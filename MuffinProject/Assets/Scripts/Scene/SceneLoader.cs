@@ -5,17 +5,19 @@ using UnityEngine.SceneManagement;
 
 public static class SceneLoader
 {
-    private static readonly Dictionary<SceneType, string> scenes = new Dictionary<SceneType, string>()
+    private const string ROOT = "Scenes/";
+
+    private static readonly Dictionary<SceneType, string> scenes = new()
     {
         { SceneType.BootStrap, "BootStrap" },
-        { SceneType.Title , "Title" },
+        { SceneType.Title, "Title" },
         { SceneType.Lobby, "Lobby" },
-        { SceneType.Room , "Room" },
+        { SceneType.Room, "Room" },
         { SceneType.Game, "Game" },
     };
 
     public static void LoadScene(SceneType sceneType)
     {
-        SceneManager.LoadScene(scenes[sceneType]);
+        SceneManager.LoadScene(ROOT + scenes[sceneType]);
     }
 }
