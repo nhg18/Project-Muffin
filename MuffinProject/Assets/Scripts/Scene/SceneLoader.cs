@@ -16,6 +16,10 @@ public static class SceneLoader
         { SceneType.Game, "Game" },
     };
 
+    /// <summary>
+    /// SceneType Enum으로 안전하게 씬 로드
+    /// </summary>
+    /// <param name="sceneType">Enum</param>
     public static void LoadScene(SceneType sceneType)
     {
         SceneManager.LoadScene(ROOT + scenes[sceneType]);
