@@ -109,7 +109,7 @@ public class PhotonRoom
     public void OnLeftRoom()
     {
         Debug.Log("On Left Room");
-        SceneManager.LoadScene("Scenes/TitleScene");
+        SceneManager.LoadScene("Scenes/LobbyScene");
     }
     
     /// <summary>
