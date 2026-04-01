@@ -1,11 +1,28 @@
+using DG.Tweening;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Splines;
+using UnityEngine.XR;
 
 public class GameRule : MonoBehaviourPunCallbacks
 {
     #region fileds
     public static GameRule Instance { get; private set; }
+
+    private int MyCardsCount = 0;
+
+    [Header("Cards of this game")]
+    [SerializeField] List<GameObject> Cards = new List<GameObject>();
+
+    [SerializeField] List<GameObject> Hands = new List<GameObject>();
+
+    [SerializeField] SplineContainer splineContainer;
+
+    [SerializeField] Transform drawPosition;
+    [SerializeField] Transform HandPosition;
 
 
     const string KEY_TURN = "turn";
@@ -61,6 +78,8 @@ public class GameRule : MonoBehaviourPunCallbacks
         int firstActor = PhotonNetwork.PlayerList[0].ActorNumber;
         Debug.Log(firstActor);
         SetTurn(firstActor);
+
+        photonView.RPC(nameof(RPC_Hand_Out_Cards), RpcTarget.All);
     }
 
     public int EndTurn()
@@ -130,5 +149,55 @@ public class GameRule : MonoBehaviourPunCallbacks
     #endregion
 
 
+    #region DrawCards
+    [PunRPC]
+    void RPC_Hand_Out_Cards()
+    {
+        for (int i = 0; i < 7; i++)
+        {
+            draw_A_Card();
+        }
+    }
+
+    public void draw_A_Card()
+    {
+        GameObject x = Instantiate(Cards[0]);
+        x.transform.position = drawPosition.position;
+        Hands.Add(x);
+        MyCardsCount++;
+        PutAwayMyCards();
+        RefreshMyInfo();
+    }
+
+    private void PutAwayMyCards()
+    {
+        if (Hands.Count == 0) return;
+        float cardSpacing = 1f / 10f;
+        float firstCardPosition = 0.5f - (Hands.Count - 1) * cardSpacing / 2;
+        float duration = 1f;
+        Spline spline = splineContainer.Spline;
+        for (int i = 0; i < Hands.Count; i++)
+        {
+            float p = firstCardPosition + i * cardSpacing;
+            Vector3 splinePosition = spline.EvaluatePosition(p);
+            Vector3 forward = spline.EvaluateTangent(p);
+            Vector3 up = spline.EvaluateUpVector(p);
+            quaternion rotation = Quaternion.LookRotation(-up, Vector3.Cross(-up, forward).normalized);
+            Hands[i].transform.DOMove(splinePosition + HandPosition.position + 0.01f * i * Vector3.back + new Vector3(0, 0, -i), duration);
+            Hands[i].transform.DORotateQuaternion(rotation, duration);
+        }
+        return;
+
+    }
+    #endregion
+    private void RefreshMyInfo()
+    {
+        PhotonNetwork.LocalPlayer.SetCustomProperties(
+            new ExitGames.Client.Photon.Hashtable
+            {
+                ["CardsCount"] = MyCardsCount
+            }
+            );
+    }
 
 }
