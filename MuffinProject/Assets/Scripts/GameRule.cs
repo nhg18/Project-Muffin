@@ -24,6 +24,8 @@ public class GameRule : MonoBehaviourPunCallbacks
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
 
+    public bool isHandMod = false;
+
 
     const string KEY_TURN = "turn";
     #endregion
@@ -161,7 +163,7 @@ public class GameRule : MonoBehaviourPunCallbacks
 
     public void draw_A_Card()
     {
-        GameObject x = Instantiate(Cards[0]);
+        GameObject x = Instantiate(Cards[0],HandPosition);
         x.transform.position = drawPosition.position;
         Hands.Add(x);
         MyCardsCount++;
@@ -190,6 +192,22 @@ public class GameRule : MonoBehaviourPunCallbacks
 
     }
     #endregion
+
+
+    public void HandsUp()
+    {
+        Debug.Log("Up!");
+        isHandMod = true;
+        HandPosition.DOMove(new Vector3(0, -4.5f, 0),1f);
+    }
+    public void HandsDown()
+    {
+        Debug.Log("down!");
+        isHandMod = false;
+        HandPosition.DOMove(new Vector3(0, -6.5f, 0), 1f);
+    }
+
+
     private void RefreshMyInfo()
     {
         PhotonNetwork.LocalPlayer.SetCustomProperties(
