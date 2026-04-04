@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine;
 
 public class NetworkManager : SingletonPersistentPun<NetworkManager>
 {
@@ -21,6 +22,11 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
         room = new PhotonRoom();
         
         connection.SetupPhotonNetwork(); // 네트워크 접속 전 세팅해줘야 함
+
+        // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
+        if (!PlayerPrefs.HasKey(PlayerPrefsKeys.playerName)) return;
+        String defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
+        SetNickname(defaultName);
     }
     
     private void Start()

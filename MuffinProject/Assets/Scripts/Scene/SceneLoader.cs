@@ -22,6 +22,6 @@ public static class SceneLoader
     /// <param name="sceneType">Enum</param>
     public static void LoadScene(SceneType sceneType)
     {
-        SceneManager.LoadScene(ROOT + scenes[sceneType]);
+        SceneManager.LoadScene(ROOT + scenes[sceneType] + "Scene");
     }
 }
