@@ -30,7 +30,7 @@ public class RoomPanel : MonoBehaviour
     private void OnStartClicked()
     {
         if (!CanStartGame()) return;
-        NetworkManager.Instance.UpdateRoomOptions(false, false);
+        NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
         PhotonNetwork.LoadLevel("Scenes/GameScene");
     }
 

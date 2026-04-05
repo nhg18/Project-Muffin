@@ -8,6 +8,6 @@ public class Bootstrapper : MonoBehaviour
 {
     private void Start()
     {
-        SceneLoader.LoadScene(SceneType.Lobby);
+        ScenePaths.LoadScene(SceneType.Lobby);
     }
 }
