@@ -99,7 +99,7 @@ public class PhotonRoom
     public void OnJoinedRoom()
     {
         Debug.Log("On Joined Room");
-        ScenePaths.LoadScene(SceneType.Room);
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
     }
     
     /// <summary>
@@ -109,7 +109,7 @@ public class PhotonRoom
     public void OnLeftRoom()
     {
         Debug.Log("On Left Room");
-        ScenePaths.LoadScene(SceneType.Lobby);
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
     }
     
     /// <summary>
