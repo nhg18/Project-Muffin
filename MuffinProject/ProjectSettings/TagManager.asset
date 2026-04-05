@@ -42,3 +42,12 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Board
+    uniqueID: 4212769109
+    locked: 0
+  - name: SystemObject
+    uniqueID: 2296990119
+    locked: 0
+  - name: Cards
+    uniqueID: 572020911
+    locked: 0

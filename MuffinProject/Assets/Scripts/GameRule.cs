@@ -171,10 +171,18 @@ public class GameRule : MonoBehaviourPunCallbacks
         RefreshMyInfo();
     }
 
-    private void PutAwayMyCards()
+    public void PutAwayMyCards()
     {
+        float cardSpacing;
         if (Hands.Count == 0) return;
-        float cardSpacing = 1f / 10f;
+        else if(Hands.Count > 10)
+        {
+            cardSpacing = 1f/ (Hands.Count + 1f);
+        }
+        else
+        {
+            cardSpacing = 1f / 10f;
+        }
         float firstCardPosition = 0.5f - (Hands.Count - 1) * cardSpacing / 2;
         float duration = 1f;
         Spline spline = splineContainer.Spline;
@@ -198,13 +206,14 @@ public class GameRule : MonoBehaviourPunCallbacks
     {
         Debug.Log("Up!");
         isHandMod = true;
-        HandPosition.DOMove(new Vector3(0, -4.5f, 0),1f);
+        HandPosition.DOMove(new Vector3(0, -3.8f, 0),1f);
     }
     public void HandsDown()
     {
         Debug.Log("down!");
         isHandMod = false;
         HandPosition.DOMove(new Vector3(0, -6.5f, 0), 1f);
+        //PutAwayMyCards();
     }
 
 

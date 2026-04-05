@@ -32,5 +32,10 @@ public class ClickManager : MonoBehaviour
                 }
             }
         }
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            GameRule.Instance.draw_A_Card();
+        }
     }
 }
