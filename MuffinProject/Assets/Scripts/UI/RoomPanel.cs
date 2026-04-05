@@ -42,7 +42,7 @@ public class RoomPanel : MonoBehaviour
         // CurrentRoom null check
         if (PhotonNetwork.CurrentRoom == null) return false;
 
-        if (PhotonNetwork.CurrentRoom.PlayerCount < NetworkManager.minPlayers)
+        if (PhotonNetwork.CurrentRoom.PlayerCount < NetworkManager.MinPlayers)
         {
             Debug.Log("It must have at least 2 players");
             // 플레이어 2명 이상 경고문 UI 처리

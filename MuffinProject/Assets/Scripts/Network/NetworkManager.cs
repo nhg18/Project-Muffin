@@ -7,8 +7,8 @@ using UnityEngine;
 
 public class NetworkManager : SingletonPersistentPun<NetworkManager>
 {
-    public const int minPlayers = 2;
-    public const int maxPlayers = 6;
+    public const int MinPlayers = 2;
+    public const int MaxPlayers = 6;
     
     public static string Nickname => PhotonNetwork.NickName;
     
