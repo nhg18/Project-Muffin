@@ -34,14 +34,7 @@ public class RoomPanel : MonoBehaviour
         PhotonNetwork.LoadLevel("Scenes/GameScene");
     }
 
-    private void StartGame()
-    {
-        if (!PreStartCheck()) return;
-        NetworkManager.Instance.UpdateRoomOptions(false, false);
-        PhotonNetwork.LoadLevel("Scenes/GameScene");
-    }
-
-    private bool PreStartCheck()
+    private bool CanStartGame()
     {
         // Master Client만 시작 가능, UI에서는 시작버튼이 안 보이게 설정
         if (!PhotonNetwork.IsMasterClient) return false;
