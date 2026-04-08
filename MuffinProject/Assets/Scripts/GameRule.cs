@@ -17,14 +17,18 @@ public class GameRule : MonoBehaviourPunCallbacks
     [Header("Cards of this game")]
     [SerializeField] List<GameObject> Cards = new List<GameObject>();
 
+    [Header("Hands of Player")]
     [SerializeField] List<GameObject> Hands = new List<GameObject>();
 
-    [SerializeField] SplineContainer splineContainer;
 
+    [Header("GameObjects")]
+    [SerializeField] SplineContainer splineContainer;
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
 
     public bool isHandMod = false;
+
+    public int startHands = 7;
 
 
     const string KEY_TURN = "turn";
@@ -155,7 +159,7 @@ public class GameRule : MonoBehaviourPunCallbacks
     [PunRPC]
     void RPC_Hand_Out_Cards()
     {
-        for (int i = 0; i < 7; i++)
+        for (int i = 0; i < startHands; i++)
         {
             draw_A_Card();
         }
@@ -201,12 +205,12 @@ public class GameRule : MonoBehaviourPunCallbacks
     }
     #endregion
 
-
+    #region HandFunc
     public void HandsUp()
     {
         Debug.Log("Up!");
         isHandMod = true;
-        HandPosition.DOMove(new Vector3(0, -3.8f, 0),1f);
+        HandPosition.DOMove(new Vector3(0, -3.8f, 0), 1f);
     }
     public void HandsDown()
     {
@@ -215,6 +219,8 @@ public class GameRule : MonoBehaviourPunCallbacks
         HandPosition.DOMove(new Vector3(0, -6.5f, 0), 1f);
         //PutAwayMyCards();
     }
+    #endregion
+
 
 
     private void RefreshMyInfo()
