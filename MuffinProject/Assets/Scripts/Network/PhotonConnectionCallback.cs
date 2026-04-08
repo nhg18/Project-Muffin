@@ -3,6 +3,12 @@ using UnityEngine;
 
 public class PhotonConnectionCallback
 {
+    private PhotonConnectionService service;
+    public PhotonConnectionCallback(PhotonConnectionService service)
+    {
+        this.service = service;
+    }
+
     /// <summary>
     /// 서버 연결 완료시 호출되는 콜백 함수
     /// 서버 연결시 자동으로 로비 참가

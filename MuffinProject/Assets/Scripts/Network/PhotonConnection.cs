@@ -7,6 +7,12 @@ using UnityEngine;
 
 public class PhotonConnection
 {
-    public readonly PhotonConnectionService service = new PhotonConnectionService();
-    public readonly PhotonConnectionCallback callback = new PhotonConnectionCallback();
+    public PhotonConnectionService service { get; }
+    public PhotonConnectionCallback callback { get; }
+
+    public PhotonConnection()
+    {
+        service = new PhotonConnectionService();
+        callback = new PhotonConnectionCallback(service);
+    }
 }
