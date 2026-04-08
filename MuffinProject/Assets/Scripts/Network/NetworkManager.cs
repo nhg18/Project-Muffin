@@ -21,23 +21,20 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
         connection = new PhotonConnection();
         room = new PhotonRoom();
         
-        connection.SetupPhotonNetwork(); // 네트워크 접속 전 세팅해줘야 함
-
-        // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
-        if (!PlayerPrefs.HasKey(PlayerPrefsKeys.playerName)) return;
-        String defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
-        SetNickname(defaultName);
+        connection.service.SetupPhotonNetwork(); // 네트워크 접속 전 세팅해줘야 함
     }
     
     private void Start()
     {
-        connection.Connect(); // 네트워크 접속
+        connection.service.Connect(); // 네트워크 접속
+        
+        connection.service.SetupInitNickname(); // 초기 닉네임 설정
     }
     
     // 퍼블릭 메서드
     #region Public Methods
     
-    public void SetNickname(string nickname) => connection.SetNickname(nickname);
+    public void SetNickname(string nickname) => connection.service.SetNickname(nickname);
     
     public void JoinRoom(string roomName) => room.JoinRoom(roomName);
     
@@ -56,9 +53,9 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     // 콜백 함수
     #region Pun Callbacks Functions
     
-    public override void OnConnectedToMaster() => connection.OnConnectedToMaster();
+    public override void OnConnectedToMaster() => connection.callback.OnConnectedToMaster();
 
-    public override void OnDisconnected(DisconnectCause cause) => connection.OnDisconnected(cause);
+    public override void OnDisconnected(DisconnectCause cause) => connection.callback.OnDisconnected(cause);
     
     public override void OnCreatedRoom() => room.OnCreatedRoom();
 
