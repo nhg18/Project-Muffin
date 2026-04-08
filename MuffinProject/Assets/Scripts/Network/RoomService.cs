@@ -1,7 +1,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 
-public class PhotonRoomService
+public class RoomService
 {
     /// <summary>
     /// 룸 참가 함수

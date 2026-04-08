@@ -7,12 +7,12 @@ using UnityEngine;
 
 public class PhotonConnection
 {
-    public PhotonConnectionService service { get; }
-    public PhotonConnectionCallback callback { get; }
+    public ConnectionService service { get; }
+    public ConnectionCallback callback { get; }
 
     public PhotonConnection()
     {
-        service = new PhotonConnectionService();
-        callback = new PhotonConnectionCallback(service);
+        service = new ConnectionService();
+        callback = new ConnectionCallback(service);
     }
 }

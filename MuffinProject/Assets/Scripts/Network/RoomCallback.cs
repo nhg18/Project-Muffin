@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class PhotonRoomCallback
+public class RoomCallback
 {
-    private readonly PhotonRoomService service;
-    public PhotonRoomCallback(PhotonRoomService service)
+    private readonly RoomService service;
+    public RoomCallback(RoomService service)
     {
         this.service = service;
     }

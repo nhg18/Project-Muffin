@@ -1,10 +1,10 @@
 using Photon.Realtime;
 using UnityEngine;
 
-public class PhotonConnectionCallback
+public class ConnectionCallback
 {
-    private PhotonConnectionService service;
-    public PhotonConnectionCallback(PhotonConnectionService service)
+    private ConnectionService service;
+    public ConnectionCallback(ConnectionService service)
     {
         this.service = service;
     }

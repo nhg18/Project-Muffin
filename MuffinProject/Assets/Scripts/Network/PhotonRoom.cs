@@ -7,12 +7,12 @@ using UnityEngine.SceneManagement;
 
 public class PhotonRoom
 {
-    public readonly PhotonRoomService service;
-    public readonly PhotonRoomCallback callback;
+    public readonly RoomService service;
+    public readonly RoomCallback callback;
 
     public PhotonRoom()
     {
-        service = new PhotonRoomService();
-        callback = new PhotonRoomCallback(service);
+        service = new RoomService();
+        callback = new RoomCallback(service);
     }
 }

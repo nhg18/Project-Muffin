@@ -2,7 +2,7 @@ using System;
 using Photon.Pun;
 using UnityEngine;
 
-public class PhotonConnectionService
+public class ConnectionService
 {
     /// <summary>
     /// 포톤 네트워크 접속 전 환경 세팅 함수
