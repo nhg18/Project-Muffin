@@ -36,17 +36,17 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     
     public void SetNickname(string nickname) => connection.service.SetNickname(nickname);
     
-    public void JoinRoom(string roomName) => room.JoinRoom(roomName);
+    public void JoinRoom(string roomName) => room.service.JoinRoom(roomName);
     
-    public void JoinRandomRoom() => room.JoinRandomRoom();
+    public void JoinRandomRoom() => room.service.JoinRandomRoom();
     
-    public void LeaveRoom() => room.LeaveRoom();
+    public void LeaveRoom() => room.service.LeaveRoom();
     
-    public void CreateRoom() => room.CreateRoom();
+    public void CreateRoom() => room.service.CreateRoom();
     
-    public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen) => room.CreateRoomOptions(maxPlayers, isVisible, isOpen);
+    public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen) => room.service.CreateRoomOptions(maxPlayers, isVisible, isOpen);
     
-    public void UpdateRoomOptions(bool isVisible, bool isOpen) => room.UpdateRoomOptions(isVisible, isOpen);
+    public void UpdateRoomOptions(bool isVisible, bool isOpen) => room.service.UpdateRoomOptions(isVisible, isOpen);
 
     #endregion
     
@@ -57,17 +57,17 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
 
     public override void OnDisconnected(DisconnectCause cause) => connection.callback.OnDisconnected(cause);
     
-    public override void OnCreatedRoom() => room.OnCreatedRoom();
+    public override void OnCreatedRoom() => room.callback.OnCreatedRoom();
 
-    public override void OnCreateRoomFailed(short returnCode, string message) => room.OnCreateRoomFailed(returnCode, message);
+    public override void OnCreateRoomFailed(short returnCode, string message) => room.callback.OnCreateRoomFailed(returnCode, message);
     
-    public override void OnJoinedRoom() => room.OnJoinedRoom();
+    public override void OnJoinedRoom() => room.callback.OnJoinedRoom();
     
-    public override void OnLeftRoom() => room.OnLeftRoom();
+    public override void OnLeftRoom() => room.callback.OnLeftRoom();
     
-    public override void OnJoinRoomFailed(short returnCode, string message) => room.OnJoinRoomFailed(returnCode, message);
+    public override void OnJoinRoomFailed(short returnCode, string message) => room.callback.OnJoinRoomFailed(returnCode, message);
     
-    public override void OnJoinRandomFailed(short returnCode, string message) => room.OnJoinRandomFailed(returnCode, message);
+    public override void OnJoinRandomFailed(short returnCode, string message) => room.callback.OnJoinRandomFailed(returnCode, message);
     
     public override void OnPlayerEnteredRoom(Player newPlayer) => RoomEventHub.RaisePlayerEntered(newPlayer);
     
