@@ -26,6 +26,10 @@ public class GameRule : MonoBehaviourPunCallbacks
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
 
+    [Header("OtherHands")]
+    [SerializeField] GameObject OtherHands;
+    [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
+
     public bool isHandMod = false;
 
     public int startHands = 7;
@@ -49,6 +53,19 @@ public class GameRule : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
+        int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+        int genCount = myActorNumber;
+
+
+
+        for(int i = 0; i < (playerCount-1); i++)
+        {
+            GameObject a = Instantiate(OtherHands, OtherHandsPosition[i]);
+            OtherPlayerHands oph = a.GetComponent<OtherPlayerHands>();
+            oph.PlayerNumber = (genCount % playerCount + 1);
+            genCount++;
+        }
         StartFirstTurn();
     }
     #endregion

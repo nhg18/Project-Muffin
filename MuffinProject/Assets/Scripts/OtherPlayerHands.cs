@@ -9,6 +9,7 @@ using UnityEngine.Splines;
 
 public class OtherPlayerHands : MonoBehaviourPunCallbacks
 {
+    public int PlayerNumber=0;
     [SerializeField] private GameObject CardBack;
 
     [SerializeField] Transform handsPosition;
@@ -36,7 +37,13 @@ public class OtherPlayerHands : MonoBehaviourPunCallbacks
             return;
         }
 
-        if (changedProps.ContainsKey("CardsCount")) //누가뽑았는지 추가 필요 (다른 플레이어를 생성할때 번호를 부여하고 그번호가 맞는지 확인하고 해당 코드를 실행하는 식)
+        if(targetPlayer.ActorNumber != PlayerNumber)
+        {
+            //나의 정보가 아님
+            return;
+        }
+
+            if (changedProps.ContainsKey("CardsCount")) //누가뽑았는지 추가 필요 (다른 플레이어를 생성할때 번호를 부여하고 그번호가 맞는지 확인하고 해당 코드를 실행하는 식)
         {
             int CardsCount = (int)changedProps["CardsCount"];
             Debug.Log("상대가 " + CardsCount + "장 가지고 있음");
