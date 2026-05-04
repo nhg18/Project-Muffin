@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class TitleUI : MonoBehaviour
+public class LobbyPanel : MonoBehaviour
 {
     [SerializeField] private Button createRoomButton;
     [SerializeField] private Button joinRoomButton;
