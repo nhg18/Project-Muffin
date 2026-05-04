@@ -222,6 +222,19 @@ public class GameRule : MonoBehaviourPunCallbacks
     }
     #endregion
 
+    #region ThrowCards
+
+    public void destoryCards(int number)
+    {
+        Destroy(Hands[number]);
+        Hands.RemoveAt(number);
+        MyCardsCount--;
+        PutAwayMyCards();
+        RefreshMyInfo();
+    }
+
+    #endregion
+
     #region HandFunc
     public void HandsUp()
     {

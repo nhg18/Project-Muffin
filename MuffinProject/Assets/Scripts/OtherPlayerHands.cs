@@ -37,13 +37,13 @@ public class OtherPlayerHands : MonoBehaviourPunCallbacks
             return;
         }
 
-        if(targetPlayer.ActorNumber != PlayerNumber)
+        if(targetPlayer.ActorNumber != PlayerNumber)//(다른 플레이어를 생성할때 번호를 부여하고 그번호가 맞는지 확인하고 해당 코드를 실행하는 식)
         {
             //나의 정보가 아님
             return;
         }
 
-            if (changedProps.ContainsKey("CardsCount")) //누가뽑았는지 추가 필요 (다른 플레이어를 생성할때 번호를 부여하고 그번호가 맞는지 확인하고 해당 코드를 실행하는 식)
+        if (changedProps.ContainsKey("CardsCount")) 
         {
             int CardsCount = (int)changedProps["CardsCount"];
             Debug.Log("상대가 " + CardsCount + "장 가지고 있음");
@@ -56,7 +56,10 @@ public class OtherPlayerHands : MonoBehaviourPunCallbacks
             }
             else if(CardsCount < LocalCardsCount)
             {
-                //카드 버리기
+                while (CardsCount < LocalCardsCount)
+                {
+                    destoryCards(Hands.Count-1);
+                }
             }
         }
 
@@ -68,6 +71,14 @@ public class OtherPlayerHands : MonoBehaviourPunCallbacks
         GameObject x = Instantiate(CardBack, handsPosition);
         x.transform.position = drawPosition.position;
         Hands.Add(x);
+        PutAwayOtherCards();
+    }
+
+    public void destoryCards(int number)
+    {
+        Destroy(Hands[number]);
+        Hands.RemoveAt(number);
+        LocalCardsCount--;
         PutAwayOtherCards();
     }
 
