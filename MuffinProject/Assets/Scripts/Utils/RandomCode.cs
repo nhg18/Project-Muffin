@@ -6,7 +6,7 @@ public class RandomCode
 {
     public static string GenerateRandomCode(int length = 6)
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         char[] code = new char[length];
 
         for (int i = 0; i < length; i++)
