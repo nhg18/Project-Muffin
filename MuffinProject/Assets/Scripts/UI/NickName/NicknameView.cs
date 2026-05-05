@@ -27,12 +27,7 @@ public class NicknameView : MonoBehaviour
         // _feedbackText.color = isError ? Color.red : Color.green;
         Debug.Log(message);
     }
-
-    public void SetSubmitInteractable(bool interactable)
-    {
-        _submitButton.interactable = interactable;
-    }
-
+    
     public void SetInputText(string text)
     {
         _nicknameInput.text = text;

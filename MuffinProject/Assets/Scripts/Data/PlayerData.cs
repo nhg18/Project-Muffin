@@ -5,4 +5,5 @@ public static class PlayerData
 {
     public static string Nickname { get; set; }
     public static int Level { get; set; }
+    public static Sprite ProfileSprite { get; set; }
 }
