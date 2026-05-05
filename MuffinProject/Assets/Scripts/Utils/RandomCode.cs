@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class RandomCode
 {
-    public static string GenerateRandomCode(int length = 6)
+    public static string GenerateRandomCode(int length = 4)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         char[] code = new char[length];

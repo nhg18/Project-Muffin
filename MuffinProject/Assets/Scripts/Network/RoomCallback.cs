@@ -24,11 +24,12 @@ public class RoomCallback
     {
         Debug.Log($"On Create Room Failed [{returnCode}]: {message}");
 
-        // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
-        if (returnCode == 32766)
+        switch (returnCode)
         {
-            service.CreateRoom();
-            return;
+            // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
+            case 32766:
+                service.CreateRoom();
+                return;
         }
     }
     
