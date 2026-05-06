@@ -1,6 +1,7 @@
 using DG.Tweening;
 using Photon.Pun;
 using Photon.Realtime;
+using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -12,23 +13,22 @@ public class GameRule : MonoBehaviourPunCallbacks
     #region fileds
     public static GameRule Instance { get; private set; }
 
-    private int MyCardsCount = 0;
+    private PlayerHandsScripts phs;
 
-    [Header("Cards of this game")]
-    [SerializeField] List<GameObject> Cards = new List<GameObject>();
+    public int MyCardsCount = 0;
 
-    [Header("Hands of Player")]
-    [SerializeField] List<GameObject> Hands = new List<GameObject>();
+    
 
 
-    [Header("GameObjects")]
-    [SerializeField] SplineContainer splineContainer;
-    [SerializeField] Transform drawPosition;
-    [SerializeField] Transform HandPosition;
+    
 
     [Header("OtherHands")]
     [SerializeField] GameObject OtherHands;
     [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
+
+    [Header("PlayerInfo")]
+    [SerializeField] private int playerHp = 10;
+    [SerializeField] private bool isChapChu = false;
 
     public bool isHandMod = false;
 
@@ -56,7 +56,7 @@ public class GameRule : MonoBehaviourPunCallbacks
         int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
         int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
         int genCount = myActorNumber;
-
+        phs = GetComponent<PlayerHandsScripts>();
 
 
         for(int i = 0; i < (playerCount-1); i++)
@@ -172,95 +172,32 @@ public class GameRule : MonoBehaviourPunCallbacks
     #endregion
 
 
-    #region DrawCards
+    #region Hand_Out
     [PunRPC]
     void RPC_Hand_Out_Cards()
     {
         for (int i = 0; i < startHands; i++)
         {
-            draw_A_Card();
+            phs.draw_A_Card();
         }
     }
-
-    public void draw_A_Card()
-    {
-        GameObject x = Instantiate(Cards[0],HandPosition);
-        x.transform.position = drawPosition.position;
-        Hands.Add(x);
-        MyCardsCount++;
-        PutAwayMyCards();
-        RefreshMyInfo();
-    }
-
-    public void PutAwayMyCards()
-    {
-        float cardSpacing;
-        if (Hands.Count == 0) return;
-        else if(Hands.Count > 10)
-        {
-            cardSpacing = 1f/ (Hands.Count + 1f);
-        }
-        else
-        {
-            cardSpacing = 1f / 10f;
-        }
-        float firstCardPosition = 0.5f - (Hands.Count - 1) * cardSpacing / 2;
-        float duration = 1f;
-        Spline spline = splineContainer.Spline;
-        for (int i = 0; i < Hands.Count; i++)
-        {
-            float p = firstCardPosition + i * cardSpacing;
-            Vector3 splinePosition = spline.EvaluatePosition(p);
-            Vector3 forward = spline.EvaluateTangent(p);
-            Vector3 up = spline.EvaluateUpVector(p);
-            quaternion rotation = Quaternion.LookRotation(-up, Vector3.Cross(-up, forward).normalized);
-            Hands[i].transform.DOMove(splinePosition + HandPosition.position + 0.01f * i * Vector3.back + new Vector3(0, 0, -i), duration);
-            Hands[i].transform.DORotateQuaternion(rotation, duration);
-        }
-        return;
-
-    }
-    #endregion
-
-    #region ThrowCards
-
-    public void destoryCards(int number)
-    {
-        Destroy(Hands[number]);
-        Hands.RemoveAt(number);
-        MyCardsCount--;
-        PutAwayMyCards();
-        RefreshMyInfo();
-    }
-
-    #endregion
-
-    #region HandFunc
-    public void HandsUp()
-    {
-        Debug.Log("Up!");
-        isHandMod = true;
-        HandPosition.DOMove(new Vector3(0, -3.8f, 0), 1f);
-    }
-    public void HandsDown()
-    {
-        Debug.Log("down!");
-        isHandMod = false;
-        HandPosition.DOMove(new Vector3(0, -6.5f, 0), 1f);
-        //PutAwayMyCards();
-    }
+    
     #endregion
 
 
 
-    private void RefreshMyInfo()
+
+
+    public void RefreshMyInfo()
     {
         PhotonNetwork.LocalPlayer.SetCustomProperties(
             new ExitGames.Client.Photon.Hashtable
             {
-                ["CardsCount"] = MyCardsCount
+                ["CardsCount"] = MyCardsCount,
+                ["PlayerHP"] = playerHp,
+                ["isChapChu"] = isChapChu
             }
-            );
+        );
     }
 
 }

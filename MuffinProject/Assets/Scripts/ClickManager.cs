@@ -5,6 +5,7 @@ using UnityEngine;
 public class ClickManager : MonoBehaviour
 {
 
+
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
@@ -17,7 +18,7 @@ public class ClickManager : MonoBehaviour
             {
                 if (!GameRule.Instance.isHandMod)
                 {
-                    GameRule.Instance.HandsUp();
+                    PlayerHandsScripts.Instance.HandsUp();
                 }
                 else
                 {
@@ -28,14 +29,14 @@ public class ClickManager : MonoBehaviour
             {
                 if (GameRule.Instance.isHandMod)
                 {
-                    GameRule.Instance.HandsDown();
+                    PlayerHandsScripts.Instance.HandsDown();
                 }
             }
         }
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            GameRule.Instance.draw_A_Card();
+            PlayerHandsScripts.Instance.draw_A_Card();
         }
     }
 }

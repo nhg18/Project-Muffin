@@ -488,8 +488,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1132676038}
-        m_TargetAssemblyTypeName: GameRule, Assembly-CSharp
+      - m_Target: {fileID: 1132676041}
+        m_TargetAssemblyTypeName: PlayerHandsScripts, Assembly-CSharp
         m_MethodName: destoryCards
         m_Mode: 3
         m_Arguments:
@@ -1078,8 +1078,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1132676038}
-        m_TargetAssemblyTypeName: GameRule, Assembly-CSharp
+      - m_Target: {fileID: 1132676041}
+        m_TargetAssemblyTypeName: PlayerHandsScripts, Assembly-CSharp
         m_MethodName: draw_A_Card
         m_Mode: 1
         m_Arguments:
@@ -1270,6 +1270,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1132676039}
   - component: {fileID: 1132676038}
+  - component: {fileID: 1132676041}
   - component: {fileID: 1132676040}
   m_Layer: 0
   m_Name: GameRule
@@ -1290,17 +1291,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 189c01e3c10c22c47b7f927fad3eaa39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Cards:
-  - {fileID: 4051323403029456082, guid: 28e05697f9309134bbe77a93fb088513, type: 3}
-  Hands: []
-  splineContainer: {fileID: 1035348244}
-  drawPosition: {fileID: 1577502110}
-  HandPosition: {fileID: 2088720530}
+  MyCardsCount: 0
   OtherHands: {fileID: 728121720584844489, guid: e30b23b5c99520f4bab411841d7967de, type: 3}
   OtherHandsPosition:
   - {fileID: 105853745}
   - {fileID: 317936390}
   - {fileID: 553969420}
+  playerHp: 10
+  isChapChu: 0
   isHandMod: 0
   startHands: 7
 --- !u!4 &1132676039
@@ -1340,6 +1338,24 @@ MonoBehaviour:
   sceneViewId: 1
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &1132676041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1132676037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed2d14a360f72eb4f9577cb13b794a40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Cards:
+  - {fileID: 4051323403029456082, guid: 28e05697f9309134bbe77a93fb088513, type: 3}
+  Hands: []
+  splineContainer: {fileID: 1035348244}
+  drawPosition: {fileID: 1577502110}
+  HandPosition: {fileID: 2088720530}
 --- !u!1 &1208741830
 GameObject:
   m_ObjectHideFlags: 0
