@@ -1,5 +1,6 @@
 using System;
 using Photon.Realtime;
+using UnityEditor.MemoryProfiler;
 using UnityEngine;
 
 public class ConnectionCallback
@@ -31,5 +32,10 @@ public class ConnectionCallback
     {
         Debug.Log($"On Disconnected: {cause}");
         ConnectionEvents.RaiseConnected(false);
+
+        if (cause is DisconnectCause.ExceptionOnConnect or DisconnectCause.ClientTimeout)
+        {
+            service.Connect();
+        }
     }
 }
