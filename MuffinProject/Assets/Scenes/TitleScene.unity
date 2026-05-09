@@ -558,9 +558,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1109537193}
-  - component: {fileID: 1109537195}
-  - component: {fileID: 1109537194}
   - component: {fileID: 1109537196}
+  - component: {fileID: 1109537199}
+  - component: {fileID: 1109537198}
   m_Layer: 5
   m_Name: NicknameInput
   m_TagString: Untagged
@@ -589,33 +589,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -186}
   m_SizeDelta: {x: 791.5028, y: 288.9904}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1109537194
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1109537192}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d4b5ff288894a04ea54aa7b73c9b039, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _nicknameInput: {fileID: 1731099263}
-  _submitButton: {fileID: 1198435431}
---- !u!114 &1109537195
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1109537192}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad242042545f61944b90182ca41fbd43, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _view: {fileID: 1109537194}
 --- !u!225 &1109537196
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -628,6 +601,30 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &1109537198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109537192}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 912bd217b6f0eb3419306804596b87d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1109537199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109537192}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd56e43be81df1446aabdddffbf5300b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1198435429
 GameObject:
   m_ObjectHideFlags: 0

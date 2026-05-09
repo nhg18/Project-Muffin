@@ -33,9 +33,25 @@ public class ConnectionCallback
         Debug.Log($"On Disconnected: {cause}");
         ConnectionEvents.RaiseConnected(false);
 
-        if (cause is DisconnectCause.ExceptionOnConnect or DisconnectCause.ClientTimeout)
+        switch (cause)
         {
-            service.Connect();
+            // 클라이언트에 의해 의도적 종료
+            case DisconnectCause.DisconnectByClientLogic:
+                // SceneManager.LoadScene(SceneType.Title);
+                break;
+
+            // 서버, 클라이언트 타임 아웃, 일시 끊김
+            case DisconnectCause.ServerTimeout:
+            case DisconnectCause.ClientTimeout:
+            case DisconnectCause.Exception:
+                // TryReconnect();
+                break;
+
+            // 서버가 강제 종료 → 이유 표시 후 타이틀
+            case DisconnectCause.DisconnectByServerLogic:
+            case DisconnectCause.InvalidAuthentication:
+                // ShowErrorAndGoTitle(cause);
+                break;
         }
     }
 }
