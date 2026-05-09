@@ -15,8 +15,8 @@ public class RoomInfoPanel : MonoBehaviour
     
     private void OnEnable()
     {
-        RoomEventHub.OnPlayerEnteredEvent += OnPlayerEntered;
-        RoomEventHub.OnPlayerLeftEvent += OnPlayerLeft;
+        RoomEvents.OnPlayerEntered += OnPlayerEntered;
+        RoomEvents.OnPlayerLeft += OnPlayerLeft;
         
         if (PhotonNetwork.InRoom)
         {
@@ -26,8 +26,8 @@ public class RoomInfoPanel : MonoBehaviour
 
     private void OnDisable()
     {
-        RoomEventHub.OnPlayerEnteredEvent -= OnPlayerEntered;
-        RoomEventHub.OnPlayerLeftEvent -= OnPlayerLeft;
+        RoomEvents.OnPlayerEntered -= OnPlayerEntered;
+        RoomEvents.OnPlayerLeft -= OnPlayerLeft;
     }
     
     private void UpdateRoomInfo()

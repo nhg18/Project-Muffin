@@ -11,6 +11,7 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     public const int MaxPlayers = 6;
     
     public static string Nickname => PhotonNetwork.NickName;
+    public static bool IsConnected => PhotonNetwork.IsConnected;
     
     private PhotonConnection connection;
     private PhotonRoom room;
@@ -47,7 +48,7 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen) => room.service.CreateRoomOptions(maxPlayers, isVisible, isOpen);
     
     public void UpdateRoomOptions(bool isVisible, bool isOpen) => room.service.UpdateRoomOptions(isVisible, isOpen);
-
+    
     #endregion
     
     // 콜백 함수
@@ -69,11 +70,11 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     
     public override void OnJoinRandomFailed(short returnCode, string message) => room.callback.OnJoinRandomFailed(returnCode, message);
     
-    public override void OnPlayerEnteredRoom(Player newPlayer) => RoomEventHub.RaisePlayerEntered(newPlayer);
+    public override void OnPlayerEnteredRoom(Player newPlayer) => room.callback.OnPlayerEntered(newPlayer);
     
-    public override void OnPlayerLeftRoom(Player otherPlayer) => RoomEventHub.RaisePlayerLeft(otherPlayer);
+    public override void OnPlayerLeftRoom(Player otherPlayer) => room.callback.OnPlayerLeft(otherPlayer);
     
-    public override void OnRoomListUpdate(List<RoomInfo> roomList) => RoomEventHub.RaiseRoomUpdateList(roomList);
+    public override void OnRoomListUpdate(List<RoomInfo> roomList) => room.callback.OnRoomListUpdate(roomList);
 
     #endregion
 }

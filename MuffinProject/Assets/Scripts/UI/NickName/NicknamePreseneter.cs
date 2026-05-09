@@ -10,13 +10,9 @@ class NicknamePreseneter : MonoBehaviour
     private const int MinLength = 2;
     private const int MaxLength = 12;
 
-    private void Awake()
+    private void OnEnable()
     {
-        if (_view == null)
-        {
-            _view = GetComponent<NicknameView>();
-            Debug.LogError("_view is null");
-        }
+        // ConnectionCallback.OnConnectionStatusChanged += b => return;
     }
 
     private void Start()
@@ -34,7 +30,8 @@ class NicknamePreseneter : MonoBehaviour
 
         _view.SetFeedback($"닉네임 '{input}' 이(가) 설정되었습니다!");
         // _view.SetSubmitInteractable(false);
-        NetworkManager.Instance.SetNickname(input);
+        NetworkManager.Instance.SetNickname(input); // 네트워크 닉네임
+        PlayerData.Nickname = input;                // PlayerData 클라이언트 내부 닉네임
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
     }
     
@@ -48,7 +45,6 @@ class NicknamePreseneter : MonoBehaviour
             {
                 defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
                 _view.SetInputText(defaultName);
-                PlayerData.Nickname = defaultName;
             }
         }
     }

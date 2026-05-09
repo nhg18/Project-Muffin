@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -69,5 +71,20 @@ public class RoomCallback
         Debug.Log($"On Join Random Room Failed: {message}");
         Debug.Log("No Empty Room -> Create New Room");
         service.CreateRoom();
+    }
+
+    public void OnPlayerEntered(Player player)
+    {
+        RoomEvents.RaisePlayerEntered(player);
+    }
+
+    public void OnPlayerLeft(Player player)
+    {
+        RoomEvents.RaisePlayerLeft(player);
+    }
+
+    public void OnRoomListUpdate(List<RoomInfo> roomList)
+    {
+        RoomEvents.RaiseRoomListUpdate(roomList);
     }
 }

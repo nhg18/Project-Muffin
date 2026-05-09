@@ -1,3 +1,4 @@
+using System;
 using Photon.Realtime;
 using UnityEngine;
 
@@ -16,7 +17,8 @@ public class ConnectionCallback
     public void OnConnectedToMaster()
     {
         Debug.Log("On Connected To Master");
-        // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 업서도 됨.
+        // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 없어도 됨.
+        ConnectionEvents.RaiseConnected(true);
     }
 
     /// <summary>
@@ -28,5 +30,6 @@ public class ConnectionCallback
     public void OnDisconnected(DisconnectCause cause)
     {
         Debug.Log($"On Disconnected: {cause}");
+        ConnectionEvents.RaiseConnected(false);
     }
 }
