@@ -4,34 +4,34 @@ using UnityEngine;
 
 public class PopupManager : SingletonPersistent<PopupManager>
 {
-    private Transform popupRoot;
+    public RectTransform _popupRoot;
 
-    private BasePopup current;
+    private BasePopup _current;
 
     protected override void Awake()
     {
         base.Awake();
-        popupRoot = GetComponentInChildren<Transform>();
+        _popupRoot = GetComponentInChildren<RectTransform>();
     }
 
     public T Show<T>() where T : BasePopup
     {
         // 기존 팝업 닫기
-        if (current != null)
+        if (_current != null)
             Hide();
 
         var prefab = Get<T>();
-        current = Instantiate(prefab, popupRoot);
-        current.OnShow();
-        return (T)current;
+        _current = Instantiate(prefab, _popupRoot);
+        _current.OnShow();
+        return (T)_current;
     }
 
     public void Hide()
     {
-        if (current == null) return;
-        current.OnHide();
-        Destroy(current.gameObject);
-        current = null;
+        if (_current == null) return;
+        _current.OnHide();
+        Destroy(_current.gameObject);
+        _current = null;
     }
     
     public T Get<T>() where T : BasePopup

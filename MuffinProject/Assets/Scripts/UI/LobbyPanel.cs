@@ -2,16 +2,17 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UI.Components;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class LobbyPanel : MonoBehaviour
 {
+    [SerializeField] private Button randomMatchButton;
     [SerializeField] private Button createRoomButton;
     [SerializeField] private Button joinRoomButton;
     
-    [SerializeField] private GameObject joinRoomPanel;
 
     private void OnEnable()
     {
@@ -32,6 +33,6 @@ public class LobbyPanel : MonoBehaviour
 
     private void OnJoinRoomClicked()
     {
-        joinRoomPanel.SetActive(true);
+        PopupManager.Instance.Show<JoinRoomPopup>();
     }
 }
