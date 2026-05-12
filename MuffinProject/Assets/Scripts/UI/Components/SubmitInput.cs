@@ -1,19 +1,20 @@
 using TMPro;
+using UI.Interfaces;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace UI.Components
 {
     [RequireComponent(typeof(ISubmitLogic))]
-    public class Input : MonoBehaviour
+    public class SubmitInput : MonoBehaviour
     {
-        private TMP_InputField _Input;
+        private TMP_InputField _input;
         private Button _submitButton;
         private ISubmitLogic _submitLogic;
     
         private void Awake()
         {
-            _Input = GetComponentInChildren<TMP_InputField>();
+            _input = GetComponentInChildren<TMP_InputField>();
             _submitButton = GetComponentInChildren<Button>();
             _submitLogic = GetComponent<ISubmitLogic>();
         }
@@ -25,7 +26,7 @@ namespace UI.Components
 
         private void Start()
         {
-            _submitLogic.Init(_Input);
+            _submitLogic.Init(_input);
         }
 
         private void OnDisable()
@@ -40,7 +41,7 @@ namespace UI.Components
 
         private void HandleSubmit()
         {
-            _submitLogic.Execute(_Input);
+            _submitLogic.Execute(_input);
         }
     }
 }

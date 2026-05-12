@@ -1,6 +1,7 @@
-using System;
-
-public interface IButtonLogic
+namespace UI.Interfaces
 {
-    void Execute();
+    public interface IButtonLogic
+    {
+        void Execute();
+    }
 }

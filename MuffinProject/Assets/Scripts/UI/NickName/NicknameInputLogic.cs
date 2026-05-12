@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UI.Interfaces;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,12 +28,13 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
     
     private void LoadNickname(TMP_InputField input)
     {
-        string defaultName = String.Empty;
+        string defaultName = string.Empty;
 
         if (PlayerPrefs.HasKey(PlayerPrefsKeys.playerName))
         {
             defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
-            input.text = defaultName;
         }
+        
+        input.text = defaultName;
     }
 }
