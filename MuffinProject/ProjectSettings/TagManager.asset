@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Card
   - DrawCards
+  - CardDropArea
   layers:
   - Default
   - TransparentFX

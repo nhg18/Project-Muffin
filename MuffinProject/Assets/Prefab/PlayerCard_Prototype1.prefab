@@ -74,7 +74,7 @@ SpriteRenderer:
   m_SortingLayer: 3
   m_SortingOrder: 2
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0.9528302, g: 0.5528213, b: 0.5528213, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -96,8 +96,9 @@ GameObject:
   - component: {fileID: 384919373410716909}
   - component: {fileID: 2589855769022802918}
   - component: {fileID: -8396187096879622842}
+  - component: {fileID: 4774311572242445914}
   m_Layer: 0
-  m_Name: PlayerCard
+  m_Name: PlayerCard_Prototype1
   m_TagString: Card
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -233,6 +234,19 @@ MonoBehaviour:
   basicScaleY: 3
   UpScale: 1.5
   basicLayerOrder: 2
+--- !u!114 &4774311572242445914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4051323403029456082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51a433e516a30ec4b8bd0239a7bef00c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  conditionList: 
 --- !u!1 &6946115253069488997
 GameObject:
   m_ObjectHideFlags: 0

@@ -19,16 +19,13 @@ public class GameRule : MonoBehaviourPunCallbacks
 
     
 
-
-    
-
     [Header("OtherHands")]
     [SerializeField] GameObject OtherHands;
     [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
 
     [Header("PlayerInfo")]
     [SerializeField] private int playerHp = 10;
-    [SerializeField] private bool isChapChu = false;
+    public bool isChapChu = false;
 
     public bool isHandMod = false;
 
