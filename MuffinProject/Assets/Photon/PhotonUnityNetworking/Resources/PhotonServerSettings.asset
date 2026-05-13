@@ -41,6 +41,8 @@ MonoBehaviour:
   - RespawnSpaceship
   - PRC_OnTurnStart
   - RequestAdvanceTurn
+  - RPC_Hand_Out_Cards
+  - RPC_RequestNextTurn
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
