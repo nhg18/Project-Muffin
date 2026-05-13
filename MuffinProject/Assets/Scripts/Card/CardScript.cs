@@ -95,16 +95,24 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         isDragging = false;
         if (isDropArea(transform.position))
         {
-
+            startCard();
         }
         else
         {
-            //transform.position = originalPosition;
             StartCoroutine(ReturnToOrigin());
-            //PlayerHandsScripts.Instance.PutAwayMyCards();
         }
     }
     #endregion
+
+
+    private void startCard()
+    {
+        if (cardCondition.CardConditionMet())
+        {
+            //111111111111111111111111111111111111111111111111111
+        }
+    }
+
     private System.Collections.IEnumerator ReturnToOrigin()
     {
         Vector3 startPos = transform.position;

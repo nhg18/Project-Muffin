@@ -1,18 +1,23 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ToWho : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public enum TargetType
     {
-        
+        One,
+        Two,
+        All_Others,
+        Everyone,
+        Me
     }
+    [Header("Target List")]
+    [SerializeField] private List<TargetType> TargetList = new List<TargetType>();
 
-    // Update is called once per frame
-    void Update()
+    void Awake()
     {
-        
+
     }
 }

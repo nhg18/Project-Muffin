@@ -12,6 +12,7 @@ public class CardCondition : MonoBehaviour
     }
     [Header("Condition List")]
     [SerializeField] private List<ConditionType> conditionList = new List<ConditionType>();
+    [SerializeField] private bool isAND = true;//false이면 OR(조건 하나만 참이여도 만족)
 
     private Dictionary<ConditionType, Func<bool>> conditionMap;
 
@@ -33,9 +34,20 @@ public class CardCondition : MonoBehaviour
         return GameRule.Instance.isChapChu;
     }
 
+    public bool CardConditionMet()
+    {
+        if (isAND)
+        {
+            return AllConditionsMet();
+        }
+        else
+        {
+            return AnyConditionMet();
+        }
+    }
     
     //모든 조건 충족
-    public bool AllConditionsMet()
+    private bool AllConditionsMet()
     {
         foreach(var condition in conditionList)
         {
@@ -49,7 +61,7 @@ public class CardCondition : MonoBehaviour
     }
 
     //위 조건중 하나라도 충족
-    public bool AnyConditionMet()
+    private bool AnyConditionMet()
     {
         foreach (var condition in conditionList)
         {
