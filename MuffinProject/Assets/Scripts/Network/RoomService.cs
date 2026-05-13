@@ -1,5 +1,6 @@
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine;
 
 public class RoomService
 {
@@ -8,7 +9,8 @@ public class RoomService
     /// </summary>
     public void JoinRoom(string roomName)
     {
-        PhotonNetwork.JoinRoom(roomName);
+        PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
+        Debug.Log(roomName.Trim().ToUpper());
     }
     
     /// <summary>

@@ -1,6 +1,5 @@
 using System;
 using Photon.Realtime;
-using UnityEditor.MemoryProfiler;
 using UnityEngine;
 
 public class ConnectionCallback

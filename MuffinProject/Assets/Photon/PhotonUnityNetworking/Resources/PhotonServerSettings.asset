@@ -44,5 +44,5 @@ MonoBehaviour:
   - RPC_Hand_Out_Cards
   - RPC_RequestNextTurn
   DisableAutoOpenWizard: 1
-  ShowSettings: 0
+  ShowSettings: 1
   DevRegionSetOnce: 1

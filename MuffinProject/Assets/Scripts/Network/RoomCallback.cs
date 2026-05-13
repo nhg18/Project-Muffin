@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -16,7 +17,7 @@ public class RoomCallback
     /// </summary>
     public void OnCreatedRoom()
     {
-        Debug.Log("On Created Room");
+        Debug.Log("On Created Room" + PhotonNetwork.CurrentRoom.Name);
     }
 
     /// <summary>
@@ -42,6 +43,7 @@ public class RoomCallback
     public void OnJoinedRoom()
     {
         Debug.Log("On Joined Room");
+        PopupManager.Instance.Hide();
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
     }
     
