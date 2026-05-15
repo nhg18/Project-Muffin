@@ -8,17 +8,13 @@ using UnityEngine;
 using UnityEngine.Splines;
 using UnityEngine.XR;
 
-public class GameRule : MonoBehaviourPunCallbacks
+public class GameRule : SingletonPun<GameRule>
 {
     #region fileds
-    public static GameRule Instance { get; private set; }
-
     private PlayerHandsScripts phs;
 
     public int MyCardsCount = 0;
-
     
-
     [Header("OtherHands")]
     [SerializeField] GameObject OtherHands;
     [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
@@ -36,17 +32,6 @@ public class GameRule : MonoBehaviourPunCallbacks
     #endregion
 
     #region UnityCallBacks
-    private void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(this.gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(this.gameObject);
-    }
 
     private void Start()
     {
