@@ -1,9 +1,27 @@
+using Photon.Pun.Demo.PunBasics;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ClickManager : MonoBehaviour
 {
+    #region field
+
+
+    #endregion
+
+    #region Singleton
+    public static ClickManager Instance { get; private set; }
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+    #endregion
 
 
     void Update()
@@ -25,6 +43,7 @@ public class ClickManager : MonoBehaviour
 
                 }
             }
+
             if (hit.collider == null || !hit.collider.CompareTag("Card"))
             {
                 if (GameRule.Instance.isHandMod)

@@ -1337,7 +1337,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Cards:
-  - {fileID: 4051323403029456082, guid: 28e05697f9309134bbe77a93fb088513, type: 3}
+  - {fileID: 4051323403029456082, guid: 093e049a27536a44383a57cbf0d7df31, type: 3}
   Hands: []
   splineContainer: {fileID: 1035348244}
   drawPosition: {fileID: 1577502110}
