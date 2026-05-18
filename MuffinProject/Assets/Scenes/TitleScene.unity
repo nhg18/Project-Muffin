@@ -193,7 +193,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -16}
+  m_AnchoredPosition: {x: 0, y: -126.7}
   m_SizeDelta: {x: 719.4896, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &646199100
@@ -624,8 +624,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uC811\uC18D"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c104d1603a013da4fabf049fb02e6aac, type: 2}
-  m_sharedMaterial: {fileID: -6181231576748891076, guid: c104d1603a013da4fabf049fb02e6aac, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 976bfe97795e23a4b898030013f86e2a, type: 2}
+  m_sharedMaterial: {fileID: 5349595754437957750, guid: 976bfe97795e23a4b898030013f86e2a, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -766,9 +766,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 912bd217b6f0eb3419306804596b87d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  minLength: 2
   maxLength: 16
   countText: {fileID: 1879670069}
-  errorText: {fileID: 0}
+  errorText: {fileID: 646199100}
 --- !u!114 &1109537199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -825,8 +826,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0000076294, y: -86}
-  m_SizeDelta: {x: 248.0142, y: 74.4643}
+  m_AnchoredPosition: {x: 0.0000076294, y: -54}
+  m_SizeDelta: {x: 255.2, y: 127.6}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1198435431
 MonoBehaviour:
@@ -892,8 +893,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 3bfc6450e5833be45901a32dabccc624, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -1540,14 +1541,14 @@ MonoBehaviour:
   m_VerticalScrollbarEventHandler: {fileID: 0}
   m_LayoutGroup: {fileID: 0}
   m_ScrollSensitivity: 1
-  m_ContentType: 5
+  m_ContentType: 0
   m_InputType: 0
   m_AsteriskChar: 42
   m_KeyboardType: 0
   m_LineType: 0
   m_HideMobileInput: 0
   m_HideSoftKeyboard: 0
-  m_CharacterValidation: 5
+  m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 28
   m_CharacterLimit: 16
