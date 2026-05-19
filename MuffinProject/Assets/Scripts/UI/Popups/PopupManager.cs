@@ -8,7 +8,7 @@ public class PopupManager : SingletonPersistent<PopupManager>
     [SerializeField] private GameObject blockingPanel;
 
     private BasePopup _current;
-
+//Todo: 팝업 스택으로 만들어서 팝업 여러개 띄울 수 있게
     public T Show<T>() where T : BasePopup
     {
         // 기존 팝업 닫기

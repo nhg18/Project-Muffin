@@ -6,10 +6,10 @@ using UnityEngine.SceneManagement;
 
 public class RoomCallback
 {
-    private readonly RoomService service;
+    private readonly RoomService _service;
     public RoomCallback(RoomService service)
     {
-        this.service = service;
+        this._service = service;
     }
 
     /// <summary>
@@ -18,6 +18,7 @@ public class RoomCallback
     public void OnCreatedRoom()
     {
         Debug.Log("On Created Room" + PhotonNetwork.CurrentRoom.Name);
+        RoomEvents.RaiseRoomCreated();
     }
 
     /// <summary>
@@ -31,9 +32,10 @@ public class RoomCallback
         {
             // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
             case 32766:
-                service.CreateRoom();
+                _service.CreateRoom();
                 return;
         }
+        RoomEvents.RaiseRoomCreateFailed();
     }
     
     /// <summary>
@@ -43,8 +45,8 @@ public class RoomCallback
     public void OnJoinedRoom()
     {
         Debug.Log("On Joined Room");
-        PopupManager.Instance.Hide();
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
+        RoomEvents.RaiseRoomJoined();
     }
     
     /// <summary>
@@ -72,7 +74,7 @@ public class RoomCallback
     {
         Debug.Log($"On Join Random Room Failed: {message}");
         Debug.Log("No Empty Room -> Create New Room");
-        service.CreateRoom();
+        _service.CreateRoom();
     }
 
     public void OnPlayerEntered(Player player)

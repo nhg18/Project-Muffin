@@ -14,6 +14,5 @@ public class RoomJoinSubmitLogic : MonoBehaviour, ISubmitLogic
     public void Execute(TMP_InputField input)
     {
         NetworkManager.Instance.JoinRoom(input.text.Trim());
-        Debug.Log(input.text.Trim());
     }
 }

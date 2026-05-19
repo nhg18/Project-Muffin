@@ -18,21 +18,40 @@ public class LobbyPanel : MonoBehaviour
     {
         createRoomButton.onClick.AddListener(OnCreateRoomClicked);
         joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
+        
+        // RoomEvents.OnRoomCreating += 
+        RoomEvents.OnRoomJoined += OnRoomJoined;
+        RoomEvents.OnRoomCreateFailed += OnRoomCreateFailed;
     }
 
     private void OnDisable()
     {
         createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
         joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
+        
+        // RoomEvents.OnRoomCreating -= 
+        RoomEvents.OnRoomJoined -= OnRoomJoined;
+        RoomEvents.OnRoomCreateFailed -= OnRoomCreateFailed;
     }
 
     private void OnCreateRoomClicked()
     {
+        PopupManager.Instance.Show<LoadingPopup>();
         NetworkManager.Instance.CreateRoom();
     }
 
     private void OnJoinRoomClicked()
     {
         PopupManager.Instance.Show<JoinRoomPopup>();
+    }
+    
+    private void OnRoomJoined()
+    {
+        PopupManager.Instance.Hide();
+    }
+
+    private void OnRoomCreateFailed()
+    {
+        PopupManager.Instance.Hide();
     }
 }
