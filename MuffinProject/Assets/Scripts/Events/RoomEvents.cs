@@ -9,9 +9,12 @@ using UnityEngine;
 /// </summary>
 public static class RoomEvents
 {
+    public static event Action OnRoomCreating;
     public static event Action<Player> OnPlayerEntered;
     public static event Action<Player> OnPlayerLeft;
     public static event Action<List<RoomInfo>> OnRoomListUpdated;
+    
+    public static void RaiseRoomCreating() => OnRoomCreating?.Invoke();
     
     public static void RaisePlayerEntered(Player newPlayer) => OnPlayerEntered?.Invoke(newPlayer);
     

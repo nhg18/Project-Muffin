@@ -36,6 +36,8 @@ public class RoomService
     {
         RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
         string code = RandomCode.GenerateRandomCode();
+        
+        RoomEvents.RaiseRoomCreating();
         PhotonNetwork.CreateRoom(code, options);
     }
     
