@@ -4,24 +4,21 @@ using UnityEngine;
 
 public class PopupManager : SingletonPersistent<PopupManager>
 {
-    public RectTransform _popupRoot;
+    [SerializeField] private RectTransform popupRoot;
+    [SerializeField] private GameObject blockingPanel;
 
     private BasePopup _current;
-
-    protected override void Awake()
-    {
-        base.Awake();
-        _popupRoot = GetComponentInChildren<RectTransform>();
-    }
 
     public T Show<T>() where T : BasePopup
     {
         // 기존 팝업 닫기
         if (_current != null)
             Hide();
+        
+        blockingPanel.SetActive(true);
 
         var prefab = Get<T>();
-        _current = Instantiate(prefab, _popupRoot);
+        _current = Instantiate(prefab, popupRoot);
         _current.OnShow();
         return (T)_current;
     }
@@ -32,6 +29,8 @@ public class PopupManager : SingletonPersistent<PopupManager>
         _current.OnHide();
         Destroy(_current.gameObject);
         _current = null;
+        
+        blockingPanel.SetActive(false);
     }
     
     public T Get<T>() where T : BasePopup
