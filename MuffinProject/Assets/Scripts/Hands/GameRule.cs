@@ -1,12 +1,10 @@
-using DG.Tweening;
+
 using Photon.Pun;
 using Photon.Realtime;
-using System;
 using System.Collections.Generic;
-using Unity.Mathematics;
+
 using UnityEngine;
-using UnityEngine.Splines;
-using UnityEngine.XR;
+
 
 public class GameRule : SingletonPun<GameRule>
 {
@@ -20,12 +18,12 @@ public class GameRule : SingletonPun<GameRule>
     [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
 
     [Header("PlayerInfo")]
-    [SerializeField] private int playerHp = 10;
+    [SerializeField] private float playerHp = 100f;
     public bool isChapChu = false;
 
     public bool isHandMod = false;
 
-    public int startHands = 7;
+    public int startHands = 1;
 
 
     const string KEY_TURN = "turn";
@@ -107,7 +105,7 @@ public class GameRule : SingletonPun<GameRule>
         if (!PhotonNetwork.IsMasterClient) return;
         if (requesterActor != CurrentTurnActor)
         {
-            Debug.LogWarning("Requester is don't have turn");
+            Debug.LogWarning("Requester don't have turn");
             return;
         }
 
@@ -158,17 +156,32 @@ public class GameRule : SingletonPun<GameRule>
     [PunRPC]
     void RPC_Hand_Out_Cards()
     {
-        for (int i = 0; i < startHands; i++)
-        {
-            phs.draw_A_Card();
-        }
+        phs.HandOut_Cards();
     }
     
     #endregion
 
+    public void RequestAttack(int targetNumber, float value)
+    {
+        photonView.RPC(nameof(RPC_Damaged), GetPlayerByActorNumber(targetNumber), value);
+    }
+    [PunRPC]
+    void RPC_Damaged(float value)
+    {
+        playerHp -= value;
+        RefreshMyInfo();
+    }
 
 
-
+    Player GetPlayerByActorNumber(int actorNumber)
+    {
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (player.ActorNumber == actorNumber)
+                return player;
+        }
+        return null;
+    }
 
     public void RefreshMyInfo()
     {

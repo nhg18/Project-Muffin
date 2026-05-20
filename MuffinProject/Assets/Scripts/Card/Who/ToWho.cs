@@ -16,6 +16,7 @@ public class ToWho : MonoBehaviourPunCallbacks
     }
     [Header("Target")]
     [SerializeField] private TargetType Target = new TargetType();
+    [SerializeField] private float selectDuration = 30f;
 
     public IEnumerator GetTargetNumber(System.Action<List<int>> onResult)
     {
@@ -23,25 +24,47 @@ public class ToWho : MonoBehaviourPunCallbacks
         switch (Target)
         {
             case TargetType.One:
-                yield return StartCoroutine(ClickDetectionCorutine(30, clicked =>
+                yield return StartCoroutine(ClickDetectionCorutine(selectDuration, clicked =>
                 {
-                    Debug.Log($"클릭한 오브젝트: {clicked.name}");
-                    OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
-                    result.Add(oph.PlayerNumber);
+                    
+                    if (clicked != null)
+                    {
+                        Debug.Log($"클릭한 오브젝트: {clicked.name}");
+                        OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
+                        result.Add(oph.PlayerNumber);
+                    }
+                    else
+                    {
+                        result.Add(-1);
+                    }
                 }));
                 break;
             case TargetType.Two:
-                yield return StartCoroutine(ClickDetectionCorutine(30, clicked =>
+                yield return StartCoroutine(ClickDetectionCorutine(selectDuration, clicked =>
                 {
-                    Debug.Log($"클릭한 오브젝트: {clicked.name}");
-                    OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
-                    result.Add(oph.PlayerNumber);
+                    
+                    if (clicked != null)
+                    {
+                        OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
+                        result.Add(oph.PlayerNumber);
+                    }
+                    else
+                    {
+                        result.Add(-1);
+                    }
                 }));
-                yield return StartCoroutine(ClickDetectionCorutine(30, clicked =>
+                yield return StartCoroutine(ClickDetectionCorutine(selectDuration, clicked =>
                 {
-                    Debug.Log($"클릭한 오브젝트: {clicked.name}");
-                    OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
-                    result.Add(oph.PlayerNumber);
+                    
+                    if (clicked != null)
+                    {
+                        OtherPlayerHands oph = clicked.GetComponentInParent<OtherPlayerHands>();
+                        result.Add(oph.PlayerNumber);
+                    }
+                    else
+                    {
+                        result.Add(-1);
+                    }
                 }));
                 break;
             case TargetType.All_Others:
@@ -76,7 +99,6 @@ public class ToWho : MonoBehaviourPunCallbacks
 
         while (timer < duration)
         {
-            Debug.Log("TICK");
             // Update처럼 매 프레임 실행
             if (Input.GetMouseButtonDown(0))
             {
@@ -85,8 +107,12 @@ public class ToWho : MonoBehaviourPunCallbacks
 
                 if (hit.collider != null && hit.collider.CompareTag("CardBack"))
                 {
-                    Debug.Log("SELECT");
                     onResult(hit.collider.gameObject);
+                    yield break;
+                }
+                else
+                {
+                    onResult(null);
                     yield break;
                 }
             }
