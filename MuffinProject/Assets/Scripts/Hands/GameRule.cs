@@ -31,8 +31,10 @@ public class GameRule : SingletonPun<GameRule>
 
     #region UnityCallBacks
 
+
     private void Start()
     {
+        PhotonNetwork.AutomaticallySyncScene = false;
         int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
         int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
         int genCount = myActorNumber;
@@ -46,6 +48,7 @@ public class GameRule : SingletonPun<GameRule>
             oph.PlayerNumber = (genCount % playerCount + 1);
             genCount++;
         }
+        Debug.Log("나 시작했어\n" + System.Environment.StackTrace);
         StartFirstTurn();
     }
     #endregion
@@ -108,7 +111,6 @@ public class GameRule : SingletonPun<GameRule>
             Debug.LogWarning("Requester don't have turn");
             return;
         }
-
         int nextActor = GetNextActor(requesterActor);
         SetTurn(nextActor);
     }
@@ -124,6 +126,7 @@ public class GameRule : SingletonPun<GameRule>
 
     void SetTurn(int actorNumber)
     {
+        //Debug.Log("turn change");
         PhotonNetwork.CurrentRoom.SetCustomProperties(
             new ExitGames.Client.Photon.Hashtable { [KEY_TURN] = actorNumber }
         );

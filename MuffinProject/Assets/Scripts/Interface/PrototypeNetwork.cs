@@ -28,7 +28,7 @@ public class PrototypeNetwork : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.IsMasterClient) return;
         if(PhotonNetwork.CurrentRoom.PlayerCount >= 1)
         {
-            PhotonNetwork.LoadLevel("MainGame");
+            PhotonNetwork.LoadLevel("GameScene");
         }
     }
 

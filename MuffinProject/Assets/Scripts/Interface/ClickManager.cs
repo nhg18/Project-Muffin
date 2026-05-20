@@ -55,7 +55,8 @@ public class ClickManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            PlayerHandsScripts.Instance.draw_A_Card();
+            //PlayerHandsScripts.Instance.draw_A_Card();
+            GameRule.Instance.EndTurn();
         }
     }
 }
