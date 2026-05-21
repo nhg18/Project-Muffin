@@ -32,6 +32,19 @@ public class PlayerHandsScripts : MonoBehaviour
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
 
+    public void HandOut_Cards()
+    {
+        for (int i = 0; i < GameRule.Instance.startHands; i++)
+        {
+            GameObject x = Instantiate(Cards[0], HandPosition);
+            x.transform.position = drawPosition.position;
+            Hands.Add(x);
+            GameRule.Instance.MyCardsCount++;
+            PutAwayMyCards();
+        }
+        GameRule.Instance.RefreshMyInfo();
+    }
+
     public void draw_A_Card()
     {
         GameObject x = Instantiate(Cards[0], HandPosition);
@@ -54,7 +67,6 @@ public class PlayerHandsScripts : MonoBehaviour
 
     public void PutAwayMyCards()
     {
-        //HandPosition.transform.DOKill();
         float cardSpacing;
         if (Hands.Count == 0) return;
         else if (Hands.Count > 10)
@@ -84,9 +96,9 @@ public class PlayerHandsScripts : MonoBehaviour
             Quaternion localRot = Quaternion.Inverse(HandPosition.rotation) * rotation;
 
             Hands[i].transform.DOKill();
-            Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart);
+            Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]);
 
-            Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart);
+            Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]); ;
         }
         return;
 

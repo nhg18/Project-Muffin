@@ -18,7 +18,9 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     protected override void Awake()
     {
         base.Awake(); // 싱글톤 부모클래스 Awake
-        
+
+        PhotonNetwork.AutomaticallySyncScene = false;
+
         connection = new PhotonConnection();
         room = new PhotonRoom();
         

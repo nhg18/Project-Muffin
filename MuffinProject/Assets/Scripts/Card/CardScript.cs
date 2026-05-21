@@ -17,6 +17,8 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
 
     private SpriteRenderer[] childRenderers;
     private CardCondition cardCondition;
+    private ToWho toWho;
+    private CardAbility cardAbility;
 
     [Header("Drag Settings")]
     [SerializeField] private float dragScale = 1.1f;
@@ -35,6 +37,8 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     {
         childRenderers = GetComponentsInChildren<SpriteRenderer>();//order in layer controls
         cardCondition = GetComponent<CardCondition>();
+        toWho = GetComponent<ToWho>();
+        cardAbility = GetComponent<CardAbility>();
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
@@ -95,7 +99,7 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         isDragging = false;
         if (isDropArea(transform.position))
         {
-            startCard();
+            StartCoroutine(StartCard());
         }
         else
         {
@@ -105,11 +109,26 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     #endregion
 
 
-    private void startCard()
+    IEnumerator StartCard()
     {
+        List<int> result = new List<int> { 0, };
         if (cardCondition.CardConditionMet())
         {
-            //111111111111111111111111111111111111111111111111111
+            Debug.Log("플레이어 선택 시작");
+            yield return StartCoroutine(toWho.GetTargetNumber(r => result = r));
+            if (result[0] == -1)
+            {
+                Debug.Log("카드 사용 취소");
+                PlayerHandsScripts.Instance.PutAwayMyCards();
+            }
+            else
+            {
+                Debug.LogError(result[0]);
+                cardAbility.ExecuteActions(result);
+
+            }
+
+                
         }
     }
 
