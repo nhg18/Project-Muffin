@@ -261,7 +261,6 @@ namespace Photon.Pun
 
         public void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
         {
-            Debug.Log("testTEst");
             PhotonNetwork.LoadLevelIfSynced();
         }
 
