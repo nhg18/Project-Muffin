@@ -25,7 +25,7 @@ public class PopupManager : SingletonPersistent<PopupManager>
 
     public void Hide()
     {
-        if (_current == null) return;
+        if (!_current) return;
         _current.OnHide();
         Destroy(_current.gameObject);
         _current = null;
