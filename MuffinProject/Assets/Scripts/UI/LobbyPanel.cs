@@ -55,12 +55,12 @@ public class LobbyPanel : MonoBehaviour
     private void OnRoomCreateFailed(short code, string message)
     {
         PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show("방 생성에 실패했습니다.");
+        ToastPopupManager.Instance.Show(message);
     }
 
     private void OnJoinRoomFailed(short code, string message)
     {
         PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show("방 생성에 실패했습니다.");
+        ToastPopupManager.Instance.Show(message);
     }
 }

@@ -15,8 +15,6 @@ public class ToastPopupManager : SingletonPersistent<ToastPopupManager>
         if (_actives.Count >= MAX_TOASTS)
             Dismiss(_actives.First.Value);
 
-        Debug.Log(message);
-        Debug.Log($"prefab: {toastPrefab}, root: {popupRoot}");
         var toast = Instantiate(toastPrefab, popupRoot);
         toast.Setup(message, duration);
         _actives.AddLast(toast);

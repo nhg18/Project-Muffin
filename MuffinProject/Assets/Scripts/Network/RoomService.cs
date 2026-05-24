@@ -12,8 +12,7 @@ public class RoomService
     {
         if (string.IsNullOrEmpty(roomName))
         {
-            Debug.LogWarning("No room name specified");
-            RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "No room name provided");
+            RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
             return;
         }
         PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
