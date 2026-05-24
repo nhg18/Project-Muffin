@@ -9,17 +9,20 @@ using UnityEngine;
 /// </summary>
 public static class RoomEvents
 {
-    public static event Action OnRoomCreated;
-    public static event Action OnRoomCreateFailed;
-    public static event Action OnRoomJoined;
+    public static event Action OnCreatedRoom;
+    public static event Action OnCreateRoomFailed;
+    public static event Action OnJoinedRoom;
+    public static event Action<short, string> OnJoinRoomFailed;
+    public static event Action<short, string> OnJoinRandomFailed;
     public static event Action<Player> OnPlayerEntered;
     public static event Action<Player> OnPlayerLeft;
-    public static event Action<List<RoomInfo>> OnRoomListUpdated;
+    public static event Action<List<RoomInfo>> OnRoomListUpdate;
     
-    public static void RaiseRoomCreated() => OnRoomCreated?.Invoke();
-    public static void RaiseRoomCreateFailed() => OnRoomCreateFailed?.Invoke();
-    public static void RaiseRoomJoined() => OnRoomJoined?.Invoke();
+    public static void RaiseCreatedRoom() => OnCreatedRoom?.Invoke();
+    public static void RaiseCreateRoomFailed() => OnCreateRoomFailed?.Invoke();
+    public static void RaiseJoinedRoom() => OnJoinedRoom?.Invoke();
+    public static void RaiseJoinRoomFailed(short returnCode, string message) => OnJoinRoomFailed?.Invoke(returnCode, message);
     public static void RaisePlayerEntered(Player newPlayer) => OnPlayerEntered?.Invoke(newPlayer);
     public static void RaisePlayerLeft(Player newPlayer) => OnPlayerLeft?.Invoke(newPlayer);
-    public static void RaiseRoomListUpdate(List<RoomInfo> roomList) => OnRoomListUpdated?.Invoke(roomList);
+    public static void RaiseRoomListUpdate(List<RoomInfo> roomList) => OnRoomListUpdate?.Invoke(roomList);
 }

@@ -18,7 +18,7 @@ public class RoomCallback
     public void OnCreatedRoom()
     {
         Debug.Log("On Created Room" + PhotonNetwork.CurrentRoom.Name);
-        RoomEvents.RaiseRoomCreated();
+        RoomEvents.RaiseCreatedRoom();
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class RoomCallback
                 _service.CreateRoom();
                 return;
         }
-        RoomEvents.RaiseRoomCreateFailed();
+        RoomEvents.RaiseCreateRoomFailed();
     }
     
     /// <summary>
@@ -45,9 +45,8 @@ public class RoomCallback
     public void OnJoinedRoom()
     {
         Debug.Log("On Joined Room");
-        PopupManager.Instance.Hide();
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
-        RoomEvents.RaiseRoomJoined();
+        RoomEvents.RaiseJoinedRoom();
     }
     
     /// <summary>

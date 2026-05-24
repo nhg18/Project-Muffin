@@ -20,8 +20,8 @@ public class LobbyPanel : MonoBehaviour
         joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
         
         // RoomEvents.OnRoomCreating += 
-        RoomEvents.OnRoomJoined += OnRoomJoined;
-        RoomEvents.OnRoomCreateFailed += OnRoomCreateFailed;
+        RoomEvents.OnJoinedRoom += OnRoomJoined;
+        RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
     }
 
     private void OnDisable()
@@ -30,8 +30,8 @@ public class LobbyPanel : MonoBehaviour
         joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
         
         // RoomEvents.OnRoomCreating -= 
-        RoomEvents.OnRoomJoined -= OnRoomJoined;
-        RoomEvents.OnRoomCreateFailed -= OnRoomCreateFailed;
+        RoomEvents.OnJoinedRoom -= OnRoomJoined;
+        RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
     }
 
     private void OnCreateRoomClicked()
