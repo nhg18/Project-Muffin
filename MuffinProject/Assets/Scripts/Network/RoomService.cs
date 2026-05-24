@@ -1,6 +1,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using WebSocketSharp;
 
 public class RoomService
 {
@@ -9,6 +10,12 @@ public class RoomService
     /// </summary>
     public void JoinRoom(string roomName)
     {
+        if (string.IsNullOrEmpty(roomName))
+        {
+            Debug.LogWarning("No room name specified");
+            RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "No room name provided");
+            return;
+        }
         PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
     }
     
@@ -36,7 +43,7 @@ public class RoomService
         RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
         string code = RandomCode.GenerateRandomCode();
         
-        PhotonNetwork.CreateRoom(code, options);
+        PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
     }
     
     /// <summary>

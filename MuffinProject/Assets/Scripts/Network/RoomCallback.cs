@@ -35,7 +35,7 @@ public class RoomCallback
                 _service.CreateRoom();
                 return;
         }
-        RoomEvents.RaiseCreateRoomFailed();
+        RoomEvents.RaiseCreateRoomFailed(returnCode, message);
     }
     
     /// <summary>
@@ -65,6 +65,7 @@ public class RoomCallback
     public void OnJoinRoomFailed(short returnCode, string message)
     {
         Debug.Log($"On Join Room Failed: {message}");
+        RoomEvents.RaiseJoinRoomFailed(returnCode, message);
     }
 
     /// <summary>

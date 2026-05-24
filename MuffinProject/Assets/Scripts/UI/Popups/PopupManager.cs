@@ -5,15 +5,14 @@ using UnityEngine;
 public class PopupManager : SingletonPersistent<PopupManager>
 {
     [SerializeField] private RectTransform popupRoot;
-    [SerializeField] private GameObject blockingPanel;
     
     private readonly Stack<BasePopup> _stack = new();
 
-//Todo: 팝업 스택으로 만들어서 팝업 여러개 띄울 수 있게
     public T Show<T>() where T : BasePopup
     {
-        var prefab = Get<T>();
+        var prefab = PopupRegistry.Get<T>();
         var popup = Instantiate(prefab, popupRoot);
+        
         popup.OnShow();
         _stack.Push(popup);
         return popup;
@@ -39,9 +38,4 @@ public class PopupManager : SingletonPersistent<PopupManager>
     }
     
     public bool HasPopup => _stack.Count > 0;
-    
-    public T Get<T>() where T : BasePopup
-    {
-        return Resources.Load<T>($"Popups/{typeof(T).Name}");
-    }
 }

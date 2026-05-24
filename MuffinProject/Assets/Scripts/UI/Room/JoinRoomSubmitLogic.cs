@@ -14,7 +14,8 @@ public class JoinRoomSubmitLogic : MonoBehaviour, ISubmitLogic
 
     public void Execute(TMP_InputField input)
     {
+        Debug.Log("Clicked Join");
         PopupManager.Instance.Show<LoadingPopup>();
-        NetworkManager.Instance.JoinRoom(input.text.Trim());
+        NetworkManager.Instance.JoinRoom(input.text);
     }
 }
