@@ -168,6 +168,7 @@ public class GameRule : SingletonPun<GameRule>
     {
         photonView.RPC(nameof(RPC_Damaged), GetPlayerByActorNumber(targetNumber), value);
     }
+
     [PunRPC]
     void RPC_Damaged(float value)
     {
