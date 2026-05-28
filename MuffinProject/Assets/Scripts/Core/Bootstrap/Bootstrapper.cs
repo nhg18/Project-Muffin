@@ -8,10 +8,10 @@ public class Bootstrapper : MonoBehaviour
 {
     private void Awake()
     {
-        if (PlayerPrefs.HasKey(PlayerPrefsKeys.playerName))
-        {
-            PlayerData.Nickname = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
-        }
+        // if (PlayerPrefs.HasKey(PlayerPrefsKeys.playerName))
+        // {
+        //     PlayerData.Nickname = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
+        // }
     }
 
     private void Start()
