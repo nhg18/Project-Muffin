@@ -49,7 +49,7 @@ public class ConnectionService
         }
         
         PhotonNetwork.NickName = nickname;
-        PlayerData.Nickname = nickname; // PlayerData 클라이언트 내부 닉네임
+        // PlayerData.Nickname = nickname; // PlayerData 클라이언트 내부 닉네임
         PlayerPrefs.SetString(PlayerPrefsKeys.playerName, nickname);
     }
 }
