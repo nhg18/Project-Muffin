@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using TMPro;
+using UI.Components;
 using UI.Interfaces;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -16,6 +17,11 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
 
     private string _errorMessage = string.Empty;
     private Coroutine _currentCoroutine;
+
+    private void Start()
+    {
+        errorText.gameObject.SetActive(false);
+    }
 
     public void Init(TMP_InputField input)
     {
@@ -38,10 +44,10 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
             ShowError(_errorMessage);
             return;
         }
-        
+
+        NetworkManager.Instance.Connect();
+        PopupManager.Instance.Show<LoadingPopup>();
         NetworkManager.Instance.SetNickname(text); // 네트워크 닉네임
-        PlayerData.Nickname = text;                // PlayerData 클라이언트 내부 닉네임
-        SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
     }
 
     private bool ValidateNickname(string nickname)
@@ -101,11 +107,6 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
     private void UpdateCount(string text)
     {
         countText.text = $"{text.Length} / {maxLength}";
-    }
-
-    private void Start()
-    {
-        errorText.gameObject.SetActive(false);
     }
 
     public void ShowError(string message)

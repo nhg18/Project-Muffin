@@ -29,13 +29,15 @@ public class NetworkManager : SingletonPersistentPun<NetworkManager>
     
     private void Start()
     {
-        connection.service.Connect(); // 네트워크 접속
+        // connection.service.Connect(); // 네트워크 접속 -> 접속 버튼 대체
         
         connection.service.SetupInitNickname(); // 초기 닉네임 설정
     }
     
     // 퍼블릭 메서드
     #region Public Methods
+
+    public void Connect() => connection.service.Connect();
     
     public void SetNickname(string nickname) => connection.service.SetNickname(nickname);
     
