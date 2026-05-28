@@ -23,7 +23,7 @@ namespace UI.Components
 
         protected override void OnCancel()
         {
-            PopupManager.Instance.Hide();
+            Close();
         }
     }
 }

@@ -5,36 +5,37 @@ using UnityEngine;
 public class PopupManager : SingletonPersistent<PopupManager>
 {
     [SerializeField] private RectTransform popupRoot;
-    [SerializeField] private GameObject blockingPanel;
+    
+    private readonly Stack<BasePopup> _stack = new();
 
-    private BasePopup _current;
-//Todo: 팝업 스택으로 만들어서 팝업 여러개 띄울 수 있게
     public T Show<T>() where T : BasePopup
     {
-        // 기존 팝업 닫기
-        if (_current != null)
-            Hide();
+        var prefab = PopupRegistry.Get<T>();
+        var popup = Instantiate(prefab, popupRoot);
         
-        blockingPanel.SetActive(true);
-
-        var prefab = Get<T>();
-        _current = Instantiate(prefab, popupRoot);
-        _current.OnShow();
-        return (T)_current;
+        popup.OnShow();
+        _stack.Push(popup);
+        return popup;
     }
 
     public void Hide()
     {
-        if (_current == null) return;
-        _current.OnHide();
-        Destroy(_current.gameObject);
-        _current = null;
-        
-        blockingPanel.SetActive(false);
+        if (_stack.Count == 0) return;
+
+        var top = _stack.Pop();
+        top.OnHide();
+        Destroy(top.gameObject);
+    }
+
+    public void HideAll()
+    {
+        while (_stack.Count > 0)
+        {
+            var top = _stack.Pop();
+            top.OnHide();
+            Destroy(top.gameObject);
+        }
     }
     
-    public T Get<T>() where T : BasePopup
-    {
-        return Resources.Load<T>($"Popups/{typeof(T).Name}");
-    }
+    public bool HasPopup => _stack.Count > 0;
 }

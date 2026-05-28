@@ -20,8 +20,9 @@ public class LobbyPanel : MonoBehaviour
         joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
         
         // RoomEvents.OnRoomCreating += 
-        RoomEvents.OnRoomJoined += OnRoomJoined;
-        RoomEvents.OnRoomCreateFailed += OnRoomCreateFailed;
+        RoomEvents.OnJoinedRoom += OnRoomJoined;
+        RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
+        RoomEvents.OnJoinRoomFailed += OnJoinRoomFailed;
     }
 
     private void OnDisable()
@@ -30,8 +31,9 @@ public class LobbyPanel : MonoBehaviour
         joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
         
         // RoomEvents.OnRoomCreating -= 
-        RoomEvents.OnRoomJoined -= OnRoomJoined;
-        RoomEvents.OnRoomCreateFailed -= OnRoomCreateFailed;
+        RoomEvents.OnJoinedRoom -= OnRoomJoined;
+        RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
+        RoomEvents.OnJoinRoomFailed -= OnJoinRoomFailed;
     }
 
     private void OnCreateRoomClicked()
@@ -47,11 +49,18 @@ public class LobbyPanel : MonoBehaviour
     
     private void OnRoomJoined()
     {
-        PopupManager.Instance.Hide();
+        PopupManager.Instance.HideAll(); // LoadingPopup, JoinRoomPopup 모두 제거
     }
 
-    private void OnRoomCreateFailed()
+    private void OnRoomCreateFailed(short code, string message)
     {
-        PopupManager.Instance.Hide();
+        PopupManager.Instance.Hide(); // LoadingPopup 제거
+        ToastPopupManager.Instance.Show(message);
+    }
+
+    private void OnJoinRoomFailed(short code, string message)
+    {
+        PopupManager.Instance.Hide(); // LoadingPopup 제거
+        ToastPopupManager.Instance.Show(message);
     }
 }
