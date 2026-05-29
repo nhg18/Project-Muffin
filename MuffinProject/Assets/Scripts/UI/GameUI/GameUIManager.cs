@@ -11,6 +11,7 @@ public class GameUIManager : Singleton<GameUIManager>
     [SerializeField] private Transform[] slotParents =  new Transform[4];
 
     private readonly Dictionary<int, GamePlayerInfoUI> actorToUI = new();
+    private readonly Dictionary<int, PlayerInfoData> cachedData = new();
 
     // ─────────────────────────────────────────
     // 시작 시 전체 생성
@@ -29,16 +30,17 @@ public class GameUIManager : Singleton<GameUIManager>
         {
             int wrappedIndex = (localIndex + i) % playerList.Length;
             var player = playerList[wrappedIndex];
-            if (slotIndex >= slotParents.Length)
-            {
-                slotIndex = 0;
-            }
-
+            if (slotIndex >= slotParents.Length) slotIndex = 0;
+            
             var ui = Instantiate(playerInfoPrefab, slotParents[slotIndex]);
             actorToUI[player.ActorNumber] = ui;
 
-            var data = PlayerInfoData.FromPhoton(player, player.CustomProperties);
-            ui.Refresh(data);
+            cachedData[player.ActorNumber] = new PlayerInfoData
+            {
+                Nickname = player.NickName
+            };
+            
+            ui.Refresh(cachedData[player.ActorNumber]);
 
             slotIndex++;
         }
@@ -51,11 +53,23 @@ public class GameUIManager : Singleton<GameUIManager>
     /// <summary>
     /// 특정 플레이어 UI 갱신 — OnPlayerPropertiesUpdate에서 호출
     /// </summary>
-    public void RefreshPlayerInfo(Player player)
+    public void RefreshPlayerInfo(Player player, ExitGames.Client.Photon.Hashtable changedProps)
     {
         if (!actorToUI.TryGetValue(player.ActorNumber, out var ui)) return;
 
-        var data = PlayerInfoData.FromPhoton(player, player.CustomProperties);
+        // 기존 캐시 가져오기 (없으면 새로 생성)
+        if (!cachedData.TryGetValue(player.ActorNumber, out var data))
+            data = new PlayerInfoData();
+
+        // 닉네임은 항상 최신으로
+        data.Nickname = player.NickName;
+
+        // changedProps에 있는 키만 덮어쓰기 (없는 키는 이전 값 유지)
+        if (changedProps.TryGet("PlayerHP",   out int hp))    data.HP         = hp;
+        if (changedProps.TryGet("CardsCount", out int cards)) data.CardsCount = cards;
+        if (changedProps.TryGet("isChapChu",  out bool trap)) data.IsChapChu  = trap;
+
+        cachedData[player.ActorNumber] = data;
         ui.Refresh(data);
     }
 }
