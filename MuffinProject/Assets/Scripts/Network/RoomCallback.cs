@@ -45,8 +45,9 @@ public class RoomCallback
     public void OnJoinedRoom()
     {
         Debug.Log("On Joined Room");
-        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
         RoomEvents.RaiseJoinedRoom();
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
+        PopupManager.Instance.HideAll();
     }
     
     /// <summary>

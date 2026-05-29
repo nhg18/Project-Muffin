@@ -33,6 +33,7 @@ public class PopupManager : SingletonPersistent<PopupManager>
         {
             var top = _stack.Pop();
             top.OnHide();
+            Debug.Log(top.gameObject.name + " delete");
             Destroy(top.gameObject);
         }
     }

@@ -49,6 +49,7 @@ public class LobbyPanel : MonoBehaviour
     
     private void OnRoomJoined()
     {
+        Debug.Log("OnRoomJoined");
         PopupManager.Instance.HideAll(); // LoadingPopup, JoinRoomPopup 모두 제거
     }
 

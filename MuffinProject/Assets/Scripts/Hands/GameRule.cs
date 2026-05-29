@@ -50,6 +50,8 @@ public class GameRule : SingletonPun<GameRule>
         }
         Debug.Log("나 시작했어\n" + System.Environment.StackTrace);
         StartFirstTurn();
+        
+        RefreshMyInfo(); // 초기 게임씬에서 정보 공유
     }
     #endregion
 
