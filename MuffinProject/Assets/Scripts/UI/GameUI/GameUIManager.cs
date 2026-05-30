@@ -10,6 +10,7 @@ public class GameUIManager : Singleton<GameUIManager>
     [SerializeField] private GamePlayerInfoUI playerInfoPrefab;
     [SerializeField] private Transform[] slotParents =  new Transform[4];
 
+    private GamePlayerInfoUI localPlayerUI;
     private readonly Dictionary<int, GamePlayerInfoUI> actorToUI = new();
     private readonly Dictionary<int, PlayerInfoData> cachedData = new();
 
@@ -19,9 +20,16 @@ public class GameUIManager : Singleton<GameUIManager>
 
     private void Start()
     {
-        var playerList = PhotonNetwork.PlayerList; // ActorNumber 순 정렬
+        // 슬롯 0 : 로컬 플레이어 UI
+        localPlayerUI = Instantiate(playerInfoPrefab, slotParents[0]);
+        localPlayerUI.Refresh(new PlayerInfoData
+        {
+            Nickname = PhotonNetwork.LocalPlayer.NickName + "(나)"
+        });
     
+        // 슬롯 1~ : 다른 플레이어 UI 생성
         // 로컬 플레이어의 인덱스 찾기
+        var playerList = PhotonNetwork.PlayerList; // ActorNumber 순 정렬
         int localIndex = System.Array.FindIndex(playerList, p => p.IsLocal);
         int slotIndex = 1;
 
@@ -41,11 +49,23 @@ public class GameUIManager : Singleton<GameUIManager>
             };
             
             ui.Refresh(cachedData[player.ActorNumber]);
-
             slotIndex++;
         }
     }
+    
+    public void RefreshLocalPlayerInfo(float hp, int cardsCount, bool isChapChu)
+    {
+        if (localPlayerUI == null) return;
 
+        localPlayerUI.Refresh(new PlayerInfoData
+        {
+            Nickname   = PhotonNetwork.LocalPlayer.NickName + "(나)",
+            HP         = hp,
+            CardsCount = cardsCount,
+            IsChapChu  = isChapChu
+        });
+    }
+    
     // ─────────────────────────────────────────
     // OtherPlayerHands에서 호출하는 메서드
     // ─────────────────────────────────────────
@@ -65,7 +85,7 @@ public class GameUIManager : Singleton<GameUIManager>
         data.Nickname = player.NickName;
 
         // changedProps에 있는 키만 덮어쓰기 (없는 키는 이전 값 유지)
-        if (changedProps.TryGet("PlayerHP",   out int hp))    data.HP         = hp;
+        if (changedProps.TryGet("PlayerHP",   out float hp))    data.HP         = hp;
         if (changedProps.TryGet("CardsCount", out int cards)) data.CardsCount = cards;
         if (changedProps.TryGet("isChapChu",  out bool trap)) data.IsChapChu  = trap;
 

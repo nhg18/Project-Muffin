@@ -24,7 +24,7 @@ public class GamePlayerInfoUI : MonoBehaviour
             nicknameText.text = nickname;
     }
 
-    private void SetHP(int hp)
+    private void SetHP(float hp)
     {
         if (hpText != null)
             hpText.text = $"{hp}";

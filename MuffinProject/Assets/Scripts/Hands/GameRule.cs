@@ -198,6 +198,7 @@ public class GameRule : SingletonPun<GameRule>
                 ["isChapChu"] = isChapChu
             }
         );
+        GameUIManager.Instance?.RefreshLocalPlayerInfo(playerHp, MyCardsCount, isChapChu);
     }
 
 }

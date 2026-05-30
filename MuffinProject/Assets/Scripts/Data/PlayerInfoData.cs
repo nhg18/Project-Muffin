@@ -5,7 +5,7 @@ using UnityEngine;
 public class PlayerInfoData
 {
     public string Nickname;
-    public int    HP;
+    public float  HP;
     public int    CardsCount;
     public bool   IsChapChu;   // 함정 카드 보유 여부
     /// <summary>
@@ -18,7 +18,7 @@ public class PlayerInfoData
         var data = new PlayerInfoData
         {
             Nickname   = player.NickName,
-            HP         = props.TryGet("PlayerHP",    out int hp)    ? hp    : 0,
+            HP         = props.TryGet("PlayerHP",    out float hp)    ? hp    : 0f,
             CardsCount = props.TryGet("CardsCount",  out int cards) ? cards : 0,
             IsChapChu  = props.TryGet("isChapChu",   out bool trap) && trap,
         };
