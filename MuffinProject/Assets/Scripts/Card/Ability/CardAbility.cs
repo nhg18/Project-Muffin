@@ -53,7 +53,7 @@ public class CardAbility : MonoBehaviour
     private void Attack(int targetNumber)
     {
         Attack_effect();
-        GameRule.Instance.RequestAttack(targetNumber,card_damage);
+        //GameRule.Instance.RequestAttack(targetNumber,card_damage);
     }
     private void Attack_effect()
     {

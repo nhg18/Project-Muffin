@@ -165,17 +165,17 @@ public class GameRule : SingletonPun<GameRule>
     
     #endregion
 
-    public void RequestAttack(int targetNumber, float value)
-    {
-        photonView.RPC(nameof(RPC_Damaged), GetPlayerByActorNumber(targetNumber), value);
-    }
+    //public void RequestAttack(int targetNumber, float value)
+    //{
+    //    photonView.RPC(nameof(RPC_Damaged), GetPlayerByActorNumber(targetNumber), value);
+    //}
 
-    [PunRPC]
-    void RPC_Damaged(float value)
-    {
-        playerHp -= value;
-        RefreshMyInfo();
-    }
+    //[PunRPC]
+    //void RPC_Damaged(float value)
+    //{
+    //    playerHp -= value;
+    //    RefreshMyInfo();
+    //}
 
 
     Player GetPlayerByActorNumber(int actorNumber)

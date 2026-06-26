@@ -1,6 +1,7 @@
 using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Splines.ExtrusionShapes;
@@ -102,8 +103,9 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         isDragging = false;
         if (isDropArea(transform.position)&& cardCondition.CardConditionMet())
         {
-            
-            StartCoroutine(StartCard());
+
+            //StartCoroutine(StartCard());
+            StartCard();
         }
         else
         {
@@ -113,12 +115,13 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     #endregion
 
 
-    IEnumerator StartCard()
+    async void StartCard()
     {
         List<int> result = new List<int> { 0, };
         
         Debug.Log("플레이어 선택 시작");
-        yield return StartCoroutine(toWho.GetTargetNumber(r => result = r));
+        //yield return StartCoroutine(toWho.GetTargetNumber(r => result = r));
+        result = await toWho.GetTargetNum();
         if (result[0] == -1)
         {
             Debug.Log("카드 사용 취소");
