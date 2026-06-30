@@ -36,6 +36,13 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     private bool isDragging = false;
     private float zDepth;
 
+    private CardAbility[] abilities;
+
+    void Awake()
+    {
+        // 인스펙터에 붙은 모든 CardAbility 스크립트를 가져옴
+        abilities = GetComponents<CardAbility>();
+    }
 
     private void Start()
     {

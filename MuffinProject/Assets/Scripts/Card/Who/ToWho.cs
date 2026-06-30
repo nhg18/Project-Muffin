@@ -124,7 +124,7 @@ public class ToWho : MonoBehaviourPunCallbacks
     //}
 
 
-    public async Task<List<int>> GetTargetNum()
+    public async Task<List<int>> GetTargetNum()//턴종료, 게임종료, 튕김시 CancellationToken 필요
     {
         List<int> result = new List<int>();
         switch (Target)
