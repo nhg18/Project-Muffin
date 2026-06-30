@@ -240,6 +240,7 @@ MonoBehaviour:
   dragSortingOrder: 10
   returnSpeed: 0.15
   DropArea: {fileID: 0}
+  cardID: 1
 --- !u!114 &4774311572242445914
 MonoBehaviour:
   m_ObjectHideFlags: 0

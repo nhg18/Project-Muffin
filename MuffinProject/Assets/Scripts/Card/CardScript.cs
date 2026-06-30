@@ -20,9 +20,9 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     private CardCondition cardCondition;
     private ToWho toWho;
     private CardAbility cardAbility;
-    private int id;
+    private int hand_id;
 
-    public void setId(int id) { this.id = id; }
+    public void setId(int id) { this.hand_id = id; }
 
     [Header("Drag Settings")]
     [SerializeField] private float dragScale = 1.1f;
@@ -37,6 +37,10 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     private float zDepth;
 
     private CardAbility[] abilities;
+
+
+    [Header("Card ID")]
+    [SerializeField] private int cardID = 0;
 
     void Awake()
     {
@@ -139,7 +143,7 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         {
             Debug.LogError(result[0]);
             cardAbility.ExecuteActions(result);
-            PlayerHandsScripts.Instance.destoryCards(id);
+            PlayerHandsScripts.Instance.destoryCards(hand_id);
         }
 
                 
