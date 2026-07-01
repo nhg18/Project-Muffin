@@ -21,7 +21,7 @@ public class PlayerHandsScripts : MonoBehaviour
     }
 
     [Header("Cards of this game")]
-    [SerializeField] List<GameObject> Cards = new List<GameObject>();
+    public List<GameObject> Cards = new List<GameObject>();
 
     [Header("Hands of Player")]
     [SerializeField] Dictionary<int, GameObject> Hands = new Dictionary<int, GameObject>();

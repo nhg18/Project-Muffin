@@ -45,6 +45,7 @@ MonoBehaviour:
   - RPC_RequestNextTurn
   - RPC_Damaged
   - RPC_RequestPush
+  - RPC_BroadcastPush
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

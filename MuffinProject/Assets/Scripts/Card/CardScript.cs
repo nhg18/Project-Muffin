@@ -40,7 +40,7 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
 
 
     [Header("Card ID")]
-    [SerializeField] private int cardID = 0;
+    public int cardID = 0;
 
     void Awake()
     {
@@ -142,7 +142,8 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         else
         {
             Debug.LogError(result[0]);
-            cardAbility.ExecuteActions(result);
+            //cardAbility.ExecuteActions(result);
+            CardSystem.Instance.RequestPlayCard(cardID,result);
             PlayerHandsScripts.Instance.destoryCards(hand_id);
         }
 
