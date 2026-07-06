@@ -36,7 +36,7 @@ public class PlayerHandsScripts : MonoBehaviour
     {
         for (int i = 0; i < GameRule.Instance.startHands; i++)
         {
-            GameObject x = Instantiate(Cards[0], HandPosition);
+            GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
             x.transform.position = drawPosition.position;
             int id = nextId++;
             x.GetComponent<CardScript>().setId(id);
@@ -49,7 +49,7 @@ public class PlayerHandsScripts : MonoBehaviour
 
     public void draw_A_Card()
     {
-        GameObject x = Instantiate(Cards[0], HandPosition);
+        GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
         x.transform.position = drawPosition.position;
         int id = nextId++;
         x.GetComponent<CardScript>().setId(id);

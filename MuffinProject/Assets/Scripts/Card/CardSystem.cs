@@ -34,6 +34,19 @@ public class CardSystem : SingletonPun<CardSystem>
         return null;
     }
 
+    public void RequestCancelNext()
+    {
+        if (chainList.Count >= 2)
+        {
+            chainList[chainList.Count - 2].isCanceled = true;
+            Debug.Log("취소 성공");
+        }
+        else
+        {
+            Debug.Log("오류! 체인리스트");
+        }
+    }
+
     public void RequestPlayCard(int cardID, List<int> targetPlayerNumber)
     {
         photonView.RPC("RPC_RequestPush", RpcTarget.MasterClient, cardID, targetPlayerNumber.ToArray());
@@ -93,19 +106,36 @@ public class CardSystem : SingletonPun<CardSystem>
     [PunRPC]
     private void RPC_ResolveChain()
     {
-        for(int i = chainList.Count - 1; i >= 0; i--)
+        StartCoroutine(ResolveChainRoutine());
+    }
+    private IEnumerator ResolveChainRoutine()
+    {
+        for (int i = chainList.Count - 1; i >= 0; i--)
         {
             GameObject popcard = FindCard(chainList[i].cardID);
-            chainList.RemoveAt(0);
+            Debug.Log("cardpop" + chainList[i].cardID);
+            
             if (popcard != null)
             {
-                GameObject a = Instantiate(popcard, spawnPosition, Quaternion.identity);
-                Destroy(a, 4f);
+                if (!chainList[i].isCanceled)
+                {
+                    GameObject a = Instantiate(popcard, spawnPosition, Quaternion.identity);
+                    a.GetComponent<Card_Effect>().Excute(chainList[i].usePlayerNumber, chainList[i].targetPlayerNumber);
+                    Destroy(a, 2.5f);
+                }
+                else
+                {
+                    Debug.Log("카드 취소");
+                }
+
+
             }
             else
             {
                 Debug.LogWarning("일치하는 카드 없음");
             }
+            chainList.RemoveAt(i);
+            yield return new WaitForSeconds(2.5f);
         }
         chainList.Clear();
     }

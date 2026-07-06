@@ -4,5 +4,5 @@ using UnityEngine;
 
 public abstract class Card_Effect : MonoBehaviour
 {
-    public abstract void Excute(int casterViewID, int targetViewID);
+    public abstract void Excute(int casterViewID, int []targetViewID);
 }
