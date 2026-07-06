@@ -26,7 +26,7 @@ namespace Network
     
         private void Start()
         {
-            // connection.service.Connect(); // 네트워크 접속 -> 접속 버튼 대체
+            // _connection.Connect();
         }
     
         // 퍼블릭 메서드

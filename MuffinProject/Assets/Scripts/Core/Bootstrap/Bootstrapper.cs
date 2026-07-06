@@ -8,7 +8,6 @@ public class Bootstrapper : MonoBehaviour
 {
     private void Start()
     {
-        // SceneManager.LoadScene(ScenePaths.Get(SceneType.Title));
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Title));
     }
 }

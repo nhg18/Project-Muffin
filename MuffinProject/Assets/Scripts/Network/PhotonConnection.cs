@@ -53,8 +53,6 @@ namespace Network
             Debug.Log("On Connected To Master");
             // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 없어도 됨.
             ConnectionEvents.RaiseConnected(true);
-            PopupManager.Instance.Hide();
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
         }
 
         /// <summary>

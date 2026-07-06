@@ -87,8 +87,11 @@ namespace Network
         {
             Debug.Log("On Joined Room");
             RoomEvents.RaiseJoinedRoom();
+            
+            int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
+            NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
+            
             SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
-            PopupManager.Instance.HideAll();
         }
     
         /// <summary>
@@ -98,7 +101,8 @@ namespace Network
         public void OnLeftRoom()
         {
             Debug.Log("On Left Room");
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
+            // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
+            SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby));
         }
     
         /// <summary>
