@@ -1,6 +1,7 @@
 using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Splines.ExtrusionShapes;
@@ -17,6 +18,11 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
 
     private SpriteRenderer[] childRenderers;
     private CardCondition cardCondition;
+    private ToWho toWho;
+    private CardAbility cardAbility;
+    private int hand_id;
+
+    public void setId(int id) { this.hand_id = id; }
 
     [Header("Drag Settings")]
     [SerializeField] private float dragScale = 1.1f;
@@ -30,11 +36,24 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     private bool isDragging = false;
     private float zDepth;
 
+    private CardAbility[] abilities;
+
+
+    [Header("Card ID")]
+    public int cardID = 0;
+
+    void Awake()
+    {
+        // 인스펙터에 붙은 모든 CardAbility 스크립트를 가져옴
+        abilities = GetComponents<CardAbility>();
+    }
 
     private void Start()
     {
         childRenderers = GetComponentsInChildren<SpriteRenderer>();//order in layer controls
         cardCondition = GetComponent<CardCondition>();
+        toWho = GetComponent<ToWho>();
+        cardAbility = GetComponent<CardAbility>();
         spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
@@ -62,9 +81,9 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
         if (!GameRule.Instance.isHandMod)
             return;
 
-        originalPosition = transform.position;
+        originalPosition = transform.localPosition;
 
-        zDepth = Camera.main.WorldToScreenPoint(transform.position).z;
+        zDepth = Camera.main.WorldToScreenPoint(transform.localPosition).z;
 
         isDragging = true;
         Debug.Log("클릭");
@@ -93,9 +112,11 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
 
         if (!isDragging) return;
         isDragging = false;
-        if (isDropArea(transform.position))
+        if (isDropArea(transform.position)&& cardCondition.CardConditionMet())
         {
-            startCard();
+
+            //StartCoroutine(StartCard());
+            StartCard();
         }
         else
         {
@@ -105,29 +126,46 @@ public class CardScript : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoi
     #endregion
 
 
-    private void startCard()
+    async void StartCard()
     {
-        if (cardCondition.CardConditionMet())
+        List<int> result = new List<int> { 0, };
+        
+        Debug.Log("플레이어 선택 시작");
+        //yield return StartCoroutine(toWho.GetTargetNumber(r => result = r));
+        result = await toWho.GetTargetNum();
+        if (result[0] == -1)
         {
-            //111111111111111111111111111111111111111111111111111
+            Debug.Log("카드 사용 취소");
+            StartCoroutine(ReturnToOrigin());
+            //PlayerHandsScripts.Instance.PutAwayMyCards();
         }
+        else
+        {
+            Debug.LogError(result[0]);
+            //cardAbility.ExecuteActions(result);
+            CardSystem.Instance.RequestPlayCard(cardID,result);
+            PlayerHandsScripts.Instance.destoryCards(hand_id);
+        }
+
+                
+        
     }
 
     private System.Collections.IEnumerator ReturnToOrigin()
     {
-        Vector3 startPos = transform.position;
+        Vector3 startPos = transform.localPosition;
         float elapsed = 0f;
 
         while (elapsed < returnSpeed)
         {
             float t = elapsed / returnSpeed;
             t = t * t * (3f - 2f * t); // Smoothstep 보간
-            transform.position = Vector3.Lerp(startPos, originalPosition, t);
+            transform.localPosition = Vector3.Lerp(startPos, originalPosition, t);
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        transform.position = originalPosition;
+        transform.localPosition = originalPosition;
     }
 
     private bool isDropArea(Vector2 position)

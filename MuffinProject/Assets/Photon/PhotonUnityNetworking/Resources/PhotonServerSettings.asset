@@ -43,6 +43,11 @@ MonoBehaviour:
   - RequestAdvanceTurn
   - RPC_Hand_Out_Cards
   - RPC_RequestNextTurn
+  - RPC_Damaged
+  - RPC_RequestPush
+  - RPC_BroadcastPush
+  - RPC_ResolveChain
+  - RPC_CancelNext
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

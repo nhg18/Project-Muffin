@@ -7,6 +7,7 @@ public class CardCondition : MonoBehaviour
 {
     public enum ConditionType
     {
+        NoCondition,
         IsMyTurn,
         AmIChapchu
     }
@@ -20,9 +21,15 @@ public class CardCondition : MonoBehaviour
     {
         conditionMap = new Dictionary<ConditionType, Func<bool>>
         {
+            {ConditionType.NoCondition, NoCondition },
             {ConditionType.IsMyTurn, IsMyTurn },
             {ConditionType.AmIChapchu, AmIChapchu }
         };
+    }
+
+    bool NoCondition()
+    {
+        return true;
     }
 
     bool IsMyTurn()

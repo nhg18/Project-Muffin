@@ -1,10 +1,9 @@
-
 using DG.Tweening;
 using System.Collections.Generic; 
 using UnityEngine;
-
 using Unity.Mathematics;
 using UnityEngine.Splines;
+using System.Linq;
 
 
 public class PlayerHandsScripts : MonoBehaviour
@@ -22,39 +21,70 @@ public class PlayerHandsScripts : MonoBehaviour
     }
 
     [Header("Cards of this game")]
-    [SerializeField] List<GameObject> Cards = new List<GameObject>();
+    public List<GameObject> Cards = new List<GameObject>();
 
     [Header("Hands of Player")]
-    [SerializeField] List<GameObject> Hands = new List<GameObject>();
+    [SerializeField] Dictionary<int, GameObject> Hands = new Dictionary<int, GameObject>();
+    private int nextId = 0;
 
     [Header("GameObjects")]
     [SerializeField] SplineContainer splineContainer;
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
 
+    public void HandOut_Cards()
+    {
+        for (int i = 0; i < GameRule.Instance.startHands; i++)
+        {
+            GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
+            x.transform.position = drawPosition.position;
+            int id = nextId++;
+            x.GetComponent<CardScript>().setId(id);
+            Hands[id] = x;
+            GameRule.Instance.MyCardsCount++;
+            PutAwayMyCards();
+        }
+        GameRule.Instance.RefreshMyInfo();
+    }
+
     public void draw_A_Card()
     {
-        GameObject x = Instantiate(Cards[0], HandPosition);
+        GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
         x.transform.position = drawPosition.position;
-        Hands.Add(x);
+        int id = nextId++;
+        x.GetComponent<CardScript>().setId(id);
+        Hands[id] = x;
         GameRule.Instance.MyCardsCount++;
         PutAwayMyCards();
         GameRule.Instance.RefreshMyInfo();
     }
-    public void destoryCards(int number)
+    public void destoryCards(int id)
     {
-        Destroy(Hands[number]);
-        Hands.RemoveAt(number);
-        GameRule.Instance.MyCardsCount--;
-        PutAwayMyCards();
-        GameRule.Instance.RefreshMyInfo();
+        if (Hands.TryGetValue(id, out GameObject obj))
+        {
+            Destroy(obj);
+            Hands.Remove(id); // 다른 ID에 영향 없음
+            GameRule.Instance.MyCardsCount--;
+            PutAwayMyCards();
+            GameRule.Instance.RefreshMyInfo();
+        }
+        else
+        {
+            Debug.LogError("없는 카드 ID");
+        }
+    }
+
+    public void debugThrowCard()
+    {
+        int firstKey = Hands.Keys.Min();
+        Debug.Log(firstKey);
+        destoryCards(firstKey);
     }
 
 
 
     public void PutAwayMyCards()
     {
-        //HandPosition.transform.DOKill();
         float cardSpacing;
         if (Hands.Count == 0) return;
         else if (Hands.Count > 10)
@@ -68,7 +98,9 @@ public class PlayerHandsScripts : MonoBehaviour
         float firstCardPosition = 0.5f - (Hands.Count - 1) * cardSpacing / 2;
         float duration = 1f;
         Spline spline = splineContainer.Spline;
-        for (int i = 0; i < Hands.Count; i++)
+        //for (int i = 0; i < Hands.Count; i++)
+        int i = 0;
+        foreach(int id in Hands.Keys.OrderBy(x=>x))
         {
             float p = firstCardPosition + i * cardSpacing;
             Vector3 splinePosition = spline.EvaluatePosition(p);
@@ -83,10 +115,11 @@ public class PlayerHandsScripts : MonoBehaviour
             Vector3 localPos = HandPosition.InverseTransformPoint(worldTarget);
             Quaternion localRot = Quaternion.Inverse(HandPosition.rotation) * rotation;
 
-            Hands[i].transform.DOKill();
-            Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart);
+            Hands[id].transform.DOKill();
+            Hands[id].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(Hands[id]);
 
-            Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart);
+            Hands[id].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(Hands[id]); ;
+            i++;
         }
         return;
 

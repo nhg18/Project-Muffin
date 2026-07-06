@@ -63,6 +63,8 @@ public class OtherPlayerHands : MonoBehaviourPunCallbacks
             }
         }
 
+        // UI Update
+        GameUIManager.Instance?.RefreshPlayerInfo(targetPlayer, changedProps);
     }
 
     private void DrawCards()

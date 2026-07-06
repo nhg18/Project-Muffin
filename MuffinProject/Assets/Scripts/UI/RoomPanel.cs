@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Network;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,14 +13,25 @@ public class RoomPanel : MonoBehaviour
 
     private void OnEnable()
     {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            startButton.gameObject.SetActive(true);
+            startButton.onClick.AddListener(OnStartClicked);
+        }
+        else
+        {
+            startButton.gameObject.SetActive(false);
+        }
         leaveButton.onClick.AddListener(OnLeaveClicked);
-        startButton.onClick.AddListener(OnStartClicked);
     }
 
     private void OnDisable()
     {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            startButton.onClick.RemoveListener(OnStartClicked);
+        }
         leaveButton.onClick.RemoveListener(OnLeaveClicked);
-        startButton.onClick.RemoveListener(OnStartClicked);
     }
 
     private void OnLeaveClicked()

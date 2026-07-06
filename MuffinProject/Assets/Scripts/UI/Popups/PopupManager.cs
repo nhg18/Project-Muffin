@@ -4,38 +4,39 @@ using UnityEngine;
 
 public class PopupManager : SingletonPersistent<PopupManager>
 {
-    public RectTransform _popupRoot;
-
-    private BasePopup _current;
-
-    protected override void Awake()
-    {
-        base.Awake();
-        _popupRoot = GetComponentInChildren<RectTransform>();
-    }
+    [SerializeField] private RectTransform popupRoot;
+    
+    private readonly Stack<BasePopup> _stack = new();
 
     public T Show<T>() where T : BasePopup
     {
-        // 기존 팝업 닫기
-        if (_current != null)
-            Hide();
-
-        var prefab = Get<T>();
-        _current = Instantiate(prefab, _popupRoot);
-        _current.OnShow();
-        return (T)_current;
+        var prefab = PopupRegistry.Get<T>();
+        var popup = Instantiate(prefab, popupRoot);
+        
+        popup.OnShow();
+        _stack.Push(popup);
+        return popup;
     }
 
     public void Hide()
     {
-        if (_current == null) return;
-        _current.OnHide();
-        Destroy(_current.gameObject);
-        _current = null;
+        if (_stack.Count == 0) return;
+
+        var top = _stack.Pop();
+        top.OnHide();
+        Destroy(top.gameObject);
+    }
+
+    public void HideAll()
+    {
+        while (_stack.Count > 0)
+        {
+            var top = _stack.Pop();
+            top.OnHide();
+            Debug.Log(top.gameObject.name + " delete");
+            Destroy(top.gameObject);
+        }
     }
     
-    public T Get<T>() where T : BasePopup
-    {
-        return Resources.Load<T>($"Popups/{typeof(T).Name}");
-    }
+    public bool HasPopup => _stack.Count > 0;
 }

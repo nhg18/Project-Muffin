@@ -9,7 +9,8 @@ public enum SceneType
     Title,
     Lobby,
     Room,
-    Game
+    Game,
+    DebugLobby,
 }
 
 
@@ -24,6 +25,7 @@ public static class ScenePaths
         { SceneType.Lobby, "Lobby" },
         { SceneType.Room, "Room" },
         { SceneType.Game, "Game" },
+        { SceneType.DebugLobby, "DebugLobby" },
     };
 
     public static string Get(SceneType type)
