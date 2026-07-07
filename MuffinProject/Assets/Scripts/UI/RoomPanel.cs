@@ -43,7 +43,7 @@ public class RoomPanel : MonoBehaviour
     {
         if (!CanStartGame()) return;
         NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
-        PhotonNetwork.LoadLevel(ScenePaths.Get(SceneType.Game));
+        PhotonNetwork.LoadLevel("RefactorGameScene");//스크립트 수정 원본->PhotonNetwork.LoadLevel(ScenePaths.Get(SceneType.Game));
     }
 
     private bool CanStartGame()

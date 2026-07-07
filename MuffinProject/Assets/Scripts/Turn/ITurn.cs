@@ -4,7 +4,7 @@ using UnityEngine;
 
 public interface ITurn
 {
-    void StartTurn();
-
-    void EndTurn();
+    void SetTurn(int actorNumber);
+    int CurrentTurnActor { get;}
+    bool IsMyTurn { get; }
 }
