@@ -97,9 +97,9 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
     {
         string defaultName = string.Empty;
 
-        if (PlayerPrefs.HasKey(PlayerPrefsKeys.playerName))
+        if (PlayerPrefs.HasKey(PlayerPrefsKeys.PlayerName))
         {
-            defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
+            defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName);
         }
         
         input.text = defaultName;

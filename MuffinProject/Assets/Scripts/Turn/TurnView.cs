@@ -8,33 +8,30 @@ using UnityEngine.UI;
 public class TurnView : MonoBehaviour
 {
     [Header("UI Elements(The button is for Debugging)")]
-    [SerializeField] private Button endTurnButton;
+    [SerializeField] private Button turnEndButton;
     [SerializeField] private TMP_Text turnIndicatorText;
 
-    public event Action OnEndTurnRequested;
 
     private void Awake()
     {
-        if(endTurnButton != null)
+        if(turnEndButton != null)
         {
-            endTurnButton.onClick.AddListener(() => OnEndTurnRequested?.Invoke());
+            turnEndButton.onClick.AddListener(TurnEvents.RaiseEndTurnRequested);
         }
     }
 
-    public void updateTurnUI(bool isMyTurn, int currentTurnActor)
+    public void SetButtonInteractable(bool interactable)
     {
-        if (isMyTurn)
-        {
-            turnIndicatorText.text = "나의 턴!";
-            turnIndicatorText.color = Color.green;
-            endTurnButton.interactable = true;
-        }
-        else
-        {
-            turnIndicatorText.text = $"플레이어 {currentTurnActor}의 턴";
-            turnIndicatorText.color = Color.red;
-            endTurnButton.interactable = false;
-        }
+        turnEndButton.interactable = interactable;
     }
 
+    public void SetIndicatorText(string text)
+    {
+        turnIndicatorText.text = text;
+    }
+
+    public void SetIndicatorColor(Color color)
+    {
+        turnIndicatorText.color = color;
+    }
 }

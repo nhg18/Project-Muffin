@@ -13,6 +13,7 @@ public class TurnModel : ITurn
             return props.ContainsKey(KEY_TURN) ? (int)props[KEY_TURN] : -1;
         }
     }
+    
     public bool IsMyTurn {
         get
         {

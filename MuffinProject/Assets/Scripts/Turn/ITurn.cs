@@ -5,6 +5,6 @@ using UnityEngine;
 public interface ITurn
 {
     void SetTurn(int actorNumber);
-    int CurrentTurnActor { get;}
+    int CurrentTurnActor { get; }
     bool IsMyTurn { get; }
 }

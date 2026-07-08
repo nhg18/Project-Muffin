@@ -10,8 +10,8 @@ namespace Network
         private void SetupInitNickname()
         {
             // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
-            if (!PlayerPrefs.HasKey(PlayerPrefsKeys.playerName)) return;
-            var defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
+            if (!PlayerPrefs.HasKey(PlayerPrefsKeys.PlayerName)) return;
+            var defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName);
             if (string.IsNullOrEmpty(defaultName)) return;
             // 연결 체크
             if (!PhotonNetwork.IsConnected) return;
@@ -41,7 +41,7 @@ namespace Network
             }
         
             PhotonNetwork.NickName = nickname;
-            PlayerPrefs.SetString(PlayerPrefsKeys.playerName, nickname);
+            PlayerPrefs.SetString(PlayerPrefsKeys.PlayerName, nickname);
         }
     
         /// <summary>

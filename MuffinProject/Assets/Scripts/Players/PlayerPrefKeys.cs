@@ -4,5 +4,5 @@ using UnityEngine;
 
 public static class PlayerPrefsKeys
 {
-    public const string playerName = "PlayerName";
+    public const string PlayerName = "PlayerName";
 }
