@@ -5,7 +5,6 @@ using Network;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 
@@ -23,26 +22,17 @@ public class DebugScript : MonoBehaviour
         NetworkManager.Instance.SetNickname(nickname);
         
         joinButton.onClick.AddListener(ClickJoinButton);
-        RoomEvents.OnJoinRoomFailed += HandleJoinRoomFailed;
     }
 
     private void ClickJoinButton()
     {
-        if (!NetworkManager.IsConnected) Debug.LogError("JoinRoom failed. Client is not connected.");
-        NetworkManager.Instance.JoinRoom(roomName);
-    }
+        if (!NetworkManager.IsConnected)
+        {
+            Debug.LogError("JoinRoom failed. Client is not connected.");
+            return;
+        }
 
-    private void HandleJoinRoomFailed(short returnCode, string message)
-    {
-        if (returnCode == ErrorCode.GameDoesNotExist)
-        {
-            PhotonNetwork.CreateRoom(
-                roomName, 
-                NetworkManager.Instance.CreateRoomOptions(4, false, true));
-        }
-        else
-        {
-            Debug.LogError(message);
-        }
+        var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
+        PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
     }
 }
