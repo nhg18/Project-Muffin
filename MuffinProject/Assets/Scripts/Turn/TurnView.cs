@@ -11,12 +11,13 @@ public class TurnView : MonoBehaviour
     [SerializeField] private Button turnEndButton;
     [SerializeField] private TMP_Text turnIndicatorText;
 
+    public event Action OnEndTurnRequested;
 
     private void Awake()
     {
         if(turnEndButton != null)
         {
-            turnEndButton.onClick.AddListener(TurnEvents.RaiseEndTurnRequested);
+            turnEndButton.onClick.AddListener(() => OnEndTurnRequested?.Invoke());
         }
     }
 
