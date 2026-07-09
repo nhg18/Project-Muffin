@@ -9,11 +9,12 @@ namespace Network
         public const int MinPlayers = 2;
         public const int MaxPlayers = 6;
     
-        public static string Nickname => PhotonNetwork.NickName;
-        public static bool IsConnected => PhotonNetwork.IsConnected;
-    
         private PhotonConnection _connection;
         private PhotonRoom _room;
+
+        public static string Nickname => PhotonNetwork.NickName;
+        public static bool IsConnected => PhotonNetwork.IsConnected;
+        
         protected override void Awake()
         {
             base.Awake(); // 싱글톤 부모클래스 Awake
