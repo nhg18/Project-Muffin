@@ -7,7 +7,7 @@ namespace Network
     public class NetworkManager : SingletonPersistentPun<NetworkManager>
     {
         public const int MinPlayers = 2;
-        public const int MaxPlayers = 6;
+        public const int MaxPlayers = 4;
     
         private PhotonConnection _connection;
         private PhotonRoom _room;
