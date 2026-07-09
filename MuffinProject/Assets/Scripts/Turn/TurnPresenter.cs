@@ -12,13 +12,13 @@ public class TurnPresenter : MonoBehaviour
     private void OnEnable()
     {
         TurnEvents.OnTurnChanged += UpdateTurnUI;
-        TurnEvents.OnEndTurnRequested += HandleEndTurnRequest;
+        turnView.OnEndTurnRequested += HandleEndTurnRequest;
     }
     
     private void OnDisable()
     {
         TurnEvents.OnTurnChanged -= UpdateTurnUI;
-        TurnEvents.OnEndTurnRequested -= HandleEndTurnRequest;
+        turnView.OnEndTurnRequested -= HandleEndTurnRequest;
     }
 
     private void UpdateTurnUI()
