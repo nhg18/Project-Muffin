@@ -11,16 +11,40 @@ public class TurnView : MonoBehaviour
     [SerializeField] private Button turnEndButton;
     [SerializeField] private TMP_Text turnIndicatorText;
 
-    public event Action OnEndTurnRequested;
-
     private void Awake()
     {
         if(turnEndButton != null)
         {
-            turnEndButton.onClick.AddListener(() => OnEndTurnRequested?.Invoke());
+            turnEndButton.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
         }
     }
+    
+    private void OnEnable()
+    {
+        TurnEvents.OnTurnChanged += UpdateTurnUI;
+    }
+    
+    private void OnDisable()
+    {
+        TurnEvents.OnTurnChanged -= UpdateTurnUI;
+    }
 
+    private void UpdateTurnUI()
+    {
+        if (TurnManager.Instance.IsMyTurn)
+        {
+            SetIndicatorText("나의 턴!");
+            SetIndicatorColor(Color.green);
+            SetButtonInteractable(true);
+        }
+        else
+        {
+            SetIndicatorText($"플레이어 {TurnManager.Instance.CurrentTurnActor}의 턴");
+            SetIndicatorColor(Color.red);
+            SetButtonInteractable(false);
+        }
+    }
+    
     public void SetButtonInteractable(bool interactable)
     {
         turnEndButton.interactable = interactable;
