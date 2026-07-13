@@ -4,18 +4,18 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-public class PlayerSeatView : MonoBehaviour
+public class PlayerSeat : MonoBehaviour
 {
     [SerializeField] private TMP_Text nicknameText;
     [SerializeField] private TMP_Text myTurnText;
 
-    public void SetNickname(string nickname)
+    public void SetNicknameUI(string nickname)
     {
         nicknameText.text = nickname;
     }
 
-    public void SetMyTurn(bool isMyTurn)
+    public void SetTurnUI(bool isTurn)
     {
-        myTurnText.text = isMyTurn ? "My Turn" : "";
+        myTurnText.text = isTurn ? "Turn" : "";
     }
 }

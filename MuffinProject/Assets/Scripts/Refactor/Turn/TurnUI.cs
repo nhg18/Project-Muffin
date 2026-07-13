@@ -5,20 +5,17 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class TurnView : MonoBehaviour
+public class TurnUI : MonoBehaviour
 {
     [Header("UI Elements(The button is for Debugging)")]
     [SerializeField] private Button turnEndButton;
     [SerializeField] private TMP_Text turnIndicatorText;
 
-    private void Awake()
+    private void Start()
     {
-        if(turnEndButton != null)
-        {
-            turnEndButton.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
-        }
+        turnEndButton?.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
     }
-    
+
     private void OnEnable()
     {
         TurnEvents.OnTurnChanged += UpdateTurnUI;
