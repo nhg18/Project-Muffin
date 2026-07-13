@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class CardEvent
+public class DeckEvent
 {
     public static event Action<int> OnDrawn;
     public static event Action<int> OnDiscarded;
