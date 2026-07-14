@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
+[System.Serializable]
 public abstract class CardCollection
 {
-    protected List<Card> cards = new();
+    [SerializeField] protected List<Card> cards = new();
     
     public int Count => cards.Count;
     public void Add(Card card) => cards.Add(card);

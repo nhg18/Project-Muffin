@@ -7,14 +7,14 @@ using UnityEngine;
 
 public class DeckPresenter : MonoBehaviourPunCallbacks
 {
-    private Deck _deck;
+    [SerializeField] private Deck deck;
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
     {
         // 1. 모델 생성
-        _deck = new Deck();
+        deck = new Deck();
     }
 
     private void Start()
@@ -24,7 +24,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
         {
             new(1), new(2), new (3), new (4), new (5), new (6),
         };
-        _deck.InitDeck(startingCards);
+        deck.InitDeck(startingCards);
 
         // 3. View의 버튼 클릭 이벤트 구독
         deckView.OnDrawButtonClicked += RequestDrawCard;
@@ -51,17 +51,17 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
 
     private void ExecuteDrawAndSync(int requesterActorNumber)
     {
-        if (_deck.Count == 0)
+        if (deck.Count == 0)
         {
             Debug.LogWarning("뽑을 카드가 없음");
             return;
         }
 
-        var drawnCard = _deck.DrawTop();
+        var drawnCard = deck.DrawTop();
         
         var hash = new ExitGames.Client.Photon.Hashtable
         {
-            { DECK_PROPERTY_KEY, _deck.GetCurrentDeck().ToArray() }
+            { DECK_PROPERTY_KEY, deck.GetCurrentDeck().Select(c => c.ID).ToArray() }
         };
         
         PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
@@ -87,7 +87,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
             var idArray = (int[])propertiesThatChanged[DECK_PROPERTY_KEY];
             var deckArray = idArray.Select(id => new Card(id)).ToList();
 
-            _deck.SyncDeck(deckArray);
+            deck.SyncDeck(deckArray);
         }
     }
 }
