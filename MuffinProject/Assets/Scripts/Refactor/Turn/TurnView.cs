@@ -15,7 +15,7 @@ public class TurnView : MonoBehaviour
     {
         if(turnEndButton != null)
         {
-            turnEndButton.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
+            turnEndButton.onClick.AddListener(TurnManager.Instance.RequestEndTurn); //여기서 오류 발생, 람다식으로 변경하고, Awake대신 Start를 사용하는게 좋아보임
         }
     }
     
