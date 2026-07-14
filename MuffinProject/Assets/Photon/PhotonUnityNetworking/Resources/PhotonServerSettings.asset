@@ -48,6 +48,8 @@ MonoBehaviour:
   - RPC_BroadcastPush
   - RPC_ResolveChain
   - RPC_CancelNext
+  - RPC_RequestDrawToMaster
+  - RPC_BroadcastDrawnCard
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -30,13 +30,13 @@ public class TurnUI : MonoBehaviour
     {
         if (TurnManager.Instance.IsMyTurn)
         {
-            SetIndicatorText("³ªÀÇ ÅÏ!");
+            SetIndicatorText("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½!");
             SetIndicatorColor(Color.green);
             SetButtonInteractable(true);
         }
         else
         {
-            SetIndicatorText($"ÇÃ·¹ÀÌ¾î {TurnManager.Instance.CurrentTurnActor}ÀÇ ÅÏ");
+            SetIndicatorText($"ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ {TurnManager.Instance.CurrentTurnActor}ï¿½ï¿½ ï¿½ï¿½");
             SetIndicatorColor(Color.red);
             SetButtonInteractable(false);
         }
