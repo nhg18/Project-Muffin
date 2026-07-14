@@ -1,45 +1,49 @@
+using System;
 using System.Text.RegularExpressions;
 
 namespace UI.NickName
 {
+    public enum NicknameValidationResult
+    {
+        Valid,
+        Empty,
+        TooShort,
+        TooLong,
+        InvalidCharacters,
+    }
+    
     public static class NicknameValidator
     {
-        public const int MAX_LENGTH = 16;
-        public const int MIN_LENGTH = 2;
+        public const int MaxLength = 16;
+        public const int MinLength = 2;
 
-        public static bool Validate(string nickname)
+        private static readonly Regex AllowedCharsRegex = 
+            new(@"^[가-힣a-zA-Z0-9]+$", RegexOptions.Compiled);
+
+        public static NicknameValidationResult Validate(string nickname)
         {
             if (string.IsNullOrWhiteSpace(nickname))
-            {
-                return false;
-            }
-        
-            if (nickname.Length is < MIN_LENGTH or > MAX_LENGTH)
-            {
-                return false;
-            }
-        
-            // 공백 포함 여부
-            if (nickname.Contains(" "))
-            {
-                return false;
-            }
-        
-            // 허용 문자 검사
-            var regex = new Regex(@"^[가-힣a-zA-Z0-9]+$");
-            if (!regex.IsMatch(nickname))
-            {
-                return false;
-            }
-        
-            // 한글 자음 모음 포함
-            var koreanJamoRegex = new Regex(@"[ㄱ-ㅎㅏ-ㅣ]");
-            if (koreanJamoRegex.IsMatch(nickname))
-            {
-                return false;
-            }
-        
-            return true;
+                return NicknameValidationResult.Empty;
+
+            if (nickname.Length < MinLength)
+                return NicknameValidationResult.TooShort;
+
+            if (nickname.Length > MaxLength)
+                return NicknameValidationResult.TooLong;
+
+            if (!AllowedCharsRegex.IsMatch(nickname))
+                return NicknameValidationResult.InvalidCharacters;
+
+            return NicknameValidationResult.Valid;
         }
+
+        public static string GetErrorMessage(NicknameValidationResult result) => result switch
+        {
+            NicknameValidationResult.Empty             => "닉네임을 입력해 주세요.",
+            NicknameValidationResult.TooShort          => $"{MinLength}자 이상 입력해 주세요.",
+            NicknameValidationResult.TooLong           => $"{MaxLength}자 이하로 입력해 주세요.",
+            NicknameValidationResult.InvalidCharacters => "사용할 수 없는 문자가 포함되어 있습니다.",
+            _                                          => "알 수 없는 오류입니다."
+        };
     }
 }
