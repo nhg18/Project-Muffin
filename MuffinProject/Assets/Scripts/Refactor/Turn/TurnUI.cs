@@ -30,13 +30,13 @@ public class TurnUI : MonoBehaviour
     {
         if (TurnManager.Instance.IsMyTurn)
         {
-            SetIndicatorText("���� ��!");
+            SetIndicatorText("나의 턴!");
             SetIndicatorColor(Color.green);
             SetButtonInteractable(true);
         }
         else
         {
-            SetIndicatorText($"�÷��̾� {TurnManager.Instance.CurrentTurnActor}�� ��");
+            SetIndicatorText($"플레이어 {TurnManager.Instance.CurrentTurnActor}의 턴");
             SetIndicatorColor(Color.red);
             SetButtonInteractable(false);
         }
