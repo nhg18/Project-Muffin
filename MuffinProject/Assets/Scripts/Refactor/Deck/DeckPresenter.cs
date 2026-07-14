@@ -1,31 +1,33 @@
+using System;
 using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class DeckPresenter : MonoBehaviourPunCallbacks
 {
-    private DeckModel deckModel;
-    [SerializeField] private DeckView deckView; // ÀÎ½ºÆåÅÍ¿¡¼­ ÇÒ´ç
+    private Deck _deck;
+    [SerializeField] private DeckView deckView; // ì¸ìŠ¤í™í„°ì—ì„œ í• ë‹¹
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
     {
-        // 1. ¸ğµ¨ »ı¼º
-        deckModel = new DeckModel();
+        // 1. ëª¨ë¸ ìƒì„±
+        _deck = new Deck();
+    }
 
-        // 2. ÀÓ½Ã Ä«µå·Î µ¦ ÃÊ±âÈ­ (½ÇÁ¦ °ÔÀÓ¿¡¼­´Â º°µµÀÇ µ¥ÀÌÅÍ ¸Å´ÏÀú¿¡¼­ ¹Ş¾Æ¿È) ¼öÁ¤ ÇÊ¿ä!!
-        List<int> startingCards = new List<int>
+    private void Start()
+    {
+        // 2. ì„ì‹œ ì¹´ë“œë¡œ ë± ì´ˆê¸°í™” (ì‹¤ì œ ê²Œì„ì—ì„œëŠ” ë³„ë„ì˜ ë°ì´í„° ë§¤ë‹ˆì €ì—ì„œ ë°›ì•„ì˜´) ìˆ˜ì • í•„ìš”!!
+        List<Card> startingCards = new List<Card>
         {
-            1,2,3
+            new(1), new(2), new (3), new (4), new (5), new (6),
         };
-        deckModel.InitDeck(startingCards);
+        _deck.InitDeck(startingCards);
 
-        // 3. ViewÀÇ ¹öÆ° Å¬¸¯ ÀÌº¥Æ® ±¸µ¶
-        if (deckView != null)
-        {
-            deckView.OnDrawButtonClicked += RequestDrawCard;
-        }
+        // 3. Viewì˜ ë²„íŠ¼ í´ë¦­ ì´ë²¤íŠ¸ êµ¬ë…
+        deckView.OnDrawButtonClicked += RequestDrawCard;
     }
 
     public void RequestDrawCard()
@@ -33,55 +35,59 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
         int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
         if (PhotonNetwork.IsMasterClient)
         {
-            ExcuteDrawAndSync(myActorNumber);
+            ExecuteDrawAndSync(myActorNumber);
         }
         else
         {
-            photonView.RPC("RPC_RequestDrawToMaster", RpcTarget.MasterClient, myActorNumber);
+            photonView.RPC(nameof(RPC_RequestDrawToMaster), RpcTarget.MasterClient, myActorNumber);
         }
     }
 
     [PunRPC]
     private void RPC_RequestDrawToMaster(int requesterActorNumber)
     {
-        ExcuteDrawAndSync(requesterActorNumber);
+        ExecuteDrawAndSync(requesterActorNumber);
     }
 
-    private void ExcuteDrawAndSync(int requesterActorNumber)
+    private void ExecuteDrawAndSync(int requesterActorNumber)
     {
-
-        int drawnCard = deckModel.Draw();
-
-        if (drawnCard == -1)
+        if (_deck.Count == 0)
         {
-            Debug.Log("»ÌÀ» Ä«µå°¡ ¾øÀ½");
+            Debug.LogWarning("ë½‘ì„ ì¹´ë“œê°€ ì—†ìŒ");
             return;
         }
-        ExitGames.Client.Photon.Hashtable hash = new ExitGames.Client.Photon.Hashtable();
-        hash.Add(DECK_PROPERTY_KEY, deckModel.getCurrentDeck().ToArray());
+
+        var drawnCard = _deck.DrawTop();
+        
+        var hash = new ExitGames.Client.Photon.Hashtable
+        {
+            { DECK_PROPERTY_KEY, _deck.GetCurrentDeck().ToArray() }
+        };
+        
         PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
 
-        Debug.Log("µå·Î¿ì!");
+        Debug.Log("ë“œë¡œìš°!");
 
-        photonView.RPC("RPC_BroadcastDrawnCard", RpcTarget.All, requesterActorNumber, drawnCard );
+        photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard.ID);
 
     }
 
     [PunRPC]
     private void RPC_BroadcastDrawnCard(int actorNumber, int drawnCardID)
     {
-        // ÀÌÁ¦ ¸ğµç Å¬¶óÀÌ¾ğÆ®°¡ ÀÌ RPC¸¦ ¹Ş°í ÀÌº¥Æ®¸¦ ½ÇÇàÇÕ´Ï´Ù.
-        // ÇâÈÄ View ½ºÅ©¸³Æ®¿¡¼­´Â actorNumber¸¦ È®ÀÎÇÏ¿© ³» Ä«µå¸é ¾Õ¸éÀ¸·Î, ³²ÀÇ Ä«µå¸é µŞ¸éÀ¸·Î »ı¼ºÇÏ¸é µË´Ï´Ù.
-        DeckEvent.RaiseDrawn(actorNumber,drawnCardID);
+        // ì´ì œ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ê°€ ì´ RPCë¥¼ ë°›ê³  ì´ë²¤íŠ¸ë¥¼ ì‹¤í–‰í•©ë‹ˆë‹¤.
+        // í–¥í›„ View ìŠ¤í¬ë¦½íŠ¸ì—ì„œëŠ” actorNumberë¥¼ í™•ì¸í•˜ì—¬ ë‚´ ì¹´ë“œë©´ ì•ë©´ìœ¼ë¡œ, ë‚¨ì˜ ì¹´ë“œë©´ ë’·ë©´ìœ¼ë¡œ ìƒì„±í•˜ë©´ ë©ë‹ˆë‹¤.
+        DeckEvent.RaiseDrawn(actorNumber, drawnCardID);
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
     {
         if (propertiesThatChanged.ContainsKey(DECK_PROPERTY_KEY))
         {
-            int[] deckArray = (int[])propertiesThatChanged[DECK_PROPERTY_KEY];
+            var idArray = (int[])propertiesThatChanged[DECK_PROPERTY_KEY];
+            var deckArray = idArray.Select(id => new Card(id)).ToList();
 
-            deckModel.SyncDeck(deckArray);
+            _deck.SyncDeck(deckArray);
         }
     }
 }

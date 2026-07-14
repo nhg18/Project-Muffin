@@ -41,7 +41,6 @@ public class SeatManager : Singleton<SeatManager>
         }
     }
     
-    
     private Dictionary<Player, int> GetSeatAssignments(int myActorNumber)
     {
         Dictionary<Player, int> result = new();

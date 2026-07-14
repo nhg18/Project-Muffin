@@ -5,7 +5,6 @@ using UnityEngine.UI;
 using System;
 public class DeckView : MonoBehaviour
 {
-    private DeckModel deckModel;
     [SerializeField] private Button DrawButton;
     public event Action OnDrawButtonClicked;
 
