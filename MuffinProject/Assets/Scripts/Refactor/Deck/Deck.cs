@@ -37,4 +37,28 @@ public class Deck : CardCollection
     {
         return new List<Card>(cards);
     }
+
+
+
+    //public void AutoAssignIDs() // AUTO ID SETTER IN UNITY INSPECTOR
+    //{
+    //    if (cards == null || cards.Count == 0) return;
+
+    //    for (int i = 0; i < cards.Count; i++)
+    //    {
+    //        if (i == 0)
+    //        {
+    //            cards[i] = new Card(1);
+    //        }
+    //        else
+    //        {
+    //            if (cards[i].ID <= cards[i - 1].ID)
+    //            {
+    //                cards[i] = new Card(cards[i - 1].ID + 1);
+    //            }
+    //        }
+    //    }
+    //}
+
+
 }

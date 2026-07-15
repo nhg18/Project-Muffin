@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[Serializable]
+[System.Serializable]
 public struct Card
 {
-    public int ID { get; private set; }
+    public int ID;
     
     public Card(int id)
     {

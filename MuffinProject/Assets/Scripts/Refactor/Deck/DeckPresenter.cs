@@ -7,14 +7,14 @@ using UnityEngine;
 
 public class DeckPresenter : MonoBehaviourPunCallbacks
 {
-    [SerializeField] private Deck deck;
+    [SerializeField] private Deck deck = new Deck();
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
     {
         // 1. 모델 생성
-        deck = new Deck();
+        //deck = new Deck();
     }
 
     private void Start()
@@ -68,16 +68,16 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
 
         Debug.Log("드로우!");
 
-        photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard.ID);
+        photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard);
 
     }
 
     [PunRPC]
-    private void RPC_BroadcastDrawnCard(int actorNumber, int drawnCardID)
+    private void RPC_BroadcastDrawnCard(int actorNumber, Card drawnCard)
     {
         // 이제 모든 클라이언트가 이 RPC를 받고 이벤트를 실행합니다.
         // 향후 View 스크립트에서는 actorNumber를 확인하여 내 카드면 앞면으로, 남의 카드면 뒷면으로 생성하면 됩니다.
-        DeckEvent.RaiseDrawn(actorNumber, drawnCardID);
+        DeckEvent.RaiseDrawn(actorNumber, drawnCard);
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
@@ -90,4 +90,12 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
             deck.SyncDeck(deckArray);
         }
     }
+
+    //public void OnValidate()
+    //{
+    //    if(deck != null)
+    //    {
+    //        deck.AutoAssignIDs();
+    //    }
+    //}
 }
