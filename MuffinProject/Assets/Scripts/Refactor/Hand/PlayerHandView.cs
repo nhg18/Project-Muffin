@@ -14,14 +14,20 @@ public class PlayerHandView : MonoBehaviour
     [SerializeField] SplineContainer splineContainer;
     [SerializeField] Transform drawPosition;
     [SerializeField] Transform HandPosition;
+    [SerializeField] private GameObject presetCard;
 
     [Header("Hands of Player")]
     [SerializeField] List<GameObject> Hands = new List<GameObject>();
 
 
 
-    public void draw_A_Card()
+    public void draw_A_Card(int cardID)
     {
+
+
+
+
+
         //GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
         //x.transform.position = drawPosition.position;
         //Hands.Add(x);
