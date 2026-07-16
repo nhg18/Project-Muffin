@@ -22,7 +22,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
         // 2. 임시 카드로 덱 초기화 (실제 게임에서는 별도의 데이터 매니저에서 받아옴) 수정 필요!!
         List<Card> startingCards = new List<Card>
         {
-            new(1), new(2), new (3), new (4), new (5), new (6),
+            new(1), new(2), new (3), new (4)
         };
         deck.InitDeck(startingCards);
 
@@ -68,16 +68,16 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
 
         Debug.Log("드로우!");
 
-        photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard);
+        photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard.ID);
 
     }
 
     [PunRPC]
-    private void RPC_BroadcastDrawnCard(int actorNumber, Card drawnCard)
+    private void RPC_BroadcastDrawnCard(int actorNumber, int drawnCardID)
     {
         // 이제 모든 클라이언트가 이 RPC를 받고 이벤트를 실행합니다.
         // 향후 View 스크립트에서는 actorNumber를 확인하여 내 카드면 앞면으로, 남의 카드면 뒷면으로 생성하면 됩니다.
-        DeckEvent.RaiseDrawn(actorNumber, drawnCard);
+        DeckEvent.RaiseDrawn(actorNumber, drawnCardID);
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)

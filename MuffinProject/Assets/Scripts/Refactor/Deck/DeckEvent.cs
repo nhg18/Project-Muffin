@@ -5,10 +5,10 @@ using UnityEngine;
 
 public class DeckEvent
 {
-    public static event Action<int, Card> OnDrawn; // ActorNumber, CardID
+    public static event Action<int, int> OnDrawn; // ActorNumber, CardID
 
-    public static void RaiseDrawn(int actorNumber, Card card)
+    public static void RaiseDrawn(int actorNumber, int cardID)
     {
-        OnDrawn?.Invoke(actorNumber, card);
+        OnDrawn?.Invoke(actorNumber, cardID);
     }
 }

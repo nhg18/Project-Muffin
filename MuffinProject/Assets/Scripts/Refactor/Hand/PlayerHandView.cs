@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 using Unity.Mathematics;
+using Photon.Pun;
 
 public class PlayerHandView : MonoBehaviour
 {
-    [Header("Hands Setting")]
-    [SerializeField] int startHands = 7;
+
 
     [Header("GameObjects")]
     [SerializeField] SplineContainer splineContainer;
@@ -20,18 +20,15 @@ public class PlayerHandView : MonoBehaviour
     [SerializeField] List<GameObject> Hands = new List<GameObject>();
 
 
-
-    public void draw_A_Card(int cardID)
+    public void draw_A_Card(CardData data)
     {
+        GameObject drawedCard = Instantiate(presetCard, HandPosition);
+        drawedCard.transform.position = drawPosition.position;
 
-
-
-
-
-        //GameObject x = Instantiate(Cards[UnityEngine.Random.Range(0, 2)], HandPosition);
-        //x.transform.position = drawPosition.position;
-        //Hands.Add(x);
-        //PutAwayMyCards();
+        CardView cardView = drawedCard.GetComponent<CardView>();
+        cardView.Setup(data);
+        Hands.Add(drawedCard);
+        PutAwayMyCards();
     }
 
     public void PutAwayMyCards()
