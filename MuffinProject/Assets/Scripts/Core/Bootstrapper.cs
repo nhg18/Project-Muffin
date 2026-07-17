@@ -1,13 +1,13 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class Bootstrapper : MonoBehaviour
+namespace Core
 {
-    private void Start()
+    public class Bootstrapper : MonoBehaviour
     {
-        SceneManager.LoadScene(ScenePaths.Get(SceneType.Title));
+        private void Start()
+        {
+            SceneManager.LoadScene(ScenePaths.Get(SceneType.Title));
+        }
     }
 }
