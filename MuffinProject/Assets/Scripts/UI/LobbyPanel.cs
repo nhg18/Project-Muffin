@@ -13,7 +13,6 @@ public class LobbyPanel : MonoBehaviour
     [SerializeField] private Button randomMatchButton;
     [SerializeField] private Button createRoomButton;
     [SerializeField] private Button joinRoomButton;
-    
 
     private void OnEnable()
     {
@@ -39,30 +38,26 @@ public class LobbyPanel : MonoBehaviour
 
     private void OnCreateRoomClicked()
     {
-        PopupManager.Instance.Show<LoadingPopup>();
         NetworkManager.Instance.CreateRoom();
     }
 
     private void OnJoinRoomClicked()
     {
-        PopupManager.Instance.Show<JoinRoomPopup>();
     }
     
     private void OnRoomJoined()
     {
         Debug.Log("OnRoomJoined");
-        PopupManager.Instance.HideAll(); // LoadingPopup, JoinRoomPopup 모두 제거
+        
     }
 
     private void OnRoomCreateFailed(short code, string message)
     {
-        PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show(message);
+        
     }
 
     private void OnJoinRoomFailed(short code, string message)
     {
-        PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show(message);
+        
     }
 }

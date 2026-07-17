@@ -19,6 +19,7 @@ public class NicknameInput : MonoBehaviour
     private void Awake()
     {
         inputField.characterLimit = NicknameValidator.MaxLength;
+        errorText.text = "";
         UpdateCount("");
     }
 

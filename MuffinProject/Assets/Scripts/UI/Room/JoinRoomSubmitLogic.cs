@@ -4,6 +4,7 @@ using Network;
 using TMPro;
 using UI.Components;
 using UI.Interfaces;
+using UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -16,7 +17,6 @@ public class JoinRoomSubmitLogic : MonoBehaviour, ISubmitLogic
     public void Execute(TMP_InputField input)
     {
         Debug.Log("Clicked Join");
-        PopupManager.Instance.Show<LoadingPopup>();
         NetworkManager.Instance.JoinRoom(input.text);
     }
 }
