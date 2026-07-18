@@ -7,14 +7,14 @@ using UnityEngine;
 
 public class DeckPresenter : MonoBehaviourPunCallbacks
 {
-    [SerializeField] private Deck deck;
+    [SerializeField] private Deck deck = new Deck();
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
     {
         // 1. 모델 생성
-        deck = new Deck();
+        //deck = new Deck();
     }
 
     private void Start()
@@ -22,7 +22,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
         // 2. 임시 카드로 덱 초기화 (실제 게임에서는 별도의 데이터 매니저에서 받아옴) 수정 필요!!
         List<Card> startingCards = new List<Card>
         {
-            new(1), new(2), new (3), new (4), new (5), new (6),
+            new(1), new(2), new (3), new (4)
         };
         deck.InitDeck(startingCards);
 
@@ -90,4 +90,12 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
             deck.SyncDeck(deckArray);
         }
     }
+
+    //public void OnValidate()
+    //{
+    //    if(deck != null)
+    //    {
+    //        deck.AutoAssignIDs();
+    //    }
+    //}
 }
