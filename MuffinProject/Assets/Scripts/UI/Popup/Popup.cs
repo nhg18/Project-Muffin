@@ -13,7 +13,6 @@ namespace UI.Popup
         public void Close()
         {
             OnClose();
-            Destroy(gameObject);
         }
         
         protected virtual void OnOpen()

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Network;
 using TMPro;
 using UI.NickName;
+using UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -14,12 +15,13 @@ public class NicknameInput : MonoBehaviour
     [SerializeField] private TMP_InputField inputField;
     [SerializeField] private Button submitButton;
     [SerializeField] private TMP_Text countText;
-    [SerializeField] private TMP_Text errorText;
+    
+    private string _errorText;
 
     private void Awake()
     {
         inputField.characterLimit = NicknameValidator.MaxLength;
-        errorText.text = "";
+        _errorText = "";
         UpdateCount("");
     }
 
@@ -60,7 +62,16 @@ public class NicknameInput : MonoBehaviour
 
     private void HandleError(string errorMsg)
     {
-        errorText.text = errorMsg;
+        _errorText = errorMsg;
+        var popup = PopupManager.Instance.OpenModal(PopupManager.Get<WarningPopup>());
+        
+        popup.SetMainText("닉네임 오류");
+        popup.SetSubText(_errorText);
+        
+        popup.OnOkButtonClick = () =>
+        {
+            PopupManager.Instance.CloseModal(popup);
+        };
     }
 
     private async void LoadScene()

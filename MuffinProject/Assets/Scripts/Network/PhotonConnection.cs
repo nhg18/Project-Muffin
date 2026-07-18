@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -7,6 +8,16 @@ namespace Network
 {
     public class PhotonConnection
     {
+        public static bool ValidateConnection()
+        {
+            if (!PhotonNetwork.IsConnectedAndReady)
+            {
+                // 팝업 매니저 호출
+                return false;
+            }
+            return true;
+        }
+        
         private void SetupInitNickname()
         {
             // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
@@ -21,8 +32,13 @@ namespace Network
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
         /// </summary>
-        public void SetupPhotonNetwork()
+        public async Task Initialize()
         {
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                // 인터넷 없음 팝업 띄우기
+                return;
+            }
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 

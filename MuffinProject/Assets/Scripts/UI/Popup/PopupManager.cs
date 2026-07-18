@@ -34,13 +34,16 @@ namespace UI.Popup
         {
             SceneManager.sceneLoaded -= CloseAllPopups;
         }
-
+        public static T Get<T>() where T : Popup
+        {
+            return Resources.Load<T>($"Popups/{typeof(T).Name}");
+        }
+        
         public T OpenModal<T>(T prefab) where T : Popup
         {
             var popup = Instantiate(prefab, modalLayer);
             popup.transform.SetAsLastSibling();
             _modalStack.Push(popup);
-            popup.Open();
             RefreshBlocker();
             
             return popup;
@@ -50,7 +53,6 @@ namespace UI.Popup
         {
             var popup = Instantiate(prefab, nonModalLayer);
             _nonModalList.Add(popup);
-            popup.Open();
             return popup;
         }
 
@@ -58,7 +60,6 @@ namespace UI.Popup
         {
             var popup = Instantiate(prefab, toastLayer);
             _toastList.Add(popup);
-            popup.Open();
             return popup;
         }
 
@@ -69,7 +70,7 @@ namespace UI.Popup
                 Debug.LogWarning("Modal count 0");
                 return;
             }
-            _modalStack.Pop().Close();
+            Destroy(_modalStack.Pop());
             RefreshBlocker();
         }
 
@@ -86,8 +87,8 @@ namespace UI.Popup
             
             foreach (var p in remaining) 
                 _modalStack.Push(p);
-
-            popup.Close();
+            
+            Destroy(popup);
             RefreshBlocker();
         }
 
@@ -98,7 +99,7 @@ namespace UI.Popup
                 Debug.LogWarning("Not contain non-modal");
                 return;
             }
-            popup.Close();
+            Destroy(popup);
         }
 
         public void CloseToast(ToastPopup popup)
@@ -109,7 +110,7 @@ namespace UI.Popup
                 return;
             }
             
-            popup.Close();
+            Destroy(popup);
         }
 
         private void RefreshBlocker()
@@ -127,21 +128,21 @@ namespace UI.Popup
         private void CloseAllModals()
         {
             while (_modalStack.Count > 0)
-                _modalStack.Pop().Close();
+                Destroy(_modalStack.Pop());
             RefreshBlocker();
         }
 
         private void CloseAllNonModals()
         {
             foreach (var popup in _nonModalList)
-                popup.Close();
+                Destroy(popup);
             _nonModalList.Clear();
         }
 
         private void CloseAllToasts()
         {
             foreach (var popup in _toastList)
-                popup.Close();
+                Destroy(popup);
             _toastList.Clear();
         }
     }

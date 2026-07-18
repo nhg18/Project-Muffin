@@ -10,6 +10,8 @@ namespace Network
     {
         public void JoinRoom(string roomName)
         {
+            if (!PhotonConnection.ValidateConnection()) return;
+            
             if (string.IsNullOrEmpty(roomName))
             {
                 RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
@@ -20,6 +22,7 @@ namespace Network
     
         public void JoinRandomRoom()
         {
+            if (!PhotonConnection.ValidateConnection()) return;
             PhotonNetwork.JoinRandomRoom();
         }
     
@@ -30,6 +33,8 @@ namespace Network
     
         public void CreateRoom()
         {
+            if (!PhotonConnection.ValidateConnection()) return;
+            
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             string code = RandomCode.GenerateRandomCode();
         
