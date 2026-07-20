@@ -70,7 +70,7 @@ namespace UI.Popup
                 Debug.LogWarning("Modal count 0");
                 return;
             }
-            Destroy(_modalStack.Pop());
+            Destroy(_modalStack.Pop().gameObject);
             RefreshBlocker();
         }
 
@@ -88,7 +88,7 @@ namespace UI.Popup
             foreach (var p in remaining) 
                 _modalStack.Push(p);
             
-            Destroy(popup);
+            Destroy(popup.gameObject);
             RefreshBlocker();
         }
 
@@ -99,7 +99,7 @@ namespace UI.Popup
                 Debug.LogWarning("Not contain non-modal");
                 return;
             }
-            Destroy(popup);
+            Destroy(popup.gameObject);
         }
 
         public void CloseToast(ToastPopup popup)
@@ -110,7 +110,7 @@ namespace UI.Popup
                 return;
             }
             
-            Destroy(popup);
+            Destroy(popup.gameObject);
         }
 
         private void RefreshBlocker()
@@ -135,14 +135,14 @@ namespace UI.Popup
         private void CloseAllNonModals()
         {
             foreach (var popup in _nonModalList)
-                Destroy(popup);
+                Destroy(popup.gameObject);
             _nonModalList.Clear();
         }
 
         private void CloseAllToasts()
         {
             foreach (var popup in _toastList)
-                Destroy(popup);
+                Destroy(popup.gameObject);
             _toastList.Clear();
         }
     }

@@ -65,10 +65,10 @@ public class NicknameInput : MonoBehaviour
         _errorText = errorMsg;
         var popup = PopupManager.Instance.OpenModal(PopupManager.Get<WarningPopup>());
         
-        popup.SetMainText("닉네임 오류");
-        popup.SetSubText(_errorText);
+        popup.MainText = "닉네임 오류";
+        popup.SubText = _errorText;
         
-        popup.OnOkButtonClick = () =>
+        popup.OnClickedOkButton = () =>
         {
             PopupManager.Instance.CloseModal(popup);
         };

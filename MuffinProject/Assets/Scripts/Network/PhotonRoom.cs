@@ -10,7 +10,7 @@ namespace Network
     {
         public void JoinRoom(string roomName)
         {
-            if (!PhotonConnection.ValidateConnection()) return;
+            if (!PhotonConnection.ValidConnect) return;
             
             if (string.IsNullOrEmpty(roomName))
             {
@@ -22,7 +22,7 @@ namespace Network
     
         public void JoinRandomRoom()
         {
-            if (!PhotonConnection.ValidateConnection()) return;
+            if (!PhotonConnection.ValidConnect) return;
             PhotonNetwork.JoinRandomRoom();
         }
     
@@ -33,7 +33,7 @@ namespace Network
     
         public void CreateRoom()
         {
-            if (!PhotonConnection.ValidateConnection()) return;
+            if (!PhotonConnection.ValidConnect) return;
             
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             string code = RandomCode.GenerateRandomCode();
@@ -53,6 +53,11 @@ namespace Network
     
         public void UpdateRoomOptions(bool isVisible, bool isOpen)
         {
+            if (!PhotonNetwork.InRoom)
+            {
+                Debug.LogWarning("Must be in room");
+                return;
+            }
             PhotonNetwork.CurrentRoom.IsVisible = isVisible;
             PhotonNetwork.CurrentRoom.IsOpen = isOpen;
         }
@@ -92,9 +97,6 @@ namespace Network
         {
             Debug.Log("On Joined Room");
             RoomEvents.RaiseJoinedRoom();
-            
-            int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
-            NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
         }
     
         /// <summary>
@@ -104,8 +106,7 @@ namespace Network
         public void OnLeftRoom()
         {
             Debug.Log("On Left Room");
-            // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby));
+            RoomEvents.RaiseLeftRoom();
         }
     
         /// <summary>

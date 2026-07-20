@@ -11,8 +11,18 @@ public class WarningPopup : Popup
     [SerializeField] private TMP_Text mainText;
     [SerializeField] private TMP_Text subText;
     [SerializeField] private Button okButton;
+
+    public string MainText
+    {
+        set => mainText.text = value;
+    }
+
+    public string SubText
+    {
+        set => subText.text = value;
+    }
     
-    public Action OnOkButtonClick;
+    public Action OnClickedOkButton;
 
     private void OnEnable()
     {
@@ -24,19 +34,9 @@ public class WarningPopup : Popup
         okButton.onClick.RemoveListener(ClickedOkButton);
     }
 
-    public void SetMainText(string text)
-    {
-        mainText.text = text;
-    }
-
-    public void SetSubText(string text)
-    {
-        subText.text = text;
-    }
-
     private void ClickedOkButton()
     {
         // PopupManager.Instance.CloseModal(this);
-        OnOkButtonClick?.Invoke();
+        OnClickedOkButton?.Invoke();
     }
 }

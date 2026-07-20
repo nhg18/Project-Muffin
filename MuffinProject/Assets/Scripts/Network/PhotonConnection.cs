@@ -2,22 +2,27 @@ using System.Threading.Tasks;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Network
 {
     public class PhotonConnection
     {
-        public static bool ValidateConnection()
+        public static bool ValidConnect
         {
-            if (!PhotonNetwork.IsConnectedAndReady)
+            get
             {
-                // 팝업 매니저 호출
-                return false;
+                if (!PhotonNetwork.IsConnectedAndReady)
+                {
+                    Debug.LogWarning("Not connected and ready");
+                    // 팝업 매니저 호출
+                    return false;
+                }
+
+                Debug.LogWarning("Connected and ready");
+                return true;
             }
-            return true;
         }
-        
+
         private void SetupInitNickname()
         {
             // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
@@ -44,8 +49,8 @@ namespace Network
 
         public void Connect()
         {
+            if (PhotonNetwork.IsConnected) return;
             PhotonNetwork.ConnectUsingSettings();
-            SetupInitNickname();
         }
     
         public void SetNickname(string nickname)
@@ -68,7 +73,7 @@ namespace Network
         {
             Debug.Log("On Connected To Master");
             // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 없어도 됨.
-            ConnectionEvents.RaiseConnected(true);
+            ConnectionEvents.RaiseConnected();
         }
 
         /// <summary>
@@ -80,7 +85,7 @@ namespace Network
         public void OnDisconnected(DisconnectCause cause)
         {
             Debug.Log($"On Disconnected: {cause}");
-            ConnectionEvents.RaiseConnected(false);
+            ConnectionEvents.RaiseDisconnected(cause);
 
             switch (cause)
             {
