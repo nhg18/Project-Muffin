@@ -48,7 +48,7 @@ public class LobbyPanel : MonoBehaviour
     private void OnRoomJoined()
     {
         Debug.Log("OnRoomJoined");
-        
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
     }
 
     private void OnRoomCreateFailed(short code, string message)

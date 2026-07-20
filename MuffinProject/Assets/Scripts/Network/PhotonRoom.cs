@@ -95,8 +95,6 @@ namespace Network
             
             int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
-            
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
         }
     
         /// <summary>
