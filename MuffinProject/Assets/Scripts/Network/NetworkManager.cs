@@ -21,8 +21,6 @@ namespace Network
         
             _connection = new PhotonConnection();
             _room = new PhotonRoom();
-        
-            _connection.SetupPhotonNetwork(); // 네트워크 접속 전 세팅해줘야 함
         }
     
         private void Start()

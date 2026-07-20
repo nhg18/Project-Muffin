@@ -6,6 +6,7 @@ using Network;
 using TMPro;
 using UI.Components;
 using UI.Interfaces;
+using UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -47,7 +48,6 @@ public class NicknameInputLogic : MonoBehaviour, ISubmitLogic
         }
 
         NetworkManager.Instance.Connect();
-        PopupManager.Instance.Show<LoadingPopup>();
         NetworkManager.Instance.SetNickname(text); // 네트워크 닉네임
     }
 

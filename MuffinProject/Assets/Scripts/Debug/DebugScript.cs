@@ -24,6 +24,16 @@ public class DebugScript : MonoBehaviour
         joinButton.onClick.AddListener(ClickJoinButton);
     }
 
+    private void OnEnable()
+    {
+        RoomEvents.OnJoinedRoom += OnJoinedRoom;
+    }
+
+    private void OnDisable()
+    {
+        RoomEvents.OnJoinedRoom -= OnJoinedRoom;
+    }
+    
     private void ClickJoinButton()
     {
         if (!NetworkManager.IsConnected)
@@ -34,5 +44,11 @@ public class DebugScript : MonoBehaviour
 
         var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
         PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
+    }
+
+    private void OnJoinedRoom()
+    {
+        int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
+        NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
     }
 }

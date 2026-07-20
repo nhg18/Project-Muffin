@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Network;
 using Photon.Pun;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class RoomPanel : MonoBehaviour
@@ -37,6 +38,8 @@ public class RoomPanel : MonoBehaviour
     private void OnLeaveClicked()
     {
         NetworkManager.Instance.LeaveRoom();
+        // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby)); // 디버깅 로비 씬
     }
 
     private void OnStartClicked()
