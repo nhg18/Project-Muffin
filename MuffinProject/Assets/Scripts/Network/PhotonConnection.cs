@@ -72,7 +72,6 @@ namespace Network
         public void OnConnectedToMaster()
         {
             Debug.Log("On Connected To Master");
-            // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 없어도 됨.
             ConnectionEvents.RaiseConnected();
         }
 
