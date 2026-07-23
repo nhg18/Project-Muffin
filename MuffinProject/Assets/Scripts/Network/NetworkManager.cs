@@ -30,6 +30,8 @@ namespace Network
     
         // 퍼블릭 메서드
         #region Public Methods
+        
+        public void Initialize() => _connection.Initialize();
 
         /// <summary>
         /// 네트워크 접속 함수
