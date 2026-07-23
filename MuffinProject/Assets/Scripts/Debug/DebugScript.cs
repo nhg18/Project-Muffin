@@ -14,9 +14,11 @@ public class DebugScript : MonoBehaviour
     [SerializeField] private Button joinButton;
     [SerializeField] private string nickname = "Player";    
     [SerializeField] private string roomName = "Debug";
-    
+
     private void Start()
     {
+        NetworkManager.Instance.Initialize();
+        
         if (!NetworkManager.IsConnected)
             NetworkManager.Instance.Connect();
         

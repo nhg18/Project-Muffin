@@ -9,7 +9,10 @@ namespace Core
     {
         private void Start()
         {
-            NetworkManager.Instance.Connect();
+            NetworkManager.Instance.Initialize();
+            
+            if (!NetworkManager.IsConnected)
+                NetworkManager.Instance.Connect();
         }
 
         private void OnEnable()
