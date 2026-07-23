@@ -5,6 +5,7 @@ using Network;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 
@@ -36,7 +37,7 @@ public class DebugScript : MonoBehaviour
     
     private void ClickJoinButton()
     {
-        if (!NetworkManager.IsConnected)
+        if (!PhotonNetwork.IsConnectedAndReady)
         {
             Debug.LogError("JoinRoom failed. Client is not connected.");
             return;
@@ -50,5 +51,6 @@ public class DebugScript : MonoBehaviour
     {
         int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
         NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
     }
 }
