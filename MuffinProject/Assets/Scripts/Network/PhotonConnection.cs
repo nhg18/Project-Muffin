@@ -37,7 +37,7 @@ namespace Network
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
         /// </summary>
-        public async Task Initialize()
+        public void Initialize()
         {
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
