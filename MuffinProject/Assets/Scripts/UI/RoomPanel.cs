@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Network;
 using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -14,32 +15,39 @@ public class RoomPanel : MonoBehaviour
 
     private void OnEnable()
     {
-        if (PhotonNetwork.IsMasterClient)
-        {
-            startButton.gameObject.SetActive(true);
-            startButton.onClick.AddListener(OnStartClicked);
-        }
-        else
-        {
-            startButton.gameObject.SetActive(false);
-        }
+        RoomEvents.OnLeftRoom += OnLeftRoom;
+        
+        RoomEvents.OnPlayerEntered += OnRoomStateChanged;
+        RoomEvents.OnPlayerLeft += OnRoomStateChanged;
+
+        RoomEvents.OnPlayerEntered += UpdateStartButtonState;
+        RoomEvents.OnPlayerLeft += UpdateStartButtonState;
+        
         leaveButton.onClick.AddListener(OnLeaveClicked);
     }
 
     private void OnDisable()
     {
-        if (PhotonNetwork.IsMasterClient)
-        {
-            startButton.onClick.RemoveListener(OnStartClicked);
-        }
+        RoomEvents.OnLeftRoom -= OnLeftRoom;
+        
+        RoomEvents.OnPlayerEntered -= OnRoomStateChanged;
+        RoomEvents.OnPlayerLeft -= OnRoomStateChanged;
+        
+        RoomEvents.OnPlayerEntered -= UpdateStartButtonState;
+        RoomEvents.OnPlayerLeft -= UpdateStartButtonState;
+        
         leaveButton.onClick.RemoveListener(OnLeaveClicked);
+    }
+
+    private void Start()
+    {
+        UpdateStartButtonState(null);
+        RefreshStartButton();
     }
 
     private void OnLeaveClicked()
     {
         NetworkManager.Instance.LeaveRoom();
-        // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
-        SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby)); // 디버깅 로비 씬
     }
 
     private void OnStartClicked()
@@ -51,12 +59,6 @@ public class RoomPanel : MonoBehaviour
 
     private bool CanStartGame()
     {
-        // Master Client만 시작 가능, UI에서는 시작버튼이 안 보이게 설정
-        if (!PhotonNetwork.IsMasterClient) return false;
-        
-        // CurrentRoom null check
-        if (PhotonNetwork.CurrentRoom == null) return false;
-
         if (PhotonNetwork.CurrentRoom.PlayerCount < NetworkManager.MinPlayers)
         {
             Debug.Log("It must have at least 2 players");
@@ -64,5 +66,38 @@ public class RoomPanel : MonoBehaviour
             return false;
         }
         return true;
+    }
+
+    private void OnLeftRoom()
+    {
+        // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
+        SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby)); // 디버깅 로비 씬
+    }
+    
+    private void UpdateStartButtonState(Player player)
+    {
+        startButton.interactable = CanStartGame();
+    }
+    
+    private void OnRoomStateChanged(Player player)
+    {
+        RefreshStartButton();
+    }
+    
+    private void RefreshStartButton()
+    {
+        // 마스터 클라이언트인지 확인
+        if (PhotonNetwork.IsMasterClient)
+        {
+            startButton.gameObject.SetActive(true);
+            
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(OnStartClicked);
+        }
+        else
+        {
+            startButton.gameObject.SetActive(false);
+            startButton.onClick.RemoveAllListeners();
+        }
     }
 }
