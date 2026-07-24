@@ -25,6 +25,8 @@ public class PlayerHandPresenter : MonoBehaviour
 
         if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
+        Debug.Log("card : " + cardid);
+
         CardData data = cardDatabase.GetCard(cardid);
 
         handView.draw_A_Card(data);

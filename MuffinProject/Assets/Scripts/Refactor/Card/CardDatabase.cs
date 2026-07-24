@@ -8,14 +8,15 @@ public class CardDatabase : ScriptableObject
     public static CardDatabase Instance { get; private set; }
 
     [SerializeField] private List<CardData> CardAssets;
-    private Dictionary<int, CardData> cardDict = new Dictionary<int, CardData>();
+    private Dictionary<int, CardData> cardDict;
 
     public void Initialize()
     {
         Instance = this;
+        cardDict = new Dictionary<int, CardData>();
         foreach(var data in CardAssets)
         {
-            cardDict.Add(data.ID, data);
+            cardDict[data.ID] = data;
         }
     }
 

@@ -10,12 +10,18 @@ public class CardView : MonoBehaviour
     [Header("UI¿¬°á")]
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text Description;
-    [SerializeField] private Image cardImage;
+    [SerializeField] private SpriteRenderer cardImage;
     [SerializeField] private int type;
 
     public void Setup(CardData data)
     {
-        if (data == null) return;
+        if (data == null)
+        {
+            Debug.Log("null null null");
+            return;
+        }
+
+        Debug.Log("data : "+ data.CardName+" "+ data.Description);
         nameText.text = data.CardName;
         Description.text = data.Description;
         cardImage.sprite = data.CardImage;
