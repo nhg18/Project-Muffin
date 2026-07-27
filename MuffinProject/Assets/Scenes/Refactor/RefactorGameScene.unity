@@ -478,7 +478,7 @@ Transform:
   m_GameObject: {fileID: 807199484}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalPosition: {x: 0, y: 0, z: -50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -931,6 +931,7 @@ MonoBehaviour:
   deck:
     cards: []
   deckView: {fileID: 803072895}
+  cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
 --- !u!4 &1059493294
 Transform:
   m_ObjectHideFlags: 0

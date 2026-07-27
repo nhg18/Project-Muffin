@@ -25,4 +25,14 @@ public class CardDatabase : ScriptableObject
         if (cardDict == null) Initialize();
         return cardDict.ContainsKey(id) ? cardDict[id] : null;
     }
+
+    public List<Card> GetCardList()
+    {
+        List<Card> cards = new List<Card>();
+        for(int i = 0; i < CardAssets.Count; i++)
+        {
+            cards.Add(new Card(CardAssets[i].ID));
+        }
+        return cards;
+    }
 }

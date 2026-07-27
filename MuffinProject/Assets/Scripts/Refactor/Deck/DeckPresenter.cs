@@ -9,6 +9,8 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
 {
     [SerializeField] private Deck deck = new Deck();
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
+    [SerializeField] private CardDatabase cardDatabase;
+    [SerializeField] private static int startHands = 7;
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
@@ -20,11 +22,13 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
     private void Start()
     {
         // 2. 임시 카드로 덱 초기화 (실제 게임에서는 별도의 데이터 매니저에서 받아옴) 수정 필요!!
-        List<Card> startingCards = new List<Card>
-        {
-            new(1), new(2), new (3), new (4)
-        };
+        List<Card> startingCards = cardDatabase.GetCardList();
         deck.InitDeck(startingCards);
+
+        for(int i = 0; i < startHands; i++)
+        {
+            RequestDrawCard();
+        }
 
         // 3. View의 버튼 클릭 이벤트 구독
         deckView.OnDrawButtonClicked += RequestDrawCard;
