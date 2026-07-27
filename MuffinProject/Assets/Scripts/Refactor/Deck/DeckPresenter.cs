@@ -10,7 +10,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
     [SerializeField] private Deck deck = new Deck();
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     [SerializeField] private CardDatabase cardDatabase;
-    [SerializeField] private static int startHands = 7;
+    [SerializeField] public static int startHands = 7;
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
@@ -69,9 +69,6 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
         };
         
         PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
-
-        Debug.Log("드로우!");
-
         photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard.ID);
 
     }

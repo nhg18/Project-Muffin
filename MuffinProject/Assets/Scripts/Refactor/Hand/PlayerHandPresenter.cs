@@ -6,17 +6,14 @@ using UnityEngine;
 public class PlayerHandPresenter : MonoBehaviour
 {
     [Header("Hands Setting")]
-    [SerializeField] int startHands = 7;
-    private int HandCount;
+    private int HandCount=0;
 
     [SerializeField] private PlayerHandView handView;
 
     [SerializeField] private CardDatabase cardDatabase;
 
-    private void Awake()
-    {
-        HandCount = startHands;
-    }
+    private bool isPropertyUpdatePending = false;
+
     private void OnEnable()
     {
         DeckEvent.OnDrawn += StartDrawEvent;
@@ -37,6 +34,35 @@ public class PlayerHandPresenter : MonoBehaviour
 
         handView.draw_A_Card(data);
 
+        HandCount++;
 
+        if (!isPropertyUpdatePending)
+        {
+            isPropertyUpdatePending = true;
+            StartCoroutine(UpdatePropertyAtEndOfFrame());
+        }
+    }
+
+    //private void RefreshMyHandCount()
+    //{
+    //    PhotonNetwork.LocalPlayer.SetCustomProperties(
+    //        new ExitGames.Client.Photon.Hashtable
+    //        {
+    //            ["HandCount"] = HandCount,
+    //        }
+    //    );
+    //}
+    private IEnumerator UpdatePropertyAtEndOfFrame()
+    {
+        yield return new WaitForEndOfFrame(); // 프레임 끝까지 대기
+
+        PhotonNetwork.LocalPlayer.SetCustomProperties(
+            new ExitGames.Client.Photon.Hashtable
+            {
+                ["HandCount"] = HandCount
+            }
+        );
+
+        isPropertyUpdatePending = false;
     }
 }

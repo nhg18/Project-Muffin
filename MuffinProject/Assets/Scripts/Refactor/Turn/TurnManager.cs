@@ -57,7 +57,7 @@ public class TurnManager : SingletonPun<TurnManager>
     {
         var players = PhotonNetwork.PlayerList;
         for (int i = 0; i < players.Length; i++)
-            if (players[i].ActorNumber == CurrentTurnActor)
+            if (players[i].ActorNumber == CurrentTurnActor)//--------
                 return players[(i + 1) % players.Length].ActorNumber;
         return players[0].ActorNumber;
     }
