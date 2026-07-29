@@ -12,8 +12,9 @@ GameObject:
   - component: {fileID: 384919373410716909}
   - component: {fileID: 2589855769022802918}
   - component: {fileID: -4058714603042988836}
+  - component: {fileID: 5318585067689382807}
   m_Layer: 0
-  m_Name: PlayerCard
+  m_Name: PlayerActionCard
   m_TagString: Card
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -133,7 +134,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 4.5, y: 6.5}
+  m_Size: {x: 2.05, y: 3.05}
   m_EdgeRadius: 0
 --- !u!114 &-4058714603042988836
 MonoBehaviour:
@@ -151,6 +152,18 @@ MonoBehaviour:
   description: {fileID: 5675138881582605864}
   cardImage: {fileID: 4509583257627586255}
   type: 0
+--- !u!210 &5318585067689382807
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4051323403029456082}
+  m_Enabled: 1
+  m_SortingLayerID: 572020911
+  m_SortingLayer: 3
+  m_SortingOrder: 0
+  m_SortAtRoot: 0
 --- !u!1 &4188547929725134271
 GameObject:
   m_ObjectHideFlags: 0
@@ -185,8 +198,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.393, y: 2.423902}
-  m_SizeDelta: {x: 21.6955, y: 6.5223}
+  m_AnchoredPosition: {x: 0.2205, y: 1.2197}
+  m_SizeDelta: {x: 11.5656, y: 3.115}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &5535151781611245568
 MeshRenderer:
@@ -277,8 +290,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35.3
-  m_fontSizeBase: 35.3
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -356,8 +369,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -2}
-  m_SizeDelta: {x: 34, y: 16}
+  m_AnchoredPosition: {x: 0, y: -0.9}
+  m_SizeDelta: {x: 16, y: 8}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &1719556489609585116
 MeshRenderer:
@@ -448,8 +461,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 27.09
-  m_fontSizeBase: 27.09
+  m_fontSize: 16
+  m_fontSizeBase: 16
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -520,7 +533,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 6241608222824089073}
@@ -603,9 +616,9 @@ Transform:
   m_GameObject: {fileID: 8904340818168941330}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.68, z: -1}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalPosition: {x: 0, y: 0.29, z: -1}
+  m_LocalScale: {x: 0.063, y: 0.063, z: 0.063}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 6241608222824089073}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -654,8 +667,8 @@ SpriteRenderer:
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
-  m_DrawMode: 1
-  m_Size: {x: 2.5, y: 2.5}
+  m_DrawMode: 0
+  m_Size: {x: 20, y: 20}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
