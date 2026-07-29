@@ -320,6 +320,7 @@ MonoBehaviour:
   Description: {fileID: 5675138881582605864}
   cardImage: {fileID: 8302360711551816829}
   type: 0
+  cardData: {fileID: 0}
 --- !u!1 &4188547929725134271
 GameObject:
   m_ObjectHideFlags: 0

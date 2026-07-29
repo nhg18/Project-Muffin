@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -6,10 +7,9 @@ using UnityEngine.UI;
 
 public class CardView : MonoBehaviour
 {
-
-    [Header("UI¿¬°á")]
+    [Header("UIì—°ê²°")]
     [SerializeField] private TMP_Text nameText;
-    [SerializeField] private TMP_Text Description;
+    [SerializeField] private TMP_Text description;
     [SerializeField] private SpriteRenderer cardImage;
     [SerializeField] private int type;
 
@@ -21,11 +21,11 @@ public class CardView : MonoBehaviour
             return;
         }
 
-        Debug.Log("data : "+ data.CardName+" "+ data.Description);
-        nameText.text = data.CardName;
-        Description.text = data.Description;
-        cardImage.sprite = data.CardImage;
+        Debug.Log("data : "+ data.cardName+" "+ data.description);
+        nameText.text = data.cardName;
+        description.text = data.description;
+        cardImage.sprite = data.cardImage;
 
-        gameObject.name = $"Card_{data.ID}_{data.CardName}";
+        gameObject.name = $"Card_{data.id}_{data.cardName}";
     }
 }

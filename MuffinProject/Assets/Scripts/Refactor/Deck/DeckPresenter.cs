@@ -7,7 +7,7 @@ using UnityEngine;
 
 public class DeckPresenter : MonoBehaviourPunCallbacks
 {
-    [SerializeField] private Deck deck = new Deck();
+    [SerializeField] private Deck deck = new();
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     [SerializeField] private CardDatabase cardDatabase;
     [SerializeField] public static int startHands = 7;

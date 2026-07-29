@@ -8,8 +8,6 @@ using Photon.Pun;
 
 public class PlayerHandView : MonoBehaviour
 {
-
-
     [Header("GameObjects")]
     [SerializeField] SplineContainer splineContainer;
     [SerializeField] Transform drawPosition;

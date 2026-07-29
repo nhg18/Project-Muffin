@@ -16,7 +16,7 @@ public class CardDatabase : ScriptableObject
         cardDict = new Dictionary<int, CardData>();
         foreach(var data in CardAssets)
         {
-            cardDict[data.ID] = data;
+            cardDict[data.id] = data;
         }
     }
 
@@ -31,7 +31,7 @@ public class CardDatabase : ScriptableObject
         List<Card> cards = new List<Card>();
         for(int i = 0; i < CardAssets.Count; i++)
         {
-            cards.Add(new Card(CardAssets[i].ID));
+            cards.Add(new Card(CardAssets[i].id));
         }
         return cards;
     }
