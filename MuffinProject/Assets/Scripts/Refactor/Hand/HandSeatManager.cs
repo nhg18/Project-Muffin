@@ -3,22 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HandSeatManager : MonoBehaviour
+public class HandSeatManager : Singleton<HandSeatManager>
 {
-    public static HandSeatManager Instance { get; private set; }
-    private void Awake()
-    {
-        // 씬에 매니저가 하나만 존재하도록 보장하는 기본 싱글톤 구조
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
     [Header("OtherHands")]
     [SerializeField] GameObject OtherHands;
     [SerializeField] List<Transform> OtherHandsPosition = new List<Transform>();
