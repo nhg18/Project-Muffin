@@ -11,6 +11,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
     [SerializeField] private DeckView deckView; // 인스펙터에서 할당
     [SerializeField] private CardDatabase cardDatabase;
     [SerializeField] public static int startHands = 7;
+    [SerializeField] private DeckRecipe startingDeckRecipe;
     private const string DECK_PROPERTY_KEY = "RoomDeck";
 
     private void Awake()
@@ -22,8 +23,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
     private void Start()
     {
         // 2. 임시 카드로 덱 초기화 (실제 게임에서는 별도의 데이터 매니저에서 받아옴) 수정 필요!!
-        List<Card> startingCards = new List<Card>() { new(1), new(2), new(3), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4), new(4) };
-
+        List<Card> startingCards = new List<Card>(startingDeckRecipe.cardIDs);
         deck.InitDeck(startingCards);
 
         for(int i = 0; i < startHands; i++)

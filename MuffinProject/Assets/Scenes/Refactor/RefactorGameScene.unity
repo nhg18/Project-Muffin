@@ -994,6 +994,7 @@ MonoBehaviour:
     cards: []
   deckView: {fileID: 803072895}
   cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
+  startingDeckRecipe: {fileID: 11400000, guid: 73bc7a1541c229b4d92d7bd2195cf9ed, type: 2}
 --- !u!4 &1059493294
 Transform:
   m_ObjectHideFlags: 0
