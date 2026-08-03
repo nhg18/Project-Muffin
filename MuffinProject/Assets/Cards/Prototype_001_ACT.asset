@@ -17,3 +17,4 @@ MonoBehaviour:
   cardImage: {fileID: 21300000, guid: ae227945ebbdbf64abf476e6addfc31b, type: 3}
   type: 0
   description: 
+  effects: []
