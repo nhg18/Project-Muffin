@@ -18,12 +18,12 @@ public class TurnUI : MonoBehaviour
 
     private void OnEnable()
     {
-        TurnEvents.OnTurnChanged += UpdateTurnUI;
+        GameEvents.OnTurnChanged += UpdateTurnUI;
     }
     
     private void OnDisable()
     {
-        TurnEvents.OnTurnChanged -= UpdateTurnUI;
+        GameEvents.OnTurnChanged -= UpdateTurnUI;
     }
 
     private void UpdateTurnUI()
@@ -42,17 +42,17 @@ public class TurnUI : MonoBehaviour
         }
     }
     
-    public void SetButtonInteractable(bool interactable)
+    private void SetButtonInteractable(bool interactable)
     {
         turnEndButton.interactable = interactable;
     }
 
-    public void SetIndicatorText(string text)
+    private void SetIndicatorText(string text)
     {
         turnIndicatorText.text = text;
     }
 
-    public void SetIndicatorColor(Color color)
+    private void SetIndicatorColor(Color color)
     {
         turnIndicatorText.color = color;
     }

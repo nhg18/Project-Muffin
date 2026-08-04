@@ -13,6 +13,11 @@ public class RoomPanel : MonoBehaviour
     [SerializeField] private Button leaveButton;
     [SerializeField] private Button startButton;
 
+    private void Awake()
+    {
+        PhotonNetwork.AutomaticallySyncScene = true;
+    }
+
     private void OnEnable()
     {
         RoomEvents.OnLeftRoom += OnLeftRoom;

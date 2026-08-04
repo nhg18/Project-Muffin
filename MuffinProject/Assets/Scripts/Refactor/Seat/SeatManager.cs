@@ -7,62 +7,75 @@ using UnityEngine;
 
 public class SeatManager : Singleton<SeatManager>
 {
-    [SerializeField] private PlayerSeat playerSeatPrefab;
-    [SerializeField] private RectTransform[] seatPositions;
+    [SerializeField] private PlayerSeat[] playerSeats = new PlayerSeat[4];
     
-    private readonly Dictionary<Player, PlayerSeat> _playerSeats = new();
+    private readonly Dictionary<int, PlayerSeat> _playerSeats = new(); // ActorNumber, PlayerSeat
     
     private void OnEnable()
     {
         RoomEvents.OnPlayerLeft += HandlePlayerLeft;
-        TurnEvents.OnTurnChanged += UpdateSeatUI;
+        GameEvents.OnTurnChanged += UpdateSeatUI;
     }
 
     private void Start()
     {
-        CreateSeats();
+        ApplyPlayerSeats();
         UpdateSeatUI();
     }
 
     private void OnDisable()
     {
         RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
-        TurnEvents.OnTurnChanged -= UpdateSeatUI;
+        GameEvents.OnTurnChanged -= UpdateSeatUI;
     }
 
     public void UpdateSeatUI()
     {
-        foreach (var (player, seatView) in _playerSeats)
+        foreach (var (actorNumber, seatView) in _playerSeats)
         {
-            seatView.SetNicknameUI(player.NickName);
+            seatView.gameObject.SetActive(true);
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+
+            if (player == null)
+            {
+                Debug.Log($"Player {actorNumber} has no player in CurrentRoom");
+                continue;
+            }
             
-            bool isMyTurn = player.ActorNumber == TurnManager.Instance.CurrentTurnActor;
+            seatView.SetNicknameUI(player.NickName);
+            bool isMyTurn = actorNumber == TurnManager.Instance.CurrentTurnActor;
+            Debug.Log($"Player {actorNumber} is my turn {isMyTurn}");
             seatView.SetTurnUI(isMyTurn);
         }
     }
     
-    private Dictionary<Player, int> GetSeatAssignments(int myActorNumber)
+    /// <summary>
+    /// 자신의 Actor 번호 기준으로 좌석배치하는 알고리즘
+    /// </summary>
+    /// <param name="myActorNumber"> 자신의 Actor번호, PhotonNetwork.LocalPlayer.ActorNumber </param>
+    /// <returns> int, int : ActorNumber, SeatIndex </returns>
+    public Dictionary<int, int> GetSeatAssignments(int myActorNumber)
     {
-        Dictionary<Player, int> result = new();
-        List<Player> others = new();
+        Dictionary<int, int> result = new();
+        List<int> others = new();
         
         // CurrentRoom.PlayerCount 말고 게임 클래스 만들어서 PlayerCount 만들어야 함. 현재는 중도 난입이 없다는 가정하에 안전
         int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
 
-        foreach (var player in PhotonNetwork.PlayerList)
+        foreach (var kvp in PhotonNetwork.CurrentRoom.Players)
         {
-            if (player.ActorNumber == myActorNumber)
+            if (kvp.Key == myActorNumber)
             {
-                result.Add(player, 0); // 본인은 항상 1번 자리(인덱스 0)
+                result.Add(kvp.Key, 0); // 본인은 항상 1번 자리(인덱스 0)
             }
             else
             {
-                others.Add(player);
+                others.Add(kvp.Key);
             }
         }
 
         // 시간복잡도 최악 O(NlogN) = O(4.6..) = O(1)
-        others.Sort((a, b) => a.ActorNumber.CompareTo(b.ActorNumber));
+        others.Sort();
         
         for (var i = 0; i < others.Count; i++)
         {
@@ -75,27 +88,26 @@ public class SeatManager : Singleton<SeatManager>
         return result;
     }
 
-    private void CreateSeats()
+    private void ApplyPlayerSeats()
     {
         var myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
         var seatAssignments = GetSeatAssignments(myActorNumber);
         
         foreach (var (targetPlayer, seatIndex) in seatAssignments)
         {
-            var seatView = Instantiate(playerSeatPrefab, seatPositions[seatIndex]);
-            _playerSeats.Add(targetPlayer, seatView);
+            _playerSeats.Add(targetPlayer, playerSeats[seatIndex]);
         }
     }
 
     private void HandlePlayerLeft(Player player)
     {
-        if (!_playerSeats.TryGetValue(player, out PlayerSeat seatView)) return;
+        if (!_playerSeats.TryGetValue(player.ActorNumber, out PlayerSeat seatView)) return;
         
         if (seatView)
         {
             Destroy(seatView.gameObject);
         }
         
-        _playerSeats.Remove(player);
+        _playerSeats.Remove(player.ActorNumber);
     }
 }

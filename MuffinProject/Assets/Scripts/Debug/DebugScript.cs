@@ -17,7 +17,7 @@ public class DebugScript : MonoBehaviour
 
     private void Start()
     {
-        NetworkManager.Instance.Initialize();
+        PhotonNetwork.AutomaticallySyncScene = false;
         
         if (!NetworkManager.IsConnected)
             NetworkManager.Instance.Connect();
@@ -44,6 +44,8 @@ public class DebugScript : MonoBehaviour
             Debug.LogError("JoinRoom failed. Client is not connected.");
             return;
         }
+        
+        Debug.Log("Click join button");
 
         var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
         PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
@@ -51,8 +53,12 @@ public class DebugScript : MonoBehaviour
 
     private void OnJoinedRoom()
     {
+        Debug.Log("JoinRoom");
         int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
         NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
+        
+        Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
+        
         SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
     }
 }
