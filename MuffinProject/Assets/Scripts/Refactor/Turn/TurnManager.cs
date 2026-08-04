@@ -97,7 +97,7 @@ public class TurnManager : SingletonPun<TurnManager>
         int actorNumber = (int)changedProperties[KEY_TURN];
         Debug.Log($"turnchange : {actorNumber}/ MyTurn?:{IsMyTurn}");
         
-        TurnEvents.RaiseTurnChanged();
+        GameEvents.RaiseTurnChanged();
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)

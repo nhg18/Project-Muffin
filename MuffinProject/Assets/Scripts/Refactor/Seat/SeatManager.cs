@@ -15,7 +15,7 @@ public class SeatManager : Singleton<SeatManager>
     private void OnEnable()
     {
         RoomEvents.OnPlayerLeft += HandlePlayerLeft;
-        TurnEvents.OnTurnChanged += UpdateSeatUI;
+        GameEvents.OnTurnChanged += UpdateSeatUI;
     }
 
     private void Start()
@@ -27,7 +27,7 @@ public class SeatManager : Singleton<SeatManager>
     private void OnDisable()
     {
         RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
-        TurnEvents.OnTurnChanged -= UpdateSeatUI;
+        GameEvents.OnTurnChanged -= UpdateSeatUI;
     }
 
     public void UpdateSeatUI()
