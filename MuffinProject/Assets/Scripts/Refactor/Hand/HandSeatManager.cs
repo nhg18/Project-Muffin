@@ -13,14 +13,25 @@ public class HandSeatManager : Singleton<HandSeatManager>
     {
         int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
         int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-        int genCount = myActorNumber;
-        for (int i = 0; i < (playerCount - 1); i++)
+        
+        var seatAssignments = SeatManager.Instance.GetSeatAssignments(myActorNumber); // ActorNumber, SeatIndex
+        foreach (var (actorNumber, seatIndex) in seatAssignments)
         {
-            GameObject a = Instantiate(OtherHands, OtherHandsPosition[i]);
+            if (actorNumber == myActorNumber) continue;
+            
+            GameObject a = Instantiate(OtherHands, OtherHandsPosition[seatIndex]);
             OtherPlayerHandPresenter oph = a.GetComponentInChildren<OtherPlayerHandPresenter>();
-            oph.OtherPlayerNumber = (genCount % playerCount + 1);
-            genCount++;
+            oph.OtherPlayerNumber = actorNumber;
         }
+        
+        // int genCount = myActorNumber;
+        // for (int i = 0; i < (playerCount - 1); i++)
+        // {
+        //     GameObject a = Instantiate(OtherHands, OtherHandsPosition[i]);
+        //     OtherPlayerHandPresenter oph = a.GetComponentInChildren<OtherPlayerHandPresenter>();
+        //     oph.OtherPlayerNumber = (genCount % playerCount + 1);
+        //     genCount++;
+        // }
     }
 
     // Update is called once per frame
