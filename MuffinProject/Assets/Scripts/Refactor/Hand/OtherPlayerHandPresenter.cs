@@ -9,7 +9,7 @@ public class OtherPlayerHandPresenter : MonoBehaviourPunCallbacks
 {
     private int HandCount=0;
     public int OtherPlayerNumber=0;
-    private static int curNum = 0; //ÀÚ¸® ¹èÄ¡¸¦ À§ÇÑ ·ÎÁ÷³Ñ¹ö
+    private static int curNum = 0; //ìë¦¬ ë°°ì¹˜ë¥¼ ìœ„í•œ ë¡œì§ë„˜ë²„
     [SerializeField] private OtherPlayerHandView handView;
     private void Awake()
     {
@@ -34,22 +34,22 @@ public class OtherPlayerHandPresenter : MonoBehaviourPunCallbacks
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        // ³»°¡ °üÂû ÁßÀÎ »ó´ë¹æÀÇ Á¤º¸°¡ ¸Â°í, º¯°æµÈ ¼Ó¼º Áß "HandCount"°¡ ÀÖ´Ù¸é
+        // ë‚´ê°€ ê´€ì°° ì¤‘ì¸ ìƒëŒ€ë°©ì˜ ì •ë³´ê°€ ë§ê³ , ë³€ê²½ëœ ì†ì„± ì¤‘ "HandCount"ê°€ ìˆë‹¤ë©´
         if (targetPlayer.ActorNumber == OtherPlayerNumber && changedProps.ContainsKey("HandCount"))
         {
             int realCount = (int)changedProps["HandCount"];
 
-            // ¸¸¾à ³×Æ®¿öÅ© ·ºÀÌ³ª ¾ÃÈûÀ¸·Î ÀÎÇØ ³» È­¸éÀÇ Ä«µå ¼ö(HandCount)¿Í
-            // »ó´ë¹æ ÀåºÎ¿¡ ÀûÈù ¼ö(realCount)°¡ ´Ù¸£´Ù¸é °­Á¦·Î ¸ÂÃçÁİ´Ï´Ù.
+            // ë§Œì•½ ë„¤íŠ¸ì›Œí¬ ë ‰ì´ë‚˜ ì”¹í˜ìœ¼ë¡œ ì¸í•´ ë‚´ í™”ë©´ì˜ ì¹´ë“œ ìˆ˜(HandCount)ì™€
+            // ìƒëŒ€ë°© ì¥ë¶€ì— ì íŒ ìˆ˜(realCount)ê°€ ë‹¤ë¥´ë‹¤ë©´ ê°•ì œë¡œ ë§ì¶°ì¤ë‹ˆë‹¤.
             if (HandCount < realCount)
             {
                 int needed = realCount - HandCount;
                 for (int i = 0; i < needed; i++)
                 {
                     HandCount++;
-                    handView.draw_A_Card(); // ´©¶ôµÈ Ä«µå º¸Ãæ
+                    handView.draw_A_Card(); // ëˆ„ë½ëœ ì¹´ë“œ ë³´ì¶©
                 }
-                Debug.LogWarning($"[µ¿±âÈ­ ±³Á¤] Ä«µå°¡ ºÎÁ·ÇÏ¿© {needed}Àå °­Á¦ Ãß°¡");
+                Debug.LogWarning($"[ë™ê¸°í™” êµì •] ì¹´ë“œê°€ ë¶€ì¡±í•˜ì—¬ {needed}ì¥ ê°•ì œ ì¶”ê°€");
             }
         }
     }

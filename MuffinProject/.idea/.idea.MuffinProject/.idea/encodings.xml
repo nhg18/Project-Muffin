@@ -7,6 +7,8 @@
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Hands/PlayerHandsScripts.cs" charset="EUC-KR" />
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Interface/PrototypeNetwork.cs" charset="EUC-KR" />
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Refactor/Card/CardView.cs" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Assets/Scripts/Refactor/Hand/HandSeatManager.cs" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/Assets/Scripts/Refactor/Hand/OtherPlayerHandPresenter.cs" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Refactor/Hand/PlayerHandPresenter.cs" charset="EUC-KR" />
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Refactor/Turn/TurnUI.cs" charset="EUC-KR" />
     <file url="file://$PROJECT_DIR$/Assets/Scripts/Turn/TurnView.cs" charset="EUC-KR" />
