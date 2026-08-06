@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 254179968675684481}
   m_Layer: 0
-  m_Name: OtherPalyerHand
+  m_Name: OtherPlayerHand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
