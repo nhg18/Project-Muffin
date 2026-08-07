@@ -19,11 +19,13 @@ public class TurnUI : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.OnTurnChanged += UpdateTurnUI;
+        GameEvents.OnTurnChanged += SeatManager.Instance.UpdateSeatUI;
     }
     
     private void OnDisable()
     {
         GameEvents.OnTurnChanged -= UpdateTurnUI;
+        GameEvents.OnTurnChanged -= SeatManager.Instance.UpdateSeatUI;
     }
 
     private void UpdateTurnUI()

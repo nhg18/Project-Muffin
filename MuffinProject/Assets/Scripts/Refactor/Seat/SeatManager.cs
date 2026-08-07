@@ -14,26 +14,23 @@ public class SeatManager : Singleton<SeatManager>
     private void OnEnable()
     {
         RoomEvents.OnPlayerLeft += HandlePlayerLeft;
-        GameEvents.OnTurnChanged += UpdateSeatUI;
     }
 
     private void Start()
     {
         ApplyPlayerSeats();
-        UpdateSeatUI();
+        SetupSeatUI();
     }
 
     private void OnDisable()
     {
         RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
-        GameEvents.OnTurnChanged -= UpdateSeatUI;
     }
 
     public void UpdateSeatUI()
     {
         foreach (var (actorNumber, seatView) in _playerSeats)
         {
-            seatView.gameObject.SetActive(true);
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
 
             if (player == null)
@@ -42,9 +39,7 @@ public class SeatManager : Singleton<SeatManager>
                 continue;
             }
             
-            seatView.SetNicknameUI(player.NickName);
             bool isMyTurn = actorNumber == TurnManager.Instance.CurrentTurnActor;
-            Debug.Log($"Player {actorNumber} is my turn {isMyTurn}");
             seatView.SetTurnUI(isMyTurn);
         }
     }
@@ -110,4 +105,24 @@ public class SeatManager : Singleton<SeatManager>
         
         _playerSeats.Remove(player.ActorNumber);
     }
+    
+    private void SetupSeatUI()
+    {
+        foreach (var (actorNumber, seatView) in _playerSeats)
+        {
+            seatView.gameObject.SetActive(true);
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+
+            if (player == null)
+            {
+                Debug.Log($"Player {actorNumber} has no player in CurrentRoom");
+                continue;
+            }
+            
+            seatView.SetNicknameUI(player.NickName);
+            bool isMyTurn = actorNumber == TurnManager.Instance.CurrentTurnActor;
+            seatView.SetTurnUI(isMyTurn);
+        }
+    }
+
 }
