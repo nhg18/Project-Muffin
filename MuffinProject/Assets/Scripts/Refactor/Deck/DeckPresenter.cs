@@ -77,9 +77,7 @@ public class DeckPresenter : MonoBehaviourPunCallbacks
     [PunRPC]
     private void RPC_BroadcastDrawnCard(int actorNumber, int drawnCardID)
     {
-        // 이제 모든 클라이언트가 이 RPC를 받고 이벤트를 실행합니다.
-        // 향후 View 스크립트에서는 actorNumber를 확인하여 내 카드면 앞면으로, 남의 카드면 뒷면으로 생성하면 됩니다.
-        DeckEvent.RaiseDrawn(actorNumber, drawnCardID);
+        GameEvents.RaiseDrawn(actorNumber, drawnCardID);
     }
 
     public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)

@@ -18,12 +18,12 @@ public class OtherPlayerHandPresenter : MonoBehaviourPunCallbacks
 
     private void OnEnable()
     {
-        DeckEvent.OnDrawn += StartDrawEvent;
+        GameEvents.OnDrawn += StartDrawEvent;
     }
 
     private void OnDisable()
     {
-        DeckEvent.OnDrawn -= StartDrawEvent;
+        GameEvents.OnDrawn -= StartDrawEvent;
     }
     private void StartDrawEvent(int actorNumber, int cardid)
     {

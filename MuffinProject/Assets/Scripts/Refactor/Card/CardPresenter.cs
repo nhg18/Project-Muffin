@@ -4,5 +4,23 @@ using UnityEngine;
 
 public class CardPresenter : MonoBehaviour
 {
-    
+    private CardModel cardModel = new CardModel();
+    public CardView cardView;
+
+    private void Awake()
+    {
+
+    }
+
+    public void Setup(CardData data) //현재 PlayerHandView 에서 호출중
+    {
+        if (data == null)
+        {
+            Debug.LogError("null CardData in CardPresenter");
+            return;
+        }
+        cardView.Setup(data);
+        cardModel.Setup(data);
+
+    }
 }
