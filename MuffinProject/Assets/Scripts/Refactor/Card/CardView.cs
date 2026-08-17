@@ -28,6 +28,8 @@ public class CardView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoint
     [SerializeField] private int dragSortingOrder = 10;
     [SerializeField] private float returnSpeed = 0.15f;
 
+    public CardPresenter cardPresenter;
+
 
     private Vector3 originalPosition;
 
@@ -177,17 +179,19 @@ public class CardView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoint
 
         if (!isDragging) return;
         isDragging = false;
-        if (isDropArea(transform.position) )//&& cardCondition.CardConditionMet())
+        if (isDropArea(transform.position) && cardPresenter.LocalConditionCheck())
         {
 
             //StartCoroutine(StartCard());
-            //StartCard();
+            //StartCard(); 
+            cardPresenter.OnCardDropped();
         }
         else
         {
             StartCoroutine(ReturnToOrigin());
         }
     }
+
     private bool isDropArea(Vector2 position)
     {
         Collider2D[] hits = Physics2D.OverlapPointAll(position);

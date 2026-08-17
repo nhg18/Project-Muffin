@@ -1,3 +1,4 @@
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,5 +23,23 @@ public class CardPresenter : MonoBehaviour
         cardView.Setup(data);
         cardModel.Setup(data);
 
+    }
+
+    public bool LocalConditionCheck()
+    {
+        string conditionMet = cardModel.cardData.ValidateConditions(PhotonNetwork.LocalPlayer);
+        if (string.IsNullOrEmpty(conditionMet))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public void OnCardDropped()
+    {
+        Debug.Log("CardDropped!");
     }
 }

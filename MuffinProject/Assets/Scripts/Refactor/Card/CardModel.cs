@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class CardModel
 {
-    CardData cardData;
+    public CardData cardData;
     public void Setup(CardData data)
     {
         cardData = data;

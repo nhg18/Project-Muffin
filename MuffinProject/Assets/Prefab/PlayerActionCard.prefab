@@ -173,6 +173,7 @@ MonoBehaviour:
   dragScale: 1.1
   dragSortingOrder: 10
   returnSpeed: 0.15
+  cardPresenter: {fileID: -8830845490142399760}
 --- !u!210 &5318585067689382807
 SortingGroup:
   m_ObjectHideFlags: 0

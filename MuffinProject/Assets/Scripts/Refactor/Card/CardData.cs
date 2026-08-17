@@ -19,6 +19,9 @@ public class CardData : ScriptableObject
     [TextArea]
     public string description;
 
+    [Header("카드 조건 리스트")]
+    public List<Card_Condition> conditions = new List<Card_Condition>();
+
     [Header("카드 효과 리스트")]
     public List<CardEffect> effects = new List<CardEffect>();
 
@@ -30,4 +33,18 @@ public class CardData : ScriptableObject
             effect.Execute(caster, target);
         }
     }
+
+    public string ValidateConditions(Player caster, Player target=null)
+    {
+        foreach(var condition in conditions)
+        {
+            string failReason = condition.CheckCondition(caster, target);
+            if (!string.IsNullOrEmpty(failReason))
+            {
+                return failReason;
+            }
+        }
+        return null;
+    }
+
 }
