@@ -41,5 +41,42 @@ public class CardPresenter : MonoBehaviour
     public void OnCardDropped()
     {
         Debug.Log("CardDropped!");
+
+
+
+    }
+
+    public List<int> SelectPlayer()
+    {
+        List<int> ActorNumbers = new List<int>();
+        
+        switch (cardModel.cardData.targetType)
+        {
+            case TargetType.SingleEnemy:
+                
+                break;
+            case TargetType.TwoEnemy:
+                break;
+            case TargetType.AllEnemies:
+                for (int i = 1; i <= 4; i++)
+                {
+                    if (PhotonNetwork.LocalPlayer.ActorNumber == i) continue;
+                    ActorNumbers.Add(i);
+                }
+                break;
+            case TargetType.AllPlayers:
+                for(int i = 1; i <= 4; i++)
+                {
+                    ActorNumbers.Add(i);
+                }
+                break;
+            case TargetType.Me:
+                ActorNumbers.Add(PhotonNetwork.LocalPlayer.ActorNumber);
+                break;
+            case TargetType.None:
+                break;
+
+        }
+        return ActorNumbers;
     }
 }

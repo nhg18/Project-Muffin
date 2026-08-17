@@ -8,6 +8,18 @@ public enum Type
     Counter,
     Trap
 }
+
+public enum TargetType
+{
+    None,
+    SingleEnemy,    
+    TwoEnemy,
+    AllEnemies,
+    Me,
+    AllPlayers
+}
+
+
 [CreateAssetMenu(fileName = "Card_", menuName = "CardSystem/Card Data")]
 public class CardData : ScriptableObject
 {
@@ -15,6 +27,7 @@ public class CardData : ScriptableObject
     public string cardName;
     public Sprite cardImage;
     public Type type;
+    public TargetType targetType;
 
     [TextArea]
     public string description;
