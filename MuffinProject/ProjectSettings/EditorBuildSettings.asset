@@ -8,19 +8,19 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/DebugLobbyScene.unity
     guid: a0ec84f17de14354caa08d64856c686e
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/BootstrapScene.unity
     guid: 2b5f7141878299e43b525b53a5f8aa5f
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/TitleScene.unity
     guid: a033967ae2645a041a9fde74e2fbca0d
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/LobbyScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
   - enabled: 1
     path: Assets/Scenes/RoomScene.unity
     guid: d63d2cfc1ada40645bf31626b184e5c9
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/GameScene.unity
     guid: 697031613670ad4438df5104ea27ee08
   - enabled: 1
