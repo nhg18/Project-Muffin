@@ -91,6 +91,7 @@ public class SeatManager : Singleton<SeatManager>
         foreach (var (targetPlayer, seatIndex) in seatAssignments)
         {
             _playerSeats.Add(targetPlayer, playerSeats[seatIndex]);
+            playerSeats[seatIndex].PlayerActorNumber = targetPlayer;//수정부분!!
         }
     }
 

@@ -1,6 +1,7 @@
 using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class CardPresenter : MonoBehaviour
@@ -38,36 +39,56 @@ public class CardPresenter : MonoBehaviour
         }
     }
 
-    public void OnCardDropped()
+    public async void OnCardDropped()
     {
         Debug.Log("CardDropped!");
+        List<int> targets = await SelectPlayer();
 
-
-
+        foreach (int player in targets)
+        {
+            Debug.Log("target : "+ player);
+        }
     }
 
-    public List<int> SelectPlayer()
+    public async Task<List<int>> SelectPlayer()
     {
         List<int> ActorNumbers = new List<int>();
         
         switch (cardModel.cardData.targetType)
         {
             case TargetType.SingleEnemy:
-                
+                int pNum = 0;
+                pNum = await CardTargetPlayerSelector();
+                if (pNum != 0)
+                {
+                    ActorNumbers.Add(pNum);
+                }
                 break;
             case TargetType.TwoEnemy:
+                int p1Num = 0;
+                p1Num = await CardTargetPlayerSelector();
+                if (p1Num != 0)
+                {
+                    ActorNumbers.Add(p1Num);
+                }
+                int p2Num = 0;
+                p2Num = await CardTargetPlayerSelector();
+                if (p2Num != 0)
+                {
+                    ActorNumbers.Add(p2Num);
+                }
                 break;
             case TargetType.AllEnemies:
-                for (int i = 1; i <= 4; i++)
+                foreach (var player in PhotonNetwork.PlayerList)
                 {
-                    if (PhotonNetwork.LocalPlayer.ActorNumber == i) continue;
-                    ActorNumbers.Add(i);
+                    if (player.IsLocal) continue; // 나 자신 제외
+                    ActorNumbers.Add(player.ActorNumber);
                 }
                 break;
             case TargetType.AllPlayers:
-                for(int i = 1; i <= 4; i++)
+                foreach (var player in PhotonNetwork.PlayerList)
                 {
-                    ActorNumbers.Add(i);
+                    ActorNumbers.Add(player.ActorNumber);
                 }
                 break;
             case TargetType.Me:
@@ -78,5 +99,21 @@ public class CardPresenter : MonoBehaviour
 
         }
         return ActorNumbers;
+    }
+
+    public async Task<int> CardTargetPlayerSelector()
+    {
+        int targetNumber = 0;
+        targetNumber = await TargetSelectionManager.Instance.SelectPlayer(20.0f);
+        if (targetNumber != 0)
+        {
+            Debug.Log($"선택 완료! 타겟 : {targetNumber}");
+            return targetNumber;
+        }
+        else
+        {
+            Debug.Log("시간 초과! 카드 사용이 취소되었습니다.");
+            return 0;
+        }
     }
 }

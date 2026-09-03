@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
-public class PlayerSeat : MonoBehaviour
+public class PlayerSeat : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] private TMP_Text nicknameText;
     [SerializeField] private TMP_Text hpText;
@@ -13,6 +14,8 @@ public class PlayerSeat : MonoBehaviour
     [SerializeField] private TMP_Text myTurnText;
     
     [SerializeField] private Image myTurnImage;
+
+    public int PlayerActorNumber=0;//수정부분!!
 
     private void Awake()
     {
@@ -38,5 +41,13 @@ public class PlayerSeat : MonoBehaviour
     private void SetTurnImage(bool isTurn)
     {
         myTurnImage.enabled = isTurn;
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (TargetSelectionManager.Instance != null && PlayerActorNumber != 0)
+        {
+            TargetSelectionManager.Instance.ReceiveClick(PlayerActorNumber);
+        }
     }
 }
