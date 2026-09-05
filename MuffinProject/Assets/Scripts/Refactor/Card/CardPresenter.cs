@@ -44,6 +44,12 @@ public class CardPresenter : MonoBehaviour
         Debug.Log("CardDropped!");
         List<int> targets = await SelectPlayer();
 
+        if(targets.Count == 0)
+        {
+            Debug.Log("no player Selected");
+            cardView.do_returnToOrigin();
+        }
+
         foreach (int player in targets)
         {
             Debug.Log("target : "+ player);

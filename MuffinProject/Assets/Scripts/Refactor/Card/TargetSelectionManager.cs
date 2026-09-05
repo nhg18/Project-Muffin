@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
-public class TargetSelectionManager : MonoBehaviour
+public class TargetSelectionManager : MonoBehaviour, IPointerClickHandler
 {
     public static TargetSelectionManager Instance { get; private set; }
     private int selectedTarget = 0;
@@ -26,7 +27,7 @@ public class TargetSelectionManager : MonoBehaviour
 
         isWaitingForSelection = false;
 
-        // 시간 초과면 null, 선택했으면 해당 오브젝트 반환
+        // 시간 초과면 0, 선택했으면 해당 playerNumber 반환
         return selectedTarget;
     }
 
@@ -35,6 +36,17 @@ public class TargetSelectionManager : MonoBehaviour
         if (isWaitingForSelection)
         {
             selectedTarget = ActorNumber;
+        }
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Right)//selection cancel
+        {
+            if (isWaitingForSelection)
+            {
+                selectedTarget = 0;
+            }
         }
     }
 }
