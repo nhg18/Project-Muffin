@@ -48,6 +48,7 @@ public class CardPresenter : MonoBehaviour
         {
             Debug.Log("no player Selected");
             cardView.do_returnToOrigin();
+            return;
         }
 
         foreach (int player in targets)
@@ -56,6 +57,7 @@ public class CardPresenter : MonoBehaviour
         }
 
         //CardPlayManager∑Œ »£√‚
+        CardPlayManager.Instance.RequestPlayCard(cardModel.cardData.id, targets);
     }
 
     public async Task<List<int>> SelectPlayer()
