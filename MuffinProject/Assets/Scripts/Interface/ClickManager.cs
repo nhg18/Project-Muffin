@@ -54,6 +54,19 @@ public class ClickManager : MonoBehaviour
             }
         }
 
+        if (Input.GetMouseButtonDown(1))
+        {
+            //Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            //RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+            if(TargetSelectionManager.Instance != null)
+            {
+                Debug.Log("cancel!!!");
+                TargetSelectionManager.Instance.ReceiveClick(0);
+
+            }
+
+        }
+
         //if (Input.GetKeyDown(KeyCode.Space))
         //{
         //    //PlayerHandsScripts.Instance.draw_A_Card();
