@@ -27,16 +27,6 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
 
     private CardData FindCard(int cardID) // 수정 필요
     {
-        //List<GameObject> Cards = PlayerHandsScripts.Instance.Cards;
-        //foreach (GameObject prefab in Cards)
-        //{
-        //    CardScript data = prefab.GetComponent<CardScript>();
-        //    if (data.cardID == cardID)
-        //    {
-        //        return prefab;
-        //    }
-        //}
-
         CardData data = cardDatabase.GetCard(cardID);
         if(data != null)
         {
@@ -96,7 +86,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         {
             Debug.LogWarning("일치하는 카드 없음");
         }
-        Invoke("StartChainResolution", waitTimeforNextCard);
+        Invoke("StartChainResolution", waitTimeforNextCard+0.5f);
     }
 
 
@@ -107,6 +97,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
 
         if (PhotonNetwork.IsMasterClient)
         {
+            Debug.Log("start resolution");
             photonView.RPC("RPC_ResolveChain", RpcTarget.All);
         }
 
@@ -151,7 +142,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
                 Debug.LogWarning("일치하는 카드 없음");
             }
             chainList.RemoveAt(i);
-            yield return new WaitForSeconds(showingTime);
+            yield return new WaitForSeconds(showingTime+0.1f);
         }
         chainList.Clear();
     }
