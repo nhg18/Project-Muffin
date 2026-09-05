@@ -10,10 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Prototype_002_ACT
+  m_Name: Card_C_002
   m_EditorClassIdentifier: 
-  ID: 2
-  CardName: prototype
-  CardImage: {fileID: 0}
-  type: 0
-  Description: second protocard
+  id: 2
+  cardName: "\uCE74\uC6B4\uD130"
+  cardImage: {fileID: 0}
+  type: 1
+  targetType: 0
+  description: "\uD589\uB3D9 \uCE74\uB4DC\uAC00 \uB098\uC654\uC744 \uB54C, \uADF8
+    \uCE74\uB4DC\uC758 \uD6A8\uACFC\uB97C \uCDE8\uC18C\uD569\uB2C8\uB2E4."
+  conditions: []
+  effects: []
