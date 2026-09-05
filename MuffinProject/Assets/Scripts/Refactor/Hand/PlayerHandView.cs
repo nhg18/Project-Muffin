@@ -17,14 +17,17 @@ public class PlayerHandView : MonoBehaviour
     [Header("Hands of Player")]
     [SerializeField] List<GameObject> Hands = new List<GameObject>();
 
+    public PlayerHandPresenter playerHandPresenter;
+
 
     public void draw_A_Card(CardData data)
     {
         GameObject drawedCard = Instantiate(presetCard, HandPosition);
         drawedCard.transform.position = drawPosition.position;
 
-        CardView cardView = drawedCard.GetComponent<CardView>();
-        cardView.Setup(data);
+        CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();//카드 셋업
+        cardPresenter.Setup(data);
+
         Hands.Add(drawedCard);
         PutAwayMyCards();
     }
@@ -69,5 +72,18 @@ public class PlayerHandView : MonoBehaviour
             Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]);
             Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]); ;
         }
+    }
+
+    public void HandsUp()//Presenter에서 CardEvent가 만들어지면 구독해서 이거 실행하기
+    {
+        Debug.Log("Up!");
+        playerHandPresenter.setHandMod(true);
+        HandPosition.DOMove(new Vector3(0, -3.8f, 0), 0.5f);
+    }
+    public void HandsDown()
+    {
+        Debug.Log("down!");
+        playerHandPresenter.setHandMod(false);
+        HandPosition.DOMove(new Vector3(0, -6.5f, 0), 0.5f);
     }
 }

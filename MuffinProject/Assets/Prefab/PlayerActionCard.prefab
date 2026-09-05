@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6241608222824089073}
   - component: {fileID: 384919373410716909}
   - component: {fileID: 2589855769022802918}
+  - component: {fileID: -8830845490142399760}
   - component: {fileID: -4058714603042988836}
   - component: {fileID: 5318585067689382807}
   m_Layer: 0
@@ -136,6 +137,19 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 2.05, y: 3.05}
   m_EdgeRadius: 0
+--- !u!114 &-8830845490142399760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4051323403029456082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c524d366f0f58884e8c661a6efb96b82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cardView: {fileID: -4058714603042988836}
 --- !u!114 &-4058714603042988836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -152,6 +166,14 @@ MonoBehaviour:
   description: {fileID: 5675138881582605864}
   cardImage: {fileID: 4509583257627586255}
   type: 0
+  basicScaleX: 1
+  basicScaleY: 1
+  UpScale: 1.5
+  basicLayerOrder: 2
+  dragScale: 1.1
+  dragSortingOrder: 10
+  returnSpeed: 0.15
+  cardPresenter: {fileID: -8830845490142399760}
 --- !u!210 &5318585067689382807
 SortingGroup:
   m_ObjectHideFlags: 0

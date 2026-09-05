@@ -6,7 +6,8 @@ using UnityEngine;
 public class ClickManager : MonoBehaviour
 {
     #region field
-
+    public PlayerHandPresenter playerHandPresenter;
+    public PlayerHandView playerHandView;
 
     #endregion
 
@@ -34,9 +35,9 @@ public class ClickManager : MonoBehaviour
 
             if (hit.collider != null && hit.collider.CompareTag("Card")) //Click Cards
             {
-                if (!GameRule.Instance.isHandMod)
+                if (!playerHandPresenter.getHandMod())
                 {
-                    PlayerHandsScripts.Instance.HandsUp();
+                    playerHandView.HandsUp();
                 }
                 else
                 {
@@ -46,17 +47,17 @@ public class ClickManager : MonoBehaviour
 
             if (hit.collider == null || !hit.collider.CompareTag("Card"))
             {
-                if (GameRule.Instance.isHandMod)
+                if (playerHandPresenter.getHandMod())
                 {
-                    PlayerHandsScripts.Instance.HandsDown();
+                    playerHandView.HandsDown();
                 }
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            //PlayerHandsScripts.Instance.draw_A_Card();
-            GameRule.Instance.EndTurn();
-        }
+        //if (Input.GetKeyDown(KeyCode.Space))
+        //{
+        //    //PlayerHandsScripts.Instance.draw_A_Card();
+        //    GameRule.Instance.EndTurn();
+        //}
     }
 }

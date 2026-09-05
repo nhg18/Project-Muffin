@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PlayerHand : CardCollection
 {
-    private bool isHandMod = false;
+    public bool isHandMod = false;
 
     public void AddHandCard(Card card)
     {

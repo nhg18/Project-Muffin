@@ -12,15 +12,17 @@ public class PlayerHandPresenter : MonoBehaviour
 
     [SerializeField] private CardDatabase cardDatabase;
 
+    PlayerHand playerHand = new PlayerHand();
+
     private bool isPropertyUpdatePending = false;
 
     private void OnEnable()
     {
-        DeckEvent.OnDrawn += StartDrawEvent;
+        GameEvents.OnDrawn += StartDrawEvent;
     }
     private void OnDisable()
     {
-        DeckEvent.OnDrawn -= StartDrawEvent;
+        GameEvents.OnDrawn -= StartDrawEvent;
     }
 
     private void StartDrawEvent(int actorNumber, int cardid)
@@ -35,6 +37,7 @@ public class PlayerHandPresenter : MonoBehaviour
         handView.draw_A_Card(data);
 
         HandCount++;
+        playerHand.Add(new Card(data.id));
 
         if (!isPropertyUpdatePending)
         {
@@ -65,4 +68,16 @@ public class PlayerHandPresenter : MonoBehaviour
 
         isPropertyUpdatePending = false;
     }
+    
+
+    public bool getHandMod()
+    {
+        return playerHand.isHandMod;
+    }
+    public void setHandMod(bool setter)
+    {
+        playerHand.isHandMod = setter;
+        GameEvents.RaiseHandModeChanged(setter);
+    }
+
 }

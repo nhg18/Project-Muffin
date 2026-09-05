@@ -16,4 +16,9 @@ MonoBehaviour:
   cardName: "\uCC39\uCE04 \uC57C\uD638~"
   cardImage: {fileID: 21300000, guid: 18436c33af6099d49b69a79bad012d1e, type: 3}
   type: 0
+  targetType: 1
   description: "\uCC39\uCE04 \uC57C\uD638 \uC124\uBA85 \uD14C\uC2A4\uD2B8"
+  conditions:
+  - {fileID: 11400000, guid: 78135d3c881a56347a450706fdb200e2, type: 2}
+  effects:
+  - {fileID: 11400000, guid: 0128eefb15bc0c14680f8ebeb08053ad, type: 2}
