@@ -193,6 +193,12 @@ public class CardView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPoint
         }
     }
 
+    public void do_returnToOrigin()
+    {
+        StartCoroutine(ReturnToOrigin());
+
+    }
+
     private bool isDropArea(Vector2 position)
     {
         Collider2D[] hits = Physics2D.OverlapPointAll(position);

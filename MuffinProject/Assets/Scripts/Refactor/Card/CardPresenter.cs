@@ -44,10 +44,20 @@ public class CardPresenter : MonoBehaviour
         Debug.Log("CardDropped!");
         List<int> targets = await SelectPlayer();
 
+        if(targets.Count == 0)
+        {
+            Debug.Log("no player Selected");
+            cardView.do_returnToOrigin();
+            return;
+        }
+
         foreach (int player in targets)
         {
             Debug.Log("target : "+ player);
         }
+
+        //CardPlayManager로 호출
+        CardPlayManager.Instance.RequestPlayCard(cardModel.cardData.id, targets);
     }
 
     public async Task<List<int>> SelectPlayer()
@@ -104,7 +114,7 @@ public class CardPresenter : MonoBehaviour
     public async Task<int> CardTargetPlayerSelector()
     {
         int targetNumber = 0;
-        targetNumber = await TargetSelectionManager.Instance.SelectPlayer(20.0f);
+        targetNumber = await TargetSelectionManager.Instance.SelectPlayer(5.0f);
         if (targetNumber != 0)
         {
             Debug.Log($"선택 완료! 타겟 : {targetNumber}");

@@ -557,6 +557,77 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &707521990
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 707521992}
+  - component: {fileID: 707521991}
+  - component: {fileID: 707521993}
+  m_Layer: 0
+  m_Name: CardPlayManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &707521991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 707521990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9313615a2168dec498bbb5449fd67112, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dummyPresetCard: {fileID: 4051323403029456082, guid: 2c4a3e1c0927e224fbedf5b856fe8405, type: 3}
+  cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
+  waitTimeforNextCard: 4
+  showingTime: 2.5
+--- !u!4 &707521992
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 707521990}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.7311738, y: 0.60300237, z: -0.091515474}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &707521993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 707521990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 3
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1 &748899482
 GameObject:
   m_ObjectHideFlags: 0
@@ -1505,7 +1576,7 @@ MonoBehaviour:
     cards: []
   deckView: {fileID: 803072895}
   cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
-  startingDeckRecipe: {fileID: 11400000, guid: 73bc7a1541c229b4d92d7bd2195cf9ed, type: 2}
+  startingDeckRecipe: {fileID: 11400000, guid: 2989761823c8b7546a3beacb98142093, type: 2}
 --- !u!4 &1059493294
 Transform:
   m_ObjectHideFlags: 0
@@ -2687,3 +2758,4 @@ SceneRoots:
   - {fileID: 1083537332}
   - {fileID: 586960899}
   - {fileID: 294411259}
+  - {fileID: 707521992}
