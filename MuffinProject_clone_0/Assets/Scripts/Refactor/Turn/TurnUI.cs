@@ -1,0 +1,61 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TurnUI : MonoBehaviour
+{
+    [Header("UI Elements(The button is for Debugging)")]
+    [SerializeField] private Button turnEndButton;
+    [SerializeField] private TMP_Text turnIndicatorText;
+
+    private void Start()
+    {
+        turnEndButton?.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
+    }
+
+    private void OnEnable()
+    {
+        GameEvents.OnTurnChanged += UpdateTurnUI;
+        GameEvents.OnTurnChanged += SeatManager.Instance.UpdateSeatUI;
+    }
+    
+    private void OnDisable()
+    {
+        GameEvents.OnTurnChanged -= UpdateTurnUI;
+        GameEvents.OnTurnChanged -= SeatManager.Instance.UpdateSeatUI;
+    }
+
+    private void UpdateTurnUI()
+    {
+        if (TurnManager.Instance.IsMyTurn)
+        {
+            SetIndicatorText("나의 턴!");
+            SetIndicatorColor(Color.green);
+            SetButtonInteractable(true);
+        }
+        else
+        {
+            SetIndicatorText($"플레이어 {TurnManager.Instance.CurrentTurnActor}의 턴");
+            SetIndicatorColor(Color.red);
+            SetButtonInteractable(false);
+        }
+    }
+    
+    private void SetButtonInteractable(bool interactable)
+    {
+        turnEndButton.interactable = interactable;
+    }
+
+    private void SetIndicatorText(string text)
+    {
+        turnIndicatorText.text = text;
+    }
+
+    private void SetIndicatorColor(Color color)
+    {
+        turnIndicatorText.color = color;
+    }
+}
