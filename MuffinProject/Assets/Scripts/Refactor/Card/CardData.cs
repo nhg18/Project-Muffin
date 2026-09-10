@@ -1,3 +1,4 @@
+using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
@@ -38,13 +39,16 @@ public class CardData : ScriptableObject
     [Header("카드 효과 리스트")]
     public List<CardEffect> effects = new List<CardEffect>();
 
-    public void PlayCard(Player caster, Player target)
+    public void PlayCard(int caster, int[] targets)
     {
-        // 리스트에 담긴 효과들을 위에서부터 순서대로 실행합니다.
-        foreach (CardEffect effect in effects)
+        foreach(int target in targets)
         {
-            effect.Execute(caster, target);
+            foreach (CardEffect effect in effects)
+            {
+                effect.Execute(PhotonNetwork.CurrentRoom.GetPlayer(caster), PhotonNetwork.CurrentRoom.GetPlayer(target));
+            }
         }
+
     }
 
     public string ValidateConditions(Player caster, Player target=null)
