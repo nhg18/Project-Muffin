@@ -5,8 +5,8 @@ using UnityEngine;
 public class ChainItem
 {
     public int cardID;
-    public int usePlayerNumber;
-    public int[] targetPlayerNumber;
+    public int caseter;
+    public int[] targets;
 
     //카드 취소 여부 및 감소효과
     public bool isCanceled = false;
@@ -15,7 +15,7 @@ public class ChainItem
     public ChainItem(int cardID, int caster, int[] target)
     {
         this.cardID = cardID;
-        this.usePlayerNumber = caster;
-        this.targetPlayerNumber = target;
+        this.caseter = caster;
+        this.targets = target;
     }
 }
