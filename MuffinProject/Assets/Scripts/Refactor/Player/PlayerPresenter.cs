@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerPresenter : SingletonPun<PlayerPresenter>
+public class PlayerPresenter : MonoBehaviourPunCallbacks
 {
     //[SerializeField] private Playerview view;
 
