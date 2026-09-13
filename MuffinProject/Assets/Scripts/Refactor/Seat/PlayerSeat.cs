@@ -26,7 +26,7 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     private void Awake()
     {
         gameObject.SetActive(false);
-        playerPresenter.Init(PlayerActorNumber,GameStatus.Instance.MaxHp);
+        
 
         _maxHpGaugeWidth = hpGaugeImage.rectTransform.rect.width;
     }
@@ -77,5 +77,12 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
         {
             TargetSelectionManager.Instance.ReceiveClick(PlayerActorNumber);
         }
+    }
+
+
+    public void InitPlayerPresenter(int PlayerActorNumber)
+    {
+        this.PlayerActorNumber = PlayerActorNumber;
+        playerPresenter.Init(PlayerActorNumber, GameStatus.Instance.MaxHp);
     }
 }
