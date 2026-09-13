@@ -15,12 +15,20 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     
     [SerializeField] private Image myTurnImage;
 
+    [SerializeField] private Image hpGaugeImage;
+    [SerializeField] private TMP_Text cardCountText;
+
     public int PlayerActorNumber=0;//수정부분!!
+
+    private float _maxHpGaugeWidth;
 
     private void Awake()
     {
         gameObject.SetActive(false);
+
+        _maxHpGaugeWidth = hpGaugeImage.rectTransform.rect.width;
     }
+
 
     public void SetNicknameUI(string nickname)
     {
@@ -41,6 +49,24 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     private void SetTurnImage(bool isTurn)
     {
         myTurnImage.enabled = isTurn;
+    }
+    
+    public void SetHpGauge(float currentHp, float maxHp)
+    {
+        if (maxHp <= 0f)
+            return;
+
+        float hpRatio = Mathf.Clamp01(currentHp / maxHp);
+
+        hpGaugeImage.rectTransform.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Horizontal,
+            _maxHpGaugeWidth * hpRatio
+        );
+    }
+    
+    private void SetCardCountUI(int cardCount)
+    {
+        cardCountText.text = cardCount.ToString();
     }
 
     public void OnPointerClick(PointerEventData eventData)
