@@ -15,10 +15,11 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     
     [SerializeField] private Image myTurnImage;
 
+    [SerializeField] private PlayerPresenter playerPresenter;
     [SerializeField] private Image hpGaugeImage;
     [SerializeField] private TMP_Text cardCountText;
 
-    public int PlayerActorNumber=0;//¼öÁ¤ºÎºÐ!!
+    public int PlayerActorNumber=0;//ï¿½ï¿½ï¿½ï¿½ï¿½Îºï¿½!!
 
     private float _maxHpGaugeWidth;
 
@@ -26,6 +27,7 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     {
         gameObject.SetActive(false);
     }
+        
 
     private void OnEnable()
     {
@@ -77,5 +79,12 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
         {
             TargetSelectionManager.Instance.ReceiveClick(PlayerActorNumber);
         }
+    }
+
+
+    public void InitPlayerPresenter(int PlayerActorNumber)
+    {
+        this.PlayerActorNumber = PlayerActorNumber;
+        playerPresenter.Init(PlayerActorNumber, GameStatus.Instance.MaxHp);
     }
 }
