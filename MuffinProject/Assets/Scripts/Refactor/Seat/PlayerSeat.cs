@@ -25,10 +25,12 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     private void Awake()
     {
         gameObject.SetActive(false);
-
-        _maxHpGaugeWidth = hpGaugeImage.rectTransform.rect.width;
     }
 
+    private void OnEnable()
+    {
+        _maxHpGaugeWidth = hpGaugeImage.rectTransform.rect.width;
+    }
 
     public void SetNicknameUI(string nickname)
     {
