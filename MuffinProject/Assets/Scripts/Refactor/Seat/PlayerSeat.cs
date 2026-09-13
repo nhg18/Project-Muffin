@@ -15,11 +15,14 @@ public class PlayerSeat : MonoBehaviour, IPointerClickHandler
     
     [SerializeField] private Image myTurnImage;
 
+    [SerializeField] private PlayerPresenter playerPresenter;
+
     public int PlayerActorNumber=0;//수정부분!!
 
     private void Awake()
     {
         gameObject.SetActive(false);
+        playerPresenter.Init(PlayerActorNumber,GameStatus.Instance.MaxHp);
     }
 
     public void SetNicknameUI(string nickname)

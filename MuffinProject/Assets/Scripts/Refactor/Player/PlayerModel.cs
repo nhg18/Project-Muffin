@@ -6,22 +6,22 @@ using UnityEngine;
 public class PlayerModel
 {
     public int ActorNumber { get; }
-    public int MaxHP { get; private set; }
-    public int CurrentHP { get; private set; }
+    public float MaxHP { get; private set; }
+    public float CurrentHP { get; private set; }
 
     public int CurrentHandCount { get; private set; }
 
 
 
 
-    public PlayerModel(int actorNumber, int maxHP)
+    public PlayerModel(int actorNumber, float maxHP)
     {
         ActorNumber = actorNumber;
         MaxHP = maxHP;
         CurrentHP = maxHP;
     }
 
-    public void SetHP(int newHP)
+    public void SetHP(float newHP)
     {
         CurrentHP = Math.Clamp(newHP, 0, MaxHP);
         GameEvents.RaiseHpChanged(CurrentHP);
