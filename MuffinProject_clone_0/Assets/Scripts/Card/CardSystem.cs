@@ -120,7 +120,7 @@ public class CardSystem : SingletonPun<CardSystem>
                 if (!chainList[i].isCanceled)
                 {
                     GameObject a = Instantiate(popcard, spawnPosition, Quaternion.identity);
-                    a.GetComponent<Card_Effect>().Excute(chainList[i].usePlayerNumber, chainList[i].targetPlayerNumber);
+                    a.GetComponent<Card_Effect>().Excute(chainList[i].caseter, chainList[i].targets);
                     Destroy(a, 2.5f);
                 }
                 else
