@@ -13,6 +13,7 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
     public void Init(int actorNumber, float maxHP)
     {
         Model = new PlayerModel(actorNumber, maxHP);
+        Debug.Log("현재 체력 : " + Model.CurrentHP);
     }
 
     //private void Start()
@@ -38,6 +39,7 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
             {
                 float newHP = (float)changedProps["HP"];
                 Model.SetHP(newHP);
+                Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHP);
             }
             if (changedProps.ContainsKey("HandCount"))
             {

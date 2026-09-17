@@ -49,6 +49,8 @@ public class CardData : ScriptableObject
             }
         }
 
+        StatBuffer.Commit();//È¿°ú ¾ÃÈû ¹æÁö
+
     }
 
     public string ValidateConditions(Player caster, Player target=null)

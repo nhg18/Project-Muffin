@@ -35,6 +35,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         return null;
     }
 
+    //로컬에서만 실행되는 문제!!!! 수정 필요
     public void RequestCancelNext()
     {
         if (chainList.Count >= 2)
@@ -93,18 +94,11 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
 
     public void StartChainResolution()
     {
-        isResolutioning = true;
-
         if (PhotonNetwork.IsMasterClient)
         {
             Debug.Log("start resolution");
             photonView.RPC("RPC_ResolveChain", RpcTarget.All);
         }
-
-
-
-
-        isResolutioning = false;
     }
 
     [PunRPC]
@@ -114,6 +108,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
     }
     private IEnumerator ResolveChainRoutine()
     {
+        isResolutioning = true;
         for (int i = chainList.Count - 1; i >= 0; i--)
         {
             CardData data = FindCard(chainList[i].cardID);
@@ -145,5 +140,6 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
             yield return new WaitForSeconds(showingTime+0.1f);
         }
         chainList.Clear();
+        isResolutioning = false;
     }
 }
