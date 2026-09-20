@@ -46,15 +46,6 @@ public class PlayerHandPresenter : MonoBehaviour
         }
     }
 
-    //private void RefreshMyHandCount()
-    //{
-    //    PhotonNetwork.LocalPlayer.SetCustomProperties(
-    //        new ExitGames.Client.Photon.Hashtable
-    //        {
-    //            ["HandCount"] = HandCount,
-    //        }
-    //    );
-    //}
     private IEnumerator UpdatePropertyAtEndOfFrame()
     {
         yield return new WaitForEndOfFrame(); // 프레임 끝까지 대기

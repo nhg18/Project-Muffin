@@ -121,7 +121,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
                     GameObject a = Instantiate(dummyPresetCard, spawnPosition, Quaternion.identity);
                     CardPresenter cardPresenter = a.GetComponent<CardPresenter>();
                     cardPresenter.Setup(data);
-                    data.PlayCard(chainList[i].caseter, chainList[i].targets);
+                    data.PlayCard(chainList[i].caster, chainList[i].targets);
 
                     Destroy(a, showingTime);
                 }

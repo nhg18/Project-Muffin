@@ -11,7 +11,6 @@ public class HandSeatManager : Singleton<HandSeatManager>
     // Start is called before the first frame update
     void Start()
     {
-        int playerCount = PhotonNetwork.CurrentRoom.PlayerCount;
         int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
         
         var seatAssignments = SeatManager.Instance.GetSeatAssignments(myActorNumber); // ActorNumber, SeatIndex
@@ -24,19 +23,6 @@ public class HandSeatManager : Singleton<HandSeatManager>
             oph.OtherPlayerNumber = actorNumber;
         }
         
-        // int genCount = myActorNumber;
-        // for (int i = 0; i < (playerCount - 1); i++)
-        // {
-        //     GameObject a = Instantiate(OtherHands, OtherHandsPosition[i]);
-        //     OtherPlayerHandPresenter oph = a.GetComponentInChildren<OtherPlayerHandPresenter>();
-        //     oph.OtherPlayerNumber = (genCount % playerCount + 1);
-        //     genCount++;
-        // }
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

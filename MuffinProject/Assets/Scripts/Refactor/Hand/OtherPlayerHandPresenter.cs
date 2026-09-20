@@ -9,12 +9,7 @@ public class OtherPlayerHandPresenter : MonoBehaviourPunCallbacks
 {
     private int HandCount=0;
     public int OtherPlayerNumber=0;
-    private static int curNum = 0; //자리 배치를 위한 로직넘버
     [SerializeField] private OtherPlayerHandView handView;
-    private void Awake()
-    {
-        
-    }
 
     private void OnEnable()
     {
