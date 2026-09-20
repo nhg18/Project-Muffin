@@ -21,9 +21,6 @@ EditorBuildSettings:
     path: Assets/Scenes/RoomScene.unity
     guid: d63d2cfc1ada40645bf31626b184e5c9
   - enabled: 1
-    path: Assets/Scenes/GameScene.unity
-    guid: 697031613670ad4438df5104ea27ee08
-  - enabled: 1
     path: Assets/Scenes/Refactor/RefactorGameScene.unity
     guid: 2b5eecef859be06458693f33b1284117
   m_configObjects: {}

@@ -35,15 +35,15 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
 
         if(targetPlayer.ActorNumber == Model.ActorNumber)
         {
-            if (changedProps.ContainsKey("HP"))
+            if (changedProps.ContainsKey(PropKey.HP))
             {
-                float newHP = (float)changedProps["HP"];
+                float newHP = (float)changedProps[PropKey.HP];
                 Model.SetHP(newHP);
                 Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHP);
             }
-            if (changedProps.ContainsKey("HandCount"))
+            if (changedProps.ContainsKey(PropKey.HandCount))
             {
-                int newHandCount = (int)changedProps["HandCount"];
+                int newHandCount = (int)changedProps[PropKey.HandCount];
                 Model.SetHandCount(newHandCount);
                 Debug.Log("드로우 연동 확인");
             }
