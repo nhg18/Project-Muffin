@@ -285,7 +285,8 @@ MonoBehaviour:
   hpText: {fileID: 2324254217790069976}
   myTurnText: {fileID: 0}
   myTurnImage: {fileID: 8010163844313782292}
-  hpGaugeImage: {fileID: 0}
+  playerPresenter: {fileID: 0}
+  hpGaugeImage: {fileID: 2222086262323227658}
   cardCountText: {fileID: 1381765467119760303}
   PlayerActorNumber: 0
 --- !u!1 &2024524401553420308
