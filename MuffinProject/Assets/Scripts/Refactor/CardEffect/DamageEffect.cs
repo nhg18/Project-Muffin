@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ public class DamageEffect : CardEffect
 {
     private const string HP_KEY = "HP";
 
-    [Header("µ¥¹ÌÁö·®")]
+    [Header("ë°ë¯¸ì§€ëŸ‰")]
     public float damageAmount;
 
     public override void Execute(Player caster, Player target)
@@ -24,8 +24,8 @@ public class DamageEffect : CardEffect
 
             StatBuffer.Set(target, HP_KEY, newHp);
 
-            //damage ·ÎÁ÷
-            Debug.Log($"{target.NickName}¿¡°Ô {damageAmount}ÀÇ µ¥¹ÌÁö!");
+            //damage ë¡œì§
+            Debug.Log($"{target.NickName}ì—ê²Œ {damageAmount}ì˜ ë°ë¯¸ì§€!");
         }
     }
 }

@@ -1,4 +1,4 @@
-using DG.Tweening;
+ï»¿using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,7 +25,7 @@ public class PlayerHandView : MonoBehaviour
         GameObject drawedCard = Instantiate(presetCard, HandPosition);
         drawedCard.transform.position = drawPosition.position;
 
-        CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();//Ä«µå ¼Â¾÷
+        CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();//ì¹´ë“œ ì…‹ì—…
         cardPresenter.Setup(data);
 
         Hands.Add(drawedCard);
@@ -74,7 +74,7 @@ public class PlayerHandView : MonoBehaviour
         }
     }
 
-    public void HandsUp()//Presenter¿¡¼­ CardEvent°¡ ¸¸µé¾îÁö¸é ±¸µ¶ÇØ¼­ ÀÌ°Å ½ÇÇàÇÏ±â
+    public void HandsUp()//Presenterì—ì„œ CardEventê°€ ë§Œë“¤ì–´ì§€ë©´ êµ¬ë…í•´ì„œ ì´ê±° ì‹¤í–‰í•˜ê¸°
     {
         Debug.Log("Up!");
         playerHandPresenter.setHandMod(true);

@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,7 +25,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         spawnPosition.z = 0f;
     }
 
-    private CardData FindCard(int cardID) // ¼öÁ¤ ÇÊ¿ä
+    private CardData FindCard(int cardID) // ìˆ˜ì • í•„ìš”
     {
         CardData data = cardDatabase.GetCard(cardID);
         if(data != null)
@@ -35,17 +35,17 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         return null;
     }
 
-    //·ÎÄÃ¿¡¼­¸¸ ½ÇÇàµÇ´Â ¹®Á¦!!!! ¼öÁ¤ ÇÊ¿ä
+    //ë¡œì»¬ì—ì„œë§Œ ì‹¤í–‰ë˜ëŠ” ë¬¸ì œ!!!! ìˆ˜ì • í•„ìš”
     public void RequestCancelNext()
     {
         if (chainList.Count >= 2)
         {
             chainList[chainList.Count - 2].isCanceled = true;
-            Debug.Log("Ãë¼Ò ¼º°ø");
+            Debug.Log("ì·¨ì†Œ ì„±ê³µ");
         }
         else
         {
-            Debug.Log("¿À·ù! Ã¼ÀÎ¸®½ºÆ®");
+            Debug.Log("ì˜¤ë¥˜! ì²´ì¸ë¦¬ìŠ¤íŠ¸");
         }
     }
 
@@ -60,7 +60,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
     {
         if (!PhotonNetwork.IsMasterClient) return;
 
-        //À¯È¿ÇÑÁö °Ë»ç
+        //ìœ íš¨í•œì§€ ê²€ì‚¬
         if (isResolutioning == true) return;
 
         int casterActorNum = info.Sender.ActorNumber;
@@ -74,7 +74,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         CancelInvoke("StartChainResolution");
         chainList.Add(new ChainItem(cardID, casterActorNum, targetPlayerNumber));
 
-        //todo Ãß°¡ Ä«¿îÅÍ Ä«µå ¹Ş´Â ÄÚµå ½ÇÇà
+        //todo ì¶”ê°€ ì¹´ìš´í„° ì¹´ë“œ ë°›ëŠ” ì½”ë“œ ì‹¤í–‰
         CardData data = FindCard(cardID);
         if (data != null)
         {
@@ -85,7 +85,7 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
         }
         else
         {
-            Debug.LogWarning("ÀÏÄ¡ÇÏ´Â Ä«µå ¾øÀ½");
+            Debug.LogWarning("ì¼ì¹˜í•˜ëŠ” ì¹´ë“œ ì—†ìŒ");
         }
         Invoke("StartChainResolution", waitTimeforNextCard+0.5f);
     }
@@ -127,14 +127,14 @@ public class CardPlayManager : SingletonPun<CardPlayManager>
                 }
                 else
                 {
-                    Debug.Log("Ä«µå Ãë¼Ò");
+                    Debug.Log("ì¹´ë“œ ì·¨ì†Œ");
                 }
 
 
             }
             else
             {
-                Debug.LogWarning("ÀÏÄ¡ÇÏ´Â Ä«µå ¾øÀ½");
+                Debug.LogWarning("ì¼ì¹˜í•˜ëŠ” ì¹´ë“œ ì—†ìŒ");
             }
             chainList.RemoveAt(i);
             yield return new WaitForSeconds(showingTime+0.1f);

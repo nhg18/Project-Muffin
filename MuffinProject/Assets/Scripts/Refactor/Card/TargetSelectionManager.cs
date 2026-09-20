@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -20,16 +20,16 @@ public class TargetSelectionManager : MonoBehaviour
         float timer = 0f;
         isSelected = false;
 
-        // Á¦ÇÑ ½Ã°£ÀÌ ³²¾Ò°í, ¾ÆÁ÷ ¾Æ¹«µµ ¼±ÅÃµÇÁö ¾Ê¾Ò´Ù¸é °è¼Ó ´ë±â
+        // ì œí•œ ì‹œê°„ì´ ë‚¨ì•˜ê³ , ì•„ì§ ì•„ë¬´ë„ ì„ íƒë˜ì§€ ì•Šì•˜ë‹¤ë©´ ê³„ì† ëŒ€ê¸°
         while (timer < timeoutSeconds && isSelected == false)
         {
             timer += Time.deltaTime;
-            await Task.Yield(); // 1ÇÁ·¹ÀÓ ´ë±â (°ÔÀÓÀÌ ¸ØÃßÁö ¾Ê°Ô ÇØÁÜ)
+            await Task.Yield(); // 1í”„ë ˆì„ ëŒ€ê¸° (ê²Œì„ì´ ë©ˆì¶”ì§€ ì•Šê²Œ í•´ì¤Œ)
         }
 
         isWaitingForSelection = false;
 
-        // ½Ã°£ ÃÊ°ú¸é 0, ¼±ÅÃÇßÀ¸¸é ÇØ´ç playerNumber ¹İÈ¯
+        // ì‹œê°„ ì´ˆê³¼ë©´ 0, ì„ íƒí–ˆìœ¼ë©´ í•´ë‹¹ playerNumber ë°˜í™˜
         return selectedTarget;
     }
 

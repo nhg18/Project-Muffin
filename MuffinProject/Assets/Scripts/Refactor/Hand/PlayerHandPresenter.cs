@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -57,7 +57,7 @@ public class PlayerHandPresenter : MonoBehaviour
     //}
     private IEnumerator UpdatePropertyAtEndOfFrame()
     {
-        yield return new WaitForEndOfFrame(); // ÇÁ·¹ÀÓ ³¡±îÁö ´ë±â
+        yield return new WaitForEndOfFrame(); // í”„ë ˆì„ ëê¹Œì§€ ëŒ€ê¸°
 
         PhotonNetwork.LocalPlayer.SetCustomProperties(
             new ExitGames.Client.Photon.Hashtable

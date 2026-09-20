@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
@@ -33,10 +33,10 @@ public class CardData : ScriptableObject
     [TextArea]
     public string description;
 
-    [Header("Ä«µå Á¶°Ç ¸®½ºÆ®")]
+    [Header("ì¹´ë“œ ì¡°ê±´ ë¦¬ìŠ¤íŠ¸")]
     public List<Card_Condition> conditions = new List<Card_Condition>();
 
-    [Header("Ä«µå È¿°ú ¸®½ºÆ®")]
+    [Header("ì¹´ë“œ íš¨ê³¼ ë¦¬ìŠ¤íŠ¸")]
     public List<CardEffect> effects = new List<CardEffect>();
 
     public void PlayCard(int caster, int[] targets)
@@ -49,7 +49,7 @@ public class CardData : ScriptableObject
             }
         }
 
-        StatBuffer.Commit();//È¿°ú ¾ÃÈû ¹æÁö
+        StatBuffer.Commit();//íš¨ê³¼ ì”¹íž˜ ë°©ì§€
 
     }
 

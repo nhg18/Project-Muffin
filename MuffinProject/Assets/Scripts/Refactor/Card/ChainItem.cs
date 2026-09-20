@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ public class ChainItem
     public int caseter;
     public int[] targets;
 
-    //Ä«µå Ãë¼Ò ¿©ºÎ ¹× °¨¼ÒÈ¿°ú
+    //ì¹´ë“œ ì·¨ì†Œ ì—¬ë¶€ ë° ê°ì†Œíš¨ê³¼
     public bool isCanceled = false;
     public float valueMultiplier = 1.0f;
 

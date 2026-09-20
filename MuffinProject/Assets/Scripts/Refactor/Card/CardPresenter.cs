@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ public class CardPresenter : MonoBehaviour
 
     }
 
-    public void Setup(CardData data) //ÇöÀç PlayerHandView ¿¡¼­ È£ÃâÁß
+    public void Setup(CardData data) //í˜„ì¬ PlayerHandView ì—ì„œ í˜¸ì¶œì¤‘
     {
         if (data == null)
         {
@@ -56,7 +56,7 @@ public class CardPresenter : MonoBehaviour
             Debug.Log("target : "+ player);
         }
 
-        //CardPlayManager·Î È£Ãâ
+        //CardPlayManagerë¡œ í˜¸ì¶œ
         CardPlayManager.Instance.RequestPlayCard(cardModel.cardData.id, targets);
     }
 
@@ -91,7 +91,7 @@ public class CardPresenter : MonoBehaviour
             case TargetType.AllEnemies:
                 foreach (var player in PhotonNetwork.PlayerList)
                 {
-                    if (player.IsLocal) continue; // ³ª ÀÚ½Å Á¦¿Ü
+                    if (player.IsLocal) continue; // ë‚˜ ìì‹  ì œì™¸
                     ActorNumbers.Add(player.ActorNumber);
                 }
                 break;
@@ -117,12 +117,12 @@ public class CardPresenter : MonoBehaviour
         targetNumber = await TargetSelectionManager.Instance.SelectPlayer(5.0f);
         if (targetNumber != 0)
         {
-            Debug.Log($"¼±ÅÃ ¿Ï·á! Å¸°Ù : {targetNumber}");
+            Debug.Log($"ì„ íƒ ì™„ë£Œ! íƒ€ê²Ÿ : {targetNumber}");
             return targetNumber;
         }
         else
         {
-            Debug.Log("½Ã°£ ÃÊ°ú! Ä«µå »ç¿ëÀÌ Ãë¼ÒµÇ¾ú½À´Ï´Ù.");
+            Debug.Log("ì‹œê°„ ì´ˆê³¼! ì¹´ë“œ ì‚¬ìš©ì´ ì·¨ì†Œë˜ì—ˆìŠµë‹ˆë‹¤.");
             return 0;
         }
     }

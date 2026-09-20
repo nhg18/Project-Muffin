@@ -1,14 +1,14 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewDeckRecipe", menuName = "CardSystem/DeckRecipe")]
 public class DeckRecipe : ScriptableObject
 {
-    [Header("µ¦ ±âº» Á¤º¸")]
-    public string deckName = "±âº» µ¦";
+    [Header("ë± ê¸°ë³¸ ì •ë³´")]
+    public string deckName = "ê¸°ë³¸ ë±";
 
-    [Header("µ¦¿¡ Æ÷ÇÔµÉ Ä«µå ID ¸ñ·Ï")]
-    // ÀÎ½ºÆåÅÍ¿¡¼­ 1, 1, 1, 2, 3... ÀÌ·± ½ÄÀ¸·Î ÀÔ·ÂÇÏ°Ô µË´Ï´Ù.
+    [Header("ë±ì— í¬í•¨ë  ì¹´ë“œ ID ëª©ë¡")]
+    // ì¸ìŠ¤í™í„°ì—ì„œ 1, 1, 1, 2, 3... ì´ëŸ° ì‹ìœ¼ë¡œ ì…ë ¥í•˜ê²Œ ë©ë‹ˆë‹¤.
     public List<Card> cardIDs = new List<Card>();
 }

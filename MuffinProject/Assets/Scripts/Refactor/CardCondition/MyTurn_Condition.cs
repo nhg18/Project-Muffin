@@ -1,4 +1,4 @@
-using Photon.Realtime;
+ï»¿using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,10 +10,10 @@ public class MyTurn_Condition : Card_Condition
     {
         if (TurnManager.Instance.CurrentTurnActor != caster.ActorNumber)
         {
-            return "³» ÅÏ¿¡¸¸ »ç¿ëÇÒ ¼ö ÀÖ½À´Ï´Ù.";
+            return "ë‚´ í„´ì—ë§Œ ì‚¬ìš©í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.";
         }
 
-        // ¹®Á¦°¡ ¾øÀ¸¸é ¼º°ø(null) ¹İÈ¯
+        // ë¬¸ì œê°€ ì—†ìœ¼ë©´ ì„±ê³µ(null) ë°˜í™˜
         return null;
     }
 }

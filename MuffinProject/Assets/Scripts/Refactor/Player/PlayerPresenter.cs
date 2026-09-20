@@ -1,4 +1,4 @@
-using Photon.Pun;
+ï»¿using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
     public void Init(int actorNumber, float maxHP)
     {
         Model = new PlayerModel(actorNumber, maxHP);
-        Debug.Log("ÇöÀç Ã¼·Â : " + Model.CurrentHP);
+        Debug.Log("í˜„ì¬ ì²´ë ¥ : " + Model.CurrentHP);
     }
 
     //private void Start()
@@ -39,13 +39,13 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
             {
                 float newHP = (float)changedProps["HP"];
                 Model.SetHP(newHP);
-                Debug.Log(Model.ActorNumber + "ÀÇ ÇöÀç Ã¼·Â : " + Model.CurrentHP);
+                Debug.Log(Model.ActorNumber + "ì˜ í˜„ì¬ ì²´ë ¥ : " + Model.CurrentHP);
             }
             if (changedProps.ContainsKey("HandCount"))
             {
                 int newHandCount = (int)changedProps["HandCount"];
                 Model.SetHandCount(newHandCount);
-                Debug.Log("µå·Î¿ì ¿¬µ¿ È®ÀÎ");
+                Debug.Log("ë“œë¡œìš° ì—°ë™ í™•ì¸");
             }
         }
     }
