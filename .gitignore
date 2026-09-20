@@ -75,3 +75,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
 # End of https://www.toptal.com/developers/gitignore/api/unity
+
+# ParrelSync 클론 (로컬 멀티플레이 테스트용 복제본 — 커밋 금지)
+*_clone_*/
