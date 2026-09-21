@@ -250,6 +250,19 @@ public void StartChainResolution()
 
 > 목표: 코드가 어디에 있는지 한눈에 보이게 한다.
 
+### 진행 상태 (2026-09-21)
+
+| 항목 | 상태 |
+| --- | --- |
+| 1-1 레거시 제거 | **완료** (`89a24a8`). `ClickManager.cs` 만 남아 `Presentation/Input/` 으로 이동 — 재작성은 Phase 6-9 |
+| 1-2 폴더 구조 | **완료** (`3dca6bc`) |
+| 1-3 네임스페이스 | **완료** (`ab7009f`) |
+| 1-4 이름 변경 | **완료** (`3dca6bc`) |
+| 1-5 어셈블리 정의 | **보류** — 아래 1-5 참고 |
+
+각 단계는 Unity 2022.3.62f3 배치모드 컴파일 error 0 으로 확인했다.
+`.cs` 와 `.cs.meta` 를 함께 옮겨 GUID 를 보존했으므로 씬·프리팹·에셋 참조는 유지된다.
+
 ### 1-1. 레거시 제거 결정
 
 | 대상 | 처리 |
@@ -309,9 +322,38 @@ Assets/Scripts/
 | `do_returnToOrigin` | `ReturnToOrigin` | 컨벤션 |
 | `setHandMod` / `getHandMod` | `SetHandMode` / `IsHandMode` | 컨벤션 + 오타(Mod→Mode) |
 
-### 1-5. 어셈블리 정의 추가
+### 1-5. 어셈블리 정의 추가 — **보류**
 
-`Muffin.Core`, `Muffin.Network`, `Muffin.Game`, `Muffin.Presentation`, `Muffin.UI` — 컴파일 시간 단축.
+`Muffin.Core`, `Muffin.Network`, `Muffin.Game`, `Muffin.Presentation`, `Muffin.UI` 로 쪼개려 했으나
+지금은 성립하지 않는다. 두 가지가 막고 있다.
+
+**(1) `Game` ↔ `Presentation` 순환 참조**
+
+`Game/Rules/CardPlayManager.cs` 가 카드 오브젝트를 생성하고 `CardPresenter`(Presentation)를 직접 읽는다.
+
+```csharp
+CardPresenter cardPresenter = a.GetComponent<CardPresenter>();   // 88행, 128행
+```
+
+Presentation 은 반대로 `CardData`·`GameEvents`(Game)를 참조하므로 어셈블리를 나눌 수 없다.
+어셈블리 참조에는 순환이 허용되지 않는다.
+
+> 해소 시점: **Phase 3-1**. 체인이 `GameServer` 소유가 되고 클라이언트가 표시용 사본만 받으면
+> 이 참조가 사라진다. asmdef 는 그 뒤에 넣는다.
+
+**(2) DOTween 모듈이 `Assembly-CSharp-firstpass` 에 있다**
+
+`PlayerHandView` / `OtherPlayerHandView` 가 쓰는 `SetLink()` 는 DOTween 코어 DLL 이 아니라
+`Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUnityVersion.cs` (소스)에 있다.
+`Assets/Plugins` 아래 소스는 `Assembly-CSharp-firstpass` 로 컴파일되는데,
+**asmdef 어셈블리는 이 어셈블리를 참조할 수 없다.**
+
+> 해소 방법: DOTween Utility Panel 의 `Create ASMDEF` 로 `DOTween.Modules.asmdef` 를 만들고
+> `Muffin.Presentation` 에서 참조한다. 서드파티 폴더를 건드리는 작업이라 Phase 1 범위에서 뺐다.
+
+**지금 넣지 않는 판단 근거**: 프로젝트 자체 스크립트는 66개다. 컴파일 시간은
+도메인 리로드가 지배하고 있어 어셈블리를 쪼개서 얻는 이득이 거의 없다.
+위 (1)이 풀리는 Phase 3 이후에 (2)와 함께 처리한다.
 
 ---
 
@@ -518,7 +560,7 @@ Phase 2~4가 끝나야 시작할 수 있다.
 | 🔴 1 | Phase 0 (인코딩, 클론 제거) | 반나절. 지금 안 하면 계속 누적 |
 | 🔴 2 | Phase 2 (마스터 권한) | **카드 35장 이상이 여기 막혀 있다** |
 | 🔴 3 | Phase 3 (카드 파이프라인 + 함정 슬롯) | 게임의 핵심 |
-| 🟡 4 | Phase 1 (폴더/네임스페이스) | Phase 2와 함께 하면 충돌이 크다. **Phase 2 이후 권장** |
+| ~~🟡 4~~ | ~~Phase 1 (폴더/네임스페이스)~~ | **완료 (2026-09-21).** 단 1-5(asmdef)는 Phase 3 이후로 미룸 |
 | 🟡 5 | Phase 4 (체력) | 승리 조건의 절반 |
 | 🟡 6 | Phase 5 (턴/승리) | 게임이 끝나게 만든다 |
 | 🟢 7 | Phase 6 (UI) | Phase 2~5 결과를 보여주는 단계 |
