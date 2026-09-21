@@ -1,4 +1,5 @@
-﻿using Photon.Pun;
+﻿using ExitGames.Client.Photon;
+using Photon.Pun;
 using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,6 +15,9 @@ public class PlayerPresenter : MonoBehaviourPunCallbacks
     {
         Model = new PlayerModel(actorNumber, maxHP);
         Debug.Log("현재 체력 : " + Model.CurrentHP);
+        ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable();
+        hashtable[PropKey.HP] = maxHP;
+        PhotonNetwork.CurrentRoom.GetPlayer(actorNumber).SetCustomProperties(hashtable);
     }
 
     //private void Start()
