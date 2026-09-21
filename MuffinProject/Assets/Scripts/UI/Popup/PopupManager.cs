@@ -3,8 +3,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Muffin.Core;
 
-namespace UI.Popup
+namespace Muffin.UI.Popup
 {
     public class PopupManager : SingletonPersistent<PopupManager>
     {

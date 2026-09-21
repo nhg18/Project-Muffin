@@ -2,75 +2,81 @@ using Photon.Pun.Demo.PunBasics;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Core;
+using Muffin.Game.Cards;
 
-public class ClickManager : MonoBehaviour
+namespace Muffin.Presentation
 {
-    #region field
-    public PlayerHandPresenter playerHandPresenter;
-    public PlayerHandView playerHandView;
 
-    #endregion
-
-    #region Singleton
-    public static ClickManager Instance { get; private set; }
-    void Awake()
+    public class ClickManager : MonoBehaviour
     {
-        if (Instance != null && Instance != this)
+        #region field
+        public PlayerHandPresenter playerHandPresenter;
+        public PlayerHandView playerHandView;
+
+        #endregion
+
+        #region Singleton
+        public static ClickManager Instance { get; private set; }
+        void Awake()
         {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
-    }
-    #endregion
-
-
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-
-            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
-
-            if (hit.collider != null && hit.collider.CompareTag("Card")) //Click Cards
+            if (Instance != null && Instance != this)
             {
-                if (!playerHandPresenter.IsHandMode())
-                {
-                    playerHandView.HandsUp();
-                }
-                else
-                {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+        }
+        #endregion
 
+
+        void Update()
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+
+                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+
+                if (hit.collider != null && hit.collider.CompareTag("Card")) //Click Cards
+                {
+                    if (!playerHandPresenter.IsHandMode())
+                    {
+                        playerHandView.HandsUp();
+                    }
+                    else
+                    {
+
+                    }
+                }
+
+                if (hit.collider == null || !hit.collider.CompareTag("Card"))
+                {
+                    if (playerHandPresenter.IsHandMode())
+                    {
+                        playerHandView.HandsDown();
+                    }
                 }
             }
 
-            if (hit.collider == null || !hit.collider.CompareTag("Card"))
+            if (Input.GetMouseButtonDown(1))
             {
-                if (playerHandPresenter.IsHandMode())
+                //Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                //RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+                if(TargetSelectionManager.Instance != null)
                 {
-                    playerHandView.HandsDown();
+                    Debug.Log("cancel!!!");
+                    TargetSelectionManager.Instance.ReceiveClick(0);
+
                 }
-            }
-        }
-
-        if (Input.GetMouseButtonDown(1))
-        {
-            //Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            //RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
-            if(TargetSelectionManager.Instance != null)
-            {
-                Debug.Log("cancel!!!");
-                TargetSelectionManager.Instance.ReceiveClick(0);
 
             }
 
+            //if (Input.GetKeyDown(KeyCode.Space))
+            //{
+            //    //PlayerHandsScripts.Instance.DrawCard();
+            //    GameRule.Instance.EndTurn();
+            //}
         }
-
-        //if (Input.GetKeyDown(KeyCode.Space))
-        //{
-        //    //PlayerHandsScripts.Instance.DrawCard();
-        //    GameRule.Instance.EndTurn();
-        //}
     }
 }

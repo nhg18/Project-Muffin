@@ -2,8 +2,9 @@ using System.Threading.Tasks;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class PhotonConnection
     {

@@ -121,15 +121,27 @@ Private Method
 모든 스크립트는 네임스페이스를 갖는다. 루트는 `Muffin`.
 
 ```
-Muffin.Core        공통 인프라 (싱글톤, 부트스트랩, 이벤트 허브)
-Muffin.Network     Photon 연결/룸
-Muffin.Game        인게임 규칙 (턴, 덱, 손패, 체력, 승리)
-Muffin.Game.Cards  카드 데이터/효과/조건
-Muffin.UI          UI
+Muffin.Core         공통 인프라 (싱글톤, 부트스트랩, 씬 경로, 상수)
+Muffin.Network      Photon 연결 / 룸 / 네트워크 이벤트
+Muffin.Game         인게임 규칙 (턴, 덱, 손패, 체력, 승리)
+Muffin.Game.Cards   카드 데이터 / 효과 / 조건
+Muffin.Presentation 인게임 표시 (좌석, 손패·카드 뷰, 입력)
+Muffin.UI           로비 / 방 / 팝업 UI
+Muffin.DebugTools   디버그 전용
 ```
+
+네임스페이스는 `Assets/Scripts/` 아래 폴더 경로를 그대로 따른다.
 
 `Type`, `Deck`, `Card` 처럼 일반적인 이름을 전역 네임스페이스에 두지 않는다.
 (`public enum Type`은 `System.Type`을 가려서 버그를 만든다. `CardType`으로 쓴다.)
+
+**폴더 이름에도 같은 규칙이 적용된다.** 폴더명이 곧 네임스페이스가 되므로,
+자주 쓰는 타입과 이름이 같은 폴더를 만들면 그 타입이 가려진다.
+
+| 금지 | 이유 |
+| --- | --- |
+| `Scripts/Debug/` | `Muffin.Debug` 가 `UnityEngine.Debug` 를 가린다 → `DebugTools/` 를 쓴다 |
+| `Scripts/UI/Room/` | `Muffin.UI.Room` 이 `Photon.Realtime.Room` 을 가린다 (CS0118) |
 
 ### 4.3 RPC
 

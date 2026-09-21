@@ -4,58 +4,63 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Muffin.Game;
 
-public class TurnUI : MonoBehaviour
+namespace Muffin.Presentation
 {
-    [Header("UI Elements(The button is for Debugging)")]
-    [SerializeField] private Button turnEndButton;
-    [SerializeField] private TMP_Text turnIndicatorText;
 
-    private void Start()
+    public class TurnUI : MonoBehaviour
     {
-        turnEndButton?.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
-    }
+        [Header("UI Elements(The button is for Debugging)")]
+        [SerializeField] private Button turnEndButton;
+        [SerializeField] private TMP_Text turnIndicatorText;
 
-    private void OnEnable()
-    {
-        GameEvents.OnTurnChanged += UpdateTurnUI;
-        GameEvents.OnTurnChanged += SeatManager.Instance.UpdateSeatUI;
-    }
-    
-    private void OnDisable()
-    {
-        GameEvents.OnTurnChanged -= UpdateTurnUI;
-        GameEvents.OnTurnChanged -= SeatManager.Instance.UpdateSeatUI;
-    }
-
-    private void UpdateTurnUI()
-    {
-        if (TurnManager.Instance.IsMyTurn)
+        private void Start()
         {
-            SetIndicatorText("나의 턴!");
-            SetIndicatorColor(Color.green);
-            SetButtonInteractable(true);
+            turnEndButton?.onClick.AddListener(TurnManager.Instance.RequestEndTurn);
         }
-        else
+
+        private void OnEnable()
         {
-            SetIndicatorText($"플레이어 {TurnManager.Instance.CurrentTurnActor}의 턴");
-            SetIndicatorColor(Color.red);
-            SetButtonInteractable(false);
+            GameEvents.OnTurnChanged += UpdateTurnUI;
+            GameEvents.OnTurnChanged += SeatManager.Instance.UpdateSeatUI;
         }
-    }
     
-    private void SetButtonInteractable(bool interactable)
-    {
-        turnEndButton.interactable = interactable;
-    }
+        private void OnDisable()
+        {
+            GameEvents.OnTurnChanged -= UpdateTurnUI;
+            GameEvents.OnTurnChanged -= SeatManager.Instance.UpdateSeatUI;
+        }
 
-    private void SetIndicatorText(string text)
-    {
-        turnIndicatorText.text = text;
-    }
+        private void UpdateTurnUI()
+        {
+            if (TurnManager.Instance.IsMyTurn)
+            {
+                SetIndicatorText("나의 턴!");
+                SetIndicatorColor(Color.green);
+                SetButtonInteractable(true);
+            }
+            else
+            {
+                SetIndicatorText($"플레이어 {TurnManager.Instance.CurrentTurnActor}의 턴");
+                SetIndicatorColor(Color.red);
+                SetButtonInteractable(false);
+            }
+        }
+    
+        private void SetButtonInteractable(bool interactable)
+        {
+            turnEndButton.interactable = interactable;
+        }
 
-    private void SetIndicatorColor(Color color)
-    {
-        turnIndicatorText.color = color;
+        private void SetIndicatorText(string text)
+        {
+            turnIndicatorText.text = text;
+        }
+
+        private void SetIndicatorColor(Color color)
+        {
+            turnIndicatorText.color = color;
+        }
     }
 }

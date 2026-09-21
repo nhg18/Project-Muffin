@@ -3,8 +3,9 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class PhotonRoom
     {

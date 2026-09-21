@@ -2,12 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using Muffin.Game.Cards;
 
-public class CardModel
+namespace Muffin.Presentation
 {
-    public CardData cardData;
-    public void Setup(CardData data)
+
+    public class CardModel
     {
-        cardData = data;
+        public CardData cardData;
+        public void Setup(CardData data)
+        {
+            cardData = data;
+        }
     }
 }

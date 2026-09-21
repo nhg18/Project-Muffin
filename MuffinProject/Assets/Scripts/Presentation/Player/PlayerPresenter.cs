@@ -3,52 +3,57 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Game;
 
-public class PlayerPresenter : MonoBehaviourPunCallbacks
+namespace Muffin.Presentation
 {
-    //[SerializeField] private Playerview view;
 
-    public PlayerModel Model { get; private set; }
-
-    public void Init(int actorNumber, float maxHP)
+    public class PlayerPresenter : MonoBehaviourPunCallbacks
     {
-        Model = new PlayerModel(actorNumber, maxHP);
-        Debug.Log("현재 체력 : " + Model.CurrentHP);
-    }
+        //[SerializeField] private Playerview view;
 
-    //private void Start()
-    //{
-    //    Model = new PlayerModel(PhotonNetwork.LocalPlayer.ActorNumber,100);
-    //}
+        public PlayerModel Model { get; private set; }
 
-    //private void OnDestroy()
-    //{
-    //    if(Model != null)
-    //    {
-            
-    //    }
-    //}
-
-    public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
-    {
-        if (Model == null) return;
-
-        if(targetPlayer.ActorNumber == Model.ActorNumber)
+        public void Init(int actorNumber, float maxHP)
         {
-            if (changedProps.ContainsKey("HP"))
+            Model = new PlayerModel(actorNumber, maxHP);
+            Debug.Log("현재 체력 : " + Model.CurrentHP);
+        }
+
+        //private void Start()
+        //{
+        //    Model = new PlayerModel(PhotonNetwork.LocalPlayer.ActorNumber,100);
+        //}
+
+        //private void OnDestroy()
+        //{
+        //    if(Model != null)
+        //    {
+            
+        //    }
+        //}
+
+        public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+        {
+            if (Model == null) return;
+
+            if(targetPlayer.ActorNumber == Model.ActorNumber)
             {
-                float newHP = (float)changedProps["HP"];
-                Model.SetHP(newHP);
-                Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHP);
-            }
-            if (changedProps.ContainsKey("HandCount"))
-            {
-                int newHandCount = (int)changedProps["HandCount"];
-                Model.SetHandCount(newHandCount);
-                Debug.Log("드로우 연동 확인");
+                if (changedProps.ContainsKey("HP"))
+                {
+                    float newHP = (float)changedProps["HP"];
+                    Model.SetHP(newHP);
+                    Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHP);
+                }
+                if (changedProps.ContainsKey("HandCount"))
+                {
+                    int newHandCount = (int)changedProps["HandCount"];
+                    Model.SetHandCount(newHandCount);
+                    Debug.Log("드로우 연동 확인");
+                }
             }
         }
+
+
     }
-
-
 }

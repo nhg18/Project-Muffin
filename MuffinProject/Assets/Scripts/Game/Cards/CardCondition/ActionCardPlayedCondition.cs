@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using Photon.Realtime;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "ActionCardPlayed", menuName = "CardSystem/Condition")]
-public class ActionCardPlayedCondition : CardCondition
+namespace Muffin.Game.Cards
 {
-    public override string CheckCondition(Player caster, Player target = null)
+
+    [CreateAssetMenu(fileName = "ActionCardPlayed", menuName = "CardSystem/Condition")]
+    public class ActionCardPlayedCondition : CardCondition
     {
-        return null;
+        public override string CheckCondition(Player caster, Player target = null)
+        {
+            return null;
+        }
     }
 }

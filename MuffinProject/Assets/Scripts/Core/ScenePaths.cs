@@ -3,33 +3,37 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public enum SceneType
+namespace Muffin.Core
 {
-    BootStrap,
-    Title,
-    Lobby,
-    Room,
-    Game,
-    DebugLobby,
-}
 
-
-public static class ScenePaths
-{
-    private const string ROOT = "Scenes";
-
-    private static readonly Dictionary<SceneType, string> PathCache = new()
+    public enum SceneType
     {
-        { SceneType.BootStrap, "BootStrap" },
-        { SceneType.Title, "Title" },
-        { SceneType.Lobby, "Lobby" },
-        { SceneType.Room, "Room" },
-        { SceneType.Game, "Game" },
-        { SceneType.DebugLobby, "DebugLobby" },
-    };
+        BootStrap,
+        Title,
+        Lobby,
+        Room,
+        Game,
+        DebugLobby,
+    }
 
-    public static string Get(SceneType type)
+
+    public static class ScenePaths
     {
-        return $"{ROOT}/{PathCache[type]}Scene";
+        private const string ROOT = "Scenes";
+
+        private static readonly Dictionary<SceneType, string> PathCache = new()
+        {
+            { SceneType.BootStrap, "BootStrap" },
+            { SceneType.Title, "Title" },
+            { SceneType.Lobby, "Lobby" },
+            { SceneType.Room, "Room" },
+            { SceneType.Game, "Game" },
+            { SceneType.DebugLobby, "DebugLobby" },
+        };
+
+        public static string Get(SceneType type)
+        {
+            return $"{ROOT}/{PathCache[type]}Scene";
+        }
     }
 }

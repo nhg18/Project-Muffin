@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
-public class DeckView : MonoBehaviour
-{
-    [SerializeField] private Button DrawButton;
-    public event Action OnDrawButtonClicked;
 
-    private void Awake()
+namespace Muffin.Presentation
+{
+    public class DeckView : MonoBehaviour
     {
-        if (DrawButton != null)
+        [SerializeField] private Button DrawButton;
+        public event Action OnDrawButtonClicked;
+
+        private void Awake()
         {
-            DrawButton.onClick.AddListener(() => OnDrawButtonClicked?.Invoke());
+            if (DrawButton != null)
+            {
+                DrawButton.onClick.AddListener(() => OnDrawButtonClicked?.Invoke());
+            }
         }
     }
 }

@@ -5,14 +5,18 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ProfileView : MonoBehaviour
+namespace Muffin.UI.PlayerProfile
 {
-    [Header("UI References")]
-    [SerializeField] private TMP_Text _nicknameText;
-    // [SerializeField] private Image _image;
 
-    public void SetNicknameText(string nickname)
+    public class ProfileView : MonoBehaviour
     {
-        _nicknameText.text = nickname;
+        [Header("UI References")]
+        [SerializeField] private TMP_Text _nicknameText;
+        // [SerializeField] private Image _image;
+
+        public void SetNicknameText(string nickname)
+        {
+            _nicknameText.text = nickname;
+        }
     }
 }

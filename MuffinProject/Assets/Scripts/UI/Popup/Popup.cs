@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UI.Popup
+namespace Muffin.UI.Popup
 {
     public abstract class Popup : MonoBehaviour
     {

@@ -2,73 +2,79 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Game;
+using Muffin.Game.Cards;
 
-public class PlayerHandPresenter : MonoBehaviour
+namespace Muffin.Presentation
 {
-    [Header("Hands Setting")]
-    private int HandCount=0;
 
-    [SerializeField] private PlayerHandView handView;
-
-    [SerializeField] private CardDatabase cardDatabase;
-
-    PlayerHand playerHand = new PlayerHand();
-
-    private bool isPropertyUpdatePending = false;
-
-    private void OnEnable()
+    public class PlayerHandPresenter : MonoBehaviour
     {
-        GameEvents.OnDrawn += StartDrawEvent;
-    }
-    private void OnDisable()
-    {
-        GameEvents.OnDrawn -= StartDrawEvent;
-    }
+        [Header("Hands Setting")]
+        private int HandCount=0;
 
-    private void StartDrawEvent(int actorNumber, int cardid)
-    {
+        [SerializeField] private PlayerHandView handView;
 
-        if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
+        [SerializeField] private CardDatabase cardDatabase;
 
-        //Debug.Log("card : " + cardid);
+        PlayerHand playerHand = new PlayerHand();
 
-        CardData data = cardDatabase.GetCard(cardid);
+        private bool isPropertyUpdatePending = false;
 
-        handView.DrawCard(data);
-
-        HandCount++;
-        playerHand.Add(new Card(data.id));
-
-        if (!isPropertyUpdatePending)
+        private void OnEnable()
         {
-            isPropertyUpdatePending = true;
-            StartCoroutine(UpdatePropertyAtEndOfFrame());
+            GameEvents.OnDrawn += StartDrawEvent;
         }
-    }
+        private void OnDisable()
+        {
+            GameEvents.OnDrawn -= StartDrawEvent;
+        }
 
-    private IEnumerator UpdatePropertyAtEndOfFrame()
-    {
-        yield return new WaitForEndOfFrame(); // 프레임 끝까지 대기
+        private void StartDrawEvent(int actorNumber, int cardid)
+        {
 
-        PhotonNetwork.LocalPlayer.SetCustomProperties(
-            new ExitGames.Client.Photon.Hashtable
+            if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
+
+            //Debug.Log("card : " + cardid);
+
+            CardData data = cardDatabase.GetCard(cardid);
+
+            handView.DrawCard(data);
+
+            HandCount++;
+            playerHand.Add(new Card(data.id));
+
+            if (!isPropertyUpdatePending)
             {
-                ["HandCount"] = HandCount
+                isPropertyUpdatePending = true;
+                StartCoroutine(UpdatePropertyAtEndOfFrame());
             }
-        );
+        }
 
-        isPropertyUpdatePending = false;
-    }
+        private IEnumerator UpdatePropertyAtEndOfFrame()
+        {
+            yield return new WaitForEndOfFrame(); // 프레임 끝까지 대기
+
+            PhotonNetwork.LocalPlayer.SetCustomProperties(
+                new ExitGames.Client.Photon.Hashtable
+                {
+                    ["HandCount"] = HandCount
+                }
+            );
+
+            isPropertyUpdatePending = false;
+        }
     
 
-    public bool IsHandMode()
-    {
-        return playerHand.isHandMode;
-    }
-    public void SetHandMode(bool setter)
-    {
-        playerHand.isHandMode = setter;
-        GameEvents.RaiseHandModeChanged(setter);
-    }
+        public bool IsHandMode()
+        {
+            return playerHand.isHandMode;
+        }
+        public void SetHandMode(bool setter)
+        {
+            playerHand.isHandMode = setter;
+            GameEvents.RaiseHandModeChanged(setter);
+        }
 
+    }
 }

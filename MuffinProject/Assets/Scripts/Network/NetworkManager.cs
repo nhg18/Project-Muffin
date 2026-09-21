@@ -1,8 +1,9 @@
 using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class NetworkManager : SingletonPersistentPun<NetworkManager>
     {

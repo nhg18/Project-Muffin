@@ -1,9 +1,9 @@
 using System;
-using Network;
+using Muffin.Network;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Core
+namespace Muffin.Core
 {
     public class Bootstrapper : MonoBehaviour
     {

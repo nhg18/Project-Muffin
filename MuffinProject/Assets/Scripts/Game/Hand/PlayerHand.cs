@@ -1,29 +1,34 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Game.Cards;
 
-public class PlayerHand : CardCollection
+namespace Muffin.Game
 {
-    public bool isHandMode = false;
 
-    public void AddHandCard(Card card)
+    public class PlayerHand : CardCollection
     {
-        Add(card);
+        public bool isHandMode = false;
+
+        public void AddHandCard(Card card)
+        {
+            Add(card);
+        }
+
+        public void DiscardCard(Card card)
+        {
+            Remove(card);
+        }
+        public void DiscardCard(int index)
+        {
+            cards.RemoveAt(index);
+        }
+
+        public void Sort()
+        {
+
+        }
+
+
     }
-
-    public void DiscardCard(Card card)
-    {
-        Remove(card);
-    }
-    public void DiscardCard(int index)
-    {
-        cards.RemoveAt(index);
-    }
-
-    public void Sort()
-    {
-
-    }
-
-
 }

@@ -2,103 +2,108 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Network;
+using Muffin.Network;
 using TMPro;
-using UI.NickName;
-using UI.Popup;
+using Muffin.UI.NickName;
+using Muffin.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Muffin.Core;
 
-public class NicknameInput : MonoBehaviour
+namespace Muffin.UI.NickName
 {
-    [SerializeField] private TMP_InputField inputField;
-    [SerializeField] private Button submitButton;
-    [SerializeField] private TMP_Text countText;
+
+    public class NicknameInput : MonoBehaviour
+    {
+        [SerializeField] private TMP_InputField inputField;
+        [SerializeField] private Button submitButton;
+        [SerializeField] private TMP_Text countText;
     
-    private string _errorText;
+        private string _errorText;
 
-    private void Awake()
-    {
-        inputField.characterLimit = NicknameValidator.MaxLength;
-        _errorText = "";
-        UpdateCount("");
-    }
-
-    private void OnEnable()
-    {
-        inputField.onValueChanged.AddListener(UpdateCount);
-        submitButton.onClick.AddListener(Submit);
-    }
-
-    private void OnDisable()
-    {
-        inputField.onValueChanged.RemoveListener(UpdateCount);
-        submitButton.onClick.RemoveListener(Submit);
-    }
-
-    private void UpdateCount(string inputText)
-    {
-        var newText = $"{inputText.Length} / {NicknameValidator.MaxLength}";
-        countText.text = newText;
-    }
-    
-    private void Submit()
-    {
-        var nickname = inputField.text;
-        var valid = NicknameValidator.Validate(nickname);
-        if (valid != NicknameValidationResult.Valid)
+        private void Awake()
         {
-            var errorMsg = NicknameValidator.GetErrorMessage(valid);
-            HandleError(errorMsg);
-            Debug.LogWarning("Nickname is invalid");
-            return;
+            inputField.characterLimit = NicknameValidator.MaxLength;
+            _errorText = "";
+            UpdateCount("");
         }
-        
-        NetworkManager.Instance.SetNickname(nickname);
 
-        LoadScene();
-    }
-
-    private void HandleError(string errorMsg)
-    {
-        _errorText = errorMsg;
-        var popup = PopupManager.Instance.OpenModal(PopupManager.Get<WarningPopup>());
-        
-        popup.MainText = "닉네임 오류";
-        popup.SubText = _errorText;
-        
-        popup.OnClickedOkButton = () =>
+        private void OnEnable()
         {
-            PopupManager.Instance.CloseModal(popup);
-        };
-    }
+            inputField.onValueChanged.AddListener(UpdateCount);
+            submitButton.onClick.AddListener(Submit);
+        }
 
-    private async void LoadScene()
-    {
-        try
+        private void OnDisable()
         {
-            submitButton.interactable = false;
-            // 팝업 호출
-            var op = SceneManager.LoadSceneAsync(ScenePaths.Get(SceneType.Lobby));
-        
-            if (op == null)
+            inputField.onValueChanged.RemoveListener(UpdateCount);
+            submitButton.onClick.RemoveListener(Submit);
+        }
+
+        private void UpdateCount(string inputText)
+        {
+            var newText = $"{inputText.Length} / {NicknameValidator.MaxLength}";
+            countText.text = newText;
+        }
+    
+        private void Submit()
+        {
+            var nickname = inputField.text;
+            var valid = NicknameValidator.Validate(nickname);
+            if (valid != NicknameValidationResult.Valid)
             {
-                Debug.LogError($"Scene {ScenePaths.Get(SceneType.Lobby)} not found");
+                var errorMsg = NicknameValidator.GetErrorMessage(valid);
+                HandleError(errorMsg);
+                Debug.LogWarning("Nickname is invalid");
                 return;
             }
         
-            op.allowSceneActivation = false;
-        
-            while (op.progress < 0.9f)
-                await Task.Yield();
-        
-            // 팝업 닫기
-            op.allowSceneActivation = true;
+            NetworkManager.Instance.SetNickname(nickname);
+
+            LoadScene();
         }
-        catch (Exception e)
+
+        private void HandleError(string errorMsg)
         {
-            Debug.LogError($"씬 로드 실패: {e}");
+            _errorText = errorMsg;
+            var popup = PopupManager.Instance.OpenModal(PopupManager.Get<WarningPopup>());
+        
+            popup.MainText = "닉네임 오류";
+            popup.SubText = _errorText;
+        
+            popup.OnClickedOkButton = () =>
+            {
+                PopupManager.Instance.CloseModal(popup);
+            };
+        }
+
+        private async void LoadScene()
+        {
+            try
+            {
+                submitButton.interactable = false;
+                // 팝업 호출
+                var op = SceneManager.LoadSceneAsync(ScenePaths.Get(SceneType.Lobby));
+        
+                if (op == null)
+                {
+                    Debug.LogError($"Scene {ScenePaths.Get(SceneType.Lobby)} not found");
+                    return;
+                }
+        
+                op.allowSceneActivation = false;
+        
+                while (op.progress < 0.9f)
+                    await Task.Yield();
+        
+                // 팝업 닫기
+                op.allowSceneActivation = true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"씬 로드 실패: {e}");
+            }
         }
     }
 }

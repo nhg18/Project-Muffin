@@ -1,36 +1,40 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Network;
+using Muffin.Network;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class JoinRoomPanel : MonoBehaviour
+namespace Muffin.UI
 {
-    [SerializeField] private Button joinButton;
-    [SerializeField] private Button backButton;
-    [SerializeField] private TMP_InputField codeInput;
 
-    private void OnEnable()
+    public class JoinRoomPanel : MonoBehaviour
     {
-        joinButton.onClick.AddListener(OnJoinClicked);
-        backButton.onClick.AddListener(OnBackClicked);
-    }
+        [SerializeField] private Button joinButton;
+        [SerializeField] private Button backButton;
+        [SerializeField] private TMP_InputField codeInput;
 
-    private void OnDisable()
-    {
-        joinButton.onClick.RemoveListener(OnJoinClicked);
-        backButton.onClick.RemoveListener(OnBackClicked);
-    }
+        private void OnEnable()
+        {
+            joinButton.onClick.AddListener(OnJoinClicked);
+            backButton.onClick.AddListener(OnBackClicked);
+        }
 
-    private void OnJoinClicked()
-    {
-        NetworkManager.Instance.JoinRoom(codeInput.text);
-    }
+        private void OnDisable()
+        {
+            joinButton.onClick.RemoveListener(OnJoinClicked);
+            backButton.onClick.RemoveListener(OnBackClicked);
+        }
 
-    private void OnBackClicked()
-    {
-        gameObject.SetActive(false);
+        private void OnJoinClicked()
+        {
+            NetworkManager.Instance.JoinRoom(codeInput.text);
+        }
+
+        private void OnBackClicked()
+        {
+            gameObject.SetActive(false);
+        }
     }
 }

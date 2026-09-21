@@ -1,10 +1,13 @@
-[System.Serializable]
-public struct Card
+namespace Muffin.Game.Cards
 {
-    public int ID;
-    
-    public Card(int id)
+    [System.Serializable]
+    public struct Card
     {
-        ID = id;
+        public int ID;
+    
+        public Card(int id)
+        {
+            ID = id;
+        }
     }
 }

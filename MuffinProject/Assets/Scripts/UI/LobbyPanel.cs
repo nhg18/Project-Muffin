@@ -1,79 +1,84 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Network;
+using Muffin.Network;
 using TMPro;
-using UI.Components;
-using UI.Popup;
+using Muffin.UI.Components;
+using Muffin.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Muffin.Core;
 
-public class LobbyPanel : MonoBehaviour
+namespace Muffin.UI
 {
-    [SerializeField] private Button randomMatchButton;
-    [SerializeField] private Button createRoomButton;
-    [SerializeField] private Button joinRoomButton;
 
-    private void OnEnable()
+    public class LobbyPanel : MonoBehaviour
     {
-        createRoomButton.onClick.AddListener(OnCreateRoomClicked);
-        joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
-        
-        // RoomEvents.OnRoomCreating += 
-        RoomEvents.OnJoinedRoom += OnJoinedRoom;
-        RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
-        RoomEvents.OnJoinRoomFailed += OnJoinRoomFailed;
-    }
+        [SerializeField] private Button randomMatchButton;
+        [SerializeField] private Button createRoomButton;
+        [SerializeField] private Button joinRoomButton;
 
-    private void OnDisable()
-    {
-        createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
-        joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
-        
-        // RoomEvents.OnRoomCreating -= 
-        RoomEvents.OnJoinedRoom -= OnJoinedRoom;
-        RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
-        RoomEvents.OnJoinRoomFailed -= OnJoinRoomFailed;
-    }
-
-    private void OnCreateRoomClicked()
-    {
-        NetworkManager.Instance.CreateRoom();
-    }
-
-    private void OnJoinRoomClicked()
-    {
-        var joinPopup = PopupManager.Instance.OpenModal(PopupManager.Get<InputPopup>());
-        joinPopup.PlaceholderText = "방 코드 입력";
-        joinPopup.SubmitButtonText = "참가";
-        joinPopup.CharacterLimit = 4;
-
-        joinPopup.OnClickedSubmitButton = () =>
+        private void OnEnable()
         {
-            Debug.Log("Clicked on the join room");
-            NetworkManager.Instance.JoinRoom(joinPopup.InputText);
-        };
+            createRoomButton.onClick.AddListener(OnCreateRoomClicked);
+            joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
+        
+            // RoomEvents.OnRoomCreating += 
+            RoomEvents.OnJoinedRoom += OnJoinedRoom;
+            RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
+            RoomEvents.OnJoinRoomFailed += OnJoinRoomFailed;
+        }
 
-        joinPopup.OnClickedExitButton = () =>
+        private void OnDisable()
         {
-            Debug.Log("Clicked on exit");
-            PopupManager.Instance.CloseModal(joinPopup);
-        };
-    }
+            createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
+            joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
+        
+            // RoomEvents.OnRoomCreating -= 
+            RoomEvents.OnJoinedRoom -= OnJoinedRoom;
+            RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
+            RoomEvents.OnJoinRoomFailed -= OnJoinRoomFailed;
+        }
+
+        private void OnCreateRoomClicked()
+        {
+            NetworkManager.Instance.CreateRoom();
+        }
+
+        private void OnJoinRoomClicked()
+        {
+            var joinPopup = PopupManager.Instance.OpenModal(PopupManager.Get<InputPopup>());
+            joinPopup.PlaceholderText = "방 코드 입력";
+            joinPopup.SubmitButtonText = "참가";
+            joinPopup.CharacterLimit = 4;
+
+            joinPopup.OnClickedSubmitButton = () =>
+            {
+                Debug.Log("Clicked on the join room");
+                NetworkManager.Instance.JoinRoom(joinPopup.InputText);
+            };
+
+            joinPopup.OnClickedExitButton = () =>
+            {
+                Debug.Log("Clicked on exit");
+                PopupManager.Instance.CloseModal(joinPopup);
+            };
+        }
     
-    private void OnJoinedRoom()
-    {
-        SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
-    }
+        private void OnJoinedRoom()
+        {
+            SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
+        }
 
-    private void OnRoomCreateFailed(short code, string message)
-    {
+        private void OnRoomCreateFailed(short code, string message)
+        {
         
-    }
+        }
 
-    private void OnJoinRoomFailed(short code, string message)
-    {
+        private void OnJoinRoomFailed(short code, string message)
+        {
         
+        }
     }
 }
