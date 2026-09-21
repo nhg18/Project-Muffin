@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Muffin.UI.Popup;
 
 namespace Muffin.UI.Components

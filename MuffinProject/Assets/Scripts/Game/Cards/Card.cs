@@ -1,4 +1,4 @@
-namespace Muffin.Game.Cards
+﻿namespace Muffin.Game.Cards
 {
     [System.Serializable]
     public struct Card
