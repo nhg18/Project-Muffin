@@ -16,7 +16,10 @@ namespace Muffin.UI
         [SerializeField] private TMP_Text roomCodeText;
         [SerializeField] private TMP_Text playerInfoText;
         [SerializeField] private TMP_Text logText;
-    
+
+        private const int MaxLogLines = 30;
+        private readonly Queue<string> _logLines = new Queue<string>();
+
         private void OnEnable()
         {
             RoomEvents.OnPlayerEntered += OnPlayerEntered;
@@ -69,7 +72,11 @@ namespace Muffin.UI
 
         private void AddLog(string text)
         {
-            logText.text += "\n" + text;
+            _logLines.Enqueue(text);
+            while (_logLines.Count > MaxLogLines)
+                _logLines.Dequeue();
+
+            logText.text = string.Join("\n", _logLines);
         }
     }
 }
