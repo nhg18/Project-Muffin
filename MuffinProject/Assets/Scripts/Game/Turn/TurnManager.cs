@@ -9,13 +9,12 @@ namespace Muffin.Game
 
     public class TurnManager : SingletonPun<TurnManager>
     {
-        public const string KEY_TURN = "turn";
     
         public int CurrentTurnActor {
             get
             {
                 var props = PhotonNetwork.CurrentRoom.CustomProperties;
-                return props.ContainsKey(KEY_TURN) ? (int)props[KEY_TURN] : -1;
+                return props.ContainsKey(RoomProps.TurnActor) ? (int)props[RoomProps.TurnActor] : -1;
             }
         }
     
@@ -24,9 +23,9 @@ namespace Muffin.Game
             {
                 if (!PhotonNetwork.InRoom) return false;
                 var props = PhotonNetwork.CurrentRoom.CustomProperties;
-                if (!props.ContainsKey(KEY_TURN)) return false;
+                if (!props.ContainsKey(RoomProps.TurnActor)) return false;
             
-                return (int)props[KEY_TURN] == PhotonNetwork.LocalPlayer.ActorNumber;
+                return (int)props[RoomProps.TurnActor] == PhotonNetwork.LocalPlayer.ActorNumber;
             }
         }
 
@@ -41,7 +40,7 @@ namespace Muffin.Game
         private void SetTurn(int actorNumber)
         {
             PhotonNetwork.CurrentRoom.SetCustomProperties(
-                new ExitGames.Client.Photon.Hashtable { [KEY_TURN] = actorNumber }
+                new ExitGames.Client.Photon.Hashtable { [RoomProps.TurnActor] = actorNumber }
             );
         }
 
@@ -96,12 +95,12 @@ namespace Muffin.Game
 
         public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changedProperties)
         {
-            if (!changedProperties.ContainsKey(KEY_TURN)) return;
+            if (!changedProperties.ContainsKey(RoomProps.TurnActor)) return;
 
-            int actorNumber = (int)changedProperties[KEY_TURN];
+            int actorNumber = (int)changedProperties[RoomProps.TurnActor];
             Debug.Log($"turnchange : {actorNumber}/ MyTurn?:{IsMyTurn}");
         
-            GameEvents.RaiseTurnChanged();
+            GameEvents.RaiseTurnChanged(actorNumber);
         }
 
         public override void OnPlayerLeftRoom(Player otherPlayer)

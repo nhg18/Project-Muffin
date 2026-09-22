@@ -3,6 +3,7 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Core;
 using Muffin.Game;
 
 namespace Muffin.Presentation
@@ -14,13 +15,13 @@ namespace Muffin.Presentation
 
         public PlayerModel Model { get; private set; }
 
-        public void Init(int actorNumber, float maxHP)
+        public void Init(int actorNumber, int maxHp)
         {
-            Model = new PlayerModel(actorNumber, maxHP);
-            Debug.Log("현재 체력 : " + Model.CurrentHP);
+            Model = new PlayerModel(actorNumber, maxHp);
+            Debug.Log("현재 체력 : " + Model.CurrentHp);
 
             ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable();
-            hashtable[PropKey.HP] = maxHP;
+            hashtable[PlayerProps.Hp] = maxHp;
             PhotonNetwork.CurrentRoom.GetPlayer(actorNumber).SetCustomProperties(hashtable);
         }
 
@@ -43,15 +44,15 @@ namespace Muffin.Presentation
 
             if(targetPlayer.ActorNumber == Model.ActorNumber)
             {
-                if (changedProps.ContainsKey(PropKey.HP))
+                if (changedProps.ContainsKey(PlayerProps.Hp))
                 {
-                    float newHP = (float)changedProps[PropKey.HP];
-                    Model.SetHP(newHP);
-                    Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHP);
+                    int newHp = (int)changedProps[PlayerProps.Hp];
+                    Model.SetHp(newHp);
+                    Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHp);
                 }
-                if (changedProps.ContainsKey(PropKey.HandCount))
+                if (changedProps.ContainsKey(PlayerProps.HandCount))
                 {
-                    int newHandCount = (int)changedProps[PropKey.HandCount];
+                    int newHandCount = (int)changedProps[PlayerProps.HandCount];
                     Model.SetHandCount(newHandCount);
                     Debug.Log("드로우 연동 확인");
                 }
