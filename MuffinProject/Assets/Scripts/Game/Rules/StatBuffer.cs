@@ -17,7 +17,16 @@ namespace Muffin.Game
             if (working.TryGetValue((player.ActorNumber, key), out float v))
                 return v;
 
-            return player.CustomProperties.TryGetValue(key, out object o) ? (int)o : 0;
+            if (player.CustomProperties.TryGetValue(key, out object o) && o != null)
+            {
+                if (o is float f) return f;
+
+                Debug.LogWarning($"[StatBuffer] {player.NickName}의 '{key}' 타입이 float가 아님: {o.GetType()} (값: {o})");
+                return System.Convert.ToSingle(o);
+            }
+
+            Debug.LogWarning($"[StatBuffer] {player.NickName}에게 '{key}' 프로퍼티가 없음");
+            return 0f;
         }
 
         public static void Set(Player player, string key, float value)

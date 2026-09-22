@@ -58,7 +58,7 @@ namespace Muffin.Presentation
             PhotonNetwork.LocalPlayer.SetCustomProperties(
                 new ExitGames.Client.Photon.Hashtable
                 {
-                    ["HandCount"] = HandCount
+                    [PropKey.HandCount] = HandCount
                 }
             );
 
