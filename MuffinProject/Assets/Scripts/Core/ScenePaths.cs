@@ -8,7 +8,6 @@ namespace Muffin.Core
 
     public enum SceneType
     {
-        BootStrap,
         Title,
         Lobby,
         Room,
@@ -23,7 +22,6 @@ namespace Muffin.Core
 
         private static readonly Dictionary<SceneType, string> PathCache = new()
         {
-            { SceneType.BootStrap, "BootStrap" },
             { SceneType.Title, "Title" },
             { SceneType.Lobby, "Lobby" },
             { SceneType.Room, "Room" },

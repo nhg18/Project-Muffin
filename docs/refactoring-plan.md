@@ -259,6 +259,7 @@ public void StartChainResolution()
 | 1-3 네임스페이스 | **완료** (`ab7009f`) |
 | 1-4 이름 변경 | **완료** (`3dca6bc`) |
 | 1-5 어셈블리 정의 | **보류** — 아래 1-5 참고 |
+| 씬 정리 | **완료 (2026-09-22)**. 레거시 `GameScene`·`Prototype_Lobby` 삭제 확인, `Refactor/RefactorGameScene` → `Scenes/GameScene` 이름 변경. `BootstrapScene` 은 `Core/GameBootstrap.cs`(런타임 부트스트랩)로 대체하고 삭제 |
 
 각 단계는 Unity 2022.3.62f3 배치모드 컴파일 error 0 으로 확인했다.
 `.cs` 와 `.cs.meta` 를 함께 옮겨 GUID 를 보존했으므로 씬·프리팹·에셋 참조는 유지된다.

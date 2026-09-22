@@ -48,18 +48,30 @@
 
 ## 4. 씬 구성
 
-| 씬 | 역할 | 상태 |
-| --- | --- | --- |
-| `BootstrapScene` | 네트워크 초기화 후 Title로 이동 | 사용 중 |
-| `TitleScene` | 타이틀 | 사용 중 |
-| `LobbyScene` | 로비 | 사용 중 |
-| `RoomScene` | 방 대기 | 사용 중 |
-| `Refactor/RefactorGameScene` | **현재 개발 중인 인게임 씬** | 사용 중 |
-| `GameScene` | 구 인게임 씬 (레거시) | **폐기 예정** |
-| `Prototype_Lobby` | 프로토타입 로비 | **폐기 예정** |
-| `DebugLobbyScene` | 개발용 즉시 입장 | 개발 전용 |
+| 씬 | 역할 | 빌드 인덱스 | 상태 |
+| --- | --- | --- | --- |
+| `TitleScene` | 타이틀 · 닉네임 입력 (**시작 씬**) | 0 | 사용 중 |
+| `LobbyScene` | 로비 | 1 | 사용 중 |
+| `RoomScene` | 방 대기 | 2 | 사용 중 |
+| `GameScene` | 인게임 | 3 | 사용 중 |
+| `DebugLobbyScene` | 개발용 즉시 입장 | 4 | 개발 전용 |
 
-> 씬 경로는 `Scripts/Scene/ScenePaths.cs` 에서 관리한다.
+> 씬 경로는 `Scripts/Core/ScenePaths.cs` 에서 관리한다. 문자열을 직접 쓰지 않는다.
+
+### 전역 매니저 (부트스트랩 씬 없음)
+
+`BootstrapScene` 은 **제거됐다.** 대신 `Scripts/Core/GameBootstrap.cs` 가
+`[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]` 로 `Resources/Bootstrap/` 의 매니저 프리팹을
+첫 씬이 로드되기 전에 생성한다.
+
+| 매니저 | 프리팹 | 비고 |
+| --- | --- | --- |
+| `NetworkManager` | `Resources/Bootstrap/NetworkManager.prefab` | 자신의 `Start()` 에서 접속을 시작한다 |
+| `PopupManager` | `Resources/Bootstrap/PopupManager.prefab` | 팝업 캔버스 · 레이어 3종 포함 |
+
+덕분에 **어느 씬에서 Play 를 눌러도 동일하게 동작한다.** 매니저를 씬에 배치할 필요가 없고,
+씬에 이미 배치돼 있어도 싱글톤 중복 방지 로직이 씬 쪽 사본을 정리한다.
+매니저를 추가할 때는 프리팹을 `Resources/Bootstrap/` 에 넣고 `GameBootstrap.ManagerPrefabs` 에 이름을 추가한다.
 
 ---
 

@@ -33,12 +33,22 @@ namespace Muffin.UI.NickName
         {
             inputField.onValueChanged.AddListener(UpdateCount);
             submitButton.onClick.AddListener(Submit);
+            ConnectionEvents.OnConnected += OnConnected;
+
+            // BootstrapScene 이 접속 완료를 보장하던 역할을 여기서 대신한다.
+            submitButton.interactable = NetworkManager.IsReady;
         }
 
         private void OnDisable()
         {
             inputField.onValueChanged.RemoveListener(UpdateCount);
             submitButton.onClick.RemoveListener(Submit);
+            ConnectionEvents.OnConnected -= OnConnected;
+        }
+
+        private void OnConnected()
+        {
+            submitButton.interactable = true;
         }
 
         private void UpdateCount(string inputText)

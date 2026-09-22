@@ -15,6 +15,8 @@ namespace Muffin.Network
 
         public static string Nickname => PhotonNetwork.NickName;
         public static bool IsConnected => PhotonNetwork.IsConnected;
+        /// <summary>서버 접속이 완료되어 요청을 보낼 수 있는 상태인지</summary>
+        public static bool IsReady => PhotonNetwork.IsConnectedAndReady;
         
         protected override void Awake()
         {
@@ -26,7 +28,11 @@ namespace Muffin.Network
     
         private void Start()
         {
-            // _connection.Connect();
+            // 어느 씬에서 실행하더라도 여기서 접속이 시작된다. (GameBootstrap 이 생성)
+            _connection.Initialize();
+
+            if (!IsConnected)
+                _connection.Connect();
         }
     
         // 퍼블릭 메서드

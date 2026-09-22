@@ -13,6 +13,7 @@
 | 코드 컨벤션 | `docs/CODE_CONVENTION.md` | 노션 「코드 컨벤션」 페이지를 이관한 것 |
 | 기획 문서 작성 방식 | `docs/GDD_GUIDE.md` | |
 | 리팩토링 계획 | `docs/refactoring-plan.md` | |
+| 작업 플랜 / 역할 분담 / 마일스톤 | `docs/development-plan.md` | 2인(로직·UI) 기준 |
 | 아이디어 / 회의록 / 사업 / 아트 | 노션 | 확정되면 `docs/systems/`로 내려온다 |
 
 ### 규칙
