@@ -63,7 +63,8 @@ namespace Muffin.UI
         {
             if (!CanStartGame()) return;
             NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
-            PhotonNetwork.LoadLevel(ScenePaths.Get(SceneType.Game));
+            // PUN 씬 동기화는 경로가 아닌 씬 이름으로 비교한다. Get() 을 쓰면 클라이언트가 무한 재로드된다.
+            PhotonNetwork.LoadLevel(ScenePaths.GetName(SceneType.Game));
         }
 
         private bool CanStartGame()
