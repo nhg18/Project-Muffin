@@ -23,17 +23,17 @@ namespace Muffin.Presentation
         private void OnEnable()
         {
             GameEvents.OnTurnChanged += UpdateTurnUI;
-            GameEvents.OnTurnChanged += SeatManager.Instance.UpdateSeatUI;
         }
     
         private void OnDisable()
         {
             GameEvents.OnTurnChanged -= UpdateTurnUI;
-            GameEvents.OnTurnChanged -= SeatManager.Instance.UpdateSeatUI;
         }
 
-        private void UpdateTurnUI()
+        private void UpdateTurnUI(int actorNumber)
         {
+            SeatManager.Instance.UpdateSeatUI();
+
             if (TurnManager.Instance.IsMyTurn)
             {
                 SetIndicatorText("나의 턴!");

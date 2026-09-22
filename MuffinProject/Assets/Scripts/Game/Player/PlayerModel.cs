@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Muffin.Game
 {
@@ -9,32 +6,27 @@ namespace Muffin.Game
     public class PlayerModel
     {
         public int ActorNumber { get; }
-        public float MaxHP { get; private set; }
-        public float CurrentHP { get; private set; }
-
+        public int MaxHp { get; private set; }
+        public int CurrentHp { get; private set; }
         public int CurrentHandCount { get; private set; }
 
-
-
-
-        public PlayerModel(int actorNumber, float maxHP)
+        public PlayerModel(int actorNumber, int maxHp)
         {
             ActorNumber = actorNumber;
-            MaxHP = maxHP;
-            CurrentHP = maxHP;
+            MaxHp = maxHp;
+            CurrentHp = maxHp;
         }
 
-        public void SetHP(float newHP)
+        public void SetHp(int newHp)
         {
-            CurrentHP = Math.Clamp(newHP, 0, MaxHP);
-            GameEvents.RaiseHpChanged(CurrentHP);
-        
+            CurrentHp = Math.Clamp(newHp, 0, MaxHp);
+            GameEvents.RaiseHpChanged(ActorNumber, CurrentHp);
         }
 
         public void SetHandCount(int newHandCount)
         {
             CurrentHandCount = newHandCount;
-            GameEvents.RaiseHandCountChanged(CurrentHandCount);
+            GameEvents.RaiseHandCountChanged(ActorNumber, CurrentHandCount);
         }
     }
 }

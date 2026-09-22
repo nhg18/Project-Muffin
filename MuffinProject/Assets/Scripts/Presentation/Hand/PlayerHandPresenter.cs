@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Core;
 using Muffin.Game;
 using Muffin.Game.Cards;
 
@@ -58,7 +59,7 @@ namespace Muffin.Presentation
             PhotonNetwork.LocalPlayer.SetCustomProperties(
                 new ExitGames.Client.Photon.Hashtable
                 {
-                    [PropKey.HandCount] = HandCount
+                    [PlayerProps.HandCount] = HandCount
                 }
             );
 

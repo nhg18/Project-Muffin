@@ -10,26 +10,26 @@ namespace Muffin.Game
 
     public class StatBuffer
     {
-        private static readonly Dictionary<(int actor, string key), float> working = new();
+        private static readonly Dictionary<(int actor, string key), int> working = new();
 
-        public static float Get(Player player, string key)
+        public static int Get(Player player, string key)
         {
-            if (working.TryGetValue((player.ActorNumber, key), out float v))
+            if (working.TryGetValue((player.ActorNumber, key), out int v))
                 return v;
 
             if (player.CustomProperties.TryGetValue(key, out object o) && o != null)
             {
-                if (o is float f) return f;
+                if (o is int i) return i;
 
-                Debug.LogWarning($"[StatBuffer] {player.NickName}의 '{key}' 타입이 float가 아님: {o.GetType()} (값: {o})");
-                return System.Convert.ToSingle(o);
+                Debug.LogWarning($"[StatBuffer] {player.NickName}의 '{key}' 타입이 int가 아님: {o.GetType()} (값: {o})");
+                return System.Convert.ToInt32(o);
             }
 
             Debug.LogWarning($"[StatBuffer] {player.NickName}에게 '{key}' 프로퍼티가 없음");
-            return 0f;
+            return 0;
         }
 
-        public static void Set(Player player, string key, float value)
+        public static void Set(Player player, string key, int value)
         {
             working[(player.ActorNumber, key)] = value;
         }

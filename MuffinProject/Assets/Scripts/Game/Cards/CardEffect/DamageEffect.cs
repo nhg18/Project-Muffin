@@ -3,6 +3,7 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Core;
 
 namespace Muffin.Game.Cards
 {
@@ -11,7 +12,7 @@ namespace Muffin.Game.Cards
     public class DamageEffect : CardEffect
     {
         [Header("데미지량")]
-        public float damageAmount;
+        public int damageAmount;
 
         public override void Execute(Player caster, Player target)
         {
@@ -20,10 +21,10 @@ namespace Muffin.Game.Cards
                 if (!PhotonNetwork.IsMasterClient) return;
                 if (target == null) return;
 
-                float curHP = StatBuffer.Get(target, PropKey.HP);
-                float newHp = Mathf.Max(0, curHP - damageAmount);
+                int curHp = StatBuffer.Get(target, PlayerProps.Hp);
+                int newHp = Mathf.Max(0, curHp - damageAmount);
 
-                StatBuffer.Set(target, PropKey.HP, newHp);
+                StatBuffer.Set(target, PlayerProps.Hp, newHp);
 
                 //damage 로직
                 Debug.Log($"{target.NickName}에게 {damageAmount}의 데미지!");

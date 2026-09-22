@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Muffin.Core;
 using Muffin.Game;
 
 namespace Muffin.Presentation
@@ -33,10 +34,10 @@ namespace Muffin.Presentation
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
         {
-            // 내가 관찰 중인 상대방의 정보가 맞고, 변경된 속성 중 "HandCount"가 있다면
-            if (targetPlayer.ActorNumber == OtherPlayerNumber && changedProps.ContainsKey("HandCount"))
+            // 내가 관찰 중인 상대방의 정보가 맞고, 변경된 속성 중 손패 장수가 있다면
+            if (targetPlayer.ActorNumber == OtherPlayerNumber && changedProps.ContainsKey(PlayerProps.HandCount))
             {
-                int realCount = (int)changedProps["HandCount"];
+                int realCount = (int)changedProps[PlayerProps.HandCount];
 
                 // 만약 네트워크 렉이나 씹힘으로 인해 내 화면의 카드 수(HandCount)와
                 // 상대방 장부에 적힌 수(realCount)가 다르다면 강제로 맞춰줍니다.
