@@ -1,15 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class PhotonRoom
     {
         public void JoinRoom(string roomName)
         {
+            if (!PhotonConnection.ValidConnect) return;
+            
             if (string.IsNullOrEmpty(roomName))
             {
                 RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
@@ -20,6 +23,7 @@ namespace Network
     
         public void JoinRandomRoom()
         {
+            if (!PhotonConnection.ValidConnect) return;
             PhotonNetwork.JoinRandomRoom();
         }
     
@@ -30,6 +34,8 @@ namespace Network
     
         public void CreateRoom()
         {
+            if (!PhotonConnection.ValidConnect) return;
+            
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             string code = RandomCode.GenerateRandomCode();
         
@@ -48,6 +54,11 @@ namespace Network
     
         public void UpdateRoomOptions(bool isVisible, bool isOpen)
         {
+            if (!PhotonNetwork.InRoom)
+            {
+                Debug.LogWarning("Must be in room");
+                return;
+            }
             PhotonNetwork.CurrentRoom.IsVisible = isVisible;
             PhotonNetwork.CurrentRoom.IsOpen = isOpen;
         }
@@ -87,11 +98,6 @@ namespace Network
         {
             Debug.Log("On Joined Room");
             RoomEvents.RaiseJoinedRoom();
-            
-            int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
-            NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
-            
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
         }
     
         /// <summary>
@@ -101,8 +107,7 @@ namespace Network
         public void OnLeftRoom()
         {
             Debug.Log("On Left Room");
-            // SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.DebugLobby));
+            RoomEvents.RaiseLeftRoom();
         }
     
         /// <summary>

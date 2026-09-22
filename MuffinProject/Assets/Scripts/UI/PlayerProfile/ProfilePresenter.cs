@@ -1,20 +1,24 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using Network;
+using Muffin.Network;
 using UnityEngine;
 
-public class ProfilePresenter : MonoBehaviour
+namespace Muffin.UI.PlayerProfile
 {
-    [Header("Dependencies")]
-    [SerializeField] private ProfileView _view;
 
-    private void Start()
+    public class ProfilePresenter : MonoBehaviour
     {
-        UpdateProfile();
-    }
+        [Header("Dependencies")]
+        [SerializeField] private ProfileView _view;
 
-    private void UpdateProfile()
-    {
-        _view.SetNicknameText(NetworkManager.Nickname);
+        private void Start()
+        {
+            UpdateProfile();
+        }
+
+        private void UpdateProfile()
+        {
+            _view.SetNicknameText(NetworkManager.Nickname);
+        }
     }
 }

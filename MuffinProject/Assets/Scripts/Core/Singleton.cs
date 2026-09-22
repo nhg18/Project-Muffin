@@ -1,41 +1,45 @@
-using Photon.Pun;
+﻿using Photon.Pun;
 using UnityEngine;
 
-public abstract class StaticInstance<T> : MonoBehaviour where T : MonoBehaviour
+namespace Muffin.Core
 {
-    public static T Instance { get; private set; }
-    protected virtual void Awake() => Instance = this as T;
 
-    protected virtual void OnApplicationQuit()
+    public abstract class StaticInstance<T> : MonoBehaviour where T : MonoBehaviour
     {
-        Instance = null;
-        Destroy(gameObject);
-    }
+        public static T Instance { get; private set; }
+        protected virtual void Awake() => Instance = this as T;
 
-    protected virtual void OnDestroy()
-    {
-        if (Instance == this) Instance = null;
-    }
-}
-
-public abstract class Singleton<T> : StaticInstance<T> where T : MonoBehaviour
-{
-    protected override void Awake()
-    {
-        if (Instance != null)
+        protected virtual void OnApplicationQuit()
         {
+            Instance = null;
             Destroy(gameObject);
-            return;
         }
-        base.Awake();
-    }
-}
 
-public abstract class SingletonPersistent<T> : Singleton<T> where T : MonoBehaviour
-{
-    protected override void Awake()
+        protected virtual void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+    }
+
+    public abstract class Singleton<T> : StaticInstance<T> where T : MonoBehaviour
     {
-        DontDestroyOnLoad(gameObject);
-        base.Awake();
+        protected override void Awake()
+        {
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            base.Awake();
+        }
+    }
+
+    public abstract class SingletonPersistent<T> : Singleton<T> where T : MonoBehaviour
+    {
+        protected override void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+            base.Awake();
+        }
     }
 }

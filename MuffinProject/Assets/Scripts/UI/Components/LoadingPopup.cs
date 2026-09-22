@@ -1,8 +1,9 @@
-using System;
+﻿using System;
+using Muffin.UI.Popup;
 
-namespace UI.Components
+namespace Muffin.UI.Components
 {
-    public class LoadingPopup : BasePopup
+    public class LoadingPopup : Popup.Popup
     {
     }
 }

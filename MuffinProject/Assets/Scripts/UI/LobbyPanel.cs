@@ -1,68 +1,84 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Network;
+using Muffin.Network;
 using TMPro;
-using UI.Components;
+using Muffin.UI.Components;
+using Muffin.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Muffin.Core;
 
-public class LobbyPanel : MonoBehaviour
+namespace Muffin.UI
 {
-    [SerializeField] private Button randomMatchButton;
-    [SerializeField] private Button createRoomButton;
-    [SerializeField] private Button joinRoomButton;
-    
 
-    private void OnEnable()
+    public class LobbyPanel : MonoBehaviour
     {
-        createRoomButton.onClick.AddListener(OnCreateRoomClicked);
-        joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
+        [SerializeField] private Button randomMatchButton;
+        [SerializeField] private Button createRoomButton;
+        [SerializeField] private Button joinRoomButton;
+
+        private void OnEnable()
+        {
+            createRoomButton.onClick.AddListener(OnCreateRoomClicked);
+            joinRoomButton.onClick.AddListener(OnJoinRoomClicked);
         
-        // RoomEvents.OnRoomCreating += 
-        RoomEvents.OnJoinedRoom += OnRoomJoined;
-        RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
-        RoomEvents.OnJoinRoomFailed += OnJoinRoomFailed;
-    }
+            // RoomEvents.OnRoomCreating += 
+            RoomEvents.OnJoinedRoom += OnJoinedRoom;
+            RoomEvents.OnCreateRoomFailed += OnRoomCreateFailed;
+            RoomEvents.OnJoinRoomFailed += OnJoinRoomFailed;
+        }
 
-    private void OnDisable()
-    {
-        createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
-        joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
+        private void OnDisable()
+        {
+            createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
+            joinRoomButton.onClick.RemoveListener(OnJoinRoomClicked);
         
-        // RoomEvents.OnRoomCreating -= 
-        RoomEvents.OnJoinedRoom -= OnRoomJoined;
-        RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
-        RoomEvents.OnJoinRoomFailed -= OnJoinRoomFailed;
-    }
+            // RoomEvents.OnRoomCreating -= 
+            RoomEvents.OnJoinedRoom -= OnJoinedRoom;
+            RoomEvents.OnCreateRoomFailed -= OnRoomCreateFailed;
+            RoomEvents.OnJoinRoomFailed -= OnJoinRoomFailed;
+        }
 
-    private void OnCreateRoomClicked()
-    {
-        PopupManager.Instance.Show<LoadingPopup>();
-        NetworkManager.Instance.CreateRoom();
-    }
+        private void OnCreateRoomClicked()
+        {
+            NetworkManager.Instance.CreateRoom();
+        }
 
-    private void OnJoinRoomClicked()
-    {
-        PopupManager.Instance.Show<JoinRoomPopup>();
-    }
+        private void OnJoinRoomClicked()
+        {
+            var joinPopup = PopupManager.Instance.OpenModal(PopupManager.Get<InputPopup>());
+            joinPopup.PlaceholderText = "방 코드 입력";
+            joinPopup.SubmitButtonText = "참가";
+            joinPopup.CharacterLimit = 4;
+
+            joinPopup.OnClickedSubmitButton = () =>
+            {
+                Debug.Log("Clicked on the join room");
+                NetworkManager.Instance.JoinRoom(joinPopup.InputText);
+            };
+
+            joinPopup.OnClickedExitButton = () =>
+            {
+                Debug.Log("Clicked on exit");
+                PopupManager.Instance.CloseModal(joinPopup);
+            };
+        }
     
-    private void OnRoomJoined()
-    {
-        Debug.Log("OnRoomJoined");
-        PopupManager.Instance.HideAll(); // LoadingPopup, JoinRoomPopup 모두 제거
-    }
+        private void OnJoinedRoom()
+        {
+            SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
+        }
 
-    private void OnRoomCreateFailed(short code, string message)
-    {
-        PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show(message);
-    }
+        private void OnRoomCreateFailed(short code, string message)
+        {
+        
+        }
 
-    private void OnJoinRoomFailed(short code, string message)
-    {
-        PopupManager.Instance.Hide(); // LoadingPopup 제거
-        ToastPopupManager.Instance.Show(message);
+        private void OnJoinRoomFailed(short code, string message)
+        {
+        
+        }
     }
 }

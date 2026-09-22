@@ -1,17 +1,34 @@
+﻿using System.Threading.Tasks;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class PhotonConnection
     {
+        public static bool ValidConnect
+        {
+            get
+            {
+                if (!PhotonNetwork.IsConnectedAndReady)
+                {
+                    Debug.LogWarning("Not connected and ready");
+                    // 팝업 매니저 호출
+                    return false;
+                }
+
+                Debug.LogWarning("Connected and ready");
+                return true;
+            }
+        }
+
         private void SetupInitNickname()
         {
             // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
-            if (!PlayerPrefs.HasKey(PlayerPrefsKeys.playerName)) return;
-            var defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.playerName);
+            if (!PlayerPrefs.HasKey(PlayerPrefsKeys.PlayerName)) return;
+            var defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName);
             if (string.IsNullOrEmpty(defaultName)) return;
             // 연결 체크
             if (!PhotonNetwork.IsConnected) return;
@@ -21,15 +38,20 @@ namespace Network
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
         /// </summary>
-        public void SetupPhotonNetwork()
+        public void Initialize()
         {
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                // 인터넷 없음 팝업 띄우기
+                return;
+            }
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
         public void Connect()
         {
+            if (PhotonNetwork.IsConnected) return;
             PhotonNetwork.ConnectUsingSettings();
-            SetupInitNickname();
         }
     
         public void SetNickname(string nickname)
@@ -41,7 +63,7 @@ namespace Network
             }
         
             PhotonNetwork.NickName = nickname;
-            PlayerPrefs.SetString(PlayerPrefsKeys.playerName, nickname);
+            PlayerPrefs.SetString(PlayerPrefsKeys.PlayerName, nickname);
         }
     
         /// <summary>
@@ -51,8 +73,7 @@ namespace Network
         public void OnConnectedToMaster()
         {
             Debug.Log("On Connected To Master");
-            // PhotonNetwork.JoinLobby(); // 매치 메이킹 없으면 로비 없어도 됨.
-            ConnectionEvents.RaiseConnected(true);
+            ConnectionEvents.RaiseConnected();
         }
 
         /// <summary>
@@ -64,7 +85,7 @@ namespace Network
         public void OnDisconnected(DisconnectCause cause)
         {
             Debug.Log($"On Disconnected: {cause}");
-            ConnectionEvents.RaiseConnected(false);
+            ConnectionEvents.RaiseDisconnected(cause);
 
             switch (cause)
             {

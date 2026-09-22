@@ -1,36 +1,44 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
+using Muffin.Core;
 
-namespace Network
+namespace Muffin.Network
 {
     public class NetworkManager : SingletonPersistentPun<NetworkManager>
     {
         public const int MinPlayers = 2;
-        public const int MaxPlayers = 6;
-    
-        public static string Nickname => PhotonNetwork.NickName;
-        public static bool IsConnected => PhotonNetwork.IsConnected;
+        public const int MaxPlayers = 4;
     
         private PhotonConnection _connection;
         private PhotonRoom _room;
+
+        public static string Nickname => PhotonNetwork.NickName;
+        public static bool IsConnected => PhotonNetwork.IsConnected;
+        /// <summary>서버 접속이 완료되어 요청을 보낼 수 있는 상태인지</summary>
+        public static bool IsReady => PhotonNetwork.IsConnectedAndReady;
+        
         protected override void Awake()
         {
             base.Awake(); // 싱글톤 부모클래스 Awake
         
             _connection = new PhotonConnection();
             _room = new PhotonRoom();
-        
-            _connection.SetupPhotonNetwork(); // 네트워크 접속 전 세팅해줘야 함
         }
     
         private void Start()
         {
-            // _connection.Connect();
+            // 어느 씬에서 실행하더라도 여기서 접속이 시작된다. (GameBootstrap 이 생성)
+            _connection.Initialize();
+
+            if (!IsConnected)
+                _connection.Connect();
         }
     
         // 퍼블릭 메서드
         #region Public Methods
+        
+        public void Initialize() => _connection.Initialize();
 
         /// <summary>
         /// 네트워크 접속 함수

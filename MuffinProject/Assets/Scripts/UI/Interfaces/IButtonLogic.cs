@@ -1,4 +1,4 @@
-namespace UI.Interfaces
+﻿namespace Muffin.UI.Interfaces
 {
     public interface IButtonLogic
     {
