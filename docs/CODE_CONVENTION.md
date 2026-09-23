@@ -118,7 +118,14 @@ Private Method
 
 ### 4.2 네임스페이스
 
-모든 스크립트는 네임스페이스를 갖는다. 루트는 `Muffin`.
+모든 스크립트는 네임스페이스를 갖는다.
+
+| 대상 | 루트 | 비고 |
+| --- | --- | --- |
+| **새로 만드는** 스크립트 | `Chapchu` | 게임 이름 기준. 예: `Chapchu.UI.Title`, `Chapchu.EditorTools` |
+| 기존 스크립트 | `Muffin` (유지) | 협업 충돌을 피하려고 **일괄 변경하지 않는다.** 새 코드에서는 `using Muffin.xxx;` 로 참조한다 |
+
+> 저장소·Unity 프로젝트 폴더 이름(`Project-Muffin`, `MuffinProject`)도 그대로 둔다. (2026-09-23 결정)
 
 ```
 Muffin.Core         공통 인프라 (싱글톤, 부트스트랩, 씬 경로, 상수)

@@ -147,7 +147,7 @@ TitleCanvas
 TMP 변환 규칙:
 - 외곽선 → 머티리얼 **Outline**. 두께는 폰트 에셋 Padding에 따라 달라지므로 **S6에서 아티팩트와 겹쳐 보며 맞춘다.**
 - 하드 그림자 → **Underlay** (Offset, Softness 0). TMP는 Underlay가 1개라 로고의 부드러운 그림자(0 14 30)는 **생략**한다.
-- 로고·부제는 효과가 다르므로 **머티리얼 프리셋 2개**(`Jua_Logo`, `Jua_Subtitle`), 에러용 1개(`Jua_Error`).
+- 로고·부제는 효과가 다르므로 **머티리얼 프리셋 2개**(`Jua SDF - Logo`, `Jua SDF - Subtitle`), 에러용 1개(`Jua SDF - Error`).
 
 ### 2-6. 박스 스타일
 
@@ -179,13 +179,14 @@ Unity `Selectable`의 Color Tint로는 이동을 못 하므로 **포인터 이�
 
 | 에셋 | 출처 | 비고 |
 | --- | --- | --- |
-| **Jua** TTF | Google Fonts (OFL) | SDF: Atlas 2048, 한글 KS X 1001 2350자 + ASCII + `♪ ≡` |
-| **IBM Plex Mono** TTF | Google Fonts (OFL) | SDF: ASCII + `·` 만 (버전 텍스트 전용) |
-| `♪ ≡` 글리프 | Jua에 없으면 | 아이콘 스프라이트 2장으로 대체 |
+| **Jua** TTF | Google Fonts (OFL) | SDF **Dynamic** · 멀티 아틀라스 2048 · 샘플링 64 · 패딩 10 (임의 한글 닉네임 대응). 고정 문구는 미리 생성 |
+| **IBM Plex Mono** TTF | Google Fonts (OFL) | SDF Dynamic · 512 · ASCII + `·` (버전 텍스트 전용) |
+| `♪ ≡` 글리프 | **Jua에 없음 (확인됨)** | 아이콘 스프라이트 `icon_sound.png` · `icon_menu.png` |
 | `TitleBackground.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
-| 둥근 사각 9-slice | 직접 생성 | 반경 20(입력창) · 22(버튼) · 14(시스템 버튼) — 흰색 단색, Image 색으로 칠함 |
-| 소프트 그림자 9-slice | 직접 생성 | 가우시안 블러 둥근 사각 |
-| 방사형 오버레이 PNG | 직접 생성 | 2-3 그라데이션 |
+| 둥근 사각 9-slice | 직접 생성 `ui_round64.png` | 반경 64 원본 1장. `Image.pixelsPerUnitMultiplier = 64 / 반경` 으로 20·22·14 및 안쪽(16·17·12)에 재사용. 흰색, Image 색으로 칠함 |
+| 소프트 그림자 9-slice | 직접 생성 `ui_shadow_soft.png` | 반경 22 · sigma 13 · 바깥 여백 40 · border 101. Image를 박스보다 사방 40 크게 |
+| 방사형 오버레이 PNG | 직접 생성 `title_overlay_radial.png` | 480×270, Stretch |
+| 입력창 안쪽 하이라이트 | 직접 생성 `ui_round64_top_highlight.png` | 배율 4(반경 16)에서 두께 2px |
 
 폴더: `Assets/Fonts/`, `Assets/Sprites/UI/`. 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
 
@@ -218,6 +219,8 @@ Scripts/UI/Title/
 | `void SetNickname(string nickname)` | 저장된 닉네임 복원용. 카운터도 갱신 |
 
 규칙:
+- 네임스페이스는 **`Chapchu.UI.Title`** (신규 코드 규칙, `CODE_CONVENTION.md` 4.2). 기존 `NicknameValidator`는 `using Muffin.UI.NickName;` 으로 참조한다.
+- 에셋 준비 메뉴: `Chapchu > Title UI > Setup Assets` (`Scripts/Editor/TitleUIAssetSetup.cs`, 네임스페이스 `Chapchu.EditorTools`)
 - `Scripts/UI/Title/` 안에 `Photon.*`, `UnityEngine.SceneManagement`, `NetworkManager`, `ScenePaths` **금지**. (합격 기준)
 - `async void` 금지, `Awake` 자기 초기화 / `OnEnable` 구독 (`CLAUDE.md` 12절).
 - `.cs` 는 UTF-8 with BOM (`CLAUDE.md` 13절).
@@ -227,10 +230,11 @@ Scripts/UI/Title/
 ## 5. 단계별 작업
 
 ### S1. 에셋 (1d)
-- [ ] Jua · IBM Plex Mono 다운로드 → `Assets/Fonts/`, TMP SDF 생성 (3절 문자셋)
-- [ ] `♪ ≡` 글리프 포함 여부 확인 → 없으면 아이콘 스프라이트
-- [ ] 둥근 사각 9-slice 3종 + 소프트 그림자 + 방사형 오버레이 PNG 생성, 임포트 설정
-- [ ] TMP 머티리얼 프리셋 3개 (`Jua_Logo`, `Jua_Subtitle`, `Jua_Error`)
+- [x] Jua · IBM Plex Mono 다운로드 → `Assets/Fonts/`, TMP SDF 생성 (3절)
+- [x] `♪ ≡` 글리프 확인 → Jua에 없음 → 아이콘 스프라이트
+- [x] 둥근 사각 · 안쪽 하이라이트 · 소프트 그림자 · 방사형 오버레이 PNG 생성, 임포트 설정
+- [x] TMP 머티리얼 프리셋 3개 (`Jua SDF - Logo` / `- Subtitle` / `- Error`) — 수치는 시작값, S6에서 조정
+- 재실행: 메뉴 `Chapchu > Title UI > Setup Assets` (기존 폰트 에셋은 건너뛰고, 프리셋·임포트 설정만 다시 적용)
 
 ### S2. 공용 프리팹 (0.5d)
 | 프리팹 | 구성 |
