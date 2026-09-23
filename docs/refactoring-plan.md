@@ -309,7 +309,7 @@ Assets/Scripts/
 
 ### 1-3. 네임스페이스 도입
 
-`Muffin.Core` / `Muffin.Network` / `Muffin.Game.*` / `Muffin.Presentation.*` / `Muffin.UI`
+`Chapchu.Core` / `Chapchu.Network` / `Chapchu.Game.*` / `Chapchu.Presentation.*` / `Chapchu.UI`
 
 ### 1-4. 이름 변경
 
@@ -325,7 +325,7 @@ Assets/Scripts/
 
 ### 1-5. 어셈블리 정의 추가 — **보류**
 
-`Muffin.Core`, `Muffin.Network`, `Muffin.Game`, `Muffin.Presentation`, `Muffin.UI` 로 쪼개려 했으나
+`Chapchu.Core`, `Chapchu.Network`, `Chapchu.Game`, `Chapchu.Presentation`, `Chapchu.UI` 로 쪼개려 했으나
 지금은 성립하지 않는다. 두 가지가 막고 있다.
 
 **(1) `Game` ↔ `Presentation` 순환 참조**
@@ -350,7 +350,7 @@ Presentation 은 반대로 `CardData`·`GameEvents`(Game)를 참조하므로 어
 **asmdef 어셈블리는 이 어셈블리를 참조할 수 없다.**
 
 > 해소 방법: DOTween Utility Panel 의 `Create ASMDEF` 로 `DOTween.Modules.asmdef` 를 만들고
-> `Muffin.Presentation` 에서 참조한다. 서드파티 폴더를 건드리는 작업이라 Phase 1 범위에서 뺐다.
+> `Chapchu.Presentation` 에서 참조한다. 서드파티 폴더를 건드리는 작업이라 Phase 1 범위에서 뺐다.
 
 **지금 넣지 않는 판단 근거**: 프로젝트 자체 스크립트는 66개다. 컴파일 시간은
 도메인 리로드가 지배하고 있어 어셈블리를 쪼개서 얻는 이득이 거의 없다.

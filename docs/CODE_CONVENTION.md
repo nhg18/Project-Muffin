@@ -118,23 +118,19 @@ Private Method
 
 ### 4.2 네임스페이스
 
-모든 스크립트는 네임스페이스를 갖는다.
+모든 스크립트는 네임스페이스를 갖는다. 루트는 `Chapchu`.
 
-| 대상 | 루트 | 비고 |
-| --- | --- | --- |
-| **새로 만드는** 스크립트 | `Chapchu` | 게임 이름 기준. 예: `Chapchu.UI.Title`, `Chapchu.EditorTools` |
-| 기존 스크립트 | `Muffin` (유지) | 협업 충돌을 피하려고 **일괄 변경하지 않는다.** 새 코드에서는 `using Muffin.xxx;` 로 참조한다 |
-
-> 저장소·Unity 프로젝트 폴더 이름(`Project-Muffin`, `MuffinProject`)도 그대로 둔다. (2026-09-23 결정)
+> 2026-09-23 게임 이름(찹츄)에 맞춰 `Muffin` → `Chapchu` 로 일괄 변경했다.
+> 저장소·Unity 프로젝트 폴더 이름(`Project-Muffin`, `MuffinProject`)은 그대로 둔다.
 
 ```
-Muffin.Core         공통 인프라 (싱글톤, 부트스트랩, 씬 경로, 상수)
-Muffin.Network      Photon 연결 / 룸 / 네트워크 이벤트
-Muffin.Game         인게임 규칙 (턴, 덱, 손패, 체력, 승리)
-Muffin.Game.Cards   카드 데이터 / 효과 / 조건
-Muffin.Presentation 인게임 표시 (좌석, 손패·카드 뷰, 입력)
-Muffin.UI           로비 / 방 / 팝업 UI
-Muffin.DebugTools   디버그 전용
+Chapchu.Core         공통 인프라 (싱글톤, 부트스트랩, 씬 경로, 상수)
+Chapchu.Network      Photon 연결 / 룸 / 네트워크 이벤트
+Chapchu.Game         인게임 규칙 (턴, 덱, 손패, 체력, 승리)
+Chapchu.Game.Cards   카드 데이터 / 효과 / 조건
+Chapchu.Presentation 인게임 표시 (좌석, 손패·카드 뷰, 입력)
+Chapchu.UI           로비 / 방 / 팝업 UI
+Chapchu.DebugTools   디버그 전용
 ```
 
 네임스페이스는 `Assets/Scripts/` 아래 폴더 경로를 그대로 따른다.
@@ -147,8 +143,8 @@ Muffin.DebugTools   디버그 전용
 
 | 금지 | 이유 |
 | --- | --- |
-| `Scripts/Debug/` | `Muffin.Debug` 가 `UnityEngine.Debug` 를 가린다 → `DebugTools/` 를 쓴다 |
-| `Scripts/UI/Room/` | `Muffin.UI.Room` 이 `Photon.Realtime.Room` 을 가린다 (CS0118) |
+| `Scripts/Debug/` | `Chapchu.Debug` 가 `UnityEngine.Debug` 를 가린다 → `DebugTools/` 를 쓴다 |
+| `Scripts/UI/Room/` | `Chapchu.UI.Room` 이 `Photon.Realtime.Room` 을 가린다 (CS0118) |
 
 ### 4.3 RPC
 
