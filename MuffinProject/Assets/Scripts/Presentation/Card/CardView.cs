@@ -8,10 +8,10 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
-using Muffin.Game;
-using Muffin.Game.Cards;
+using Chapchu.Game;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class CardView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IPointerEnterHandler, IPointerExitHandler

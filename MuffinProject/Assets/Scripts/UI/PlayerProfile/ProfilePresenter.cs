@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using UnityEngine;
 
-namespace Muffin.UI.PlayerProfile
+namespace Chapchu.UI.PlayerProfile
 {
 
     public class ProfilePresenter : MonoBehaviour

@@ -2,16 +2,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Muffin.Network;
+using Chapchu.Network;
 using TMPro;
-using Muffin.UI.Components;
-using Muffin.UI.Interfaces;
-using Muffin.UI.Popup;
+using Chapchu.UI.Components;
+using Chapchu.UI.Interfaces;
+using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.UI.NickName
+namespace Chapchu.UI.NickName
 {
 
     public class NicknameInputLogic : MonoBehaviour, ISubmitLogic

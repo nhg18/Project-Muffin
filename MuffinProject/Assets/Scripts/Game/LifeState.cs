@@ -1,4 +1,4 @@
-﻿namespace Muffin.Game
+﻿namespace Chapchu.Game
 {
 
     /// <summary>생존 상태 (06-health.md 3절).</summary>

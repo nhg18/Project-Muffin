@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace Muffin.UI.NickName
+namespace Chapchu.UI.NickName
 {
     public enum NicknameValidationResult
     {

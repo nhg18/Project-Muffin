@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
-using Muffin.Game;
-using Muffin.Game.Cards;
+using Chapchu.Core;
+using Chapchu.Game;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class PlayerHandPresenter : MonoBehaviour

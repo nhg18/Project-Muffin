@@ -1,4 +1,4 @@
-﻿namespace Muffin.UI.Popup
+﻿namespace Chapchu.UI.Popup
 {
     public abstract class ModalPopup : Popup
     {

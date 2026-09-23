@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
-using Muffin.Game;
-using Muffin.Game.Cards;
+using Chapchu.Game;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class CardPresenter : MonoBehaviour

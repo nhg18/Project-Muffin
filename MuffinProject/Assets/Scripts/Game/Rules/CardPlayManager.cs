@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
-using Muffin.Game.Cards;
-using Muffin.Presentation;
+using Chapchu.Core;
+using Chapchu.Game.Cards;
+using Chapchu.Presentation;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class CardPlayManager : SingletonPun<CardPlayManager>

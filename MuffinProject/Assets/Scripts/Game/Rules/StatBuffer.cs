@@ -5,7 +5,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class StatBuffer

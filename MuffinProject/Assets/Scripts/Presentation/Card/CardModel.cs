@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
-using Muffin.Game.Cards;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class CardModel

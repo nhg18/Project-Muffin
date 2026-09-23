@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class PlayerModel

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Muffin.Game.Cards
+namespace Chapchu.Game.Cards
 {
 
     [CreateAssetMenu(fileName ="CardDatabase", menuName = "CardSystem/Database")]

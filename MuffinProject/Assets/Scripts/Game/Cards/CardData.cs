@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Muffin.Game.Cards
+namespace Chapchu.Game.Cards
 {
     public enum CardType
     {

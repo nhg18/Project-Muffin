@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.DebugTools
+namespace Chapchu.DebugTools
 {
 
 
