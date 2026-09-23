@@ -23,17 +23,23 @@ namespace Muffin.Presentation
 
         public PlayerHandPresenter playerHandPresenter;
 
+        public void DiscardCard(int index)
+        {
+            Destroy(Hands[index].gameObject);
+            Hands.RemoveAt(index);
+            PutAwayMyCards();
+        }
 
-        public void DrawCard(CardData data)
+        public CardPresenter DrawCard(CardData data)
         {
             GameObject drawedCard = Instantiate(presetCard, HandPosition);
             drawedCard.transform.position = drawPosition.position;
 
-            CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();//카드 셋업
-            cardPresenter.Setup(data);
-
+            CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();
             Hands.Add(drawedCard);
             PutAwayMyCards();
+
+            return cardPresenter;
         }
 
         public void PutAwayMyCards()
