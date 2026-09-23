@@ -2,16 +2,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Muffin.Network;
+using Chapchu.Network;
 using TMPro;
-using Muffin.UI.NickName;
-using Muffin.UI.Popup;
+using Chapchu.UI.NickName;
+using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.UI.NickName
+namespace Chapchu.UI.NickName
 {
 
     public class NicknameInput : MonoBehaviour

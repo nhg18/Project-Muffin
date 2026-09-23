@@ -3,9 +3,9 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.Game.Cards
+namespace Chapchu.Game.Cards
 {
 
     [CreateAssetMenu(fileName = "NewDamageEffect", menuName = "CardSystem/Effects/Damage")]

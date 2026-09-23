@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using Muffin.Core;
-using Muffin.Game;
-using Muffin.Network;
+using Chapchu.Core;
+using Chapchu.Game;
+using Chapchu.Network;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class SeatManager : Singleton<SeatManager>

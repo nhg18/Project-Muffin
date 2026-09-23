@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
 
-namespace Muffin.Core
+namespace Chapchu.Core
 {
 
 

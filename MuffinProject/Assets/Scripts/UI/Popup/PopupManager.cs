@@ -3,9 +3,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.UI.Popup
+namespace Chapchu.UI.Popup
 {
     public class PopupManager : SingletonPersistent<PopupManager>
     {

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 
-namespace Muffin.UI
+namespace Chapchu.UI
 {
 
     public class RoomInfoPanel : MonoBehaviour

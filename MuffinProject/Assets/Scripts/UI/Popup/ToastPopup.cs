@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace Muffin.UI.Popup
+namespace Chapchu.UI.Popup
 {
     public abstract class ToastPopup : Popup, IPointerClickHandler
     {

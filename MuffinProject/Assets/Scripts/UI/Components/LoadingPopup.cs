@@ -1,7 +1,7 @@
 ﻿using System;
-using Muffin.UI.Popup;
+using Chapchu.UI.Popup;
 
-namespace Muffin.UI.Components
+namespace Chapchu.UI.Components
 {
     public class LoadingPopup : Popup.Popup
     {

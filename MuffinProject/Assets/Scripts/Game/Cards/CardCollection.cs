@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-namespace Muffin.Game.Cards
+namespace Chapchu.Game.Cards
 {
 
     [System.Serializable]

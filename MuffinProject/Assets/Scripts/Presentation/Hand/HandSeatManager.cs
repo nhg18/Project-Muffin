@@ -2,9 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class HandSeatManager : Singleton<HandSeatManager>

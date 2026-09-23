@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Photon.Realtime;
 using UnityEngine;
 
-namespace Muffin.Game.Cards
+namespace Chapchu.Game.Cards
 {
 
     [CreateAssetMenu(fileName = "ActionCardPlayed", menuName = "CardSystem/Condition")]

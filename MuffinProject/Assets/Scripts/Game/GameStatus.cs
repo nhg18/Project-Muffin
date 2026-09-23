@@ -1,6 +1,6 @@
-﻿using Muffin.Core;
+﻿using Chapchu.Core;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class GameStatus : Singleton<GameStatus>

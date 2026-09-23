@@ -1,7 +1,7 @@
 ﻿using Photon.Pun;
 using UnityEngine;
 
-namespace Muffin.Core
+namespace Chapchu.Core
 {
 
     public abstract class StaticInstance<T> : MonoBehaviour where T : MonoBehaviour

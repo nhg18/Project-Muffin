@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Muffin.UI
+namespace Chapchu.UI
 {
 
     public class JoinRoomPanel : MonoBehaviour

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using TMPro;
-using Muffin.UI.Components;
-using Muffin.UI.Popup;
+using Chapchu.UI.Components;
+using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.UI
+namespace Chapchu.UI
 {
 
     public class LobbyPanel : MonoBehaviour

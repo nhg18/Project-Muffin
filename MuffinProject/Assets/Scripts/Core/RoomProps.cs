@@ -1,4 +1,4 @@
-﻿namespace Muffin.Core
+﻿namespace Chapchu.Core
 {
 
     /// <summary>

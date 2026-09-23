@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class ChainItem
