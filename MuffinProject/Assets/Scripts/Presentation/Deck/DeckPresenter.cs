@@ -15,7 +15,6 @@ namespace Muffin.Presentation
         [SerializeField] private Deck deck = new();
         [SerializeField] private DeckView deckView; // 인스펙터에서 할당
         [SerializeField] private CardDatabase cardDatabase;
-        [SerializeField] public static int startHands = 7;
         [SerializeField] private DeckRecipe startingDeckRecipe;
         private const string DECK_PROPERTY_KEY = "RoomDeck";
 
@@ -31,7 +30,7 @@ namespace Muffin.Presentation
             List<Card> startingCards = new List<Card>(startingDeckRecipe.cardIDs);
             deck.InitDeck(startingCards);
 
-            for(int i = 0; i < startHands; i++)
+            for(int i = 0; i < GameStatus.Instance.StartHandCount; i++)
             {
                 RequestDrawCard();
             }
