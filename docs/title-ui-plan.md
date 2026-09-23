@@ -141,7 +141,7 @@ TitleCanvas
 | 카운터 | Jua | 20 | `#A08FB5` | 우측 정렬 |
 | 버튼 「접속」 | Jua | 30 | `#FFFDF8` | — |
 | 에러 | Jua | 18 | `#FF6E8A` | 그림자 (0, −2) `rgba(58,34,70,.5)` |
-| 버전 | IBM Plex Mono | 12 | `#FFFDF8` 72% | 문구 `ver 0.1.0 · Project Muffin` |
+| 버전 | IBM Plex Mono | 12 | `#FFFDF8` 72% | 문구 `ver 0.1.0 · Project Chapchu` |
 | 시스템 아이콘 | Jua | 18 | `#FFFDF8` | ♪ / ≡ |
 
 TMP 변환 규칙:
@@ -200,7 +200,7 @@ Scripts/UI/Title/
 ├ NicknameFieldView.cs    입력창: characterLimit 16, 카운터 "n / 16", 변경 시 이벤트
 ├ PressableButton.cs      2-7 호버/눌림 이동·색 (공용, PillButton 프리팹에 부착)
 ├ ErrorLabel.cs           문자열만 교체 (자리 고정, SetActive 사용 안 함)
-└ VersionLabel.cs         "ver {Application.version} · Project Muffin"
+└ VersionLabel.cs         "ver {Application.version} · Project Chapchu"
 
 재사용: Scripts/UI/NickName/NicknameValidator.cs  (검증 규칙 · 에러 문구)
 
@@ -219,7 +219,7 @@ Scripts/UI/Title/
 | `void SetNickname(string nickname)` | 저장된 닉네임 복원용. 카운터도 갱신 |
 
 규칙:
-- 네임스페이스는 **`Chapchu.UI.Title`** (신규 코드 규칙, `CODE_CONVENTION.md` 4.2). 기존 `NicknameValidator`는 `using Muffin.UI.NickName;` 으로 참조한다.
+- 네임스페이스는 **`Chapchu.UI.Title`** (`CODE_CONVENTION.md` 4.2). `NicknameValidator`는 `using Chapchu.UI.NickName;` 으로 참조한다.
 - 에셋 준비 메뉴: `Chapchu > Title UI > Setup Assets` (`Scripts/Editor/TitleUIAssetSetup.cs`, 네임스페이스 `Chapchu.EditorTools`)
 - `Scripts/UI/Title/` 안에 `Photon.*`, `UnityEngine.SceneManagement`, `NetworkManager`, `ScenePaths` **금지**. (합격 기준)
 - `async void` 금지, `Awake` 자기 초기화 / `OnEnable` 구독 (`CLAUDE.md` 12절).

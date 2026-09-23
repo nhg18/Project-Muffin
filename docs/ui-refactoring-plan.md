@@ -87,7 +87,7 @@ public T OpenToast<T>(T prefab) where T : ToastPopup
 
 ```csharp
 // UI/Popups/MessageToast.cs (신규)
-namespace Muffin.UI.Popups
+namespace Chapchu.UI.Popups
 {
     public class MessageToast : ToastPopup
     {
@@ -256,12 +256,12 @@ private async void LoadScene()   // 금지 항목
 
 ### U-15 🟡 네임스페이스가 타입 이름을 가린다
 
-`Muffin.UI.Popup` 네임스페이스 안에 `Popup` 클래스가 있어 `class LoadingPopup : Popup.Popup` 같은 표현이 나온다.
+`Chapchu.UI.Popup` 네임스페이스 안에 `Popup` 클래스가 있어 `class LoadingPopup : Popup.Popup` 같은 표현이 나온다.
 `CODE_CONVENTION.md` 4.2 가 경고하는 패턴(`Scripts/UI/Room/` 금지와 같은 이유)이다.
 
 | 현재 | 변경 |
 | --- | --- |
-| `UI/Popup/` (`Muffin.UI.Popup`) | `UI/Popups/` (`Muffin.UI.Popups`) |
+| `UI/Popup/` (`Chapchu.UI.Popup`) | `UI/Popups/` (`Chapchu.UI.Popups`) |
 | `UI/Popup/PopupScripts/` | `UI/Popups/` 로 평탄화 |
 | `UI/Components/LoadingPopup.cs` | `UI/Popups/LoadingPopup.cs` |
 | `UI/NickName/` | `UI/Title/` (타이틀 화면 전용으로 재편) |
@@ -275,7 +275,7 @@ private async void LoadScene()   // 금지 항목
 
 ### U-17 🟡 사용하지 않는 `using`
 
-거의 모든 UI 파일에 `System.Collections`, `UnityEngine.SceneManagement`, `Muffin.UI.Components` 등 템플릿 잔재가 남아 있다. 일괄 정리하되 **저장 인코딩이 UTF-8(BOM) 에서 바뀌지 않는지 확인**한다(`CLAUDE.md` 13절).
+거의 모든 UI 파일에 `System.Collections`, `UnityEngine.SceneManagement`, `Chapchu.UI.Components` 등 템플릿 잔재가 남아 있다. 일괄 정리하되 **저장 인코딩이 UTF-8(BOM) 에서 바뀌지 않는지 확인**한다(`CLAUDE.md` 13절).
 
 ---
 
