@@ -14,11 +14,9 @@ namespace Chapchu.EditorTools
         private const string SpriteDir = "Assets/Sprites/UI/";
         private const string FontDir = "Assets/Fonts/";
 
-        private const string JuaAssetPath = FontDir + "Jua SDF.asset";
+        // 기존 프로젝트 폰트. 한글 11,172자가 미리 구워진 정적 아틀라스라 새로 만들지 않고 그대로 쓴다.
+        private const string MainFontAssetPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/Hakgyoansim Dunggeunmiso OTF B SDF.asset";
         private const string PlexMonoAssetPath = FontDir + "IBMPlexMono SDF.asset";
-
-        // 화면에 고정으로 나오는 문구. 첫 프레임에 글리프 생성이 몰리지 않도록 미리 굽는다.
-        private const string JuaPrewarm = "찹츄치와와개판오분전언찹츄찹찹츄닉네임을입력해주세요접속자이상이하로사용할수없는문자가포함되어있습니다 ./0123456789";
 
         private static readonly Color32 Stroke = new(0x3A, 0x22, 0x46, 0xFF);
 
@@ -26,11 +24,13 @@ namespace Chapchu.EditorTools
         public static void SetupAll()
         {
             ConfigureSprites();
-            TMP_FontAsset jua = GetOrCreateFontAsset(FontDir + "Jua-Regular.ttf", JuaAssetPath, 64, 10, 2048, JuaPrewarm);
             GetOrCreateFontAsset(FontDir + "IBMPlexMono-Regular.ttf", PlexMonoAssetPath, 48, 6, 512, AsciiPrintable() + "·");
 
-            if (jua != null)
-                CreateMaterialPresets(jua);
+            TMP_FontAsset mainFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(MainFontAssetPath);
+            if (mainFont != null)
+                CreateMaterialPresets(mainFont);
+            else
+                Debug.LogWarning($"[TitleUIAssetSetup] 폰트 에셋 없음: {MainFontAssetPath}");
 
             AssetDatabase.SaveAssets();
             Debug.Log("[TitleUIAssetSetup] 완료");
@@ -87,7 +87,7 @@ namespace Chapchu.EditorTools
                 return null;
             }
 
-            // 닉네임은 임의의 한글이 들어오므로 정적 문자셋 대신 Dynamic + 멀티 아틀라스를 쓴다.
+            // 버전 표기 전용. 들어갈 문자가 ASCII 뿐이라 Dynamic 으로 두고 필요한 글자만 미리 굽는다.
             TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(font, samplingSize, padding, GlyphRenderMode.SDFAA,
                 atlasSize, atlasSize, AtlasPopulationMode.Dynamic, true);
             if (fontAsset == null)
@@ -111,20 +111,20 @@ namespace Chapchu.EditorTools
         }
 
         // 수치는 12-title-ui.md 8절의 px 값을 TMP 정규화 단위로 옮긴 시작값이다. 아티팩트와 겹쳐 보며 최종 조정한다(플랜 S6).
-        private static void CreateMaterialPresets(TMP_FontAsset jua)
+        private static void CreateMaterialPresets(TMP_FontAsset fontAsset)
         {
             // 로고 190px: 외곽선 5 · 그림자 (6, 6) 90%
-            Material logo = GetOrCreatePreset(jua, "Logo");
+            Material logo = GetOrCreatePreset(fontAsset, "Logo");
             SetOutline(logo, 0.3f);
             SetUnderlay(logo, new Color32(Stroke.r, Stroke.g, Stroke.b, 230), 0.2f, -0.2f, 0.3f);
 
             // 부제 36px: 외곽선 2.5 · 그림자 (0, 3) 85%
-            Material subtitle = GetOrCreatePreset(jua, "Subtitle");
+            Material subtitle = GetOrCreatePreset(fontAsset, "Subtitle");
             SetOutline(subtitle, 0.45f);
             SetUnderlay(subtitle, new Color32(Stroke.r, Stroke.g, Stroke.b, 217), 0f, -0.5f, 0.45f);
 
             // 에러 18px: 그림자 (0, 2) 50%
-            Material error = GetOrCreatePreset(jua, "Error");
+            Material error = GetOrCreatePreset(fontAsset, "Error");
             SetOutline(error, 0f);
             SetUnderlay(error, new Color32(Stroke.r, Stroke.g, Stroke.b, 128), 0f, -0.7f, 0f);
         }
@@ -138,6 +138,8 @@ namespace Chapchu.EditorTools
                 return preset;
 
             preset = new Material(fontAsset.material) { name = $"{fontAsset.name} - {suffix}" };
+            // 기존 폰트 에셋의 기본 머티리얼은 Mobile 셰이더다. 프리셋만 기본 SDF 셰이더로 바꾼다(원본 머티리얼은 다른 씬이 쓰므로 건드리지 않는다).
+            preset.shader = Shader.Find("TextMeshPro/Distance Field");
             AssetDatabase.CreateAsset(preset, path);
             return preset;
         }
