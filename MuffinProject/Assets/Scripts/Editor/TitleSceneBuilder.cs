@@ -30,6 +30,11 @@ namespace Chapchu.EditorTools
 
         private const float ShadowSpriteMargin = 40f;
 
+        // 12-title-ui 4-3 모바일 확대 배율. 아티팩트(1920×1080 모니터 기준)대로면 폰에서 글자 · 버튼이 너무 작다.
+        private const float TitleGroupScale = 1.3f;
+        private const float FormGroupScale = 1.7f;
+        private const float ContentSpacing = 56f;
+
         private static readonly Color Cream = Hex(0xFFFDF8);
         private static readonly Color Purple = Hex(0xB18AE0);
         private static readonly Color PurpleHover = Hex(0xBF9CE9);
@@ -242,11 +247,15 @@ namespace Chapchu.EditorTools
             // 중앙 묶음
             RectTransform content = NewRect("Content", canvasRoot);
             Stretch(content, 0f, 0f, 0f, 0f);
-            VerticalLayoutGroup contentLayout = AddVertical(content.gameObject, 43f, TextAnchor.MiddleCenter);
+            VerticalLayoutGroup contentLayout = AddVertical(content.gameObject, ContentSpacing, TextAnchor.MiddleCenter);
             contentLayout.padding = new RectOffset(24, 24, 76, 108);
+            // 12-title-ui 4-3: 묶음 안의 수치는 아티팩트 그대로 두고 묶음 배율로만 키운다 → 레이아웃이 배율을 반영해야 한다.
+            contentLayout.childScaleWidth = true;
+            contentLayout.childScaleHeight = true;
 
             RectTransform titleGroup = NewRect("TitleGroup", content);
             AddVertical(titleGroup.gameObject, 6f, TextAnchor.UpperCenter);
+            titleGroup.localScale = new Vector3(TitleGroupScale, TitleGroupScale, 1f);
 
             TMP_FontAsset bold = Font(BoldFontName);
             TextMeshProUGUI logo = NewText("Logo", titleGroup, bold, 190f, Cream, "찹츄", TextAlignmentOptions.Center);
@@ -260,6 +269,7 @@ namespace Chapchu.EditorTools
 
             RectTransform formGroup = NewRect("FormGroup", content);
             AddVertical(formGroup.gameObject, 16f, TextAnchor.UpperCenter);
+            formGroup.localScale = new Vector3(FormGroupScale, FormGroupScale, 1f);
             LayoutElement formLayout = formGroup.gameObject.AddComponent<LayoutElement>();
             formLayout.preferredWidth = 560f;
 

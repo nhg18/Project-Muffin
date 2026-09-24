@@ -296,3 +296,4 @@ PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적
 | 2026-09-24 | 시스템 아이콘 스프라이트 유지 확정 |
 | 2026-09-24 | 기준 아티팩트 Version 7 (배경 일러스트를 게임과 같은 최신 그림으로 교체) |
 | 2026-09-24 | 버전 문구 `Project ChapChu` 확정, 아티팩트 Version 8에 반영 |
+| 2026-09-24 | 모바일 확대 배율 (`12-title-ui.md` 4-3): `TitleGroup` localScale 1.3 · `FormGroup` 1.7, `Content` VerticalLayoutGroup 의 Child Scale Width/Height 켬, 간격 43 → 56. 내부 수치는 아티팩트 그대로 두고 묶음 배율로만 키운다 |
