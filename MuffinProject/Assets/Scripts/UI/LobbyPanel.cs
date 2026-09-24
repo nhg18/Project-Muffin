@@ -3,6 +3,7 @@ using Chapchu.Network;
 using Chapchu.UI.Popups;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.UI
 {
@@ -58,7 +59,7 @@ namespace Chapchu.UI
     
         private void OnJoinedRoom()
         {
-            SceneLoader.Load(SceneType.Room);
+            SceneManager.LoadScene(ScenePaths.Room);
         }
 
         private void OnRoomCreateFailed(short code, string message)

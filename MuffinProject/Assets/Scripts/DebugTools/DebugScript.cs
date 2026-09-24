@@ -7,6 +7,7 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.UI;
 using Chapchu.Core;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.DebugTools
 {
@@ -62,7 +63,7 @@ namespace Chapchu.DebugTools
         
             Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
         
-            SceneLoader.Load(SceneType.Room);
+            SceneManager.LoadScene(ScenePaths.Room);
         }
     }
 }

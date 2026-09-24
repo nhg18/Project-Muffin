@@ -2,6 +2,7 @@
 using Chapchu.Network;
 using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.UI.Title
 {
@@ -80,7 +81,7 @@ namespace Chapchu.UI.Title
         private void LoadLobby()
         {
             _waitingForConnection = false;
-            SceneLoader.Load(SceneType.Lobby);
+            SceneManager.LoadScene(ScenePaths.Lobby);
         }
 
         // 12-title-ui.md 10-5. Photon 원문 메시지는 보여주지 않는다.
