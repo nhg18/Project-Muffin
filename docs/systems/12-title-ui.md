@@ -2,7 +2,7 @@
 
 **최종 수정일**: 2026-09-24
 **분류**: MVP
-**출처**: Claude Design 「찹츄 타이틀 화면」을 게시한 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` — **기준: 2026-09-24 게시본(`1790251827-b3ed`)에 폰트(학교안심 둥근미소 B/R, 기존 TitleScene 굵기 배분)·배경(`TitleBackground.png`)만 교체한 판 (Version 6)**
+**출처**: Claude Design 「찹츄 타이틀 화면」을 게시한 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` — **기준: 2026-09-24 게시본(`1790251827-b3ed`)에 폰트(학교안심 둥근미소 B/R, 기존 TitleScene 굵기 배분)·배경(게임과 같은 일러스트)만 교체한 판 (Version 7)**
 **이전 출처**: 노션 「🎬 타이틀 화면 개발 문서(UI 구현 스펙)」 — 이 문서 기준으로 갱신됨
 
 > 아티팩트가 수정되더라도 **이 문서를 고치기 전까지는 이 문서가 기준이다.** 아티팩트를 갱신했다면 버전 ID와 바뀐 수치를 이 문서에 먼저 반영한다.

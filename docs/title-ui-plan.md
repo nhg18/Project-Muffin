@@ -3,7 +3,7 @@
 **작성일**: 2026-09-23 (2026-09-24 갱신 — 7절 변경 이력)
 **대상 씬**: `Assets/Scenes/TitleScene.unity` **단독**
 **범위**: **화면(뷰)만.** 네트워크·씬 전환 등 실제 기능은 연결하지 않는다.
-**기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude Design 게시 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (Version 6 — 2026-09-24 게시본에 폰트·배경만 교체)
+**기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude Design 게시 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (Version 7 — 2026-09-24 게시본에 폰트·배경만 교체)
 
 > **기준 흐름 (2026-09-23)**: 아티팩트 → `docs/systems/12-title-ui.md` → 노션 「타이틀 화면 개발 문서」 순으로 반영했다.
 > 셋이 다르면 **`12-title-ui.md`가 옳다** (`CLAUDE.md` 0절). 아래 2절 환산표는 구현용 상세이며, 수치는 12번 문서와 같다.
@@ -112,7 +112,7 @@ TitleCanvas
 
 | 레이어 | 아티팩트 | Unity |
 | --- | --- | --- |
-| 일러스트 | `TitleBackground.png`와 같은 그림 (게임 에셋으로 교체) · `center/cover` | `Sprites/TitleBackground.png` (2021×1138, 16:9) · 중앙 기준 cover |
+| 일러스트 | 게임 `TitleBackground.png`와 같은 일러스트 · `center/cover` | `Sprites/TitleBackground.png` (2021×1138, 16:9) · 중앙 기준 cover |
 | 오버레이 | `linear-gradient(180deg, rgba(46,36,64,.26), rgba(46,36,64,.1) 40%, rgba(46,36,64,.46))` | 같은 그라데이션을 세로 텍스처로 구워 Stretch (색은 전부 `#2E2440`, 알파만 변함) |
 
 ### 2-4. 레이아웃 수치
@@ -267,7 +267,7 @@ Scripts/UI/Title/
 ### S6. 아티팩트 대조 QA (0.5d)
 - [ ] Game 뷰 1920×1080 스크린샷 ↔ 아티팩트 브라우저 1920×1080 스크린샷을 겹쳐 비교 (위치 ±2px)
 - [ ] 로고·부제 외곽선 두께, 그림자 위치 맞춤
-- [ ] 세로 오버레이 밝기 — 아티팩트(Version 6, 같은 배경)와 겹쳐 비교
+- [ ] 세로 오버레이 밝기 — 아티팩트(Version 7, 같은 배경)와 겹쳐 비교
 - [ ] 1600×900 / 1280×720 / 21:9 에서 겹침·잘림 없음
 - [ ] 16자 초과 차단(붙여넣기 포함), IME 한글 조합 중 카운터 정상
 - [ ] 에러 표시/해제 시 버튼 위치 불변
@@ -294,3 +294,4 @@ PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적
 | 2026-09-23 | 신규 |
 | 2026-09-24 | 기준을 Claude Design 최신 게시본으로 갱신. 폰트 Jua → 학교안심 둥근미소 B/R(기존 에셋, 입력칸 안은 R), 오버레이 방사형 → 세로 선형, 접속 중 표시(`SetConnecting`) 추가 |
 | 2026-09-24 | 시스템 아이콘 스프라이트 유지 확정 |
+| 2026-09-24 | 기준 아티팩트 Version 7 (배경 일러스트를 게임과 같은 최신 그림으로 교체) |
