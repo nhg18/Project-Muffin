@@ -206,7 +206,7 @@ Scripts/UI/Title/
 ├ VersionLabel.cs         "ver {Application.version} · Project ChapChu"
 └ TitlePresenter.cs       (S7) 뷰 ↔ 네트워크 · 씬 전환 연결. TitleView 와 같은 오브젝트
 
-재사용: Scripts/UI/NickName/NicknameValidator.cs  (검증 규칙 · 에러 문구)
+재사용: Scripts/UI/Title/NicknameValidator.cs    (검증 규칙 · 에러 문구 — PR2 에서 UI/NickName 에서 이동)
 
 삭제:
 ├ Scripts/UI/NickName/NicknameInput.cs        네트워크·씬로드 섞임
@@ -224,7 +224,7 @@ Scripts/UI/Title/
 | `void SetConnecting(bool connecting)` | 버튼 글자 "접속" ↔ "접속 중…". 검증 통과 시 뷰가 스스로 `true`, `ShowError()`는 `false`로 되돌림 |
 
 규칙:
-- 네임스페이스는 **`Chapchu.UI.Title`** (`CODE_CONVENTION.md` 4.2). `NicknameValidator`는 `using Chapchu.UI.NickName;` 으로 참조한다.
+- 네임스페이스는 **`Chapchu.UI.Title`** (`CODE_CONVENTION.md` 4.2). `NicknameValidator` 도 같은 네임스페이스다 (PR2 에서 `Chapchu.UI.NickName` 에서 이동).
 - 에셋 준비 메뉴: `Chapchu > Title UI > Setup Assets` (`Scripts/Editor/TitleUIAssetSetup.cs`, 네임스페이스 `Chapchu.EditorTools`)
 - `Scripts/UI/Title/` 안에 `Photon.*`, `UnityEngine.SceneManagement`, `NetworkManager`, `ScenePaths` **금지**. (합격 기준) — **단 `TitlePresenter.cs` 는 예외**: 뷰와 네트워크를 잇는 유일한 파일이다.
 - `async void` 금지, `Awake` 자기 초기화 / `OnEnable` 구독 (`CLAUDE.md` 12절).

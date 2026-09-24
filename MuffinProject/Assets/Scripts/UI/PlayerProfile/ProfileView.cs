@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.Serialization;
 
 namespace Chapchu.UI.PlayerProfile
 {
@@ -11,12 +8,12 @@ namespace Chapchu.UI.PlayerProfile
     public class ProfileView : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private TMP_Text _nicknameText;
+        [SerializeField, FormerlySerializedAs("_nicknameText")] private TMP_Text nicknameText;
         // [SerializeField] private Image _image;
 
         public void SetNicknameText(string nickname)
         {
-            _nicknameText.text = nickname;
+            nicknameText.text = nickname;
         }
     }
 }

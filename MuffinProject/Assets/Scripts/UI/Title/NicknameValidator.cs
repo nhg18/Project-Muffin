@@ -1,7 +1,6 @@
-﻿using System;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace Chapchu.UI.NickName
+namespace Chapchu.UI.Title
 {
     public enum NicknameValidationResult
     {

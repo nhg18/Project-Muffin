@@ -2068,7 +2068,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5baddd3f49b09ea4a8e0fa2e25ecbdf3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _view: {fileID: 9151095027568262913}
+  view: {fileID: 9151095027568262913}
 --- !u!1 &9082028236260162578
 GameObject:
   m_ObjectHideFlags: 0
@@ -2118,7 +2118,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a5f2fa32471b4a4bba3c34893a458ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _nicknameText: {fileID: 8586268903825205419}
+  nicknameText: {fileID: 8586268903825205419}
 --- !u!222 &9175603791841741957
 CanvasRenderer:
   m_ObjectHideFlags: 0
