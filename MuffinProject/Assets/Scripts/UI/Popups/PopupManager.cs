@@ -143,12 +143,22 @@ namespace Chapchu.UI.Popups
         private void DebugShowToast() => ShowToast("테스트 토스트입니다.");
 
         [ContextMenu("Debug/경고 모달을 띄운 채 현재 씬 다시 로드")]
-        private void DebugOpenModalThenReload()
+        private void DebugOpenModalThenReload() => StartCoroutine(DebugOpenModalThenReloadRoutine());
+
+        private System.Collections.IEnumerator DebugOpenModalThenReloadRoutine()
         {
             WarningPopup popup = OpenModal<WarningPopup>();
+            if (popup == null) yield break;
             popup.MainText = "테스트";
-            popup.SubText = "씬을 다시 불러옵니다.";
+            popup.SubText = "2초 뒤 씬을 다시 불러옵니다.";
+
+            // 같은 프레임에 로드하면 그려지기도 전에 닫혀 눈으로 확인할 수 없다.
+            yield return new WaitForSecondsRealtime(2f);
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            yield return null;
+
+            int leftover = modalLayer.childCount + nonModalLayer.childCount + toastLayer.childCount;
+            Debug.Log($"[PopupManager] 씬 재로드 후 남은 팝업 오브젝트 {leftover}개 (0이면 정상), 차단막 {(_modalBlocker.enabled ? "켜짐(비정상)" : "꺼짐")}");
         }
 #endif
     }
