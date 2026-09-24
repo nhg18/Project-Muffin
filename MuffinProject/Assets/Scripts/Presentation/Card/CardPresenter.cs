@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Chapchu.Game;
 using Chapchu.Game.Cards;
+using Chapchu.Core;
 
 namespace Chapchu.Presentation
 {
@@ -19,7 +20,7 @@ namespace Chapchu.Presentation
 
         }
 
-        public void Setup(CardData data) //현재 PlayerHandView 에서 호출중
+        public void Setup(CardData data,int index = -1) //현재 PlayerHandView 에서 호출중
         {
             if (data == null)
             {
@@ -27,7 +28,7 @@ namespace Chapchu.Presentation
                 return;
             }
             cardView.Setup(data);
-            cardModel.Setup(data);
+            cardModel.Setup(data,index);
 
         }
 
@@ -63,6 +64,7 @@ namespace Chapchu.Presentation
 
             //CardPlayManager로 호출
             CardPlayManager.Instance.RequestPlayCard(cardModel.cardData.id, targets);
+            GameEvents.RaiseCardPlayed(cardModel.cardData.id,cardModel.cardIndex);
         }
 
         public async Task<List<int>> SelectPlayer()

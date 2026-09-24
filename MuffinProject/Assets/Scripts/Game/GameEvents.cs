@@ -18,6 +18,7 @@ namespace Chapchu.Game
         public static event Action<int, bool> OnChapChuChanged;        // actorNumber, isChapChu
         public static event Action<int> OnDeckCountChanged;            // deckCount
         public static event Action<int, string> OnRequestRejected;     // actorNumber, reason
+        public static event Action<int,int> OnCardPlayed;              // cardID,   HandIndex
 
         // 로컬 UI 전용. 마스터 통지가 아니므로 Presentation 으로 이동 예정.
         public static event Action<bool> OnHandModeChanged;
@@ -31,7 +32,7 @@ namespace Chapchu.Game
         public static void RaiseChapChuChanged(int actorNumber, bool isChapChu) => OnChapChuChanged?.Invoke(actorNumber, isChapChu);
         public static void RaiseDeckCountChanged(int deckCount) => OnDeckCountChanged?.Invoke(deckCount);
         public static void RaiseRequestRejected(int actorNumber, string reason) => OnRequestRejected?.Invoke(actorNumber, reason);
-
+        public static void RaiseCardPlayed(int cardID,int index) => OnCardPlayed?.Invoke(cardID,index);
         public static void RaiseHandModeChanged(bool isHandMode) => OnHandModeChanged?.Invoke(isHandMode);
     }
 }

@@ -11,24 +11,23 @@ namespace Chapchu.Presentation
 
     public class PlayerHandPresenter : MonoBehaviour
     {
-        [Header("Hands Setting")]
-        private int HandCount=0;
-
         [SerializeField] private PlayerHandView handView;
 
         [SerializeField] private CardDatabase cardDatabase;
 
-        PlayerHand playerHand = new PlayerHand();
+        public PlayerHand playerHand = new PlayerHand();
 
         private bool isPropertyUpdatePending = false;
 
         private void OnEnable()
         {
             GameEvents.OnDrawn += StartDrawEvent;
+            GameEvents.OnCardPlayed += DiscardCard;
         }
         private void OnDisable()
         {
             GameEvents.OnDrawn -= StartDrawEvent;
+            GameEvents.OnCardPlayed -= DiscardCard;
         }
 
         private void StartDrawEvent(int actorNumber, int cardid)
@@ -40,11 +39,21 @@ namespace Chapchu.Presentation
 
             CardData data = cardDatabase.GetCard(cardid);
 
-            handView.DrawCard(data);
-
-            HandCount++;
+            CardPresenter cp = handView.DrawCard(data);
+            cp.Setup(data, playerHand.GetHandCount());//Count is bigger than index 커밋추가용
             playerHand.Add(new Card(data.id));
 
+            if (!isPropertyUpdatePending)
+            {
+                isPropertyUpdatePending = true;
+                StartCoroutine(UpdatePropertyAtEndOfFrame());
+            }
+        }
+
+        private void DiscardCard(int cardID, int index)
+        {
+            playerHand.DiscardCard(index);
+            handView.DiscardCard(index);
             if (!isPropertyUpdatePending)
             {
                 isPropertyUpdatePending = true;
@@ -59,7 +68,7 @@ namespace Chapchu.Presentation
             PhotonNetwork.LocalPlayer.SetCustomProperties(
                 new ExitGames.Client.Photon.Hashtable
                 {
-                    [PlayerProps.HandCount] = HandCount
+                    [PlayerProps.HandCount] = playerHand.GetHandCount()
                 }
             );
 
