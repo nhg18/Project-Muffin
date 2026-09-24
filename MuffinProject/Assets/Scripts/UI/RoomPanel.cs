@@ -7,6 +7,7 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.UI;
 using Chapchu.Core;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.UI
 {
@@ -62,8 +63,8 @@ namespace Chapchu.UI
         {
             if (!CanStartGame()) return;
             NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
-            // 방 전원이 함께 넘어가야 하므로 SceneLoader 가 아닌 LoadLevel. PUN 씬 동기화는 씬 이름으로 비교한다(ScenePaths.GetName 설명).
-            PhotonNetwork.LoadLevel(ScenePaths.GetName(SceneType.Game));
+            // 방 전원이 함께 넘어가야 하므로 LoadScene 이 아닌 LoadLevel (ScenePaths 설명 참고).
+            PhotonNetwork.LoadLevel(ScenePaths.Game);
         }
 
         private bool CanStartGame()
@@ -80,7 +81,7 @@ namespace Chapchu.UI
         private void OnLeftRoom()
         {
             // 정식 흐름은 LobbyScene (B5-2). 지금은 개발용 디버그 로비로 돌아간다.
-            SceneLoader.Load(SceneType.DebugLobby);
+            SceneManager.LoadScene(ScenePaths.DebugLobby);
         }
     
         private void UpdateStartButtonState(Player player)

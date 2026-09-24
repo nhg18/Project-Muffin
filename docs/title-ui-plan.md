@@ -289,7 +289,7 @@ Scripts/UI/Title/
 | `ConnectRequested(nickname)` | `NetworkManager.SetNickname()` → 이미 `IsReady` 면 로비 이동. 아니면 대기 상태로 두고, 접속이 끊겨 있으면(`!IsConnected`) `NetworkManager.Connect()` 로 재시도 |
 | `ConnectionEvents.OnConnected` | 대기 중이면 로비 이동 |
 | `ConnectionEvents.OnDisconnected(cause)` | 대기 중일 때만 → 대기 해제, `TitleView.ShowError(10-5 문구)`. 대기 중이 아니면 무시 (앱 시작 직후 실패는 누를 때 다시 시도) |
-| 로비 이동 | `SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby))` — **임시.** PR3 `SceneLoader` 가 생기면 교체 |
+| 로비 이동 | `SceneManager.LoadScene(ScenePaths.Lobby)` (PR3 에서 씬 이름 상수로 통일) |
 
 **`TitleView`** — 접속 중(`SetConnecting(true)`)에는 접속 버튼 탭을 무시한다.
 
