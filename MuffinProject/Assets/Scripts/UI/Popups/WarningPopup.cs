@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
-using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Chapchu.UI.Popup
+namespace Chapchu.UI.Popups
 {
-
+    /// <summary>
+    /// 경고 · 에러 안내. 확인을 누르면 OnConfirmed 를 알린 뒤 스스로 닫힌다.
+    /// </summary>
     public class WarningPopup : Popup
     {
         [SerializeField] private TMP_Text mainText;
@@ -24,23 +23,23 @@ namespace Chapchu.UI.Popup
         {
             set => subText.text = value;
         }
-    
-        public Action OnClickedOkButton;
+
+        public event Action OnConfirmed;
 
         private void OnEnable()
         {
-            okButton.onClick.AddListener(ClickedOkButton);
+            okButton.onClick.AddListener(HandleOkClicked);
         }
 
         private void OnDisable()
         {
-            okButton.onClick.RemoveListener(ClickedOkButton);
+            okButton.onClick.RemoveListener(HandleOkClicked);
         }
 
-        private void ClickedOkButton()
+        private void HandleOkClicked()
         {
-            // PopupManager.Instance.CloseModal(this);
-            OnClickedOkButton?.Invoke();
+            OnConfirmed?.Invoke();
+            Close();
         }
     }
 }
