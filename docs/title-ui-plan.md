@@ -1,14 +1,15 @@
 # 타이틀 화면 UI 구현 플랜 (프론트엔드 전용)
 
-**작성일**: 2026-09-23
+**작성일**: 2026-09-23 (2026-09-24 갱신 — 7절 변경 이력)
 **대상 씬**: `Assets/Scenes/TitleScene.unity` **단독**
 **범위**: **화면(뷰)만.** 네트워크·씬 전환 등 실제 기능은 연결하지 않는다.
-**기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude 디자인 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (버전 `1790067707-dea6`)
+**기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude Design 게시 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (Version 6 — 2026-09-24 게시본에 폰트·배경만 교체)
 
 > **기준 흐름 (2026-09-23)**: 아티팩트 → `docs/systems/12-title-ui.md` → 노션 「타이틀 화면 개발 문서」 순으로 반영했다.
 > 셋이 다르면 **`12-title-ui.md`가 옳다** (`CLAUDE.md` 0절). 아래 2절 환산표는 구현용 상세이며, 수치는 12번 문서와 같다.
 >
 > 같은 계정의 다른 아티팩트: 로비 `87PcE8t7ic5Ei5VveoZXYf`, 룸 `XYKxMfH3pVh5KNS8hQJscE` — 이번 범위 아님.
+> 최신 디자인은 Claude Design에 있다(타이틀이 "찹츄 로비 화면 v2"로 이동). 로비 작업 전에 v2를 아티팩트로 게시받아 기준을 다시 잡는다.
 
 ---
 
@@ -18,7 +19,7 @@
 
 | 단계 | 내용 | 산출물 | 예상 |
 | --- | --- | --- | --- |
-| **S1** | 폰트 · 스프라이트 준비 | Jua / IBM Plex Mono SDF, 둥근 사각 9-slice, 그림자 스프라이트 | 1d |
+| **S1** | 폰트 · 스프라이트 준비 | 학교안심 둥근미소 B/R(기존 에셋) · B 프리셋 · IBM Plex Mono SDF, 둥근 사각 9-slice, 그림자 · 세로 오버레이 스프라이트 | 1d |
 | **S2** | 공용 UI 프리팹 3종 | `PillButton` · `PillInputField` · `IconButton` | 0.5d |
 | **S3** | `TitleScene` 재구성 | `TitleScene.unity` | 1d |
 | **S4** | 뷰 스크립트 · 기존 코드 삭제 | `.cs` 5개 | 0.5d |
@@ -42,6 +43,7 @@
 | 입력 시 | 에러 문구 지움 |
 | 접속 클릭 | `NicknameValidator`로 검증 → 실패 시 해당 문구 표시, 통과 시 에러 지움 + `ConnectRequested` 발행 |
 | 버튼 연출 | 호버: 색 `#BF9CE9` + 위로 2px / 눌림: 아래로 4px + 그림자 3px로 축소 |
+| 접속 중 표시 | 검증 통과 시 버튼 글자를 "접속 중…"으로. `ShowError()` 호출 시 "접속"으로 복귀 (버튼 비활성화는 하지 않음) |
 
 ### 하지 않는 것 (로직 담당 몫)
 
@@ -56,14 +58,14 @@ Photon 연결 · 씬 전환 · 닉네임 저장/복원 · 타임아웃 · 사운
 | 항목 | 처리 |
 | --- | --- |
 | 입력창 포커스 연출 | 없음 (아티팩트 `outline:none`) |
-| 버튼 비활성(연결 중) 상태 | 없음. 로직 연결 시 추가 |
+| 버튼 비활성(연결 중) 상태 | 없음 (글자만 바뀜). 중복 요청 차단은 로직 연결 시 |
 | 에러 페이드 | 없음. 즉시 표시/해제 |
 | 카운터 16자 한계색 | 없음. 항상 `#A08FB5` |
 
 ### 검증 규칙 (확정 2026-09-23)
 
 아티팩트 검증은 빈 값 검사뿐이지만, **검증 규칙은 기존 `NicknameValidator`를 유지한다** (2~16자, 한·영·숫자, 공백 불가).
-**표시 방식만 아티팩트대로** 한다: `ErrorText` 자리(높이 26 고정)에 Jua 18 `#FF6E8A` 문구를 즉시 표시하고, 입력이 바뀌면 지운다.
+**표시 방식만 아티팩트대로** 한다: `ErrorText` 자리(높이 26 고정)에 학교안심 둥근미소 B 18 `#FF6E8A` 문구를 즉시 표시하고, 입력이 바뀌면 지운다.
 문구는 `NicknameValidator.GetErrorMessage()` 결과를 그대로 쓴다.
 
 ---
@@ -89,7 +91,7 @@ Photon 연결 · 씬 전환 · 닉네임 저장/복원 · 타임아웃 · 사운
 ```
 TitleCanvas
 ├ BG_Illust        Image (TitleBackground.png) · AspectRatioFitter Envelope Parent  ← CSS cover
-├ BG_Overlay       Image · 방사형 그라데이션 스프라이트 (2-3)
+├ BG_Overlay       Image · 세로 선형 그라데이션 스프라이트 (2-3) · Stretch
 ├ Content          Stretch · VerticalLayoutGroup(Middle Center)
 │  ├ TitleGroup    VerticalLayoutGroup · Spacing 6
 │  │  ├ Logo       TMP "찹츄"
@@ -110,10 +112,8 @@ TitleCanvas
 
 | 레이어 | 아티팩트 | Unity |
 | --- | --- | --- |
-| 일러스트 | 슬롯(원뿔 그라데이션 플레이스홀더) | `Sprites/TitleBackground.png` (2021×1138, 로비·룸 아티팩트의 키 아트와 동일 그림) · 중앙 기준 cover |
-| 오버레이 | `radial-gradient(circle at 52% 44%, rgba(255,226,186,.72), rgba(210,96,160,.35) 46%, rgba(46,36,64,.72) 100%)` | 같은 그라데이션을 PNG로 구워 Stretch (중심 52%/44%) |
-
-> 이 오버레이는 아티팩트에서 플레이스홀더 위에 얹힌 것이라, 실제 일러스트 위에서는 밝게 뜰 수 있다. **S6에서 눈으로 확인**하고, 과하면 로비·룸 아티팩트의 선형 오버레이(`rgba(46,36,64,.3) → .08 @42% → .36`)로 교체를 제안한다.
+| 일러스트 | `TitleBackground.png`와 같은 그림 (게임 에셋으로 교체) · `center/cover` | `Sprites/TitleBackground.png` (2021×1138, 16:9) · 중앙 기준 cover |
+| 오버레이 | `linear-gradient(180deg, rgba(46,36,64,.26), rgba(46,36,64,.1) 40%, rgba(46,36,64,.46))` | 같은 그라데이션을 세로 텍스처로 구워 Stretch (색은 전부 `#2E2440`, 알파만 변함) |
 
 ### 2-4. 레이아웃 수치
 
@@ -134,20 +134,21 @@ TitleCanvas
 
 | 요소 | 폰트 | 크기 | 색 | 효과 |
 | --- | --- | --- | --- | --- |
-| Logo 「찹츄」 | Jua | 190 | `#FFFDF8` | 외곽선 5px `#3A2246` (stroke 10 + paint-order → 바깥 5), 하드 그림자 (6, −6) `rgba(58,34,70,.9)`, 자간 .04em, 행간 .95 |
-| Subtitle | Jua | 36 | `#FFFDF8` | 외곽선 2.5px `#3A2246`, 그림자 (0, −3) `rgba(58,34,70,.85)` |
-| 입력 텍스트 | Jua | 22 | `#5B3E8C` | — |
-| 플레이스홀더 | Jua | 22 | 브라우저 기본(흐린 `#5B3E8C`) → **`#A08FB5` 제안** | — |
-| 카운터 | Jua | 20 | `#A08FB5` | 우측 정렬 |
-| 버튼 「접속」 | Jua | 30 | `#FFFDF8` | — |
-| 에러 | Jua | 18 | `#FF6E8A` | 그림자 (0, −2) `rgba(58,34,70,.5)` |
+| Logo 「찹츄」 | 학교안심 둥근미소 B | 190 | `#FFFDF8` | 외곽선 5px `#3A2246` (stroke 10 + paint-order → 바깥 5), 하드 그림자 (6, −6) `rgba(58,34,70,.9)`, 자간 .04em, 행간 .95 |
+| Subtitle | 학교안심 둥근미소 B | 36 | `#FFFDF8` | 외곽선 2.5px `#3A2246`, 그림자 (0, −3) `rgba(58,34,70,.85)` |
+| 입력 텍스트 | 학교안심 둥근미소 R | 22 | `#5B3E8C` | — |
+| 플레이스홀더 | 학교안심 둥근미소 R | 22 | 브라우저 기본(흐린 `#5B3E8C`) → **`#A08FB5` 제안** | — |
+| 카운터 | 학교안심 둥근미소 R | 20 | `#A08FB5` | 우측 정렬 |
+| 버튼 「접속」 / 「접속 중…」 | 학교안심 둥근미소 B | 30 | `#FFFDF8` | — |
+| 에러 | 학교안심 둥근미소 B | 18 | `#FF6E8A` | 그림자 (0, −2) `rgba(58,34,70,.5)` |
 | 버전 | IBM Plex Mono | 12 | `#FFFDF8` 72% | 문구 `ver 0.1.0 · Project Chapchu` |
-| 시스템 아이콘 | Jua | 18 | `#FFFDF8` | ♪ / ≡ |
+| 시스템 아이콘 | 학교안심 둥근미소 B | 18 | `#FFFDF8` | ♪ / ≡ |
 
 TMP 변환 규칙:
 - 외곽선 → 머티리얼 **Outline**. 두께는 폰트 에셋 Padding에 따라 달라지므로 **S6에서 아티팩트와 겹쳐 보며 맞춘다.**
 - 하드 그림자 → **Underlay** (Offset, Softness 0). TMP는 Underlay가 1개라 로고의 부드러운 그림자(0 14 30)는 **생략**한다.
-- 로고·부제는 효과가 다르므로 **머티리얼 프리셋 2개**(`Jua SDF - Logo`, `Jua SDF - Subtitle`), 에러용 1개(`Jua SDF - Error`).
+- 로고·부제는 효과가 다르므로 **머티리얼 프리셋 2개**(`Hakgyoansim Dunggeunmiso OTF B SDF - Logo`, `- Subtitle`), 에러용 1개(`- Error`). 위치 `Assets/Fonts/`. 프리셋만 `TextMeshPro/Distance Field` 셰이더 (원본 머티리얼은 Mobile 셰이더이고 다른 씬이 쓰므로 건드리지 않는다).
+- 이 폰트 에셋은 정적 아틀라스 4096 · 샘플링 50 · **패딩 5**(Jua 계획값 10의 절반)라 외곽선·그림자 최대 두께가 작다. 로고 외곽선이 모자라면 S6에서 판단한다.
 
 ### 2-6. 박스 스타일
 
@@ -179,13 +180,13 @@ Unity `Selectable`의 Color Tint로는 이동을 못 하므로 **포인터 이�
 
 | 에셋 | 출처 | 비고 |
 | --- | --- | --- |
-| **Jua** TTF | Google Fonts (OFL) | SDF **Dynamic** · 멀티 아틀라스 2048 · 샘플링 64 · 패딩 10 (임의 한글 닉네임 대응). 고정 문구는 미리 생성 |
+| **학교안심 둥근미소 B / R** | 기존 에셋 `TextMesh Pro/Resources/Fonts & Materials/Hakgyoansim Dunggeunmiso OTF B SDF` · `OTF R SDF` (OFL). 입력칸 안(입력값 · 안내문 · 카운터)은 R, 나머지는 B — 기존 TitleScene 배분 | 정적 아틀라스, 한글 11,172자 전부 포함 → 임의 닉네임에서 □ 없음, Play 중 에셋 변경 없음. 새로 만들지 않는다 |
 | **IBM Plex Mono** TTF | Google Fonts (OFL) | SDF Dynamic · 512 · ASCII + `·` (버전 텍스트 전용) |
-| `♪ ≡` 글리프 | **Jua에 없음 (확인됨)** | 아이콘 스프라이트 `icon_sound.png` · `icon_menu.png` |
+| `♪ ≡` 아이콘 | 새 폰트에도 글자가 있지만 **스프라이트 유지 (확정 2026-09-24)** | `icon_sound.png` · `icon_menu.png` |
 | `TitleBackground.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
 | 둥근 사각 9-slice | 직접 생성 `ui_round64.png` | 반경 64 원본 1장. `Image.pixelsPerUnitMultiplier = 64 / 반경` 으로 20·22·14 및 안쪽(16·17·12)에 재사용. 흰색, Image 색으로 칠함 |
 | 소프트 그림자 9-slice | 직접 생성 `ui_shadow_soft.png` | 반경 22 · sigma 13 · 바깥 여백 40 · border 101. Image를 박스보다 사방 40 크게 |
-| 방사형 오버레이 PNG | 직접 생성 `title_overlay_radial.png` | 480×270, Stretch |
+| 세로 오버레이 텍스처 | 셋업 스크립트가 생성 `title_overlay_vertical.png` | 4×256 · 색 `#2E2440` 고정, 알파 .26 → .10(40%) → .46 · Bilinear · Clamp · 비압축. **`title_overlay_radial.png`는 삭제** |
 | 입력창 안쪽 하이라이트 | 직접 생성 `ui_round64_top_highlight.png` | 배율 4(반경 16)에서 두께 2px |
 
 폴더: `Assets/Fonts/`, `Assets/Sprites/UI/`. 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
@@ -217,6 +218,7 @@ Scripts/UI/Title/
 | `event Action<string> ConnectRequested` | 검증 통과 닉네임 전달. **지금은 구독자 없음** |
 | `void ShowError(string message)` | 외부 실패 사유 표시 (연결 실패 등) |
 | `void SetNickname(string nickname)` | 저장된 닉네임 복원용. 카운터도 갱신 |
+| `void SetConnecting(bool connecting)` | 버튼 글자 "접속" ↔ "접속 중…". 검증 통과 시 뷰가 스스로 `true`, `ShowError()`는 `false`로 되돌림 |
 
 규칙:
 - 네임스페이스는 **`Chapchu.UI.Title`** (`CODE_CONVENTION.md` 4.2). `NicknameValidator`는 `using Chapchu.UI.NickName;` 으로 참조한다.
@@ -230,10 +232,12 @@ Scripts/UI/Title/
 ## 5. 단계별 작업
 
 ### S1. 에셋 (1d)
-- [x] Jua · IBM Plex Mono 다운로드 → `Assets/Fonts/`, TMP SDF 생성 (3절)
-- [x] `♪ ≡` 글리프 확인 → Jua에 없음 → 아이콘 스프라이트
-- [x] 둥근 사각 · 안쪽 하이라이트 · 소프트 그림자 · 방사형 오버레이 PNG 생성, 임포트 설정
-- [x] TMP 머티리얼 프리셋 3개 (`Jua SDF - Logo` / `- Subtitle` / `- Error`) — 수치는 시작값, S6에서 조정
+- [x] IBM Plex Mono 다운로드 → `Assets/Fonts/`, TMP SDF 생성 (3절)
+- [x] 둥근 사각 · 안쪽 하이라이트 · 소프트 그림자 PNG 생성, 임포트 설정
+- [x] 폰트를 학교안심 둥근미소 B(기존 에셋)로 교체 — `TitleUIAssetSetup` 수정, Jua 파일 12개 삭제 (`c3f58b0`)
+- [ ] 셋업 스크립트에 세로 오버레이 텍스처 생성 추가, `title_overlay_radial.png` 삭제 (3절)
+- [ ] 메뉴 재실행 → `Assets/Fonts/`에 `Hakgyoansim Dunggeunmiso OTF B SDF - Logo / Subtitle / Error.mat` 생성 확인 — 수치는 시작값, S6에서 조정
+- [x] 스프라이트 `.meta` 6개의 Android 플랫폼 블록 변경분 커밋 (`c3f58b0`) — 재실행 시 변경 0인지는 다음 실행 때 확인
 - 재실행: 메뉴 `Chapchu > Title UI > Setup Assets` (기존 폰트 에셋은 건너뛰고, 프리셋·임포트 설정만 다시 적용)
 
 ### S2. 공용 프리팹 (0.5d)
@@ -253,7 +257,7 @@ Scripts/UI/Title/
 > 씬 파일은 병합이 어렵다(`CLAUDE.md` 14절). S3 동안 다른 사람은 `TitleScene`을 열지 않는다.
 
 ### S4. 뷰 스크립트 (0.5d)
-- [ ] 4절 5개 작성, 씬·프리팹에 배선
+- [ ] 4절 5개 작성, 씬·프리팹에 배선 (`SetConnecting` 포함)
 - [ ] 기존 3개 파일 삭제
 - [ ] `Scripts/UI/Title/`에 금지 `using` 없는지 확인
 
@@ -263,7 +267,7 @@ Scripts/UI/Title/
 ### S6. 아티팩트 대조 QA (0.5d)
 - [ ] Game 뷰 1920×1080 스크린샷 ↔ 아티팩트 브라우저 1920×1080 스크린샷을 겹쳐 비교 (위치 ±2px)
 - [ ] 로고·부제 외곽선 두께, 그림자 위치 맞춤
-- [ ] 방사형 오버레이 밝기 확인 (2-3 메모)
+- [ ] 세로 오버레이 밝기 — 아티팩트(Version 6, 같은 배경)와 겹쳐 비교
 - [ ] 1600×900 / 1280×720 / 21:9 에서 겹침·잘림 없음
 - [ ] 16자 초과 차단(붙여넣기 포함), IME 한글 조합 중 카운터 정상
 - [ ] 에러 표시/해제 시 버튼 위치 불변
@@ -273,9 +277,20 @@ Scripts/UI/Title/
 
 ## 6. 커밋 분할
 
-1. `chore(ui): Jua·IBM Plex Mono 폰트 및 타이틀 UI 스프라이트 추가` (S1)
+1. `chore(ui): Jua·IBM Plex Mono 폰트 및 타이틀 UI 스프라이트 추가` (S1) — `a78dd89` 완료
+   - 보완: `chore(ui): 타이틀 폰트를 학교안심 둥근미소로 교체, 세로 오버레이로 변경` (S1)
 2. `feat(ui): 공용 UI 프리팹 3종 추가` (S2)
 3. `feat(title): 디자인 아티팩트 기준 TitleScene 재구성 + 뷰 스크립트` (S3+S4, 씬·스크립트 상호 참조라 한 커밋)
 4. `feat(title): 접속 버튼 눌림 연출` (S5)
 
-PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적는다.
+PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적는다. (접속을 누르면 "접속 중…"에서 멈추는 것이 정상이다 — 구독자가 없으므로)
+
+---
+
+## 7. 변경 이력
+
+| 날짜 | 내용 |
+| --- | --- |
+| 2026-09-23 | 신규 |
+| 2026-09-24 | 기준을 Claude Design 최신 게시본으로 갱신. 폰트 Jua → 학교안심 둥근미소 B/R(기존 에셋, 입력칸 안은 R), 오버레이 방사형 → 세로 선형, 접속 중 표시(`SetConnecting`) 추가 |
+| 2026-09-24 | 시스템 아이콘 스프라이트 유지 확정 |
