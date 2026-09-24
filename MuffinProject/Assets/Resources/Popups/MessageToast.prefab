@@ -146,9 +146,9 @@ GameObject:
   - component: {fileID: 207028263183941559}
   - component: {fileID: 8151174984904003255}
   - component: {fileID: 4321584684276509776}
-  - component: {fileID: 608323870551477934}
+  - component: {fileID: 1918990751064884916}
   m_Layer: 0
-  m_Name: ToastPopup
+  m_Name: MessageToast
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -257,7 +257,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &608323870551477934
+--- !u!114 &1918990751064884916
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -266,10 +266,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 3957106455775788808}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b84b303517994dac830b087e7164351a, type: 3}
+  m_Script: {fileID: 11500000, guid: 1a05fad33aff2cc4293788eb9fab462e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  closeButton: {fileID: 4321584684276509776}
+  duration: 3
+  dismissOnClick: 1
   messageText: {fileID: 7180774355667221153}
 --- !u!1 &6892536439985388977
 GameObject:

@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using Chapchu.Core;
 using Chapchu.Network;
-using TMPro;
-using Chapchu.UI.Components;
-using Chapchu.UI.Popup;
+using Chapchu.UI.Popups;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Chapchu.Core;
 
 namespace Chapchu.UI
 {
@@ -55,20 +50,11 @@ namespace Chapchu.UI
 
         private void OnJoinRoomClicked()
         {
-            var joinPopup = PopupManager.Instance.OpenModal(PopupManager.Get<InputPopup>());
+            InputPopup joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
             joinPopup.PlaceholderText = "방 코드 입력";
             joinPopup.SubmitButtonText = "참가";
             joinPopup.CharacterLimit = 4;
-
-            joinPopup.OnClickedSubmitButton = () =>
-            {
-                NetworkManager.Instance.JoinRoom(joinPopup.InputText);
-            };
-
-            joinPopup.OnClickedExitButton = () =>
-            {
-                PopupManager.Instance.CloseModal(joinPopup);
-            };
+            joinPopup.OnSubmitted += roomCode => NetworkManager.Instance.JoinRoom(roomCode);
         }
     
         private void OnJoinedRoom()
@@ -93,10 +79,9 @@ namespace Chapchu.UI
 
         private void ShowError(string title, string message)
         {
-            var popup = PopupManager.Instance.OpenModal(PopupManager.Get<WarningPopup>());
+            WarningPopup popup = PopupManager.Instance.OpenModal<WarningPopup>();
             popup.MainText = title;
             popup.SubText = message;
-            popup.OnClickedOkButton = () => PopupManager.Instance.CloseModal(popup);
         }
     }
 }

@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-09-24 · 팝업 인프라 복구 · 정리 (B 트랙 B1-9, `ui-refactoring-plan` PR1)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/popup-infra` (← `changhwan.exe` `95a785e`) |
+| 작업 위치 | worktree `../Project-Muffin-title` |
+| 범위 | PR1(U-1 · U-2 · U-3 · U-11 · U-20) + 팝업 코드 한정 정리(U-15 · U-17 일부). 사용자 요청: "코드도 안 좋게 썼던 것 같다" → 버그 수정과 함께 구조 정리 |
+
+### 한 것
+
+| # | 내용 |
+| --- | --- |
+| U-1 | 씬 전환 시 모달이 컴포넌트만 지워져 껍데기가 남던 문제 → 모든 닫기가 GameObject 째 지운다 |
+| U-2 | `OnOpen` / `OnClose` 가 한 번도 안 불리던 문제 → 매니저가 생성 직후 · 파괴 직전에 부른다 (토스트 자동 닫힘이 이제 동작) |
+| U-3 | 토스트 불가 → `MessageToast` 신설, `ToastPopup.prefab` → `MessageToast.prefab` (GUID 유지) + 컴포넌트 · 문구 연결. 옛 프리팹 루트의 **끊긴 스크립트 참조 1개 제거**(저장이 거부되던 원인) |
+| U-11 | `WarningPopup` 확인 → `OnConfirmed` 알림 후 스스로 닫힘 |
+| U-20 | 프리팹 규약 위반 시 원인 로그 (`Resources/Popups/{타입}.prefab 이 없거나 루트에 컴포넌트가 없다`) |
+| U-15 일부 | `UI/Popup/` · `PopupScripts/` · `Components/LoadingPopup` → `UI/Popups/` 평탄화, 네임스페이스 `Chapchu.UI.Popups` (`Popup.Popup` 표기 해소). `.meta` 동반 이동 |
+| U-17 일부 | 팝업 · `LobbyPanel` 의 안 쓰는 `using` 제거 |
+| U-10 일부 | `InputPopup` 닫기 버튼이 스스로 닫힘. 제출 후 닫기 · 로딩 전환은 PR5 |
+
+### API 변경 (호출하는 쪽)
+
+| 전 | 후 |
+| --- | --- |
+| `OpenModal(PopupManager.Get<T>())` | `OpenModal<T>()` (`OpenNonModal<T>` · `OpenToast<T>` 동일). `Get<T>` 는 내부로 |
+| `CloseModal()` / `CloseModal(p)` / `CloseNonModal(p)` / `CloseToast(p)` | `PopupManager.Close(p)` 하나 또는 `popup.Close()` |
+| — | `PopupManager.ShowToast("문구")` |
+| `popup.Close()` = 훅만 호출(닫히지 않음) | `popup.Close()` = 실제로 닫음. 훅은 매니저 전용 |
+| `WarningPopup.OnClickedOkButton = …` (대입 · 직접 닫기 필요) | `OnConfirmed += …` (닫기 자동) |
+| `InputPopup.OnClickedSubmitButton` / `OnClickedExitButton` / `InputText` | `OnSubmitted += text => …` / 닫기 자동 |
+
+`LobbyPanel` 은 위에 맞춰 두 곳만 바꿨다(나머지는 PR5).
+
+### 확인 방법 (PC 에디터) — 자동 테스트는 asmdef(A1-2) 전까지 불가
+
+| # | 방법 | 기대 |
+| --- | --- | --- |
+| T1 | Play 중 Hierarchy `PopupManager` 선택 → 컴포넌트 ⋮ → **Debug/테스트 토스트** | 3초 뒤 사라짐 · 누르면 즉시 사라짐 |
+| T2 | 같은 메뉴 → **Debug/경고 모달을 띄운 채 현재 씬 다시 로드** | 새 씬에 모달 · 반투명 차단막 없음 |
+| T3 | 로비 → 방 참가 → 없는 코드 → 경고 확인 | 경고만 닫히고 입력 팝업은 남음. 경고 로그 없음 |
+| T4 | 로비 → 방 참가 입력 팝업 열린 채 방 입장 | 방 씬에 잔재 없음 |
+| T5 | 로비 → 방 참가 → 닫기 버튼 | 입력 팝업이 닫힘 |
+
+디버그 메뉴는 `#if UNITY_EDITOR` · `[ContextMenu]` — 빌드에 안 들어가고 씬을 건드리지 않는다.
+
+### 하지 않은 것
+
+- 팝업 디자인(옛 모양 그대로) — 디자인 기준 없음 → 플랜 세션
+- 팝업 캔버스 스케일(`PopupManager` 는 Constant Pixel Size, 타이틀만 1920×1080) — B1-14(화면 방향 미정)
+- `LoadingPopup` 연결 — PR3
+
+### 플랜 세션에 넘김
+
+- `systems/10-ui.md` 8절: 토스트 규칙(3초 자동 닫힘 · 누르면 닫힘 · 위치) 명문화, `ToastPopup` 행을 "구현됨(`MessageToast`)" 으로
+- `ui-refactoring-plan.md`: U-15 · U-17 의 팝업 부분, U-10 의 닫기 버튼 부분 완료 표시. PR2 에 남은 것: `UI/NickName` → `UI/Title`, U-16, 나머지 `using`
+- 팝업 · 토스트 디자인 아티팩트 (새 UI 구조로 통일할 때)
+
+### 타이틀 후속
+
+- 사용자 PC 테스트 통과(2026-09-24). **모바일 실기는 기기가 없어 당분간 PC 로 대신** — S6 의 Android 항목 보류
+- `TitleSceneBuilder` 삭제 — 플랜 세션이 에디터에서 타이틀 묶음을 키운 뒤(`02b4964`)라 재실행하면 덮어쓴다
+
+---
+
 ## 2026-09-24 · 타이틀 화면 UI (B 트랙 B1-10) — S1~S5 구현, S6 일부
 
 | 항목 | 값 |
@@ -24,7 +89,7 @@
 | S3 씬 | ✅ | `TitleScene` 의 Canvas 를 지우고 `TitleCanvas` 로 재구성. 카메라 · EventSystem 유지 |
 | S4 스크립트 | ✅ | `Scripts/UI/Title/` 5개. 금지 `using`(Photon · SceneManagement · NetworkManager · ScenePaths) 없음 |
 | S5 버튼 연출 | ✅ | 캡처로 확인: 호버 위로 2 · `#BF9CE9` / 누름 아래로 4 · 그림자 7→3 |
-| S6 QA | 🔶 일부 | 아래 "S6 결과". **남음**: Android 실기(세이프에어리어), 실제 플레이 중 IME · 붙여넣기 입력 |
+| S6 QA | 🔶 PC 완료 | 아래 "S6 결과" + 사용자 PC 테스트 통과. **보류**: Android 실기(기기 없음) |
 
 ### S6 결과 (아티팩트 Edge 1920×1080 렌더 ↔ Unity 캡처)
 
@@ -97,7 +162,7 @@
    → 1920×1080(기본 · 회색 배경 · 에러 · 호버 · 누름), 1600×900, 1280×720, 21:9, 2400×1080 PNG.
    `BuildAndCapture` 는 에셋 셋업 → 프리팹 · 씬 **재생성** → 캡처. 씬을 손으로 고친 뒤에는 쓰지 않는다.
 3. 주의: batchmode 는 화면을 640×480 으로 보고 TMP 셰이더 픽셀 크기를 잘못 계산한다. 캡처 코드가 머티리얼 인스턴스 `_ScaleX/Y` 로 보정한다(실제 게임과 무관).
-4. `TitleSceneBuilder.cs` 는 개발용. **S6 끝나면 삭제.**
+4. `TitleSceneBuilder.cs` 는 2026-09-24 삭제됨 (위 팝업 항목 참고). 다시 필요하면 `0fc3e71` 에서 꺼낸다.
 
 ### 다음 할 일
 
@@ -106,4 +171,4 @@
 - [ ] B · 아트에 Gamma 전환 공유
 - [ ] S6 남은 것: Android 실기(세이프에어리어), 실제 입력(IME 조합 · 붙여넣기 16자)
 - [ ] B PR4(접속 실패 안내 · 재시도, 닉네임 복원)는 `TitleView.ConnectRequested` · `ShowError` · `SetConnecting` · `SetNickname` 에 붙인다. 지금은 구독자가 없어 "접속 중…"에서 멈추는 게 정상
-- [ ] S6 종료 후 `TitleSceneBuilder.cs` 삭제
+- [x] `TitleSceneBuilder.cs` 삭제
