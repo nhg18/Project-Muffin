@@ -383,6 +383,22 @@ RoomEvents.OnPlayerEntered += UpdateStartButtonState;  // → interactable
 
 ## 5. 작업 순서 (PR 단위)
 
+### 진행 상태 (2026-09-25)
+
+| 항목 | 상태 |
+| --- | --- |
+| U-1 · U-2 · U-3 · U-11 · U-20 (PR1) | ✅ #15 · #17 |
+| U-15 · U-17 팝업 부분, U-10 닫기 버튼 | ✅ #15 |
+| U-4 · U-5 · U-13 | ✅ `c44c855` |
+| U-6 · U-7 · U-21 (PR4) | ✅ #16 — 구조는 `TitleView`(뷰) + `TitlePresenter`(연결) |
+| U-8 | ✅ 해소 — `TitleView` 가 검증 전에 앞뒤 공백 제거. 스펙이 공백 불가라 연속 공백 축약은 불필요 |
+| U-14 | ✅ 해소 — `NicknameInput` 삭제(#14) |
+| U-19 | ✅ #14 — 죽은 스크립트 전부 삭제 |
+| U-18 (PR3) | ✅ `feature/scene-loader` — `SceneLoader.Load` 만. 비동기 로딩 · 로딩 팝업은 쓰는 곳이 생길 때(PR5) |
+| U-15 나머지 · U-16 · U-17 나머지 (PR2) | 진행 — `refactor/ui-cleanup` |
+| U-9 · U-10 나머지 (PR5), U-12 · U-22 · U-23 · U-24 (PR6) | 남음 |
+
+
 한 PR 이 끝날 때마다 **컴파일 에러 0 + 타이틀→로비→방 왕복 1회**가 게이트다.
 
 | PR | 내용 | 항목 | 검증 |
