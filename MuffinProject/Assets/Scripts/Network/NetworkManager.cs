@@ -111,6 +111,8 @@ namespace Chapchu.Network
         public override void OnPlayerEnteredRoom(Player newPlayer) => _room.OnPlayerEntered(newPlayer);
     
         public override void OnPlayerLeftRoom(Player otherPlayer) => _room.OnPlayerLeft(otherPlayer);
+
+        public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);
     
         public override void OnRoomListUpdate(List<RoomInfo> roomList) => _room.OnRoomListUpdate(roomList);
 

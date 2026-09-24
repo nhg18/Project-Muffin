@@ -143,5 +143,15 @@ namespace Chapchu.Network
         {
             RoomEvents.RaiseRoomListUpdate(roomList);
         }
+
+        /// <summary>
+        /// 방장 전환시 호출되는 콜백 함수
+        /// 방장 이탈 시 처리(08-room.md 5절 #5)는 미정이라 통지만 한다.
+        /// </summary>
+        public void OnMasterClientSwitched(Player newMasterClient)
+        {
+            Debug.Log($"On Master Client Switched: {newMasterClient.NickName}");
+            RoomEvents.RaiseMasterClientSwitched(newMasterClient);
+        }
     }
 }
