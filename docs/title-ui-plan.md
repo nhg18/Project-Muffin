@@ -293,10 +293,11 @@ Scripts/UI/Title/
 
 규칙: 이벤트 구독은 `OnEnable` / 해제는 `OnDisable`, `NetworkManager.Instance` 접근은 `Start` 이후 (`CLAUDE.md` 12절).
 
-- [ ] `TitlePresenter.cs` 작성, `TitleView` 중복 탭 무시
-- [ ] `TitleScene` 의 `TitleCanvas` 에 부착, `TitleSceneBuilder` 에도 반영
-- [ ] 컴파일 · 씬 로드 확인 (batchmode)
-- [ ] 수동 확인: 정상 접속 → 로비 / 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비 / 재실행 시 닉네임 복원
+- [x] `TitlePresenter.cs` 작성, `TitleView` 중복 탭 무시
+- [x] `TitleScene` 의 `TitleCanvas` 에 부착, `TitleSceneBuilder` 에도 반영
+- [x] 컴파일 · 씬 로드 확인 (batchmode, 누락 스크립트 0)
+- [x] Play 모드 자동 확인 (batchmode · 실제 Photon 접속): 닉네임 복원 / 접속 → 1.3초 후 `LobbyScene` / 접속 중 연타 무시 / 누르기 전 끊김은 표시 안 함 → 탭 시 재접속 → 로비 / `ClientTimeout` 시 10-5 문구 · 버튼 "접속" 복귀 · 늦게 온 접속 성공에도 이동 안 함
+- [ ] 수동 확인: 실기기 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비
 
 ---
 

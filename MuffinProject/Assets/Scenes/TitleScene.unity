@@ -1816,6 +1816,7 @@ GameObject:
   - component: {fileID: 1899680297}
   - component: {fileID: 1899680296}
   - component: {fileID: 1899680295}
+  - component: {fileID: 1899680302}
   m_Layer: 5
   m_Name: TitleCanvas
   m_TagString: Untagged
@@ -1839,6 +1840,18 @@ MonoBehaviour:
   connectButton: {fileID: 1738695140}
   connectLabel: {fileID: 1738695139}
   errorLabel: {fileID: 637523344}
+--- !u!114 &1899680302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1899680294}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55784b962d3d4f67a58f9b4c2fe1a11d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1899680296
 MonoBehaviour:
   m_ObjectHideFlags: 0

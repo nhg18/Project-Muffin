@@ -320,6 +320,8 @@ namespace Chapchu.EditorTools
                 ("connectButton", connectButton.GetComponent<Button>()),
                 ("connectLabel", connectButton.transform.Find("Body/Label").GetComponent<TMP_Text>()),
                 ("errorLabel", errorLabel));
+            // S7 접속 연결. TitleView 를 GetComponent 로 찾는다.
+            canvasObject.AddComponent<TitlePresenter>();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
