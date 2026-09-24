@@ -24,34 +24,53 @@ namespace Chapchu.Network
             }
         }
 
-        private void SetupInitNickname()
-        {
-            // PlayerPrefs 저장된 닉네임이 존재하면 닉네임 설정
-            if (!PlayerPrefs.HasKey(PlayerPrefsKeys.PlayerName)) return;
-            var defaultName = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName);
-            if (string.IsNullOrEmpty(defaultName)) return;
-            // 연결 체크
-            if (!PhotonNetwork.IsConnected) return;
-            SetNickname(defaultName);
-        }
+        /// <summary>
+        /// 접속 시작부터 마스터 서버 접속 완료까지 기다리는 최대 시간 (초)
+        /// </summary>
+        public const float ConnectTimeoutSeconds = 15f;
+
+        // 제한 시간 초과로 직접 끊었는지. 사용자 의도 종료(DisconnectByClientLogic)와 구분한다.
+        private bool _isTimedOut;
 
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
+        /// 연결 가능 여부와 무관하게 항상 설정한다. (꺼진 채 연결되면 LoadLevel 이 동기화되지 않는다)
         /// </summary>
         public void Initialize()
         {
-            if (Application.internetReachability == NetworkReachability.NotReachable)
-            {
-                // 인터넷 없음 팝업 띄우기
-                return;
-            }
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
-        public void Connect()
+        /// <summary>
+        /// 네트워크 접속 함수
+        /// 실패하면 ConnectionEvents.OnDisconnected 로 사유를 알린다.
+        /// </summary>
+        /// <returns>접속 시도를 새로 시작했으면 true</returns>
+        public bool Connect()
         {
-            if (PhotonNetwork.IsConnected) return;
-            PhotonNetwork.ConnectUsingSettings();
+            if (PhotonNetwork.IsConnected) return false;
+
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                // Photon 을 거치지 않고, PUN 이 연결 실패 시 보내는 것과 같은 사유로 알린다.
+                ConnectionEvents.RaiseDisconnected(DisconnectCause.ExceptionOnConnect);
+                return false;
+            }
+
+            _isTimedOut = false;
+            return PhotonNetwork.ConnectUsingSettings();
+        }
+
+        /// <summary>
+        /// 접속 제한 시간이 지났을 때 호출. 아직 접속 중이면 끊는다.
+        /// </summary>
+        public void OnConnectTimeout()
+        {
+            if (!PhotonNetwork.IsConnected || PhotonNetwork.IsConnectedAndReady) return;
+
+            Debug.LogWarning($"Connect Timeout: {ConnectTimeoutSeconds}s");
+            _isTimedOut = true;
+            PhotonNetwork.Disconnect();
         }
     
         public void SetNickname(string nickname)
@@ -78,35 +97,23 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 서버 연결 끊어졌을 때 호출되는 콜백 함수
+        /// 안내 · 화면 전환 · 재시도(NetworkManager.Connect)는 UI 가 사유를 보고 결정한다.
         /// </summary>
         /// <param name="cause">
         /// 끊긴 사유가 담긴 Enum 집합체
         /// </param>
         public void OnDisconnected(DisconnectCause cause)
         {
+            if (_isTimedOut && cause == DisconnectCause.DisconnectByClientLogic)
+                cause = DisconnectCause.ClientTimeout;
+            _isTimedOut = false;
+
             Debug.Log($"On Disconnected: {cause}");
+
+            // 앱 종료 — 알릴 화면이 없다
+            if (cause == DisconnectCause.ApplicationQuit) return;
+
             ConnectionEvents.RaiseDisconnected(cause);
-
-            switch (cause)
-            {
-                // 클라이언트에 의해 의도적 종료
-                case DisconnectCause.DisconnectByClientLogic:
-                    // SceneManager.LoadScene(SceneType.Title);
-                    break;
-
-                // 서버, 클라이언트 타임 아웃, 일시 끊김
-                case DisconnectCause.ServerTimeout:
-                case DisconnectCause.ClientTimeout:
-                case DisconnectCause.Exception:
-                    // TryReconnect();
-                    break;
-
-                // 서버가 강제 종료 → 이유 표시 후 타이틀
-                case DisconnectCause.DisconnectByServerLogic:
-                case DisconnectCause.InvalidAuthentication:
-                    // ShowErrorAndGoTitle(cause);
-                    break;
-            }
         }
     }
 }
