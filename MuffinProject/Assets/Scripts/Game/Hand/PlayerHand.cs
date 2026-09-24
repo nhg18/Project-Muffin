@@ -23,6 +23,10 @@ namespace Chapchu.Game
         {
             cards.RemoveAt(index);
         }
+        public int GetHandCount()
+        {
+            return cards.Count;
+        }
 
         public void Sort()
         {

@@ -10,9 +10,11 @@ namespace Chapchu.Presentation
     public class CardModel
     {
         public CardData cardData;
-        public void Setup(CardData data)
+        public int cardIndex;
+        public void Setup(CardData data, int index = -1)
         {
             cardData = data;
+            cardIndex = index;
         }
     }
 }
