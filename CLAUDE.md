@@ -133,6 +133,7 @@
 | 멀티 테스트 | ParrelSync (`Assets/ParrelSync`) |
 | 프로젝트 루트 | `MuffinProject/` |
 | 타겟 플랫폼 | 모바일 (Android / iOS) |
+| 색 공간 | **Gamma** (2026-09-24 Linear → Gamma). 반투명 UI 를 브라우저 디자인 시안(sRGB 블렌딩)과 같게 섞기 위해 |
 
 ## 11. 네트워크 권한 규칙 (필독)
 
