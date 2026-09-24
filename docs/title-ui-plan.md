@@ -201,7 +201,8 @@ Scripts/UI/Title/
 ├ NicknameFieldView.cs    입력창: characterLimit 16, 카운터 "n / 16", 변경 시 이벤트
 ├ PressableButton.cs      2-7 호버/눌림 이동·색 (공용, PillButton 프리팹에 부착)
 ├ ErrorLabel.cs           문자열만 교체 (자리 고정, SetActive 사용 안 함)
-└ VersionLabel.cs         "ver {Application.version} · Project ChapChu"
+├ VersionLabel.cs         "ver {Application.version} · Project ChapChu"
+└ TitlePresenter.cs       (S7) 뷰 ↔ 네트워크 · 씬 전환 연결. TitleView 와 같은 오브젝트
 
 재사용: Scripts/UI/NickName/NicknameValidator.cs  (검증 규칙 · 에러 문구)
 
@@ -223,7 +224,7 @@ Scripts/UI/Title/
 규칙:
 - 네임스페이스는 **`Chapchu.UI.Title`** (`CODE_CONVENTION.md` 4.2). `NicknameValidator`는 `using Chapchu.UI.NickName;` 으로 참조한다.
 - 에셋 준비 메뉴: `Chapchu > Title UI > Setup Assets` (`Scripts/Editor/TitleUIAssetSetup.cs`, 네임스페이스 `Chapchu.EditorTools`)
-- `Scripts/UI/Title/` 안에 `Photon.*`, `UnityEngine.SceneManagement`, `NetworkManager`, `ScenePaths` **금지**. (합격 기준)
+- `Scripts/UI/Title/` 안에 `Photon.*`, `UnityEngine.SceneManagement`, `NetworkManager`, `ScenePaths` **금지**. (합격 기준) — **단 `TitlePresenter.cs` 는 예외**: 뷰와 네트워크를 잇는 유일한 파일이다.
 - `async void` 금지, `Awake` 자기 초기화 / `OnEnable` 구독 (`CLAUDE.md` 12절).
 - `.cs` 는 UTF-8 with BOM (`CLAUDE.md` 13절).
 
@@ -273,6 +274,30 @@ Scripts/UI/Title/
 - [ ] 에러 표시/해제 시 버튼 위치 불변
 - [ ] Android 실기 1회 — 하단 버전/버튼이 세이프에어리어 안
 
+### S7. 접속 로직 연결 — PR4 (0.5d)
+
+`ui-refactoring-plan.md` PR4 · `plan-b-ui.md` B1-13. 기준: `12-title-ui.md` 6절 · 10-5, `09-network.md` 접속 규칙.
+선행(A): 앱 시작 시 자동 접속 · 15초 제한 · 인터넷 없음 알림 · `SetNickname` 저장 — 전부 완료 (PR #13).
+
+**`TitlePresenter`** (`Scripts/UI/Title/TitlePresenter.cs`, `TitleCanvas` 에 `TitleView` 와 함께 부착)
+
+| 시점 | 동작 |
+| --- | --- |
+| `Start` | `PlayerPrefs[PlayerPrefsKeys.PlayerName]` 가 있으면 `TitleView.SetNickname()` 으로 복원 |
+| `ConnectRequested(nickname)` | `NetworkManager.SetNickname()` → 이미 `IsReady` 면 로비 이동. 아니면 대기 상태로 두고, 접속이 끊겨 있으면(`!IsConnected`) `NetworkManager.Connect()` 로 재시도 |
+| `ConnectionEvents.OnConnected` | 대기 중이면 로비 이동 |
+| `ConnectionEvents.OnDisconnected(cause)` | 대기 중일 때만 → 대기 해제, `TitleView.ShowError(10-5 문구)`. 대기 중이 아니면 무시 (앱 시작 직후 실패는 누를 때 다시 시도) |
+| 로비 이동 | `SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby))` — **임시.** PR3 `SceneLoader` 가 생기면 교체 |
+
+**`TitleView`** — 접속 중(`SetConnecting(true)`)에는 접속 버튼 탭을 무시한다.
+
+규칙: 이벤트 구독은 `OnEnable` / 해제는 `OnDisable`, `NetworkManager.Instance` 접근은 `Start` 이후 (`CLAUDE.md` 12절).
+
+- [ ] `TitlePresenter.cs` 작성, `TitleView` 중복 탭 무시
+- [ ] `TitleScene` 의 `TitleCanvas` 에 부착, `TitleSceneBuilder` 에도 반영
+- [ ] 컴파일 · 씬 로드 확인 (batchmode)
+- [ ] 수동 확인: 정상 접속 → 로비 / 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비 / 재실행 시 닉네임 복원
+
 ---
 
 ## 6. 커밋 분할
@@ -297,3 +322,4 @@ PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적
 | 2026-09-24 | 기준 아티팩트 Version 7 (배경 일러스트를 게임과 같은 최신 그림으로 교체) |
 | 2026-09-24 | 버전 문구 `Project ChapChu` 확정, 아티팩트 Version 8에 반영 |
 | 2026-09-24 | 모바일 확대 배율 (`12-title-ui.md` 4-3): `TitleGroup` localScale 1.3 · `FormGroup` 1.7, `Content` VerticalLayoutGroup 의 Child Scale Width/Height 켬, 간격 43 → 56. 내부 수치는 아티팩트 그대로 두고 묶음 배율로만 키운다 |
+| 2026-09-24 | S7 접속 로직 연결(PR4) 추가 — `TitlePresenter` |
