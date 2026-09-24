@@ -50,9 +50,11 @@ namespace Chapchu.Network
         {
             if (PhotonNetwork.IsConnected) return false;
 
+            Debug.Log($"Connect Start: {Application.internetReachability}");
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
                 // Photon 을 거치지 않고, PUN 이 연결 실패 시 보내는 것과 같은 사유로 알린다.
+                Debug.LogWarning($"No Internet: {DisconnectCause.ExceptionOnConnect}");
                 ConnectionEvents.RaiseDisconnected(DisconnectCause.ExceptionOnConnect);
                 return false;
             }
