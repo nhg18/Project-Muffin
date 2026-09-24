@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Muffin.UI.Popup;
+using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Muffin.UI.Popup
+namespace Chapchu.UI.Popup
 {
 
     public class WarningPopup : Popup

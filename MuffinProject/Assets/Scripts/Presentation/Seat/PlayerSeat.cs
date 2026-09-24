@@ -5,9 +5,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using Muffin.Game;
+using Chapchu.Game;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class PlayerSeat : MonoBehaviour, IPointerClickHandler

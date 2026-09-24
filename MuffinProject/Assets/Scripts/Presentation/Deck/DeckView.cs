@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
     public class DeckView : MonoBehaviour
     {

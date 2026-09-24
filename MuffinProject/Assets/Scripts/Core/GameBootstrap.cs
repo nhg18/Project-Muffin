@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Muffin.Core
+namespace Chapchu.Core
 {
     /// <summary>
     /// 어느 씬에서 실행하더라도 전역 매니저가 먼저 생성되도록 보장한다.

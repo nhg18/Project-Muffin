@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.Network
+namespace Chapchu.Network
 {
     public class NetworkManager : SingletonPersistentPun<NetworkManager>
     {

@@ -5,7 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Muffin.UI.PlayerProfile
+namespace Chapchu.UI.PlayerProfile
 {
 
     public class ProfileView : MonoBehaviour

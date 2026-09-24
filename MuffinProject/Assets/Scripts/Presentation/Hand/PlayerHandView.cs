@@ -5,9 +5,9 @@ using UnityEngine;
 using UnityEngine.Splines;
 using Unity.Mathematics;
 using Photon.Pun;
-using Muffin.Game.Cards;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class PlayerHandView : MonoBehaviour

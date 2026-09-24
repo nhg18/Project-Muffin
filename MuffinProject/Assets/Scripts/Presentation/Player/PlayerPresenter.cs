@@ -3,10 +3,10 @@ using Photon.Realtime;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
-using Muffin.Game;
+using Chapchu.Core;
+using Chapchu.Game;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class PlayerPresenter : MonoBehaviourPunCallbacks

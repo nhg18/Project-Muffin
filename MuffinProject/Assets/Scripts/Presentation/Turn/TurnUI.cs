@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Muffin.Game;
+using Chapchu.Game;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class TurnUI : MonoBehaviour

@@ -2,9 +2,9 @@
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using Muffin.Core;
+using Chapchu.Core;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     public class TurnManager : SingletonPun<TurnManager>

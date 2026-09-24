@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Muffin.Core
+namespace Chapchu.Core
 {
 
     public static class PlayerPrefsKeys

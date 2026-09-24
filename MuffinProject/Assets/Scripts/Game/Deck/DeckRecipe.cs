@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Game.Cards;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Game
+namespace Chapchu.Game
 {
 
     [CreateAssetMenu(fileName = "NewDeckRecipe", menuName = "CardSystem/DeckRecipe")]

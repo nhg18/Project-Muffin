@@ -1,4 +1,4 @@
-﻿namespace Muffin.UI.Interfaces
+﻿namespace Chapchu.UI.Interfaces
 {
     public interface IButtonLogic
     {

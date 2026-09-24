@@ -2,10 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Muffin.Core;
-using Muffin.Game.Cards;
+using Chapchu.Core;
+using Chapchu.Game.Cards;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class ClickManager : MonoBehaviour

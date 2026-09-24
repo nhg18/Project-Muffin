@@ -1,14 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Muffin.Network;
+using Chapchu.Network;
 using TMPro;
-using Muffin.UI.Components;
-using Muffin.UI.Interfaces;
-using Muffin.UI.Popup;
+using Chapchu.UI.Components;
+using Chapchu.UI.Interfaces;
+using Chapchu.UI.Popup;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Muffin.UI
+namespace Chapchu.UI
 {
 
     public class JoinRoomSubmitLogic : MonoBehaviour, ISubmitLogic

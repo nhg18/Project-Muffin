@@ -8,7 +8,7 @@ using UnityEngine;
 /// Room에서 외부로 노출되는 Event Bus
 /// </summary>
 
-namespace Muffin.Network
+namespace Chapchu.Network
 {
     public static class RoomEvents
     {

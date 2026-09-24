@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Splines;
 using Unity.Mathematics;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class OtherPlayerHandView : MonoBehaviour

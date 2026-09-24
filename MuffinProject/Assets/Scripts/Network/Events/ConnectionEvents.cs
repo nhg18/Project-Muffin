@@ -8,7 +8,7 @@ using UnityEngine;
 /// Connect 관련 외부로 노출되는 Event Hub
 /// </summary>
 
-namespace Muffin.Network
+namespace Chapchu.Network
 {
     public static class ConnectionEvents
     {

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace Muffin.Presentation
+namespace Chapchu.Presentation
 {
 
     public class TargetSelectionManager : MonoBehaviour
