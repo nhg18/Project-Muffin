@@ -38,14 +38,80 @@ namespace Chapchu.EditorTools
 
         private static void ConfigureSprites()
         {
+            CreateVerticalOverlay(SpriteDir + "title_overlay_vertical.png");
+            // 배경이 반투명한 박스(입력창 · 시스템 버튼)는 테두리를 링으로 그린다.
+            // 꽉 찬 사각 2장을 겹치면 배경 아래로 테두리색이 비쳐 CSS(배경 위에 테두리)와 달라진다.
+            CreateRing(SpriteDir + "ui_ring_r20_w4.png", 4f / 20f);
+            CreateRing(SpriteDir + "ui_ring_r14_w2.png", 2f / 14f);
+
             // 둥근 사각은 반경 64 원본 하나를 Image.pixelsPerUnitMultiplier(= 64 / 원하는 반경)로 재사용한다.
             ConfigureSprite(SpriteDir + "ui_round64.png", 64, false);
+            ConfigureSprite(SpriteDir + "ui_ring_r20_w4.png", 64, false);
+            ConfigureSprite(SpriteDir + "ui_ring_r14_w2.png", 64, false);
             ConfigureSprite(SpriteDir + "ui_round64_top_highlight.png", 64, false);
             ConfigureSprite(SpriteDir + "ui_shadow_soft.png", 101, false);
-            ConfigureSprite(SpriteDir + "title_overlay_radial.png", 0, false);
+            ConfigureSprite(SpriteDir + "title_overlay_vertical.png", 0, false);
             ConfigureSprite(SpriteDir + "icon_sound.png", 0, false);
             ConfigureSprite(SpriteDir + "icon_menu.png", 0, false);
             ConfigureSprite("Assets/Sprites/TitleBackground.png", 0, true);
+        }
+
+        // 12-title-ui.md 9-1: 위 → 아래 #2E2440 26% → 40% 지점 10% → 46%. 색은 고정이고 알파만 변한다.
+        private static void CreateVerticalOverlay(string path)
+        {
+            const int width = 4;
+            const int height = 256;
+            Color32 baseColor = new(0x2E, 0x24, 0x40, 0xFF);
+
+            Texture2D texture = new(width, height, TextureFormat.RGBA32, false);
+            for (int y = 0; y < height; y++)
+            {
+                // 텍스처 y 는 아래가 0 이므로 CSS 기준(위가 0) 위치로 뒤집는다.
+                float t = 1f - (y + 0.5f) / height;
+                float alpha = t < 0.4f
+                    ? Mathf.Lerp(0.26f, 0.10f, t / 0.4f)
+                    : Mathf.Lerp(0.10f, 0.46f, (t - 0.4f) / 0.6f);
+
+                Color32 color = baseColor;
+                color.a = (byte)Mathf.RoundToInt(alpha * 255f);
+                for (int x = 0; x < width; x++)
+                    texture.SetPixel(x, y, color);
+            }
+
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path);
+        }
+
+        // ui_round64.png 와 같은 160px · 반경 64 윤곽의 링. 두께는 (테두리 / 반경) 비율로 받는다 → 64 / 반경 배율로 쓰면 원하는 두께가 된다.
+        private static void CreateRing(string path, float thicknessRatio)
+        {
+            const int size = 160;
+            const float radius = 64f;
+            float half = size / 2f;
+            float thickness = radius * thicknessRatio;
+
+            Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // 둥근 사각의 부호 거리(안쪽 음수). 안쪽 윤곽은 같은 거리장을 두께만큼 줄인 것.
+                    float qx = Mathf.Abs(x + 0.5f - half) - (half - radius);
+                    float qy = Mathf.Abs(y + 0.5f - half) - (half - radius);
+                    float outside = new Vector2(Mathf.Max(qx, 0f), Mathf.Max(qy, 0f)).magnitude;
+                    float distance = outside + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+
+                    float outer = Mathf.Clamp01(0.5f - distance);
+                    float inner = Mathf.Clamp01(0.5f - (distance + thickness));
+                    byte alpha = (byte)Mathf.RoundToInt((outer - inner) * 255f);
+                    texture.SetPixel(x, y, new Color32(0xFF, 0xFF, 0xFF, alpha));
+                }
+            }
+
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path);
         }
 
         private static void ConfigureSprite(string path, int border, bool compressed)
@@ -111,22 +177,15 @@ namespace Chapchu.EditorTools
         }
 
         // 수치는 12-title-ui.md 8절의 px 값을 TMP 정규화 단위로 옮긴 시작값이다. 아티팩트와 겹쳐 보며 최종 조정한다(플랜 S6).
+        // 12-title-ui.md 8절의 px 값을 그대로 환산한다. 프리셋은 글자 크기별이다(같은 px 라도 크기마다 SDF 값이 다르다).
         private static void CreateMaterialPresets(TMP_FontAsset fontAsset)
         {
-            // 로고 190px: 외곽선 5 · 그림자 (6, 6) 90%
-            Material logo = GetOrCreatePreset(fontAsset, "Logo");
-            SetOutline(logo, 0.3f);
-            SetUnderlay(logo, new Color32(Stroke.r, Stroke.g, Stroke.b, 230), 0.2f, -0.2f, 0.3f);
-
-            // 부제 36px: 외곽선 2.5 · 그림자 (0, 3) 85%
-            Material subtitle = GetOrCreatePreset(fontAsset, "Subtitle");
-            SetOutline(subtitle, 0.45f);
-            SetUnderlay(subtitle, new Color32(Stroke.r, Stroke.g, Stroke.b, 217), 0f, -0.5f, 0.45f);
-
-            // 에러 18px: 그림자 (0, 2) 50%
-            Material error = GetOrCreatePreset(fontAsset, "Error");
-            SetOutline(error, 0f);
-            SetUnderlay(error, new Color32(Stroke.r, Stroke.g, Stroke.b, 128), 0f, -0.7f, 0f);
+            // 로고 190: 외곽선 5 · 그림자 (6, 6) 90%
+            ApplyTextEffects(GetOrCreatePreset(fontAsset, "Logo"), fontAsset, 190f, 5f, new Vector2(6f, 6f), 0.9f);
+            // 부제 36: 외곽선 2.5 · 그림자 (0, 3) 85%
+            ApplyTextEffects(GetOrCreatePreset(fontAsset, "Subtitle"), fontAsset, 36f, 2.5f, new Vector2(0f, 3f), 0.85f);
+            // 에러 18: 외곽선 없음 · 그림자 (0, 2) 50%
+            ApplyTextEffects(GetOrCreatePreset(fontAsset, "Error"), fontAsset, 18f, 0f, new Vector2(0f, 2f), 0.5f);
         }
 
         private static Material GetOrCreatePreset(TMP_FontAsset fontAsset, string suffix)
@@ -144,26 +203,44 @@ namespace Chapchu.EditorTools
             return preset;
         }
 
-        private static void SetOutline(Material material, float width)
+        /// <summary>
+        /// CSS 의 -webkit-text-stroke(paint-order: stroke fill) + 하드 text-shadow 를 TMP SDF 머티리얼로 옮긴다.
+        /// </summary>
+        /// <param name="stroke">글자 바깥으로 보이는 외곽선 두께 px (CSS stroke 폭의 절반)</param>
+        /// <param name="shadow">그림자 (오른쪽, 아래) px. 브라우저는 외곽선을 뺀 글자 면 모양으로 그림자를 그린다(아티팩트 렌더링으로 확인)</param>
+        private static void ApplyTextEffects(Material material, TMP_FontAsset fontAsset, float fontSize, float stroke, Vector2 shadow, float shadowAlpha)
         {
-            material.SetColor("_OutlineColor", (Color)Stroke);
-            material.SetFloat("_OutlineWidth", width);
-            // TMP 외곽선은 글자 안쪽도 깎는다. CSS paint-order(stroke → fill)처럼 면을 유지하려고 같은 양만큼 부풀린다.
-            material.SetFloat("_FaceDilate", width);
+            // TMP 는 기본적으로 효과 값을 패딩 한도 안으로 줄여(Ratios) px 로 환산할 수 없다. 끄고 직접 환산한다.
+            material.EnableKeyword("RATIOS_OFF");
+
+            // 셰이더 1 단위 = GradientScale 텍셀. 텍셀 → px 는 글자 크기 / 아틀라스 샘플링 크기.
+            float pxPerUnit = material.GetFloat(ShaderUtilities.ID_GradientScale) * fontSize / fontAsset.faceInfo.pointSize;
+
+            // TMP 외곽선은 면 가장자리를 중심으로 안팎 반씩 그려진다.
+            // 면을 두께의 절반만큼 부풀리면 원래 글자 면은 그대로 두고 바깥에 stroke 만큼 보인다.
+            float halfStroke = stroke * 0.5f / pxPerUnit;
+            material.SetFloat(ShaderUtilities.ID_FaceDilate, halfStroke);
+            material.SetFloat(ShaderUtilities.ID_OutlineWidth, halfStroke);
+            material.SetColor(ShaderUtilities.ID_OutlineColor, ToShaderColor(Stroke));
+
+            // TMP 언더레이는 부풀린 면을 기준으로 그려지므로, 같은 양만큼 줄여 원래 글자 면 모양으로 되돌린다.
+            material.EnableKeyword("UNDERLAY_ON");
+            Color shadowColor = (Color)Stroke;
+            shadowColor.a = shadowAlpha;
+            material.SetColor(ShaderUtilities.ID_UnderlayColor, ToShaderColor(shadowColor));
+            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, shadow.x / pxPerUnit);
+            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -shadow.y / pxPerUnit);
+            material.SetFloat(ShaderUtilities.ID_UnderlayDilate, -halfStroke);
+            material.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+
             ShaderUtilities.UpdateShaderRatios(material);
             EditorUtility.SetDirty(material);
         }
 
-        private static void SetUnderlay(Material material, Color color, float offsetX, float offsetY, float dilate)
-        {
-            material.EnableKeyword("UNDERLAY_ON");
-            material.SetColor("_UnderlayColor", color);
-            material.SetFloat("_UnderlayOffsetX", offsetX);
-            material.SetFloat("_UnderlayOffsetY", offsetY);
-            material.SetFloat("_UnderlayDilate", dilate);
-            material.SetFloat("_UnderlaySoftness", 0f);
-            EditorUtility.SetDirty(material);
-        }
+        // TMP 셰이더의 외곽선 · 언더레이 색은 [HDR] 이라 Linear 색 공간에서 자동 변환되지 않는다.
+        // 인스펙터 색상 선택기는 알아서 바꿔 저장하지만 스크립트는 직접 선형 값으로 넣어야 디자인 색(sRGB)과 같아진다.
+        private static Color ToShaderColor(Color color) =>
+            QualitySettings.activeColorSpace == ColorSpace.Linear ? color.linear : color;
 
         private static string AsciiPrintable()
         {
