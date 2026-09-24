@@ -3,6 +3,7 @@
 **작성일**: 2026-09-22
 **대상**: 프로그래밍 파트 2인 (게임 로직 1 · UI 1)
 **기준 문서**: [`systems/`](systems/) · [`refactoring-plan.md`](refactoring-plan.md)
+**트랙 문서**: [`plan-a-logic.md`](plan-a-logic.md) (A · 로직) · [`plan-b-ui.md`](plan-b-ui.md) (B · UI) — **2026-09-24 분리.** 작업 목록은 트랙 문서, 이 문서는 공통 규칙 · 게이트 · 동기화 지점
 
 ---
 
@@ -59,69 +60,38 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 
 ## 3. 마일스톤
 
+작업 목록은 트랙 문서로 나눴다. **이 절은 게이트(합류 조건)와 동기화 지점만 가진다.**
+
+| 트랙 | 문서 |
+| --- | --- |
+| **A — 게임 로직** | [`plan-a-logic.md`](plan-a-logic.md) |
+| **B — UI** | [`plan-b-ui.md`](plan-b-ui.md) (아웃게임 세부: `docs/title-ui` 브랜치의 `title-ui-plan.md` · `ui-refactoring-plan.md`) |
+
 각 마일스톤 끝에서 **ParrelSync 4클론으로 실제 플레이 가능**해야 한다. 기간은 2인 기준 추정치.
 
-### M0 — 계약 확정 (같이, 3일)
+| 마일스톤 | 기간 | A | B | 게이트 (양쪽 합류 조건) |
+| --- | --- | --- | --- | --- |
+| **M0** 계약 확정 | 3일 | 네트워크 2건 (A0-1, A0-2) ✅ | 계약 리뷰, 로딩 팝업 | ✅ 계약 3종 머지(PR #10). 잔여: 접속 실패 시 안내 없이 정지하는 문제 해소 |
+| **M1** 마스터 권한 / UI 재연결 | 2주 | `GameServer`, 요청 파이프라인, 시작 시퀀스 | `FakeGameServer`, 좌석 연결, 입력, 팝업 인프라, 타이틀 | 4인 입장 → 마스터가 셔플한 덱에서 각자 5장 → 전원 화면에 HP 100 · 손패 장수 · 턴 외곽선 정상 |
+| **M2** 카드 파이프라인 + 함정 | 2주 | 체인 마스터 소유, 5초 마감, `EffectContext`, 함정 슬롯 | 반응 타이머, 체인 · 카운터 · 함정 UI, 거절 사유 | A09 → C05 → 체인 역순이 4인 전원 화면에서 동일 |
+| **M3** 체력 · 턴 · 승리 | 1.5주 | `HealthService`, `LifeState`, 턴 타이머, 찹츄 | HP 위험색, 사망 표시, 턴 타이머, 찹츄 버튼, 결과 화면 | 게임이 **끝난다.** 처치 승리 · 찹츄 승리 모두 |
+| **M4** 카드 대량 구현 | 2주 | 복잡한 효과, MVP 6장 검증 | **로직 투입** — 단순 효과 + 59장 SO | MVP 6장 통과 후 59장 |
+| **M5** MVP 마감 | 2주 | 방 시스템, 재접속, asmdef, 로그인 | 모바일 빌드 · 해상도 · 터치 | 모바일 기기에서 4인 1판 완주 (제안) |
 
-| 작업 |
-| --- |
-| 노션 9/18 갱신분을 `systems/03-turn.md` 에 반영 (20초 확정, **자동 제출 폐기**, 강제 퇴장 N 결정) |
-| `PlayerProps` / `RoomProps` 상수화, `"PlayerHP"` / `"HP"` / `"CardsCount"` / `"HandCount"` 혼재 제거 |
-| `GameEvents` 재정의 — 전 이벤트에 `actorNumber` 추가, `RaiseHandCountChanged` 오호출 수정(C-1) |
-| `IGameRequests` 인터페이스 스텁 + `CardInstance` 구조체 정의 |
-| `GameStatus` 정리 (초기 손패 **5장**, HP `int`) |
+### 3-1. 동기화 지점 (A ↔ B 가 만나는 곳)
 
-> 이 단계는 **한 PR 로 둘이 같이** 끝낸다. 여기서 갈라지면 이후 모든 병합이 충돌한다.
+두 트랙은 아래 지점에서만 서로를 기다린다. 나머지 기간에는 각자 머지한다.
 
-### M1 — 마스터 권한 / UI 재연결 (2주, 병렬)
+| # | 시점 | 먼저 끝내는 쪽 | 내용 | 기다리는 쪽 |
+| --- | --- | --- | --- | --- |
+| S1 | M1 첫 PR | A (A1-1) | **[계약]** `OnDrawn` 공개/비공개 분리 + `CardInstance` 전달. 현재 카드 ID 가 전원에게 새고, UI 가 `InstanceId` 를 몰라 `RequestPlayCard` 를 부를 수 없다 | B 의 `FakeGameServer` (B1-1) |
+| S2 | M1 끝 | A (A1-5) | `IGameRequests` Photon 구현체 머지 → B 가 **교체 PR** (`FakeGameServer` → 실제, `Presentation` 의 옛 로직 제거) | M1 게이트 |
+| S3 | M2 첫 PR | A (A2-1) | **[계약]** 체인 · 반응 마감 · 함정 · 손패 제거 이벤트 | B 의 M2 전체 |
+| S4 | M3 초 | A (A3-4) | 턴 마감 시각 이벤트 | B 의 턴 타이머 (B3-2) |
+| S5 | M4 시작 | A (A4-1) | 효과 SO 기반 클래스 동결 | B 의 단순 효과 (B4-1) |
+| — | 수시 | A | ✅ B 의 요청 R-1 ~ R-3 (`plan-a-logic.md` 3절 · 3-1 인계) | B 의 PR4 · PR6 |
 
-| A (로직) | B (UI) |
-| --- | --- |
-| `GameServer` 도입: 덱 · 손패 · HP · 턴순서 · 버림 더미 원본 소유 | `FakeGameServer` 작성 — `IGameRequests` 구현 + `GameEvents` 발행 (오프라인 개발용, 이후에도 유지) |
-| 요청-검증-전파 파이프라인 (`if (!PhotonNetwork.IsMasterClient) return;` 강제) | `PlayerSeat` HP 게이지 · 손패 장수 실제 연결 (C-13, C-14) |
-| `Deck.Shuffle()` 구현, 소진 시 버림 더미 재생성 (C-6, C-7) | 좌석 계산을 `SeatManager` 한 곳으로 통합 (C-16), `OnEnable` 싱글톤 접근 제거 (C-15) |
-| `"RoomDeck"` 제거 → `deckCount` 만 공개 (B-1) | `PutAwayMyCards` 중복 45줄 공통화 |
-| 게임 시작 1회 시퀀스: 셔플 → 인스턴스 ID → HP 100 → 5장 배분 → 턴 순서 무작위 | 입력 재작성: 우클릭 취소 → 모바일 입력 (C-21), `TargetSelectionManager` 취소 토큰 (C-12, C-19) |
-
-**게이트**: 4인 입장 → 마스터가 셔플한 덱에서 각자 5장 → 전원 화면에 서로의 HP 100 · 손패 장수 · 턴 외곽선이 정상 표시.
-
-### M2 — 카드 파이프라인 + 함정 슬롯 (2주, 병렬)
-
-| A (로직) | B (UI) |
-| --- | --- |
-| 체인을 `GameServer` 단독 소유로, `isCanceled` 마스터 전용 (A-2) | 반응 타이머 UI (5초, 전원 동일) |
-| `Invoke` 제거 → `PhotonNetwork.Time` 기준 5초 마감, 카운터 등록 시 재시작 (B-4, B-5) | 체인 표시 UI (**기획 확정 필요**) |
-| `EffectContext` 도입 (대상 0개도 1회 실행, 다중 대상 일괄 계산 — C-9, C-10) | 카운터 사용 UI (**기획 확정 필요**) |
-| 함정 슬롯 데이터 3칸 (설치 / 발동 / 파괴 / 공개, 개수만 공개) | 함정 슬롯 UI + 설치 · 발동 인터랙션 |
-| 사용한 카드 손패에서 제거 → 버림 더미 (C-8) | 카드 사용 거절 사유 표시 (`ToastPopup` 재사용) |
-
-**게이트**: A09(피해) → C05(무효화) → 체인 역순 처리가 4인 전원 화면에서 동일하게 보인다.
-
-### M3 — 체력 · 사망 / 턴 · 승리 (1.5주, 병렬)
-
-| A (로직) | B (UI) |
-| --- | --- |
-| `HealthService` (감소 · 무효 · 전환 전부 계산 후 1회 반영), 처리 ID 중복 방지 | HP 위험색(1~20), 사망 대기 카운트, 최종 사망 좌석 비활성 |
-| `LifeState` (Alive / DeathPending / Dead), 동시 사망 일괄 처리 | 턴 타이머 20초 표시 (로컬 계산, 판정은 마스터) |
-| 메인 행동 1회 제한, 턴 타이머 마스터 판정 | 찹츄 버튼 (손패 정확히 10장일 때만 활성) |
-| 찹츄 선언 · 해제 · 판정, 처치 승리, 무승부 | 결과 화면 (**기획 확정 필요**) |
-
-**게이트**: 게임이 **끝난다.** 처치 승리와 찹츄 승리 양쪽 모두.
-
-### M4 — 카드 대량 구현 (2주, 분담 재조정)
-
-A 의 부하가 B 의 3배가 되는 구간이므로 **B 도 로직에 투입**한다.
-
-1. A: 구조가 까다로운 효과 — `Negate`, `Redirect`, `Choice`, `Peek`, 사후 트리거(T06~T16)
-2. B: 단순 파라미터 효과 — `Damage`, `Heal`, `Draw`, `Discard`, `SkipTurn` … + 카드 59장 SO 에셋 작성
-3. **MVP 6장(A09 / A08 / A06 / A05 / C05 / T06)** 으로 구조 검증 → 통과 후에만 나머지 53장
-
-> 카드 수치 N / M 확정이 전제다. 미확정이면 M4 전체가 멈춘다.
-
-### M5 — MVP 마감 (2주)
-
-방 시스템 확정 · 구현, 로그인, 재접속 / 마스터 이탈, `asmdef` 분리(Phase 1-5 — M2 에서 순환이 풀린 뒤),
-모바일 빌드 · 해상도 · 터치 검증.
+> **S1 이 늦어지면 B 의 M1 인게임이 전부 멈춘다.** A 는 M1 첫날 S1 부터 올린다.
 
 ---
 
@@ -185,17 +155,17 @@ A 의 부하가 B 의 3배가 되는 구간이므로 **B 도 로직에 투입**�
 
 ### 남은 항목 (마일스톤에 편입)
 
-| # | 항목 | 편입 |
+| # | 항목 | 편입 (트랙 문서 번호) |
 | --- | --- | --- |
-| 1 | `PhotonConnection.Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 설정을 건너뛴다. 이 값이 꺼진 채 연결되면 `PhotonNetwork.LoadLevel` 이 동기화되지 않아 **인게임 진입이 실패**한다 | **M0** |
-| 2 | `OnDisconnected` 의 처리 분기가 전부 주석. 접속 실패 시 안내도 복구도 없다. 연결 타임아웃도 없음 | **M0** |
-| 3 | 미사용 `Resources/Popups/LoadingPopup.prefab` 을 접속 대기 표시에 연결 | M0 |
-| 4 | 모든 Canvas 가 `ConstantPixelSize` — 모바일 해상도 대응 없음. `ProjectSettings` 는 4방향 자동회전 | **M1 (기획 4-3 확정 후)** |
-| 5 | `PopupManager.CloseAllModals` 가 `.gameObject` 대신 컴포넌트를 `Destroy` → 씬 전환 시 팝업이 화면에 남는다 | M1 |
-| 6 | 닉네임 구현 2벌 (`NicknameInput` vs `NicknameInputLogic`) — 검증 규칙이 서로 다름. `NicknameValidator` 로 단일화 | M1 |
-| 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 |
-| 8 | `NicknameInput.LoadScene()` 이 `async void` (`CLAUDE.md` 12절 위반), 취소 처리 없음 | M1 |
+| 1 | `PhotonConnection.Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 설정을 건너뛴다. 이 값이 꺼진 채 연결되면 `PhotonNetwork.LoadLevel` 이 동기화되지 않아 **인게임 진입이 실패**한다 | **M0** · A0-1 ✅ |
+| 2 | `OnDisconnected` 의 처리 분기가 전부 주석. 접속 실패 시 안내도 복구도 없다. 연결 타임아웃도 없음 | **M0** · A0-2 ✅ (표시는 B) |
+| 3 | 미사용 `Resources/Popups/LoadingPopup.prefab` 을 접속 대기 표시에 연결 | M0 · B0-2 |
+| 4 | 모든 Canvas 가 `ConstantPixelSize` — 모바일 해상도 대응 없음. `ProjectSettings` 는 4방향 자동회전 | **M1 (기획 4-3 확정 후)** · B1-14 |
+| 5 | `PopupManager.CloseAllModals` 가 `.gameObject` 대신 컴포넌트를 `Destroy` → 씬 전환 시 팝업이 화면에 남는다 | M1 · B1-9 (U-1) |
+| 6 | 닉네임 구현 2벌 (`NicknameInput` vs `NicknameInputLogic`) — 검증 규칙이 서로 다름. `NicknameValidator` 로 단일화 | M1 · B1-11 (U-19) |
+| 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 · B1-13 + A 요청 R-2 ✅ |
+| 8 | `NicknameInput.LoadScene()` 이 `async void` (`CLAUDE.md` 12절 위반), 취소 처리 없음 | M1 · B1-12 (U-14) |
 | 9 | `PlayerSettings` 의 `productName: CardGame` / `companyName: DefaultCompany` 미설정 | M5 |
-| 10 | `RoomPanel` 의 나가기가 `DebugLobbyScene` 으로 이동 (개발 편의. 정식 흐름은 `LobbyScene`) | M5 |
+| 10 | `RoomPanel` 의 나가기가 `DebugLobbyScene` 으로 이동 (개발 편의. 정식 흐름은 `LobbyScene`) | M5 · B5-2 |
 
 1 · 2번은 접속 실패 시 사용자가 **아무 안내 없이 정지**하는 문제라 M0 에서 같이 처리한다.
