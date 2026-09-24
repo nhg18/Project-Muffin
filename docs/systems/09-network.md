@@ -201,7 +201,7 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 재접속 시 상태 복원 | **미정 — 결정 필요** | 미정 |
 | 서버 접속 제한 시간 | 접속 시작 후 **15초** 안에 마스터 서버 접속이 끝나지 않으면 끊고 `ClientTimeout` 으로 알림 | 확정 |
 | 인터넷 없음 (접속 전) | Photon 을 호출하지 않고 `ExceptionOnConnect` 로 알림 (PUN 이 연결 실패 시 보내는 값과 동일) | 확정 |
-| 접속 실패 후 재시도 | 자동 재시도 없음. UI 가 사유를 표시하고 사용자가 재시도(`NetworkManager.Connect`) | 제안 |
+| 접속 실패 후 재시도 | 자동 재시도 없음. UI 가 사유를 표시하고 사용자가 재시도(`NetworkManager.Connect`). 타이틀은 접속 버튼을 다시 누르면 재시도 (`12-title-ui.md` 6절 · 10-5) | 확정 |
 
 ---
 

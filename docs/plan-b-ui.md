@@ -99,7 +99,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B1-10 | 타이틀 화면 재구성 | `title-ui-plan` S1~S6 | 4일. 끝나면 타이틀 → 로비가 일시 단절 |
 | B1-11 | 죽은 코드 · 폴더 · 네임스페이스 정리 | PR2 | |
 | B1-12 | `SceneLoader` 도입, `async void` 제거 | PR3 | B0-2 흡수 |
-| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | ←A 요청 R-2 · R-3 ✅ 완료 — 시작 가능 |
+| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | 세부 플랜 `title-ui-plan.md` S7 — ✅ 구현 (`feature/title-connect`), 실기기 확인 남음 |
 | B1-14 | Canvas 규격 통일 (Scale With Screen Size) | `development-plan` 6절 #4 | ⛔ 화면 방향 · 기준 해상도(기획 #3) |
 
 > ⚠ **M1 에서 B 의 부하가 가장 크다.** 인게임 8건 + 아웃게임 6건. `development-plan.md` 원안은 인게임만 계산했다.

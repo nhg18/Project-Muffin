@@ -20,6 +20,8 @@ namespace Chapchu.UI.Title
         [SerializeField] private TMP_Text connectLabel;
         [SerializeField] private ErrorLabel errorLabel;
 
+        private bool _connecting;
+
         /// <summary>검증을 통과한 닉네임(앞뒤 공백 제거)</summary>
         public event Action<string> ConnectRequested;
 
@@ -50,14 +52,21 @@ namespace Chapchu.UI.Title
         public void SetNickname(string nickname) => nicknameField.SetText(nickname);
 
         /// <summary>
-        /// 버튼 글자 "접속" ↔ "접속 중…". 버튼을 비활성화하지는 않는다.
+        /// 버튼 글자 "접속" ↔ "접속 중…". 버튼을 비활성화하지는 않고, 접속 중의 탭만 무시한다.
         /// </summary>
-        public void SetConnecting(bool connecting) => connectLabel.text = connecting ? ConnectingText : ConnectText;
+        public void SetConnecting(bool connecting)
+        {
+            _connecting = connecting;
+            connectLabel.text = connecting ? ConnectingText : ConnectText;
+        }
 
         private void HandleNicknameChanged(string _) => errorLabel.Clear();
 
         private void HandleConnectClicked()
         {
+            // 12-title-ui 5절: 접속 중에는 중복 요청을 막는다.
+            if (_connecting) return;
+
             string nickname = nicknameField.Text.Trim();
             NicknameValidationResult result = NicknameValidator.Validate(nickname);
             if (result != NicknameValidationResult.Valid)
