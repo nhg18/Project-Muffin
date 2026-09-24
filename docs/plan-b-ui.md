@@ -99,7 +99,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B1-10 | 타이틀 화면 재구성 | `title-ui-plan` S1~S6 | 4일. 끝나면 타이틀 → 로비가 일시 단절 |
 | B1-11 | 죽은 코드 · 폴더 · 네임스페이스 정리 | PR2 | |
 | B1-12 | `SceneLoader` 도입, `async void` 제거 | PR3 | B0-2 흡수 |
-| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | ←A 요청 R-2 |
+| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | ←A 요청 R-2 · R-3 ✅ 완료 — 시작 가능 |
 | B1-14 | Canvas 규격 통일 (Scale With Screen Size) | `development-plan` 6절 #4 | ⛔ 화면 방향 · 기준 해상도(기획 #3) |
 
 > ⚠ **M1 에서 B 의 부하가 가장 크다.** 인게임 8건 + 아웃게임 6건. `development-plan.md` 원안은 인게임만 계산했다.
@@ -151,11 +151,16 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 
 ## 3. B 가 A 에게 요청한 항목
 
-| # | 요청 | 원 번호 | 필요 시점 |
-| --- | --- | --- | --- |
-| R-1 | `RoomEvents.OnMasterClientSwitched` 추가 | U-12 | PR6 |
-| R-2 | `PhotonConnection.SetupInitNickname()` 삭제 | U-7 | PR4 |
-| R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | PR6 **전 필수** (A0-1, A0-2) |
+| # | 요청 | 원 번호 | 필요 시점 | 상태 |
+| --- | --- | --- | --- | --- |
+| R-1 | `RoomEvents.OnMasterClientSwitched` 추가 | U-12 | PR6 | ✅ A 완료 (2026-09-24) |
+| R-2 | `PhotonConnection.SetupInitNickname()` 삭제 | U-7 | PR4 | ✅ A 완료 (2026-09-24) |
+| R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | PR6 **전 필수** (A0-1, A0-2) | ✅ A 완료 (2026-09-24) |
+
+> **B 가 이어서 할 것** — 상세는 [`plan-a-logic.md`](plan-a-logic.md) 3-1.
+> * **A0-3**: A 브랜치(`temp/a-network-outgame`) **머지 후** `RoomPanel.Awake` 의 `AutomaticallySyncScene` 삭제
+> * **PR4**: `ConnectionEvents.OnDisconnected` 구독 → 안내 + 재시도(`NetworkManager.Connect()`). 인게임 끊김도 같은 이벤트로 온다
+> * **PR6**: `RoomEvents.OnMasterClientSwitched` 구독
 
 ---
 

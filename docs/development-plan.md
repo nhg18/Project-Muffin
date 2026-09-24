@@ -71,7 +71,7 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 
 | 마일스톤 | 기간 | A | B | 게이트 (양쪽 합류 조건) |
 | --- | --- | --- | --- | --- |
-| **M0** 계약 확정 | 3일 | 네트워크 2건 (A0-1, A0-2) | 계약 리뷰, 로딩 팝업 | ✅ 계약 3종 머지(PR #10). 잔여: 접속 실패 시 안내 없이 정지하는 문제 해소 |
+| **M0** 계약 확정 | 3일 | 네트워크 2건 (A0-1, A0-2) ✅ | 계약 리뷰, 로딩 팝업 | ✅ 계약 3종 머지(PR #10). 잔여: 접속 실패 시 안내 없이 정지하는 문제 해소 |
 | **M1** 마스터 권한 / UI 재연결 | 2주 | `GameServer`, 요청 파이프라인, 시작 시퀀스 | `FakeGameServer`, 좌석 연결, 입력, 팝업 인프라, 타이틀 | 4인 입장 → 마스터가 셔플한 덱에서 각자 5장 → 전원 화면에 HP 100 · 손패 장수 · 턴 외곽선 정상 |
 | **M2** 카드 파이프라인 + 함정 | 2주 | 체인 마스터 소유, 5초 마감, `EffectContext`, 함정 슬롯 | 반응 타이머, 체인 · 카운터 · 함정 UI, 거절 사유 | A09 → C05 → 체인 역순이 4인 전원 화면에서 동일 |
 | **M3** 체력 · 턴 · 승리 | 1.5주 | `HealthService`, `LifeState`, 턴 타이머, 찹츄 | HP 위험색, 사망 표시, 턴 타이머, 찹츄 버튼, 결과 화면 | 게임이 **끝난다.** 처치 승리 · 찹츄 승리 모두 |
@@ -89,7 +89,7 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 | S3 | M2 첫 PR | A (A2-1) | **[계약]** 체인 · 반응 마감 · 함정 · 손패 제거 이벤트 | B 의 M2 전체 |
 | S4 | M3 초 | A (A3-4) | 턴 마감 시각 이벤트 | B 의 턴 타이머 (B3-2) |
 | S5 | M4 시작 | A (A4-1) | 효과 SO 기반 클래스 동결 | B 의 단순 효과 (B4-1) |
-| — | 수시 | A | B 의 요청 R-1 ~ R-3 (`plan-a-logic.md` 3절) | B 의 PR4 · PR6 |
+| — | 수시 | A | ✅ B 의 요청 R-1 ~ R-3 (`plan-a-logic.md` 3절 · 3-1 인계) | B 의 PR4 · PR6 |
 
 > **S1 이 늦어지면 B 의 M1 인게임이 전부 멈춘다.** A 는 M1 첫날 S1 부터 올린다.
 
@@ -157,13 +157,13 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 
 | # | 항목 | 편입 (트랙 문서 번호) |
 | --- | --- | --- |
-| 1 | `PhotonConnection.Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 설정을 건너뛴다. 이 값이 꺼진 채 연결되면 `PhotonNetwork.LoadLevel` 이 동기화되지 않아 **인게임 진입이 실패**한다 | **M0** · A0-1 |
-| 2 | `OnDisconnected` 의 처리 분기가 전부 주석. 접속 실패 시 안내도 복구도 없다. 연결 타임아웃도 없음 | **M0** · A0-2 (표시는 B) |
+| 1 | `PhotonConnection.Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 설정을 건너뛴다. 이 값이 꺼진 채 연결되면 `PhotonNetwork.LoadLevel` 이 동기화되지 않아 **인게임 진입이 실패**한다 | **M0** · A0-1 ✅ |
+| 2 | `OnDisconnected` 의 처리 분기가 전부 주석. 접속 실패 시 안내도 복구도 없다. 연결 타임아웃도 없음 | **M0** · A0-2 ✅ (표시는 B) |
 | 3 | 미사용 `Resources/Popups/LoadingPopup.prefab` 을 접속 대기 표시에 연결 | M0 · B0-2 |
 | 4 | 모든 Canvas 가 `ConstantPixelSize` — 모바일 해상도 대응 없음. `ProjectSettings` 는 4방향 자동회전 | **M1 (기획 4-3 확정 후)** · B1-14 |
 | 5 | `PopupManager.CloseAllModals` 가 `.gameObject` 대신 컴포넌트를 `Destroy` → 씬 전환 시 팝업이 화면에 남는다 | M1 · B1-9 (U-1) |
 | 6 | 닉네임 구현 2벌 (`NicknameInput` vs `NicknameInputLogic`) — 검증 규칙이 서로 다름. `NicknameValidator` 로 단일화 | M1 · B1-11 (U-19) |
-| 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 · B1-13 + A 요청 R-2 |
+| 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 · B1-13 + A 요청 R-2 ✅ |
 | 8 | `NicknameInput.LoadScene()` 이 `async void` (`CLAUDE.md` 12절 위반), 취소 처리 없음 | M1 · B1-12 (U-14) |
 | 9 | `PlayerSettings` 의 `productName: CardGame` / `companyName: DefaultCompany` 미설정 | M5 |
 | 10 | `RoomPanel` 의 나가기가 `DebugLobbyScene` 으로 이동 (개발 편의. 정식 흐름은 `LobbyScene`) | M5 · B5-2 |

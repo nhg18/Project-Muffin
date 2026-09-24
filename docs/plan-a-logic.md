@@ -74,9 +74,9 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 | # | 작업 | 위치 | 비고 |
 | --- | --- | --- | --- |
-| A0-1 | `Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 누락 | `Network/PhotonConnection.cs:41` | 설정은 항상 하고, 연결 가능 여부만 분기 |
-| A0-2 | `OnDisconnected` 분기 구현 + 연결 타임아웃 | `Network/PhotonConnection.cs:85` | UI 표시는 B. A 는 `ConnectionEvents.OnDisconnected` 로 사유만 넘긴다 **→B** |
-| A0-3 | `RoomPanel.Awake` 의 `AutomaticallySyncScene` 중복 제거 요청 처리 | — | A0-1 **이후에만** B 가 지운다 (U-23) **→B** |
+| A0-1 | ✅ `Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 누락 | `Network/PhotonConnection.cs` | 설정은 항상 하고, 인터넷 확인은 `Connect()` 로 이동 |
+| A0-2 | ✅ `OnDisconnected` 분기 구현 + 연결 타임아웃 | `Network/PhotonConnection.cs` · `NetworkManager.cs` | 사유만 `ConnectionEvents.OnDisconnected` 로 넘긴다. 규칙은 `09-network.md` 11절 **→B** (3-1 인계) |
+| A0-3 | `RoomPanel.Awake` 의 `AutomaticallySyncScene` 중복 제거 요청 처리 | — | A0-1 머지 후 B 가 지운다 (U-23) **→B** (3-1 인계) |
 
 ### M1 — 마스터 권한 (2주)
 
@@ -146,11 +146,19 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 `docs/title-ui` 브랜치의 [`ui-refactoring-plan.md`](ui-refactoring-plan.md) 5절에서 넘어온 것. 파일 소유가 A 다.
 
-| # | 요청 | 원 번호 | 시한 |
-| --- | --- | --- | --- |
-| R-1 | `RoomEvents.OnMasterClientSwitched` 추가 | U-12 | B 의 PR6 전 |
-| R-2 | `PhotonConnection.SetupInitNickname()` 삭제 (호출처 0) | U-7 | B 의 PR4 와 함께 |
-| R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | = A0-1, A0-2. **B 의 PR6 전 필수** |
+| # | 요청 | 원 번호 | 시한 | 상태 |
+| --- | --- | --- | --- | --- |
+| R-1 | `RoomEvents.OnMasterClientSwitched` 추가 | U-12 | B 의 PR6 전 | ✅ 2026-09-24 |
+| R-2 | `PhotonConnection.SetupInitNickname()` 삭제 (호출처 0) | U-7 | B 의 PR4 와 함께 | ✅ 2026-09-24 |
+| R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | = A0-1, A0-2. **B 의 PR6 전 필수** | ✅ 2026-09-24 |
+
+### 3-1. B 에게 인계 (브랜치 `temp/a-network-outgame` → `changhwan.exe`)
+
+| B 작업 | 이제 할 수 있는 것 | 주의 |
+| --- | --- | --- |
+| A0-3 (U-23) | `RoomPanel.Awake` 의 `PhotonNetwork.AutomaticallySyncScene = true` 삭제 | 위 브랜치 **머지 후에만**. 먼저 지우면 인게임 진입이 깨진다 |
+| PR4 · B1-13 (U-6) | `ConnectionEvents.OnDisconnected(DisconnectCause)` 구독 → 안내 문구 + 재시도 버튼(`NetworkManager.Connect()`) | 인게임에서 끊겨도 같은 이벤트가 온다. `ExceptionOnConnect` = 인터넷 없음 포함 접속 실패, `ClientTimeout` = 15초 초과. 접속 중에 `Connect()` 를 다시 불러도 무시된다 |
+| PR6 (U-12) | `RoomInfoPanel` · `RoomPanel` 에서 `RoomEvents.OnMasterClientSwitched(Player)` 구독 → `(Host)` 표기 · 시작 버튼 갱신 | `OnPlayerLeft` 와의 호출 순서는 보장되지 않는다. 방장 이탈 처리(`08-room.md` 5절 #5)는 미정 |
 
 ---
 
