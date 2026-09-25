@@ -18,6 +18,13 @@ namespace Chapchu.Presentation
 
         public async Task<int> SelectPlayer(float timeoutSeconds)
         {
+            // 재진입 방어선. 호출자(PlayerHandPresenter)가 직렬화하므로 정상 흐름에서는 오지 않는다.
+            if (isWaitingForSelection)
+            {
+                Debug.LogWarning("[TargetSelectionManager] 이미 대상 선택 중. 새 요청은 취소(0)로 처리한다.");
+                return 0;
+            }
+
             isWaitingForSelection = true;
             selectedTarget = 0;
             float timer = 0f;
