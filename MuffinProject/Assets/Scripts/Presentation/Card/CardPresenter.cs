@@ -15,12 +15,20 @@ namespace Chapchu.Presentation
         private CardModel cardModel = new CardModel();
         public CardView cardView;
 
+        /// <summary>이 카드가 속한 손패. 손패 밖 카드(체인 표시용 등)는 null.</summary>
+        public PlayerHandPresenter Hand { get; private set; }
+
         private void Awake()
         {
 
         }
 
-        public void Setup(CardData data,int index = -1) //현재 PlayerHandView 에서 호출중
+        public void DownIndex()
+        {
+            cardModel.cardIndex = cardModel.cardIndex - 1;
+        }
+
+        public void Setup(CardData data, int index = -1, PlayerHandPresenter hand = null)
         {
             if (data == null)
             {
@@ -29,7 +37,7 @@ namespace Chapchu.Presentation
             }
             cardView.Setup(data);
             cardModel.Setup(data,index);
-
+            Hand = hand;
         }
 
         public bool LocalConditionCheck()
@@ -45,9 +53,26 @@ namespace Chapchu.Presentation
             }
         }
 
-        public async void OnCardDropped()
+        /// <summary>
+        /// 드롭 영역에 놓였을 때 CardView 가 호출. 실제 처리는 손패가 직렬화한다 (PlayerHandPresenter.PlayCardAsync).
+        /// </summary>
+        public void OnCardDropped()
         {
             Debug.Log("CardDropped!");
+
+            if (Hand == null)
+            {
+                Debug.LogError("[CardPresenter] 손패에 속하지 않은 카드를 드롭했다.");
+                cardView.ReturnToOrigin();
+                return;
+            }
+
+            _ = Hand.PlayCardAsync(this); // 예외는 PlayCardAsync 안에서 로그로 처리
+        }
+
+        /// <summary>대상 선택 → 사용 요청. 취소 · 타임아웃이면 손패로 되돌린다.</summary>
+        public async Task PlayAsync()
+        {
             List<int> targets = await SelectPlayer();
 
             if(targets.Count == 0)

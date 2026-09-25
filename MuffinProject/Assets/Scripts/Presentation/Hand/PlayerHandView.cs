@@ -25,6 +25,10 @@ namespace Chapchu.Presentation
 
         public void DiscardCard(int index)
         {
+            for(int i=index+1;i<Hands.Count;i++)
+            {
+                Hands[i].GetComponent<CardPresenter>().DownIndex();
+            }
             Destroy(Hands[index].gameObject);
             Hands.RemoveAt(index);
             PutAwayMyCards();
@@ -81,6 +85,20 @@ namespace Chapchu.Presentation
                 Hands[i].transform.DOKill();
                 Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]);
                 Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]); ;
+            }
+        }
+
+        /// <summary>
+        /// 카드 처리 잠금이 시작될 때 다른 카드의 드래그 · 호버를 되돌린다 (멀티터치 · 잠금 직전 입력 대비).
+        /// </summary>
+        public void CancelAllInteractions(CardView except)
+        {
+            foreach (GameObject card in Hands)
+            {
+                if (card == null) continue;
+                CardView view = card.GetComponent<CardView>();
+                if (view == null || view == except) continue;
+                view.CancelInteraction();
             }
         }
 

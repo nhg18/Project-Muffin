@@ -44,8 +44,23 @@ namespace Chapchu.Presentation
         private float zDepth; 
 
         private bool isHandMode = false;
+        private bool isHovered = false;
 
         private SpriteRenderer[] childRenderers;
+
+        /// <summary>
+        /// 지금 이 카드를 만질 수 있는가. HandMode 이고, 손패가 다른 카드를 처리 중이 아니어야 한다.
+        /// 손패에 속하지 않은 카드(Hand == null)는 HandMode 만 본다.
+        /// </summary>
+        private bool CanInteract
+        {
+            get
+            {
+                if (!isHandMode) return false;
+                if (cardPresenter != null && cardPresenter.Hand != null && cardPresenter.Hand.IsCardPlayInProgress) return false;
+                return true;
+            }
+        }
 
         public void Setup(CardData data)
         {
@@ -103,29 +118,48 @@ namespace Chapchu.Presentation
 
         private void HoverCard()
         {
+            isHovered = true;
             BringToFront();
             transform.DOScaleX(basicScaleX * UpScale, 0.1f);
             transform.DOScaleY(basicScaleY * UpScale, 0.1f);
         }
         private void UnHoverCard()
         {
+            isHovered = false;
             BringToOriginal();
             transform.DOScaleX(basicScaleX, 0.1f);
             transform.DOScaleY(basicScaleY, 0.1f);
+        }
+
+        /// <summary>
+        /// 진행 중인 드래그 · 호버를 되돌린다. 손패가 카드 처리 잠금을 걸 때 호출한다.
+        /// </summary>
+        public void CancelInteraction()
+        {
+            if (isDragging)
+            {
+                isDragging = false;
+                StartCoroutine(ReturnToOriginRoutine());
+            }
+            if (isHovered)
+            {
+                UnHoverCard();
+            }
         }
 
 
         public void OnPointerEnter(PointerEventData eventData)
         {
             Debug.Log("hover!");
-            if (isHandMode)
+            if (CanInteract)
             {
                 HoverCard();
             }
         }
         public void OnPointerExit(PointerEventData eventData)
         {
-            if (isHandMode)
+            // 잠금 중이라도 이미 커진 카드는 되돌린다. CanInteract 로 막으면 확대된 채 남는다.
+            if (isHovered)
             {
                 UnHoverCard();
             }
@@ -133,7 +167,7 @@ namespace Chapchu.Presentation
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (!isHandMode)
+            if (!CanInteract)
                 return;
 
             originalPosition = transform.localPosition;
@@ -145,7 +179,7 @@ namespace Chapchu.Presentation
         }
         public void OnDrag(PointerEventData eventData)
         {
-            if (!isHandMode)
+            if (!CanInteract)
                 return;
 
             if (!isDragging) return;
@@ -180,16 +214,12 @@ namespace Chapchu.Presentation
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            if (!isHandMode)
-                return;
-
             if (!isDragging) return;
             isDragging = false;
-            if (isDropArea(transform.position) && cardPresenter.LocalConditionCheck())
-            {
 
-                //StartCoroutine(StartCard());
-                //StartCard(); 
+            // 드래그 도중 잠금이 걸렸으면(다른 카드가 먼저 드롭됨) 드롭하지 않고 되돌린다.
+            if (CanInteract && isDropArea(transform.position) && cardPresenter.LocalConditionCheck())
+            {
                 cardPresenter.OnCardDropped();
             }
             else
