@@ -301,6 +301,35 @@ Scripts/UI/Title/
 - [x] Play 모드 자동 확인 (batchmode · 실제 Photon 접속): 닉네임 복원 / 접속 → 1.3초 후 `LobbyScene` / 접속 중 연타 무시 / 누르기 전 끊김은 표시 안 함 → 탭 시 재접속 → 로비 / `ClientTimeout` 시 10-5 문구 · 버튼 "접속" 복귀 · 늦게 온 접속 성공에도 이동 안 함
 - [ ] 수동 확인: 실기기 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비 — **보류** (기기 없음)
 
+### S8. 연결 중 · 연결 실패 상태 — 로딩 링 · 다시 시도 (0.5d)
+
+기준: `12-title-ui.md` 3절 #6~8 · 6절 · 7-1 · 9-3 (2026-09-25). 아티팩트 Version 12. **사용자가 아티팩트를 검증한 뒤 착수.**
+사유: 연결 전에 접속 버튼이 눌리고, 연결 없이 로비로 이동하는 버그 (사용자 보고 2026-09-25).
+
+**뷰 (B — 이 트랙)**
+
+| 항목 | 내용 |
+| --- | --- |
+| 에셋 | `Sprites/UI/ui_spinner_56.png` — 지름 56 · 선 6 · 바탕 링 `#FFFDF8` 25% + 1/4 호 `#B18AE0` (9-3). 흰색으로 그려 색은 Image color 로 줄 수 없음(두 색) → 스프라이트에 색 포함 |
+| 씬 | `Content/FormGroup` 옆에 **`LoadingGroup`** (폭 560 · 높이 216 · localScale 1.7 · FormGroup 과 같은 자리). 자식: `Spinner`(56×56) · `StatusText`(22 B, `#FFFDF8`) · `RetryButton`(PillButton 프리팹, 글자 "다시 시도") · `FailText`(18 B, `#FF6E8A`). VerticalLayoutGroup 가운데 정렬 · 간격 16 |
+| 스크립트 | `TitleView` 에 `SetPhase(Connecting / Failed(message) / Ready)` 추가: FormGroup ↔ LoadingGroup 활성 전환, 실패 문구 설정. `RetryRequested` 이벤트. `Spinner` 는 `SpinnerView`(`Transform.Rotate(0, 0, -360 * dt)`) |
+| 삭제 | `TitleView.SetConnecting` · "접속 중…" 문자열 · `_connecting` 탭 무시 (규칙 폐기) |
+
+**로직 연결 (로직 담당)** — `TitlePresenter`
+
+| 시점 | 동작 |
+| --- | --- |
+| `Start` | `IsReady` 면 `SetPhase(Ready)`, 아니면 `SetPhase(Connecting)` + `!IsConnected` 면 `Connect()` |
+| `OnConnected` | `SetPhase(Ready)` |
+| `OnDisconnected(cause)` | 어느 상태든 `SetPhase(Failed(10-5 문구))` |
+| `RetryRequested` | `SetPhase(Connecting)` → `Connect()` |
+| `ConnectRequested(nickname)` | `IsReady` 면 저장 → 로비. 아니면 `SetPhase(Failed("연결이 끊어졌습니다…"))` |
+
+- [ ] 아티팩트 Version 12 사용자 검증
+- [ ] 스프라이트 · `LoadingGroup` · `TitleView.SetPhase` (뷰)
+- [ ] `TitlePresenter` 연결 (로직)
+- [ ] 확인: 앱 시작 → 링 회전 → 연결 → 입력 묶음 / 비행기 모드 → 실패 문구 + 다시 시도 → 인터넷 켜고 탭 → 링 → 입력 묶음 / 연결된 뒤 끊김 → 실패 상태
+
 ---
 
 ## 6. 커밋 분할
@@ -326,3 +355,4 @@ PR 설명에 **"접속 → 로비 흐름이 일시적으로 끊긴다"** 를 적
 | 2026-09-24 | 버전 문구 `Project ChapChu` 확정, 아티팩트 Version 8에 반영 |
 | 2026-09-24 | 모바일 확대 배율 (`12-title-ui.md` 4-3): `TitleGroup` localScale 1.3 · `FormGroup` 1.7, `Content` VerticalLayoutGroup 의 Child Scale Width/Height 켬, 간격 43 → 56. 내부 수치는 아티팩트 그대로 두고 묶음 배율로만 키운다 |
 | 2026-09-24 | S7 접속 로직 연결(PR4) 추가 — `TitlePresenter` |
+| 2026-09-25 | S8 연결 중 · 연결 실패 상태(로딩 링 · 다시 시도) 추가. 아티팩트 Version 12 |
