@@ -25,6 +25,10 @@ namespace Chapchu.Presentation
 
         public void DiscardCard(int index)
         {
+            for(int i=index+1;i<Hands.Count;i++)
+            {
+                Hands[i].GetComponent<CardPresenter>().DownIndex();
+            }
             Destroy(Hands[index].gameObject);
             Hands.RemoveAt(index);
             PutAwayMyCards();

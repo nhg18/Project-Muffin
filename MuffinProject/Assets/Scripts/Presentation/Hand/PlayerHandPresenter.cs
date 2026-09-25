@@ -62,6 +62,7 @@ namespace Chapchu.Presentation
         {
             playerHand.DiscardCard(index);
             handView.DiscardCard(index);
+
             if (!isPropertyUpdatePending)
             {
                 isPropertyUpdatePending = true;

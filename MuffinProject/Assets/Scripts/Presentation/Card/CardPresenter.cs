@@ -23,6 +23,11 @@ namespace Chapchu.Presentation
 
         }
 
+        public void DownIndex()
+        {
+            cardModel.cardIndex = cardModel.cardIndex - 1;
+        }
+
         public void Setup(CardData data, int index = -1, PlayerHandPresenter hand = null)
         {
             if (data == null)
