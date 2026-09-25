@@ -1,18 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class FakeGameServer : MonoBehaviour
+namespace Chapchu.Practice
 {
-    // Start is called before the first frame update
-    void Start()
+    public class FakeGameServer : MonoBehaviour, IGameRequests, IGameState
     {
-        
-    }
+        public int CurrentTurnActor { get; private set; } = -1;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        public void RequestEndTurn()
+        {
+            Debug.Log("RequestEndTurn");
+        }
     }
 }
