@@ -6,6 +6,70 @@
 
 ---
 
+## 2026-09-25 · 로비 개편 0~2단계 (문서 · 캔버스 초기화 · 배치)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/lobby-layout` (← `changhwan.exe` `8b4ff88`) · PR #21 |
+| 작업 위치 | worktree `../Project-Muffin-title` (Library 재사용) |
+| 기준 | `docs/systems/14-lobby-ui.md` (이번에 신설). 디자인 아티팩트는 개편 예정이라 참고하지 않음 |
+
+### 한 것
+
+| 단계 | 내용 |
+| --- | --- |
+| 0 | `14-lobby-ui.md` 신설(크기 · 배치 규칙), `08-room.md` 랜덤 매칭 확정, `01-game-flow.md` · `README.md` 연결 |
+| 1 | `LobbyScene` CanvasScaler 800×600 고정 → 1920×1080 · 높이 기준. Canvas 아래 전부 삭제, 카메라 단색 배경 `#2E2440` |
+| 2 | `Scripts/Editor/LobbySceneBuilder.cs` 로 Canvas 아래 재생성: `LobbyPanel` › `NicknameText`(48, 좌상단 48/48, 폭 800 말줄임) · `MainButtons`(1560×200, 간격 60) › `RandomMatchButton` · `CreateRoomButton` · `JoinRoomButton`(480×200, 글자 56). 기본 UISprite 회색 + 학교안심 R 폰트 |
+
+### 캡처 결과 (`LobbySceneBuilder.BuildAndCapture`)
+
+| 해상도 | 결과 |
+| --- | --- |
+| 1920×1080 · 1280×720 | 문서 7-1 그대로. 버튼 줄 정중앙, 닉네임 좌상단 |
+| 2340×1080 · 2400×1080 (폰) | 좌우 여백만 늘어남. 잘림 없음 |
+| 2048×1536 (iPad 4:3) | **양 끝 버튼 60씩 잘림** — 높이 기준 스케일의 한계. `14-lobby-ui` 7-1 · 10절에 기록. Expand 전환은 전역 미정 #9 |
+
+### 결정 (사용자, 2026-09-25)
+
+1. 랜덤 매칭 MVP 유지 → `08-room.md` 4절 · 6절에 확정으로 추가
+2. 기능 없는 버튼(설정 · 친구 · 프로필 편집 · 사운드/메뉴)은 두지 않음 → `14-lobby-ui` 3절 #1
+3. 문서 · 구현 모두 플랜 세션이 직접 수행
+
+### 역할 분리 (사용자 지시, 2026-09-25)
+
+**이 작업은 뷰만 만든다.** `LobbyPanel` · `ProfilePresenter` · `ProfileView` 를 씬에 붙이고 참조를 연결하는 것은 **로직 담당(옆 세션)** 몫.
+빌더에 연결 코드를 넣었다가 뺐다 — 뷰 산출물에 로직 연결이 섞이지 않도록.
+
+### 로직 담당에게 넘기는 것 — 연결 방법
+
+씬 `LobbyScene` 의 오브젝트 이름이 `LobbyPanel` 의 필드명과 같다. 코드 수정 없이 인스펙터 연결만 하면 된다.
+
+| 붙일 오브젝트 | 컴포넌트 | 필드 | 연결 대상 |
+| --- | --- | --- | --- |
+| `Canvas/LobbyPanel` | `LobbyPanel` | `randomMatchButton` | `MainButtons/RandomMatchButton` |
+| | | `createRoomButton` | `MainButtons/CreateRoomButton` |
+| | | `joinRoomButton` | `MainButtons/JoinRoomButton` |
+| `Canvas/LobbyPanel` | `ProfileView` | `_nicknameText` | `NicknameText` |
+| `Canvas/LobbyPanel` | `ProfilePresenter` | `_view` | 같은 오브젝트의 `ProfileView` |
+
+연결 뒤 확인: 타이틀 → 로비(닉네임 표시) → 방 만들기 → 방 → 나가기 → 로비 / 방 참가 → 팝업 → 없는 코드 → 경고.
+
+### 주의
+
+- 연결 전까지 로비 버튼은 동작하지 않는다 (뷰만 있음).
+- `LobbySceneBuilder.cs` 는 씬 생성 후 **삭제했다** (커밋 `88e0822` 에 있음. 손으로 고친 씬을 덮어쓰지 않도록). 다시 필요하면 그 커밋에서 꺼낸다.
+- batchmode 실행 시 `Assets/Settings/Lit2DSceneTemplate.scenetemplate` 가 같이 바뀐다(URP 템플릿 의존성 정리). 무관한 변경이라 되돌렸다.
+
+### 다음 할 일
+
+- [ ] (로직) 위 표대로 컴포넌트 연결 + 왕복 확인
+- [ ] (뷰) Game 뷰 1920×1080 · 2400×1080 에서 캡처와 같은지 눈으로 확인 — 에디터 GUI 필요
+- [ ] 화면 방향 · Screen Match Mode(Expand) 결정 (전역 미정 #9)
+- [ ] 디자인 확정 후 색 · 스프라이트 교체 (크기 · 배치 유지)
+
+---
+
 ## 2026-09-25 · 방 나가기 → 들어온 씬으로 복귀 (B 트랙 B5-2)
 
 | 항목 | 값 |
