@@ -1,7 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using Chapchu.Network;
+﻿using Chapchu.Network;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Chapchu.UI.PlayerProfile
 {
@@ -9,7 +8,7 @@ namespace Chapchu.UI.PlayerProfile
     public class ProfilePresenter : MonoBehaviour
     {
         [Header("Dependencies")]
-        [SerializeField] private ProfileView _view;
+        [SerializeField, FormerlySerializedAs("_view")] private ProfileView view;
 
         private void Start()
         {
@@ -18,7 +17,7 @@ namespace Chapchu.UI.PlayerProfile
 
         private void UpdateProfile()
         {
-            _view.SetNicknameText(NetworkManager.Nickname);
+            view.SetNicknameText(NetworkManager.Nickname);
         }
     }
 }

@@ -1,6 +1,6 @@
 # 08. 방(Room) · 로비
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: MVP
 **상태: 결정되지 않은 항목이 많다. 구현 전 5절을 먼저 확정해야 한다.**
 
@@ -45,6 +45,7 @@
 | 방 생성 | 랜덤 코드 생성 → `CreateRoom(code, maxPlayers=4, visible, open)` | `PhotonRoom.CreateRoom` |
 | 코드 중복 (에러 32766) | 자동으로 다시 생성 시도 | `PhotonRoom.OnCreateRoomFailed` |
 | 방 참가 | 코드를 `Trim().ToUpper()` 후 참가 | `PhotonRoom.JoinRoom` |
+| 랜덤 매칭 | `JoinRandomRoom()` → 빈 방이 있으면 참가, 없으면(`OnJoinRandomFailed`) 새 방 생성 — **확정 (2026-09-25, MVP 포함)** | `PhotonRoom.JoinRandomRoom` · `OnJoinRandomFailed` |
 | 참가 실패 | `RoomEvents.RaiseJoinRoomFailed` → 팝업 | `PhotonRoom` |
 | 방 씬 이동 | `OnJoinedRoom` → Room 씬 로드 | `PhotonRoom` |
 | 게임 시작 | 방장이 `PhotonNetwork.LoadLevel` | 레거시 `PrototypeNetwork.GameStart` |
@@ -73,6 +74,7 @@
 ```
 Lobby ──(방 생성)──→ Room(방장)
 Lobby ──(코드 입력/초대)──→ Room(참가자)
+Lobby ──(랜덤 매칭)──→ Room(빈 방이 있으면 참가자, 없으면 방장)
 Room  ──(시작 버튼)──→ GameScene
 Room  ──(나가기)──→ Lobby
 ```
@@ -86,7 +88,7 @@ Room  ──(나가기)──→ Lobby
 | 존재하지 않는 코드 | 참가 실패 팝업 | 확정 (구현됨) |
 | 인원 초과 | 참가 실패 팝업 | 확정 (구현됨) |
 | 이미 시작된 방 | 참가 불가 | **미정** (`IsOpen` 처리 여부) |
-| 방장 이탈 | **미정** | 미정 |
+| 방장 이탈 | **미정** (위임 vs 방 폭파). 현재 동작은 PUN 기본인 **위임** — 남은 사람 중 한 명이 방장이 되고, `(Host)` 표기 · 시작 버튼이 즉시 갱신된다 | 미정 |
 | 연결 끊김 | **미정** | 미정 |
 
 ---
@@ -101,10 +103,10 @@ Room  ──(나가기)──→ Lobby
 | 이벤트 전파 (`RoomEvents`, `ConnectionEvents`) | 구현됨 |
 | 팝업 (`PopupManager`) | 구현됨 |
 | 닉네임 입력/검증 | 구현됨 |
-| 방 UI (`RoomPanel`, `RoomInfoPanel`) | 부분 구현 |
+| 방 UI (`RoomPanel`, `RoomInfoPanel`) | 부분 구현 — 인원 · 코드 · 목록 · `(Host)` · 입장/퇴장 로그(30줄), 방장 교체 즉시 반영. 준비 · 설정 UI 없음 |
 | 준비 상태 | 미구현 |
 | 방 설정 | 미구현 |
-| 시작 조건 검증 | 미구현 |
+| 시작 조건 검증 | 최소 인원 2명만 (버튼 비활성). 준비 상태 등은 5절 #2 미정 |
 | 로그 | 미구현 |
 
 > 네트워크 연결 계층(`Scripts/Network`, `Scripts/Events`, `Scripts/UI`)은 프로젝트에서 **가장 잘 정리된 부분**이다.
@@ -115,3 +117,5 @@ Room  ──(나가기)──→ Lobby
 ## 9. 미정 / 결정 필요
 
 5절 전체 (8개 항목).
+
+> 로비 **화면**(버튼 크기 · 배치)은 [`14-lobby-ui.md`](14-lobby-ui.md).
