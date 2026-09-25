@@ -293,7 +293,9 @@ private async void LoadScene()   // 금지 항목
 `ScenePaths.Get()` 이 넘기는 `"Scenes/RoomScene"` 은 빌드 세팅 경로(`Assets/Scenes/RoomScene.unity`)도, 씬 이름(`RoomScene`)도 아닌 **부분 경로**다.
 → **먼저 에디터에서 타이틀→로비→방 전환을 1회 확인한다.** 동작 여부와 무관하게, 형식이 하나로 고정되지 않은 점 자체가 이미 한 번 사고를 냈다(`PhotonNetwork.LoadLevel` 무한 재로드, `bb43c4e`).
 
-**수정**: `Core/SceneLoader.cs` 신규 — UI는 이것만 호출한다.
+> **결정 (2026-09-25)**: 아래 `SceneLoader` 래퍼 안은 **채택하지 않았다.** 사고의 원인은 "형식이 둘"이었으므로 `ScenePaths` 를 **씬 이름 상수**(`ScenePaths.Lobby = "LobbyScene"`) 하나로 만들고, 호출은 `SceneManager.LoadScene(ScenePaths.Lobby)` / `PhotonNetwork.LoadLevel(ScenePaths.Game)` 로 직접 한다. enum · Dictionary · 한 줄짜리 래퍼는 이득 없이 단계만 늘린다(YAGNI). 로딩 화면 같은 공통 처리가 실제로 생기면 그때 래퍼를 둔다.
+
+**(당시 제안 — 미채택)**: `Core/SceneLoader.cs` 신규 — UI는 이것만 호출한다.
 
 ```csharp
 public static class SceneLoader
@@ -350,7 +352,7 @@ public static T Get<T>() where T : Popup
 | 클래스 | 책임 |
 | --- | --- |
 | `TitleView` | TMP·버튼 참조만 보유. `SetError` / `SetCount` / `SetSubmitInteractable` / `SetNickname` |
-| `TitlePresenter` | `NicknameValidator` 호출, `NetworkManager` 요청, `ConnectionEvents` 구독, `SceneLoader` 호출 |
+| `TitlePresenter` | `NicknameValidator` 호출, `NetworkManager` 요청, `ConnectionEvents` 구독, 씬 전환 |
 
 > **Model 은 만들지 않는다.** 화면 상태가 "입력값 + 에러 문구" 뿐이라 계층을 하나 더 두면 KISS 위반이다.
 > 노션 스펙의 인라인 `ErrorText`(레이아웃 점프 방지)와 16자 도달 시 카운터 색상 전환이 `TitleView` 에 들어간다.
@@ -383,13 +385,31 @@ RoomEvents.OnPlayerEntered += UpdateStartButtonState;  // → interactable
 
 ## 5. 작업 순서 (PR 단위)
 
+### 진행 상태 (2026-09-25)
+
+| 항목 | 상태 |
+| --- | --- |
+| U-1 · U-2 · U-3 · U-11 · U-20 (PR1) | ✅ #15 · #17 |
+| U-15 · U-17 팝업 부분, U-10 닫기 버튼 | ✅ #15 |
+| U-4 · U-5 · U-13 | ✅ `c44c855` |
+| U-6 · U-7 · U-21 (PR4) | ✅ #16 — 구조는 `TitleView`(뷰) + `TitlePresenter`(연결) |
+| U-8 | ✅ 해소 — `TitleView` 가 검증 전에 앞뒤 공백 제거. 스펙이 공백 불가라 연속 공백 축약은 불필요 |
+| U-14 | ✅ 해소 — `NicknameInput` 삭제(#14) |
+| U-19 | ✅ #14 — 죽은 스크립트 전부 삭제 |
+| U-18 (PR3) | ✅ `feature/scene-loader` — `ScenePaths` 를 씬 이름 상수 하나로 (래퍼 없음, 위 U-18 결정). 비동기 로딩 · 로딩 팝업은 쓰는 곳이 생길 때(PR5) |
+| U-15 나머지 · U-16 · U-17 나머지 (PR2) | ✅ `refactor/ui-cleanup` — `UI/NickName` → `UI/Title`, `ProfilePresenter.view` · `ProfileView.nicknameText`(`FormerlySerializedAs`), UI · `ScenePaths` 의 안 쓰는 `using` |
+| U-12 · U-22 · U-23 (PR6) | ✅ `feature/room-cleanup` — 방장 교체 즉시 갱신(2클라이언트 확인), 시작 버튼 핸들러 1개 · `OnEnable` 1회 등록, `AutomaticallySyncScene` 줄 삭제 |
+| U-24 (PR6) | **보류** — 방 화면 디자인이 없어 지금 분리하면 재구성 때 다시 버린다. 방 디자인 게시 후 방 재구성 계획에 포함 |
+| U-9 · U-10 나머지 (PR5) | 남음 |
+
+
 한 PR 이 끝날 때마다 **컴파일 에러 0 + 타이틀→로비→방 왕복 1회**가 게이트다.
 
 | PR | 내용 | 항목 | 검증 |
 | --- | --- | --- | --- |
 | **PR1** | 팝업 인프라 복구 | U-1, U-2, U-3, U-11, U-20 | 토스트가 3초 후 자동으로 닫힌다 / 모달을 띄운 채 씬 전환 시 잔재가 없다 |
 | **PR2** | 죽은 코드 제거 · 폴더/네임스페이스 정리 | U-15, U-16, U-17, U-19 | 컴파일 0, 씬·프리팹 참조 유지(`.meta` 동반 이동) |
-| **PR3** | `SceneLoader` 도입 | U-14, U-18 | 3개 씬 전환 + 로딩 팝업 표시/해제 |
+| **PR3** | 씬 이름 형식 통일 (`ScenePaths` 상수) | U-14, U-18 | 3개 씬 전환 + 로딩 팝업 표시/해제 |
 | **PR4** | 타이틀 재구성 | U-6, U-7, U-8, U-21 | 닉네임 복원 / 오류가 인라인 표시 / 접속 실패 시 재시도 가능 |
 | **PR5** | 로비 | U-4, U-5, U-9, U-10 | 없는 코드 입력 시 사유 표시 + 버튼 복구 / 랜덤매치 동작(또는 숨김) |
 | **PR6** | 방 | U-12, U-13, U-22, U-23, U-24 | 방장 이탈 시 표기·시작 버튼 즉시 갱신 / 로그 상한 동작 |
@@ -422,4 +442,4 @@ RoomEvents.OnPlayerEntered += UpdateStartButtonState;  // → interactable
 | `systems/10-ui.md` 10절 | 중복 UI 시스템(`GameUIManager`/`GamePlayerInfoUI`) 행 삭제 — 이미 제거됨 |
 | `systems/08-room.md` | 방장 이탈 시 동작을 확정으로 올릴지 결정 (U-12) |
 | `refactoring-plan.md` | Phase 6(UI) 항목을 이 문서로 연결 |
-| 노션 「타이틀 화면 개발 문서」 9절 | 샘플 코드의 `SceneLoader.Load("MainMenu")` → 실제 도입되는 `SceneLoader.Load(SceneType.Lobby)` 로 갱신 (U-18) |
+| 노션 「타이틀 화면 개발 문서」 9절 | 샘플 코드의 `SceneLoader.Load("MainMenu")` → `SceneManager.LoadScene(ScenePaths.Lobby)` 로 갱신 (U-18 결정) |

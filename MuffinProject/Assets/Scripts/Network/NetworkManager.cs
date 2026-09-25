@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine;
 using Chapchu.Core;
 
 namespace Chapchu.Network
@@ -12,6 +14,7 @@ namespace Chapchu.Network
     
         private PhotonConnection _connection;
         private PhotonRoom _room;
+        private Coroutine _connectTimeout;
 
         public static string Nickname => PhotonNetwork.NickName;
         public static bool IsConnected => PhotonNetwork.IsConnected;
@@ -30,9 +33,7 @@ namespace Chapchu.Network
         {
             // 어느 씬에서 실행하더라도 여기서 접속이 시작된다. (GameBootstrap 이 생성)
             _connection.Initialize();
-
-            if (!IsConnected)
-                _connection.Connect();
+            Connect();
         }
     
         // 퍼블릭 메서드
@@ -41,9 +42,16 @@ namespace Chapchu.Network
         public void Initialize() => _connection.Initialize();
 
         /// <summary>
-        /// 네트워크 접속 함수
+        /// 네트워크 접속 함수. 접속 실패 후 재시도에도 사용한다.
+        /// 실패 사유는 ConnectionEvents.OnDisconnected 로 전달된다.
         /// </summary>
-        public void Connect() => _connection.Connect();
+        public void Connect()
+        {
+            if (!_connection.Connect()) return;
+
+            StopConnectTimeout();
+            _connectTimeout = StartCoroutine(ConnectTimeoutRoutine());
+        }
     
         /// <summary>
         /// 닉네임 설정 함수
@@ -86,15 +94,42 @@ namespace Chapchu.Network
         /// <param name="isVisible">로비 노출 여부</param>
         /// <param name="isOpen">공개 비공개 여부</param>
         public void UpdateRoomOptions(bool isVisible, bool isOpen) => _room.UpdateRoomOptions(isVisible, isOpen);
-    
+
         #endregion
-    
+
+        #region Connect Timeout
+
+        private IEnumerator ConnectTimeoutRoutine()
+        {
+            yield return new WaitForSecondsRealtime(PhotonConnection.ConnectTimeoutSeconds);
+            _connectTimeout = null;
+            _connection.OnConnectTimeout();
+        }
+
+        // 마스터 접속 이후(룸 입장 중 서버 이동 등)에 타임아웃이 끼어들지 않도록 접속 완료 · 끊김 시 반드시 멈춘다.
+        private void StopConnectTimeout()
+        {
+            if (_connectTimeout == null) return;
+            StopCoroutine(_connectTimeout);
+            _connectTimeout = null;
+        }
+
+        #endregion
+
         // 콜백 함수
         #region Pun Callbacks Functions
-    
-        public override void OnConnectedToMaster() => _connection.OnConnectedToMaster();
 
-        public override void OnDisconnected(DisconnectCause cause) => _connection.OnDisconnected(cause);
+        public override void OnConnectedToMaster()
+        {
+            StopConnectTimeout();
+            _connection.OnConnectedToMaster();
+        }
+
+        public override void OnDisconnected(DisconnectCause cause)
+        {
+            StopConnectTimeout();
+            _connection.OnDisconnected(cause);
+        }
     
         public override void OnCreatedRoom() => _room.OnCreatedRoom();
 
@@ -111,6 +146,8 @@ namespace Chapchu.Network
         public override void OnPlayerEnteredRoom(Player newPlayer) => _room.OnPlayerEntered(newPlayer);
     
         public override void OnPlayerLeftRoom(Player otherPlayer) => _room.OnPlayerLeft(otherPlayer);
+
+        public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);
     
         public override void OnRoomListUpdate(List<RoomInfo> roomList) => _room.OnRoomListUpdate(roomList);
 

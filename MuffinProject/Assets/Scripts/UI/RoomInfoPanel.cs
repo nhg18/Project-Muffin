@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Chapchu.Network;
 using Photon.Pun;
 using Photon.Realtime;
@@ -16,12 +14,16 @@ namespace Chapchu.UI
         [SerializeField] private TMP_Text roomCodeText;
         [SerializeField] private TMP_Text playerInfoText;
         [SerializeField] private TMP_Text logText;
-    
+
+        private const int MaxLogLines = 30;
+        private readonly Queue<string> _logLines = new Queue<string>();
+
         private void OnEnable()
         {
             RoomEvents.OnPlayerEntered += OnPlayerEntered;
             RoomEvents.OnPlayerLeft += OnPlayerLeft;
-        
+            RoomEvents.OnMasterClientSwitched += OnMasterClientSwitched;
+
             if (PhotonNetwork.InRoom)
             {
                 OnJoined();
@@ -32,6 +34,7 @@ namespace Chapchu.UI
         {
             RoomEvents.OnPlayerEntered -= OnPlayerEntered;
             RoomEvents.OnPlayerLeft -= OnPlayerLeft;
+            RoomEvents.OnMasterClientSwitched -= OnMasterClientSwitched;
         }
     
         private void UpdateRoomInfo()
@@ -67,9 +70,19 @@ namespace Chapchu.UI
             UpdateRoomInfo();
         }
 
+        // (Host) 표기 갱신. OnPlayerLeft 와의 순서가 보장되지 않아 따로 구독한다. 로그 문구는 08-room #4 미정이라 남기지 않는다.
+        private void OnMasterClientSwitched(Player newMaster)
+        {
+            UpdateRoomInfo();
+        }
+
         private void AddLog(string text)
         {
-            logText.text += "\n" + text;
+            _logLines.Enqueue(text);
+            while (_logLines.Count > MaxLogLines)
+                _logLines.Dequeue();
+
+            logText.text = string.Join("\n", _logLines);
         }
     }
 }

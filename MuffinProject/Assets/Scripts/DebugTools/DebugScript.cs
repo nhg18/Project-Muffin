@@ -5,9 +5,9 @@ using Chapchu.Network;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Chapchu.Core;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.DebugTools
 {
@@ -62,8 +62,9 @@ namespace Chapchu.DebugTools
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
         
             Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
-        
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Room));
+
+            SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
+            SceneManager.LoadScene(ScenePaths.Room);
         }
     }
 }
