@@ -17,4 +17,17 @@
         public const string Game = "GameScene";
         public const string DebugLobby = "DebugLobbyScene";
     }
+
+    /// <summary>
+    /// 씬 사이에서 넘겨야 하는 전환 정보. 씬을 로드하면 씬 안의 오브젝트는 전부 사라지므로
+    /// 정적 필드에 둔다.
+    /// </summary>
+    public static class SceneFlow
+    {
+        /// <summary>
+        /// 방(Room)에서 나갔을 때 돌아갈 씬. 방에 들어가기 직전에 진입 쪽(Lobby / DebugLobby)이 설정한다.
+        /// 기본값은 정식 흐름인 Lobby. (08-room.md 6절: Room ──(나가기)──→ Lobby)
+        /// </summary>
+        public static string ReturnSceneAfterRoom = ScenePaths.Lobby;
+    }
 }

@@ -77,8 +77,8 @@ namespace Chapchu.UI
 
         private void OnLeftRoom()
         {
-            // 정식 흐름은 LobbyScene (B5-2). 지금은 개발용 디버그 로비로 돌아간다.
-            SceneManager.LoadScene(ScenePaths.DebugLobby);
+            // 들어온 곳으로 돌아간다. Lobby 에서 왔으면 Lobby, DebugLobby 에서 왔으면 DebugLobby.
+            SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
         }
     
         private void UpdateStartButtonState(Player player)

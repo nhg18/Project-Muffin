@@ -62,7 +62,8 @@ namespace Chapchu.DebugTools
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
         
             Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
-        
+
+            SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
             SceneManager.LoadScene(ScenePaths.Room);
         }
     }

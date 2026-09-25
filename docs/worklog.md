@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-09-25 · 방 나가기 → 들어온 씬으로 복귀 (B 트랙 B5-2)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `changhwan.exe` (직접 작업, worktree 없음) |
+| 범위 | `.cs` 4개 + 문서 3개. 씬 · 프리팹 수정 없음 |
+
+### 한 것
+
+- `RoomPanel.OnLeftRoom` 이 `DebugLobbyScene` 으로 고정돼 있던 것을 **들어온 씬으로 복귀**하도록 변경.
+  `LobbyScene` → 방 → 나가기 → `LobbyScene`, `DebugLobbyScene` → 방 → 나가기 → `DebugLobbyScene`.
+- `Core/ScenePaths.cs` 에 `SceneFlow.ReturnSceneAfterRoom` (정적 문자열, 기본값 `ScenePaths.Lobby`) 추가.
+  `LobbyPanel.OnJoinedRoom` · `DebugScript.OnJoinedRoom` 이 Room 로드 직전에 설정, `RoomPanel.OnLeftRoom` 이 읽는다.
+- 문서: `01-game-flow.md` 4절 씬 표 아래 규칙 추가, `plan-b-ui.md` B5-2 ✅, `development-plan.md` 6절 #10 ✅.
+
+### 결정
+
+- 매니저 · 싱글톤 대신 정적 필드 하나. 씬을 넘어 살아남는 값이 이것 하나뿐이라 YAGNI.
+- `RoomScene` 을 에디터에서 바로 Play 하고 나가면 기본값이라 `LobbyScene` 으로 간다 (의도한 동작).
+- 방장 퇴장 시 방 처리(위임 / 폭파)는 `08-room.md` **미정** → 범위 밖.
+
+### 다음 할 일
+
+- [ ] PC 에디터 확인: Lobby 경로 · DebugLobby 경로 두 가지 모두 나가기 후 씬 확인 (컴파일 에러 미확인)
+- [ ] `GameScene` 에서 나가는 경우는 별도 항목. 필요하면 같은 값을 재사용
+
+---
+
 ## 2026-09-24 · 팝업 인프라 복구 · 정리 (B 트랙 B1-9, `ui-refactoring-plan` PR1)
 
 | 항목 | 값 |

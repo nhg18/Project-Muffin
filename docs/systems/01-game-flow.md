@@ -57,6 +57,8 @@
 | `DebugLobbyScene` | 개발용 즉시 입장 | 4 | 개발 전용 |
 
 > 씬 경로는 `Scripts/Core/ScenePaths.cs` 에서 관리한다. 문자열을 직접 쓰지 않는다.
+> 방(Room)에서 나가면 **들어온 씬으로 돌아간다**: `LobbyScene` 에서 왔으면 `LobbyScene`, `DebugLobbyScene` 에서 왔으면 `DebugLobbyScene`.
+> 진입 쪽이 `SceneFlow.ReturnSceneAfterRoom` 을 설정하고 `RoomPanel` 이 읽는다. 기본값은 `LobbyScene`.
 
 ### 전역 매니저 (부트스트랩 씬 없음)
 

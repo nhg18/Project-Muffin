@@ -144,7 +144,7 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 | # | 작업 |
 | --- | --- |
 | B5-1 | 모바일 빌드 · 해상도 · 터치 검증 |
-| B5-2 | `RoomPanel` 나가기 → `LobbyScene` (현재 `DebugLobbyScene`) |
+| B5-2 | `RoomPanel` 나가기 → 들어온 씬으로 복귀 (`Lobby` → `Lobby`, `DebugLobby` → `DebugLobby`). `SceneFlow.ReturnSceneAfterRoom` ✅ (2026-09-25) |
 | B5-3 | 설정 · 사운드 화면 ⛔ 기획 미정 |
 
 ---

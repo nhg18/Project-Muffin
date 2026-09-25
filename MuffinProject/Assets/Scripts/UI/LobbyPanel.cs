@@ -59,6 +59,7 @@ namespace Chapchu.UI
     
         private void OnJoinedRoom()
         {
+            SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
             SceneManager.LoadScene(ScenePaths.Room);
         }
 

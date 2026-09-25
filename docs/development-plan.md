@@ -166,6 +166,6 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 | 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 · B1-13 + A 요청 R-2 ✅ |
 | 8 | `NicknameInput.LoadScene()` 이 `async void` (`CLAUDE.md` 12절 위반), 취소 처리 없음 | M1 · B1-12 (U-14) |
 | 9 | `PlayerSettings` 의 `productName: CardGame` / `companyName: DefaultCompany` 미설정 | M5 |
-| 10 | `RoomPanel` 의 나가기가 `DebugLobbyScene` 으로 이동 (개발 편의. 정식 흐름은 `LobbyScene`) | M5 · B5-2 |
+| 10 | `RoomPanel` 의 나가기가 `DebugLobbyScene` 으로 이동 (개발 편의. 정식 흐름은 `LobbyScene`) | M5 · B5-2 ✅ (들어온 씬으로 복귀) |
 
 1 · 2번은 접속 실패 시 사용자가 **아무 안내 없이 정지**하는 문제라 M0 에서 같이 처리한다.
