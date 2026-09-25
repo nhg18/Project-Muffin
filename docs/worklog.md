@@ -36,17 +36,37 @@
 2. 기능 없는 버튼(설정 · 친구 · 프로필 편집 · 사운드/메뉴)은 두지 않음 → `14-lobby-ui` 3절 #1
 3. 문서 · 구현 모두 플랜 세션이 직접 수행
 
+### 역할 분리 (사용자 지시, 2026-09-25)
+
+**이 작업은 뷰만 만든다.** `LobbyPanel` · `ProfilePresenter` · `ProfileView` 를 씬에 붙이고 참조를 연결하는 것은 **로직 담당(옆 세션)** 몫.
+빌더에 연결 코드를 넣었다가 뺐다 — 뷰 산출물에 로직 연결이 섞이지 않도록.
+
+### 로직 담당에게 넘기는 것 — 연결 방법
+
+씬 `LobbyScene` 의 오브젝트 이름이 `LobbyPanel` 의 필드명과 같다. 코드 수정 없이 인스펙터 연결만 하면 된다.
+
+| 붙일 오브젝트 | 컴포넌트 | 필드 | 연결 대상 |
+| --- | --- | --- | --- |
+| `Canvas/LobbyPanel` | `LobbyPanel` | `randomMatchButton` | `MainButtons/RandomMatchButton` |
+| | | `createRoomButton` | `MainButtons/CreateRoomButton` |
+| | | `joinRoomButton` | `MainButtons/JoinRoomButton` |
+| `Canvas/LobbyPanel` | `ProfileView` | `_nicknameText` | `NicknameText` |
+| `Canvas/LobbyPanel` | `ProfilePresenter` | `_view` | 같은 오브젝트의 `ProfileView` |
+
+연결 뒤 확인: 타이틀 → 로비(닉네임 표시) → 방 만들기 → 방 → 나가기 → 로비 / 방 참가 → 팝업 → 없는 코드 → 경고.
+
 ### 주의
 
-- **2단계까지는 로비가 동작하지 않는다.** `LobbyPanel` · `ProfilePresenter` · `ProfileView` 컴포넌트가 씬에 없다 (3단계에서 연결). 코드는 그대로.
-- `LobbySceneBuilder.Build` 는 Canvas 아래를 통째로 다시 만든다. 에디터에서 손으로 고친 뒤에는 실행하지 않는다. 3단계 연결까지 빌더로 할 예정이라 아직 삭제하지 않음.
+- 연결 전까지 로비 버튼은 동작하지 않는다 (뷰만 있음).
+- `LobbySceneBuilder.cs` 는 씬 생성 후 **삭제했다** (커밋 `88e0822` 에 있음. 손으로 고친 씬을 덮어쓰지 않도록). 다시 필요하면 그 커밋에서 꺼낸다.
 - batchmode 실행 시 `Assets/Settings/Lit2DSceneTemplate.scenetemplate` 가 같이 바뀐다(URP 템플릿 의존성 정리). 무관한 변경이라 되돌렸다.
 
 ### 다음 할 일
 
-- [ ] 3단계: 빌더에 `LobbyPanel`(버튼 3개) · `ProfilePresenter`/`ProfileView`(닉네임) 연결 추가 → 재생성 → 빌더 삭제 여부 결정
-- [ ] 4단계: 에디터에서 타이틀 → 로비 → 방 왕복 1회, Game 뷰 해상도별 확인
+- [ ] (로직) 위 표대로 컴포넌트 연결 + 왕복 확인
+- [ ] (뷰) Game 뷰 1920×1080 · 2400×1080 에서 캡처와 같은지 눈으로 확인 — 에디터 GUI 필요
 - [ ] 화면 방향 · Screen Match Mode(Expand) 결정 (전역 미정 #9)
+- [ ] 디자인 확정 후 색 · 스프라이트 교체 (크기 · 배치 유지)
 
 ---
 
