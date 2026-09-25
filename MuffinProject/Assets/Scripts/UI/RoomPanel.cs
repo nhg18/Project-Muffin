@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using Chapchu.Network;
+﻿using Chapchu.Network;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;

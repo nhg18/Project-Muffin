@@ -397,7 +397,7 @@ RoomEvents.OnPlayerEntered += UpdateStartButtonState;  // → interactable
 | U-14 | ✅ 해소 — `NicknameInput` 삭제(#14) |
 | U-19 | ✅ #14 — 죽은 스크립트 전부 삭제 |
 | U-18 (PR3) | ✅ `feature/scene-loader` — `ScenePaths` 를 씬 이름 상수 하나로 (래퍼 없음, 위 U-18 결정). 비동기 로딩 · 로딩 팝업은 쓰는 곳이 생길 때(PR5) |
-| U-15 나머지 · U-16 · U-17 나머지 (PR2) | 진행 — `refactor/ui-cleanup` |
+| U-15 나머지 · U-16 · U-17 나머지 (PR2) | ✅ `refactor/ui-cleanup` — `UI/NickName` → `UI/Title`, `ProfilePresenter.view` · `ProfileView.nicknameText`(`FormerlySerializedAs`), UI · `ScenePaths` 의 안 쓰는 `using` |
 | U-9 · U-10 나머지 (PR5), U-12 · U-22 · U-23 · U-24 (PR6) | 남음 |
 
 

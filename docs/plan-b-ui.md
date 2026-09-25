@@ -97,7 +97,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | --- | --- | --- | --- |
 | B1-9 | 팝업 인프라 복구 (모달 잔재, `Open()` 미호출, 토스트 불가) | PR1 (U-1, U-2, U-3, U-11, U-20) | ✅ #15 · #17 |
 | B1-10 | 타이틀 화면 재구성 | `title-ui-plan` S1~S6 | ✅ #14 (PC 확인 완료, 모바일 실기 보류) |
-| B1-11 | 죽은 코드 · 폴더 · 네임스페이스 정리 | PR2 | |
+| B1-11 | 죽은 코드 · 폴더 · 네임스페이스 정리 | PR2 | ✅ `refactor/ui-cleanup` |
 | B1-12 | 씬 전환 형식 통일, `async void` 제거 | PR3 | ✅ `feature/scene-loader` — `ScenePaths` 이름 상수, 래퍼 없음 (`async void` 는 `NicknameInput` 삭제로 이미 없음) |
 | B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | 세부 플랜 `title-ui-plan.md` S7 — ✅ #16 (실기기 확인 보류) |
 | B1-14 | Canvas 규격 통일 (Scale With Screen Size) | `development-plan` 6절 #4 | ⛔ 화면 방향 · 기준 해상도(기획 #3) |

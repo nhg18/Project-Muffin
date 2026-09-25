@@ -1,5 +1,4 @@
 ﻿using System;
-using Chapchu.UI.NickName;
 using TMPro;
 using UnityEngine;
 
