@@ -102,14 +102,15 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 
 합격: 중앙 묶음이 잘리거나 겹치지 않는다. 가장자리 UI 가 노치에 가리지 않는다.
 
-## 9. 확정 시 반영할 곳
+## 9. 반영 상태 (2026-09-25, B1-14)
 
 | 대상 | 변경 |
 | --- | --- |
-| `ProjectSettings` | 허용 방향 Landscape 2개, Render outside safe area |
-| `12-title-ui` 4-1, `14-lobby-ui` 4-1 | 화면 방향 미정 → 확정, Match 1 → Expand |
-| 모든 씬 Canvas (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `Resources/Bootstrap/PopupManager`) | Scale With Screen Size · 1920×1080 · Expand. 방 · 팝업 · 인게임은 아직 Constant Pixel Size |
-| `plan-b-ui` B1-14 | 착수 (`⛔` 해제) |
+| `ProjectSettings` | ✅ 허용 방향 Landscape 2개 (Portrait 2개 끔), Render outside safe area (이미 켜져 있었음) |
+| `12-title-ui` 4-1, `14-lobby-ui` 4-1 | ✅ 화면 방향 확정, Match 1 → Expand |
+| 모든 씬 Canvas (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `DebugLobbyScene` · `Resources/Bootstrap/PopupManager`) | ✅ Scale With Screen Size · 1920×1080 · Expand. 방 · 게임 · 디버그 로비 · 팝업은 800×600 고정 픽셀에서 전환 — **UI 위치 · 크기는 그대로**(1080p 에서 동일), 다른 해상도에서 늘어나거나 줄어드는 대신 잘리지 않는다 |
+| `plan-b-ui` B1-14 | ✅ |
+| `SafeArea` 컴포넌트 (`Scripts/UI/SafeArea.cs`) | ✅ 타이틀(버전 · 시스템 버튼) · 로비(닉네임)에 적용. 방 · 인게임은 재구성 때 |
 | README 전역 미정 #9 | 화면 방향 항목 닫음 (시스템 버튼 동작은 남음) |
 
 ## 10. 미정 / 결정 필요
@@ -122,3 +123,4 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | --- | --- |
 | 2026-09-25 | 신규. 노션 제안(2026-09-24)을 이관, 로비 iPad 잘림 확인 결과 반영 |
 | 2026-09-25 | 3절 전부 확정 (사용자 승인) |
+| 2026-09-25 | B1-14 반영: 씬 5곳 · 팝업 프리팹 Expand, 가로 고정, `SafeArea`. 4비율(16:9 · 4:3 · 20:9 · 16:10) 요소 bounds 확인 — 전부 화면 안 |
