@@ -3,11 +3,12 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Chapchu.Practice
+namespace Chapchu.Presentation
 {
     /// <summary>
     /// 턴 표시 · 턴 종료 버튼 뷰. 값을 받아 표시하고, 버튼 탭을 이벤트로만 알린다.
     /// 누구 턴인지 판정하지 않는다 — 누를 수 있는지는 서버가 거절로 알려준다.
+    /// 턴 종료 버튼은 개발용 디버그 입력이다 (03-turn.md 8절).
     /// </summary>
     public class TurnView : MonoBehaviour
     {

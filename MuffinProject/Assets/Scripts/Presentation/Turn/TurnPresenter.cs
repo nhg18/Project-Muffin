@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+﻿using Chapchu.Game;
+using UnityEngine;
 
-namespace Chapchu.Practice
+namespace Chapchu.Presentation
 {
     /// <summary>
     /// 턴 뷰와 서버를 잇는다. 서버는 <see cref="IGameRequests"/> · <see cref="IGameState"/> 로만 알고,
