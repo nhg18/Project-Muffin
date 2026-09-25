@@ -33,7 +33,7 @@
 | 항목 | 값 | 구분 |
 | --- | --- | --- |
 | 기준 해상도 | 1920 × 1080 | 확정 (타이틀과 동일) |
-| 스케일 방식 | Scale With Screen Size · **Expand** (`15-screen.md` 3절) | 확정 (2026-09-25 변경, 이전 높이 기준). 구현은 B1-14 |
+| 스케일 방식 | Scale With Screen Size · **Expand** (`15-screen.md` 3절) | 확정 (2026-09-25 변경, 이전 높이 기준). 구현됨 (B1-14) |
 | 화면 방향 고정 | **가로 고정** (`15-screen.md`) | 확정 (2026-09-25) |
 
 > 아래 px 값은 전부 **1080 높이 기준 캔버스 좌표**다. 폰(가로, 화면 높이 ≈ 390pt)에서는 캔버스 1 ≈ 0.36pt.
@@ -105,11 +105,11 @@
 **하이어라키** (TitleScene 과 같은 구조)
 
 ```
-LobbyCanvas            [LobbyView · LobbyPresenter]  1920×1080 · 높이 기준
+LobbyCanvas            [LobbyView · LobbyPresenter]  1920×1080 · Expand (15-screen)
 ├ BG_Illust            타이틀과 같은 키 아트 (cover)
 ├ BG_Overlay           타이틀과 같은 세로 오버레이
-├ NicknameText         좌상단 (48, 48)
-└ MainButtons          정중앙 1560×200 · 간격 60
+├ MainButtons          정중앙 1560×200 · 간격 60
+└ SafeArea             [SafeArea] 가장자리 UI 컨테이너 — NicknameText 가 이 안에 있다 (15-screen 7절)
    ├ RandomMatchButton  PillButton 480×200 「랜덤 매칭」
    ├ CreateRoomButton   PillButton 480×200 「방 만들기」
    └ JoinRoomButton     PillButton 480×200 「방 참가」
@@ -121,7 +121,7 @@ LobbyCanvas            [LobbyView · LobbyPresenter]  1920×1080 · 높이 기�
 | `UI/Lobby/LobbyPresenter` | `NetworkManager` 요청, `RoomEvents` 결과 → 팝업 · 씬 전환. 로비에서 네트워크를 아는 유일한 파일 (`TitlePresenter` 와 같은 역할) |
 
 - 총 폭 1560은 16:9(1920) 안에 들어가고, 넓은 폰(19.5:9 → 2340 폭)에서는 좌우 여백이 늘어날 뿐이다.
-- ⚠ **4:3 태블릿(iPad)** 에서는 높이 기준 스케일 때문에 캔버스 폭이 1440으로 줄어 **양 끝 버튼이 60씩 잘린다** (2026-09-25 캡처로 확인). → **Expand 로 확정** (2026-09-25, `15-screen.md`). B1-14 에서 바꾸면 iPad 캔버스가 1920×1440 이 되어 잘림이 사라진다.
+- ⚠ **4:3 태블릿(iPad)** 에서는 높이 기준 스케일 때문에 캔버스 폭이 1440으로 줄어 **양 끝 버튼이 60씩 잘린다** (2026-09-25 캡처로 확인). → **Expand 로 확정** (2026-09-25, `15-screen.md`). B1-14 적용 후 iPad 캔버스 1920×1440 — **잘림 없음** (2026-09-25 캡처 확인).
 - 가장자리 요소(닉네임)는 모서리에 앵커한다. 화면이 늘어나면 같이 바깥으로 이동한다.
 - 높이 기준 스케일이라 세로 배치는 어떤 비율에서도 같다.
 

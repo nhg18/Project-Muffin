@@ -6,6 +6,38 @@
 
 ---
 
+## 2026-09-25 · 캔버스 규격 통일 (B1-14) — Expand · 가로 고정 · SafeArea
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/screen-spec` (← `changhwan.exe` `1c461be`) |
+| 기준 | `15-screen.md` 3절 (확정 2026-09-25) |
+
+### 한 것
+
+| 대상 | 변경 |
+| --- | --- |
+| `ProjectSettings` | `allowedAutorotateToPortrait` · `…UpsideDown` 0 → Landscape Left/Right 만. Render outside safe area 는 이미 1 |
+| Canvas 5곳 (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `Resources/Bootstrap/PopupManager.prefab`) | Scale With Screen Size · 1920×1080 · **Expand**. 방 · 인게임 · 팝업은 800×600 Constant Pixel Size 였음 — 1920×1080 창에서는 scaleFactor 1 이라 보이는 크기가 그대로 |
+| `Scripts/UI/SafeArea.cs` | `Screen.safeArea` 를 앵커로 적용. 값이 바뀔 때만 다시 계산 |
+| 씬 계층 | 타이틀 `TitleCanvas/SafeArea` ← `VersionText` · `SystemButtons`, 로비 `LobbyCanvas/SafeArea` ← `NicknameText`. 컨테이너가 캔버스와 같은 크기라 위치 값은 그대로 |
+| 도구 | `Scripts/Editor/CanvasUnifier.cs` 로 일괄 적용 · 캡처 후 삭제 |
+
+### 캡처 (Expand, scaleFactor = min(w/1920, h/1080))
+
+| 해상도 | 타이틀 | 로비 |
+| --- | --- | --- |
+| 1920×1080 · 2400×1080 | 이전과 동일 | 이전과 동일 |
+| 2048×1536 (iPad) | 중앙 묶음 위치 규칙 그대로, 위아래 여유만 늘어남 | **양 끝 버튼 잘림 사라짐** |
+
+### 확인 필요 (에디터 · 실기)
+
+- [ ] `GameScene` — 인게임 UI 가 Expand 에서 겹치지 않는지 (A 담당 화면. 1920×1080 에서는 변화 없음)
+- [ ] 팝업 4종 — 1920×1080 외 비율에서 위치
+- [ ] 실기: 노치 옆으로 `VersionText` · `SystemButtons` · `NicknameText` 가 밀리는지
+
+---
+
 ## 2026-09-25 · 로비를 타이틀 구조로 통일 (LobbyCanvas · LobbyView/Presenter · PillButton · 같은 배경)
 
 | 항목 | 값 |

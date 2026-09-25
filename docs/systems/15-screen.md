@@ -104,13 +104,16 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 
 ## 9. 확정 시 반영할 곳
 
-| 대상 | 변경 |
-| --- | --- |
-| `ProjectSettings` | 허용 방향 Landscape 2개, Render outside safe area |
-| `12-title-ui` 4-1, `14-lobby-ui` 4-1 | 화면 방향 미정 → 확정, Match 1 → Expand |
-| 모든 씬 Canvas (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `Resources/Bootstrap/PopupManager`) | Scale With Screen Size · 1920×1080 · Expand. 방 · 팝업 · 인게임은 아직 Constant Pixel Size |
-| `plan-b-ui` B1-14 | 착수 (`⛔` 해제) |
-| README 전역 미정 #9 | 화면 방향 항목 닫음 (시스템 버튼 동작은 남음) |
+| 대상 | 변경 | 상태 |
+| --- | --- | --- |
+| `ProjectSettings` | 허용 방향 Landscape 2개, Render outside safe area | ✅ 2026-09-25 (세로 2방향 해제, Render outside safe area 는 이미 켜져 있었음) |
+| `12-title-ui` 4-1, `14-lobby-ui` 4-1 | 화면 방향 미정 → 확정, Match 1 → Expand | ✅ |
+| 모든 씬 Canvas (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `Resources/Bootstrap/PopupManager`) | Scale With Screen Size · 1920×1080 · Expand | ✅ 2026-09-25 — 5곳 전부. 1920×1080 창에서는 이전과 같은 크기, 다른 비율에서만 달라진다 |
+| Safe Area | `Scripts/UI/SafeArea.cs` — 캔버스 아래 `SafeArea` 컨테이너(화면 전체 앵커)에 가장자리 UI 를 넣는다. 타이틀: `VersionText` · `SystemButtons`, 로비: `NicknameText` | ✅ 2026-09-25. 방 · 인게임은 화면 재구성 때 |
+| `plan-b-ui` B1-14 | 착수 (`⛔` 해제) | ✅ 완료 |
+| README 전역 미정 #9 | 화면 방향 항목 닫음 (시스템 버튼 동작은 남음) | ✅ |
+
+캡처 확인 (2026-09-25, Expand): 타이틀 · 로비 1920×1080 · 2400×1080 · **2048×1536(iPad)** — 로비 양 끝 버튼 잘림이 사라졌고, 타이틀 중앙 묶음은 세로로 여유가 늘었을 뿐 위치 규칙 그대로.
 
 ## 10. 미정 / 결정 필요
 
