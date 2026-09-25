@@ -40,7 +40,7 @@ namespace Chapchu.Presentation
             CardData data = cardDatabase.GetCard(cardid);
 
             CardPresenter cp = handView.DrawCard(data);
-            cp.Setup(data, playerHand.GetHandCount());//Count is bigger than index 커밋추가용
+            cp.Setup(data, playerHand.GetHandCount());//Count is bigger than index
             playerHand.Add(new Card(data.id));
 
             if (!isPropertyUpdatePending)
