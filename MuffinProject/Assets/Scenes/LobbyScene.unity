@@ -425,6 +425,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 673723259}
+  - component: {fileID: 673723262}
+  - component: {fileID: 673723261}
+  - component: {fileID: 673723260}
   m_Layer: 5
   m_Name: LobbyPanel
   m_TagString: Untagged
@@ -453,6 +456,47 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &673723260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673723258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5baddd3f49b09ea4a8e0fa2e25ecbdf3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  view: {fileID: 673723261}
+--- !u!114 &673723261
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673723258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a5f2fa32471b4a4bba3c34893a458ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nicknameText: {fileID: 1014118935}
+--- !u!114 &673723262
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673723258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54640514f71b86d4ba897aaa4cee9ec3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  randomMatchButton: {fileID: 1595252675}
+  createRoomButton: {fileID: 1703148120}
+  joinRoomButton: {fileID: 849667558}
 --- !u!1 &849667556
 GameObject:
   m_ObjectHideFlags: 0

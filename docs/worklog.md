@@ -63,7 +63,7 @@
 
 ### 다음 할 일
 
-- [ ] (로직) 위 표대로 컴포넌트 연결 + 왕복 확인
+- [x] (로직) 위 표대로 컴포넌트 연결 + 왕복 확인 — `feature/lobby-logic` (PR5 와 함께). 필드명은 #19 이후 `ProfileView.nicknameText` · `ProfilePresenter.view`
 - [ ] (뷰) Game 뷰 1920×1080 · 2400×1080 에서 캡처와 같은지 눈으로 확인 — 에디터 GUI 필요
 - [ ] 화면 방향 · Screen Match Mode(Expand) 결정 (전역 미정 #9)
 - [ ] 디자인 확정 후 색 · 스프라이트 교체 (크기 · 배치 유지)
