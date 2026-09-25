@@ -14,41 +14,32 @@ namespace Chapchu.UI
         [SerializeField] private Button leaveButton;
         [SerializeField] private Button startButton;
 
-        private void Awake()
-        {
-            PhotonNetwork.AutomaticallySyncScene = true;
-        }
-
         private void OnEnable()
         {
             RoomEvents.OnLeftRoom += OnLeftRoom;
-        
-            RoomEvents.OnPlayerEntered += OnRoomStateChanged;
-            RoomEvents.OnPlayerLeft += OnRoomStateChanged;
+            RoomEvents.OnPlayerEntered += RefreshStartButton;
+            RoomEvents.OnPlayerLeft += RefreshStartButton;
+            // 방장이 나가면 PUN 이 새 방장을 정한다. OnPlayerLeft 와의 순서가 보장되지 않으므로 둘 다에서 갱신한다.
+            RoomEvents.OnMasterClientSwitched += RefreshStartButton;
 
-            RoomEvents.OnPlayerEntered += UpdateStartButtonState;
-            RoomEvents.OnPlayerLeft += UpdateStartButtonState;
-        
             leaveButton.onClick.AddListener(OnLeaveClicked);
+            startButton.onClick.AddListener(OnStartClicked);
         }
 
         private void OnDisable()
         {
             RoomEvents.OnLeftRoom -= OnLeftRoom;
-        
-            RoomEvents.OnPlayerEntered -= OnRoomStateChanged;
-            RoomEvents.OnPlayerLeft -= OnRoomStateChanged;
-        
-            RoomEvents.OnPlayerEntered -= UpdateStartButtonState;
-            RoomEvents.OnPlayerLeft -= UpdateStartButtonState;
-        
+            RoomEvents.OnPlayerEntered -= RefreshStartButton;
+            RoomEvents.OnPlayerLeft -= RefreshStartButton;
+            RoomEvents.OnMasterClientSwitched -= RefreshStartButton;
+
             leaveButton.onClick.RemoveListener(OnLeaveClicked);
+            startButton.onClick.RemoveListener(OnStartClicked);
         }
 
         private void Start()
         {
-            UpdateStartButtonState(null);
-            RefreshStartButton();
+            RefreshStartButton(null);
         }
 
         private void OnLeaveClicked()
@@ -64,48 +55,20 @@ namespace Chapchu.UI
             PhotonNetwork.LoadLevel(ScenePaths.Game);
         }
 
-        private bool CanStartGame()
-        {
-            if (PhotonNetwork.CurrentRoom.PlayerCount < NetworkManager.MinPlayers)
-            {
-                Debug.Log("It must have at least 2 players");
-                // 플레이어 2명 이상 경고문 UI 처리
-                return false;
-            }
-            return true;
-        }
+        // 08-room.md: 최소 인원 2명 (확정). 준비 상태 등 다른 조건은 미정.
+        private bool CanStartGame() => PhotonNetwork.CurrentRoom.PlayerCount >= NetworkManager.MinPlayers;
 
         private void OnLeftRoom()
         {
             // 들어온 곳으로 돌아간다. Lobby 에서 왔으면 Lobby, DebugLobby 에서 왔으면 DebugLobby.
             SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
         }
-    
-        private void UpdateStartButtonState(Player player)
+
+        // 시작 버튼은 방장에게만 보이고, 최소 인원이 찼을 때만 누를 수 있다.
+        private void RefreshStartButton(Player _)
         {
+            startButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
             startButton.interactable = CanStartGame();
-        }
-    
-        private void OnRoomStateChanged(Player player)
-        {
-            RefreshStartButton();
-        }
-    
-        private void RefreshStartButton()
-        {
-            // 마스터 클라이언트인지 확인
-            if (PhotonNetwork.IsMasterClient)
-            {
-                startButton.gameObject.SetActive(true);
-            
-                startButton.onClick.RemoveAllListeners();
-                startButton.onClick.AddListener(OnStartClicked);
-            }
-            else
-            {
-                startButton.gameObject.SetActive(false);
-                startButton.onClick.RemoveAllListeners();
-            }
         }
     }
 }

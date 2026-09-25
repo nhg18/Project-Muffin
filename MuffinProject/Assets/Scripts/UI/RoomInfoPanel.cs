@@ -22,7 +22,8 @@ namespace Chapchu.UI
         {
             RoomEvents.OnPlayerEntered += OnPlayerEntered;
             RoomEvents.OnPlayerLeft += OnPlayerLeft;
-        
+            RoomEvents.OnMasterClientSwitched += OnMasterClientSwitched;
+
             if (PhotonNetwork.InRoom)
             {
                 OnJoined();
@@ -33,6 +34,7 @@ namespace Chapchu.UI
         {
             RoomEvents.OnPlayerEntered -= OnPlayerEntered;
             RoomEvents.OnPlayerLeft -= OnPlayerLeft;
+            RoomEvents.OnMasterClientSwitched -= OnMasterClientSwitched;
         }
     
         private void UpdateRoomInfo()
@@ -65,6 +67,12 @@ namespace Chapchu.UI
         private void OnPlayerLeft(Player oldPlayer)
         {
             AddLog($"{oldPlayer.NickName}님이 퇴장했습니다.");
+            UpdateRoomInfo();
+        }
+
+        // (Host) 표기 갱신. OnPlayerLeft 와의 순서가 보장되지 않아 따로 구독한다. 로그 문구는 08-room #4 미정이라 남기지 않는다.
+        private void OnMasterClientSwitched(Player newMaster)
+        {
             UpdateRoomInfo();
         }
 
