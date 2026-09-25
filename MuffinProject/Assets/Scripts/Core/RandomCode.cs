@@ -1,22 +1,24 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Chapchu.Core
 {
-
-    public class RandomCode
+    /// <summary>
+    /// 방 코드 생성. 자릿수 · 규칙은 08-room.md 5절 #3 미정 — 확정되면 Length 하나만 바꾼다.
+    /// </summary>
+    public static class RandomCode
     {
-        public static string GenerateRandomCode(int length = 4)
+        public const int Length = 4;
+
+        public static string GenerateRandomCode()
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            char[] code = new char[length];
+            char[] code = new char[Length];
 
-            for (int i = 0; i < length; i++)
+            for (int i = 0; i < Length; i++)
             {
                 code[i] = chars[Random.Range(0, chars.Length)];
             }
-        
+
             return new string(code);
         }
     }

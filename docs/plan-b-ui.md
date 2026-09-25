@@ -117,7 +117,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B2-4 | 카운터 사용 UI | ⛔ 기획 #2 |
 | B2-5 | 함정 슬롯 UI + 설치 · 발동 인터랙션 | ⛔ 기획 #2 (UI 부분) |
 | B2-6 | 카드 사용 거절 사유 표시 (`OnRequestRejected` → `MessageToast`) | ←B1-9 |
-| B2-7 | 로비 · 방 정리 | `ui-refactoring-plan` PR5 · PR6 | PR6 코드 정리(U-12 · U-22 · U-23) ✅ `feature/room-cleanup`. U-24 는 방 디자인 후. PR5 남음 |
+| B2-7 | 로비 · 방 정리 | `ui-refactoring-plan` PR5 · PR6 | PR6 코드 정리(U-12 · U-22 · U-23) ✅ #22. PR5 ✅ `feature/lobby-logic`. U-24 는 방 디자인 후 |
 
 > 기획 #2 가 M1 중에 안 나오면 **M2 의 B 작업 대부분이 멈춘다.** 그 경우 B 는 PR5 · PR6 과 M3 의 확정 항목(B3-1, B3-2)을 당겨온다.
 
