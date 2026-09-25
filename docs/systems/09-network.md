@@ -1,6 +1,6 @@
 # 09. 네트워크 권한 · 동기화 규약
 
-**최종 수정일**: 2026-09-24
+**최종 수정일**: 2026-09-25
 **분류**: Core
 **전제**: Photon PUN2. 마스터 클라이언트(방장)가 서버 역할을 겸한다.
 
@@ -127,8 +127,8 @@ public static class RoomProps
 }
 ```
 
-> ⚠ 현재 코드에는 `"HP"`, `"PlayerHP"`, `"HandCount"`, `"CardsCount"`, `"isChapChu"`, `"turn"`, `"RoomDeck"` 이 혼재한다.
-> `PlayerPresenter`는 `"HP"`를 읽고 `PlayerInfoData`는 `"PlayerHP"`를 읽는데 **어느 쪽도 쓰는 코드가 없어 HP UI가 갱신되지 않는다.**
+> 키 상수는 `Core/PlayerProps.cs` · `Core/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음).
+> ⚠ 남은 위반: `DeckPresenter` 의 `"RoomDeck"` 리터럴 (덱 전체 배열 동기화, 6.2 위반) — M1 A1-7 에서 제거한다.
 
 ---
 
@@ -212,11 +212,11 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 마스터 경유 카드 요청 (`CardPlayManager.RPC_RequestPush`) | 있음. **검증 로직 없음** (`isResolutioning` 체크만) |
 | 마스터 소유 덱 | 없음. 덱 배열을 Room Property로 전체 동기화 |
 | 마스터 소유 손패 | **없음.** 손패는 각 클라이언트 로컬에만 존재 |
-| 마스터 소유 HP | 없음. HP를 변경하는 코드 자체가 없음 |
+| 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
 | 처리 ID | 없음 |
-| 카드 인스턴스 ID | 없음 (`Card` 구조체가 `ID` 하나만 보유) |
+| 카드 인스턴스 ID | `CardInstance` 구조체만 존재. 부여 · 전송 · 요청에 쓰는 곳 없음 |
 | 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
-| RPC `nameof` 사용 | 혼재 (`TurnManager`/`DeckPresenter`는 사용, `CardPlayManager`는 문자열) |
+| RPC `nameof` 사용 | 혼재 (`TurnManager`/`DeckPresenter`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
 | 마스터 가드 | 일부 누락 (`RPC_RequestDrawToMaster`) |
 
 ---

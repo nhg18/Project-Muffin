@@ -2,7 +2,7 @@
 
 **최종 수정일**: 2026-09-25
 **분류**: MVP
-**상태: 결정되지 않은 항목이 많다. 구현 전 5절을 먼저 확정해야 한다.**
+**상태: 5절 8건 전부 확정 (2026-09-25). 남은 미정은 연결 끊김 · 재접속뿐 (9절).**
 
 ---
 
@@ -20,7 +20,6 @@
 | 최대 인원 | 4명 | 확정 (`NetworkManager.MaxPlayers`) |
 | room code | 랜덤 생성 코드 (영대문자 4자리) | 확정 (5절 #3) |
 
-> ⚠ 레거시 `PrototypeNetwork`는 `MaxPlayers = 6`으로 방을 만든다. 기획(2~4인) 위반.
 
 ---
 
@@ -28,12 +27,12 @@
 
 | 요소 | 설명 | 결정 상태 |
 | --- | --- | --- |
-| 플레이어 리스트 | 참가자 목록 | 명칭만 |
-| room code | 방 참가 코드 | 명칭만 |
-| 로그 | 방 이벤트 기록 | **내용 미정** |
-| 설정 버튼 | 방 설정 | 명칭만 |
+| 플레이어 리스트 | 참가자 4칸, 닉네임 + `(방장)` | 확정 (`16-room-ui.md`) |
+| room code | 영대문자 4자리, 상단 중앙 | 확정 (5절 #3) |
+| 로그 | 입장 · 퇴장 · 방장 교체, 최대 30줄 | 확정 (5절 #4) |
+| 설정 버튼 | 방 설정 | **MVP 에 없음** (5절 #7) |
 | 나가기 버튼 | 방 퇴장 → 들어온 씬으로 복귀. 방장이면 위임 | 확정 (5절 #5) |
-| 시작 버튼 | 게임 시작 | **활성 조건 미정** |
+| 시작 버튼 | 게임 시작. 방장에게만 표시, 2명 이상이면 활성 | 확정 (5절 #1 · #2) |
 | 친구 초대 버튼 | 친구 초대 | Optional |
 
 ---
@@ -48,7 +47,7 @@
 | 랜덤 매칭 | `JoinRandomRoom()` → 빈 방이 있으면 참가, 없으면(`OnJoinRandomFailed`) 새 방 생성 — **확정 (2026-09-25, MVP 포함)** | `PhotonRoom.JoinRandomRoom` · `OnJoinRandomFailed` |
 | 참가 실패 | `RoomEvents.RaiseJoinRoomFailed` → 팝업 | `PhotonRoom` |
 | 방 씬 이동 | `OnJoinedRoom` → Room 씬 로드 | `PhotonRoom` |
-| 게임 시작 | 방장이 `PhotonNetwork.LoadLevel` | 레거시 `PrototypeNetwork.GameStart` |
+| 게임 시작 | 방장이 방을 닫고(`IsOpen = IsVisible = false`) `PhotonNetwork.LoadLevel(Game)` | `RoomPresenter.HandleStartRequested` |
 
 ---
 
@@ -106,9 +105,9 @@ Room  ──(나가기)──→ Lobby
 | 팝업 (`PopupManager`) | 구현됨 |
 | 닉네임 입력/검증 | 구현됨 |
 | 방 UI (`RoomView` · `RoomPresenter`) | 구현됨 (2026-09-25 재구성, [`16-room-ui.md`](16-room-ui.md)) — 코드 · 인원 · 플레이어 칸 4개 · `(방장)` · 시작(방장만, 2명 이상) · 나가기 · 로그 |
-| 준비 상태 | 미구현 |
-| 방 설정 | 미구현 |
-| 시작 조건 검증 | 최소 인원 2명만 (버튼 비활성). 준비 상태 등은 5절 #2 미정 |
+| 준비 상태 | 없음 (5절 #6 확정) |
+| 방 설정 | 없음 (5절 #7 확정) |
+| 시작 조건 검증 | 최소 인원 2명 (5절 #2 확정, 구현됨) |
 | 로그 | 구현됨 — 입장 · 퇴장 · 방장 교체, 최대 30줄 |
 
 > 네트워크 연결 계층(`Scripts/Network`, `Scripts/Events`, `Scripts/UI`)은 프로젝트에서 **가장 잘 정리된 부분**이다.

@@ -1,6 +1,6 @@
 # 02. 플레이어 · 좌석
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core
 
 ---
@@ -28,7 +28,7 @@
 
 > 노션 원본의 **이름 없는 속성 4칸**은 위 `lifeState / isChapChu / handCount / trapCount` 로 해석한 것이다. → **확인 필요 (가정)**
 
-> ⚠ 현재 코드는 HP가 `float`(`PlayerModel.CurrentHP`, `GameStatus.MaxHp`, `PlayerInfoData.HP`)이다. 기획은 정수이므로 `int`로 통일한다.
+> HP 는 코드 전체에서 `int` 다 (`PlayerModel.CurrentHp`, `GameStatus.MaxHp`). 2026-09-24 통일 완료.
 
 ---
 
@@ -102,7 +102,7 @@ Alive → (HP 0) → DeathPending → (대응 처리) → Alive 복귀
 | --- | --- |
 | 좌석 배치 알고리즘 (`SeatManager.GetSeatAssignments`) | 구현됨. 기획과 일치 |
 | 좌석 UI (닉네임 / 턴 표시) | 구현됨 |
-| HP UI | **미동작** — HP를 쓰는 코드가 없고, 읽는 키(`"HP"` / `"PlayerHP"`)도 서로 다름 |
+| HP UI | **미동작** — 키는 `PlayerProps.Hp` 로 통일됐고 `GameEvents.OnHpChanged` 까지는 오지만, 이를 받아 게이지를 갱신하는 구독자가 없다 |
 | 손패 장수 UI (`PlayerSeat.SetCardCountUI`) | 함수만 존재, **호출하는 곳 없음** |
 | HP 게이지 (`PlayerSeat.SetHpGauge`) | 함수만 존재, **호출하는 곳 없음** |
 | 함정 슬롯 | **미구현** |

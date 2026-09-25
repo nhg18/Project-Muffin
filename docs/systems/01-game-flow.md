@@ -1,6 +1,6 @@
 # 01. 게임플레이 흐름
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core(플레이) / MVP(로비·방) / 미정(로그인)
 
 ---
@@ -20,7 +20,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 로그인 | 앱 실행 | 로그인 수단 선택 | 로그인 성공 | 메인 메뉴 | **미정** |
 | 메인 메뉴(로비) | 접속 완료 | 랜덤 매칭 / 방 생성 / 방 참가 — 화면 스펙: [`14-lobby-ui.md`](14-lobby-ui.md) | 방 생성 또는 참가 선택 | 방(Room) | 확정 (2026-09-25) / 친구 목록은 Optional |
-| 방(Room) | 방 생성/참가/초대 수락 | 대기, 설정, 초대, 나가기 | 방장이 시작 버튼 클릭 | 게임 시작 | 초안 |
+| 방(Room) | 방 생성/참가 | 대기, 나가기 — 화면 스펙: [`16-room-ui.md`](16-room-ui.md) | 방장이 시작 버튼 클릭 (2명 이상) | 게임 시작 | 확정 (2026-09-25, `08-room.md` 5절) |
 | 플레이 | 게임 시작 | 턴 진행 (드로우 / 행동 카드 / 함정 설치) | 승리 조건 충족 | 결과 화면 | 확정 |
 | 결과 화면 | 승리 판정 확정 | 결과 확인, 재대전/나가기 | 선택 완료 | 메인 메뉴 | **미정** |
 
@@ -58,7 +58,7 @@
 
 > 씬 경로는 `Scripts/Core/ScenePaths.cs` 에서 관리한다. 문자열을 직접 쓰지 않는다.
 > 방(Room)에서 나가면 **들어온 씬으로 돌아간다**: `LobbyScene` 에서 왔으면 `LobbyScene`, `DebugLobbyScene` 에서 왔으면 `DebugLobbyScene`.
-> 진입 쪽이 `SceneFlow.ReturnSceneAfterRoom` 을 설정하고 `RoomPanel` 이 읽는다. 기본값은 `LobbyScene`.
+> 진입 쪽이 `SceneFlow.ReturnSceneAfterRoom` 을 설정하고 `RoomPresenter` 가 읽는다. 기본값은 `LobbyScene`.
 
 > **UI 흐름 도식**: [`docs/diagrams/ui-flow.html`](../diagrams/ui-flow.html) (브라우저에서 열기) · 온라인: https://claude.ai/artifact/Dm6eTgxoUYTuNQHKt18Ggi (공유 설정 필요).
 > 원본은 [`ui-flow.workflow.json`](../diagrams/ui-flow.workflow.json) — 흐름이 바뀌면 원본을 고치고 `archify deliver` 로 다시 만든다.

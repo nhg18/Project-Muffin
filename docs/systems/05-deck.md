@@ -1,6 +1,6 @@
 # 05. 덱 · 손패 · 버림 더미
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core
 
 ---
@@ -20,10 +20,8 @@
 | 1회 드로우 장수 | 1장 (메인 행동) | 확정 |
 | 덱 총 구성 (카드별 매수) | — | **미정** |
 
-> ⚠ 현재 코드는 초기 손패가 7장이다. 3곳에 흩어져 있고 서로 다르다.
-> * `GameStatus.StartHandCount = 7` — 아무도 사용하지 않음
-> * `DeckPresenter.startHands = 7` — 실제 사용값 (`[SerializeField] static` 이라 Inspector 값이 반영되지 않음)
-> * `GameRule.startHands = 1` — 레거시
+> 초기 손패 수는 `GameStatus.StartHandCount = 5` 한 곳이다 (`DeckPresenter` 가 읽는다). 2026-09-24 통일 완료.
+> 단, 배분 방식은 여전히 각 클라이언트가 `Start()` 에서 5회 요청하는 구조다 (10절).
 
 ---
 

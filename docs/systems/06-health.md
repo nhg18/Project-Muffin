@@ -1,6 +1,6 @@
 # 06. 체력 · 사망
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core
 
 ---
@@ -24,7 +24,7 @@
 * 회복으로 최대치를 초과해도 최종 HP는 **100**.
 * 최대 HP를 변경하는 카드가 생기기 전까지 전원 최대 HP는 100 고정.
 
-> ⚠ 현재 코드는 HP가 `float`이다 (`PlayerModel`, `GameStatus.MaxHp`, `PlayerInfoData.HP`). `int`로 통일한다.
+> HP 는 코드 전체에서 `int` 다. 2026-09-24 통일 완료.
 
 ---
 
@@ -197,16 +197,16 @@ Alive → (HP 0) → DeathPending → 사망 관련 카드 연쇄 처리 →  HP
 
 | 항목 | 상태 |
 | --- | --- |
-| 초기 HP 100 | `GameStatus.MaxHp = 100` (float) |
+| 초기 HP 100 | `GameStatus.MaxHp = 100` (int). 단, 프로퍼티 초기 기록은 **각 클라이언트**의 `PlayerPresenter.Init` 이 한다 (마스터 일괄 초기화 아님) |
 | HP UI 텍스트 / 게이지 | UI 컴포넌트는 있으나 **갱신되지 않음** |
-| `DamageEffect` 클래스 | 존재하나 `Debug.Log`만 출력 (`//damage 적용` 주석 상태) |
-| **피해 적용** | **미구현** |
+| `DamageEffect` 클래스 | 마스터에서 `StatBuffer.Get/Set` 으로 HP 를 빼고 `Commit` 이 프로퍼티에 기록한다 |
+| **피해 적용** | 부분 — 단순 차감만. 감소 · 무효 · 전환을 모은 뒤 1회 반영(4절), 처리 ID, 다중 대상 일괄 계산은 없음 |
 | 회복 | **미구현** |
 | 위험 상태 | **미구현** |
 | 사망 대기 | **미구현** |
 | 최종 사망 | **미구현** |
 | 마스터 검증 | **미구현** |
-| HP Photon 프로퍼티 | 키가 `"HP"`(PlayerPresenter)와 `"PlayerHP"`(PlayerInfoData)로 **불일치**하며 **쓰는 코드가 없음** |
+| HP Photon 프로퍼티 | `PlayerProps.Hp` 로 통일. `PlayerPresenter` 가 읽어 `GameEvents.OnHpChanged` 를 올리지만 **좌석 UI 가 구독하지 않는다** |
 | HP 변경 기록 | **미구현** |
 
 ---
