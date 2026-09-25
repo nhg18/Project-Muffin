@@ -25,7 +25,7 @@
           "lobby_error",
           "room"
         ],
-        "note": "로비의 일은 셋뿐: 랜덤 매칭 · 방 만들기 · 방 참가. 요청 중엔 LoadingPopup, 실패는 WarningPopup 문구 5종 (08-room 7절)."
+        "note": "로비의 일은 셋뿐: 랜덤 매칭 · 방 만들기 · 방 참가(영대문자 4자리 코드). 요청 중엔 LoadingPopup, 실패는 WarningPopup 문구 5종 (08-room 7절)."
       },
       {
         "id": "leave_room",
@@ -35,7 +35,7 @@
           "lobby",
           "debug_lobby"
         ],
-        "note": "방에서 나가면 들어온 씬으로 돌아간다. SceneFlow.ReturnSceneAfterRoom, 기본값 LobbyScene. 방장이 나가면 PUN 기본대로 위임 (제안)."
+        "note": "방에서 나가면 들어온 씬으로 돌아간다. SceneFlow.ReturnSceneAfterRoom, 기본값 LobbyScene. 방장이 나가면 PUN 기본대로 위임 (08-room 5절 #5 확정)."
       }
     ],
     "legend": {
@@ -284,11 +284,11 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "씬 전환 규칙",
+      "title": "씬 · 화면 규칙",
       "items": [
         "씬 이름은 Core/ScenePaths 상수만 쓴다 (경로 문자열 금지)",
-        "방 나가기는 SceneFlow.ReturnSceneAfterRoom 으로 들어온 씬에 복귀",
-        "씬이 바뀌면 PopupManager 가 열린 팝업을 전부 닫는다"
+        "방 나가기는 SceneFlow.ReturnSceneAfterRoom 으로 들어온 씬에 복귀. 씬이 바뀌면 PopupManager 가 팝업을 전부 닫는다",
+        "모든 캔버스 1920×1080 · Expand · 가로 고정 · SafeArea (15-screen 확정)"
       ]
     },
     {
@@ -296,17 +296,17 @@
       "title": "판정 주체",
       "items": [
         "타이틀 · 로비 · 방 UI 판정은 전부 로컬 (요청만 보낸다)",
-        "인게임 전환은 방장이 PhotonNetwork.LoadLevel 로 전원 동기화, 시작한 방은 닫는다",
+        "인게임 전환은 방장이 PhotonNetwork.LoadLevel 로 전원 동기화, 시작한 방은 닫는다 (IsOpen=false)",
         "게임 규칙 판정은 마스터 클라이언트 (09-network)"
       ]
     },
     {
       "dot": "amber",
-      "title": "확정 대기 · 미정",
+      "title": "아직 미정",
       "items": [
-        "08-room 5절 8건: 제안값 = 현재 구현 (방장 위임 · 준비 없음 · 4자리 코드), 확정만 남음",
+        "결과 화면 · 재대전 (01-game-flow 7절)",
         "타이틀 연결 중 · 실패 상태 (12-title-ui Version 12) 사용자 검증 대기",
-        "결과 화면 · 재대전, 화면 방향, 로그인 시스템"
+        "로그인 시스템, 연결 끊김 · 재접속 (09-network)"
       ]
     }
   ]
