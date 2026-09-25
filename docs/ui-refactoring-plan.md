@@ -398,7 +398,9 @@ RoomEvents.OnPlayerEntered += UpdateStartButtonState;  // → interactable
 | U-19 | ✅ #14 — 죽은 스크립트 전부 삭제 |
 | U-18 (PR3) | ✅ `feature/scene-loader` — `ScenePaths` 를 씬 이름 상수 하나로 (래퍼 없음, 위 U-18 결정). 비동기 로딩 · 로딩 팝업은 쓰는 곳이 생길 때(PR5) |
 | U-15 나머지 · U-16 · U-17 나머지 (PR2) | ✅ `refactor/ui-cleanup` — `UI/NickName` → `UI/Title`, `ProfilePresenter.view` · `ProfileView.nicknameText`(`FormerlySerializedAs`), UI · `ScenePaths` 의 안 쓰는 `using` |
-| U-9 · U-10 나머지 (PR5), U-12 · U-22 · U-23 · U-24 (PR6) | 남음 |
+| U-12 · U-22 · U-23 (PR6) | ✅ `feature/room-cleanup` — 방장 교체 즉시 갱신(2클라이언트 확인), 시작 버튼 핸들러 1개 · `OnEnable` 1회 등록, `AutomaticallySyncScene` 줄 삭제 |
+| U-24 (PR6) | **보류** — 방 화면 디자인이 없어 지금 분리하면 재구성 때 다시 버린다. 방 디자인 게시 후 방 재구성 계획에 포함 |
+| U-9 · U-10 나머지 (PR5) | 남음 |
 
 
 한 PR 이 끝날 때마다 **컴파일 에러 0 + 타이틀→로비→방 왕복 1회**가 게이트다.
