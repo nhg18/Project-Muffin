@@ -1,0 +1,313 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "찹츄 UI 흐름 — 타이틀 · 로비 · 방 · 인게임",
+    "output": "docs/diagrams/ui-flow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "connect",
+        "label": "접속 → 로비",
+        "focus": [
+          "title_loading",
+          "title_input",
+          "lobby"
+        ],
+        "note": "타이틀은 연결 결과를 표시만 한다. 연결 전엔 로딩 링, OnConnected 뒤에만 닉네임 입력 · 접속 버튼. 실패하면 같은 자리에 사유 + 다시 시도 (12-title-ui 6~8)."
+      },
+      {
+        "id": "find_room",
+        "label": "방 찾기",
+        "focus": [
+          "lobby",
+          "join_input",
+          "lobby_error",
+          "room"
+        ],
+        "note": "로비의 일은 셋뿐: 랜덤 매칭 · 방 만들기 · 방 참가(영대문자 4자리 코드). 요청 중엔 LoadingPopup, 실패는 WarningPopup 문구 5종 (08-room 7절)."
+      },
+      {
+        "id": "leave_room",
+        "label": "나가기 복귀",
+        "focus": [
+          "room",
+          "lobby",
+          "debug_lobby"
+        ],
+        "note": "방에서 나가면 들어온 씬으로 돌아간다. SceneFlow.ReturnSceneAfterRoom, 기본값 LobbyScene. 방장이 나가면 PUN 기본대로 위임 (08-room 5절 #5 확정)."
+      }
+    ],
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "화면 · 팝업 (로컬 UI)"
+        },
+        "backend": {
+          "label": "네트워크 대기 · 전원 전환"
+        },
+        "security": {
+          "label": "실패 안내"
+        },
+        "external": {
+          "label": "개발 전용"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "scenes",
+      "label": "씬 (SceneManager.LoadScene)"
+    },
+    {
+      "id": "popups",
+      "label": "공용 팝업 (PopupManager · 모달 레이어)"
+    },
+    {
+      "id": "debug",
+      "label": "개발 전용 (DebugLobbyScene)"
+    }
+  ],
+  "phases": [
+    {
+      "id": "connect_phase",
+      "label": "접속",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "match_phase",
+      "label": "방 찾기",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "play_phase",
+      "label": "플레이",
+      "fromCol": 4,
+      "toCol": 4
+    }
+  ],
+  "mainPath": [
+    "title_loading",
+    "title_input",
+    "lobby",
+    "room",
+    "game"
+  ],
+  "nodes": [
+    {
+      "id": "title_loading",
+      "lane": "scenes",
+      "col": 0,
+      "type": "backend",
+      "label": "연결 중",
+      "sublabel": "로딩 링 · 다시 시도",
+      "width": 120,
+      "tag": "TitleScene"
+    },
+    {
+      "id": "title_input",
+      "lane": "scenes",
+      "col": 1,
+      "type": "frontend",
+      "label": "닉네임 · 접속",
+      "sublabel": "OnConnected 뒤에만 표시",
+      "width": 120,
+      "tag": "TitleScene"
+    },
+    {
+      "id": "lobby",
+      "lane": "scenes",
+      "col": 2,
+      "type": "frontend",
+      "label": "로비",
+      "sublabel": "매칭 · 생성 · 참가",
+      "tag": "LobbyScene"
+    },
+    {
+      "id": "room",
+      "lane": "scenes",
+      "col": 3,
+      "type": "frontend",
+      "label": "방 대기",
+      "sublabel": "2~4명 · 방장만 시작",
+      "width": 120,
+      "tag": "RoomScene"
+    },
+    {
+      "id": "game",
+      "lane": "scenes",
+      "col": 4,
+      "type": "backend",
+      "label": "인게임",
+      "sublabel": "LoadLevel · 전원 전환",
+      "width": 120,
+      "tag": "GameScene"
+    },
+    {
+      "id": "lobby_error",
+      "lane": "popups",
+      "col": 0,
+      "type": "security",
+      "label": "WarningPopup",
+      "sublabel": "실패 사유 5종",
+      "width": 120,
+      "tag": "모달"
+    },
+    {
+      "id": "loading",
+      "lane": "popups",
+      "col": 1,
+      "type": "backend",
+      "label": "LoadingPopup",
+      "sublabel": "요청 결과 대기",
+      "width": 110,
+      "tag": "모달"
+    },
+    {
+      "id": "join_input",
+      "lane": "popups",
+      "col": 3,
+      "type": "frontend",
+      "label": "방 코드 입력",
+      "sublabel": "InputPopup · 4자",
+      "width": 110,
+      "tag": "모달"
+    },
+    {
+      "id": "debug_lobby",
+      "lane": "debug",
+      "col": 4,
+      "type": "external",
+      "label": "디버그 입장",
+      "sublabel": "DebugScript",
+      "width": 110,
+      "tag": "빌드 인덱스 4"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_connected",
+      "from": "title_loading",
+      "to": "title_input",
+      "label": "OnConnected",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e_connect",
+      "from": "title_input",
+      "to": "lobby",
+      "label": "접속 (검증 통과 · IsReady)",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e_create",
+      "from": "lobby",
+      "to": "room",
+      "label": "방 만들기 · 랜덤 매칭",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e_loading",
+      "from": "lobby",
+      "to": "loading",
+      "label": "요청 중",
+      "role": "branch",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_join_click",
+      "from": "lobby",
+      "to": "join_input",
+      "label": "방 참가",
+      "role": "branch"
+    },
+    {
+      "id": "e_join_submit",
+      "from": "join_input",
+      "to": "room",
+      "label": "코드 제출 → OnJoinedRoom",
+      "role": "branch",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "e_lobby_fail",
+      "from": "loading",
+      "to": "lobby_error",
+      "label": "실패 콜백",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "e_start",
+      "from": "room",
+      "to": "game",
+      "label": "시작 버튼 (방장 · 2명 이상)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_leave_lobby",
+      "from": "room",
+      "to": "lobby",
+      "label": "나가기 → 들어온 씬 (기본 Lobby)",
+      "role": "return",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "id": "e_debug_join",
+      "from": "debug_lobby",
+      "to": "room",
+      "label": "Join 버튼",
+      "role": "branch",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_leave_debug",
+      "from": "room",
+      "to": "debug_lobby",
+      "label": "나가기 (DebugLobby 진입 시)",
+      "role": "return",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "씬 · 화면 규칙",
+      "items": [
+        "씬 이름은 Core/ScenePaths 상수만 쓴다 (경로 문자열 금지)",
+        "방 나가기는 SceneFlow.ReturnSceneAfterRoom 으로 들어온 씬에 복귀. 씬이 바뀌면 PopupManager 가 팝업을 전부 닫는다",
+        "모든 캔버스 1920×1080 · Expand · 가로 고정 · SafeArea (15-screen 확정)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "판정 주체",
+      "items": [
+        "타이틀 · 로비 · 방 UI 판정은 전부 로컬 (요청만 보낸다)",
+        "인게임 전환은 방장이 PhotonNetwork.LoadLevel 로 전원 동기화, 시작한 방은 닫는다 (IsOpen=false)",
+        "게임 규칙 판정은 마스터 클라이언트 (09-network)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "아직 미정",
+      "items": [
+        "결과 화면 · 재대전 (01-game-flow 7절)",
+        "타이틀 연결 중 · 실패 상태 (12-title-ui Version 12) 사용자 검증 대기",
+        "로그인 시스템, 연결 끊김 · 재접속 (09-network)"
+      ]
+    }
+  ]
+}
