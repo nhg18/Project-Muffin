@@ -1,6 +1,6 @@
 # 08. 방(Room) · 로비
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: MVP
 **상태: 결정되지 않은 항목이 많다. 구현 전 5절을 먼저 확정해야 한다.**
 
@@ -45,6 +45,7 @@
 | 방 생성 | 랜덤 코드 생성 → `CreateRoom(code, maxPlayers=4, visible, open)` | `PhotonRoom.CreateRoom` |
 | 코드 중복 (에러 32766) | 자동으로 다시 생성 시도 | `PhotonRoom.OnCreateRoomFailed` |
 | 방 참가 | 코드를 `Trim().ToUpper()` 후 참가 | `PhotonRoom.JoinRoom` |
+| 랜덤 매칭 | `JoinRandomRoom()` → 빈 방이 있으면 참가, 없으면(`OnJoinRandomFailed`) 새 방 생성 — **확정 (2026-09-25, MVP 포함)** | `PhotonRoom.JoinRandomRoom` · `OnJoinRandomFailed` |
 | 참가 실패 | `RoomEvents.RaiseJoinRoomFailed` → 팝업 | `PhotonRoom` |
 | 방 씬 이동 | `OnJoinedRoom` → Room 씬 로드 | `PhotonRoom` |
 | 게임 시작 | 방장이 `PhotonNetwork.LoadLevel` | 레거시 `PrototypeNetwork.GameStart` |
@@ -73,6 +74,7 @@
 ```
 Lobby ──(방 생성)──→ Room(방장)
 Lobby ──(코드 입력/초대)──→ Room(참가자)
+Lobby ──(랜덤 매칭)──→ Room(빈 방이 있으면 참가자, 없으면 방장)
 Room  ──(시작 버튼)──→ GameScene
 Room  ──(나가기)──→ Lobby
 ```
@@ -115,3 +117,5 @@ Room  ──(나가기)──→ Lobby
 ## 9. 미정 / 결정 필요
 
 5절 전체 (8개 항목).
+
+> 로비 **화면**(버튼 크기 · 배치)은 [`14-lobby-ui.md`](14-lobby-ui.md).
