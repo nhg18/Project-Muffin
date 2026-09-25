@@ -8,9 +8,7 @@ namespace Chapchu.Practice
     public static class GameEvents
     {
         public static event Action<int> OnTurnChanged;               // actorNumber
-        public static event Action<int, string> OnEndTurnRejected;   // actorNumber, reason
 
         public static void RaiseTurnChanged(int actorNumber) => OnTurnChanged?.Invoke(actorNumber);
-        public static void RaiseEndTurnRejected(int actorNumber, string reason) => OnEndTurnRejected?.Invoke(actorNumber, reason);
     }
 }
