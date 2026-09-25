@@ -21,8 +21,8 @@ namespace Chapchu.DebugTools
 
         private void Start()
         {
-            PhotonNetwork.AutomaticallySyncScene = false;
-        
+            // AutomaticallySyncScene 은 NetworkManager.Awake(PhotonConnection.Initialize) 가 true 로 켠다.
+            // 여기서 false 로 덮어쓰면 방장의 LoadLevel 이 참가자에게 동기화되지 않아 마스터만 인게임으로 넘어간다.
             if (!NetworkManager.IsConnected)
                 NetworkManager.Instance.Connect();
         

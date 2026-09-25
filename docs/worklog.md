@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-09-25 · hotfix: 디버그 로비에서 마스터만 인게임으로 넘어가는 버그
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `changhwan.exe` (PR #31 에 포함) |
+| 증상 | `DebugLobbyScene` → 방 → 시작하면 마스터만 `GameScene` 으로 가고 참가자는 `RoomScene` 에 남는다 |
+| 원인 | `DebugScript.Start()` 의 `PhotonNetwork.AutomaticallySyncScene = false;` (`2442718`, 2026-08-04). `NetworkManager.Awake` 가 `true` 로 켠 값을 디버그 씬이 다시 꺼서 `RoomPresenter` 의 `LoadLevel` 이 동기화되지 않았다. 옛 `RoomPanel.Awake` 의 `= true` 땜질(`2f362ed`)이 이를 가려 왔고, 그 줄이 U-23(`3e1c333`)으로 삭제되자 드러났다 |
+| 수정 | 그 줄 삭제. 설정은 `PhotonConnection.Initialize()` 한 곳만 담당 (A0-1 취지) |
+| 확인 | 에디터 + ParrelSync 클론으로 디버그 로비 → 방 → 시작 시 두 클라이언트 모두 `GameScene` 진입 확인 필요 |
+
+---
+
 ## 2026-09-25 · 로비를 타이틀 구조로 통일 (LobbyCanvas · LobbyView/Presenter · PillButton · 같은 배경)
 
 | 항목 | 값 |
