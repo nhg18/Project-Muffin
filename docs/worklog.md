@@ -42,6 +42,146 @@
 - [ ] 타임아웃 · 우클릭 취소 후 잠금이 풀려 B 드래그 가능한지
 - [ ] 대상 선택 중 빈 곳 좌클릭에 손패가 내려가지 않는지
 - [ ] `TargetType.None / AllEnemies / Me` 카드가 즉시 처리되는지
+## 2026-09-25 · hotfix: 디버그 로비에서 마스터만 인게임으로 넘어가는 버그
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `changhwan.exe` (PR #31 에 포함) |
+| 증상 | `DebugLobbyScene` → 방 → 시작하면 마스터만 `GameScene` 으로 가고 참가자는 `RoomScene` 에 남는다 |
+| 원인 | `DebugScript.Start()` 의 `PhotonNetwork.AutomaticallySyncScene = false;` (`2442718`, 2026-08-04). `NetworkManager.Awake` 가 `true` 로 켠 값을 디버그 씬이 다시 꺼서 `RoomPresenter` 의 `LoadLevel` 이 동기화되지 않았다. 옛 `RoomPanel.Awake` 의 `= true` 땜질(`2f362ed`)이 이를 가려 왔고, 그 줄이 U-23(`3e1c333`)으로 삭제되자 드러났다 |
+| 수정 | 그 줄 삭제. 설정은 `PhotonConnection.Initialize()` 한 곳만 담당 (A0-1 취지) |
+| 확인 | 에디터 + ParrelSync 클론으로 디버그 로비 → 방 → 시작 시 두 클라이언트 모두 `GameScene` 진입 확인 필요 |
+
+---
+
+## 2026-09-25 · 로비를 타이틀 구조로 통일 (LobbyCanvas · LobbyView/Presenter · PillButton · 같은 배경)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/lobby-unify` (← `changhwan.exe` `33ee5be`, #24 머지 후) |
+| 작업 위치 | worktree `../Project-Muffin-title` |
+| 사유 | 사용자 지적: #24 뒤에도 로비가 타이틀과 구조가 달랐다(`Canvas`/`LobbyPanel` 단일 스크립트/기본 버튼/단색 배경). "갈아엎어" → 통일 |
+
+### 한 것
+
+| 항목 | 내용 |
+| --- | --- |
+| 씬 | `LobbyCanvas` [LobbyView · LobbyPresenter] › `BG_Illust` · `BG_Overlay`(타이틀과 같은 에셋) · `NicknameText`(B 48) · `MainButtons` › `PillButton` 프리팹 인스턴스 3개(480×200, 글자 56). 프리팹 연결 유지 |
+| 코드 | `UI/Lobby/LobbyView.cs`(이벤트만) + `UI/Lobby/LobbyPresenter.cs`(옛 `LobbyPanel` 로직을 그대로 옮김 — 팝업 · 실패 문구 · 씬 전환 · `ReturnSceneAfterRoom`). `LobbyPanel` · `PlayerProfile/ProfileView` · `ProfilePresenter` 삭제 (참조: LobbyScene 뿐) |
+| 문서 | `14-lobby-ui` 3절 #5 · 7-1(버튼 스타일 · 하이어라키 · 스크립트 표) · 8절(배경 = 타이틀) · 9 · 10 |
+| 빌더 | `LobbySceneBuilder.cs` 로 생성 후 삭제 (이 브랜치 커밋 이력에 있음) |
+
+### 캡처 (1920×1080 · 2400×1080 · 1280×720)
+
+버튼 줄 정중앙, 닉네임 좌상단, 타이틀과 같은 배경 · 오버레이. 잘림 없음. 4:3 은 이전과 같이 양 끝 60 잘림(전역 미정 #9).
+
+### 확인 필요 (에디터)
+
+- [ ] 타이틀 → 로비(닉네임) → 방 만들기 → 방 → 나가기 → 로비
+- [ ] 방 참가 → 팝업 → 없는 코드 → "방을 찾을 수 없습니다."
+- [ ] 버튼 호버 · 누름 연출(PressableButton)이 480×200 에서도 자연스러운지
+
+---
+
+## 2026-09-25 · 방 화면 재구성 (B 트랙 2-1 순서 3, U-24)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/room-rework` (← `changhwan.exe` `5dae904`) |
+| 작업 위치 | worktree `../Project-Muffin-connect` |
+| 기준 | `docs/systems/16-room-ui.md` (신설), `08-room.md` 5절 확정, `15-screen.md` |
+
+### 한 것
+
+| 단계 | 내용 |
+| --- | --- |
+| 문서 | `16-room-ui.md` — 크기 · 배치 · 스타일(타이틀 · 로비와 동일) · 하이어라키 · 스크립트 역할 |
+| 씬 | `RoomScene` Canvas 아래 재생성 (임시 빌더, 실행 후 삭제): 배경 키 아트 · 오버레이, 플레이어 칸 4개(400×400, 간격 40), `PillButton` 「게임 시작」(480×200, 하단) · 「나가기」(320×120, 좌상단), 방 코드(상단 중앙, 글자 96), 인원(우상단), 로그(좌하단 640×200). 가장자리 요소는 `SafeArea` 아래 |
+| 코드 | `UI/RoomScreen/RoomView` (표시 setter + 버튼 이벤트) · `RoomPresenter` (`RoomEvents` · `PhotonNetwork` → 뷰, 시작 · 나가기). `RoomPanel` · `RoomInfoPanel` 삭제 |
+| 폴더명 | `UI/RoomScreen` — `UI/Room` 은 `Photon.Realtime.Room` 과 이름이 겹쳐 금지 (`CODE_CONVENTION` 4.2) |
+
+### 발견 · 수정
+
+- **참가자 화면이 입장 직후 비어 있던 버그.** `AutomaticallySyncScene` 이 참가자를 방장의 씬으로 끌어오면 **`RoomScene` 이 `OnJoinedRoom` 보다 먼저 뜬다** (로그 순서로 확인). `Start()` 에서만 초기화하면 이때 `InRoom` 이 아직 아니라 건너뛴다. → `RoomEvents.OnJoinedRoom` 에서도 초기화하고 1회 가드. 옛 `RoomInfoPanel` 도 같은 조건이었다.
+- 2클라이언트 테스트에서 가짜 방장이 `TitleScene` 에 머물면 참가자가 타이틀로 끌려간다 — 테스트 환경 문제(실제 방장은 방 씬에 있음). 방장 스크립트가 `RoomScene` 을 로드하도록 수정.
+
+### 검증 (batchmode, 실제 Photon)
+
+| 시나리오 | 결과 |
+| --- | --- |
+| bounds @ 1920×1080 · 2048×1536 · 2400×1080 · 2560×1600 | 8요소 전부 화면 안, 겹침 없음 |
+| 방장 1명: 코드 4자 · `1 / 4` · 칸0 `이름 (방장)` · 시작 표시+비활성 · 입장 로그 · 비활성 시작 무시 · 나가기 → 로비 | 통과 |
+| 참가자(2대): 입장 직후 `2 / 4` · 칸0 호스트(방장) · 칸1 본인 · 시작 숨김 · 로그 → 방장 퇴장 후 칸0 본인(방장) · `1 / 4` · 시작 표시+비활성 · 퇴장 · 방장 교체 로그 → 나가기 → 로비 | 통과 |
+
+### 다음 할 일
+
+- [ ] 디자인 게시 후 색 · 스프라이트 교체 (배치 유지)
+- [ ] 실기기 Safe Area · 터치 크기 확인
+- [ ] 2-1 순서 4: 팝업 재구성 (타이틀 박스 스타일)
+
+---
+
+## 2026-09-25 · 로비 개편 0~2단계 (문서 · 캔버스 초기화 · 배치)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/lobby-layout` (← `changhwan.exe` `8b4ff88`) · PR #21 |
+| 작업 위치 | worktree `../Project-Muffin-title` (Library 재사용) |
+| 기준 | `docs/systems/14-lobby-ui.md` (이번에 신설). 디자인 아티팩트는 개편 예정이라 참고하지 않음 |
+
+### 한 것
+
+| 단계 | 내용 |
+| --- | --- |
+| 0 | `14-lobby-ui.md` 신설(크기 · 배치 규칙), `08-room.md` 랜덤 매칭 확정, `01-game-flow.md` · `README.md` 연결 |
+| 1 | `LobbyScene` CanvasScaler 800×600 고정 → 1920×1080 · 높이 기준. Canvas 아래 전부 삭제, 카메라 단색 배경 `#2E2440` |
+| 2 | `Scripts/Editor/LobbySceneBuilder.cs` 로 Canvas 아래 재생성: `LobbyPanel` › `NicknameText`(48, 좌상단 48/48, 폭 800 말줄임) · `MainButtons`(1560×200, 간격 60) › `RandomMatchButton` · `CreateRoomButton` · `JoinRoomButton`(480×200, 글자 56). 기본 UISprite 회색 + 학교안심 R 폰트 |
+
+### 캡처 결과 (`LobbySceneBuilder.BuildAndCapture`)
+
+| 해상도 | 결과 |
+| --- | --- |
+| 1920×1080 · 1280×720 | 문서 7-1 그대로. 버튼 줄 정중앙, 닉네임 좌상단 |
+| 2340×1080 · 2400×1080 (폰) | 좌우 여백만 늘어남. 잘림 없음 |
+| 2048×1536 (iPad 4:3) | **양 끝 버튼 60씩 잘림** — 높이 기준 스케일의 한계. `14-lobby-ui` 7-1 · 10절에 기록. Expand 전환은 전역 미정 #9 |
+
+### 결정 (사용자, 2026-09-25)
+
+1. 랜덤 매칭 MVP 유지 → `08-room.md` 4절 · 6절에 확정으로 추가
+2. 기능 없는 버튼(설정 · 친구 · 프로필 편집 · 사운드/메뉴)은 두지 않음 → `14-lobby-ui` 3절 #1
+3. 문서 · 구현 모두 플랜 세션이 직접 수행
+
+### 역할 분리 (사용자 지시, 2026-09-25)
+
+**이 작업은 뷰만 만든다.** `LobbyPanel` · `ProfilePresenter` · `ProfileView` 를 씬에 붙이고 참조를 연결하는 것은 **로직 담당(옆 세션)** 몫.
+빌더에 연결 코드를 넣었다가 뺐다 — 뷰 산출물에 로직 연결이 섞이지 않도록.
+
+### 로직 담당에게 넘기는 것 — 연결 방법
+
+씬 `LobbyScene` 의 오브젝트 이름이 `LobbyPanel` 의 필드명과 같다. 코드 수정 없이 인스펙터 연결만 하면 된다.
+
+| 붙일 오브젝트 | 컴포넌트 | 필드 | 연결 대상 |
+| --- | --- | --- | --- |
+| `Canvas/LobbyPanel` | `LobbyPanel` | `randomMatchButton` | `MainButtons/RandomMatchButton` |
+| | | `createRoomButton` | `MainButtons/CreateRoomButton` |
+| | | `joinRoomButton` | `MainButtons/JoinRoomButton` |
+| `Canvas/LobbyPanel` | `ProfileView` | `_nicknameText` | `NicknameText` |
+| `Canvas/LobbyPanel` | `ProfilePresenter` | `_view` | 같은 오브젝트의 `ProfileView` |
+
+연결 뒤 확인: 타이틀 → 로비(닉네임 표시) → 방 만들기 → 방 → 나가기 → 로비 / 방 참가 → 팝업 → 없는 코드 → 경고.
+
+### 주의
+
+- 연결 전까지 로비 버튼은 동작하지 않는다 (뷰만 있음).
+- `LobbySceneBuilder.cs` 는 씬 생성 후 **삭제했다** (커밋 `88e0822` 에 있음. 손으로 고친 씬을 덮어쓰지 않도록). 다시 필요하면 그 커밋에서 꺼낸다.
+- batchmode 실행 시 `Assets/Settings/Lit2DSceneTemplate.scenetemplate` 가 같이 바뀐다(URP 템플릿 의존성 정리). 무관한 변경이라 되돌렸다.
+
+### 다음 할 일
+
+- [x] (로직) 위 표대로 컴포넌트 연결 + 왕복 확인 — `feature/lobby-logic` (PR5 와 함께). 필드명은 #19 이후 `ProfileView.nicknameText` · `ProfilePresenter.view`
+- [ ] (뷰) Game 뷰 1920×1080 · 2400×1080 에서 캡처와 같은지 눈으로 확인 — 에디터 GUI 필요
+- [ ] 화면 방향 · Screen Match Mode(Expand) 결정 (전역 미정 #9)
+- [ ] 디자인 확정 후 색 · 스프라이트 교체 (크기 · 배치 유지)
 
 ---
 

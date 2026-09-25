@@ -60,6 +60,9 @@
 > 방(Room)에서 나가면 **들어온 씬으로 돌아간다**: `LobbyScene` 에서 왔으면 `LobbyScene`, `DebugLobbyScene` 에서 왔으면 `DebugLobbyScene`.
 > 진입 쪽이 `SceneFlow.ReturnSceneAfterRoom` 을 설정하고 `RoomPanel` 이 읽는다. 기본값은 `LobbyScene`.
 
+> **UI 흐름 도식**: [`docs/diagrams/ui-flow.html`](../diagrams/ui-flow.html) (브라우저에서 열기) · 온라인: https://claude.ai/artifact/Dm6eTgxoUYTuNQHKt18Ggi (공유 설정 필요).
+> 원본은 [`ui-flow.workflow.json`](../diagrams/ui-flow.workflow.json) — 흐름이 바뀌면 원본을 고치고 `archify deliver` 로 다시 만든다.
+
 ### 전역 매니저 (부트스트랩 씬 없음)
 
 `BootstrapScene` 은 **제거됐다.** 대신 `Scripts/Core/GameBootstrap.cs` 가

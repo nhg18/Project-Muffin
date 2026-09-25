@@ -160,7 +160,7 @@ Phase 를 순서대로 한 명씩 맡는 방식으로는 안 된다.
 | 1 | `PhotonConnection.Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 설정을 건너뛴다. 이 값이 꺼진 채 연결되면 `PhotonNetwork.LoadLevel` 이 동기화되지 않아 **인게임 진입이 실패**한다 | **M0** · A0-1 ✅ |
 | 2 | `OnDisconnected` 의 처리 분기가 전부 주석. 접속 실패 시 안내도 복구도 없다. 연결 타임아웃도 없음 | **M0** · A0-2 ✅ (표시는 B) |
 | 3 | 미사용 `Resources/Popups/LoadingPopup.prefab` 을 접속 대기 표시에 연결 | M0 · B0-2 |
-| 4 | 모든 Canvas 가 `ConstantPixelSize` — 모바일 해상도 대응 없음. `ProjectSettings` 는 4방향 자동회전 | **M1 (기획 4-3 확정 후)** · B1-14 |
+| 4 | 모든 Canvas 가 `ConstantPixelSize` — 모바일 해상도 대응 없음. `ProjectSettings` 는 4방향 자동회전 | ✅ B1-14 (2026-09-25, `15-screen.md`) |
 | 5 | `PopupManager.CloseAllModals` 가 `.gameObject` 대신 컴포넌트를 `Destroy` → 씬 전환 시 팝업이 화면에 남는다 | M1 · B1-9 (U-1) |
 | 6 | 닉네임 구현 2벌 (`NicknameInput` vs `NicknameInputLogic`) — 검증 규칙이 서로 다름. `NicknameValidator` 로 단일화 | M1 · B1-11 (U-19) |
 | 7 | 저장된 닉네임 복원 미동작 — `PhotonConnection.SetupInitNickname()` 은 호출처 없는 죽은 코드 | M1 · B1-13 + A 요청 R-2 ✅ |
