@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-09-25 · 코드 전수 대조 → 낡은 문서 정리 · Practice 접기 · 플랜 v2
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `ui` (prac 위) |
+| 범위 | `.cs` 이동 3 · 삭제 5 · 신규 1, 씬 변경 없음(GUID 유지), 문서 13개 |
+
+### 한 것
+
+1. **코드 vs 기획서 전수 대조** — 결과는 `development-plan.md` v2 0절 표. 아웃게임 약 90%, 인게임 약 25%, 카드 5%, 로그인 · 재접속 · 결과 0%.
+2. **낡은 문서 7곳 갱신** — 코드가 앞서 갔는데 문서가 옛 경고를 유지하던 곳: 01(방 확정 · `RoomPresenter`), 02 · 06(HP int 통일, HP 이벤트는 오지만 구독자 없음), 04(`DamageEffect` 실제 동작, 손패 제거가 승인 전 로컬), 05(초기 손패 5장 한 곳), 08(5절 8건 확정에 맞춰 머리말 · 3절 · 4절 · 8절), 09(키 상수 통일, `RoomDeck` 만 잔존), README(12 · 08 상태), development-plan §4 노션 표 해소.
+3. **Practice 접음** — `Practice/` 의 계약 복사본(`GameEvents` · `IGameRequests` · `IGameState`, 빈 `GameServer`) 삭제. `TurnView` · `TurnPresenter` → `Presentation/Turn/` (네임스페이스 `Chapchu.Presentation`, `.meta` GUID 유지라 씬 참조 그대로). 옛 `Presentation/Turn/TurnUI.cs` 삭제(`TurnManager` 직접 참조, 씬 없음). `FakeGameServer` → `DebugTools/`, 실제 `Chapchu.Game.IGameRequests` · `IGameState` 구현. Start 에서 4인 HP 100 · 손패 5 · Alive · 첫 턴 전파, `RequestEndTurn` 순환, 나머지 요청은 거절 이벤트. `Game/IGameState.cs` 신설 (계약 4종째, **A 리뷰 대기**).
+4. **플랜 v2** — `development-plan.md` 전면 재작성: M1~M5(MVP `0.5.0`) + M6 안정화 · M7 로그인 · 친구 · M8 완성도(`1.0.0`), 단계별 게이트 · 날짜 · 기획 마감 11건 · 동기화 지점 S0~S9. `plan-b-ui.md` 에 B1-0(`17-game-ui` + GameScene 재구성) · B2-7 · B4-3 · B5-3 · B5-4 추가, 지금 시작 가능 항목 표시. `plan-a-logic.md` 에 K-4(`IGameState` 리뷰) · A1-5 구현체 조건 추가, 로그인을 M7 로 이동.
+
+### 검증
+
+- MSBuild 로 `Assembly-CSharp` 컴파일 통과 (Unity 가 생성한 csproj 가 낡아 파일 목록만 고친 임시 사본으로 빌드). 경고 4건은 기존 파일.
+- 에디터 실행은 안 함. 확인할 것: GameScene Play → "플레이어 1의 턴" 표시 → 턴 종료 탭 → "플레이어 2의 턴" → 다시 탭하면 콘솔에 거절 로그.
+
+### 정정
+
+- 직전 세션 보고에서 "턴 종료 버튼이 씬에 없다"고 했는데 **틀렸다.** `PillButton` 프리팹 인스턴스(stripped)라 grep 에 안 잡혔을 뿐 참조는 정상이다.
+
+### 다음 할 일
+
+- [ ] A: `IGameState` 리뷰 (K-4), A1-1 착수 (S1 병목)
+- [ ] B: B1-0 `17-game-ui.md` + GameScene 재구성 → B1-2 좌석 HP · 손패 장수 (FakeGameServer 로 확인 가능)
+- [ ] 기획: 덱 구성(10/4) · 카운터 · 체인 · 함정 UI(10/11) — v2 4절 마감
+
+---
+
 ## 2026-09-25 · 대상 선택 중 다른 카드 입력 차단 (버그 수정)
 
 | 항목 | 값 |

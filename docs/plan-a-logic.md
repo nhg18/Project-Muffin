@@ -1,9 +1,9 @@
 # A 트랙 — 게임 로직 작업 플랜
 
-**작성일**: 2026-09-24
+**작성일**: 2026-09-24 · **갱신**: 2026-09-25 (v2 플랜 · `IGameState` 리뷰 항목 반영)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
-**상위 문서**: [`development-plan.md`](development-plan.md) (마일스톤 · 게이트 · 동기화 지점) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v2 (M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
 **짝 문서**: [`plan-b-ui.md`](plan-b-ui.md)
 
 ---
@@ -38,6 +38,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | K-1 | `GameEvents.OnDrawn(actorNumber, cardId)` + `DeckPresenter.RPC_BroadcastDrawnCard` | **뽑은 카드 ID 를 `RpcTarget.All` 로 전파** — 남의 손패 내용이 전원에게 보인다 (`CLAUDE.md` 11-6 위반) | 공개 통지(누가 1장 뽑음)와 비공개 통지(내 손에 들어온 `CardInstance`)로 분리 |
 | K-2 | 위와 동일 | 이벤트에 `InstanceId` 가 없다 → UI 가 `RequestPlayCard(cardInstanceId, …)` 를 **호출할 수 없다** | K-1 의 비공개 통지가 `CardInstance` 를 넘긴다 |
 | K-3 | 손패에서 카드가 빠지는 통지 없음 | 사용 · 버림 · 강탈 시 UI 가 어떤 카드를 지울지 모른다 (C-8 의 UI 측) | 비공개 통지 `내 손에서 InstanceId 제거` 추가 (M2 전) |
+| K-4 | `Game/IGameState.cs` (B 가 2026-09-25 추가) | 늦게 켜진 UI 가 현재 턴 주인을 읽는 읽기 전용 계약. 지금은 `CurrentTurnActor` 하나 | **A 리뷰 필요** (A1-1 과 함께). Photon 구현체는 `RoomProps.TurnActor` 를 읽어 돌려주면 된다. 판정에 쓰지 않는다 |
 
 > K-1 · K-2 는 **M1 첫 PR** 로 계약만 먼저 바꾼다. 이름 · 시그니처는 A 가 제안하고 B 가 리뷰한다.
 
@@ -82,11 +83,11 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 | # | 작업 | 진단 | 비고 |
 | --- | --- | --- | --- |
-| A1-1 | **[계약]** `OnDrawn` 공개/비공개 분리, 비공개 통지에 `CardInstance` | K-1, K-2 | **M1 첫 PR.** B 의 `FakeGameServer` 가 이 계약을 쓴다 **→B** |
+| A1-1 | **[계약]** `OnDrawn` 공개/비공개 분리, 비공개 통지에 `CardInstance` + `IGameState` 리뷰 | K-1, K-2, K-4 | **M1 첫 PR (v2: 9/28 시작).** B 의 `FakeGameServer` 가 이 계약을 쓴다 **→B**. 2026-09-25 현재 미착수 — B 의 인게임 카드 작업이 전부 여기 걸려 있다 |
 | A1-2 | `Muffin.Game.Server` asmdef + EditMode 테스트 asmdef | 1-4 | |
 | A1-3 | `GameServer` — 덱 · 손패 · HP · 턴 순서 · 버림 더미 원본 소유 | A-1 | 순수 C#. Photon 은 바깥 어댑터에서만 |
 | A1-4 | `Deck.Shuffle()` 구현, `DrawAt` 범위 검사, 소진 시 버림 더미 재생성 | C-6, C-7 | 테스트: 셔플 분포 · 소진 재생성 |
-| A1-5 | `IGameRequests` Photon 구현체 — 요청 → 검증 → 전파. 거절은 `RaiseRequestRejected` 를 **요청자에게만** | A-1, B-2 | RPC 첫 줄 `if (!PhotonNetwork.IsMasterClient) return;` |
+| A1-5 | `IGameRequests` · `IGameState` Photon 구현체 — 요청 → 검증 → 전파. 거절은 `RaiseRequestRejected` 를 **요청자에게만** | A-1, B-2 | RPC 첫 줄 `if (!PhotonNetwork.IsMasterClient) return;`. B 의 `TurnPresenter` 는 `MonoBehaviour` 로 `server` 를 받으므로 구현체도 `MonoBehaviour` 여야 씬에서 교체된다 |
 | A1-6 | 게임 시작 1회 시퀀스: 셔플 → 인스턴스 ID → HP 100 → 5장 배분 → 턴 순서 무작위 | B-7, C-3, C-5 | ⛔ 덱 구성(기획 #1). 확정 전엔 기존 `DeckRecipe` 로 테스트만 |
 | A1-7 | `"RoomDeck"` 제거 → `RoomProps.deckCount` 만 공개 | B-1 | |
 | A1-8 | `handCount` · `hp` 를 **마스터만** 기록 | 1-3 | 클라이언트 기록 코드 제거는 B (교체 PR) |
@@ -138,7 +139,11 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | A5-1 | 방 시스템 확정분 구현 (시작 조건 · 방장 이탈) ⛔ 기획 #7 |
 | A5-2 | 재접속 / 마스터 이탈 — 새 마스터가 상태를 이어받는 방식 결정 필요 |
 | A5-3 | 전체 asmdef 분리 (`refactoring-plan.md` 1-5 — DOTween Modules asmdef 포함) |
-| A5-4 | 로그인 |
+| A5-4 | EditMode 테스트를 한 번에 돌리는 메뉴 (CI 없음) |
+
+### M6 ~ M8 — 안정화 · 로그인 · 완성도
+
+[`development-plan.md`](development-plan.md) 2절 M6 · M7 · M8 의 A 열을 따른다 (재접속 · 마스터 이탈 · 로그인 · 친구 · 치트 로그 · 빌드 파이프라인). 트랙 세부는 M5 게이트 통과 후 이 문서에 내려쓴다. 로그인은 v1 의 A5-4 에서 M7 로 옮겼다 — 문서가 없어 M5 안에 들어갈 수 없다.
 
 ---
 

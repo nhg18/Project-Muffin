@@ -1,9 +1,9 @@
 # B 트랙 — UI 작업 플랜
 
-**작성일**: 2026-09-24
+**작성일**: 2026-09-24 · **갱신**: 2026-09-25 (Practice 접음, B1-0 추가, v2 플랜 반영)
 **담당**: UI 담당 (B)
 **소유 폴더**: `Presentation/`, `UI/` + **모든 `.unity` / `.prefab` 단독**
-**상위 문서**: [`development-plan.md`](development-plan.md) (마일스톤 · 게이트 · 동기화 지점) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v2 (M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 C-)
 **짝 문서**: [`plan-a-logic.md`](plan-a-logic.md)
 **세부 문서** (⚠ `docs/title-ui` 브랜치, develop 미머지):
 [`title-ui-plan.md`](title-ui-plan.md) (타이틀 S1~S6) · [`ui-refactoring-plan.md`](ui-refactoring-plan.md) (인게임 외 UI 코드 PR1~PR6, 진단 번호 U-)
@@ -24,6 +24,9 @@ B 를 A 로부터 떼어내는 장치는 하나다.
 > **인게임 UI 는 전부 `FakeGameServer`(로컬 모의 마스터)에 붙여 만든다.**
 > `FakeGameServer` 는 `IGameRequests` 를 구현하고 `GameEvents` 를 발행한다. Photon 없이 에디터 1개로 4인 상황을 재현한다.
 > A 의 실제 구현체가 머지되면 **교체 PR 한 번**으로 갈아끼운다. `FakeGameServer` 는 이후에도 버리지 않는다.
+>
+> **2026-09-25 현황**: `DebugTools/FakeGameServer.cs` 골격 완료 — 실제 `IGameRequests` · `IGameState` 구현, Start 에서 4인 HP 100 · 손패 5 · Alive · 첫 턴을 `GameEvents` 로 전파, 턴 종료 순환. 드로우 · 카드 사용은 A1-1 계약 후.
+> `Practice/` 폴더(계약 복사본)는 접었다. `TurnView` · `TurnPresenter` 는 `Presentation/Turn/` 으로 옮겼고 옛 `TurnUI` 는 삭제. `IGameState` 는 `Game/` 에 계약으로 추가 (A 리뷰 대기).
 
 B 가 지키는 규칙:
 
@@ -82,9 +85,10 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 
 | # | 작업 | 진단 | 비고 |
 | --- | --- | --- | --- |
-| B1-1 | `FakeGameServer` — `IGameRequests` 구현 + `GameEvents` 발행, 가짜 4좌석 | — | ←A1-1(계약). 셔플 · 판정은 흉내만 (진짜 규칙 구현 금지) |
-| B1-2 | `PlayerSeat` HP 게이지 · 손패 장수 연결, 게이지 폭 측정 시점 | C-13, C-14 | `OnHpChanged` · `OnHandCountChanged` 구독 |
-| B1-3 | 좌석 계산을 `SeatManager` 한 곳으로 | C-16 | |
+| B1-0 | 🆕 인게임 배치 문서 `systems/17-game-ui.md` (12 · 14 · 16 형식) + `GameScene` 재구성 — prac 에서 씬이 비워져 인게임 클래스 14개가 어느 씬에도 없다. 좌석 4 · 손패 · 덱 · 드롭 영역 · 턴 표시 · 함정 슬롯 자리를 기본 스프라이트로 | — | **지금 시작 가능.** 10-ui §2 레이아웃 기준 |
+| B1-1 | `FakeGameServer` — `IGameRequests` 구현 + `GameEvents` 발행, 가짜 4좌석 | — | ✅ 골격 (턴 · HP · 손패 장수 · 생존). 드로우 · 카드 흉내는 ←A1-1(계약). 셔플 · 판정은 흉내만 (진짜 규칙 구현 금지) |
+| B1-2 | `PlayerSeat` HP 게이지 · 손패 장수 연결, 게이지 폭 측정 시점 | C-13, C-14 | `OnHpChanged` · `OnHandCountChanged` 구독. **지금 시작 가능** (FakeGameServer 가 이미 올린다) |
+| B1-3 | 좌석 계산을 `SeatManager` 한 곳으로 | C-16 | 지금 시작 가능 |
 | B1-4 | `PutAwayMyCards` 공통화 | D | |
 | B1-5 | 손패 장수 초과 보정 | C-17 | |
 | B1-6 | 입력 재작성: 우클릭 취소 → 모바일 입력, `TargetSelectionManager` 를 `Singleton<T>` + 취소 토큰 | C-12, C-19, C-21 | |
@@ -103,7 +107,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B1-14 | Canvas 규격 통일 (Scale With Screen Size · Expand) | `15-screen.md` 9절 | ✅ `feature/canvas-unify` — 씬 5곳 + PopupManager 프리팹, 가로 고정, `SafeArea` 컴포넌트 |
 
 > ⚠ **M1 에서 B 의 부하가 가장 크다.** 인게임 8건 + 아웃게임 6건. `development-plan.md` 원안은 인게임만 계산했다.
-> 권장 순서: B1-9 → B1-1 → B1-2~B1-3 → B1-10 → 나머지. PR5 · PR6(로비 · 방)은 M2 로 넘긴다.
+> 권장 순서 (2026-09-25 갱신): B1-0 → B1-2 → B1-3 → B1-4 → B1-5 → (A1-1 후) B1-1 확장 → B1-6 → B1-7 → (A1-5 후) B1-8. 아웃게임 6건은 전부 끝났다.
 
 **B 의 M1 완료 기준**: `FakeGameServer` 로 4좌석 HP · 손패 장수 · 턴 외곽선 표시 + 교체 PR 후 4클론에서 동일 표시.
 
@@ -116,7 +120,8 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B2-3 | 체인 표시 UI | ⛔ 기획 #2 |
 | B2-4 | 카운터 사용 UI | ⛔ 기획 #2 |
 | B2-5 | 함정 슬롯 UI + 설치 · 발동 인터랙션 | ⛔ 기획 #2 (UI 부분) |
-| B2-6 | 카드 사용 거절 사유 표시 (`OnRequestRejected` → `MessageToast`) | ←B1-9 |
+| B2-6 | 카드 사용 거절 사유 표시 (`OnRequestRejected` → `MessageToast`) | ←B1-9. `FakeGameServer` 가 이미 거절을 올리므로 지금도 가능 |
+| B2-7 | 버림 더미 표시 (맨 위 카드 · 장수) | 05 §7 맨 위 카드 표시 여부 미정 → 장수만 먼저 |
 | B2-7 | 로비 · 방 정리 | `ui-refactoring-plan` PR5 · PR6 | PR6 코드 정리(U-12 · U-22 · U-23) ✅ #22. PR5 ✅ `feature/lobby-logic`. U-24 는 방 디자인 후 |
 
 > 기획 #2 가 M1 중에 안 나오면 **M2 의 B 작업 대부분이 멈춘다.** 그 경우 B 는 PR5 · PR6 과 M3 의 확정 항목(B3-1, B3-2)을 당겨온다.
@@ -128,7 +133,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | B3-1 | HP 위험색(1~20), 사망 대기 카운트, 최종 사망 좌석 비활성 | `OnLifeStateChanged` (이미 선언됨) |
 | B3-2 | 턴 타이머 20초 표시 — 로컬 계산, 판정은 마스터 | ←A3-4 (턴 마감 시각 이벤트) |
 | B3-3 | 찹츄 버튼 (손패 정확히 10장일 때만 활성 — 표시용) | `OnChapChuChanged` |
-| B3-4 | 결과 화면 | ⛔ 기획 #7 |
+| B3-4 | 결과 화면 (승자 · 승리 유형 · 재대전/나가기) | ⛔ 기획 #3 (v2 마감 10/25). ←A3-6 결과 이벤트 |
 
 ### M4 — 카드 대량 구현 (2주, 로직 투입)
 
@@ -137,7 +142,8 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 | # | 작업 | 비고 |
 | --- | --- | --- |
 | B4-1 | 단순 파라미터 효과 — `Damage`, `Heal`, `Draw`, `Discard`, `SkipTurn` … | ←A4-1 (효과 기반 클래스 동결). **A 리뷰 필수** |
-| B4-2 | 카드 59장 SO 에셋 작성 | ⛔ 카드 수치 N / M (기획 #6) |
+| B4-2 | 카드 59장 SO 에셋 작성 + 이미지 연결 | ⛔ 카드 수치 N / M (기획 #6, v2 마감 11/4) |
+| B4-3 | 카드 프리팹 3종(행동 · 카운터 · 함정) 앞면 · 뒷면 통일 | 현재 `PlayerActionCard` · `PlayerCounterCard` · `PlayerTrapCard` · `Dummy` 4개 |
 
 ### M5 — MVP 마감 (2주)
 
@@ -145,7 +151,12 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 | --- | --- |
 | B5-1 | 모바일 빌드 · 해상도 · 터치 검증 |
 | B5-2 | `RoomPanel` 나가기 → 들어온 씬으로 복귀 (`Lobby` → `Lobby`, `DebugLobby` → `DebugLobby`). `SceneFlow.ReturnSceneAfterRoom` ✅ (2026-09-25) |
-| B5-3 | 설정 · 사운드 화면 ⛔ 기획 미정 |
+| B5-3 | 인게임 연출 1차 (드로우 · 사용 · 피해 · 무효화 · 승리) |
+| B5-4 | `PlayerSettings` productName · 아이콘 · 빌드 번호 |
+
+### M6 ~ M8 — 안정화 · 로그인 · 완성도
+
+[`development-plan.md`](development-plan.md) 2절 M6 · M7 · M8 의 B 열을 따른다. 트랙 세부는 M5 게이트 통과 후 이 문서에 내려쓴다.
 
 ---
 
@@ -164,7 +175,7 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 | — | 친구 시스템 (`13-friend`) | — | — | **MVP 밖 유지** (README 분류 Optional). M5 이후 별도 마일스톤 |
 | — | 설정 · 사운드 · 메뉴 버튼 | — | — | 기능 미정 → 계속 제외 (`14-lobby-ui` 3절 #1) |
 
-> 2026-09-25 사용자 승인으로 1 · 3 의 결정 완료. 2 → 3 → 4 순서로 진행한다.
+> 2026-09-25 사용자 승인으로 1 · 3 의 결정 완료. 1 · 2 · 3 완료. 남은 순서 4 → 5 → 6. 단, **인게임 B1-0 · B1-2 · B1-3 이 4 보다 먼저다** (M1 게이트가 인게임이다).
 
 ## 3. B 가 A 에게 요청한 항목
 
@@ -187,3 +198,4 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 * 계약 3종을 단독으로 수정
 * `FakeGameServer` 안에 진짜 규칙 구현 — 흉내만 낸다. 규칙이 두 벌이 되면 반드시 갈라진다
 * 씬 레이아웃 변경과 코드 리팩토링을 한 PR 에 섞기
+* 계약을 복사한 연습용 네임스페이스 만들기 (옛 `Chapchu.Practice` — 2026-09-25 접음)
