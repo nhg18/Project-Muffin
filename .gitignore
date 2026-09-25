@@ -78,3 +78,6 @@ crashlytics-build.properties
 
 # ParrelSync 클론 (로컬 멀티플레이 테스트용 복제본 — 커밋 금지)
 *_clone_*/
+
+# Quest Maker MCP 배포본 (로컬 도구 — 개인 토큰과 .venv 가 들어있다. 커밋 금지)
+quest_mcp_dist_*/
