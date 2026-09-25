@@ -78,11 +78,10 @@ namespace Chapchu.UI.Title
             _view.ShowError(GetDisconnectMessage(cause));
         }
 
-        // TODO(PR3): SceneLoader 가 생기면 교체한다.
         private void LoadLobby()
         {
             _waitingForConnection = false;
-            SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby));
+            SceneManager.LoadScene(ScenePaths.Lobby);
         }
 
         // 12-title-ui.md 10-5. Photon 원문 메시지는 보여주지 않는다.

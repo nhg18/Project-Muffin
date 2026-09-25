@@ -117,6 +117,8 @@ TitleCanvas
 
 ### 2-4. 레이아웃 수치
 
+> 입력창 · 버튼 · 시스템 버튼 크기는 **안쪽 크기**다(CSS content-box). 구현한 겉 크기는 612×74 · 310×84 · 50×50 (`12-title-ui.md` 7-1).
+
 | 요소 | 아티팩트 CSS | 1080 기준 값 |
 | --- | --- | --- |
 | Content 패딩 | top `clamp(24,7vh,90)` / 좌우 24 / bottom `clamp(60,10vh,110)` | **T 76 / L·R 24 / B 108** |
@@ -236,43 +238,43 @@ Scripts/UI/Title/
 - [x] IBM Plex Mono 다운로드 → `Assets/Fonts/`, TMP SDF 생성 (3절)
 - [x] 둥근 사각 · 안쪽 하이라이트 · 소프트 그림자 PNG 생성, 임포트 설정
 - [x] 폰트를 학교안심 둥근미소 B(기존 에셋)로 교체 — `TitleUIAssetSetup` 수정, Jua 파일 12개 삭제 (`c3f58b0`)
-- [ ] 셋업 스크립트에 세로 오버레이 텍스처 생성 추가, `title_overlay_radial.png` 삭제 (3절)
-- [ ] 메뉴 재실행 → `Assets/Fonts/`에 `Hakgyoansim Dunggeunmiso OTF B SDF - Logo / Subtitle / Error.mat` 생성 확인 — 수치는 시작값, S6에서 조정
+- [x] 셋업 스크립트에 세로 오버레이 텍스처 생성 추가, `title_overlay_radial.png` 삭제 (3절) — `3174ce2`
+- [x] 메뉴 재실행 → `Assets/Fonts/`에 `Hakgyoansim Dunggeunmiso OTF B SDF - Logo / Subtitle / Error.mat` 생성 확인 — 수치는 시작값, S6에서 조정
 - [x] 스프라이트 `.meta` 6개의 Android 플랫폼 블록 변경분 커밋 (`c3f58b0`) — 재실행 시 변경 0인지는 다음 실행 때 확인
 - 재실행: 메뉴 `Chapchu > Title UI > Setup Assets` (기존 폰트 에셋은 건너뛰고, 프리셋·임포트 설정만 다시 적용)
 
 ### S2. 공용 프리팹 (0.5d)
 | 프리팹 | 구성 |
 | --- | --- |
-| `UI/Prefabs/PillButton.prefab` | SoftShadow · HardShadow(Y −7) · Body(테두리+배경) · Label · `PressableButton` |
-| `UI/Prefabs/PillInputField.prefab` | SoftShadow · Border · Fill · TopHighlight · `TMP_InputField`(Text/Placeholder) · CountText · `NicknameFieldView` |
-| `UI/Prefabs/IconButton.prefab` | Border · Fill · 아이콘 TMP/Image · `Button` |
+| `Assets/Prefab/UI/PillButton.prefab` | Body(SoftShadow · HardShadow(Y −7) · Border · Fill · Label) · `PressableButton` — 그림자는 Body 의 자식이라 눌림과 함께 움직인다 |
+| `Assets/Prefab/UI/PillInputField.prefab` | SoftShadow · Border · Fill · TopHighlight · `TMP_InputField`(Text/Placeholder) · CountText · `NicknameFieldView` |
+| `Assets/Prefab/UI/IconButton.prefab` | Border · Fill · 아이콘 TMP/Image · `Button` |
 
-- [ ] 루트 크기는 `LayoutElement`로 고정
+- [x] 루트 크기는 `LayoutElement`로 고정 — `f5581af`
 
 ### S3. 씬 재구성 (1d)
-- [ ] 기존 Canvas 하위 **전부 삭제** 후 2-2 하이어라키로 새로 구성
-- [ ] 2-1 캔버스 설정, 2-4 수치, 2-5 텍스트 적용
-- [ ] `ErrorText`는 빈 문자열로 두고 높이 26 유지
+- [x] 기존 Canvas 하위 **전부 삭제** 후 2-2 하이어라키로 새로 구성 — `7aa5951`
+- [x] 2-1 캔버스 설정, 2-4 수치, 2-5 텍스트 적용
+- [x] `ErrorText`는 빈 문자열로 두고 높이 26 유지
 
 > 씬 파일은 병합이 어렵다(`CLAUDE.md` 14절). S3 동안 다른 사람은 `TitleScene`을 열지 않는다.
 
 ### S4. 뷰 스크립트 (0.5d)
-- [ ] 4절 5개 작성, 씬·프리팹에 배선 (`SetConnecting` 포함)
-- [ ] 기존 3개 파일 삭제
-- [ ] `Scripts/UI/Title/`에 금지 `using` 없는지 확인
+- [x] 4절 5개 작성, 씬·프리팹에 배선 (`SetConnecting` 포함) — `8d1ea46`
+- [x] 기존 3개 파일 삭제
+- [x] `Scripts/UI/Title/`에 금지 `using` 없는지 확인
 
 ### S5. 버튼 연출 (0.5d)
-- [ ] 2-7 표대로 `PressableButton` 동작 (Hover/Pressed/Exit 복귀)
+- [x] 2-7 표대로 `PressableButton` 동작 (Hover/Pressed/Exit 복귀)
 
 ### S6. 아티팩트 대조 QA (0.5d)
-- [ ] Game 뷰 1920×1080 스크린샷 ↔ 아티팩트 브라우저 1920×1080 스크린샷을 겹쳐 비교 (위치 ±2px)
-- [ ] 로고·부제 외곽선 두께, 그림자 위치 맞춤
-- [ ] 세로 오버레이 밝기 — 아티팩트(Version 8, 같은 배경)와 겹쳐 비교
-- [ ] 1600×900 / 1280×720 / 21:9 에서 겹침·잘림 없음
+- [x] Game 뷰 1920×1080 스크린샷 ↔ 아티팩트 브라우저 1920×1080 스크린샷을 겹쳐 비교 (위치 ±2px) — ±1px (`worklog.md`)
+- [x] 로고·부제 외곽선 두께, 그림자 위치 맞춤
+- [x] 세로 오버레이 밝기 — 아티팩트(Version 8, 같은 배경)와 겹쳐 비교
+- [x] 1600×900 / 1280×720 / 21:9 에서 겹침·잘림 없음
 - [ ] 16자 초과 차단(붙여넣기 포함), IME 한글 조합 중 카운터 정상
-- [ ] 에러 표시/해제 시 버튼 위치 불변
-- [ ] Android 실기 1회 — 하단 버전/버튼이 세이프에어리어 안
+- [x] 에러 표시/해제 시 버튼 위치 불변
+- [ ] Android 실기 1회 — 하단 버전/버튼이 세이프에어리어 안 — **보류** (기기 없음, PC 로 대신. 2026-09-24)
 
 ### S7. 접속 로직 연결 — PR4 (0.5d)
 
@@ -287,7 +289,7 @@ Scripts/UI/Title/
 | `ConnectRequested(nickname)` | `NetworkManager.SetNickname()` → 이미 `IsReady` 면 로비 이동. 아니면 대기 상태로 두고, 접속이 끊겨 있으면(`!IsConnected`) `NetworkManager.Connect()` 로 재시도 |
 | `ConnectionEvents.OnConnected` | 대기 중이면 로비 이동 |
 | `ConnectionEvents.OnDisconnected(cause)` | 대기 중일 때만 → 대기 해제, `TitleView.ShowError(10-5 문구)`. 대기 중이 아니면 무시 (앱 시작 직후 실패는 누를 때 다시 시도) |
-| 로비 이동 | `SceneManager.LoadScene(ScenePaths.Get(SceneType.Lobby))` — **임시.** PR3 `SceneLoader` 가 생기면 교체 |
+| 로비 이동 | `SceneManager.LoadScene(ScenePaths.Lobby)` (PR3 에서 씬 이름 상수로 통일) |
 
 **`TitleView`** — 접속 중(`SetConnecting(true)`)에는 접속 버튼 탭을 무시한다.
 
@@ -297,7 +299,7 @@ Scripts/UI/Title/
 - [x] `TitleScene` 의 `TitleCanvas` 에 부착 (`TitleSceneBuilder` 는 S6 종료로 삭제됨 — 씬만 기준)
 - [x] 컴파일 · 씬 로드 확인 (batchmode, 누락 스크립트 0)
 - [x] Play 모드 자동 확인 (batchmode · 실제 Photon 접속): 닉네임 복원 / 접속 → 1.3초 후 `LobbyScene` / 접속 중 연타 무시 / 누르기 전 끊김은 표시 안 함 → 탭 시 재접속 → 로비 / `ClientTimeout` 시 10-5 문구 · 버튼 "접속" 복귀 · 늦게 온 접속 성공에도 이동 안 함
-- [ ] 수동 확인: 실기기 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비
+- [ ] 수동 확인: 실기기 비행기 모드 → 문구 → 인터넷 켜고 재탭 → 로비 — **보류** (기기 없음)
 
 ---
 

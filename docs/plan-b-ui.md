@@ -72,7 +72,7 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 | # | 작업 | 비고 |
 | --- | --- | --- |
 | B0-1 | **[계약]** A 의 `OnDrawn` 분리 PR(A1-1) 리뷰 | `FakeGameServer` 가 이 계약을 쓴다 |
-| B0-2 | 접속 대기 중 `LoadingPopup` 표시 | `development-plan.md` 6절 #3. `ui-refactoring-plan` PR3(`SceneLoader`)와 합쳐도 된다 |
+| B0-2 | 접속 대기 중 `LoadingPopup` 표시 | ✅ 해소 — 타이틀은 버튼 글자 "접속 중…"으로 대기 표시 (`12-title-ui.md` 6절). `LoadingPopup` 은 방 참가 대기(PR5)에 쓴다 |
 
 ### M1 — UI 재연결 (2주)
 
@@ -95,11 +95,11 @@ A 가 `Game/` 에 새 경로를 만들면 B 가 옛 호출을 지운다 (`plan-a
 
 | # | 작업 | 원 번호 | 비고 |
 | --- | --- | --- | --- |
-| B1-9 | 팝업 인프라 복구 (모달 잔재, `Open()` 미호출, 토스트 불가) | PR1 (U-1, U-2, U-3, U-11, U-20) | **최우선** |
-| B1-10 | 타이틀 화면 재구성 | `title-ui-plan` S1~S6 | 4일. 끝나면 타이틀 → 로비가 일시 단절 |
+| B1-9 | 팝업 인프라 복구 (모달 잔재, `Open()` 미호출, 토스트 불가) | PR1 (U-1, U-2, U-3, U-11, U-20) | ✅ #15 · #17 |
+| B1-10 | 타이틀 화면 재구성 | `title-ui-plan` S1~S6 | ✅ #14 (PC 확인 완료, 모바일 실기 보류) |
 | B1-11 | 죽은 코드 · 폴더 · 네임스페이스 정리 | PR2 | |
-| B1-12 | `SceneLoader` 도입, `async void` 제거 | PR3 | B0-2 흡수 |
-| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | 세부 플랜 `title-ui-plan.md` S7 — ✅ 구현 (`feature/title-connect`), 실기기 확인 남음 |
+| B1-12 | 씬 전환 형식 통일, `async void` 제거 | PR3 | ✅ `feature/scene-loader` — `ScenePaths` 이름 상수, 래퍼 없음 (`async void` 는 `NicknameInput` 삭제로 이미 없음) |
+| B1-13 | 타이틀 로직 연결 (접속 실패 재시도, 닉네임 복원) | PR4 | 세부 플랜 `title-ui-plan.md` S7 — ✅ #16 (실기기 확인 보류) |
 | B1-14 | Canvas 규격 통일 (Scale With Screen Size) | `development-plan` 6절 #4 | ⛔ 화면 방향 · 기준 해상도(기획 #3) |
 
 > ⚠ **M1 에서 B 의 부하가 가장 크다.** 인게임 8건 + 아웃게임 6건. `development-plan.md` 원안은 인게임만 계산했다.
