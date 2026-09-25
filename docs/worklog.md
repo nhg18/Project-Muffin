@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-09-25 · 로비를 타이틀 구조로 통일 (LobbyCanvas · LobbyView/Presenter · PillButton · 같은 배경)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `feature/lobby-unify` (← `changhwan.exe` `33ee5be`, #24 머지 후) |
+| 작업 위치 | worktree `../Project-Muffin-title` |
+| 사유 | 사용자 지적: #24 뒤에도 로비가 타이틀과 구조가 달랐다(`Canvas`/`LobbyPanel` 단일 스크립트/기본 버튼/단색 배경). "갈아엎어" → 통일 |
+
+### 한 것
+
+| 항목 | 내용 |
+| --- | --- |
+| 씬 | `LobbyCanvas` [LobbyView · LobbyPresenter] › `BG_Illust` · `BG_Overlay`(타이틀과 같은 에셋) · `NicknameText`(B 48) · `MainButtons` › `PillButton` 프리팹 인스턴스 3개(480×200, 글자 56). 프리팹 연결 유지 |
+| 코드 | `UI/Lobby/LobbyView.cs`(이벤트만) + `UI/Lobby/LobbyPresenter.cs`(옛 `LobbyPanel` 로직을 그대로 옮김 — 팝업 · 실패 문구 · 씬 전환 · `ReturnSceneAfterRoom`). `LobbyPanel` · `PlayerProfile/ProfileView` · `ProfilePresenter` 삭제 (참조: LobbyScene 뿐) |
+| 문서 | `14-lobby-ui` 3절 #5 · 7-1(버튼 스타일 · 하이어라키 · 스크립트 표) · 8절(배경 = 타이틀) · 9 · 10 |
+| 빌더 | `LobbySceneBuilder.cs` 로 생성 후 삭제 (이 브랜치 커밋 이력에 있음) |
+
+### 캡처 (1920×1080 · 2400×1080 · 1280×720)
+
+버튼 줄 정중앙, 닉네임 좌상단, 타이틀과 같은 배경 · 오버레이. 잘림 없음. 4:3 은 이전과 같이 양 끝 60 잘림(전역 미정 #9).
+
+### 확인 필요 (에디터)
+
+- [ ] 타이틀 → 로비(닉네임) → 방 만들기 → 방 → 나가기 → 로비
+- [ ] 방 참가 → 팝업 → 없는 코드 → "방을 찾을 수 없습니다."
+- [ ] 버튼 호버 · 누름 연출(PressableButton)이 480×200 에서도 자연스러운지
+
+---
+
 ## 2026-09-25 · 로비 개편 0~2단계 (문서 · 캔버스 초기화 · 배치)
 
 | 항목 | 값 |
