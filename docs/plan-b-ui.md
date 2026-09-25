@@ -157,7 +157,7 @@ A 의 부하가 B 의 3배가 되는 구간이라 B 가 `Game/` 에 들어간다
 | --- | --- | --- | --- | --- |
 | 1 | **화면 규격 확정** | — | ✅ 2026-09-25 승인 | 가로 고정 · Expand (`15-screen.md`) |
 | 2 | **B1-14 캔버스 통일** | ✅ `feature/canvas-unify` | 0.5d | `ProjectSettings` 방향 · Safe Area, 씬 5곳 Canvas 를 15-screen 3절로. 타이틀 · 로비는 Match 1 → Expand 만, 방 · 팝업 · 인게임은 Constant Pixel Size → Scale With Screen Size. 공용 `SafeArea` 컴포넌트 1개 |
-| 3 | **방 화면 재구성 (뷰)** | ✅ `08-room` 5절 확정 (2026-09-25) | 1d | 로비와 같은 방식 — 배치 규칙 문서(`16-room-ui.md`) 신설 → 디자인 없이 기본 스프라이트로 씬 재구성. 요소: 방 코드(크게, 복사 가능) · 플레이어 목록 4칸(닉네임 · 방장 표시) · 인원 · 시작(방장) · 나가기 · 로그. U-24 `RoomPlayerListView` 도 여기서 |
+| 3 | **방 화면 재구성 (뷰)** | ✅ `feature/room-rework` — `16-room-ui.md` · `RoomView` + `RoomPresenter` | 1d | 로비와 같은 방식 — 배치 규칙 문서(`16-room-ui.md`) 신설 → 디자인 없이 기본 스프라이트로 씬 재구성. 요소: 방 코드(크게, 복사 가능) · 플레이어 목록 4칸(닉네임 · 방장 표시) · 인원 · 시작(방장) · 나가기 · 로그. U-24 `RoomPlayerListView` 도 여기서 |
 | 4 | **팝업 재구성 (뷰)** | 3 | 0.5d | `WarningPopup` · `InputPopup` · `LoadingPopup` · `MessageToast` 를 15-screen 규격 · 타이틀 박스 스타일(둥근 사각 9-slice · 학교안심 폰트)로. 기능 코드는 그대로 |
 | 5 | **디자인 교체** | 로비 · 방 · 팝업 디자인 아티팩트 게시 | 씬당 0.5d | 크기 · 배치 유지, 색 · 스프라이트 · 폰트 효과만 교체 (타이틀 S6 방식으로 대조) |
 | 6 | 모바일 실기 확인 | 기기 확보 | — | 타이틀 · 로비 · 방 Safe Area, 터치 크기, 비행기 모드 접속 실패 흐름 |
