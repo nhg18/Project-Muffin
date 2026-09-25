@@ -32,7 +32,9 @@ namespace Chapchu.Presentation
 
         void Update()
         {
-            if (Input.GetMouseButtonDown(0))
+            // 카드 처리(대상 선택) 중에는 손패를 올리거나 내리지 않는다.
+            // 좌석 탭은 물리 레이캐스트에 "Card" 로 잡히지 않아 HandsDown 이 불리던 문제도 함께 막는다.
+            if (Input.GetMouseButtonDown(0) && !playerHandPresenter.IsCardPlayInProgress)
             {
 
                 Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);

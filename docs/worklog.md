@@ -6,6 +6,45 @@
 
 ---
 
+## 2026-09-25 · 대상 선택 중 다른 카드 입력 차단 (버그 수정)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `refactor/logic4` |
+| 범위 | `.cs` 6개 + 문서 1개. 씬 · 프리팹 수정 없음 |
+
+### 버그
+
+카드를 드롭해 대상을 고르는 동안 다른 카드를 또 드래그 · 드롭할 수 있었다. `CardView` 가 `isHandMode` 만 보고, "처리 중인 카드가 있다"는 상태를 아무도 갖지 않았다. 두 번째 `TargetSelectionManager.SelectPlayer` 가 같은 필드를 덮어써 좌석 한 번 탭에 두 카드가 같은 대상으로 `RequestPlayCard` 됐다.
+
+### 한 것
+
+- `10-ui.md` §6 에 "선택 중 \| 손패의 다른 카드 입력과 손패 올리기/내리기 차단" 행 추가 (확정). 잠금 범위는 드롭 → 대상 확정까지. 반응 5초는 카운터를 내야 하므로 잠그지 않는다.
+- `PlayerHandPresenter.IsCardPlayInProgress` + `PlayCardAsync(CardPresenter)`: 손패가 카드 처리를 직렬화. 처리 중이면 두 번째 카드는 `ReturnToOrigin`. 잠금 해제는 `finally` (카드는 처리 끝에 Destroy 되므로 손패가 책임).
+- `CardPresenter.Hand` (Setup 3번째 인자, 손패 밖 카드는 null). `OnCardDropped` 는 `Hand.PlayCardAsync(this)` 로 위임, 본문은 `PlayAsync()` 로 분리.
+- `CardView.CanInteract` (HandMode && !Hand.IsCardPlayInProgress) 로 Enter · Down · Drag · Up 게이트. `CancelInteraction()` 으로 진행 중 드래그 · 호버 되돌림. `OnPointerExit` 는 잠금과 무관하게 확대된 카드를 되돌린다.
+- `PlayerHandView.CancelAllInteractions(except)`: 잠금 시작 시 다른 카드 전부 되돌림 (멀티터치 대비).
+- `ClickManager`: 처리 중엔 좌클릭의 HandsUp/Down 건너뜀. 좌석 탭이 "Card" 레이캐스트에 안 잡혀 대상 선택 중 손패가 내려가던 문제도 함께 막힘.
+- `TargetSelectionManager.SelectPlayer`: 이미 대기 중이면 경고 후 0 반환 (재진입 방어선).
+
+### 검증
+
+- MSBuild 로 `Assembly-CSharp.csproj` 컴파일 통과. 에디터 실행 테스트는 아직 안 함 (아래 시나리오).
+
+### 남긴 것
+
+- `async void` → 취소 토큰 전면 재작성은 B1-6 (C-12 · C-19) 범위. 지금은 `_ = Hand.PlayCardAsync(this)` + 내부 catch/로그.
+- 대상 선택 중 카드 흐리게 · 좌석 하이라이트 연출, 우클릭 취소의 모바일 대체 입력 (B1-6).
+
+### 다음 할 일
+
+- [ ] 에디터 확인: A 드롭 → 대기 중 B 드래그 무반응 → 좌석 탭 → `target :` 로그 1회
+- [ ] 타임아웃 · 우클릭 취소 후 잠금이 풀려 B 드래그 가능한지
+- [ ] 대상 선택 중 빈 곳 좌클릭에 손패가 내려가지 않는지
+- [ ] `TargetType.None / AllEnemies / Me` 카드가 즉시 처리되는지
+
+---
+
 ## 2026-09-25 · 방 나가기 → 들어온 씬으로 복귀 (B 트랙 B5-2)
 
 | 항목 | 값 |

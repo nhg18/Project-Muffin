@@ -84,6 +84,20 @@ namespace Chapchu.Presentation
             }
         }
 
+        /// <summary>
+        /// 카드 처리 잠금이 시작될 때 다른 카드의 드래그 · 호버를 되돌린다 (멀티터치 · 잠금 직전 입력 대비).
+        /// </summary>
+        public void CancelAllInteractions(CardView except)
+        {
+            foreach (GameObject card in Hands)
+            {
+                if (card == null) continue;
+                CardView view = card.GetComponent<CardView>();
+                if (view == null || view == except) continue;
+                view.CancelInteraction();
+            }
+        }
+
         public void HandsUp()//Presenter에서 CardEvent가 만들어지면 구독해서 이거 실행하기
         {
             Debug.Log("Up!");
