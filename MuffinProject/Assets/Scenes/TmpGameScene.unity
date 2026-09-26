@@ -748,9 +748,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1886823434}
+  - component: {fileID: 1886823435}
   - component: {fileID: 1886823433}
   m_Layer: 0
-  m_Name: FakeGameServer
+  m_Name: GameServer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -765,9 +766,31 @@ MonoBehaviour:
   m_GameObject: {fileID: 1886823432}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08aff687f5cc0ed4e89fd346f1c96f5d, type: 3}
+  m_Script: {fileID: 11500000, guid: 43441e567063ed14d9e02315db4e88ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1886823435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1886823432}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 1
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!4 &1886823434
 Transform:
   m_ObjectHideFlags: 0

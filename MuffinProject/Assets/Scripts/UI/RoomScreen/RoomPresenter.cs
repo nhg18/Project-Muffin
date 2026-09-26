@@ -93,7 +93,7 @@ namespace Chapchu.UI.RoomScreen
 
             NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
             // 방 전원이 함께 넘어가야 하므로 LoadScene 이 아닌 LoadLevel (ScenePaths 설명 참고).
-            PhotonNetwork.LoadLevel(ScenePaths.Game);
+            PhotonNetwork.LoadLevel(SceneFlow.GameSceneAfterRoom);
         }
 
         private void HandleLeaveRequested()
