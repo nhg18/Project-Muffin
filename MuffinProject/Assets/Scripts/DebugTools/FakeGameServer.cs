@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Chapchu.Game;
 using UnityEngine;
 
@@ -12,30 +13,40 @@ namespace Chapchu.DebugTools
     /// </summary>
     public class FakeGameServer : MonoBehaviour, IGameRequests, IGameState
     {
+        private readonly List<int> _playerList = new() { 0, 1, 2, 3 }; // actorNumber
+        
+        [field: SerializeField]
         public int CurrentTurnActor { get; private set; } = -1;
+
+        private void Start()
+        {
+            Debug.Log("Starting game server");
+        }
+
         public void RequestDraw()
         {
-            throw new System.NotImplementedException();
+            
         }
 
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
-            throw new System.NotImplementedException();
+            
         }
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
-            throw new System.NotImplementedException();
+            
         }
 
         public void RequestDeclareChapChu()
         {
-            throw new System.NotImplementedException();
+            
         }
 
         public void RequestEndTurn()
         {
-            throw new System.NotImplementedException();
+            Debug.Log("[FakeGameServer] Request End Turn");
+            GameEvents.RaiseTurnChanged(CurrentTurnActor);
         }
     }
 }

@@ -32,12 +32,14 @@ namespace Chapchu.Presentation
         {
             _view.EndTurnRequested += HandleEndTurnRequested;
             GameEvents.OnTurnChanged += HandleTurnChanged;
+            GameEvents.OnRequestRejected += HandleRequestRejected;
         }
 
         private void OnDisable()
         {
             _view.EndTurnRequested -= HandleEndTurnRequested;
             GameEvents.OnTurnChanged -= HandleTurnChanged;
+            GameEvents.OnRequestRejected -= HandleRequestRejected;
         }
 
         // 켜지기 전에 지나간 이벤트는 못 받으므로 현재 상태를 한 번 읽어 그린다.
@@ -48,6 +50,15 @@ namespace Chapchu.Presentation
 
         private void HandleEndTurnRequested() => _requests?.RequestEndTurn();
 
-        private void HandleTurnChanged(int actorNumber) => _view.SetTurnActor(actorNumber);
+        private void HandleTurnChanged(int actorNumber)
+        {
+            Debug.Log($"[GameEvent] TurnChanged {actorNumber}");
+            _view.SetTurnActor(actorNumber);
+        }
+
+        private void HandleRequestRejected(int actorNumber, string reason)
+        {
+            Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {reason}");
+        }
     }
 }
