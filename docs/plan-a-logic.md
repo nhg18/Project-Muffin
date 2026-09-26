@@ -3,7 +3,7 @@
 **작성일**: 2026-09-24 · **갱신**: 2026-09-25 (v2 플랜 · `IGameState` 리뷰 항목 반영)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
-**상위 문서**: [`development-plan.md`](development-plan.md) v2 (M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v3 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감 담당) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
 **짝 문서**: [`plan-b-ui.md`](plan-b-ui.md)
 
 ---

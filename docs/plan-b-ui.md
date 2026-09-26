@@ -3,7 +3,7 @@
 **작성일**: 2026-09-24 · **갱신**: 2026-09-25 (Practice 접음, B1-0 추가, v2 플랜 반영)
 **담당**: UI 담당 (B)
 **소유 폴더**: `Presentation/`, `UI/` + **모든 `.unity` / `.prefab` 단독**
-**상위 문서**: [`development-plan.md`](development-plan.md) v2 (M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v3 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 디자인 납품 D1~D12) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 C-)
 **짝 문서**: [`plan-a-logic.md`](plan-a-logic.md)
 **세부 문서** (⚠ `docs/title-ui` 브랜치, develop 미머지):
 [`title-ui-plan.md`](title-ui-plan.md) (타이틀 S1~S6) · [`ui-refactoring-plan.md`](ui-refactoring-plan.md) (인게임 외 UI 코드 PR1~PR6, 진단 번호 U-)

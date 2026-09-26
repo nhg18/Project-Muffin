@@ -13,8 +13,8 @@
 | 코드 컨벤션 | `docs/CODE_CONVENTION.md` | 노션 「코드 컨벤션」 페이지를 이관한 것 |
 | 기획 문서 작성 방식 | `docs/GDD_GUIDE.md` | |
 | 리팩토링 계획 | `docs/refactoring-plan.md` | |
-| 작업 플랜 / 역할 분담 / 마일스톤 | `docs/development-plan.md` | 2인(로직·UI) 기준. 공통 규칙 · 게이트 · 동기화 지점 |
-| 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI) | 병렬 분업용 |
+| 작업 플랜 / 역할 분담 / 마일스톤 | `docs/development-plan.md` | 6인(로직 · UI 개발 · 기획 2 · 카드 디자인 · UI 디자인) 기준. 단계 · 게이트 · 마감 · 주간 리듬 |
+| 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI 개발) · `docs/plan-c-planning.md` (C · 기획) · `docs/plan-d-art.md` (D · 디자인) | 병렬 분업용 |
 | 작업 진행 기록 | `docs/worklog.md` | 구현 세션이 완료 내용 · 결정 · 다음 할 일을 남긴다. 다음 세션은 여기서 이어간다 |
 | 버전 규칙 | `docs/versioning.md` | `MAJOR.MINOR.PATCH`, MINOR = 마일스톤 |
 | 아이디어 / 회의록 / 사업 / 아트 | 노션 | 확정되면 `docs/systems/`로 내려온다 |
