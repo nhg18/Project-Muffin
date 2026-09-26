@@ -12,77 +12,30 @@ namespace Chapchu.DebugTools
     /// </summary>
     public class FakeGameServer : MonoBehaviour, IGameRequests, IGameState
     {
-        // 게임 규칙 수치는 GameStatus(코드) 가 원본이다. 여기 흩어두지 않는다.
-        [Header("모의 플레이어")]
-        [SerializeField] private int playerCount = 4;
-        [SerializeField] private int localActorNumber = 1;
-        [Tooltip("켜져 있으면 Start 에서 시작 상태(HP · 손패 장수 · 첫 턴)를 전파한다.")]
-        [SerializeField] private bool startOnPlay = true;
-
-        private readonly List<int> _actors = new List<int>();
-        private int _turnIndex = -1;
-
-        public int CurrentTurnActor => _turnIndex < 0 ? -1 : _actors[_turnIndex];
-
-        private void Start()
+        public int CurrentTurnActor { get; private set; } = -1;
+        public void RequestDraw()
         {
-            for (int i = 1; i <= playerCount; i++)
-                _actors.Add(i);
-
-            if (startOnPlay)
-                StartGame();
+            throw new System.NotImplementedException();
         }
 
-        /// <summary>01-game-flow.md 3절 시작 시퀀스의 결과만 흉내 낸다. 셔플 · 배분은 하지 않는다.</summary>
-        public void StartGame()
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
-            foreach (int actor in _actors)
-            {
-                GameEvents.RaiseHpChanged(actor, GameStatus.Instance != null ? GameStatus.Instance.MaxHp : 100);
-                GameEvents.RaiseHandCountChanged(actor, GameStatus.Instance != null ? GameStatus.Instance.StartHandCount : 5);
-                GameEvents.RaiseLifeStateChanged(actor, LifeState.Alive);
-            }
+            throw new System.NotImplementedException();
+        }
 
-            _turnIndex = 0;
-            GameEvents.RaiseTurnChanged(CurrentTurnActor);
+        public void RequestSetTrap(int cardInstanceId, int slotIndex)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void RequestDeclareChapChu()
+        {
+            throw new System.NotImplementedException();
         }
 
         public void RequestEndTurn()
         {
-            if (CurrentTurnActor != localActorNumber)
-            {
-                GameEvents.RaiseRequestRejected(localActorNumber, "내 턴이 아닙니다.");
-                return;
-            }
-
-            _turnIndex = (_turnIndex + 1) % _actors.Count;
-            GameEvents.RaiseTurnChanged(CurrentTurnActor);
+            throw new System.NotImplementedException();
         }
-
-        // 아래 요청은 아직 흉내 내지 않는다. 필요한 화면을 만들 때 이벤트 발행만 추가한다.
-        public void RequestDraw() => Reject(nameof(RequestDraw));
-        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => Reject(nameof(RequestPlayCard));
-        public void RequestSetTrap(int cardInstanceId, int slotIndex) => Reject(nameof(RequestSetTrap));
-        public void RequestDeclareChapChu() => Reject(nameof(RequestDeclareChapChu));
-
-        private void Reject(string request)
-        {
-            Debug.Log($"[{nameof(FakeGameServer)}] {request} — 모의 서버가 아직 흉내 내지 않는 요청");
-            GameEvents.RaiseRequestRejected(localActorNumber, $"{request} 미구현 (모의 서버)");
-        }
-
-#if UNITY_EDITOR
-        // 동작 확인용: Play 중 Hierarchy 의 FakeGameServer 선택 → 인스펙터 컴포넌트 ⋮ 메뉴
-        [ContextMenu("Debug/다른 플레이어 턴 넘기기 (내 턴이 될 때까지)")]
-        private void DebugAdvanceToLocalTurn()
-        {
-            if (_turnIndex < 0) return;
-            do
-            {
-                _turnIndex = (_turnIndex + 1) % _actors.Count;
-            } while (CurrentTurnActor != localActorNumber);
-            GameEvents.RaiseTurnChanged(CurrentTurnActor);
-        }
-#endif
     }
 }
