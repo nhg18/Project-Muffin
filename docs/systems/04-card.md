@@ -1,6 +1,6 @@
 # 04. 카드 시스템
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core
 **개별 카드 효과는 [`11-card-list.md`](11-card-list.md) 참고. 이 문서는 "카드가 어떻게 처리되는가"만 다룬다.**
 
@@ -258,15 +258,15 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 항목 | 상태 |
 | --- | --- |
 | 카드 데이터 (`CardData` ScriptableObject) | 구현됨 (id / 이름 / 이미지 / 타입 / 대상 / 조건 / 효과) |
-| 카드 조건 (`Card_Condition`) | 골격만. `MyTurn_Condition` 1개, `ActionCardPlayedCondition`은 항상 통과 |
-| 카드 효과 (`CardEffect`) | 골격만. `DamageEffect`가 `Debug.Log`만 출력 |
+| 카드 조건 (`CardCondition`) | 골격만. `MyTurnCondition`(에셋 `IsMyTurn`) 1개, `ActionCardPlayedCondition`은 항상 통과 |
+| 카드 효과 (`CardEffect`) | 골격만. `DamageEffect` 1종 — 마스터에서 `StatBuffer` 로 HP 를 계산해 프로퍼티에 기록한다. 감소 · 무효 · 전환 계산(06 §4)은 없음 |
 | 체인 등록 / 역순 처리 | 부분 구현 (`CardPlayManager`). **클라이언트마다 개별 실행** |
 | 반응 시간 | 하드코딩 4.5초 `Invoke`. 기획 5초와 불일치, 갱신 로직 없음 |
 | 마스터 검증 | **없음** |
-| 카운터 카드 | 카드 데이터(`Card_C_002`)만 존재. 반응 입력 UI 없음 |
+| 카운터 카드 | 카드 데이터만 존재(`Card_C_002`, `Prototype_003_ACT` — 이름과 달리 타입이 카운터). 반응 입력 UI 없음 |
 | **함정 카드 / 함정 슬롯** | **전혀 미구현** |
-| 대상 선택 (`TargetSelectionManager`) | 구현됨. 5초 타임아웃, 우클릭 취소 |
-| 사용한 카드 손패에서 제거 | **미구현** — 카드를 써도 손패 뷰에 그대로 남는다 |
+| 대상 선택 (`TargetSelectionManager`) | 구현됨. 5초 타임아웃, 우클릭 취소, 선택 중 다른 카드 입력 차단 (2026-09-25). 대상이 비면 요청을 보내지 않고 손패로 되돌린다 → **대상 없음(`TargetType.None`) 카드는 지금 쓸 수 없다** |
+| 사용한 카드 손패에서 제거 | 부분 — 요청을 보낸 클라이언트가 `OnCardPlayed` 를 **스스로** 올려 즉시 지운다. 마스터 승인 뒤 제거해야 하므로 규약 위반 (거절되면 되돌릴 수 없다) |
 | 버림 더미 | **미구현** |
 | 카드 인스턴스 ID | **미구현** |
 | 등록된 카드 에셋 | 4장 (`Card_A_001`, `Card_C_002`, `Prototype_003_ACT`, `Prototype_004_ACT`) / 기획 59장 |

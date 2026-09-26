@@ -44,7 +44,7 @@
 | `MyTurn` | 행동 카드 1장 사용 | `Resolving` → `TurnEnd` | 체인 처리 완료 후 턴 종료 (불발돼도 종료) | 확정 |
 | `MyTurn` | 제한 시간 종료 & 미제출 | `TurnEnd` | 아무것도 하지 않고 턴 종료 (자동 제출 없음) | 확정 |
 | `MyTurn` (연속 N턴 미제출) | 위 조건 반복 | 강제 퇴장 | 방에서 퇴장 처리 | 확정(퇴장) / **미정**(N) |
-| 임의 상태 | 함정 설치 조건 충족 | 상태 변화 없음 | 함정 슬롯에 배치 | 확정 |
+| `MyTurn` (메인 행동 전) | 함정 설치 조건 충족 (`04-card.md` 6절) | 상태 변화 없음 | 함정 슬롯에 배치 | 확정 |
 | `TurnEnd` | — | 다음 생존 플레이어의 `WaitingTurn` | 턴 이동 | 확정 |
 
 ```
@@ -131,7 +131,8 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 항목 | 상태 |
 | --- | --- |
 | 턴 주인 Room Property 저장/동기화 | 구현됨 (`TurnManager`) |
-| 턴 종료 요청 → 마스터 검증 | 구현됨 |
+| 턴 종료 요청 → 마스터 검증 | 구현됨 (`TurnManager`) — 단, 요청자를 `info.Sender` 가 아니라 클라이언트가 보낸 `requesterActor` 로 믿는다 (09 10절 위반) |
+| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `FakeGameServer` (에디터 1개). `TurnManager` 는 아직 이 계약을 구현하지 않는다 |
 | 이탈 시 턴 이동 | 구현됨 (단, `GetNextActor` 인자 무시 버그 있음) |
 | 첫 턴 무작위 결정 | **미구현** (`PlayerList[0]` 고정) |
 | 턴 제한 시간 / 타이머 | **미구현** |
