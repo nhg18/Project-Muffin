@@ -83,6 +83,7 @@ namespace Chapchu.UI.Lobby
         private void HandleJoinedRoom()
         {
             SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
+            SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
             SceneManager.LoadScene(ScenePaths.Room);
         }
 
