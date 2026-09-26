@@ -1,6 +1,6 @@
 # 02. 플레이어 · 좌석
 
-**최종 수정일**: 2026-09-17
+**최종 수정일**: 2026-09-25
 **분류**: Core
 
 ---
@@ -28,7 +28,7 @@
 
 > 노션 원본의 **이름 없는 속성 4칸**은 위 `lifeState / isChapChu / handCount / trapCount` 로 해석한 것이다. → **확인 필요 (가정)**
 
-> ⚠ 현재 코드는 HP가 `float`(`PlayerModel.CurrentHP`, `GameStatus.MaxHp`, `PlayerInfoData.HP`)이다. 기획은 정수이므로 `int`로 통일한다.
+> HP 는 코드 전체에서 `int` 다 (`PlayerModel.CurrentHp`, `GameStatus.MaxHp`). 2026-09-24 통일 완료.
 
 ---
 
@@ -51,7 +51,7 @@
 * 같은 입력(내 actorNumber + 참가자 목록)이면 항상 같은 결과가 나와야 한다.
 * 좌석 계산은 **한 곳에서만** 수행하고, 손패 UI와 플레이어 정보 UI가 그 결과를 공유한다.
 
-> ⚠ 현재 `SeatManager`와 `HandSeatManager`가 각각 `Start()`에서 좌석을 계산해 실행 순서에 의존한다.
+> ⚠ 계산 함수는 `SeatManager.GetSeatAssignments` 하나지만, `SeatManager` 와 `HandSeatManager` 가 각자 `Start()` 에서 호출한다 (이중 호출).
 
 ---
 
@@ -92,7 +92,7 @@ Alive → (HP 0) → DeathPending → (대응 처리) → Alive 복귀
 | 게임 중 퇴장 | 좌석 UI 제거, 턴 순서·대상 후보에서 제외 | 확정(UI 제거만 구현됨) |
 | 퇴장 후 재접속 | **미정 — 결정 필요** | 미정 |
 | 중도 난입 | 허용하지 않음 | **가정** (현재 코드가 전제하고 있음) |
-| 남은 플레이어가 1명 | 즉시 승리 판정 | 확정 |
+| 남은 플레이어가 1명 | 승리 판정. 시점(즉시 vs 연쇄 뒤)은 **미정** (`07` 3절) | 확정 (승리) / **미정** (시점) |
 
 ---
 
@@ -101,13 +101,13 @@ Alive → (HP 0) → DeathPending → (대응 처리) → Alive 복귀
 | 항목 | 상태 |
 | --- | --- |
 | 좌석 배치 알고리즘 (`SeatManager.GetSeatAssignments`) | 구현됨. 기획과 일치 |
-| 좌석 UI (닉네임 / 턴 표시) | 구현됨 |
-| HP UI | **미동작** — HP를 쓰는 코드가 없고, 읽는 키(`"HP"` / `"PlayerHP"`)도 서로 다름 |
+| 좌석 UI (닉네임 / 턴 표시) | 닉네임 구현됨. 턴 표시는 시작 때 한 번만 설정 — `OnTurnChanged` 구독이 없어 턴이 바뀌어도 갱신되지 않는다 (`SeatManager.UpdateSeatUI` 호출처 없음) |
+| HP UI | **미동작** — 키는 `PlayerProps.Hp` 로 통일됐고 `GameEvents.OnHpChanged` 까지는 오지만, 이를 받아 게이지를 갱신하는 구독자가 없다 |
 | 손패 장수 UI (`PlayerSeat.SetCardCountUI`) | 함수만 존재, **호출하는 곳 없음** |
 | HP 게이지 (`PlayerSeat.SetHpGauge`) | 함수만 존재, **호출하는 곳 없음** |
 | 함정 슬롯 | **미구현** |
 | 생존 상태 | **미구현** |
-| 찹츄 상태 | **미구현** (레거시 `GameRule.isChapChu` bool만 존재) |
+| 찹츄 상태 | **미구현** |
 | 좌석 계산 중복 | `SeatManager` + `HandSeatManager` 이중 호출 |
 
 ---
