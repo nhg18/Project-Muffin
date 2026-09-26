@@ -137,7 +137,7 @@ LobbyCanvas            [LobbyView · LobbyPresenter]  1920×1080 · 높이 기�
 
 ## 8. 배경 · 색
 
-**타이틀과 동일** (확정 2026-09-25). 바탕 `#2E2440`, 일러스트 `Sprites/TitleBackground.png`(cover), 세로 오버레이 — 값은 [`12-title-ui.md`](12-title-ui.md) 9-1. 로비 전용 배경이 나오면 `BG_Illust` 스프라이트만 바꾼다.
+**타이틀과 동일** (확정 2026-09-25). 바탕 `#2E2440`, 일러스트 `Sprites/UI/Background/bg_title.png`(cover), 세로 오버레이 — 값은 [`12-title-ui.md`](12-title-ui.md) 9-1. 로비 전용 배경이 나오면 `BG_Illust` 스프라이트만 바꾼다.
 
 ## 9. 현재 구현 상태
 
