@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-09-26 · 브랜치 정리 — logic · ui 두 트랙으로
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `ui` (로컬 v5 + `changhwan.exe` 병합) |
+| 범위 | 브랜치 구조 · `CLAUDE.md` 14절 · 문서 v5 정합 · `GameScene` 복원 |
+
+### 결정 (사용자, 2026-09-26)
+
+- 구조: `main` ← `develop` ← `logic` · `ui` 두 트랙. UI 브랜치 이름은 `ui` (`changhwan.exe` 폐기). 규칙은 `CLAUDE.md` 14절.
+- `GameScene` 은 develop 의 옛 인게임 배치로 복원 — 로직 담당이 쓰는 씬을 지우지 않기 위해. 턴 표시 연습(`TurnView` · `TurnPresenter` · `FakeGameServer`)은 `Scenes/Dev/TurnPractice.unity` 로 옮김 (빌드 설정 밖). 씬이 쓰는 `TurnUI.cs` 도 develop 에서 되살림.
+- `logic` 은 develop + `db change`(`refactor/logic4` 의 남은 1커밋)로 새로 만듦.
+
+### 한 것
+
+- 로컬 `ui` (플랜 v5 커밋 3개, 미푸시) + `changhwan.exe` (문서 재검토 · develop 스프라이트 정리) 병합. 플랜 문서 충돌은 **v5 를 기준**으로 두고 재검토 내용 중 유효한 것만 다시 얹음: 약속 파일 4종, 끝난 인계 ✅, C-11 해결, 타이틀 S8 을 `plan-b-ui` 2절 "아웃게임 남은 것"으로, 처치 승리 판정 시점을 기능 8 · 11/4 마감에 추가. `18-sandbox.md` 는 v5 대로 삭제.
+- 문서의 v4 작업 번호(B1-x · A1-x · M1 ~ M8)를 v5 기능 번호로. `refactoring-plan` 5부의 "샌드박스로 해제" 주석 철회 ("Phase 2 이전" = 기능 1 서버 코어 이전).
+- `versioning`: v5 에 마일스톤이 없어 **MINOR = 점검일 순번** 으로 (12/12 첫 완성판 = `0.5`, 사용자가 고른 "첫 완성판 0.5" 유지).
+
+---
+
 ## 2026-09-26 · 플랜 v5 승인 — 마감 +10일, 기능 4 = 행동 카드 내기
 
 - 사용자가 v5 를 승인했다. 승인 조건 두 가지를 반영했다.
@@ -33,6 +54,36 @@
 - 약속을 한 번에 크게 올리지 않고 기능마다 작게 먼저.
 - 점검일 10/11 · 10/25 · 11/4 · 11/18 · 12/2 · 12/16 · 12/30 · 1/25.
 - 로직 · UI 작업 목록은 `development-plan.md` 3절 한 곳. 트랙 문서는 코드 상태 · 진단 번호 → 기능 매핑만.
+## 2026-09-26 · 기획서 · 개발 문서 재검토 (코드 대조 · 낡은 곳 정리)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `docs/review-0926` (`ui` 플랜 v4 + `develop` 병합 — worklog 충돌만 수동 해결) |
+| 범위 | 문서만. 코드 · 씬 변경 없음 |
+
+### 한 것
+
+- **개발 문서**: 트랙 A · B 를 v4 에 맞춤 — 상위 문서 v3 → v4, 계약 3종 → 4종(`IGameState`), M3 ~ M5 기간을 날짜로, 동기화 지점 번호(S5 → S6, S8 → S7), M5 작업 번호를 트랙 문서와 `development-plan` 에서 일치(B5-0 디자인 교체 신설). 끝난 인계(A0-3 · PR4 · PR6) ✅. `development-plan` 주간 리듬의 "M2 까지 종이" → 10/9 부터 샌드박스. C · D 트랙 머리말에 "v3 기준, v4 미반영 · 보류" 표시.
+- **`refactoring-plan`**: 머리말에 "1부 진단 번호만 유효, 순서 · 우선순위 · 기획 목록은 development-plan 으로 대체". 5부 "새 카드 에셋 · 함정 슬롯 UI 금지"는 샌드박스로 해제 표시.
+- **B 누락 작업**: 타이틀 S8(연결 중 · 실패 상태)이 미구현인데 "아웃게임 전부 완료"로 적혀 있었다 → `plan-b-ui` **B1-15** 신설, README · 12 상태 정정, 아티팩트 기준 Version 13 으로 통일.
+- **`ui-refactoring-plan`** 완료 · 기록 문서 표시(없는 `ui-plan.md` 링크 제거). `title-ui-plan` 은 S8 남음 표시.
+- **시스템 기획서 코드 대조** (00 ~ 18): 초기 손패 7 → 5, 없는 `GameRule` 참조 삭제, `CardCondition` · `MyTurnCondition` 이름, 손패 제거 · `handCount` 기록 주체, `(Host)` → `(방장)`, `RoomPanel` → `RoomPresenter`, 방장 교체 로그 구현됨, `LoadingPopup` 사용처, SafeArea 적용 범위, 로비 캔버스 Expand, 친구 = M7, README 상태 열(04 ~ 09 "작성 완료" → "일부 미정"), 18 에 현재 구현 상태 절. 함정 **설치** 시점 문구를 03 · 04 확정(자신의 턴)에 맞춤.
+- README 에 "인게임 구현 상태는 코드 기준 — 지금 GameScene 은 비어 있다" 안내.
+
+### 발견만 하고 고치지 않은 것
+
+- ⚠ `EditorBuildSettings` 씬 순서가 `DebugLobby 0 · Title 1 …` (`bbf48bc`). 빌드 시작 씬이 디버그 로비다 — 01 에 경고만 적음.
+- 코드 주석이 낡음: `RandomCode.cs` · `PhotonRoom.cs` 의 "08-room 5절 미정" (이미 확정).
+- `GameStatus` 규칙 수치가 MonoBehaviour public 필드 (씬 값이 덮어씀) — 05 에 적음, 서버 1층에서 해소.
+- 게임 중 이탈 표기가 01 제안 · 02 확정 · 01 §7 미정으로 섞임 — 4-1 #7 (11/18) 결정 때 정리.
+
+### 결정 (사용자, 2026-09-26)
+
+- 처치 승리 판정 시점(02 "즉시" vs 07 "모든 연쇄 뒤") → **미정**으로 되돌림. 4-1 #4 에 추가 (10/25), README 전역 미정 #10.
+- 찹츄 첫 선언 시점("언제든" 가정 vs 재선언 "자신의 턴") → **미정**. 4-1 #4, README #11.
+- 버전: **MINOR = 마일스톤 번호** (M5 MVP = `0.5.x`). `versioning.md` 변경, 지금 값 `0.1.0` 그대로.
+- 이 정리는 `changhwan.exe` 로 올림 (`ui` 의 플랜 v4 · 코드 변경 포함).
+- GDD_GUIDE 형식 위반 다수(변경 이력 절 없음, 구분 열 없는 표, 분류 값) — 문서별 내용 수정 때 같이.
 
 ---
 
@@ -85,6 +136,36 @@
 - 카드 일러스트 범위(59장 고유 vs 계열 공용) → 10/25 MVP 6장 속도 보고 뒤
 - 사운드 담당 없음 → 기획 X 가 에셋 선정
 - 전원 가용 시간 모름 → 날짜는 가정, M1 회고에서 재조정
+
+---
+
+## 2026-09-26 · UI 스프라이트 정리 (미사용 삭제 · 폴더 · 이름)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `refactor/ui-sprites` (develop 기준) |
+| 범위 | `Sprites/` 중 UI 만. `Sprites/Cards` · `Hands` · `sample.png` 는 손대지 않음. 씬 · 프리팹 수정 없음 |
+
+### 한 것
+
+- **삭제 15개**: develop 과 살아 있는 브랜치 어디서도 GUID 참조가 없는 것. 옛 로비 버튼 6(`Button1` · `Cancel Button` · `Confirm Button2` · `Create/Join Room` · `Random Match`) · 아이콘 5(`Door` · `Home` · `Icon1` · `card icon` · `circle`) · `Profile Panel1/2` · `Profile circle` · `WarningPopupConfirmButton`. 옛 main · 닫힌 PR #28 의 씬만 쓰던 것들.
+- **이동 · 이름 변경 25개** (`.meta` 같이 이동 → GUID 유지, 참조 그대로). 규칙은 기존 `Sprites/UI` 의 snake_case.
+  - `UI/Common/` — `ui_round64` · `ui_round64_top_highlight` · `ui_ring_r14_w2` · `ui_ring_r20_w4` · `ui_shadow_soft` · `icon_menu` · `icon_sound` (이름 유지)
+  - `UI/Background/` — `bg_title` (← `TitleBackground`) · `bg_overlay_vertical` (← `title_overlay_vertical`) · `bg_ingame` (← `In-GameBackground`, develop GameScene 이 사용)
+  - `UI/Popup/` — `popup_input_panel/field/submit/close` · `popup_warning_panel/button` · `popup_toast_panel/check` · `popup_loading_icon`
+  - `UI/Seat/` — `seat_player_icon` · `seat_turn_display` · `seat_profile` (← `Rectangle 212`) · `seat_hp_bar` · `seat_hp_gauge` (← `Player Hp Guage`)
+- 빈 폴더 `Buttons` · `Icons` · `Player` · `WarningPopup` 삭제.
+- `TitleUIAssetSetup` 경로 상수 (`SpriteDir` → `UI/Common/`, `BackgroundDir` 추가). `12-title-ui` · `14-lobby-ui` · `title-ui-plan` 의 경로 갱신.
+
+### 검증
+
+- 씬 · 프리팹 · 에셋이 참조하는 옛 스프라이트 GUID 29개 전부 새 위치에 존재, 중복 GUID 없음.
+- Unity 2022.3.62f3 batchmode 임포트: 컴파일 에러 0, 옮긴 스프라이트가 같은 GUID 로 임포트, Unity 가 수정한 추적 파일 없음.
+
+### 남긴 것
+
+- `PlayerSeatUI` 프리팹의 오브젝트 이름 오타 `HP Guage Image` — 로직 쪽 GameScene 이 쓰는 프리팹이라 그대로 둠.
+- 팝업 스프라이트(`UI/Popup/`)는 `plan-b-ui` 의 팝업 재구성 때 공용 9-slice 로 교체 예정.
 
 ---
 

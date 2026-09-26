@@ -14,31 +14,33 @@
 | [01-game-flow.md](01-game-flow.md) | 게임플레이 흐름 / 씬 구성 | Core | 일부 미정 |
 | [02-player.md](02-player.md) | 플레이어 · 좌석 | Core | 일부 미정 |
 | [03-turn.md](03-turn.md) | 턴 시스템 | Core | 일부 미정 |
-| [04-card.md](04-card.md) | 카드 시스템 (사용·체인·반응) | Core | 작성 완료 |
-| [05-deck.md](05-deck.md) | 덱 · 손패 · 버림 더미 | Core | 작성 완료 |
-| [06-health.md](06-health.md) | 체력 · 사망 | Core | 작성 완료 |
-| [07-win-condition.md](07-win-condition.md) | 승리 조건 (찹츄 / 최후 생존) | Core | 작성 완료 |
+| [04-card.md](04-card.md) | 카드 시스템 (사용·체인·반응) | Core | 일부 미정 |
+| [05-deck.md](05-deck.md) | 덱 · 손패 · 버림 더미 | Core | 일부 미정 (덱 구성) |
+| [06-health.md](06-health.md) | 체력 · 사망 | Core | 일부 미정 (카드 N) |
+| [07-win-condition.md](07-win-condition.md) | 승리 조건 (찹츄 / 최후 생존) | Core | 일부 미정 (선언 시점 · 결과 화면) |
 | [08-room.md](08-room.md) | 방(Room) / 로비 | MVP | 규칙 확정 · 구현 완료 (연결 끊김 · 재접속만 미정) |
-| [09-network.md](09-network.md) | 네트워크 권한 · 동기화 규약 | Core | 작성 완료 |
+| [09-network.md](09-network.md) | 네트워크 권한 · 동기화 규약 | Core | 일부 미정 (마스터 교체 · 재접속) |
 | [10-ui.md](10-ui.md) | 인게임 UI | Core | 일부 미정 |
 | [11-card-list.md](11-card-list.md) | 카드 목록 (행동 27 / 카운터 15 / 함정 17) | Core | 수치 N 미정 |
-| [12-title-ui.md](12-title-ui.md) | 타이틀 화면 UI | MVP | 구현 완료. 시스템 버튼(사운드 · 메뉴)만 미정 |
-| [13-friend.md](13-friend.md) | 친구 시스템 | Optional | 개발 범위 밖 (규칙은 확정) |
+| [12-title-ui.md](12-title-ui.md) | 타이틀 화면 UI | MVP | 배치 · 입력 구현됨. **연결 중 · 실패 상태(12절, S8) 미구현** — 아티팩트 v13 검증 대기. 시스템 버튼 미정 |
+| [13-friend.md](13-friend.md) | 친구 시스템 | Optional | MVP 밖 — M7(12/17~) 착수. 규칙 일부 확정 |
 | [14-lobby-ui.md](14-lobby-ui.md) | 로비 화면 UI (크기 · 배치) | MVP | 배치 확정, 디자인 미정 |
 | [15-screen.md](15-screen.md) | 화면 규격 (방향 · 해상도 · 스케일) | MVP | 확정 (2026-09-25) |
 | [16-room-ui.md](16-room-ui.md) | 방 화면 UI (크기 · 배치) | MVP | 배치 확정, 디자인 미정 |
 
 > 12번의 원본은 노션이 아니라 **Claude 디자인 아티팩트**다 (버전 고정, 문서 머리말 참고).
+>
+> ⚠ **인게임 "현재 구현 상태" 읽는 법 (2026-09-26)** — 02 · 03 · 04 · 05 · 06 · 09 · 10 의 "구현됨"은 **코드 기준**이다. `GameScene` 은 옛 인게임 배치(`TurnManager` · `CardPlayManager` · `DeckPresenter` · `SeatManager` …) 그대로이고, 새 계약으로 만든 턴 표시(`TurnView` · `TurnPresenter` · `FakeGameServer`)는 연습 씬 `Scenes/Dev/TurnPractice` 에 따로 있다. `development-plan` 기능 1 의 씬 재구성에서 합친다.
 
 ## 아직 문서가 없는 시스템
 
-> 기획 확정 마감일은 [`../development-plan.md`](../development-plan.md) 4절.
+> 기획 확정 마감일은 [`../development-plan.md`](../development-plan.md) 4절 "기획 결정 마감".
 
 | 시스템 | 분류 | 사유 |
 | --- | --- | --- |
-| 인게임 화면 배치 (`17-game-ui`) | Core | 10-ui §2 의 ASCII 그림뿐. 12 · 14 · 16 형식(크기 · 배치 · 하이어라키)으로 **B 가 M1 에 신설** (B1-0) |
-| 로그인 | MVP | 노션 원본이 빈 페이지. v2 플랜 M7 — **M6 끝(12/16)까지 작성** |
-| 재접속 | MVP | 노션 원본 내용 없음. v2 플랜 M6 — M5 끝(12/2)까지 결정 |
+| 인게임 화면 배치 (`17-game-ui`) | Core | 10-ui §2 의 ASCII 그림뿐. 12 · 14 · 16 형식(크기 · 배치 · 하이어라키)으로 **UI 가 기능 1 에서 신설** (`development-plan` 3절) |
+| 로그인 | MVP | 노션 원본이 빈 페이지. 플랜 기능 12 — **12/26 까지 작성** |
+| 재접속 | MVP | 노션 원본 내용 없음. 플랜 기능 11 — 12/12 까지 결정 |
 | 설정 / 프로필 | Optional | 미확인 |
 | 재화 / 상점 / 커스터마이징 | Future | 개발 범위 제외 |
 
@@ -67,3 +69,5 @@
 | 7 | 총 덱 구성 (카드별 매수, 총 장수) | 05-deck | 덱 밸런스, 소진 빈도 |
 | 8 | 턴 진행 방향 개념 (A07 "방향 반전"이 요구) | 03-turn | A07/A10 구현 |
 | 9 | 타이틀 사운드·메뉴 버튼 동작 (화면 방향 · 스케일은 2026-09-25 확정 → 15-screen) | 12-title-ui, 14-lobby-ui | 시스템 버튼 기능 |
+| 10 | 처치 승리 판정 시점 — 즉시(01 · 02) vs 모든 연쇄 뒤(07) | 07-win-condition, 01, 02 | 기능 8 승리 판정 (11/4 마감) |
+| 11 | 찹츄 첫 선언 시점 — 언제든 vs 자신의 턴(재선언과 같게) | 07-win-condition | 기능 8 찹츄 버튼 · 판정 (11/4 마감) |

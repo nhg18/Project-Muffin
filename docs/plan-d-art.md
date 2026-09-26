@@ -5,6 +5,8 @@
 **상위 문서**: [`development-plan.md`](development-plan.md) v3 — 단계 · 마감 · 주간 리듬 · 납품표(4-2절)
 **짝 문서**: [`plan-b-ui.md`](plan-b-ui.md) (받아서 Unity 에 넣는 사람) · [`plan-c-planning.md`](plan-c-planning.md) (카드 이름 · 문구 · 화면 흐름을 주는 사람)
 
+> ⚠ **보류 (2026-09-26)** — v3 (M1 ~ M8 단계) 기준으로 쓰였고 사용자 검토 전이다. 지금 플랜은 v5 (기능 13개 · 날짜 +10일, [`development-plan.md`](development-plan.md)) 라서 이 문서의 단계 · 마감 · 납품 마감(D1 ~ D12) 참조는 맞지 않는다. 검토 때 v5 4절 "기획 결정 마감" 기준으로 고친다.
+
 ---
 
 ## 0. 결론 먼저

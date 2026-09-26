@@ -6,6 +6,8 @@
 **작성 규칙**: [`GDD_GUIDE.md`](GDD_GUIDE.md) — 기획 문서를 쓸 때 반드시 따른다
 **짝 문서**: [`plan-a-logic.md`](plan-a-logic.md) · [`plan-b-ui.md`](plan-b-ui.md) · [`plan-d-art.md`](plan-d-art.md)
 
+> ⚠ **보류 (2026-09-26)** — v3 (M1 ~ M8 단계) 기준으로 쓰였고 사용자 검토 전이다. 지금 플랜은 v5 (기능 13개 · 날짜 +10일, [`development-plan.md`](development-plan.md)) 라서 이 문서의 단계 · 마감 · `4-1 #번호` 참조는 맞지 않는다. 검토 때 v5 4절 "기획 결정 마감" 기준으로 고친다.
+
 > 이 문서는 **게임 개발이 처음인 기획자**를 위해 썼다. 모르는 단어는 10절 용어집부터 본다.
 
 ---

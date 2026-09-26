@@ -3,7 +3,7 @@
 **작성일**: 2026-09-24 · **갱신**: 2026-09-26 (v5 — 작업 목록을 `development-plan.md` 3절 기능별 표로 옮김)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
-**상위 문서**: [`development-plan.md`](development-plan.md) v3 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감 담당) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v5 (기능 13개 · 기능별 작업 표 · 서로 기다리는 곳 · 기획 결정 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
 **짝 문서**: [`plan-b-ui.md`](plan-b-ui.md)
 
 ---
@@ -12,20 +12,17 @@
 
 A 의 일은 한 줄이다. **게임 상태 원본을 `GameServer`(마스터 전용) 하나로 모으고, UI 에는 `GameEvents` 로만 알린다.**
 
-```
-M0 잔여(네트워크 2건 + 계약 보강) → M1 GameServer · 요청 파이프라인 → M2 체인 · 함정
-→ M3 체력 · 턴 · 승리 → M4 복잡한 카드 효과 → M5 방 · 재접속 · asmdef
-```
+순서는 `development-plan.md` 0절의 기능 13개 (게임 시작 → 턴 → 뽑기 → 행동 카드 → 카운터 → 함정 → 체력 → 찹츄 · 승리 → 59장 → 첫 완성판 → 재접속 → 로그인 → 출시).
 
 B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
-1. **계약 3종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`)은 쓰기 전에 먼저 PR 로 올린다.** B 는 계약만 보고 `FakeGameServer` 로 개발한다.
+1. **약속 파일 4종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`, `IGameState`)은 쓰기 전에 먼저 PR 로 올린다.** B 는 약속만 보고 로컬 서버(`FakeGameServer`)로 개발한다.
 2. **`Presentation/` 파일은 고치지 않는다.** 지금 `Presentation` 에 들어 있는 로직(아래 1-3)은 A 가 `Game/` 에 새 경로를 만들고, **옛 호출 제거는 B 가 교체 PR 에서 한다.**
 3. **`Presentation` 타입을 참조하지 않는다.** (asmdef 분리의 전제)
 
 ---
 
-## 1. 현재 코드 상태 (2026-09-24 확인)
+## 1. 현재 코드 상태 (2026-09-26 확인)
 
 ### 1-1. M0 에서 끝난 것 (PR #10, `3f84952`)
 
@@ -40,7 +37,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | K-3 | 손패에서 카드가 빠지는 통지 없음 | 사용 · 버림 · 강탈 시 UI 가 어떤 카드를 지울지 모른다 (C-8 의 UI 측) | 비공개 통지 `내 손에서 InstanceId 제거` 추가 (M2 전) |
 | K-4 | `Game/IGameState.cs` (B 가 2026-09-25 추가) | 늦게 켜진 UI 가 현재 턴 주인을 읽는 읽기 전용 계약. 지금은 `CurrentTurnActor` 하나 | **A 리뷰 필요** (A1-1 과 함께). Photon 구현체는 `RoomProps.TurnActor` 를 읽어 돌려주면 된다. 판정에 쓰지 않는다 |
 
-> K-1 · K-2 는 **M1 첫 PR** 로 계약만 먼저 바꾼다. 이름 · 시그니처는 A 가 제안하고 B 가 리뷰한다.
+> K-1 · K-2 는 **기능 1 약속 PR** 로 계약만 먼저 바꾼다. 이름 · 시그니처는 A 가 제안하고 B 가 리뷰한다.
 
 ### 1-3. `Presentation` 에 들어 있는 로직 (A 가 대체, B 가 제거)
 
@@ -58,7 +55,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 → **M1 에서 `GameServer` 계열 순수 C# 코드만 담는 작은 asmdef 를 먼저 만든다.**
 이 코드는 새로 쓰는 것이라 `Presentation` · DOTween 의존이 없어 `refactoring-plan.md` 1-5 의 보류 사유 두 가지에 걸리지 않는다.
-나머지 전체 asmdef 분리는 그대로 M5.
+나머지 전체 asmdef 분리는 기능 10.
 
 | 결정 필요 (A) | 제안 |
 | --- | --- |
@@ -89,7 +86,7 @@ M0 에서 끝난 것: 인터넷 없을 때 씬 동기화 누락(A0-1) ✅ · 연
 
 ## 3. B 가 A 에게 요청한 항목
 
-`docs/title-ui` 브랜치의 [`ui-refactoring-plan.md`](ui-refactoring-plan.md) 5절에서 넘어온 것. 파일 소유가 A 다.
+[`ui-refactoring-plan.md`](ui-refactoring-plan.md) 5절에서 넘어온 것. 파일 소유가 A 다. **전부 완료.**
 
 | # | 요청 | 원 번호 | 시한 | 상태 |
 | --- | --- | --- | --- | --- |
@@ -97,13 +94,13 @@ M0 에서 끝난 것: 인터넷 없을 때 씬 동기화 누락(A0-1) ✅ · 연
 | R-2 | `PhotonConnection.SetupInitNickname()` 삭제 (호출처 0) | U-7 | B 의 PR4 와 함께 | ✅ 2026-09-24 |
 | R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | = A0-1, A0-2. **B 의 PR6 전 필수** | ✅ 2026-09-24 |
 
-### 3-1. B 에게 인계 (브랜치 `temp/a-network-outgame` → `changhwan.exe`)
+### 3-1. B 에게 인계 — ✅ 전부 반영됨
 
-| B 작업 | 이제 할 수 있는 것 | 주의 |
+| B 작업 | 반영 | 남은 주의 |
 | --- | --- | --- |
-| A0-3 (U-23) | `RoomPanel.Awake` 의 `PhotonNetwork.AutomaticallySyncScene = true` 삭제 | 위 브랜치 **머지 후에만**. 먼저 지우면 인게임 진입이 깨진다 |
-| PR4 · B1-13 (U-6) | `ConnectionEvents.OnDisconnected(DisconnectCause)` 구독 → 안내 문구 + 재시도 버튼(`NetworkManager.Connect()`) | 인게임에서 끊겨도 같은 이벤트가 온다. `ExceptionOnConnect` = 인터넷 없음 포함 접속 실패, `ClientTimeout` = 15초 초과. 접속 중에 `Connect()` 를 다시 불러도 무시된다 |
-| PR6 (U-12) | `RoomInfoPanel` · `RoomPanel` 에서 `RoomEvents.OnMasterClientSwitched(Player)` 구독 → `(Host)` 표기 · 시작 버튼 갱신 | `OnPlayerLeft` 와의 호출 순서는 보장되지 않는다. 방장 이탈 처리(`08-room.md` 5절 #5)는 미정 |
+| A0-3 (U-23) | ✅ `RoomPanel` 삭제로 해소 (설정은 `PhotonConnection` 한 곳) | — |
+| PR4 (U-6) | ✅ `TitlePresenter` 가 `ConnectionEvents.OnDisconnected` 구독 → 실패 안내 + 다시 시도 | 인게임에서 끊겨도 같은 이벤트가 온다 — 인게임 끊김 화면은 기능 11 |
+| PR6 (U-12) | ✅ `RoomPresenter` 가 `RoomEvents.OnMasterClientSwitched` 구독 | `OnPlayerLeft` 와의 호출 순서는 보장되지 않는다 |
 
 ---
 

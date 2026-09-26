@@ -4,6 +4,10 @@
 **대상**: `MuffinProject/Assets/Scripts` 전체 (84개 `.cs`, 프로젝트 자체 코드 약 5,100줄)
 **기준 문서**: [`systems/`](systems/)
 
+> **2026-09-26 현재 이 문서의 역할** — **1부 진단**(A- · B- · C- · D- · E- 번호)과 **Phase 1 진행 기록**만 계속 유효하다. 트랙 문서가 이 번호로 참조한다.
+> 2부 Phase 2~7 의 **순서 · 일정**, 3부 우선순위, 4부 기획 확정 목록은 [`development-plan.md`](development-plan.md) v5 (기능 13개 · 4절 기획 결정 마감)와 [`plan-a-logic.md`](plan-a-logic.md) · [`plan-b-ui.md`](plan-b-ui.md) 로 대체됐다. 2부의 **설계 내용**(GameServer · CardInstance · EffectContext …)은 설계 참고로 남긴다.
+> 5부의 "Phase 2 이전" 은 v5 의 **기능 1 서버 코어 이전**으로 읽는다.
+
 ---
 
 ## 결론 먼저
