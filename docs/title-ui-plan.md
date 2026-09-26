@@ -5,11 +5,13 @@
 **범위**: **화면(뷰)만.** 네트워크·씬 전환 등 실제 기능은 연결하지 않는다.
 **기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude Design 게시 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (Version 8 — 2026-09-24 게시본에 폰트·배경·버전 문구만 교체)
 
+> ⏳ **S1 ~ S7 완료, S8(연결 중 · 연결 실패) 남음 (2026-09-26)** — S8 은 `plan-b-ui` B1-15. 남은 체크: S6 붙여넣기 · IME, 실기(S6 · S7). 아래 1 ~ 2절의 Match 1 · 800×600 · "타이틀→로비 끊김" 설명은 작성 당시 기준이다 — 지금 규격은 [`systems/15-screen.md`](systems/15-screen.md) (Expand · 가로 고정).
+
 > **기준 흐름 (2026-09-23)**: 아티팩트 → `docs/systems/12-title-ui.md` → 노션 「타이틀 화면 개발 문서」 순으로 반영했다.
 > 셋이 다르면 **`12-title-ui.md`가 옳다** (`CLAUDE.md` 0절). 아래 2절 환산표는 구현용 상세이며, 수치는 12번 문서와 같다.
 >
 > 같은 계정의 다른 아티팩트: 로비 `87PcE8t7ic5Ei5VveoZXYf`, 룸 `XYKxMfH3pVh5KNS8hQJscE` — 이번 범위 아님.
-> 최신 디자인은 Claude Design에 있다(타이틀이 "찹츄 로비 화면 v2"로 이동). 로비 작업 전에 v2를 아티팩트로 게시받아 기준을 다시 잡는다.
+> 로비 · 룸 옛 아티팩트는 기준으로 쓰지 않는다 (2026-09-25 사용자 결정 — 로비 · 방은 `14` · `16` 배치 문서가 기준, 디자인은 D8 에서).
 
 ---
 
@@ -303,7 +305,7 @@ Scripts/UI/Title/
 
 ### S8. 연결 중 · 연결 실패 상태 — 로딩 링 · 다시 시도 (0.5d)
 
-기준: `12-title-ui.md` 3절 #6~8 · 6절 · 7-1 · 9-3 (2026-09-25). 아티팩트 Version 12. **사용자가 아티팩트를 검증한 뒤 착수.**
+기준: `12-title-ui.md` 3절 #6~8 · 6절 · 7-1 · 9-3 (2026-09-25). 아티팩트 Version 13. **사용자가 아티팩트를 검증한 뒤 착수.**
 사유: 연결 전에 접속 버튼이 눌리고, 연결 없이 로비로 이동하는 버그 (사용자 보고 2026-09-25).
 
 **뷰 (B — 이 트랙)**
@@ -325,7 +327,7 @@ Scripts/UI/Title/
 | `RetryRequested` | `SetPhase(Connecting)` → `Connect()` |
 | `ConnectRequested(nickname)` | `IsReady` 면 저장 → 로비. 아니면 `SetPhase(Failed("연결 끊김", …, 마지막 cause 또는 빈 문자열))` |
 
-- [ ] 아티팩트 Version 12 사용자 검증
+- [ ] 아티팩트 Version 13 사용자 검증
 - [ ] 스프라이트 · `LoadingGroup` · `TitleView.SetPhase` (뷰)
 - [ ] `TitlePresenter` 연결 (로직)
 - [ ] 확인: 앱 시작 → 링 회전 → 연결 → 입력 묶음 / 비행기 모드 → 실패 문구 + 다시 시도 → 인터넷 켜고 탭 → 링 → 입력 묶음 / 연결된 뒤 끊김 → 실패 상태

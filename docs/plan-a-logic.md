@@ -1,9 +1,9 @@
 # A 트랙 — 게임 로직 작업 플랜
 
-**작성일**: 2026-09-24 · **갱신**: 2026-09-26 (v4 — M1 을 샌드박스 = 서버 1층으로, M2 를 규칙 붙이기로 재구성)
+**작성일**: 2026-09-24 · **갱신**: 2026-09-26 (v4 — M1 을 샌드박스 = 서버 1층으로, M2 를 규칙 붙이기로 재구성 · 문서 정리)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
-**상위 문서**: [`development-plan.md`](development-plan.md) v3 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감 담당) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
+**상위 문서**: [`development-plan.md`](development-plan.md) v4 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감 담당) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
 **짝 문서**: [`plan-b-ui.md`](plan-b-ui.md)
 
 ---
@@ -13,19 +13,19 @@
 A 의 일은 한 줄이다. **게임 상태 원본을 `GameServer`(마스터 전용) 하나로 모으고, UI 에는 `GameEvents` 로만 알린다.**
 
 ```
-M0 잔여(네트워크 2건 + 계약 보강) → M1 GameServer · 요청 파이프라인 → M2 체인 · 함정
-→ M3 체력 · 턴 · 승리 → M4 복잡한 카드 효과 → M5 방 · 재접속 · asmdef
+M1 서버 1층(샌드박스) → M2 검사층 · 효과층(규칙 붙이기) → M3 체력 · 턴 · 승리
+→ M4 카드 59장 효과 → M5 이탈 처리 · asmdef → M6 재접속 → M7 로그인 · 친구 → M8 출시 준비
 ```
 
 B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
-1. **계약 3종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`)은 쓰기 전에 먼저 PR 로 올린다.** B 는 계약만 보고 `FakeGameServer` 로 개발한다.
+1. **계약 4종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`, `IGameState`)은 쓰기 전에 먼저 PR 로 올린다.** B 는 계약만 보고 로컬 서버(`FakeGameServer`)로 개발한다.
 2. **`Presentation/` 파일은 고치지 않는다.** 지금 `Presentation` 에 들어 있는 로직(아래 1-3)은 A 가 `Game/` 에 새 경로를 만들고, **옛 호출 제거는 B 가 교체 PR 에서 한다.**
 3. **`Presentation` 타입을 참조하지 않는다.** (asmdef 분리의 전제)
 
 ---
 
-## 1. 현재 코드 상태 (2026-09-24 확인)
+## 1. 현재 코드 상태 (2026-09-26 확인)
 
 ### 1-1. M0 에서 끝난 것 (PR #10, `3f84952`)
 
@@ -71,13 +71,13 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 표기: **[계약]** = 양쪽 리뷰 필수 PR · **→B** = 끝나면 B 에게 알려야 하는 것 · **⛔** = 기획 미정으로 막힘
 
-### M0 잔여 (이번 주)
+### M0 잔여 — ✅ 전부 완료
 
 | # | 작업 | 위치 | 비고 |
 | --- | --- | --- | --- |
 | A0-1 | ✅ `Initialize()` 가 인터넷 없을 때 조기 반환 → `AutomaticallySyncScene = true` 누락 | `Network/PhotonConnection.cs` | 설정은 항상 하고, 인터넷 확인은 `Connect()` 로 이동 |
 | A0-2 | ✅ `OnDisconnected` 분기 구현 + 연결 타임아웃 | `Network/PhotonConnection.cs` · `NetworkManager.cs` | 사유만 `ConnectionEvents.OnDisconnected` 로 넘긴다. 규칙은 `09-network.md` 11절 **→B** (3-1 인계) |
-| A0-3 | `RoomPanel.Awake` 의 `AutomaticallySyncScene` 중복 제거 요청 처리 | — | A0-1 머지 후 B 가 지운다 (U-23) **→B** (3-1 인계) |
+| A0-3 | ✅ `RoomPanel.Awake` 의 `AutomaticallySyncScene` 중복 제거 | — | 방 화면 재구성(`RoomView` · `RoomPresenter`)으로 `RoomPanel` 자체가 사라졌다. 설정은 `PhotonConnection` 한 곳 (U-23) |
 
 ### M1 — 샌드박스 = 서버 1층 (9/28 ~ 10/11)
 
@@ -108,7 +108,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 **A 의 M2 완료 기준**: A09 → C05 → 체인 역순이 EditMode 테스트 + 4클론 규칙 모드에서 동일. 같은 빌드에서 샌드박스 모드도 동작.
 
-### M3 — 체력 · 턴 · 승리 (1.5주)
+### M3 — 체력 · 턴 · 승리 (10/26 ~ 11/4)
 
 | # | 작업 | 비고 |
 | --- | --- | --- |
@@ -121,33 +121,33 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 **A 의 M3 완료 기준**: 처치 승리 · 찹츄 승리 · 무승부가 테스트로 재현된다.
 
-### M4 — 카드 대량 구현 (2주)
+### M4 — 카드 59장 (11/5 ~ 11/18)
 
 | # | 작업 | 비고 |
 | --- | --- | --- |
-| A4-1 | **효과 SO 기반 클래스 동결** — B 가 단순 효과를 쓰기 시작하는 조건 | **→B** (동기화 지점 S5) |
+| A4-1 | **효과 SO 기반 클래스 동결** — B 가 단순 효과를 쓰기 시작하는 조건 | **→B** (동기화 지점 S6) |
 | A4-2 | 구조가 까다로운 효과: `Negate`, `Redirect`, `Choice`, `Peek`, 사후 트리거(T06~T16) | |
 | A4-3 | MVP 6장(A09 / A08 / A06 / A05 / C05 / T06) 구조 검증 → 통과 후 나머지 | ⛔ 카드 수치 N / M(기획 #6) |
 | A4-4 | B 가 쓴 단순 효과 리뷰 | 규칙 판정 코드는 A 가 최종 책임 |
 
-### M5 — MVP 마감 (2주)
+### M5 — 첫 완성판 `0.5.0` (11/19 ~ 12/2)
 
 | # | 작업 |
 | --- | --- |
-| A5-1 | 방 시스템 확정분 구현 (시작 조건 · 방장 이탈) ⛔ 기획 #7 |
-| A5-2 | 재접속 / 마스터 이탈 — 새 마스터가 상태를 이어받는 방식 결정 필요 |
+| A5-1 | 마스터 이탈 = 게임 종료 (새 마스터가 상태를 잇지 않는다 — MVP 범위) ⛔ 기획 #7 |
+| A5-2 | 게임 중 이탈 (일반 플레이어) ⛔ 기획 #7 |
 | A5-3 | 전체 asmdef 분리 (`refactoring-plan.md` 1-5 — DOTween Modules asmdef 포함) |
 | A5-4 | EditMode 테스트를 한 번에 돌리는 메뉴 (CI 없음) |
 
-### M6 ~ M8 — 안정화 · 로그인 · 완성도
+### M6 ~ M8 — 다듬기 · 로그인 · 출시 준비
 
-[`development-plan.md`](development-plan.md) 2절 M6 · M7 · M8 의 A 열을 따른다 (재접속 · 마스터 이탈 · 로그인 · 친구 · 치트 로그 · 빌드 파이프라인). 트랙 세부는 M5 게이트 통과 후 이 문서에 내려쓴다. 로그인은 v1 의 A5-4 에서 M7 로 옮겼다 — 문서가 없어 M5 안에 들어갈 수 없다.
+[`development-plan.md`](development-plan.md) 3절 M6 · M7 · M8 의 로직 행을 따른다 (M6 재접속 · 중복 방어 · 수치 반영, M7 로그인 · 친구, M8 치트 로그 · 크래시 리포트 · 빌드 자동화). 트랙 세부는 M5 게이트 통과 후 이 문서에 내려쓴다. 로그인은 문서(기획 #10, 12/16)가 없어 M7 에 둔다.
 
 ---
 
 ## 3. B 가 A 에게 요청한 항목
 
-`docs/title-ui` 브랜치의 [`ui-refactoring-plan.md`](ui-refactoring-plan.md) 5절에서 넘어온 것. 파일 소유가 A 다.
+[`ui-refactoring-plan.md`](ui-refactoring-plan.md) 5절에서 넘어온 것. 파일 소유가 A 다. **전부 완료.**
 
 | # | 요청 | 원 번호 | 시한 | 상태 |
 | --- | --- | --- | --- | --- |
@@ -155,13 +155,13 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | R-2 | `PhotonConnection.SetupInitNickname()` 삭제 (호출처 0) | U-7 | B 의 PR4 와 함께 | ✅ 2026-09-24 |
 | R-3 | `Initialize()` 조기 반환 + `OnDisconnected` 분기 | U-6, U-23 | = A0-1, A0-2. **B 의 PR6 전 필수** | ✅ 2026-09-24 |
 
-### 3-1. B 에게 인계 (브랜치 `temp/a-network-outgame` → `changhwan.exe`)
+### 3-1. B 에게 인계 — ✅ 전부 반영됨
 
-| B 작업 | 이제 할 수 있는 것 | 주의 |
+| B 작업 | 반영 | 남은 주의 |
 | --- | --- | --- |
-| A0-3 (U-23) | `RoomPanel.Awake` 의 `PhotonNetwork.AutomaticallySyncScene = true` 삭제 | 위 브랜치 **머지 후에만**. 먼저 지우면 인게임 진입이 깨진다 |
-| PR4 · B1-13 (U-6) | `ConnectionEvents.OnDisconnected(DisconnectCause)` 구독 → 안내 문구 + 재시도 버튼(`NetworkManager.Connect()`) | 인게임에서 끊겨도 같은 이벤트가 온다. `ExceptionOnConnect` = 인터넷 없음 포함 접속 실패, `ClientTimeout` = 15초 초과. 접속 중에 `Connect()` 를 다시 불러도 무시된다 |
-| PR6 (U-12) | `RoomInfoPanel` · `RoomPanel` 에서 `RoomEvents.OnMasterClientSwitched(Player)` 구독 → `(Host)` 표기 · 시작 버튼 갱신 | `OnPlayerLeft` 와의 호출 순서는 보장되지 않는다. 방장 이탈 처리(`08-room.md` 5절 #5)는 미정 |
+| A0-3 (U-23) | ✅ `RoomPanel` 삭제로 해소 | — |
+| PR4 · B1-13 (U-6) | ✅ 타이틀이 `ConnectionEvents.OnDisconnected` 구독 → 실패 안내 + 다시 시도 | 인게임에서 끊겨도 같은 이벤트가 온다 — 인게임 끊김 화면은 M6 (B6-1) |
+| PR6 (U-12) | ✅ `RoomPresenter` 가 `RoomEvents.OnMasterClientSwitched` 구독 | `OnPlayerLeft` 와의 호출 순서는 보장되지 않는다 |
 
 ---
 

@@ -218,6 +218,8 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
 | RPC `nameof` 사용 | 혼재 (`TurnManager`/`DeckPresenter`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
 | 마스터 가드 | 일부 누락 (`RPC_RequestDrawToMaster`) |
+| 손패 장수 기록 | **손패 주인이 직접** `handCount` 를 기록한다 (3절 위반) |
+| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있고, 에디터용 `FakeGameServer` 만 구현한다. Photon 구현체는 A1-5 |
 
 ---
 

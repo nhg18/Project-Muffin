@@ -51,7 +51,7 @@
 * 같은 입력(내 actorNumber + 참가자 목록)이면 항상 같은 결과가 나와야 한다.
 * 좌석 계산은 **한 곳에서만** 수행하고, 손패 UI와 플레이어 정보 UI가 그 결과를 공유한다.
 
-> ⚠ 현재 `SeatManager`와 `HandSeatManager`가 각각 `Start()`에서 좌석을 계산해 실행 순서에 의존한다.
+> ⚠ 계산 함수는 `SeatManager.GetSeatAssignments` 하나지만, `SeatManager` 와 `HandSeatManager` 가 각자 `Start()` 에서 호출한다 (이중 호출).
 
 ---
 
@@ -101,13 +101,13 @@ Alive → (HP 0) → DeathPending → (대응 처리) → Alive 복귀
 | 항목 | 상태 |
 | --- | --- |
 | 좌석 배치 알고리즘 (`SeatManager.GetSeatAssignments`) | 구현됨. 기획과 일치 |
-| 좌석 UI (닉네임 / 턴 표시) | 구현됨 |
+| 좌석 UI (닉네임 / 턴 표시) | 닉네임 구현됨. 턴 표시는 시작 때 한 번만 설정 — `OnTurnChanged` 구독이 없어 턴이 바뀌어도 갱신되지 않는다 (`SeatManager.UpdateSeatUI` 호출처 없음) |
 | HP UI | **미동작** — 키는 `PlayerProps.Hp` 로 통일됐고 `GameEvents.OnHpChanged` 까지는 오지만, 이를 받아 게이지를 갱신하는 구독자가 없다 |
 | 손패 장수 UI (`PlayerSeat.SetCardCountUI`) | 함수만 존재, **호출하는 곳 없음** |
 | HP 게이지 (`PlayerSeat.SetHpGauge`) | 함수만 존재, **호출하는 곳 없음** |
 | 함정 슬롯 | **미구현** |
 | 생존 상태 | **미구현** |
-| 찹츄 상태 | **미구현** (레거시 `GameRule.isChapChu` bool만 존재) |
+| 찹츄 상태 | **미구현** |
 | 좌석 계산 중복 | `SeatManager` + `HandSeatManager` 이중 호출 |
 
 ---
