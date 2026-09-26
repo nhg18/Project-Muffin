@@ -6,6 +6,21 @@
 
 ---
 
+## 2026-09-26 · GameScene 옛 배치 유지 (로직 테스트용)
+
+로직 담당이 인게임 씬으로 테스트해야 해서 `GameScene` 은 **옛 인게임 배치(develop 과 동일) + `TurnUI.cs`** 로 둔다 (사용자 결정). 턴 표시 연습 씬(`Scenes/Dev/TurnPractice`)은 두지 않는다 — `TurnView` · `TurnPresenter` · `FakeGameServer` 는 코드만 남고 기능 1 씬 재구성에서 놓는다.
+정정: 앞선 보고에서 "PR #36 머지로 develop 의 GameScene 이 비워졌다"고 했으나 틀림 — #36 은 되돌리기 전 커밋(`a0aa2e1`)에서 머지돼 develop 은 옛 씬 그대로였다.
+
+---
+
+## 2026-09-26 · 되돌림 — 브랜치 정리 때 바꾼 씬 · 코드
+
+사용자 지시로 브랜치 정리(`a0aa2e1`)에서 AI 가 바꾼 씬 · 코드 3가지를 되돌림: `GameScene` develop 버전 복원 → 이전(`ui`, 턴 표시만 있는 씬)으로, 되살린 `TurnUI.cs` 삭제, `Scenes/Dev/TurnPractice.unity` 삭제. 문서의 연습 씬 언급도 지움. `FakeGameServer` · `TurnView` · `TurnPresenter` · `IGameState` 는 2026-09-25 `ui` 커밋(`979effa` · `6746c54`) 그대로.
+
+⚠ 이대로 PR #36 이 develop 에 머지되면 develop 의 옛 인게임 `GameScene` 이 비워진다.
+
+---
+
 ## 2026-09-26 · 브랜치 정리 — logic · ui 두 트랙으로
 
 | 항목 | 값 |
