@@ -90,7 +90,7 @@ Photon 연결 · 씬 전환 · 닉네임 저장/복원 · 타임아웃 · 사운
 
 ```
 TitleCanvas
-├ BG_Illust        Image (TitleBackground.png) · AspectRatioFitter Envelope Parent  ← CSS cover
+├ BG_Illust        Image (bg_title.png) · AspectRatioFitter Envelope Parent  ← CSS cover
 ├ BG_Overlay       Image · 세로 선형 그라데이션 스프라이트 (2-3) · Stretch
 ├ Content          Stretch · VerticalLayoutGroup(Middle Center)
 │  ├ TitleGroup    VerticalLayoutGroup · Spacing 6
@@ -112,7 +112,7 @@ TitleCanvas
 
 | 레이어 | 아티팩트 | Unity |
 | --- | --- | --- |
-| 일러스트 | 게임 `TitleBackground.png`와 같은 일러스트 · `center/cover` | `Sprites/TitleBackground.png` (2021×1138, 16:9) · 중앙 기준 cover |
+| 일러스트 | 게임 `bg_title.png`와 같은 일러스트 · `center/cover` | `Sprites/UI/Background/bg_title.png` (2021×1138, 16:9) · 중앙 기준 cover |
 | 오버레이 | `linear-gradient(180deg, rgba(46,36,64,.26), rgba(46,36,64,.1) 40%, rgba(46,36,64,.46))` | 같은 그라데이션을 세로 텍스처로 구워 Stretch (색은 전부 `#2E2440`, 알파만 변함) |
 
 ### 2-4. 레이아웃 수치
@@ -185,13 +185,13 @@ Unity `Selectable`의 Color Tint로는 이동을 못 하므로 **포인터 이�
 | **학교안심 둥근미소 B / R** | 기존 에셋 `TextMesh Pro/Resources/Fonts & Materials/Hakgyoansim Dunggeunmiso OTF B SDF` · `OTF R SDF` (OFL). 입력칸 안(입력값 · 안내문 · 카운터)은 R, 나머지는 B — 기존 TitleScene 배분 | 정적 아틀라스, 한글 11,172자 전부 포함 → 임의 닉네임에서 □ 없음, Play 중 에셋 변경 없음. 새로 만들지 않는다 |
 | **IBM Plex Mono** TTF | Google Fonts (OFL) | SDF Dynamic · 512 · ASCII + `·` (버전 텍스트 전용) |
 | `♪ ≡` 아이콘 | 새 폰트에도 글자가 있지만 **스프라이트 유지 (확정 2026-09-24)** | `icon_sound.png` · `icon_menu.png` |
-| `TitleBackground.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
+| `bg_title.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
 | 둥근 사각 9-slice | 직접 생성 `ui_round64.png` | 반경 64 원본 1장. `Image.pixelsPerUnitMultiplier = 64 / 반경` 으로 20·22·14 및 안쪽(16·17·12)에 재사용. 흰색, Image 색으로 칠함 |
 | 소프트 그림자 9-slice | 직접 생성 `ui_shadow_soft.png` | 반경 22 · sigma 13 · 바깥 여백 40 · border 101. Image를 박스보다 사방 40 크게 |
-| 세로 오버레이 텍스처 | 셋업 스크립트가 생성 `title_overlay_vertical.png` | 4×256 · 색 `#2E2440` 고정, 알파 .26 → .10(40%) → .46 · Bilinear · Clamp · 비압축. **`title_overlay_radial.png`는 삭제** |
+| 세로 오버레이 텍스처 | 셋업 스크립트가 생성 `bg_overlay_vertical.png` | 4×256 · 색 `#2E2440` 고정, 알파 .26 → .10(40%) → .46 · Bilinear · Clamp · 비압축. **`title_overlay_radial.png`는 삭제** |
 | 입력창 안쪽 하이라이트 | 직접 생성 `ui_round64_top_highlight.png` | 배율 4(반경 16)에서 두께 2px |
 
-폴더: `Assets/Fonts/`, `Assets/Sprites/UI/`. 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
+폴더: `Assets/Fonts/`, `Assets/Sprites/UI/Common/` (9-slice · 아이콘), `Assets/Sprites/UI/Background/` (배경 · 오버레이). 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
 
 ---
 
@@ -310,7 +310,7 @@ Scripts/UI/Title/
 
 | 항목 | 내용 |
 | --- | --- |
-| 에셋 | `Sprites/UI/ui_spinner_56.png` — 지름 56 · 선 6 · 바탕 링 `#FFFDF8` 25% + 1/4 호 `#B18AE0` (9-3). 흰색으로 그려 색은 Image color 로 줄 수 없음(두 색) → 스프라이트에 색 포함 |
+| 에셋 | `Sprites/UI/Common/ui_spinner_56.png` — 지름 56 · 선 6 · 바탕 링 `#FFFDF8` 25% + 1/4 호 `#B18AE0` (9-3). 흰색으로 그려 색은 Image color 로 줄 수 없음(두 색) → 스프라이트에 색 포함 |
 | 씬 | `Content/FormGroup` 옆에 **`LoadingGroup`** (폭 560 · 높이 216 · localScale 1.7 · FormGroup 과 같은 자리). 자식: `Spinner`(56×56) · `StatusText`(22 B, `#FFFDF8`) · `FailTitle`(22 B, `#FF6E8A`) · `FailDescription`(18 R, `#FFFDF8`) · `RetryButton`(PillButton 프리팹, 글자 "다시 시도") · `ErrorCode`(IBM Plex Mono 12, `#FFFDF8` 50%, 묶음 우하단 앵커 — 레이아웃 그룹 밖). VerticalLayoutGroup 가운데 정렬, 제목↔설명 8 · 그 외 16 |
 | 스크립트 | `TitleView` 에 `SetPhase(Connecting / Failed(title, description, code) / Ready)` 추가: FormGroup ↔ LoadingGroup 활성 전환, 실패 제목 · 설명 · 오류 코드 설정. `RetryRequested` 이벤트. `Spinner` 는 `SpinnerView`(`Transform.Rotate(0, 0, -360 * dt)`) |
 | 삭제 | `TitleView.SetConnecting` · "접속 중…" 문자열 · `_connecting` 탭 무시 (규칙 폐기) |

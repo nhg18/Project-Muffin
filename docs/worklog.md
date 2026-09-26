@@ -58,6 +58,36 @@
 
 ---
 
+## 2026-09-26 · UI 스프라이트 정리 (미사용 삭제 · 폴더 · 이름)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `refactor/ui-sprites` (develop 기준) |
+| 범위 | `Sprites/` 중 UI 만. `Sprites/Cards` · `Hands` · `sample.png` 는 손대지 않음. 씬 · 프리팹 수정 없음 |
+
+### 한 것
+
+- **삭제 15개**: develop 과 살아 있는 브랜치 어디서도 GUID 참조가 없는 것. 옛 로비 버튼 6(`Button1` · `Cancel Button` · `Confirm Button2` · `Create/Join Room` · `Random Match`) · 아이콘 5(`Door` · `Home` · `Icon1` · `card icon` · `circle`) · `Profile Panel1/2` · `Profile circle` · `WarningPopupConfirmButton`. 옛 main · 닫힌 PR #28 의 씬만 쓰던 것들.
+- **이동 · 이름 변경 25개** (`.meta` 같이 이동 → GUID 유지, 참조 그대로). 규칙은 기존 `Sprites/UI` 의 snake_case.
+  - `UI/Common/` — `ui_round64` · `ui_round64_top_highlight` · `ui_ring_r14_w2` · `ui_ring_r20_w4` · `ui_shadow_soft` · `icon_menu` · `icon_sound` (이름 유지)
+  - `UI/Background/` — `bg_title` (← `TitleBackground`) · `bg_overlay_vertical` (← `title_overlay_vertical`) · `bg_ingame` (← `In-GameBackground`, develop GameScene 이 사용)
+  - `UI/Popup/` — `popup_input_panel/field/submit/close` · `popup_warning_panel/button` · `popup_toast_panel/check` · `popup_loading_icon`
+  - `UI/Seat/` — `seat_player_icon` · `seat_turn_display` · `seat_profile` (← `Rectangle 212`) · `seat_hp_bar` · `seat_hp_gauge` (← `Player Hp Guage`)
+- 빈 폴더 `Buttons` · `Icons` · `Player` · `WarningPopup` 삭제.
+- `TitleUIAssetSetup` 경로 상수 (`SpriteDir` → `UI/Common/`, `BackgroundDir` 추가). `12-title-ui` · `14-lobby-ui` · `title-ui-plan` 의 경로 갱신.
+
+### 검증
+
+- 씬 · 프리팹 · 에셋이 참조하는 옛 스프라이트 GUID 29개 전부 새 위치에 존재, 중복 GUID 없음.
+- Unity 2022.3.62f3 batchmode 임포트: 컴파일 에러 0, 옮긴 스프라이트가 같은 GUID 로 임포트, Unity 가 수정한 추적 파일 없음.
+
+### 남긴 것
+
+- `PlayerSeatUI` 프리팹의 오브젝트 이름 오타 `HP Guage Image` — 로직 쪽 GameScene 이 쓰는 프리팹이라 그대로 둠.
+- 팝업 스프라이트(`UI/Popup/`)는 `plan-b-ui` 의 팝업 재구성 때 공용 9-slice 로 교체 예정.
+
+---
+
 ## 2026-09-25 · 코드 전수 대조 → 낡은 문서 정리 · Practice 접기 · 플랜 v2
 
 | 항목 | 값 |
