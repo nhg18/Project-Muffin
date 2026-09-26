@@ -1,6 +1,6 @@
 # A 트랙 — 게임 로직 작업 플랜
 
-**작성일**: 2026-09-24 · **갱신**: 2026-09-25 (v2 플랜 · `IGameState` 리뷰 항목 반영)
+**작성일**: 2026-09-24 · **갱신**: 2026-09-26 (v4 — M1 을 샌드박스 = 서버 1층으로, M2 를 규칙 붙이기로 재구성)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
 **상위 문서**: [`development-plan.md`](development-plan.md) v3 (6인 팀 · M1~M8 단계 · 게이트 · 동기화 지점 · 기획 마감 담당) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
@@ -79,36 +79,34 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | A0-2 | ✅ `OnDisconnected` 분기 구현 + 연결 타임아웃 | `Network/PhotonConnection.cs` · `NetworkManager.cs` | 사유만 `ConnectionEvents.OnDisconnected` 로 넘긴다. 규칙은 `09-network.md` 11절 **→B** (3-1 인계) |
 | A0-3 | `RoomPanel.Awake` 의 `AutomaticallySyncScene` 중복 제거 요청 처리 | — | A0-1 머지 후 B 가 지운다 (U-23) **→B** (3-1 인계) |
 
-### M1 — 마스터 권한 (2주)
+### M1 — 샌드박스 = 서버 1층 (9/28 ~ 10/11)
+
+기준 문서: [`systems/18-sandbox.md`](systems/18-sandbox.md). **1층만 만든다** — 상태 원본 · 카드 이동 · 섞기 · 시작 배분 · 비공개 전달. 검사(2층)와 효과(3층)는 M2.
 
 | # | 작업 | 진단 | 비고 |
 | --- | --- | --- | --- |
-| A1-1 | **[계약]** `OnDrawn` 공개/비공개 분리, 비공개 통지에 `CardInstance` + `IGameState` 리뷰 | K-1, K-2, K-4 | **M1 첫 PR (v2: 9/28 시작).** B 의 `FakeGameServer` 가 이 계약을 쓴다 **→B**. 2026-09-25 현재 미착수 — B 의 인게임 카드 작업이 전부 여기 걸려 있다 |
-| A1-2 | `Muffin.Game.Server` asmdef + EditMode 테스트 asmdef | 1-4 | |
-| A1-3 | `GameServer` — 덱 · 손패 · HP · 턴 순서 · 버림 더미 원본 소유 | A-1 | 순수 C#. Photon 은 바깥 어댑터에서만 |
-| A1-4 | `Deck.Shuffle()` 구현, `DrawAt` 범위 검사, 소진 시 버림 더미 재생성 | C-6, C-7 | 테스트: 셔플 분포 · 소진 재생성 |
-| A1-5 | `IGameRequests` · `IGameState` Photon 구현체 — 요청 → 검증 → 전파. 거절은 `RaiseRequestRejected` 를 **요청자에게만** | A-1, B-2 | RPC 첫 줄 `if (!PhotonNetwork.IsMasterClient) return;`. B 의 `TurnPresenter` 는 `MonoBehaviour` 로 `server` 를 받으므로 구현체도 `MonoBehaviour` 여야 씬에서 교체된다 |
-| A1-6 | 게임 시작 1회 시퀀스: 셔플 → 인스턴스 ID → HP 100 → 5장 배분 → 턴 순서 무작위 | B-7, C-3, C-5 | ⛔ 덱 구성(기획 #1). 확정 전엔 기존 `DeckRecipe` 로 테스트만 |
-| A1-7 | `"RoomDeck"` 제거 → `RoomProps.deckCount` 만 공개 | B-1 | |
-| A1-8 | `handCount` · `hp` 를 **마스터만** 기록 | 1-3 | 클라이언트 기록 코드 제거는 B (교체 PR) |
-| A1-9 | `TurnManager.GetNextActor` 인자 무시 버그 | C-2 | |
+| A1-1 | **[계약] 약속 먼저** — ① 카드 이동 알림: 영역(덱 · 손패 · 함정 칸 · 가운데 · 버림) 사이 이동을 하나의 알림으로. 비공개 영역으로 들어가면 주인에게만 카드 내용(`CardInstance`), 나머지에겐 "누가 어디서 어디로 1장" ② 체력 · 턴 · 찹츄 표시 · 덱 장수 · 대상 표시 · 타이머 알림 ③ `ISandboxRequests` 신설(18-sandbox 5절 조작) ④ `IGameState` 리뷰 | K-1, K-2, K-3, K-4 | **10/1 (3일).** ①은 제안 — 뽑기 · 내기 · 버리기 · 주기 · 빼앗기를 따로 만들지 않고 "영역 이동" 하나로 묶으면 규칙 모드의 손패 조작 카드(A04 · A05 · A11 …)도 같은 알림을 쓴다. 이름 · 모양은 A 가 정하고 B 가 리뷰 **→B** |
+| A1-2 | `Muffin.Game.Server` asmdef + EditMode 테스트 asmdef | 1-4 | A1-3 과 같이 |
+| A1-3 | **서버 1층** (`GameServer`, 순수 C#) — 영역 · 카드 번호 · 체력 · 턴 · 찹츄 표시 원본. 요청 → 적용 → 알림 목록 반환. **모드 스위치**(샌드박스 = 검사 · 효과 끔) | A-1 | **10/6.** Photon · UnityEngine UI 참조 없음 — B 의 로컬 서버가 이 코드를 에디터에서 그대로 돌린다 **→B** |
+| A1-4 | 섞기 · 덱 소진 시 버림 더미 재생성 · 시작 순서(섞기 → 번호 → 체력 100 → 5장 → 첫 턴 무작위) | B-7, C-3, C-5, C-6, C-7 | 덱 구성 미정 → 카드 데이터 전부 × 1장 (가정, 18-sandbox 6절). 테스트: 섞기 분포 · 소진 재생성 · 시작 순서 |
+| A1-5 | **Photon 연결** — 요청 RPC → `GameServer` → 공개 알림은 전원, 비공개 알림은 해당 플레이어에게만(대상 지정 RPC). `IGameRequests` · `ISandboxRequests` · `IGameState` 구현, `MonoBehaviour` | A-1, B-2 | **10/9.** RPC 첫 줄 `if (!PhotonNetwork.IsMasterClient) return;`. 요청자는 `PhotonMessageInfo.Sender` 로 식별 **→B** (교체) |
+| A1-6 | 샌드박스 스위치 — 방 프로퍼티로 모드 전달, 개발 빌드에서만 허용 | — | 방 화면 토글은 B |
+| A1-7 | 옛 동기화 정리 — `"RoomDeck"` 제거(`deckCount` 만), `handCount` · `hp` 마스터만 기록, `GetNextActor` 버그 | B-1, C-2 | 클라이언트 쪽 기록 코드 제거는 B (B1-6) |
 
-**A 의 M1 완료 기준**: EditMode 테스트로 셔플 · 드로우 · 소진 재생성 · 시작 시퀀스 통과 + 4클론에서 요청 RPC 가 마스터에서만 처리됨.
-**→B**: Photon 구현체가 머지되면 B 가 `FakeGameServer` → 실제 구현체 교체 PR 을 연다 (동기화 지점 S2).
+**A 의 M1 완료 기준**: 서버 1층 EditMode 테스트(섞기 · 이동 · 비공개 · 시작 순서) 통과 + 4클론 샌드박스에서 손패 내용이 본인에게만 간다.
 
-### M2 — 카드 파이프라인 · 함정 (2주)
+### M2 — 규칙 붙이기 = 서버 2 · 3층 (10/12 ~ 10/25)
 
 | # | 작업 | 진단 | 비고 |
 | --- | --- | --- | --- |
-| A2-1 | **[계약]** 체인 · 반응 마감 · 함정 · 손패 제거 이벤트 추가 | K-3 | **M2 첫 PR.** 반응 마감은 `PhotonNetwork.Time` 기준 절대 시각으로 **→B** |
-| A2-2 | 체인을 `GameServer` 단독 소유, `isCanceled` 마스터 전용 | A-2 | `CardPlayManager` → `CardPresenter` 참조 제거 (asmdef 순환 해소) |
-| A2-3 | `Invoke` 제거 → 5초 마감, 카운터 등록 시 재시작, `isResolutioning` 가드 수정 | B-4, B-5 | |
-| A2-4 | `EffectContext` — 대상 0개도 1회 실행, 다중 대상 변경 전 HP 기준 일괄 계산 | C-9, C-10 | 테스트 필수 |
-| A2-5 | 함정 슬롯 3칸 (설치 / 발동 / 파괴 / 공개). 개수만 공개 | — | `trapCount` 프로퍼티 |
-| A2-6 | 사용한 카드 손패 제거 → 버림 더미 | C-8 | |
-| A2-7 | 대상 타입 확장 (조건부 대상, 카드 대상) | `refactoring-plan` 3-5 | ⛔ 턴 진행 방향(기획 #5) — A07, A10 만 보류 |
+| A2-1 | **[계약]** 반응 마감 시각(`PhotonNetwork.Time`) · 체인 상태 · 거절 사유 | — | **M2 첫 PR.** 카드 이동 · 손패 제거는 M1 약속에 이미 있다 **→B** |
+| A2-2 | **검사층(2층)** — 턴 · 소유 · 메인 행동 1회 · 함정 설치 조건 · 대상 유효. 거절은 요청자에게만. 규칙 모드에서만 켠다 | A-1 | 샌드박스 모드는 그대로 통과 |
+| A2-3 | **체인** 서버 단독 소유 · 서버 시각 5초 · 카운터 시 재시작 · 역순 처리. `CardPlayManager` 대체 (`CardPresenter` 참조 제거) | A-2, B-4, B-5 | |
+| A2-4 | **효과층(3층)** — `EffectContext`(대상 0개 1회, 다중 대상 변경 전 체력 일괄) + 시험 카드 6장(A09 · A08 · A06 · A05 · C05 · T06) 효과 | C-9, C-10 | 테스트 필수 |
+| A2-5 | 함정 수동 발동 · 동시 발동 1개 승인 · 처리 뒤 재확인 | — | `04-card.md` 6절 |
+| A2-6 | 대상 종류 확장 (조건부 · 카드 대상) | `refactoring-plan` 3-5 | ⛔ 턴 방향(기획 #5) — A07 · A10 만 보류 |
 
-**A 의 M2 완료 기준**: A09 → C05 → 체인 역순이 EditMode 테스트 + 4클론에서 동일.
+**A 의 M2 완료 기준**: A09 → C05 → 체인 역순이 EditMode 테스트 + 4클론 규칙 모드에서 동일. 같은 빌드에서 샌드박스 모드도 동작.
 
 ### M3 — 체력 · 턴 · 승리 (1.5주)
 
