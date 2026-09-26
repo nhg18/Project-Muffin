@@ -25,7 +25,7 @@ B 를 A 로부터 떼어내는 장치는 하나다.
 > `FakeGameServer` 는 `IGameRequests` 를 구현하고 `GameEvents` 를 발행한다. Photon 없이 에디터 1개로 4인 상황을 재현한다.
 > A 의 실제 구현체가 머지되면 **교체 PR 한 번**으로 갈아끼운다. `FakeGameServer` 는 이후에도 버리지 않는다.
 >
-> **2026-09-25 현황**: `DebugTools/FakeGameServer.cs` 골격 완료 — 실제 `IGameRequests` · `IGameState` 구현, Start 에서 4인 HP 100 · 손패 5 · Alive · 첫 턴을 `GameEvents` 로 전파, 턴 종료 순환. 드로우 · 카드 사용은 기능 1 약속(10/11) 후. 이 턴 표시는 `GameScene` 에 있다 (옛 인게임 배치는 이 브랜치의 `GameScene` 에서 비웠고, develop 에 남아 있다).
+> **2026-09-25 현황**: `DebugTools/FakeGameServer.cs` 골격 완료 — 실제 `IGameRequests` · `IGameState` 구현, Start 에서 4인 HP 100 · 손패 5 · Alive · 첫 턴을 `GameEvents` 로 전파, 턴 종료 순환. 드로우 · 카드 사용은 기능 1 약속(10/11) 후. 이 턴 표시는 지금 어느 씬에도 없다 — `GameScene` 은 로직 담당이 테스트하는 옛 인게임 배치를 유지한다 (2026-09-26 사용자 결정). 기능 1 씬 재구성에서 놓는다.
 > `Practice/` 폴더(계약 복사본)는 접었다. `TurnView` · `TurnPresenter` 는 `Presentation/Turn/` 으로 옮겼고 옛 `TurnUI` 는 삭제. `IGameState` 는 `Game/` 에 계약으로 추가 (A 리뷰 대기).
 
 B 가 지키는 규칙:

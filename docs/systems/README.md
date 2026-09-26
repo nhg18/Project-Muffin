@@ -30,7 +30,7 @@
 
 > 12번의 원본은 노션이 아니라 **Claude 디자인 아티팩트**다 (버전 고정, 문서 머리말 참고).
 >
-> ⚠ **인게임 "현재 구현 상태" 읽는 법 (2026-09-26)** — 02 · 03 · 04 · 05 · 06 · 09 · 10 의 "구현됨"은 **코드 기준**이다. `ui` 브랜치의 `GameScene` 은 턴 표시(`TurnView` · `FakeGameServer`)만 남기고 비워서, `TurnManager` · `CardPlayManager` · `DeckPresenter` · `SeatManager` 등은 씬에 없다. 옛 배치는 develop 의 `GameScene` 에 있고, `development-plan` 기능 1 의 씬 재구성에서 다시 놓는다.
+> ⚠ **인게임 "현재 구현 상태" 읽는 법 (2026-09-26)** — 02 · 03 · 04 · 05 · 06 · 09 · 10 의 "구현됨"은 **코드 기준**이다. `GameScene` 은 옛 인게임 배치(`TurnManager` · `CardPlayManager` · `DeckPresenter` · `SeatManager` …)다. 새 약속 위의 턴 표시(`TurnView` · `TurnPresenter` · `FakeGameServer`)는 코드만 있고 씬에 없다 — `development-plan` 기능 1 의 씬 재구성에서 놓는다.
 
 ## 아직 문서가 없는 시스템
 
