@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-09-26 · 되돌림 — 브랜치 정리 때 바꾼 씬 · 코드
+
+사용자 지시로 브랜치 정리(`a0aa2e1`)에서 AI 가 바꾼 씬 · 코드 3가지를 되돌림: `GameScene` develop 버전 복원 → 이전(`ui`, 턴 표시만 있는 씬)으로, 되살린 `TurnUI.cs` 삭제, `Scenes/Dev/TurnPractice.unity` 삭제. 문서의 연습 씬 언급도 지움. `FakeGameServer` · `TurnView` · `TurnPresenter` · `IGameState` 는 2026-09-25 `ui` 커밋(`979effa` · `6746c54`) 그대로.
+
+⚠ 이대로 PR #36 이 develop 에 머지되면 develop 의 옛 인게임 `GameScene` 이 비워진다.
+
+---
+
 ## 2026-09-26 · 브랜치 정리 — logic · ui 두 트랙으로
 
 | 항목 | 값 |

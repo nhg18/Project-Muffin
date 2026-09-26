@@ -185,7 +185,6 @@ develop   ← 통합. logic · ui 가 PR 로 들어온다
 | 상대 트랙 받기 | 상대 PR 이 `develop` 에 머지되면 내 트랙에 `develop` 을 머지한다. `logic` ↔ `ui` 를 직접 머지하지 않는다 |
 | 문서 | 문서 수정은 `ui` 에 바로 커밋 (PR 없이). 로직 담당은 `logic` 에서 고치고 PR 에 함께 |
 | 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (7절 · `development-plan` 7절 1) |
-| 연습 씬 | `Scenes/Dev/` — 빌드 설정에 넣지 않는다 |
 
 * 기능 단위로 커밋한다.
 * 커밋되면 안 되는 것: ParrelSync 클론 디렉터리(`*_clone_*`), `Library/`, `Temp/`, 빌드 산출물.
