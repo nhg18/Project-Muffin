@@ -12,7 +12,10 @@
 | **시스템 기획 / 게임 규칙 / 수치** | `docs/systems/*.md` | **코드를 작성할 때는 이 문서가 기준이다.** 노션이 아니다. |
 | 코드 컨벤션 | `docs/CODE_CONVENTION.md` | 노션 「코드 컨벤션」 페이지를 이관한 것 |
 | 기획 문서 작성 방식 | `docs/GDD_GUIDE.md` | |
-| 리팩토링 계획 | `docs/refactoring-plan.md` | |
+| 리팩토링 계획 | `docs/refactoring-plan.md` · `docs/ui-refactoring-plan.md` | `ui-refactoring-plan` 은 완료된 기록 문서 |
+| GameServer 확장 방법 | `docs/gameserver-guide.md` | 요청 · 규칙 추가 절차 (11절) |
+| 화면별 구현 플랜 | `docs/title-ui-plan.md` | 타이틀 화면 |
+| 스토어 출시 준비 | `docs/store-release.md` | Google Play · App Store 요건 · 결정 사항 |
 | 작업 플랜 / 역할 분담 / 기능 일정 | `docs/development-plan.md` | 6인(로직 · UI 개발 · 기획 2 · 카드 디자인 · UI 디자인) 기준. 기능 13개 · 점검일 · 기획 결정 마감 |
 | 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI 개발) · `docs/plan-c-planning.md` (C · 기획) · `docs/plan-d-art.md` (D · 디자인) | 병렬 분업용 |
 | 작업 진행 기록 | `docs/worklog.md` | 구현 세션이 완료 내용 · 결정 · 다음 할 일을 남긴다. 다음 세션은 여기서 이어간다 |
@@ -22,9 +25,10 @@
 ### 규칙
 
 1. 코드와 문서가 다르면 **문서가 옳다.** 코드를 고치거나, 문서를 먼저 고치고 코드를 고친다.
-2. 노션과 `docs/systems/`가 다르면 **`docs/systems/`가 옳다.** 노션 변경은 PR로 `docs/systems/`에 반영한 뒤 구현한다.
+2. 노션과 `docs/systems/`가 다르면 **`docs/systems/`가 옳다.** 노션 변경은 먼저 `docs/systems/`에 반영(커밋)한 뒤 구현한다.
 3. 문서에 없는 규칙은 구현하지 않는다. 필요하면 문서를 먼저 추가한다.
 4. 수치를 코드에 하드코딩하기 전에 문서의 `확정 / 제안 / 미정` 표기를 확인한다. **`미정` 값은 구현하지 않고 질문한다.**
+5. 작업 세션을 마치면 `docs/worklog.md`에 완료 내용 · 결정 · 다음 할 일을 기록한다. 새 세션은 worklog를 먼저 읽고 이어간다.
 
 ---
 
@@ -63,6 +67,7 @@
 * 컴파일되지 않을 가능성이 있는 코드를 확정적인 코드처럼 제시하지 않습니다.
 * API나 패키지 사용법이 버전에 따라 달라질 수 있다면 현재 버전을 확인합니다.
 * 임의의 클래스, 메서드, API가 실제로 존재한다고 가정하지 않습니다.
+* Claude는 Unity 컴파일 · 플레이 결과를 직접 확인할 수 없습니다. 코드를 바꾼 뒤에는 **Unity에서 확인할 항목**(컴파일, 씬 동작, 인스펙터 연결)을 따로 보고합니다.
 
 ## 5. 작업 방식
 
@@ -114,7 +119,7 @@
 
 프로젝트의 기존 구조를 존중하는 것을 최우선으로 합니다.
 
-더 좋은 구조가 있다면 적극적으로 모색해 방안을 추천합니다. 단, "더 좋은 구조"라는 이유만으로 기존 시스템을 임의로 전면 변경하지 않습니다. 변경은 추천 후 합의를 거쳐 진행합니다.
+더 좋은 구조가 보이면 적극적으로 제안합니다. 단, 요청 범위를 벗어난 변경은 구현하지 않고 **제안까지만** 합니다. "더 좋은 구조"라는 이유만으로 기존 시스템을 임의로 변경하지 않으며, 변경은 합의 후 진행합니다.
 
 요구사항을 충족하는 가장 단순하고 유지보수하기 좋은 방법을 우선합니다.
 
@@ -144,9 +149,26 @@
 3. 마스터는 요청을 **검증(소유권·턴·조건·대상 유효성)** 한 뒤에만 결과를 전파한다.
 4. HP, 덱, 손패, 함정 슬롯, 턴, 찹츄 상태의 **원본은 마스터 메모리**에 하나만 존재한다.
 5. 클라이언트는 원본을 직접 수정하지 않는다. 마스터가 브로드캐스트한 결과만 반영한다.
-6. 비공개 정보(내 손패 내용, 남의 함정 종류)는 **해당 플레이어에게만** 보낸다(`RpcTarget.Others` 금지, 대상 지정 RPC 사용).
+6. 비공개 정보(내 손패 내용, 남의 함정 종류)는 **대상 지정 RPC로 해당 플레이어에게만** 보낸다. `RpcTarget.All` / `Others` 로 비공개 정보를 보내지 않는다.
 7. `CustomProperties`는 "모두가 항상 봐도 되는 값"에만 사용한다(턴 주인, 손패 **장수**, HP, 생존 상태).
    카드 ID 배열처럼 큰 값이나 비공개 값은 CustomProperties에 넣지 않는다.
+
+### 코드 구조 (GameServer)
+
+> 요청 · 규칙 추가 방법은 [`docs/gameserver-guide.md`](docs/gameserver-guide.md).
+
+```
+UI ─ IGameRequests.RequestX() ─▶ PunGameServer ─▶ GameServer (방장, 규칙 원본)
+                                                     │ IServerOutbox
+UI ◀─ GameEvents 구독 ◀─ PunGameServer ◀─ CustomProperties(공개) · 대상 지정 RPC(비공개)
+```
+
+| 층 | 위치 | 규칙 |
+| --- | --- | --- |
+| 규칙 | `Game/Server/GameServer*.cs` | 규칙은 **여기에만** 둔다. 순수 C# — `UnityEngine` · `Photon` · `GameEvents` 참조 금지. 기능마다 `partial` 파일로 나눈다. 출력은 `IServerOutbox`로만 |
+| 전송 | `Network/PunGameServer.cs` | 요청 RPC 수신 · 결과 전파 · `GameEvents` 발생. **규칙 판정 금지** |
+| 표시 | `Presentation/` · `UI/` | `IGameRequests`로 요청하고 `IGameState` · `GameEvents`로 표시만 한다. 규칙 판정 금지 (표시용 조건만 예외) |
+| 대역 | `DebugTools/FakeGameServer.cs` | Photon 없이 UI를 돌리는 로컬 서버. 약속 인터페이스가 바뀌면 함께 고친다 |
 
 ## 12. Unity 작업 규칙
 
@@ -163,8 +185,9 @@
 ## 13. 파일 / 인코딩
 
 * 모든 `.cs` 파일은 **UTF-8 with BOM** 으로 저장한다. (Visual Studio/Rider 기본 저장이 CP949가 되면 한글 주석·문자열이 깨진다.)
-* `.gitattributes`로 강제한다. 저장 전에 한글 주석이 깨져 보이면 인코딩부터 확인한다.
+* `.editorconfig`(`[*.cs] charset = utf-8-bom`)로 강제한다. 에디터가 `.editorconfig`를 따르는지 확인하고, 저장 전에 한글 주석이 깨져 보이면 인코딩부터 확인한다.
 * 파일명·클래스명은 영문. 오타 금지(`Excute`, `Trun`, `caseter` 같은 기존 오타는 발견 시 수정한다).
+* `MuffinProject_clone_*/` 는 ParrelSync 복제본이다. 읽거나 고치지 않고, 검색에서도 제외한다. 작업은 항상 `MuffinProject/` 에서.
 
 ## 14. Git
 
@@ -184,10 +207,12 @@ develop   ← 통합. logic · ui 가 PR 로 들어온다
 | develop 반영 | 트랙 → `develop` **PR**. 기능 한 덩어리가 끝날 때마다(최소 주 1회). 약속 파일(`GameEvents` · `IGameRequests` · `IGameState` · `PlayerProps`/`RoomProps`) PR 은 양쪽 리뷰 |
 | 상대 트랙 받기 | 상대 PR 이 `develop` 에 머지되면 내 트랙에 `develop` 을 머지한다. `logic` ↔ `ui` 를 직접 머지하지 않는다 |
 | 문서 | 문서 수정은 `ui` 에 바로 커밋 (PR 없이). 로직 담당은 `logic` 에서 고치고 PR 에 함께 |
-| 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (7절 · `development-plan` 7절 1) |
-| 연습 씬 | `Scenes/Dev/` — 빌드 설정에 넣지 않는다. 예외: `Scenes/TempGameScene` 은 멀티 테스트에서 `LoadLevel` 로 넘어가야 해서 빌드 설정에 둔다 |
+| 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (`development-plan` 7절 1) |
+| 개발 전용 씬 | `DebugLobbyScene`(개발용 즉시 입장) · `TempGameScene`(멀티 테스트용 임시 게임 씬)은 멀티 테스트에서 `LoadLevel` 로 넘어가야 해서 빌드 설정에 둔다. 그 밖의 연습 씬은 빌드 설정에 넣지 않는다 |
 
 * 기능 단위로 커밋한다.
+* 커밋 메시지: `type(scope): 요약` — type 은 `feat` · `fix` · `refactor` · `chore` · `docs`, 요약은 한국어. 예: `refactor(deck): 덱을 GameServer 권위로 이전`
+* `.meta` 는 에셋과 한 몸이다. 새 파일은 Unity 가 만든 `.meta` 와 함께 커밋하고, 이동 · 이름 변경 때는 `.meta` 도 같이 옮긴다. `.meta` 를 손으로 만들거나 지우지 않는다(GUID 가 바뀌면 씬 · 프리팹 참조가 끊긴다).
 * 커밋되면 안 되는 것: ParrelSync 클론 디렉터리(`*_clone_*`), `Library/`, `Temp/`, 빌드 산출물.
 * 씬(`.unity`)과 프리팹(`.prefab`)은 병합 충돌이 어렵다. 같은 씬을 동시에 편집하지 않는다.
 
