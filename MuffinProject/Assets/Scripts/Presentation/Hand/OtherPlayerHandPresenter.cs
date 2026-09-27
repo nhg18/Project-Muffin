@@ -1,56 +1,58 @@
-﻿using Photon.Pun;
-using Photon.Realtime;
-using System;
-using System.Collections;
-using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
 using Chapchu.Core;
 using Chapchu.Game;
 
 namespace Chapchu.Presentation
 {
-
-    public class OtherPlayerHandPresenter : MonoBehaviourPunCallbacks
+    /// <summary>
+    /// 상대 손패의 뒷면 개수만 보여준다. 카드 내용은 절대 모른다 — 알 필요도 없다.
+    /// "몇 장인지"는 공개 정보(PlayerProps.HandCount)이므로 GameEvents.OnHandCountChanged 로만 받는다.
+    /// (OnDrawn 은 카드 내용을 담은 비공개 이벤트라 카드 주인에게만 간다. 여기선 쓰지 않는다.)
+    /// </summary>
+    public class OtherPlayerHandPresenter : MonoBehaviour
     {
-        private int HandCount=0;
-        public int OtherPlayerNumber=0;
+        public int OtherPlayerNumber = 0;
         [SerializeField] private OtherPlayerHandView handView;
+
+        private int _handCount = 0;
 
         private void OnEnable()
         {
-            GameEvents.OnDrawn += StartDrawEvent;
+            GameEvents.OnHandCountChanged += HandleHandCountChanged;
         }
 
         private void OnDisable()
         {
-            GameEvents.OnDrawn -= StartDrawEvent;
-        }
-        private void StartDrawEvent(int actorNumber, int cardid)
-        {
-            if (OtherPlayerNumber != actorNumber) return;
-            HandCount++;
-            handView.DrawCard();
+            GameEvents.OnHandCountChanged -= HandleHandCountChanged;
         }
 
-        public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+        // 늦게 켜졌을 때(관전 시작 시점)를 대비해 현재 장수로 한 번 맞춘다.
+        private void Start()
         {
-            // 내가 관찰 중인 상대방의 정보가 맞고, 변경된 속성 중 손패 장수가 있다면
-            if (targetPlayer.ActorNumber == OtherPlayerNumber && changedProps.ContainsKey(PlayerProps.HandCount))
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(OtherPlayerNumber);
+            int current = player != null && player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object value) ? (int)value : 0;
+            Reconcile(current);
+        }
+
+        private void HandleHandCountChanged(int actorNumber, int handCount)
+        {
+            if (actorNumber != OtherPlayerNumber) return;
+            Reconcile(handCount);
+        }
+
+        private void Reconcile(int targetCount)
+        {
+            while (_handCount < targetCount)
             {
-                int realCount = (int)changedProps[PlayerProps.HandCount];
+                handView.DrawCard();
+                _handCount++;
+            }
 
-                // 만약 네트워크 렉이나 씹힘으로 인해 내 화면의 카드 수(HandCount)와
-                // 상대방 장부에 적힌 수(realCount)가 다르다면 강제로 맞춰줍니다.
-                if (HandCount < realCount)
-                {
-                    int needed = realCount - HandCount;
-                    for (int i = 0; i < needed; i++)
-                    {
-                        HandCount++;
-                        handView.DrawCard(); // 누락된 카드 보충
-                    }
-                    Debug.LogWarning($"[동기화 교정] 카드가 부족하여 {needed}장 강제 추가");
-                }
+            while (_handCount > targetCount)
+            {
+                handView.RemoveCard();
+                _handCount--;
             }
         }
     }

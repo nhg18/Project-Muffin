@@ -6,17 +6,27 @@ using System;
 
 namespace Chapchu.Presentation
 {
+    /// <summary>
+    /// 덱 뒷면 · 드로우 버튼 뷰. 버튼 탭을 이벤트로만 알린다.
+    /// 뽑을 수 있는지 스스로 판정하지 않는다 — 안 되면 서버가 거절로 알려준다.
+    /// </summary>
     public class DeckView : MonoBehaviour
     {
         [SerializeField] private Button DrawButton;
-        public event Action OnDrawButtonClicked;
+        public event Action DrawRequested;
 
-        private void Awake()
+        private void OnEnable()
         {
             if (DrawButton != null)
-            {
-                DrawButton.onClick.AddListener(() => OnDrawButtonClicked?.Invoke());
-            }
+                DrawButton.onClick.AddListener(HandleDrawButtonClicked);
         }
+
+        private void OnDisable()
+        {
+            if (DrawButton != null)
+                DrawButton.onClick.RemoveListener(HandleDrawButtonClicked);
+        }
+
+        private void HandleDrawButtonClicked() => DrawRequested?.Invoke();
     }
 }

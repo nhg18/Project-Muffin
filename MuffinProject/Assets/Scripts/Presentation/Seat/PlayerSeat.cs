@@ -89,7 +89,7 @@ namespace Chapchu.Presentation
         public void InitPlayerPresenter(int PlayerActorNumber)
         {
             this.PlayerActorNumber = PlayerActorNumber;
-            playerPresenter.Init(PlayerActorNumber, GameStatus.Instance.MaxHp);
+            playerPresenter.Init(PlayerActorNumber, GameStatus.MaxHp);
         }
     }
 }
