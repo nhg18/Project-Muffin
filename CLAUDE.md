@@ -142,33 +142,11 @@
 
 ## 11. 네트워크 권한 규칙 (필독)
 
-> 상세 규약은 [`docs/systems/09-network.md`](docs/systems/09-network.md).
+> 상세 규칙 · GameServer 구조는 skill `network-rpc` (`.claude/skills/network-rpc/`). 규약 원문은 [`docs/systems/09-network.md`](docs/systems/09-network.md), 확장 절차는 [`docs/gameserver-guide.md`](docs/gameserver-guide.md).
 
-1. **게임 규칙 판정은 전부 마스터 클라이언트가 한다.** 클라이언트는 "요청"만 보낸다.
-2. 클라이언트가 보내는 것은 **의도(Intent)** 뿐이다: `이 카드를, 이 대상에게 쓰겠다`.
-3. 마스터는 요청을 **검증(소유권·턴·조건·대상 유효성)** 한 뒤에만 결과를 전파한다.
-4. HP, 덱, 손패, 함정 슬롯, 턴, 찹츄 상태의 **원본은 마스터 메모리**에 하나만 존재한다.
-5. 클라이언트는 원본을 직접 수정하지 않는다. 마스터가 브로드캐스트한 결과만 반영한다.
-6. 비공개 정보(내 손패 내용, 남의 함정 종류)는 **대상 지정 RPC로 해당 플레이어에게만** 보낸다. `RpcTarget.All` / `Others` 로 비공개 정보를 보내지 않는다.
-7. `CustomProperties`는 "모두가 항상 봐도 되는 값"에만 사용한다(턴 주인, 손패 **장수**, HP, 생존 상태).
-   카드 ID 배열처럼 큰 값이나 비공개 값은 CustomProperties에 넣지 않는다.
-
-### 코드 구조 (GameServer)
-
-> 요청 · 규칙 추가 방법은 [`docs/gameserver-guide.md`](docs/gameserver-guide.md).
-
-```
-UI ─ IGameRequests.RequestX() ─▶ PunGameServer ─▶ GameServer (방장, 규칙 원본)
-                                                     │ IServerOutbox
-UI ◀─ GameEvents 구독 ◀─ PunGameServer ◀─ CustomProperties(공개) · 대상 지정 RPC(비공개)
-```
-
-| 층 | 위치 | 규칙 |
-| --- | --- | --- |
-| 규칙 | `Game/Server/GameServer*.cs` | 규칙은 **여기에만** 둔다. 순수 C# — `UnityEngine` · `Photon` · `GameEvents` 참조 금지. 기능마다 `partial` 파일로 나눈다. 출력은 `IServerOutbox`로만 |
-| 전송 | `Network/PunGameServer.cs` | 요청 RPC 수신 · 결과 전파 · `GameEvents` 발생. **규칙 판정 금지** |
-| 표시 | `Presentation/` · `UI/` | `IGameRequests`로 요청하고 `IGameState` · `GameEvents`로 표시만 한다. 규칙 판정 금지 (표시용 조건만 예외) |
-| 대역 | `DebugTools/FakeGameServer.cs` | Photon 없이 UI를 돌리는 로컬 서버. 약속 인터페이스가 바뀌면 함께 고친다 |
+1. **게임 규칙 판정은 전부 방장(마스터 클라이언트)이 한다.** 클라이언트는 의도(`이 카드를, 이 대상에게`)만 요청하고, 방장이 검증한 결과만 반영한다.
+2. 규칙은 `Game/Server/GameServer*.cs`(순수 C#)에만 둔다. `PunGameServer`는 전송만, UI는 `IGameRequests`로 요청하고 `IGameState` · `GameEvents`로 표시만 한다.
+3. 비공개 정보는 대상 지정 RPC로만 보낸다. `CustomProperties`는 모두가 봐도 되는 값에만 쓴다.
 
 ## 12. Unity 작업 규칙
 
@@ -191,30 +169,11 @@ UI ◀─ GameEvents 구독 ◀─ PunGameServer ◀─ CustomProperties(공개)
 
 ## 14. Git
 
-### 브랜치 구조
+> 브랜치 표 · 머지 · PR · `.meta` 규칙은 skill `git-workflow` (`.claude/skills/git-workflow/`).
 
-```
-main      ← 점검일 · 출시 빌드 때만 develop 을 머지 (항상 빌드 가능)
-develop   ← 통합. logic · ui 가 PR 로 들어온다
- ├─ logic ← 로직 담당 전용 — Game/ · Network/ · Core/ 의 .cs
- └─ ui    ← UI 담당 전용 — Presentation/ · UI/ · DebugTools/ · 씬 · 프리팹 · 스프라이트 · docs/
-     └─ ui/<작업> · logic/<작업>   ← 필요할 때만 쓰는 짧은 브랜치. 끝나면 트랙 브랜치로 머지 후 삭제
-```
-
-| 규칙 | 내용 |
-| --- | --- |
-| 작업 시작 | 자기 트랙 브랜치(`logic` / `ui`)에서. 시작 전에 `develop` 을 머지해 최신으로 |
-| develop 반영 | 트랙 → `develop` **PR**. 기능 한 덩어리가 끝날 때마다(최소 주 1회). 약속 파일(`GameEvents` · `IGameRequests` · `IGameState` · `PlayerProps`/`RoomProps`) PR 은 양쪽 리뷰 |
-| 상대 트랙 받기 | 상대 PR 이 `develop` 에 머지되면 내 트랙에 `develop` 을 머지한다. `logic` ↔ `ui` 를 직접 머지하지 않는다 |
-| 문서 | 문서 수정은 `ui` 에 바로 커밋 (PR 없이). 로직 담당은 `logic` 에서 고치고 PR 에 함께 |
-| 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (`development-plan` 7절 1) |
-| 개발 전용 씬 | `DebugLobbyScene`(개발용 즉시 입장) · `TempGameScene`(멀티 테스트용 임시 게임 씬)은 멀티 테스트에서 `LoadLevel` 로 넘어가야 해서 빌드 설정에 둔다. 그 밖의 연습 씬은 빌드 설정에 넣지 않는다 |
-
-* 기능 단위로 커밋한다.
-* 커밋 메시지: `type(scope): 요약` — type 은 `feat` · `fix` · `refactor` · `chore` · `docs`, 요약은 한국어. 예: `refactor(deck): 덱을 GameServer 권위로 이전`
-* `.meta` 는 에셋과 한 몸이다. 새 파일은 Unity 가 만든 `.meta` 와 함께 커밋하고, 이동 · 이름 변경 때는 `.meta` 도 같이 옮긴다. `.meta` 를 손으로 만들거나 지우지 않는다(GUID 가 바뀌면 씬 · 프리팹 참조가 끊긴다).
-* 커밋되면 안 되는 것: ParrelSync 클론 디렉터리(`*_clone_*`), `Library/`, `Temp/`, 빌드 산출물.
-* 씬(`.unity`)과 프리팹(`.prefab`)은 병합 충돌이 어렵다. 같은 씬을 동시에 편집하지 않는다.
+* `main` ← `develop` ← `logic`(로직 `.cs`) / `ui`(UI · 씬 · 프리팹 · docs). 트랙 → `develop` 은 PR, `logic` ↔ `ui` 직접 머지 금지.
+* `.unity` · `.prefab` 은 `ui` 에서만 바꾼다. 문서는 `ui` 에 바로 커밋한다.
+* 커밋 메시지: `type(scope): 한국어 요약` (`feat` · `fix` · `refactor` · `chore` · `docs`). 기능 단위로 커밋한다.
 
 ## 15. 작업 시작 전 체크리스트
 
@@ -223,3 +182,12 @@ develop   ← 통합. logic · ui 가 PR 로 들어온다
 3. 마스터가 판정해야 하는 로직인가, 로컬 연출인가?
 4. 기존에 같은 일을 하는 클래스가 있는가? (`Scripts/` 전체 검색)
 5. 이 변경이 깨뜨리는 기존 기능은 무엇인가?
+
+## 16. 자동 검사 (hooks)
+
+`.claude/settings.json` 의 hook 이 아래를 자동으로 처리한다. 막히면 규칙을 우회하지 말고 코드를 고친다.
+
+| hook | 하는 일 |
+| --- | --- |
+| `guard-paths.sh` (편집 전) | 차단: `*_clone_*/` · `Library/` · `Temp/` · `.meta` 편집, `logic` 브랜치의 씬 · 프리팹 편집 |
+| `check-cs.sh` (`.cs` 편집 후) | BOM 자동 추가. 되돌림: RPC 문자열 리터럴 · `async void` · `[SerializeField] static` · C# 10+ 문법 · GameServer 의 `UnityEngine`/`Photon`/`GameEvents` 참조 |
