@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-09-27 · TmpGameScene 해상도 대응 — 좌석 · 테이블 배치
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `ui` |
+| 범위 | `TmpGameScene` 좌석 3개 · 테이블 · 손패 배치, `Scripts/UI/SeatLayout.cs` 신설 |
+
+### 문제
+
+Canvas 는 15-screen 대로 1920×1080 · Expand 였지만 Seat · Table · MyHand 가 **고정 크기 + 점 앵커**라 20:9 · 4:3 에서 늘어난 공간이 빈 틈으로 남았다 (15-screen 5절 위반).
+
+### 한 것
+
+- `MyHand` → 가로 Stretch (Left/Right 416, MySeat · ButtonArea 에 붙음). 좌석 안 `Hand` 3개 → 양방향 Stretch (Body 쪽 200 만 남김).
+- **`SeatLayout`** (`SafeArea` 오브젝트에 부착, `[ExecuteAlways]`): 좌석 두께 T 를 하나로 계산해 위 · 좌 · 우 좌석과 테이블의 앵커 · 오프셋을 덮어쓴다. 앵커는 축마다 따로 계산돼 좌우(가로) · 위(세로) 두께를 한 값으로 묶을 수 없어 스크립트로 맞춤.
+  - T = 기준 두께 240 × (1 − r + r × s), s = (폭/1920 + 높이/1080)/2, r = 0.5. 1080p 에서 240, 20:9 에서 255, 4:3 에서 260, Fold 에서 289.
+  - 테이블 = 좌 · 우 · 위 (8 + T + 8), 아래 336 을 뺀 나머지. 1080p 에서 1408×488 (사용자 요청으로 이전 1488×528 보다 5% 축소, 남는 공간은 좌석이 채움).
+  - 연출값(기준 두께 · 비례 비율 · 간격 · 아래 예약)은 Inspector.
+- Game 뷰 프리셋 6개(15-screen 8절)는 에디터 환경설정에 추가함 (일회성 `GameViewSizeSetup` 스크립트로 넣고 삭제). 역할이 끝난 `Editor/TitleUIAssetSetup.cs` 도 삭제 (git `3174ce2` 에 남음).
+
+### 다음 할 일
+
+- [ ] Game 탭 프리셋 6개에서 확인 뒤 커밋. 두께 시작값(240) · 비례 비율(0.5)은 눈으로 보고 조정
+- [ ] MySeat · MyHand · ButtonArea 줄(높이 320 고정)도 비례로 키울지 결정
+
+---
+
 ## 2026-09-26 · GameScene 옛 배치 유지 (로직 테스트용)
 
 로직 담당이 인게임 씬으로 테스트해야 해서 `GameScene` 은 **옛 인게임 배치(develop 과 동일) + `TurnUI.cs`** 로 둔다 (사용자 결정). 턴 표시 연습 씬(`Scenes/Dev/TurnPractice`)은 두지 않는다 — `TurnView` · `TurnPresenter` · `FakeGameServer` 는 코드만 남고 기능 1 씬 재구성에서 놓는다.

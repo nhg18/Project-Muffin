@@ -38,7 +38,7 @@ namespace Chapchu.Game
         // 4. PunGameServer 에 요청 RPC 와 결과 받기를 잇는다 (PunGameServer 맨 위 주석).
         //
         // 5. 멀티 테스트: DebugLobbyScene 을 메인 에디터 · ParrelSync 클론에서 Play → 입장 → 방장이 시작
-        //    → TmpGameScene 으로 넘어간다 (DebugScript 의 Start In Tmp Game 이 켜져 있어야 한다).
+        //    → TempGameScene 으로 넘어간다 (DebugScript 의 Start In Tmp Game 이 켜져 있어야 한다).
         //    공개 값은 양쪽 모두, 비공개 값 · 거절은 요청한 쪽에만 와야 한다.
         //
         // 하지 말 것: 여기서 Debug.Log · PhotonNetwork · GameEvents 호출 / 클라가 보낸 actorNumber 를 요청자로 믿기.

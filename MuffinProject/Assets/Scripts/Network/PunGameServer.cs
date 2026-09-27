@@ -51,7 +51,7 @@ namespace Chapchu.Network
             _server = new GameServer(this);
         }
 
-        // 이 씬은 방에서 LoadLevel 로 넘어오므로(Room → Game / TmpGameScene) 방장이 바로 시작한다.
+        // 이 씬은 방에서 LoadLevel 로 넘어오므로(Room → Game / TempGameScene) 방장이 바로 시작한다.
         private void Start()
         {
             if (!PhotonNetwork.IsMasterClient) return;
