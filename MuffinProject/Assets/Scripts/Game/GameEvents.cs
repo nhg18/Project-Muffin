@@ -9,6 +9,7 @@ namespace Chapchu.Game
     /// </summary>
     public static class GameEvents
     {
+        public static event Action<int[]> OnGameStarted; // playerActors
         public static event Action<int> OnTurnChanged;                 // actorNumber
         public static event Action<int, int> OnDrawn;                  // actorNumber, cardId
         public static event Action<int, int> OnHpChanged;              // actorNumber, hp
@@ -23,6 +24,7 @@ namespace Chapchu.Game
         // 로컬 UI 전용. 마스터 통지가 아니므로 Presentation 으로 이동 예정.
         public static event Action<bool> OnHandModeChanged;
 
+        public static void RaiseOnGameStarted(int [] playerActors) => OnGameStarted?.Invoke(playerActors);
         public static void RaiseTurnChanged(int actorNumber) => OnTurnChanged?.Invoke(actorNumber);
         public static void RaiseDrawn(int actorNumber, int cardId) => OnDrawn?.Invoke(actorNumber, cardId);
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);

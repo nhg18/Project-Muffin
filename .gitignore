@@ -81,3 +81,4 @@ crashlytics-build.properties
 
 # Quest Maker MCP 배포본 (로컬 도구 — 개인 토큰과 .venv 가 들어있다. 커밋 금지)
 quest_mcp_dist_*/
+MuffinProject/ProjectSettings/EditorBuildSettings.asset
