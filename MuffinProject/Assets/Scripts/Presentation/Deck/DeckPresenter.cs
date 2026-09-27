@@ -1,47 +1,106 @@
-﻿using Chapchu.Game;
+﻿using System;
+using Photon.Pun;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using Chapchu.Game;
+using Chapchu.Game.Cards;
 
 namespace Chapchu.Presentation
 {
-    /// <summary>
-    /// 덱 뷰와 서버를 잇는다. 서버는 <see cref="IGameRequests"/> 로만 알고,
-    /// 결과(덱 잔여 장수)는 <see cref="GameEvents"/> 로만 받는다. 서버가 가짜인지 진짜인지 모른다.
-    /// 뽑은 카드 내용은 여기서 다루지 않는다 — 손패 쪽(PlayerHandPresenter)이 GameEvents.OnDrawn 을 직접 구독한다.
-    /// </summary>
-    public class DeckPresenter : MonoBehaviour
-    {
-        [SerializeField] private DeckView deckView; // 인스펙터에서 할당
-        // 인터페이스는 인스펙터에 직렬화되지 않아 컴포넌트로 받고 Awake 에서 꺼낸다.
-        // IGameRequests 를 구현한 컴포넌트를 연결한다.
-        [SerializeField] private MonoBehaviour server;
 
-        private IGameRequests _requests;
+    public class DeckPresenter : MonoBehaviourPunCallbacks
+    {
+        [SerializeField] private Deck deck = new();
+        [SerializeField] private DeckView deckView; // 인스펙터에서 할당
+        [SerializeField] private CardDatabase cardDatabase;
+        [SerializeField] private DeckRecipe startingDeckRecipe;
+        private const string DECK_PROPERTY_KEY = "RoomDeck";
 
         private void Awake()
         {
-            _requests = server as IGameRequests;
-
-            if (_requests == null)
-                Debug.LogError($"[{nameof(DeckPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
+            // 1. 모델 생성
+            //deck = new Deck();
         }
 
-        private void OnEnable()
+        private void Start()
         {
-            deckView.DrawRequested += HandleDrawRequested;
-            GameEvents.OnRequestRejected += HandleRequestRejected;
+            // 2. 임시 카드로 덱 초기화 (실제 게임에서는 별도의 데이터 매니저에서 받아옴) 수정 필요!!
+            List<Card> startingCards = new List<Card>(startingDeckRecipe.cardIDs);
+            deck.InitDeck(startingCards);
+
+            for(int i = 0; i < GameStatus.Instance.StartHandCount; i++)
+            {
+                RequestDrawCard();
+            }
+
+            // 3. View의 버튼 클릭 이벤트 구독
+            deckView.OnDrawButtonClicked += RequestDrawCard;
         }
 
-        private void OnDisable()
+        public void RequestDrawCard()
         {
-            deckView.DrawRequested -= HandleDrawRequested;
-            GameEvents.OnRequestRejected -= HandleRequestRejected;
+            int myActorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+            if (PhotonNetwork.IsMasterClient)
+            {
+                ExecuteDrawAndSync(myActorNumber);
+            }
+            else
+            {
+                photonView.RPC(nameof(RPC_RequestDrawToMaster), RpcTarget.MasterClient, myActorNumber);
+            }
         }
 
-        private void HandleDrawRequested() => _requests?.RequestDraw();
-
-        private void HandleRequestRejected(int actorNumber, string reason)
+        [PunRPC]
+        private void RPC_RequestDrawToMaster(int requesterActorNumber)
         {
-            Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {reason}");
+            ExecuteDrawAndSync(requesterActorNumber);
         }
+
+        private void ExecuteDrawAndSync(int requesterActorNumber)
+        {
+            if (deck.Count == 0)
+            {
+                Debug.LogWarning("뽑을 카드가 없음");
+                return;
+            }
+
+            var drawnCard = deck.DrawTop();
+        
+            var hash = new ExitGames.Client.Photon.Hashtable
+            {
+                { DECK_PROPERTY_KEY, deck.GetCurrentDeck().Select(c => c.ID).ToArray() }
+            };
+        
+            PhotonNetwork.CurrentRoom.SetCustomProperties(hash);
+            photonView.RPC(nameof(RPC_BroadcastDrawnCard), RpcTarget.All, requesterActorNumber, drawnCard.ID);
+
+        }
+
+        [PunRPC]
+        private void RPC_BroadcastDrawnCard(int actorNumber, int drawnCardID)
+        {
+            GameEvents.RaiseDrawn(actorNumber, drawnCardID);
+        }
+
+        public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+        {
+            if (propertiesThatChanged.ContainsKey(DECK_PROPERTY_KEY))
+            {
+                var idArray = (int[])propertiesThatChanged[DECK_PROPERTY_KEY];
+                var deckArray = idArray.Select(id => new Card(id)).ToList();
+
+                deck.SyncDeck(deckArray);
+            }
+        }
+
+        //public void OnValidate()
+        //{
+        //    if(deck != null)
+        //    {
+        //        deck.AutoAssignIDs();
+        //    }
+        //}
     }
 }

@@ -34,17 +34,6 @@ namespace Chapchu.Presentation
             PutAwayMyCards();
         }
 
-        /// <summary>뒷면 카드는 서로 구분되지 않으므로 어떤 걸 지워도 같다 — 맨 뒤 1장만 제거한다.</summary>
-        public void RemoveCard()
-        {
-            if (Hands.Count == 0) return;
-
-            int last = Hands.Count - 1;
-            Destroy(Hands[last]);
-            Hands.RemoveAt(last);
-            PutAwayMyCards();
-        }
-
         public void PutAwayMyCards()
         {
             float cardSpacing;

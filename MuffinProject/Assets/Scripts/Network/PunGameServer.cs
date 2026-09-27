@@ -12,29 +12,29 @@ namespace Chapchu.Network
     /// 요청: IGameRequests → RPC_Request* → (방장) GameServer.
     /// 결과: GameServer → <see cref="IServerOutbox"/> → CustomProperties · RPC_Reject* → (각 클라) GameEvents.
     /// </summary>
-    // ── 요청 하나 추가하는 법 (예: 함정 설치, 아직 구현 전) ──
+    // ── 요청 하나 추가하는 법 (예: 카드 뽑기) ──
     // 1. 보내기 (IGameRequests 구현):
-    //        public void RequestSetTrap(int cardInstanceId, int slotIndex) => photonView.RPC(nameof(RPC_RequestSetTrap), RpcTarget.MasterClient, cardInstanceId, slotIndex);
+    //        public void RequestDraw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
     // 2. 받기 (방장). 요청자는 인자로 받지 말고 info.Sender 를 쓴다:
-    //        [PunRPC] private void RPC_RequestSetTrap(int cardInstanceId, int slotIndex, PhotonMessageInfo info)
+    //        [PunRPC] private void RPC_RequestDraw(PhotonMessageInfo info)
     //        {
     //            if (!PhotonNetwork.IsMasterClient) return;
-    //            _server.SetTrap(info.Sender.ActorNumber, cardInstanceId, slotIndex);
+    //            _server.Draw(info.Sender.ActorNumber);
     //        }
     // 3. 결과 받기 → GameEvents:
-    //    · 모두 보는 값(턴 · HP · 덱 잔여 · 함정 개수): OnRoomPropertiesUpdate / OnPlayerPropertiesUpdate 에 한 줄
+    //    · 모두 보는 값(턴 · HP · 장수): OnRoomPropertiesUpdate / OnPlayerPropertiesUpdate 에 한 줄
     //        if (changedProps.TryGetValue(RoomProps.DeckCount, out object d)) GameEvents.RaiseDeckCountChanged((int)d);
-    //    · 한 사람만 보는 값(뽑은 카드 · 함정 종류): IServerOutbox 에 메서드 추가 → 여기서 구현(대상 지정 RPC) → RPC_OnX 에서 Raise
-    //        (실제 예시: SendDrawnCard · RPC_OnDrawn 를 참고)
+    //    · 한 사람만 보는 값(뽑은 카드 · 함정): IServerOutbox 에 메서드 추가 → 여기서 구현(대상 지정 RPC) → RPC_OnX 에서 Raise
+    //        void IServerOutbox.SendDrawn(int actor, int id, int cardId)
+    //            => photonView.RPC(nameof(RPC_OnDrawn), PhotonNetwork.CurrentRoom.GetPlayer(actor), id, cardId);
+    //        [PunRPC] private void RPC_OnDrawn(int id, int cardId)
+    //            => GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
     // 규칙(검증 · 계산)은 여기 쓰지 않는다. GameServer 에만.
     [RequireComponent(typeof(PhotonView))]
     public class PunGameServer : MonoBehaviourPunCallbacks, IGameRequests, IGameState, IServerOutbox
     {
         // 모든 클라가 만들지만 방장에서만 쓰인다.
         private GameServer _server;
-
-        // 덱 구성은 미정이라 더미 레시피를 그대로 쓴다 (05-deck.md 2절 · 8절).
-        [SerializeField] private DeckRecipe startingDeckRecipe;
 
         public int CurrentTurnActor
         {
@@ -55,17 +55,13 @@ namespace Chapchu.Network
         private void Start()
         {
             if (!PhotonNetwork.IsMasterClient) return;
-
-            int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
-            _server.StartGame(actors);
-            _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
-            _server.DealInitialHands(actors);
+            _server.StartGame(PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray());
         }
 
         #region IGameRequests (UI → 방장)
-        public void RequestDraw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
-
-        public void RequestDiscard(int cardId) => photonView.RPC(nameof(RPC_RequestDiscard), RpcTarget.MasterClient, cardId);
+        public void RequestDraw()
+        {
+        }
 
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
@@ -89,20 +85,6 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
             _server.EndTurn(info.Sender.ActorNumber);
         }
-
-        [PunRPC]
-        private void RPC_RequestDraw(PhotonMessageInfo info)
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-            _server.Draw(info.Sender.ActorNumber);
-        }
-
-        [PunRPC]
-        private void RPC_RequestDiscard(int cardId, PhotonMessageInfo info)
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-            _server.Discard(info.Sender.ActorNumber, cardId);
-        }
         #endregion
 
         #region IServerOutbox (방장 → 클라). UI 가 부르지 못하게 명시적 구현.
@@ -122,13 +104,6 @@ namespace Chapchu.Network
             if (player == null) return;
             photonView.RPC(nameof(RPC_RejectRequest), player, reason);
         }
-
-        void IServerOutbox.SendDrawnCard(int actorNumber, int cardId)
-        {
-            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
-            if (player == null) return;
-            photonView.RPC(nameof(RPC_OnDrawn), player, cardId);
-        }
         #endregion
 
         #region 각 클라 — 결과 받기 → GameEvents
@@ -136,21 +111,12 @@ namespace Chapchu.Network
         {
             if (changedProps.TryGetValue(RoomProps.TurnActor, out object actor))
                 GameEvents.RaiseTurnChanged((int)actor);
-
-            if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
-                GameEvents.RaiseDeckCountChanged((int)deckCount);
         }
 
         [PunRPC]
         private void RPC_RejectRequest(string reason)
         {
             GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, reason);
-        }
-
-        [PunRPC]
-        private void RPC_OnDrawn(int cardId)
-        {
-            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
         }
         #endregion
     }
