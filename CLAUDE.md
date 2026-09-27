@@ -13,8 +13,8 @@
 | 코드 컨벤션 | `docs/CODE_CONVENTION.md` | 노션 「코드 컨벤션」 페이지를 이관한 것 |
 | 기획 문서 작성 방식 | `docs/GDD_GUIDE.md` | |
 | 리팩토링 계획 | `docs/refactoring-plan.md` | |
-| 작업 플랜 / 역할 분담 / 마일스톤 | `docs/development-plan.md` | 2인(로직·UI) 기준. 공통 규칙 · 게이트 · 동기화 지점 |
-| 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI) | 병렬 분업용 |
+| 작업 플랜 / 역할 분담 / 기능 일정 | `docs/development-plan.md` | 6인(로직 · UI 개발 · 기획 2 · 카드 디자인 · UI 디자인) 기준. 기능 13개 · 점검일 · 기획 결정 마감 |
+| 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI 개발) · `docs/plan-c-planning.md` (C · 기획) · `docs/plan-d-art.md` (D · 디자인) | 병렬 분업용 |
 | 작업 진행 기록 | `docs/worklog.md` | 구현 세션이 완료 내용 · 결정 · 다음 할 일을 남긴다. 다음 세션은 여기서 이어간다 |
 | 버전 규칙 | `docs/versioning.md` | `MAJOR.MINOR.PATCH`, MINOR = 마일스톤 |
 | 아이디어 / 회의록 / 사업 / 아트 | 노션 | 확정되면 `docs/systems/`로 내려온다 |
@@ -114,7 +114,7 @@
 
 프로젝트의 기존 구조를 존중하는 것을 최우선으로 합니다.
 
-"더 좋은 구조"라는 이유만으로 기존 시스템을 전면적으로 변경하지 않습니다.
+더 좋은 구조가 있다면 적극적으로 모색해 방안을 추천합니다. 단, "더 좋은 구조"라는 이유만으로 기존 시스템을 임의로 전면 변경하지 않습니다. 변경은 추천 후 합의를 거쳐 진행합니다.
 
 요구사항을 충족하는 가장 단순하고 유지보수하기 좋은 방법을 우선합니다.
 
@@ -168,7 +168,26 @@
 
 ## 14. Git
 
-* 작업 브랜치에서 개발하고, 기능 단위로 커밋한다.
+### 브랜치 구조
+
+```
+main      ← 점검일 · 출시 빌드 때만 develop 을 머지 (항상 빌드 가능)
+develop   ← 통합. logic · ui 가 PR 로 들어온다
+ ├─ logic ← 로직 담당 전용 — Game/ · Network/ · Core/ 의 .cs
+ └─ ui    ← UI 담당 전용 — Presentation/ · UI/ · DebugTools/ · 씬 · 프리팹 · 스프라이트 · docs/
+     └─ ui/<작업> · logic/<작업>   ← 필요할 때만 쓰는 짧은 브랜치. 끝나면 트랙 브랜치로 머지 후 삭제
+```
+
+| 규칙 | 내용 |
+| --- | --- |
+| 작업 시작 | 자기 트랙 브랜치(`logic` / `ui`)에서. 시작 전에 `develop` 을 머지해 최신으로 |
+| develop 반영 | 트랙 → `develop` **PR**. 기능 한 덩어리가 끝날 때마다(최소 주 1회). 약속 파일(`GameEvents` · `IGameRequests` · `IGameState` · `PlayerProps`/`RoomProps`) PR 은 양쪽 리뷰 |
+| 상대 트랙 받기 | 상대 PR 이 `develop` 에 머지되면 내 트랙에 `develop` 을 머지한다. `logic` ↔ `ui` 를 직접 머지하지 않는다 |
+| 문서 | 문서 수정은 `ui` 에 바로 커밋 (PR 없이). 로직 담당은 `logic` 에서 고치고 PR 에 함께 |
+| 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (7절 · `development-plan` 7절 1) |
+| 연습 씬 | `Scenes/Dev/` — 빌드 설정에 넣지 않는다. 예외: `Scenes/TmpGameScene` 은 멀티 테스트에서 `LoadLevel` 로 넘어가야 해서 빌드 설정에 둔다 |
+
+* 기능 단위로 커밋한다.
 * 커밋되면 안 되는 것: ParrelSync 클론 디렉터리(`*_clone_*`), `Library/`, `Temp/`, 빌드 산출물.
 * 씬(`.unity`)과 프리팹(`.prefab`)은 병합 충돌이 어렵다. 같은 씬을 동시에 편집하지 않는다.
 

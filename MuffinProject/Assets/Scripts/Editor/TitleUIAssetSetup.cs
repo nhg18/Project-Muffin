@@ -11,7 +11,8 @@ namespace Chapchu.EditorTools
     /// </summary>
     public static class TitleUIAssetSetup
     {
-        private const string SpriteDir = "Assets/Sprites/UI/";
+        private const string SpriteDir = "Assets/Sprites/UI/Common/";
+        private const string BackgroundDir = "Assets/Sprites/UI/Background/";
         private const string FontDir = "Assets/Fonts/";
 
         // 기존 프로젝트 폰트. 한글 11,172자가 미리 구워진 정적 아틀라스라 새로 만들지 않고 그대로 쓴다.
@@ -38,7 +39,7 @@ namespace Chapchu.EditorTools
 
         private static void ConfigureSprites()
         {
-            CreateVerticalOverlay(SpriteDir + "title_overlay_vertical.png");
+            CreateVerticalOverlay(BackgroundDir + "bg_overlay_vertical.png");
             // 배경이 반투명한 박스(입력창 · 시스템 버튼)는 테두리를 링으로 그린다.
             // 꽉 찬 사각 2장을 겹치면 배경 아래로 테두리색이 비쳐 CSS(배경 위에 테두리)와 달라진다.
             CreateRing(SpriteDir + "ui_ring_r20_w4.png", 4f / 20f);
@@ -50,10 +51,10 @@ namespace Chapchu.EditorTools
             ConfigureSprite(SpriteDir + "ui_ring_r14_w2.png", 64, false);
             ConfigureSprite(SpriteDir + "ui_round64_top_highlight.png", 64, false);
             ConfigureSprite(SpriteDir + "ui_shadow_soft.png", 101, false);
-            ConfigureSprite(SpriteDir + "title_overlay_vertical.png", 0, false);
+            ConfigureSprite(BackgroundDir + "bg_overlay_vertical.png", 0, false);
             ConfigureSprite(SpriteDir + "icon_sound.png", 0, false);
             ConfigureSprite(SpriteDir + "icon_menu.png", 0, false);
-            ConfigureSprite("Assets/Sprites/TitleBackground.png", 0, true);
+            ConfigureSprite(BackgroundDir + "bg_title.png", 0, true);
         }
 
         // 12-title-ui.md 9-1: 위 → 아래 #2E2440 26% → 40% 지점 10% → 46%. 색은 고정이고 알파만 변한다.

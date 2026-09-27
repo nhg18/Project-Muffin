@@ -3,7 +3,9 @@
 **작성일**: 2026-09-23
 **범위**: `Assets/Scripts/UI/**` + UI가 직접 건드리는 `Core` / `Network` 경계
 **제외**: `GameScene` 및 `Assets/Scripts/Presentation/**` (좌석·손패·카드·덱·턴·입력) — 별도 진행
-**관계 문서**: [`refactoring-plan.md`](refactoring-plan.md) Phase 6(UI) 자리에 들어간다 · [`ui-plan.md`](ui-plan.md) 의 선행 작업
+**관계 문서**: [`refactoring-plan.md`](refactoring-plan.md) Phase 6(UI) 자리에 들어간다 · `ui-plan.md`(초안 — 저장소에 없음, 본문의 `ui-plan.md` 참조는 전부 옛 초안을 가리킨다)
+
+> ✅ **완료 · 기록 문서 (2026-09-25)** — U-1 ~ U-24 · PR1 ~ PR6 · A 요청 3건 전부 끝났다. 새 작업은 [`plan-b-ui.md`](plan-b-ui.md) 에 올린다. 본문의 `ProfileView` · `LobbyPanel` · `RoomPanel` 등은 지금 `LobbyView` / `LobbyPresenter` · `RoomView` / `RoomPresenter` 로 바뀌었다 (`systems/14` · `16`).
 
 ---
 

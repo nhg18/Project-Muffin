@@ -110,7 +110,7 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | `12-title-ui` 4-1, `14-lobby-ui` 4-1 | ✅ 화면 방향 확정, Match 1 → Expand |
 | 모든 씬 Canvas (`TitleScene` · `LobbyScene` · `RoomScene` · `GameScene` · `DebugLobbyScene` · `Resources/Bootstrap/PopupManager`) | ✅ Scale With Screen Size · 1920×1080 · Expand. 방 · 게임 · 디버그 로비 · 팝업은 800×600 고정 픽셀에서 전환 — **UI 위치 · 크기는 그대로**(1080p 에서 동일), 다른 해상도에서 늘어나거나 줄어드는 대신 잘리지 않는다 |
 | `plan-b-ui` B1-14 | ✅ |
-| `SafeArea` 컴포넌트 (`Scripts/UI/SafeArea.cs`) | ✅ 타이틀(버전 · 시스템 버튼) · 로비(닉네임)에 적용. 방 · 인게임은 재구성 때 |
+| `SafeArea` 컴포넌트 (`Scripts/UI/SafeArea.cs`) | ✅ 타이틀(버전 · 시스템 버튼) · 로비(닉네임) · 방 · 인게임 씬에 적용 |
 | README 전역 미정 #9 | 화면 방향 항목 닫음 (시스템 버튼 동작은 남음) |
 
 ## 10. 미정 / 결정 필요

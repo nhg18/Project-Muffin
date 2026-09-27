@@ -5,11 +5,13 @@
 **범위**: **화면(뷰)만.** 네트워크·씬 전환 등 실제 기능은 연결하지 않는다.
 **기준 문서**: [`systems/12-title-ui.md`](systems/12-title-ui.md) — 원본은 Claude Design 게시 아티팩트 `https://claude.ai/artifact/7hXwuwxuZfL7ZXW7VSyoRv` (Version 8 — 2026-09-24 게시본에 폰트·배경·버전 문구만 교체)
 
+> ⏳ **S1 ~ S7 완료, S8(연결 중 · 연결 실패) 남음 (2026-09-26)** — S8 은 `plan-b-ui` 2절 아웃게임 남은 것. 남은 체크: S6 붙여넣기 · IME, 실기(S6 · S7). 아래 1 ~ 2절의 Match 1 · 800×600 · "타이틀→로비 끊김" 설명은 작성 당시 기준이다 — 지금 규격은 [`systems/15-screen.md`](systems/15-screen.md) (Expand · 가로 고정).
+
 > **기준 흐름 (2026-09-23)**: 아티팩트 → `docs/systems/12-title-ui.md` → 노션 「타이틀 화면 개발 문서」 순으로 반영했다.
 > 셋이 다르면 **`12-title-ui.md`가 옳다** (`CLAUDE.md` 0절). 아래 2절 환산표는 구현용 상세이며, 수치는 12번 문서와 같다.
 >
 > 같은 계정의 다른 아티팩트: 로비 `87PcE8t7ic5Ei5VveoZXYf`, 룸 `XYKxMfH3pVh5KNS8hQJscE` — 이번 범위 아님.
-> 최신 디자인은 Claude Design에 있다(타이틀이 "찹츄 로비 화면 v2"로 이동). 로비 작업 전에 v2를 아티팩트로 게시받아 기준을 다시 잡는다.
+> 로비 · 룸 옛 아티팩트는 기준으로 쓰지 않는다 (2026-09-25 사용자 결정 — 로비 · 방은 `14` · `16` 배치 문서가 기준, 디자인은 D8 에서).
 
 ---
 
@@ -90,7 +92,7 @@ Photon 연결 · 씬 전환 · 닉네임 저장/복원 · 타임아웃 · 사운
 
 ```
 TitleCanvas
-├ BG_Illust        Image (TitleBackground.png) · AspectRatioFitter Envelope Parent  ← CSS cover
+├ BG_Illust        Image (bg_title.png) · AspectRatioFitter Envelope Parent  ← CSS cover
 ├ BG_Overlay       Image · 세로 선형 그라데이션 스프라이트 (2-3) · Stretch
 ├ Content          Stretch · VerticalLayoutGroup(Middle Center)
 │  ├ TitleGroup    VerticalLayoutGroup · Spacing 6
@@ -112,7 +114,7 @@ TitleCanvas
 
 | 레이어 | 아티팩트 | Unity |
 | --- | --- | --- |
-| 일러스트 | 게임 `TitleBackground.png`와 같은 일러스트 · `center/cover` | `Sprites/TitleBackground.png` (2021×1138, 16:9) · 중앙 기준 cover |
+| 일러스트 | 게임 `bg_title.png`와 같은 일러스트 · `center/cover` | `Sprites/UI/Background/bg_title.png` (2021×1138, 16:9) · 중앙 기준 cover |
 | 오버레이 | `linear-gradient(180deg, rgba(46,36,64,.26), rgba(46,36,64,.1) 40%, rgba(46,36,64,.46))` | 같은 그라데이션을 세로 텍스처로 구워 Stretch (색은 전부 `#2E2440`, 알파만 변함) |
 
 ### 2-4. 레이아웃 수치
@@ -185,13 +187,13 @@ Unity `Selectable`의 Color Tint로는 이동을 못 하므로 **포인터 이�
 | **학교안심 둥근미소 B / R** | 기존 에셋 `TextMesh Pro/Resources/Fonts & Materials/Hakgyoansim Dunggeunmiso OTF B SDF` · `OTF R SDF` (OFL). 입력칸 안(입력값 · 안내문 · 카운터)은 R, 나머지는 B — 기존 TitleScene 배분 | 정적 아틀라스, 한글 11,172자 전부 포함 → 임의 닉네임에서 □ 없음, Play 중 에셋 변경 없음. 새로 만들지 않는다 |
 | **IBM Plex Mono** TTF | Google Fonts (OFL) | SDF Dynamic · 512 · ASCII + `·` (버전 텍스트 전용) |
 | `♪ ≡` 아이콘 | 새 폰트에도 글자가 있지만 **스프라이트 유지 (확정 2026-09-24)** | `icon_sound.png` · `icon_menu.png` |
-| `TitleBackground.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
+| `bg_title.png` | 프로젝트에 있음 | Max Size 2048, Compression Normal |
 | 둥근 사각 9-slice | 직접 생성 `ui_round64.png` | 반경 64 원본 1장. `Image.pixelsPerUnitMultiplier = 64 / 반경` 으로 20·22·14 및 안쪽(16·17·12)에 재사용. 흰색, Image 색으로 칠함 |
 | 소프트 그림자 9-slice | 직접 생성 `ui_shadow_soft.png` | 반경 22 · sigma 13 · 바깥 여백 40 · border 101. Image를 박스보다 사방 40 크게 |
-| 세로 오버레이 텍스처 | 셋업 스크립트가 생성 `title_overlay_vertical.png` | 4×256 · 색 `#2E2440` 고정, 알파 .26 → .10(40%) → .46 · Bilinear · Clamp · 비압축. **`title_overlay_radial.png`는 삭제** |
+| 세로 오버레이 텍스처 | 셋업 스크립트가 생성 `bg_overlay_vertical.png` | 4×256 · 색 `#2E2440` 고정, 알파 .26 → .10(40%) → .46 · Bilinear · Clamp · 비압축. **`title_overlay_radial.png`는 삭제** |
 | 입력창 안쪽 하이라이트 | 직접 생성 `ui_round64_top_highlight.png` | 배율 4(반경 16)에서 두께 2px |
 
-폴더: `Assets/Fonts/`, `Assets/Sprites/UI/`. 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
+폴더: `Assets/Fonts/`, `Assets/Sprites/UI/Common/` (9-slice · 아이콘), `Assets/Sprites/UI/Background/` (배경 · 오버레이). 9-slice는 Texture Type `Sprite (2D and UI)`, Mesh Type `Full Rect`, **Compression None**, Image Type **Sliced**.
 
 ---
 
@@ -303,14 +305,14 @@ Scripts/UI/Title/
 
 ### S8. 연결 중 · 연결 실패 상태 — 로딩 링 · 다시 시도 (0.5d)
 
-기준: `12-title-ui.md` 3절 #6~8 · 6절 · 7-1 · 9-3 (2026-09-25). 아티팩트 Version 12. **사용자가 아티팩트를 검증한 뒤 착수.**
+기준: `12-title-ui.md` 3절 #6~8 · 6절 · 7-1 · 9-3 (2026-09-25). 아티팩트 Version 13. **사용자가 아티팩트를 검증한 뒤 착수.**
 사유: 연결 전에 접속 버튼이 눌리고, 연결 없이 로비로 이동하는 버그 (사용자 보고 2026-09-25).
 
 **뷰 (B — 이 트랙)**
 
 | 항목 | 내용 |
 | --- | --- |
-| 에셋 | `Sprites/UI/ui_spinner_56.png` — 지름 56 · 선 6 · 바탕 링 `#FFFDF8` 25% + 1/4 호 `#B18AE0` (9-3). 흰색으로 그려 색은 Image color 로 줄 수 없음(두 색) → 스프라이트에 색 포함 |
+| 에셋 | `Sprites/UI/Common/ui_spinner_56.png` — 지름 56 · 선 6 · 바탕 링 `#FFFDF8` 25% + 1/4 호 `#B18AE0` (9-3). 흰색으로 그려 색은 Image color 로 줄 수 없음(두 색) → 스프라이트에 색 포함 |
 | 씬 | `Content/FormGroup` 옆에 **`LoadingGroup`** (폭 560 · 높이 216 · localScale 1.7 · FormGroup 과 같은 자리). 자식: `Spinner`(56×56) · `StatusText`(22 B, `#FFFDF8`) · `FailTitle`(22 B, `#FF6E8A`) · `FailDescription`(18 R, `#FFFDF8`) · `RetryButton`(PillButton 프리팹, 글자 "다시 시도") · `ErrorCode`(IBM Plex Mono 12, `#FFFDF8` 50%, 묶음 우하단 앵커 — 레이아웃 그룹 밖). VerticalLayoutGroup 가운데 정렬, 제목↔설명 8 · 그 외 16 |
 | 스크립트 | `TitleView` 에 `SetPhase(Connecting / Failed(title, description, code) / Ready)` 추가: FormGroup ↔ LoadingGroup 활성 전환, 실패 제목 · 설명 · 오류 코드 설정. `RetryRequested` 이벤트. `Spinner` 는 `SpinnerView`(`Transform.Rotate(0, 0, -360 * dt)`) |
 | 삭제 | `TitleView.SetConnecting` · "접속 중…" 문자열 · `_connecting` 탭 무시 (규칙 폐기) |
@@ -325,7 +327,7 @@ Scripts/UI/Title/
 | `RetryRequested` | `SetPhase(Connecting)` → `Connect()` |
 | `ConnectRequested(nickname)` | `IsReady` 면 저장 → 로비. 아니면 `SetPhase(Failed("연결 끊김", …, 마지막 cause 또는 빈 문자열))` |
 
-- [ ] 아티팩트 Version 12 사용자 검증
+- [ ] 아티팩트 Version 13 사용자 검증
 - [ ] 스프라이트 · `LoadingGroup` · `TitleView.SetPhase` (뷰)
 - [ ] `TitlePresenter` 연결 (로직)
 - [ ] 확인: 앱 시작 → 링 회전 → 연결 → 입력 묶음 / 비행기 모드 → 실패 문구 + 다시 시도 → 인터넷 켜고 탭 → 링 → 입력 묶음 / 연결된 뒤 끊김 → 실패 상태
