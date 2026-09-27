@@ -5,7 +5,7 @@ using Chapchu.Game.Cards;
 
 namespace Chapchu.Game
 {
-    // GameServer.Deck.cs — 덱 · 버림 더미 원본과 드로우 처리 (05-deck.md)
+    // GameServer.Deck.cs — 덱 · 버림 더미 · 손패 장수 원본과 드로우 · 버림 처리 (05-deck.md)
     public partial class GameServer
     {
         // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 InitDeck 인자로 받는 더미 DeckRecipe 가 대신한다.
@@ -13,6 +13,7 @@ namespace Chapchu.Game
 
         private readonly List<CardInstance> _deck = new List<CardInstance>();
         private readonly List<CardInstance> _discardPile = new List<CardInstance>();
+        private readonly Dictionary<int, int> _handCounts = new Dictionary<int, int>();
         private int _nextInstanceId = 0;
 
         /// <summary>덱을 카드 ID 목록으로 채우고 인스턴스 ID를 부여한 뒤 섞는다.</summary>
@@ -20,6 +21,7 @@ namespace Chapchu.Game
         {
             _deck.Clear();
             _discardPile.Clear();
+            _handCounts.Clear();
             _nextInstanceId = 0;
 
             foreach (int cardId in cardIds)
@@ -62,16 +64,40 @@ namespace Chapchu.Game
             DrawOne(requester);
         }
 
+        /// <summary>카드 사용 · 버림으로 손패에서 카드 1장이 빠졌음을 알린다. 카드 효과 자체는 다루지 않는다 — 그건 CardPlayManager 가 별도로 처리한다.</summary>
+        public void Discard(int requester, int cardId)
+        {
+            if (requester != CurrentTurnActor)
+            {
+                _outbox.Reject(requester, "내 턴이 아닙니다.");
+                return;
+            }
+
+            int handCount = _handCounts.TryGetValue(requester, out int count) ? count : 0;
+            if (handCount <= 0)
+            {
+                _outbox.Reject(requester, "손패에 카드가 없습니다.");
+                return;
+            }
+
+            _handCounts[requester] = handCount - 1;
+            _discardPile.Add(new CardInstance(_nextInstanceId++, cardId));
+            _outbox.SetPlayerState(requester, PlayerProps.HandCount, _handCounts[requester]);
+        }
+
         private void DrawOne(int actor)
         {
             CardInstance card = _deck[0];
             _deck.RemoveAt(0);
 
+            int handCount = (_handCounts.TryGetValue(actor, out int count) ? count : 0) + 1;
+            _handCounts[actor] = handCount;
+
             _outbox.SendDrawnCard(actor, card.CardId);
+            _outbox.SetPlayerState(actor, PlayerProps.HandCount, handCount);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
         }
 
-        // 버림 더미를 채우는 경로(카드 사용 · 강제 버림)는 이 리팩토링 범위 밖이라 아직 비어 있다. 회수 규칙만 미리 준비해 둔다.
         private void RefillFromDiscardPile()
         {
             if (_discardPile.Count == 0) return;

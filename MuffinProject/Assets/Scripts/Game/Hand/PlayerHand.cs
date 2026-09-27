@@ -27,12 +27,5 @@ namespace Chapchu.Game
         {
             return cards.Count;
         }
-
-        public void Sort()
-        {
-
-        }
-
-
     }
 }

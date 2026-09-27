@@ -50,6 +50,11 @@ MonoBehaviour:
   - RPC_CancelNext
   - RPC_RequestDrawToMaster
   - RPC_BroadcastDrawnCard
+  - RPC_RejectRequest
+  - RPC_RequestEndTurn
+  - RPC_OnDrawn
+  - RPC_RequestDraw
+  - RPC_RequestDiscard
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
