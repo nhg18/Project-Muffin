@@ -1,10 +1,8 @@
-﻿using Chapchu.Core;
-
-namespace Chapchu.Game
+﻿namespace Chapchu.Game
 {
-
-    public class GameStatus : Singleton<GameStatus>
+    // 확정 규칙 수치(06-health.md). 씬 배치가 필요 없는 상수라 Singleton MonoBehaviour 로 두지 않는다.
+    public static class GameStatus
     {
-        public int MaxHp = 100;
+        public const int MaxHp = 100;
     }
 }
