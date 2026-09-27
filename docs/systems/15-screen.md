@@ -112,7 +112,7 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | `plan-b-ui` B1-14 | ✅ |
 | `SafeArea` 컴포넌트 (`Scripts/UI/SafeArea.cs`) | ✅ 타이틀(버전 · 시스템 버튼) · 로비(닉네임) · 방 · 인게임 씬에 적용 |
 | README 전역 미정 #9 | 화면 방향 항목 닫음 (시스템 버튼 동작은 남음) |
-| `TmpGameScene` 좌석 · 테이블 (`Scripts/UI/SeatLayout.cs`, 2026-09-27) | ✅ 좌석 3개 두께를 한 값 T 로 통일하고 테이블은 나머지를 채움. T = 240 × (1 − r + r·s), s = 가로 · 세로 배율 평균, r = 0.5 (Inspector). `MyHand` · 좌석 안 `Hand` 는 Stretch |
+| `TempGameScene` 좌석 · 테이블 (`Scripts/UI/SeatLayout.cs`, 2026-09-27) | ✅ 좌석 3개 두께를 한 값 T 로 통일하고 테이블은 나머지를 채움. T = 240 × (1 − r + r·s), s = 가로 · 세로 배율 평균, r = 0.5 (Inspector). `MyHand` · 좌석 안 `Hand` 는 Stretch |
 
 ## 10. 미정 / 결정 필요
 

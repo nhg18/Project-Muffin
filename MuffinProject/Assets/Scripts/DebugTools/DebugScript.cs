@@ -19,7 +19,7 @@ namespace Chapchu.DebugTools
         [SerializeField] private Button joinButton;
         [SerializeField] private string nickname = "Player";    
         [SerializeField] private string roomName = "Debug";
-        [Tooltip("켜면 게임 시작 시 GameScene 대신 TmpGameScene 으로 넘어간다 (새 GameServer 멀티 테스트). 끄면 예전처럼 GameScene.")]
+        [Tooltip("켜면 게임 시작 시 GameScene 대신 TempGameScene 으로 넘어간다 (새 GameServer 멀티 테스트). 끄면 예전처럼 GameScene.")]
         [SerializeField] private bool startInTmpGame = true;
 
         private void Start()

@@ -109,17 +109,17 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 | 드로우 · 카드 내기 · 함정 · 찹츄 선언 | 빈 메서드 |
 | 다음 턴 | 시작 때 순서 기준. 생존자만 · 나간 사람 건너뛰기 없음 |
 | 방장 교체 | 새 방장의 `GameServer` 는 비어 있다 (`09-network` 9절 **미정**) |
-| 씬 배치 | `Scenes/TmpGameScene` 의 `GameServer` 오브젝트 (`PhotonView` + `PunGameServer`). `GameScene` 은 아직 옛 배치 |
+| 씬 배치 | `Scenes/TempGameScene` 의 `GameServer` 오브젝트 (`PhotonView` + `PunGameServer`). `GameScene` 은 아직 옛 배치 |
 
 ---
 
-## 5. 멀티 테스트 — TmpGameScene
+## 5. 멀티 테스트 — TempGameScene
 
-기존 디버그 입장 흐름(`DebugLobbyScene` → `RoomScene` → 시작)을 그대로 쓰고, 넘어가는 씬만 `TmpGameScene` 으로 바꾼다.
+기존 디버그 입장 흐름(`DebugLobbyScene` → `RoomScene` → 시작)을 그대로 쓰고, 넘어가는 씬만 `TempGameScene` 으로 바꾼다.
 
 1. `DebugLobbyScene` 의 `DebugScript` 에서 **Start In Tmp Game** 이 켜져 있는지 본다 (기본 켜짐. 끄면 예전처럼 `GameScene`).
 2. 메인 에디터와 ParrelSync 클론 양쪽에서 `DebugLobbyScene` 을 열고 Play → 입장 버튼.
-3. 대기실에서 방장이 **시작** → 전원 `TmpGameScene` 으로 넘어가고 방장이 바로 게임을 시작한다.
+3. 대기실에서 방장이 **시작** → 전원 `TempGameScene` 으로 넘어가고 방장이 바로 게임을 시작한다.
 4. 진짜 UI(턴 표시 · 턴 종료 버튼)로 요청하고, 결과는 에디터마다 화면과 Console 로 확인한다.
    * 공개 값(턴 · HP · 장수)은 **양쪽 모두** 바뀌어야 한다.
    * 비공개 값(뽑은 카드 · 거절)은 **요청한 쪽에만** 와야 한다.
