@@ -5,7 +5,6 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using Chapchu.Core;
-using Chapchu.Game;
 using Chapchu.Network;
 
 namespace Chapchu.Presentation
@@ -45,11 +44,19 @@ namespace Chapchu.Presentation
                     continue;
                 }
             
-                bool isMyTurn = actorNumber == TurnManager.Instance.CurrentTurnActor;
+                bool isMyTurn = actorNumber == CurrentTurnActor();
                 seatView.SetTurnUI(isMyTurn);
             }
         }
-    
+
+        // TurnManager(레거시) · GameServer(신규) 둘 다 같은 룸 프로퍼티 키에 턴 주인을 기록하므로,
+        // 어느 쪽이 판정하는 씬이든 직접 읽으면 된다. 아직 시작 전이면 -1.
+        private static int CurrentTurnActor()
+        {
+            var props = PhotonNetwork.CurrentRoom.CustomProperties;
+            return props.TryGetValue(RoomProps.TurnActor, out object actor) ? (int)actor : -1;
+        }
+
         /// <summary>
         /// 자신의 Actor 번호 기준으로 좌석배치하는 알고리즘
         /// </summary>
@@ -127,7 +134,7 @@ namespace Chapchu.Presentation
                 }
             
                 seatView.SetNicknameUI(player.NickName);
-                bool isMyTurn = actorNumber == TurnManager.Instance.CurrentTurnActor;
+                bool isMyTurn = actorNumber == CurrentTurnActor();
                 seatView.SetTurnUI(isMyTurn);
             }
         }
