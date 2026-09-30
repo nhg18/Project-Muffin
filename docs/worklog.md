@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-09-30 · GameServer.Deck.cs 점검 — 드로우 규격 · 턴 종료 · 문서 정리
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic` |
+| 범위 | `GameServer.Deck.cs` · `IServerOutbox` · `PunGameServer`, `docs/systems/03 · 05 · 09`, `plan-a-logic.md` |
+
+### 한 것
+
+- `SendDrawnCard` / `RPC_OnDrawn` 에 `cardInstanceId` 추가 — 가이드 규격 · `09` 7절에 맞춤 (`41673c7`). `GameEvents` · `FakeGameServer` · `PlayerHandPresenter` 는 **건드리지 않는다** (사용자 결정 — 머지 때 충돌 · 버그가 보이면 그때 점검).
+- 드로우 성공 시 턴 종료 (`80ea520`). 거절 시 턴 유지, 카드 효과 드로우(`DrawOne`)는 턴을 끝내지 않는다.
+- 덱 · 버림 더미 0장 처리 주석을 "미정 — 임시 거절"로 정정, `GameServer.Deck.cs` BOM 추가 (`f8f6d13`).
+- `develop` 에서만 바뀐 문서 7개 반영 — 위험 상태(HP 1~20) 삭제 등 (`076e49c`). CLAUDE.md · 씬은 제외.
+- `05-deck` · `09-network` 현재 구현 상태를 PR #40 이후로 갱신 (`f35e659`). `plan-a-logic.md` 1절을 현재 상태 · 기능별 남은 일로 다시 씀.
+
+### 결정
+
+- 턴 종료 요청(`RequestEndTurn`)은 정식 흐름이 아니다(`03` — 개발용 버튼). 20초 타이머 · 카드 사용 후 턴 종료가 생길 때까지 테스트용으로 둔다.
+- Notion 「개발 기획서」는 `develop`(`9b78e23`)과 같다. 이번 `05` · `09` 갱신은 아직 Notion 에 없다.
+
+### 다음 할 일
+
+→ `plan-a-logic.md` 1-2 (기능별 남은 일). 바로 다음은 기능 1 약속(10/11) · 서버 코어(10/16).
+- [ ] `AdvanceTurn` 도입 여부 결정 (턴 넘김 경로 한 곳으로)
+- [ ] Unity 에서 컴파일 · `TempGameScene` 멀티 테스트로 드로우 → 턴 넘김 확인
+
+---
+
 ## 2026-09-27 · TmpGameScene 해상도 대응 — 좌석 · 테이블 배치
 
 | 항목 | 값 |
