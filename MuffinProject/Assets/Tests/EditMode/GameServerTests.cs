@@ -41,6 +41,15 @@ namespace Chapchu.Game.Tests
         }
 
         [Test]
+        public void StartGame_RecordsMaxHpForEveryPlayer()
+        {
+            _server.StartGame(new[] { A, B });
+
+            Assert.AreEqual(GameServer.MaxHp, _outbox.LastPlayerState(A, PlayerProps.Hp));
+            Assert.AreEqual(GameServer.MaxHp, _outbox.LastPlayerState(B, PlayerProps.Hp));
+        }
+
+        [Test]
         public void DealInitialHands_GivesFiveUniqueCardsToEachPlayer()
         {
             StartTwoPlayerGame(20);

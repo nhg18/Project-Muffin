@@ -69,7 +69,10 @@ namespace Chapchu.Game
 
             _players.Clear();
             foreach (int actor in turnOrder)
-                _players[actor] = new PlayerState { Hp = MaxHp };
+            {
+                _players[actor] = new PlayerState();
+                SetHp(actor, MaxHp);
+            }
 
             SetTurn(_turnOrder[0]);
         }

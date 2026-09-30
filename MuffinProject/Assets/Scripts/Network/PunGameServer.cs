@@ -2,6 +2,7 @@
 using Chapchu.Core;
 using Chapchu.Game;
 using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
@@ -139,6 +140,15 @@ namespace Chapchu.Network
 
             if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
                 GameEvents.RaiseDeckCountChanged((int)deckCount);
+        }
+
+        public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
+        {
+            if (changedProps.TryGetValue(PlayerProps.Hp, out object hp))
+                GameEvents.RaiseHpChanged(targetPlayer.ActorNumber, (int)hp);
+
+            if (changedProps.TryGetValue(PlayerProps.HandCount, out object handCount))
+                GameEvents.RaiseHandCountChanged(targetPlayer.ActorNumber, (int)handCount);
         }
 
         [PunRPC]
