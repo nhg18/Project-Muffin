@@ -56,16 +56,16 @@ public void Draw(int requester)
 
     _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);                            // 공개
     _outbox.SetPlayerState(requester, PlayerProps.HandCount, _hands[requester].Count); // 공개
-    _outbox.SendDrawn(requester, card.InstanceId, card.CardId);                        // 비공개 — 새 출구
+    _outbox.SendDrawnCard(requester, card.InstanceId, card.CardId);                    // 비공개 — 새 출구
 }
 ```
 
 ```csharp
 // IServerOutbox — 새 결과 종류
-void SendDrawn(int actorNumber, int cardInstanceId, int cardId);
+void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
 
 // PunGameServer — 출구 구현 + 받기
-void IServerOutbox.SendDrawn(int actorNumber, int cardInstanceId, int cardId)
+void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)
 {
     var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
     if (player != null) photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);

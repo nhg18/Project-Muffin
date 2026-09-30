@@ -32,7 +32,7 @@ namespace Chapchu.Game
         //
         //            // 내보내기: 모두 봐도 되는 값은 상태로, 한 사람만 볼 값은 그 사람에게만
         //            _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
-        //            _outbox.SendDrawn(requester, card.InstanceId, card.CardId); // 새 종류의 결과면 IServerOutbox 에 메서드 추가
+        //            _outbox.SendDrawnCard(requester, card.InstanceId, card.CardId); // 새 종류의 결과면 IServerOutbox 에 메서드 추가
         //        }
         //
         // 4. PunGameServer 에 요청 RPC 와 결과 받기를 잇는다 (PunGameServer 맨 위 주석).

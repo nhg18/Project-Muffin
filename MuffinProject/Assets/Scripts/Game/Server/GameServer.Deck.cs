@@ -93,7 +93,7 @@ namespace Chapchu.Game
             int handCount = (_handCounts.TryGetValue(actor, out int count) ? count : 0) + 1;
             _handCounts[actor] = handCount;
 
-            _outbox.SendDrawnCard(actor, card.CardId);
+            _outbox.SendDrawnCard(actor, card.InstanceId, card.CardId);
             _outbox.SetPlayerState(actor, PlayerProps.HandCount, handCount);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
         }

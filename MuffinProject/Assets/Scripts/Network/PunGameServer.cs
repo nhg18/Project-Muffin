@@ -123,11 +123,11 @@ namespace Chapchu.Network
             photonView.RPC(nameof(RPC_RejectRequest), player, reason);
         }
 
-        void IServerOutbox.SendDrawnCard(int actorNumber, int cardId)
+        void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)
         {
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
-            photonView.RPC(nameof(RPC_OnDrawn), player, cardId);
+            photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);
         }
         #endregion
 
@@ -148,7 +148,7 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnDrawn(int cardId)
+        private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
             GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
         }
