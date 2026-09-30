@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Chapchu.Core;
 using Chapchu.Game.Cards;
@@ -56,7 +56,7 @@ namespace Chapchu.Game
 
             if (_deck.Count == 0)
             {
-                // 덱 · 버림 더미가 모두 0장 → 0장으로 처리하고 거절만 한다 (05-deck.md 5절).
+                // TODO(미정): 덱 · 버림 더미가 모두 0장일 때 처리는 기획 미정 (05-deck.md 5절). 확정 전까지 상태 변경 없이 거절만 한다.
                 _outbox.Reject(requester, "뽑을 카드가 없습니다.");
                 return;
             }
