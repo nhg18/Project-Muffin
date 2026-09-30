@@ -44,9 +44,13 @@ namespace Chapchu.Game
         // 하지 말 것: 여기서 Debug.Log · PhotonNetwork · GameEvents 호출 / 클라가 보낸 actorNumber 를 요청자로 믿기.
         // ─────────────────────────────────────────────────────────────────────────────
 
+        // 확정(06-health.md 2절). 규칙 수치의 원본은 GameServer — 서버 밖(옛 GameStatus)은 이 값을 참조한다.
+        public const int MaxHp = 100;
+
         // ── 원본 상태 ──
         private readonly IServerOutbox _outbox;
         private readonly List<int> _turnOrder = new List<int>();
+        private readonly Dictionary<int, PlayerState> _players = new Dictionary<int, PlayerState>(); // actorNumber → 원본
 
         public int CurrentTurnActor { get; private set; } = -1;
 
@@ -62,6 +66,11 @@ namespace Chapchu.Game
 
             _turnOrder.Clear();
             _turnOrder.AddRange(turnOrder);
+
+            _players.Clear();
+            foreach (int actor in turnOrder)
+                _players[actor] = new PlayerState { Hp = MaxHp };
+
             SetTurn(_turnOrder[0]);
         }
     }

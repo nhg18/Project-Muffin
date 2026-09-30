@@ -208,7 +208,7 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | --- | --- |
 | 마스터 경유 카드 요청 (`CardPlayManager.RPC_RequestPush`) | 있음. **검증 로직 없음** (`isResolutioning` 체크만) |
 | 마스터 소유 덱 · 버림 더미 | 있음 (`GameServer.Deck.cs`). 잔여 장수만 Room Property |
-| 마스터 소유 손패 | **장수만** (`_handCounts`). 손패 **내용**은 각 클라이언트 로컬에만 존재 → 버림 요청 소유 검증 불가 (`05-deck` 10절) |
+| 마스터 소유 손패 | 있음 (`PlayerState.Hand`). 각 클라이언트는 자기 손패 사본만 받는다 |
 | 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
 | 처리 ID | 없음 |
 | 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn`). UI 이벤트 · 요청(버림 · 카드 사용)에는 아직 쓰지 않는다 |
