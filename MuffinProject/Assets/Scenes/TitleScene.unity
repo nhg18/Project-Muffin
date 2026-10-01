@@ -1253,8 +1253,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uCC39\uCE04"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 064f4cea75fc3fc46b3f86aeea73adb0, type: 2}
-  m_sharedMaterial: {fileID: -4300391205297096849, guid: 064f4cea75fc3fc46b3f86aeea73adb0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 440670d235511094c9b9095e8d62e661, type: 2}
+  m_sharedMaterial: {fileID: 1308452781091668632, guid: 440670d235511094c9b9095e8d62e661, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
