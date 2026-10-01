@@ -171,8 +171,8 @@
 
 > 브랜치 표 · 머지 · PR · `.meta` 규칙은 skill `git-workflow` (`.claude/skills/git-workflow/`).
 
-* `main` ← `develop` ← `logic`(로직 `.cs`) / `ui`(UI · 씬 · 프리팹 · docs). 트랙 → `develop` 은 PR, `logic` ↔ `ui` 직접 머지 금지.
-* `.unity` · `.prefab` 은 `ui` 에서만 바꾼다. 문서는 `ui` 에 바로 커밋한다.
+* `main` ← `develop` ← `logic`(로직 `.cs`) / `ui`(UI · 씬 · 프리팹). 트랙 → `develop` 은 PR, `logic` ↔ `ui` 직접 머지 금지.
+* `.unity` · `.prefab` 은 `ui` 에서만 바꾼다. 문서(`docs/` · `CLAUDE.md` · `.claude/`)는 모든 브랜치가 같은 내용을 공유한다 — 고친 브랜치에 커밋하고 바로 `develop` 에 같은 내용을 반영한다.
 * 커밋 메시지: `type(scope): 한국어 요약` (`feat` · `fix` · `refactor` · `chore` · `docs`). 기능 단위로 커밋한다.
 
 ## 15. 작업 시작 전 체크리스트
