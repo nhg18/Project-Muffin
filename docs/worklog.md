@@ -6,6 +6,41 @@
 
 ---
 
+## 2026-10-01 · 기능 1 진행 — PlayerState · 체력 기록 · 테스트 환경
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic` |
+| 범위 | `GameServer*` · `PlayerState` · `PunGameServer` · EditMode 테스트 · `TempGameScene` |
+
+### 한 것
+
+- `PlayerState`(Hand · Hp) — 방장이 actorNumber 별로 손패 내용 · 체력 원본 보관. `_handCounts` 삭제(장수 = `Hand.Count`). 버림 요청 소유 검증(손패에 없으면 거절), 버린 카드는 인스턴스 ID 유지 (`aaee0c2`)
+- 체력 최대치 원본 `GameServer.MaxHp`, 옛 `GameStatus.MaxHp` 는 참조만 (`aaee0c2`)
+- EditMode 테스트 8개 — 배분 · 드로우 후 턴 종료 · 남의 턴 거절 · 버림 소유 · 인스턴스 ID 유지 (`477f593`)
+- 체력 기록 — `GameServer.Health.cs` `SetHp`, `StartGame` 에서 전원 100, `PunGameServer.OnPlayerPropertiesUpdate` → `GameEvents` (`1b18c3e`, 수정 1 의 A 쪽)
+- `PlayerState` 를 `Game/Player` 로 이동, asmref 로 서버 어셈블리 유지. `PlayerModel` 은 `Presentation/Player` 로 (`05e9012`)
+- `TempGameScene` 에 GameServer 오브젝트(PhotonView 씬 ID 1 · `PunGameServer` · `ServerDebugLog`). `ServerDebugLog` 는 서버 이벤트를 `[Server:번호]` 로그로, D = 뽑기 (`35cbf08`)
+
+### 결정 · 의견
+
+1. **전원 로드 대기 — 지금은 넣지 않는다.** (사용자: 기획이 아니라 테스트로 정할 기술 문제)
+   - PUN 소스 확인: `LoadLevel`(동기화로 따라 로드하는 클라 포함)이 로드 중 `IsMessageQueueRunning = false`, 씬 로드 뒤(`sceneLoaded` → `NewSceneLoaded`) 재개한다. 방장이 먼저 보낸 RPC · 속성 변경은 **버려지지 않고 로드 뒤에 처리**된다. 재개 시점은 `Awake` · `OnEnable` 뒤, `Start` 앞 → **`Start` 에서 구독하는 UI 는 첫 알림을 놓칠 수 있다.**
+   - 퀘스트 #1216: 4클론 테스트(지연 주입)에서 놓침이 재현될 때만 구현.
+   - 다시 볼 때: 기능 2 의 20초 마감. 로드가 느린 기기의 턴 시간이 로드 중에 깎인다 → 멀티 테스트에서 로드 시간 차이를 재 보고 결정.
+2. **`AdvanceTurn` (턴 넘김 한 곳) — 의견: 도입.** (사용자 우려: 턴 쉬기 · 역순 카드에서는 못 쓴다)
+   - 턴 쉬기(A01 · T05 `SkipTurn`) · 역순(A07 `ReverseDirection`)은 카드가 직접 턴을 넘기지 않고 **상태만 바꾼다**(방향 · 쉬기 횟수). 다음 사람 계산(`GetNextActor`)이 그 상태와 나간 · 죽은 사람을 한 번에 본다. 넘기는 곳이 여럿(턴 종료 · 드로우 · 카드 사용 · 20초 초과 · 나감)이면 쉬기 · 역순 처리를 곳마다 넣어야 해서 오히려 깨진다.
+   - 지금 `SetTurn(GetNextActor(CurrentTurnActor))` 가 `EndTurn` · `Draw` 두 곳. 도입은 기능 2(타이머 리셋이 같이 들어갈 때). 쉬기 중첩은 `03` 에서 **미정**. — 사용자 결정 대기
+
+### 다음 할 일
+
+- [ ] 기능 1: 첫 턴 무작위 (`StartGame` 에서 턴 순서 셔플, 난수 주입) + 테스트
+- [ ] B 에게 요청: `GameScene` 옛 `TurnManager` → `PunGameServer` 교체(수정 2), `PlayerPresenter.Init` HP 기록 제거(수정 1)
+- [ ] Unity 확인: 컴파일 · `TempGameScene` 멀티 테스트(드로우 → 턴 넘김, 체력 100)
+- [ ] `AdvanceTurn` 결정 (기능 2 전)
+
+---
+
 ## 2026-09-30 · GameServer.Deck.cs 점검 — 드로우 규격 · 턴 종료 · 문서 정리
 
 | 항목 | 값 |
