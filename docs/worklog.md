@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-10-01 · 기능 1 진행 — PlayerState · 체력 기록 · 테스트 환경
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic` |
+| 범위 | `GameServer*` · `PlayerState` · `PunGameServer` · EditMode 테스트 · `TempGameScene` |
+
+### 한 것
+
+- `PlayerState`(Hand · Hp) — 방장이 actorNumber 별로 손패 내용 · 체력 원본 보관. `_handCounts` 삭제(장수 = `Hand.Count`). 버림 요청 소유 검증(손패에 없으면 거절), 버린 카드는 인스턴스 ID 유지 (`aaee0c2`)
+- 체력 최대치 원본 `GameServer.MaxHp`, 옛 `GameStatus.MaxHp` 는 참조만 (`aaee0c2`)
+- EditMode 테스트 8개 — 배분 · 드로우 후 턴 종료 · 남의 턴 거절 · 버림 소유 · 인스턴스 ID 유지 (`477f593`)
+- 체력 기록 — `GameServer.Health.cs` `SetHp`, `StartGame` 에서 전원 100, `PunGameServer.OnPlayerPropertiesUpdate` → `GameEvents` (`1b18c3e`, 수정 1 의 A 쪽)
+- `PlayerState` 를 `Game/Player` 로 이동, asmref 로 서버 어셈블리 유지. `PlayerModel` 은 `Presentation/Player` 로 (`05e9012`)
+- `TempGameScene` 에 GameServer 오브젝트(PhotonView 씬 ID 1 · `PunGameServer` · `ServerDebugLog`). `ServerDebugLog` 는 서버 이벤트를 `[Server:번호]` 로그로, D = 뽑기 (`35cbf08`)
+
+### 결정 · 의견
+
+1. **전원 로드 대기 — 지금은 넣지 않는다.** (사용자: 기획이 아니라 테스트로 정할 기술 문제)
+   - PUN 소스 확인: `LoadLevel`(동기화로 따라 로드하는 클라 포함)이 로드 중 `IsMessageQueueRunning = false`, 씬 로드 뒤(`sceneLoaded` → `NewSceneLoaded`) 재개한다. 방장이 먼저 보낸 RPC · 속성 변경은 **버려지지 않고 로드 뒤에 처리**된다. 재개 시점은 `Awake` · `OnEnable` 뒤, `Start` 앞 → **`Start` 에서 구독하는 UI 는 첫 알림을 놓칠 수 있다.**
+   - 퀘스트 #1216: 4클론 테스트(지연 주입)에서 놓침이 재현될 때만 구현.
+   - 다시 볼 때: 기능 2 의 20초 마감. 로드가 느린 기기의 턴 시간이 로드 중에 깎인다 → 멀티 테스트에서 로드 시간 차이를 재 보고 결정.
+2. **`AdvanceTurn` (턴 넘김 한 곳) — 의견: 도입.** (사용자 우려: 턴 쉬기 · 역순 카드에서는 못 쓴다)
+   - 턴 쉬기(A01 · T05 `SkipTurn`) · 역순(A07 `ReverseDirection`)은 카드가 직접 턴을 넘기지 않고 **상태만 바꾼다**(방향 · 쉬기 횟수). 다음 사람 계산(`GetNextActor`)이 그 상태와 나간 · 죽은 사람을 한 번에 본다. 넘기는 곳이 여럿(턴 종료 · 드로우 · 카드 사용 · 20초 초과 · 나감)이면 쉬기 · 역순 처리를 곳마다 넣어야 해서 오히려 깨진다.
+   - 지금 `SetTurn(GetNextActor(CurrentTurnActor))` 가 `EndTurn` · `Draw` 두 곳. 도입은 기능 2(타이머 리셋이 같이 들어갈 때). 쉬기 중첩은 `03` 에서 **미정**. — 사용자 결정 대기
+
+### 다음 할 일
+
+- [ ] 기능 1: 첫 턴 무작위 (`StartGame` 에서 턴 순서 셔플, 난수 주입) + 테스트
+- [ ] B 에게 요청: `GameScene` 옛 `TurnManager` → `PunGameServer` 교체(수정 2), `PlayerPresenter.Init` HP 기록 제거(수정 1)
+- [ ] Unity 확인: 컴파일 · `TempGameScene` 멀티 테스트(드로우 → 턴 넘김, 체력 100)
+- [ ] `AdvanceTurn` 결정 (기능 2 전)
+
+---
+
+## 2026-09-30 · GameServer.Deck.cs 점검 — 드로우 규격 · 턴 종료 · 문서 정리
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic` |
+| 범위 | `GameServer.Deck.cs` · `IServerOutbox` · `PunGameServer`, `docs/systems/03 · 05 · 09`, `plan-a-logic.md` |
+
+### 한 것
+
+- `SendDrawnCard` / `RPC_OnDrawn` 에 `cardInstanceId` 추가 — 가이드 규격 · `09` 7절에 맞춤 (`41673c7`). `GameEvents` · `FakeGameServer` · `PlayerHandPresenter` 는 **건드리지 않는다** (사용자 결정 — 머지 때 충돌 · 버그가 보이면 그때 점검).
+- 드로우 성공 시 턴 종료 (`80ea520`). 거절 시 턴 유지, 카드 효과 드로우(`DrawOne`)는 턴을 끝내지 않는다.
+- 덱 · 버림 더미 0장 처리 주석을 "미정 — 임시 거절"로 정정, `GameServer.Deck.cs` BOM 추가 (`f8f6d13`).
+- `develop` 에서만 바뀐 문서 7개 반영 — 위험 상태(HP 1~20) 삭제 등 (`076e49c`). CLAUDE.md · 씬은 제외.
+- `05-deck` · `09-network` 현재 구현 상태를 PR #40 이후로 갱신 (`f35e659`). `plan-a-logic.md` 1절을 현재 상태 · 기능별 남은 일로 다시 씀.
+
+### 결정
+
+- 턴 종료 요청(`RequestEndTurn`)은 정식 흐름이 아니다(`03` — 개발용 버튼). 20초 타이머 · 카드 사용 후 턴 종료가 생길 때까지 테스트용으로 둔다.
+- Notion 「개발 기획서」는 `develop`(`9b78e23`)과 같다. 이번 `05` · `09` 갱신은 아직 Notion 에 없다.
+- (사용자, 10/1) 약속 파일은 선행 단계로 두지 않는다 — 기능을 만들다 필요해질 때 그 작업에서 고친다. `development-plan` 2절 공통 순서(약속 먼저)와 다르다 — B 와 맞출 것.
+- (사용자, 10/1) 로직 개발 순서는 **기능 하나가 한 줄** (`plan-a-logic.md` 1-3). 서버 코어 · 테스트 같은 내부 단계를 따로 세지 않는다. 버림 요청 소유 검증은 기능 4.
+
+### 다음 할 일
+
+→ `plan-a-logic.md` 1-2 (수정 목록) · 1-3 (기능 개발 순서). 바로 다음은 기능 1 게임 시작하기.
+- [ ] `AdvanceTurn` 도입 여부 결정 (턴 넘김 경로 한 곳으로)
+- [ ] Unity 에서 컴파일 · `TempGameScene` 멀티 테스트로 드로우 → 턴 넘김 확인
+
+---
+
 ## 2026-09-27 · TmpGameScene 해상도 대응 — 좌석 · 테이블 배치
 
 | 항목 | 값 |

@@ -1,6 +1,6 @@
 # 09. 네트워크 권한 · 동기화 규약
 
-**최종 수정일**: 2026-09-25
+**최종 수정일**: 2026-09-30
 **분류**: Core
 **전제**: Photon PUN2. 마스터 클라이언트(방장)가 서버 역할을 겸한다.
 
@@ -103,8 +103,6 @@
 * 비공개 정보 (손패 내용, 함정 종류)
 * 프레임 단위로 바뀌는 값
 
-> ⚠ 현재 코드 `DeckPresenter`는 드로우마다 덱 전체 카드 ID 배열을 Room CustomProperties로 동기화한다. 이 규칙 위반이며 제거 대상이다.
-
 ### 6.3 키 상수
 
 문자열 리터럴 금지. 상수 클래스에 모은다.
@@ -127,8 +125,7 @@ public static class RoomProps
 }
 ```
 
-> 키 상수는 `Core/PlayerProps.cs` · `Core/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음).
-> ⚠ 남은 위반: `DeckPresenter` 의 `"RoomDeck"` 리터럴 (덱 전체 배열 동기화, 6.2 위반) — 기능 1 (로직 6: 옛 동기화 정리)에서 제거한다.
+> 키 상수는 `Core/Props/PlayerProps.cs` · `Core/Props/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음). 옛 `"RoomDeck"` 덱 전체 배열 동기화는 삭제됐다.
 
 ---
 
@@ -210,16 +207,16 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 항목 | 상태 |
 | --- | --- |
 | 마스터 경유 카드 요청 (`CardPlayManager.RPC_RequestPush`) | 있음. **검증 로직 없음** (`isResolutioning` 체크만) |
-| 마스터 소유 덱 | 없음. 덱 배열을 Room Property로 전체 동기화 |
-| 마스터 소유 손패 | **없음.** 손패는 각 클라이언트 로컬에만 존재 |
+| 마스터 소유 덱 · 버림 더미 | 있음 (`GameServer.Deck.cs`). 잔여 장수만 Room Property |
+| 마스터 소유 손패 | 있음 (`PlayerState.Hand`). 각 클라이언트는 자기 손패 사본만 받는다 |
 | 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
 | 처리 ID | 없음 |
-| 카드 인스턴스 ID | `CardInstance` 구조체만 존재. 부여 · 전송 · 요청에 쓰는 곳 없음 |
+| 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn`). UI 이벤트 · 요청(버림 · 카드 사용)에는 아직 쓰지 않는다 |
 | 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
-| RPC `nameof` 사용 | 혼재 (`TurnManager`/`DeckPresenter`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
-| 마스터 가드 | 일부 누락 (`RPC_RequestDrawToMaster`) |
-| 손패 장수 기록 | **손패 주인이 직접** `handCount` 를 기록한다 (3절 위반) |
-| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 턴 종료만 구현 · 씬 미배치 |
+| RPC `nameof` 사용 | 혼재 (`PunGameServer` · `TurnManager`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
+| 마스터 가드 | 요청 RPC 전부 있음 (`PunGameServer` · `CardPlayManager` · `TurnManager`). 옛 `RPC_RequestDrawToMaster` 는 삭제 |
+| 손패 장수 기록 | 마스터만 기록 (`GameServer` → `PlayerProps.HandCount`) |
+| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 턴 종료 · 드로우 · 버림 구현, `TempGameScene` 에만 배치 |
 
 ---
 
