@@ -11,7 +11,7 @@ description: 찹츄 저장소의 브랜치 구조(main · develop · logic · ui
 main      ← 점검일 · 출시 빌드 때만 develop 을 머지 (항상 빌드 가능)
 develop   ← 통합. logic · ui 가 PR 로 들어온다
  ├─ logic ← 로직 담당 전용 — Game/ · Network/ · Core/ 의 .cs
- └─ ui    ← UI 담당 전용 — Presentation/ · UI/ · DebugTools/ · 씬 · 프리팹 · 스프라이트 · docs/
+ └─ ui    ← UI 담당 전용 — Presentation/ · UI/ · DebugTools/ · 씬 · 프리팹 · 스프라이트
      └─ ui/<작업> · logic/<작업>   ← 필요할 때만 쓰는 짧은 브랜치. 끝나면 트랙 브랜치로 머지 후 삭제
 ```
 
@@ -20,7 +20,7 @@ develop   ← 통합. logic · ui 가 PR 로 들어온다
 | 작업 시작 | 자기 트랙 브랜치(`logic` / `ui`)에서. 시작 전에 `develop` 을 머지해 최신으로 |
 | develop 반영 | 트랙 → `develop` **PR**. 기능 한 덩어리가 끝날 때마다(최소 주 1회). 약속 파일(`GameEvents` · `IGameRequests` · `IGameState` · `PlayerProps`/`RoomProps`) PR 은 양쪽 리뷰 |
 | 상대 트랙 받기 | 상대 PR 이 `develop` 에 머지되면 내 트랙에 `develop` 을 머지한다. `logic` ↔ `ui` 를 직접 머지하지 않는다 |
-| 문서 | 문서 수정은 `ui` 에 바로 커밋 (PR 없이). 로직 담당은 `logic` 에서 고치고 PR 에 함께 |
+| 문서 | `docs/` · `CLAUDE.md` · `.claude/` 는 **모든 브랜치가 같은 내용을 공유**한다. 어느 트랙에서 고치든 그 브랜치에 커밋하고, 바로 `develop` 에 같은 내용을 반영한다(PR 없이). 상대 트랙은 `develop` 을 머지해 받는다 |
 | 씬 | `.unity` · `.prefab` 은 `ui` 에서만 바꾼다 (`development-plan` 7절 1). `logic` 에서는 hook 이 막는다 |
 | 개발 전용 씬 | `DebugLobbyScene`(개발용 즉시 입장) · `TempGameScene`(멀티 테스트용 임시 게임 씬)은 멀티 테스트에서 `LoadLevel` 로 넘어가야 해서 빌드 설정에 둔다. 그 밖의 연습 씬은 빌드 설정에 넣지 않는다 |
 
