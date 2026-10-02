@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abc080711e83cdb408eb914ded2af421, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  server: {fileID: 1886823433}
+  server: {fileID: 0}
 --- !u!114 &5082969
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -404,7 +404,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handView: {fileID: 262505924}
   cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
-  server: {fileID: 1886823433}
+  server: {fileID: 0}
 --- !u!4 &262505926
 Transform:
   m_ObjectHideFlags: 0
@@ -2916,7 +2916,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   deckView: {fileID: 709453409}
-  server: {fileID: 1886823433}
+  server: {fileID: 0}
 --- !u!4 &709453411
 Transform:
   m_ObjectHideFlags: 0
@@ -4777,74 +4777,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 323a3b66b74fa9a4e95e80921894494d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &1886823432
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1886823434}
-  - component: {fileID: 1886823435}
-  - component: {fileID: 1886823433}
-  m_Layer: 0
-  m_Name: GameServer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1886823433
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1886823432}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 43441e567063ed14d9e02315db4e88ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  startingDeckRecipe: {fileID: 11400000, guid: 73bc7a1541c229b4d92d7bd2195cf9ed, type: 2}
---- !u!4 &1886823434
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1886823432}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1886823435
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1886823432}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents: []
-  sceneViewId: 1
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
 --- !u!1 &1932116362
 GameObject:
   m_ObjectHideFlags: 0
@@ -5220,7 +5152,6 @@ SceneRoots:
   - {fileID: 807199487}
   - {fileID: 5082973}
   - {fileID: 1705444390}
-  - {fileID: 1886823434}
   - {fileID: 709453411}
   - {fileID: 262505926}
   - {fileID: 571855876}

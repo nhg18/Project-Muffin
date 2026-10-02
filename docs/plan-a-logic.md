@@ -1,6 +1,6 @@
 # A 트랙 — 게임 로직 작업 플랜
 
-**작성일**: 2026-09-24 · **갱신**: 2026-09-26 (v5 — 작업 목록을 `development-plan.md` 3절 기능별 표로 옮김)
+**작성일**: 2026-09-24 · **갱신**: 2026-10-01 (v7 — 약속 단계 폐지 · 수정 목록 · 기능 단위 개발 순서)
 **담당**: 로직 담당 (A)
 **소유 폴더**: `Game/`, `Network/`, `Core/` — **`.cs` 만.** 씬 · 프리팹은 만지지 않는다.
 **상위 문서**: [`development-plan.md`](development-plan.md) v5 (기능 13개 · 기능별 작업 표 · 서로 기다리는 곳 · 기획 결정 마감) · [`refactoring-plan.md`](refactoring-plan.md) (진단 번호 A-/B-/C-)
@@ -16,51 +16,73 @@ A 의 일은 한 줄이다. **게임 상태 원본을 `GameServer`(마스터 전
 
 B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
-1. **약속 파일 4종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`, `IGameState`)은 쓰기 전에 먼저 PR 로 올린다.** B 는 약속만 보고 로컬 서버(`FakeGameServer`)로 개발한다.
-2. **`Presentation/` 파일은 고치지 않는다.** 지금 `Presentation` 에 들어 있는 로직(아래 1-3)은 A 가 `Game/` 에 새 경로를 만들고, **옛 호출 제거는 B 가 교체 PR 에서 한다.**
+1. **약속 파일 4종(`PlayerProps`/`RoomProps`, `GameEvents`, `IGameRequests`, `IGameState`)은 기능을 개발하다 필요해질 때, 그 기능 작업 안에서 고친다.** 약속만 먼저 올리는 단계를 따로 두지 않는다 (2026-09-30 결정). 약속 파일이 바뀌는 PR 은 B 리뷰를 받는다 (`CLAUDE.md` 14절). ⚠ `development-plan.md` 2절 공통 순서(약속 먼저)와 다르다 — B 와 맞출 것.
+2. **`Presentation/` 파일은 고치지 않는다.** 지금 `Presentation` 에 들어 있는 로직(아래 1-4)은 A 가 `Game/` 에 새 경로를 만들고, **옛 호출 제거는 B 가 교체 PR 에서 한다.**
 3. **`Presentation` 타입을 참조하지 않는다.** (asmdef 분리의 전제)
 
 ---
 
-## 1. 현재 코드 상태 (2026-09-26 확인)
+## 1. 현재 코드 상태 (2026-09-30 확인)
 
-### 1-1. M0 에서 끝난 것 (PR #10, `3f84952`)
+### 1-1. 끝난 것
 
-`PlayerProps`/`RoomProps`, `GameEvents` 전 이벤트 `actorNumber` 포함, `IGameRequests` 스텁, `CardInstance`, `LifeState`, HP `int` 통일, 초기 손패 5장, `03-turn.md` 노션 반영.
-
-### 1-2. 계약에서 새로 발견된 구멍
-
-| # | 위치 | 문제 | 처리 |
-| --- | --- | --- | --- |
-| K-1 | `GameEvents.OnDrawn(actorNumber, cardId)` + `DeckPresenter.RPC_BroadcastDrawnCard` | **뽑은 카드 ID 를 `RpcTarget.All` 로 전파** — 남의 손패 내용이 전원에게 보인다 (`CLAUDE.md` 11-6 위반) | 공개 통지(누가 1장 뽑음)와 비공개 통지(내 손에 들어온 `CardInstance`)로 분리 |
-| K-2 | 위와 동일 | 이벤트에 `InstanceId` 가 없다 → UI 가 `RequestPlayCard(cardInstanceId, …)` 를 **호출할 수 없다** | K-1 의 비공개 통지가 `CardInstance` 를 넘긴다 |
-| K-3 | 손패에서 카드가 빠지는 통지 없음 | 사용 · 버림 · 강탈 시 UI 가 어떤 카드를 지울지 모른다 (C-8 의 UI 측) | 비공개 통지 `내 손에서 InstanceId 제거` 추가 (M2 전) |
-| K-4 | `Game/IGameState.cs` (B 가 2026-09-25 추가) | 늦게 켜진 UI 가 현재 턴 주인을 읽는 읽기 전용 계약. 지금은 `CurrentTurnActor` 하나 | **A 리뷰 필요** (A1-1 과 함께). Photon 구현체는 `RoomProps.TurnActor` 를 읽어 돌려주면 된다. 판정에 쓰지 않는다 |
-
-> K-1 · K-2 는 **기능 1 약속 PR** 로 계약만 먼저 바꾼다. 이름 · 시그니처는 A 가 제안하고 B 가 리뷰한다.
-
-### 1-3. `Presentation` 에 들어 있는 로직 (A 가 대체, B 가 제거)
-
-| 현재 위치 (B 소유) | 하고 있는 일 | A 가 만들 대체 |
-| --- | --- | --- |
-| `Presentation/Deck/DeckPresenter` | 드로우 RPC, 마스터 가드 없음(B-2), 덱 전체를 `"RoomDeck"` 로 동기화(B-1), 클라이언트별 초기 배분(B-7) | `GameServer.Draw` + 요청 RPC + `deckCount` |
-| `Presentation/Hand/PlayerHandPresenter` | 자기 `handCount` 를 `SetCustomProperties` 로 **직접** 기록 | 마스터가 `handCount` 기록 |
-| `Presentation/Player/PlayerPresenter.Init` | HP 초기값을 **클라이언트가** 프로퍼티에 기록 | 마스터가 게임 시작 시퀀스에서 기록 |
-| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | M2 에서 `GameServer` 로 이동 |
-
-### 1-4. EditMode 테스트 전제 조건
-
-운영 규칙 4(`GameServer` 는 Photon 없이 EditMode 테스트)는 **지금 구조로는 불가능하다.**
-프로젝트 코드에 asmdef 가 하나도 없고, 테스트 asmdef 는 `Assembly-CSharp` 를 참조할 수 없다.
-
-→ **M1 에서 `GameServer` 계열 순수 C# 코드만 담는 작은 asmdef 를 먼저 만든다.**
-이 코드는 새로 쓰는 것이라 `Presentation` · DOTween 의존이 없어 `refactoring-plan.md` 1-5 의 보류 사유 두 가지에 걸리지 않는다.
-나머지 전체 asmdef 분리는 기능 10.
-
-| 결정 필요 (A) | 제안 |
+| 항목 | 커밋 |
 | --- | --- |
-| asmdef 이름 · 범위 | `Muffin.Game.Server` — `GameServer`, `Deck`, `DiscardPile`, `CardInstance`, `LifeState`. Photon · UnityEngine UI 참조 없음 |
-| `CardInstance` · `LifeState` 이동 | 이 asmdef 로 옮기면 `Assembly-CSharp` 쪽은 자동 참조된다 (asmdef → Assembly-CSharp 방향만 불가) |
+| M0 약속 — `PlayerProps`/`RoomProps`, `GameEvents` 전 이벤트 `actorNumber`, `IGameRequests` 스텁, `CardInstance`, `LifeState`, HP `int`, 초기 손패 5장 | PR #10 `3f84952` |
+| `GameServer`(순수 C#) · `IServerOutbox` · `PunGameServer` — 턴 종료 요청 · 검증 · 거절 | `6b70e99` |
+| 덱을 `GameServer` 권위로 — 인스턴스 ID 부여 · 셔플 · 마스터 일괄 배분 · 드로우 · 버림 더미 회수, 손패 장수 마스터 기록, `"RoomDeck"` 삭제 (B-1 · B-2 · B-7) | PR #40 `921de03` |
+| 뽑은 카드는 주인에게만 · 인스턴스 ID 포함 (K-1 해결, K-2 서버 쪽) | `41673c7` |
+| 드로우 후 턴 종료 (메인 행동 중 드로우 쪽) | `80ea520` |
+| `Muffin.Game.Server` asmdef + EditMode 테스트 환경 (옛 1-4 해결) | `1462ae0` |
+
+### 1-2. 수정 목록 — 급한 순
+
+기존 코드의 버그 · 규약 위반만 모았다. **먼저 만드는 기능에서 풀리는 것이 위.** 따로 고치지 않고, 적힌 기능을 만들 때 함께 고친다. 새 기능은 1-3.
+
+> **0. 먼저 확인** — Unity 컴파일, `TempGameScene` 멀티 테스트로 드로우 → 턴 넘김 (2026-09-30 변경분, 아직 미확인)
+
+| # | 문제 | 위치 | 고치는 기능 |
+| --- | --- | --- | --- |
+| 1 | HP 초기값을 **각 클라이언트가** 기록한다 (`09` 3절 위반). A 가 마스터 기록을 만들고 B 가 옛 코드를 지운다 | `PlayerPresenter.Init` (B 파일) | 1 게임 시작하기 |
+| 2 | 옛 턴 관리자가 요청자를 클라가 보낸 값으로 믿고, 다음 턴 계산이 인자를 무시한다 (C-2). `PunGameServer` 로 교체하면 삭제 — 따로 고치지 않는다 | `TurnManager` (`GameScene` 사용 중) | 1 게임 시작하기 |
+| 3 | 턴 주인이 나가면 턴이 멈춘다 — `PunGameServer` 에 나감 처리가 없다. 멀티 테스트 중 클론을 끄면 막힌다 | `PunGameServer` · `GameServer.Turn.cs` | 2 턴 넘기기 |
+| 4 | 버림 요청이 클라가 보낸 **카드 종류 ID** 를 믿는다 (소유 검증 없음) → 없는 카드가 버림 더미를 거쳐 덱에 섞인다. 버릴 때 인스턴스 ID 재발급. UI 는 인스턴스 ID 를 받지 못한다 (`OnDrawn`, K-2). 버림 요청은 PR #40 의 임시 경로 — 카드 사용 요청으로 대체하면서 삭제 | `GameServer.Deck.cs` `Discard` · `GameEvents` | 4 행동 카드 내기 |
+| 5 | 카드 사용 시 **승인 전에** 손패에서 지운다. 옛 카드 관리자는 검증 없이 전원이 체인을 로컬 실행 | `PlayerHandPresenter` (B) · `CardPlayManager` | 4 행동 카드 내기 |
+| 6 | 버림을 **자신의 턴에만** 받는다 → 강제 버림 · 카운터(남의 턴)가 막힌다 | `GameServer.Deck.cs` `Discard` | 4 행동 카드 내기 · 5 카운터 |
+| 7 | RPC 이름 문자열 리터럴 3곳 · `Invoke("…")`, 반응 시간 4.5초 하드코딩 (기획 5초). 옛 카드 관리자 교체 시 삭제 | `CardPlayManager` | 4 행동 카드 내기 · 5 카운터 |
+| 8 | 뽑을 때 빈 덱 방어 없음 (덱 < 인원 × 5 면 예외). 지금 레시피로는 재현 안 됨 | `GameServer.Deck.cs` `DrawOne` | 덱 구성 확정 때 |
+| 9 | 문서 — Notion 「개발 기획서」에 `05` · `09` 갱신분 미반영, 강퇴 턴 수 "2~3" 이 `03-turn` 에 없음 | Notion · `03-turn.md` | 틈날 때 |
+
+### 1-3. 기능 개발 순서 (로직)
+
+**기능 하나가 한 줄이다.** `development-plan.md` 3절의 기능을 순서대로 만든다. 서버 코어 · Photon 연결 같은 내부 단계와 테스트는 따로 세지 않는다 — 기능을 만드는 과정이고, 테스트는 "끝났다는 기준"이다.
+약속 파일은 그 기능을 만들다 필요해질 때 고친다 (0절 규칙 1). ✅ 끝남 · ⛔ 기획 결정 대기 · (수정 #) 은 1-2 에서 같이 해결되는 것.
+
+| 순서 | 기능 | 남은 일 (로직) | 끝났다는 기준 |
+| --- | --- | --- | --- |
+| **1** | **게임 시작하기** (~ 10/19) | 첫 턴 무작위 · `GameScene` 의 옛 서버를 `PunGameServer` 로 교체(씬은 B, 수정 2). 섞기 · 카드 번호 · 5장 배분 · 체력 100 마스터 기록(수정 1 의 A 쪽) · 손패 원본 `PlayerState` 는 ✅. 전원 로드 대기는 넣지 않음 — 기능 2 의 20초 마감 때 테스트로 결정 (worklog 10/1) | 4클론 — 손패가 서로 다르다 · 체력 100 · 장수 5 · 첫 턴 주인이 같다. EditMode — 셔플 · 시작 순서 (셔플 난수 주입) |
+| 2 | 턴 넘기기 (~ 10/26) | 턴 순서 알림 · 다음 사람 찾기(나간 사람 건너뛰기, 수정 3) · 턴 넘김 한 곳으로(`AdvanceTurn` — **결정 필요**, 의견은 worklog 10/1) · 20초 마감 · 전원 로드 대기 필요 여부 측정. 턴 주인 검사는 ✅. 강퇴 ⛔ | 턴 종료 → 다음 사람 · 남의 턴이면 거절 · 20초 뒤 자동 넘김 · 네 화면 동일 |
+| 3 | 카드 뽑기 (~ 10/21) | 요청 · 덱 재생성 · 뽑으면 턴 종료 ✅. 덱 · 버림 더미가 모두 0장일 때 ⛔ | EditMode — 뽑기 · 소진 재생성 · 두 번 뽑기 거절 |
+| 4 | 행동 카드 내기 (~ 10/30) | 카드 사용 요청(인스턴스 ID) · 검사(내 턴 · 이번 턴 행동 안 함 · **손패에 있음** · 카드 조건 · 대상) · 효과 실행 틀 · 사용 후 턴 종료 · 옛 카드 관리자와 임시 버림 요청 삭제 (수정 4 · 5 · 6 · 7) | 공격 카드(A09)로 대상 체력 감소가 네 화면 동일 · 남의 턴에 내면 거절 · 한 턴에 뽑기와 카드 내기를 둘 다 못 한다 |
+| 5 | 카운터로 막기 (~ 11/4) | 반응 5초(카운터가 오면 재시작) · 검사 · 역순 처리 · 무효(C05) | EditMode — A09 ← C05, 5초 지나 온 카운터 거절 |
+| 6 | 함정 쓰기 (~ 11/9) | 설치 · 검사 · 수동 발동 · T06 | 함정 효과 1개(T06) 경로 검증 |
+| 7 | 체력과 사망 (~ 11/11) | 한 번에 반영 · 처리 번호 · 사망 대기 5초 · 죽은 사람 제외. 나간 사람 처리 ⛔ | EditMode — 동시 사망 · 사망 대기 중 회복 |
+| 8 | 찹츄와 승리 (~ 11/14) | 선언 · 해제 · 판정. 판정 시점 · 방장 이탈 ⛔ | EditMode — 세 가지 결말 |
+| 9 ~ 13 | 카드 59장 · 첫 완성판 · 재접속 · 로그인 · 출시 | `development-plan` 참고 | |
+
+> 손패 원본 보관은 `development-plan` 에 기능 1 로 적혀 있어 1 에 뒀다. 처음 실제로 쓰이는 곳은 기능 4 의 "손패에 있음" 검사다.
+
+> `develop` 에서 아직 안 받은 것: `CLAUDE.md` · `.claude/` 변경, `TempGameScene` 에서 GameServer 오브젝트 제거(`2981199`). 머지할 때 멀티 테스트 씬에 `PunGameServer` 가 남는지 확인한다.
+
+### 1-4. `Presentation` 에 남은 로직 (A 가 대체, B 가 제거)
+
+| 현재 위치 (B 소유) | 하고 있는 일 | 상태 |
+| --- | --- | --- |
+| `Presentation/Deck/DeckPresenter` | 요청 · 이벤트만 | ✅ PR #40 |
+| `Presentation/Hand/PlayerHandPresenter` | `handCount` 직접 기록 | ✅ 마스터가 기록 (PR #40) |
+| `Presentation/Hand/PlayerHandPresenter` | 카드 사용 시 **승인 전에** 손패에서 먼저 지움 | 기능 4 |
+| `Presentation/Player/PlayerPresenter.Init` | HP 초기값을 **클라이언트가** 기록 | 기능 1 시작 순서 |
+| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | 기능 4 · 5 |
 
 ---
 
@@ -80,7 +102,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | 9 카드 59장 | 효과 기본 틀 11/15 |
 | 11 재접속 | 복원 알림 12/13 |
 
-1절의 진단 번호(K- · A- · B- · C-)는 각 기능 작업에서 함께 해결한다. 예: K-1 · K-2(뽑은 카드가 전원에게 보임)는 기능 1 약속, C-2(다음 턴 계산 버그)는 기능 2.
+1-2 수정 목록 · 1-3 개발 순서와 진단 번호(K- · A- · B- · C-)는 각 기능 작업에서 함께 해결한다. 예: K-2 · K-3 은 기능 4, C-2(옛 다음 턴 계산 버그)는 기능 1 의 옛 턴 관리자 교체로 사라진다.
 
 M0 에서 끝난 것: 인터넷 없을 때 씬 동기화 누락(A0-1) ✅ · 연결 끊김 사유 · 타임아웃(A0-2) ✅ · 방 화면 중복 설정 제거(A0-3, B 가 처리) ✅.
 

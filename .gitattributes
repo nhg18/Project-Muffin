@@ -3,6 +3,10 @@
 # 팀원 각자의 core.autocrlf 설정과 무관하게 동일하게 동작한다.
 * text=auto eol=crlf
 
+# === 셸 스크립트 (.claude/hooks) ===========================================
+# CRLF 면 bash 가 '\r' 때문에 실패한다.
+*.sh text eol=lf
+
 # === C# 소스 ==============================================================
 # 인코딩은 UTF-8. 에디터 단의 강제는 .editorconfig(charset)가 담당한다.
 *.cs text eol=crlf working-tree-encoding=UTF-8
