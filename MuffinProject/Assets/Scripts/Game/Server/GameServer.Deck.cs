@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Chapchu.Core;
 using Chapchu.Game.Cards;
 
@@ -112,17 +111,6 @@ namespace Chapchu.Game
             _deck.AddRange(_discardPile);
             _discardPile.Clear();
             Shuffle(_deck);
-        }
-
-        private static readonly Random _shuffleRng = new Random();
-
-        private static void Shuffle(List<CardInstance> list)
-        {
-            for (int i = list.Count - 1; i > 0; i--)
-            {
-                int j = _shuffleRng.Next(i + 1);
-                (list[i], list[j]) = (list[j], list[i]);
-            }
         }
     }
 }

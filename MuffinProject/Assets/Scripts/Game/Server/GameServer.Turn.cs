@@ -1,10 +1,21 @@
-﻿using Chapchu.Core;
+﻿using System.Collections.Generic;
+using Chapchu.Core;
 
 namespace Chapchu.Game
 {
     // GameServer.Turn.cs
     public partial class GameServer
     {
+        // 게임 시작 1회: 참가자 순서를 무작위로 섞어 턴 순서를 정하고 첫 사람에게 턴을 준다 (03-turn.md 6절).
+        private void InitTurnOrder(IReadOnlyList<int> actors)
+        {
+            _turnOrder.Clear();
+            _turnOrder.AddRange(actors);
+            Shuffle(_turnOrder);
+
+            SetTurn(_turnOrder[0]);
+        }
+
         public void EndTurn(int requester)
         {
             if (requester != CurrentTurnActor)

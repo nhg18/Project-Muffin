@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
 using NUnit.Framework;
@@ -24,12 +24,15 @@ namespace Chapchu.Game.Tests
             _server = new GameServer(_outbox);
         }
 
-        // 카드 종류 ID 가 모두 다른 덱으로 A · B 2인 게임을 시작하고 5장씩 나눠 준다. 첫 턴은 A.
-        private void StartTwoPlayerGame(int deckSize)
+        // 카드 종류 ID 가 모두 다른 덱으로 A · B 2인 게임을 시작하고 5장씩 나눠 준다. 첫 턴은 무작위라 (턴 주인, 상대) 를 돌려준다.
+        private (int current, int other) StartTwoPlayerGame(int deckSize)
         {
             _server.StartGame(new[] { A, B });
             _server.InitDeck(Enumerable.Range(100, deckSize).ToArray());
             _server.DealInitialHands(new[] { A, B });
+
+            int current = _server.CurrentTurnActor;
+            return (current, current == A ? B : A);
         }
 
         [Test]
@@ -65,63 +68,63 @@ namespace Chapchu.Game.Tests
         [Test]
         public void Draw_AddsOneCardAndEndsTurn()
         {
-            StartTwoPlayerGame(20);
+            var (current, other) = StartTwoPlayerGame(20);
 
-            _server.Draw(A);
+            _server.Draw(current);
 
-            Assert.AreEqual(6, _outbox.DrawnTo(A).Count);
-            Assert.AreEqual(6, _outbox.LastPlayerState(A, PlayerProps.HandCount));
+            Assert.AreEqual(6, _outbox.DrawnTo(current).Count);
+            Assert.AreEqual(6, _outbox.LastPlayerState(current, PlayerProps.HandCount));
             Assert.AreEqual(9, _outbox.LastRoomState(RoomProps.DeckCount));
-            Assert.AreEqual(B, _server.CurrentTurnActor);
+            Assert.AreEqual(other, _server.CurrentTurnActor);
         }
 
         [Test]
         public void Draw_NotMyTurn_IsRejectedWithoutChange()
         {
-            StartTwoPlayerGame(20);
+            var (current, other) = StartTwoPlayerGame(20);
 
-            _server.Draw(B);
+            _server.Draw(other);
 
-            Assert.AreEqual(1, _outbox.RejectCount(B));
-            Assert.AreEqual(5, _outbox.DrawnTo(B).Count);
-            Assert.AreEqual(A, _server.CurrentTurnActor);
+            Assert.AreEqual(1, _outbox.RejectCount(other));
+            Assert.AreEqual(5, _outbox.DrawnTo(other).Count);
+            Assert.AreEqual(current, _server.CurrentTurnActor);
         }
 
         [Test]
         public void Discard_CardInHand_LowersHandCount()
         {
-            StartTwoPlayerGame(20);
-            int cardId = _outbox.DrawnTo(A)[0].CardId;
+            var (current, _) = StartTwoPlayerGame(20);
+            int cardId = _outbox.DrawnTo(current)[0].CardId;
 
-            _server.Discard(A, cardId);
+            _server.Discard(current, cardId);
 
-            Assert.AreEqual(0, _outbox.RejectCount(A));
-            Assert.AreEqual(4, _outbox.LastPlayerState(A, PlayerProps.HandCount));
+            Assert.AreEqual(0, _outbox.RejectCount(current));
+            Assert.AreEqual(4, _outbox.LastPlayerState(current, PlayerProps.HandCount));
         }
 
         [Test]
         public void Discard_CardNotInHand_IsRejectedWithoutChange()
         {
-            StartTwoPlayerGame(20);
-            int othersCardId = _outbox.DrawnTo(B)[0].CardId; // 종류 ID 가 모두 달라 A 손패에는 없다
+            var (current, other) = StartTwoPlayerGame(20);
+            int othersCardId = _outbox.DrawnTo(other)[0].CardId; // 종류 ID 가 모두 달라 내 손패에는 없다
 
-            _server.Discard(A, othersCardId);
+            _server.Discard(current, othersCardId);
 
-            Assert.AreEqual(1, _outbox.RejectCount(A));
-            Assert.AreEqual(5, _outbox.LastPlayerState(A, PlayerProps.HandCount));
+            Assert.AreEqual(1, _outbox.RejectCount(current));
+            Assert.AreEqual(5, _outbox.LastPlayerState(current, PlayerProps.HandCount));
         }
 
         [Test]
         public void Discard_KeepsInstanceId_WhenRefilledIntoDeck()
         {
-            StartTwoPlayerGame(11); // 5 + 5 배분 → 덱 1장
-            DrawnCard discarded = _outbox.DrawnTo(A)[0];
+            var (current, other) = StartTwoPlayerGame(11); // 5 + 5 배분 → 덱 1장
+            DrawnCard discarded = _outbox.DrawnTo(current)[0];
 
-            _server.Discard(A, discarded.CardId);
-            _server.Draw(A); // 덱 마지막 1장 → 턴은 B
-            _server.Draw(B); // 덱 0장 → 버림 더미(버린 1장) 회수 → B 가 뽑는다
+            _server.Discard(current, discarded.CardId);
+            _server.Draw(current); // 덱 마지막 1장 → 턴은 상대
+            _server.Draw(other); // 덱 0장 → 버림 더미(버린 1장) 회수 → 상대가 뽑는다
 
-            DrawnCard refilled = _outbox.DrawnTo(B).Last();
+            DrawnCard refilled = _outbox.DrawnTo(other).Last();
             Assert.AreEqual(discarded.InstanceId, refilled.InstanceId);
             Assert.AreEqual(discarded.CardId, refilled.CardId);
         }
