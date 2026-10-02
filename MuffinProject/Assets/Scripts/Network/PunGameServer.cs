@@ -104,6 +104,13 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
             _server.Discard(info.Sender.ActorNumber, cardId);
         }
+
+        // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.RemoveFromTurnOrder(otherPlayer.ActorNumber);
+        }
         #endregion
 
         #region IServerOutbox (방장 → 클라). UI 가 부르지 못하게 명시적 구현.

@@ -26,14 +26,25 @@ namespace Chapchu.Game
 
             SetTurn(GetNextActor(CurrentTurnActor));
         }
-        
+
+        // 턴 순서에서 뺀다. 턴 주인이었으면 다음 사람에게 넘긴다 (03-turn.md 7절).
+        public void RemoveFromTurnOrder(int actor)
+        {
+            if (!_turnOrder.Contains(actor)) return;
+
+            if (actor == CurrentTurnActor)
+                SetTurn(GetNextActor(actor)); // 빼기 전에 다음 사람을 구한다
+
+            _turnOrder.Remove(actor);
+        }
+
         private void SetTurn(int actorNumber)
         {
             CurrentTurnActor = actorNumber;
             _outbox.SetRoomState(RoomProps.TurnActor, actorNumber);
         }
 
-        // TODO: 살아 있는 사람만 · 나간 사람 건너뛰기 (기능 2 · 7).
+        // TODO: 살아 있는 사람만 (기능 7).
         private int GetNextActor(int currentActor)
         {
             int index = _turnOrder.IndexOf(currentActor);
