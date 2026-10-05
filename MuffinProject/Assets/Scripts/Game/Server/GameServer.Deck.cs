@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Chapchu.Core;
 using Chapchu.Game.Cards;
 
@@ -33,6 +34,10 @@ namespace Chapchu.Game
         /// <summary>게임 시작 1회: 모든 플레이어에게 확정 수치(5장)만큼 나눠 준다. 턴 검증 없이 마스터가 바로 실행한다.</summary>
         public void DealInitialHands(IReadOnlyList<int> actors)
         {
+            // 배분 중에 덱이 바닥나면 DrawOne 이 터진다. 덱 레시피가 잘못된 개발 오류라 바로 알린다.
+            if (_deck.Count < actors.Count * InitialHandCount)
+                throw new InvalidOperationException($"덱 {_deck.Count}장으로는 {actors.Count}명에게 {InitialHandCount}장씩 나눠 줄 수 없다. 덱 레시피를 늘린다.");
+
             foreach (int actor in actors)
             {
                 for (int i = 0; i < InitialHandCount; i++)

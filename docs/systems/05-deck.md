@@ -143,7 +143,7 @@
 | 항목 | 상태 |
 | --- | --- |
 | 덱 원본 | 마스터 (`GameServer.Deck.cs`, 순수 C#). Photon 전송은 `PunGameServer` — `TempGameScene` 에만 배치 |
-| `DeckRecipe`로 덱 초기화 · 인스턴스 ID 부여 | 구현됨 (`InitDeck`). 덱 구성은 미정이라 더미 레시피 |
+| `DeckRecipe`로 덱 초기화 · 인스턴스 ID 부여 | 구현됨 (`InitDeck`). 덱 구성은 미정이라 **임시 레시피(가정)** `NewDeckRecipe` — 행동 카드 ID 1 · ID 4 각 20장 = 40장 (2026-10-06). 덱이 인원 × 5장보다 적으면 시작 때 예외로 알린다 |
 | 셔플 | 구현됨 (Fisher–Yates) |
 | 초기 배분 | 구현됨 — 마스터가 `DealInitialHands` 로 전원에게 5장 일괄 배분 |
 | 드로우 | 구현됨 — 요청 → 턴 검증 → 덱 맨 위 1장 → **드로우 후 턴 종료** (03 3절). 메인 행동 중 카드 사용 쪽 제한은 기능 4 |

@@ -14,36 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   deckName: "\uAE30\uBCF8\uB371"
   cardIDs:
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
-  - ID: 4
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
+  - ID: 1
   - ID: 4
   - ID: 4
   - ID: 4

@@ -61,6 +61,9 @@ namespace Chapchu.Network
             _server.StartGame(actors);
             _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
             _server.DealInitialHands(actors);
+
+            // 멀티 확인용: 방장 콘솔에 시작 결과를 남긴다. 각 클라 결과는 ServerDebugLog 가 찍는다.
+            Debug.Log($"[PunGameServer] 게임 시작 — 참가자 {string.Join(", ", actors)} · 첫 턴 {_server.CurrentTurnActor} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
         }
 
         #region IGameRequests (UI → 방장)
