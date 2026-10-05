@@ -160,6 +160,9 @@ namespace Chapchu.Network
 
             if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
                 GameEvents.RaiseDeckCountChanged((int)deckCount);
+
+            if (changedProps.TryGetValue(RoomProps.DiscardCount, out object discardCount))
+                GameEvents.RaiseDiscardCountChanged((int)discardCount);
         }
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
