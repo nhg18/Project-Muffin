@@ -100,16 +100,18 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 
 ---
 
-## 4. 현재 상태 (2026-09-26)
+## 4. 현재 상태 (2026-10-06)
 
 | 항목 | 상태 |
 | --- | --- |
 | 턴 종료 요청 · 검증 · 거절 | 구현 |
-| 게임 시작 | 최소 — 접속 순서대로 첫 사람부터. 무작위 순서 · 덱 · 손패 · HP 는 기능 1-4 |
-| 드로우 · 카드 내기 · 함정 · 찹츄 선언 | 빈 메서드 |
-| 다음 턴 | 시작 때 순서 기준. 생존자만 · 나간 사람 건너뛰기 없음 |
+| 게임 시작 | 턴 순서 무작위 · 덱 섞기 · 카드 번호 · 5장씩 배분 · 체력 100 (방장 기록). 손패 · 체력 원본은 `PlayerState` |
+| 드로우 | 구현 — 내 턴 · 덱 재생성 · 뽑으면 턴 종료. 뽑은 카드는 주인에게만 |
+| 버림 | 임시 경로 — 손패에 있는지 검증 (기능 4 카드 사용 요청으로 대체) |
+| 카드 내기 · 함정 · 찹츄 선언 | 빈 메서드 |
+| 다음 턴 | 시작 때 섞은 순서 기준. 나간 사람은 순서에서 빠지고, 턴 주인이었으면 다음 사람에게 넘긴다 (`RemoveFromTurnOrder`). 생존자만 고르기는 기능 7 |
 | 방장 교체 | 새 방장의 `GameServer` 는 비어 있다 (`09-network` 9절 **미정**) |
-| 씬 배치 | `Scenes/TempGameScene` 의 `GameServer` 오브젝트 (`PhotonView` + `PunGameServer`). `GameScene` 은 아직 옛 배치 |
+| 씬 배치 | `Scenes/TempGameScene` 의 `GameServer` 오브젝트 (`PhotonView` 씬 ID 1 + `PunGameServer` + `ServerDebugLog`). `DeckPresenter` · `PlayerHandPresenter` · `TurnPresenter` 의 `server` 가 여기 연결. `GameScene` 은 아직 옛 배치 |
 
 ---
 
@@ -125,3 +127,8 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
    * 비공개 값(뽑은 카드 · 거절)은 **요청한 쪽에만** 와야 한다.
 
 UI 가 아직 없는 요청은 UI 담당이 뷰를 붙일 때 같이 확인한다. 그 전에 UI 는 `FakeGameServer` 로 혼자 작업한다.
+
+**테스트 방식** (2026-10-06): Test Runner(EditMode) 는 쓰지 않는다. 로직은 이 멀티 실행으로 함께 확인한다.
+* `ServerDebugLog` 가 서버 이벤트를 `[Server:번호]` 로그로 찍는다. D = 뽑기. 키는 만든 기능의 행동만 추가한다.
+* 사용자 입력(컨트롤러) 영역이 아직 없으니 확인용 로그는 `Start` 에서 찍는다.
+* 알려진 문제: 카드를 드롭 영역에 놓으면 `MyTurnCondition` 이 옛 `TurnManager.Instance`(이 씬에 없음)를 읽어 NRE — `plan-a-logic.md` 수정 10.

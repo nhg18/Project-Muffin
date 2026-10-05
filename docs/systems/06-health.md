@@ -187,7 +187,7 @@ Alive → (HP 0) → DeathPending → 사망 관련 카드 연쇄 처리 →  HP
 
 | 항목 | 상태 |
 | --- | --- |
-| 초기 HP 100 | `GameStatus.MaxHp = 100` (int). 단, 프로퍼티 초기 기록은 **모든 클라이언트가 모든 좌석의 HP 를** `PlayerPresenter.Init` 으로 기록한다 (마스터 일괄 초기화 아님) |
+| 초기 HP 100 | 방장이 `GameServer.StartGame` 에서 전원 100 을 기록(`GameServer.MaxHp`, 원본은 `PlayerState`) → `PunGameServer` 가 `GameEvents.OnHpChanged` (2026-10-01). 단, 옛 `PlayerPresenter.Init` 이 **각 클라이언트에서 모든 좌석 HP 를** 다시 기록하는 코드가 남아 있다 (UI 쪽 제거 대기, `plan-a-logic.md` 수정 1) |
 | HP UI 텍스트 / 게이지 | UI 컴포넌트는 있으나 **갱신되지 않음** |
 | `DamageEffect` 클래스 | 마스터에서 `StatBuffer.Get/Set` 으로 HP 를 빼고 `Commit` 이 프로퍼티에 기록한다 |
 | **피해 적용** | 부분 — 단순 차감만. 감소 · 무효 · 전환을 모은 뒤 1회 반영(4절), 처리 ID, 다중 대상 일괄 계산은 없음 |

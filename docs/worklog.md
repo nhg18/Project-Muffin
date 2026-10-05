@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-10-06 · develop 통합 (#48 · #47) · 테스트 방식 변경 · 카드 드롭 NRE
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic` → `develop` (PR #48), `HeeGeon` → `develop` (PR #47) |
+| 범위 | `TempGameScene` 충돌 정리, 문서 (CLAUDE.md · development-plan · plan-a-logic · gameserver-guide · 03 · 04 · 06) |
+
+### 한 것
+
+- PR #48 logic → develop 머지 (충돌 없음) — PlayerState · 체력 100 · 첫 턴 무작위 · 턴 주인 이탈 · 서버 asmdef.
+- HeeGeon 에 develop 머지 → `TempGameScene` 충돌 정리 (`26133b8`) → PR #47 머지 (`6c70ac1`). `logic` 을 develop 으로 fast-forward.
+  - 서버 오브젝트가 양쪽에 따로 있었다(둘 다 `sceneViewId: 1`). HeeGeon 쪽 하나만 남기고 `GameSever` → `GameServer`, logic 쪽 `ServerDebugLog` 를 붙임.
+  - `DeckPresenter` · `PlayerHandPresenter` 의 `server` 가 `PhotonView` 를 가리키던 것 → `PunGameServer`. 비어 있던 `TurnPresenter.server` 도 연결. **Unity 에서 아직 안 열어 봄.**
+
+### 결정
+
+1. **(사용자) 테스트는 멀티 실행으로 한다. Test Runner(EditMode) 는 쓰지 않는다.** 로직은 멀티와 엮여 있어 함께 확인한다. 사용자 입력(컨트롤러) 영역이 아직 없으니 확인용 로그는 `Start` 에서 찍는다. CLAUDE.md 12절 · development-plan · plan-a-logic · gameserver-guide 5절에 반영.
+2. **(사용자) 서버 asmdef 는 유지** — 컴파일 속도. `Assets/Tests/EditMode/GameServerTests.cs` 는 그대로 둠(실행하지 않음).
+3. (사용자) 씬 · 프리팹을 `ui` 에서만 고친다는 규칙은 사용자가 정한 규칙이 아니다 — 머지 순서 · 충돌 해결 담당의 근거로 쓰지 않는다. 문서(CLAUDE.md 14절 · development-plan 7절 1 · git-workflow skill)와 hook 은 아직 그대로 — 정리 여부 미정.
+
+### 발견
+
+- **카드 드롭 NRE** — `TempGameScene` 에서 카드를 드롭 영역에 놓으면 `CardView.OnPointerUp` → `CardPresenter.LocalConditionCheck` → `MyTurnCondition.CheckCondition:14` 에서 `TurnManager.Instance` null. `TurnManager` 는 이 씬에 없다. `MyTurnCondition` 은 08-17 노희건 프로토타입 코드(`a61cbe0`), #47 의 `CardDropArea` 로 드롭 경로가 처음 실행되며 드러남. → `plan-a-logic.md` 수정 10 (기능 4).
+
+### 다음 할 일
+
+- [ ] Unity 확인: develop 컴파일 · `TempGameScene` 참조(Missing 없음) · 4클론으로 손패 5장 · 체력 100 · 드로우 → 턴 넘김 · 클론 종료 시 턴 이동 (Console 로그)
+- [ ] 수정 10 (`MyTurnCondition` → `RoomProps.TurnActor`) 처리 방법 결정 — 지금 고칠지, 기능 4 에서 방장 검사와 함께 할지
+- [ ] 씬 규칙 문서 · hook 정리 여부
+- [ ] `AdvanceTurn` 결정 (기능 2 전)
+
+---
+
 ## 2026-10-01 · 기능 1 진행 — PlayerState · 체력 기록 · 테스트 환경
 
 | 항목 | 값 |

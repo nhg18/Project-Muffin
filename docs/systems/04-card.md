@@ -258,7 +258,7 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 항목 | 상태 |
 | --- | --- |
 | 카드 데이터 (`CardData` ScriptableObject) | 구현됨 (id / 이름 / 이미지 / 타입 / 대상 / 조건 / 효과) |
-| 카드 조건 (`CardCondition`) | 골격만. `MyTurnCondition`(에셋 `IsMyTurn`) 1개, `ActionCardPlayedCondition`은 항상 통과 |
+| 카드 조건 (`CardCondition`) | 골격만. `MyTurnCondition`(에셋 `IsMyTurn`) 1개, `ActionCardPlayedCondition`은 항상 통과. ⚠ `MyTurnCondition` 은 옛 `TurnManager.Instance` 를 읽어 `TempGameScene`(TurnManager 없음)에서 카드 드롭 시 NRE (2026-10-06, `plan-a-logic.md` 수정 10). 조건 검사는 클라이언트 미리보기뿐 — 방장 검사 없음 |
 | 카드 효과 (`CardEffect`) | 골격만. `DamageEffect` 1종 — 마스터에서 `StatBuffer` 로 HP 를 계산해 프로퍼티에 기록한다. 감소 · 무효 · 전환 계산(06 §4)은 없음 |
 | 체인 등록 / 역순 처리 | 부분 구현 (`CardPlayManager`). **클라이언트마다 개별 실행** |
 | 반응 시간 | 하드코딩 4.5초 `Invoke`. 기획 5초와 불일치, 갱신 로직 없음 |

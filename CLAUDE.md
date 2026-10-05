@@ -158,6 +158,7 @@
 * `Awake` → 자기 자신 초기화, `Start` → 다른 오브젝트 참조, `OnEnable` → 이벤트 구독.
   `OnEnable`에서 다른 컴포넌트의 `Instance`에 접근하지 않는다(실행 순서 미보장).
 * 싱글톤은 `Core/Singleton.cs`, `Core/SingletonPun.cs`의 기존 클래스를 쓴다. 클래스마다 싱글톤을 새로 구현하지 않는다.
+* **테스트는 멀티 실행으로 한다.** Test Runner(EditMode · PlayMode) 테스트는 쓰지 않는다 — 로직은 멀티와 엮여 있어 함께 확인한다. `DebugLobbyScene` → `TempGameScene` 을 ParrelSync 클론과 돌리고 Console 로그로 본다. 아직 사용자 입력(컨트롤러) 영역이 없으므로 확인용 로그는 `Start` 에서 찍는다. 서버 어셈블리(`Muffin.Game.Server` asmdef)는 컴파일 속도 때문에 유지한다.
 * RPC 이름은 반드시 `nameof(RPC_Xxx)` 로 넘긴다. 문자열 리터럴 금지.
 * `async void` 금지(`Awake`/`OnClick` 핸들러 포함). 코루틴 또는 `async Task` + 취소 처리.
 

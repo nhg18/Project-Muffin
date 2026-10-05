@@ -72,8 +72,8 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 2. 이 배열을 모든 클라이언트에 1회 브로드캐스트한다. (제안)
 3. 이후 턴 이동은 이 배열에서 다음 **생존** 플레이어를 찾는다. (확정)
 
-> ⚠ 현재 코드(`TurnManager.StartFirstTurn`)는 `PhotonNetwork.PlayerList[0]`을 고정으로 첫 턴에 지정한다. 무작위가 아니다.
-> 또한 `GetNextActor`는 `PhotonNetwork.PlayerList`(현재 접속자)를 매번 순회해 순서를 계산하므로 이탈이 발생하면 순서가 흔들린다.
+> 현재 코드 (2026-10-06): 새 서버 `GameServer.InitTurnOrder` 는 시작 때 참가자를 섞어 순서 배열을 만든다 (1 · 3 구현, 2 브로드캐스트는 없음). `TempGameScene` 기준.
+> ⚠ 옛 `TurnManager.StartFirstTurn`(`GameScene`)은 여전히 `PhotonNetwork.PlayerList[0]` 고정이고, `GetNextActor` 가 현재 접속자를 매번 순회해 이탈 시 순서가 흔들린다. `GameScene` 을 `PunGameServer` 로 교체하면 사라진다.
 
 ---
 
@@ -130,11 +130,11 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 
 | 항목 | 상태 |
 | --- | --- |
-| 턴 주인 Room Property 저장/동기화 | 구현됨 (`TurnManager`) |
-| 턴 종료 요청 → 마스터 검증 | 구현됨 (`TurnManager`) — 단, 요청자를 `info.Sender` 가 아니라 클라이언트가 보낸 `requesterActor` 로 믿는다 (09 10절 위반) |
-| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `FakeGameServer` (에디터 1개). `TurnManager` 는 아직 이 계약을 구현하지 않는다 |
-| 이탈 시 턴 이동 | 구현됨 (단, `GetNextActor` 인자 무시 버그 있음) |
-| 첫 턴 무작위 결정 | **미구현** (`PlayerList[0]` 고정) |
+| 턴 주인 Room Property 저장/동기화 | 구현됨 — `GameServer.SetTurn` → `RoomProps.TurnActor` (`TempGameScene`). 옛 `TurnManager`(`GameScene`)도 같은 키 |
+| 턴 종료 요청 → 마스터 검증 | 구현됨 — `GameServer.EndTurn`, 요청자는 `info.Sender`. 옛 `TurnManager` 는 클라이언트가 보낸 `requesterActor` 를 믿는다 (09 10절 위반, 교체 시 삭제) |
+| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `PunGameServer` (`TempGameScene`, 2026-10-06 연결. 턴 종료 버튼 영역은 비활성). 옛 `TurnManager` 는 이 계약을 구현하지 않는다 |
+| 이탈 시 턴 이동 | 구현됨 — `GameServer.RemoveFromTurnOrder`: 나간 사람을 순서에서 빼고, 턴 주인이었으면 다음 사람에게. 옛 `TurnManager` 는 `GetNextActor` 인자 무시 버그 |
+| 첫 턴 무작위 결정 | 구현됨 — `GameServer.InitTurnOrder` 셔플 (2026-10-02). 옛 `TurnManager` 는 `PlayerList[0]` 고정 |
 | 턴 제한 시간 / 타이머 | **미구현** |
 | 시간 초과 턴 종료 | **미구현** |
 | 연속 미제출 강제 퇴장 | **미구현** |
