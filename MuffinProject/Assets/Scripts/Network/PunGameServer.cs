@@ -188,7 +188,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
-            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
+            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardInstanceId, cardId);
         }
         #endregion
     }

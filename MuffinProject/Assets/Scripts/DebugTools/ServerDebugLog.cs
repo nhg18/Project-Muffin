@@ -64,10 +64,10 @@ namespace Chapchu.DebugTools
         private void OnDiscardCountChanged(int count) => Log($"버림 더미: {count}");
         private void OnRequestRejected(int actor, string reason) => Log($"거절 {actor}: {reason}");
 
-        private void OnDrawn(int actor, int cardId)
+        private void OnDrawn(int actor, int cardInstanceId, int cardId)
         {
             // 비공개 — 주인에게만 와야 한다. 남의 것이 찍히면 규칙 위반.
-            Log($"뽑은 카드 {actor}: card={cardId}{(actor == Me ? "" : "  ⚠ 남의 손패 내용이 왔다")}");
+            Log($"뽑은 카드 {actor}: #{cardInstanceId} card={cardId}{(actor == Me ? "" : "  ⚠ 남의 손패 내용이 왔다")}");
         }
 
         private void Log(string msg) => Debug.Log($"[Server:{Me}] {msg}");

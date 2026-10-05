@@ -29,7 +29,7 @@ namespace Chapchu.DebugTools
         public void RequestDraw()
         {
             Debug.Log("[FakeGameServer] Request Draw");
-            GameEvents.RaiseDrawn(CurrentTurnActor, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
+            GameEvents.RaiseDrawn(CurrentTurnActor, 0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
         }
 
         public void RequestDiscard(int cardId)

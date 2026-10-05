@@ -51,7 +51,7 @@ namespace Chapchu.Presentation
             GameEvents.OnCardPlayed -= DiscardCard;
         }
 
-        private void StartDrawEvent(int actorNumber, int cardid)
+        private void StartDrawEvent(int actorNumber, int cardInstanceId, int cardid)
         {
             if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
