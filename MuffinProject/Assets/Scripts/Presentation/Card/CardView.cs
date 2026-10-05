@@ -218,7 +218,7 @@ namespace Chapchu.Presentation
             isDragging = false;
 
             // 드래그 도중 잠금이 걸렸으면(다른 카드가 먼저 드롭됨) 드롭하지 않고 되돌린다.
-            if (CanInteract && isDropArea(transform.position) && cardPresenter.LocalConditionCheck())
+            if (CanInteract && isDropArea(transform.position))
             {
                 cardPresenter.OnCardDropped();
             }
