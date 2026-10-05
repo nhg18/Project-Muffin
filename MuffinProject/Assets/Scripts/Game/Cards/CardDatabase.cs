@@ -13,6 +13,8 @@ namespace Chapchu.Game.Cards
         [SerializeField] private List<CardData> CardAssets;
         private Dictionary<int, CardData> cardDict;
 
+        public IReadOnlyList<CardData> Cards => CardAssets;
+
         public void Initialize()
         {
             Instance = this;

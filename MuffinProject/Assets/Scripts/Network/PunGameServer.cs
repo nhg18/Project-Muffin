@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Chapchu.Core;
 using Chapchu.Game;
+using Chapchu.Game.Cards;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -37,6 +38,9 @@ namespace Chapchu.Network
         // 덱 구성은 미정이라 더미 레시피를 그대로 쓴다 (05-deck.md 2절 · 8절).
         [SerializeField] private DeckRecipe startingDeckRecipe;
 
+        // 카드 규칙의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘긴다.
+        [SerializeField] private CardDatabase cardDatabase;
+
         public int CurrentTurnActor
         {
             get
@@ -59,6 +63,7 @@ namespace Chapchu.Network
 
             int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
             _server.StartGame(actors);
+            _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
             _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
             _server.DealInitialHands(actors);
 
