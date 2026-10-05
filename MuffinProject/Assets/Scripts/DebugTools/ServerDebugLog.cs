@@ -1,14 +1,17 @@
 ﻿using System.Collections.Generic;
+using Chapchu.Core;
 using Chapchu.Game;
+using Chapchu.Network;
 using Photon.Pun;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Chapchu.DebugTools
 {
     /// <summary>
     /// 멀티 테스트용 콘솔 드라이버. 화면(Presenter) 없이 GameEvents 를 전부 로그로 찍고, 키로 요청을 보낸다.
     /// TempGameScene 의 PunGameServer 오브젝트에 같이 붙인다. 규칙 판정은 하지 않는다 — 로그와 요청뿐.
-    /// 키는 지금까지 만든 게임 흐름의 행동만 둔다 — D = 뽑기, E = 턴 종료, P = 손패 첫 카드를 다른 사람 1명에게. 기능이 생기면 그 행동만 추가한다.
+    /// 키는 지금까지 만든 게임 흐름의 행동만 둔다 — D = 뽑기, E = 턴 종료, P = 손패 첫 카드를 다른 사람 1명에게, Esc = 나가기(들어온 로비로). 기능이 생기면 그 행동만 추가한다.
     /// </summary>
     public class ServerDebugLog : MonoBehaviour
     {
@@ -28,6 +31,7 @@ namespace Chapchu.DebugTools
 
         private void OnEnable()
         {
+            RoomEvents.OnLeftRoom += HandleLeftRoom;
             GameEvents.OnTurnChanged += OnTurnChanged;
             GameEvents.OnTurnDeadlineChanged += OnTurnDeadlineChanged;
             GameEvents.OnDrawn += OnDrawn;
@@ -41,6 +45,7 @@ namespace Chapchu.DebugTools
 
         private void OnDisable()
         {
+            RoomEvents.OnLeftRoom -= HandleLeftRoom;
             GameEvents.OnTurnChanged -= OnTurnChanged;
             GameEvents.OnTurnDeadlineChanged -= OnTurnDeadlineChanged;
             GameEvents.OnDrawn -= OnDrawn;
@@ -54,6 +59,9 @@ namespace Chapchu.DebugTools
 
         private void Update()
         {
+            // Esc = 나가기: 방을 나가고, 들어온 로비(Lobby / DebugLobby)로 돌아간다
+            if (Input.GetKeyDown(KeyCode.Escape)) { Log("요청: 나가기"); NetworkManager.Instance.LeaveRoom(); }
+
             if (_requests == null) return;
 
             if (Input.GetKeyDown(KeyCode.D)) { Log("요청: 뽑기"); _requests.RequestDraw(); }
@@ -70,6 +78,9 @@ namespace Chapchu.DebugTools
             Log($"요청: 카드 #{_myHand[0]} → {target}");
             _requests.RequestPlayCard(_myHand[0], new[] { target });
         }
+
+        // RoomPresenter 의 나가기와 같은 흐름 — 들어온 곳(SceneFlow.ReturnSceneAfterRoom)으로 돌아간다
+        private void HandleLeftRoom() => SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
 
         private void OnTurnChanged(int actor) => Log($"턴 → {actor}{(actor == Me ? " (내 턴)" : "")}");
         private void OnTurnDeadlineChanged(double deadline) => Log($"턴 마감 {deadline - PhotonNetwork.Time:F1}초 뒤");
