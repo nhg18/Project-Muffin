@@ -49,7 +49,7 @@ namespace Chapchu.Network
 
         private void Awake()
         {
-            _server = new GameServer(this);
+            _server = new GameServer(this, () => PhotonNetwork.Time);
         }
 
         // 이 씬은 방에서 LoadLevel 로 넘어오므로(Room → Game / TempGameScene) 방장이 바로 시작한다.
@@ -64,6 +64,13 @@ namespace Chapchu.Network
 
             // 멀티 확인용: 방장 콘솔에 시작 결과를 남긴다. 각 클라 결과는 ServerDebugLog 가 찍는다.
             Debug.Log($"[PunGameServer] 게임 시작 — 참가자 {string.Join(", ", actors)} · 첫 턴 {_server.CurrentTurnActor} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
+        }
+
+        // 턴 마감 판정은 방장만 한다 (09-network.md 8절).
+        private void Update()
+        {
+            if (PhotonNetwork.IsMasterClient)
+                _server.Tick();
         }
 
         #region IGameRequests (UI → 방장)
@@ -147,6 +154,9 @@ namespace Chapchu.Network
         {
             if (changedProps.TryGetValue(RoomProps.TurnActor, out object actor))
                 GameEvents.RaiseTurnChanged((int)actor);
+
+            if (changedProps.TryGetValue(RoomProps.TurnDeadline, out object deadline))
+                GameEvents.RaiseTurnDeadlineChanged((double)deadline);
 
             if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
                 GameEvents.RaiseDeckCountChanged((int)deckCount);

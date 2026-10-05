@@ -8,5 +8,6 @@
     {
         public const string TurnActor = "turnActor";
         public const string DeckCount = "deckCount";
+        public const string TurnDeadline = "turnDeadline"; // 턴 마감 서버 시각(PhotonNetwork.Time, 초). UI 는 남은 시간을 로컬에서 계산한다
     }
 }

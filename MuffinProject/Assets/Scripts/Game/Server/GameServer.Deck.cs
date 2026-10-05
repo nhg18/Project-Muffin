@@ -68,7 +68,7 @@ namespace Chapchu.Game
             DrawOne(requester);
 
             // 드로우는 메인 행동 — 끝나면 턴 종료 (03-turn.md 3절). 카드 효과 드로우는 DrawOne 을 직접 써서 턴을 끝내지 않는다.
-            SetTurn(GetNextActor(CurrentTurnActor));
+            AdvanceTurn();
         }
 
         /// <summary>카드 사용 · 버림으로 손패에서 카드 1장이 빠졌음을 알린다. 카드 효과 자체는 다루지 않는다 — 그건 CardPlayManager 가 별도로 처리한다.</summary>

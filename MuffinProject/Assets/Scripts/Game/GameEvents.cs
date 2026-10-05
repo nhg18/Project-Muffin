@@ -11,6 +11,7 @@ namespace Chapchu.Game
     {
         public static event Action<int[]> OnGameStarted; // playerActors
         public static event Action<int> OnTurnChanged;                 // actorNumber
+        public static event Action<double> OnTurnDeadlineChanged;      // 턴 마감 서버 시각(PhotonNetwork.Time). 남은 시간 = 마감 - 현재
         public static event Action<int, int> OnDrawn;                  // actorNumber, cardId
         public static event Action<int, int> OnHpChanged;              // actorNumber, hp
         public static event Action<int, int> OnHandCountChanged;       // actorNumber, handCount
@@ -26,6 +27,7 @@ namespace Chapchu.Game
 
         public static void RaiseOnGameStarted(int [] playerActors) => OnGameStarted?.Invoke(playerActors);
         public static void RaiseTurnChanged(int actorNumber) => OnTurnChanged?.Invoke(actorNumber);
+        public static void RaiseTurnDeadlineChanged(double deadline) => OnTurnDeadlineChanged?.Invoke(deadline);
         public static void RaiseDrawn(int actorNumber, int cardId) => OnDrawn?.Invoke(actorNumber, cardId);
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);
         public static void RaiseHandCountChanged(int actorNumber, int handCount) => OnHandCountChanged?.Invoke(actorNumber, handCount);
