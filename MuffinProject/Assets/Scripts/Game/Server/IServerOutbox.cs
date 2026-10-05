@@ -17,5 +17,8 @@
 
         /// <summary>드로우한 카드 내용. 요청자(카드 주인)에게만 보낸다.</summary>
         void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
+
+        /// <summary>승인된 카드 사용 (누가 · 무엇을 · 누구에게). 전원에게 보낸다.</summary>
+        void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers);
     }
 }
