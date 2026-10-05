@@ -10,7 +10,7 @@ namespace Chapchu.Presentation
     /// 내 손패 모델 · 뷰를 잇는다. 카드는 드로우 순서대로 쌓인다(정렬 없음, 05-deck.md 6절).
     /// 손패 장수(PlayerProps.HandCount)는 마스터(GameServer)만 기록한다 — 여기서는 더 이상 직접 쓰지 않는다.
     /// 카드 사용 · 버림도 서버에 <see cref="IGameRequests.RequestDiscard"/> 로 알려 장수만 마스터 권위로 갱신시킨다.
-    /// 카드 효과(대상 · 체인 · 카운터) 자체는 CardPlayManager 가 별도로 처리한다 — 범위 밖.
+    /// 카드 효과(대상 · 체인 · 카운터) 판정은 서버(GameServer)가 한다 — 범위 밖.
     /// </summary>
     public class PlayerHandPresenter : MonoBehaviour
     {

@@ -54,10 +54,10 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | 4 | 버림 요청이 클라가 보낸 **카드 종류 ID** 를 믿는다 (소유 검증 없음) → 없는 카드가 버림 더미를 거쳐 덱에 섞인다. 버릴 때 인스턴스 ID 재발급. UI 는 인스턴스 ID 를 받지 못한다 (`OnDrawn`, K-2). 버림 요청은 PR #40 의 임시 경로 — 카드 사용 요청으로 대체하면서 삭제 | `GameServer.Deck.cs` `Discard` · `GameEvents` | 4 행동 카드 내기 |
 | 5 | 카드 사용 시 **승인 전에** 손패에서 지운다. 옛 카드 관리자는 검증 없이 전원이 체인을 로컬 실행 | `PlayerHandPresenter` (B) · `CardPlayManager` | 4 행동 카드 내기 |
 | 6 | 버림을 **자신의 턴에만** 받는다 → 강제 버림 · 카운터(남의 턴)가 막힌다 | `GameServer.Deck.cs` `Discard` | 4 행동 카드 내기 · 5 카운터 |
-| 7 | RPC 이름 문자열 리터럴 3곳 · `Invoke("…")`, 반응 시간 4.5초 하드코딩 (기획 5초). 옛 카드 관리자 교체 시 삭제 | `CardPlayManager` | 4 행동 카드 내기 · 5 카운터 |
+| ~~7~~ | ✅ `CardPlayManager` 삭제로 해결 (10/6, PR #52) — RPC 이름 문자열 리터럴 3곳 · `Invoke("…")`, 반응 시간 4.5초 하드코딩 (기획 5초). 옛 카드 관리자 교체 시 삭제 | `CardPlayManager` | 4 행동 카드 내기 · 5 카운터 |
 | 8 | 뽑을 때 빈 덱 방어 없음 (덱 < 인원 × 5 면 예외). 시작 배분은 레시피 부족 시 원인을 적은 예외로 바꿈 (10/6) — 게임 중 덱 · 버림 더미 모두 0장은 ⛔ | `GameServer.Deck.cs` `DrawOne` | 덱 구성 확정 때 |
 | 9 | 문서 — Notion 「개발 기획서」에 `05` · `09` 갱신분 미반영, 강퇴 턴 수 "2~3" 이 `03-turn` 에 없음 | Notion · `03-turn.md` | 틈날 때 |
-| 10 | 카드 조건 `MyTurnCondition` 이 옛 `TurnManager.Instance` 를 읽는다 → `TempGameScene`(TurnManager 없음)에서 카드를 드롭하면 NRE (10/6 발견 — #47 의 `CardDropArea` 로 드롭 경로가 처음 실행됨). 08-17 프로토타입 코드. `TurnUI` 도 같은 참조 2곳. 최소 수정은 `RoomProps.TurnActor` 읽기, 최종 판정은 방장 | `Game/Cards/CardCondition/MyTurnCondition.cs` · `Presentation/Turn/TurnUI.cs` | 4 행동 카드 내기 |
+| ~~10~~ | ✅ `MyTurnCondition` 삭제 · 드롭은 손패로 되돌림 (10/6, PR #52) — 카드 조건 `MyTurnCondition` 이 옛 `TurnManager.Instance` 를 읽는다 → `TempGameScene`(TurnManager 없음)에서 카드를 드롭하면 NRE (10/6 발견 — #47 의 `CardDropArea` 로 드롭 경로가 처음 실행됨). 08-17 프로토타입 코드. `TurnUI` 도 같은 참조 2곳. 최소 수정은 `RoomProps.TurnActor` 읽기, 최종 판정은 방장 | `Game/Cards/CardCondition/MyTurnCondition.cs` · `Presentation/Turn/TurnUI.cs` | 4 행동 카드 내기 |
 
 ### 1-3. 기능 개발 순서 (로직)
 
