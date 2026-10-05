@@ -100,6 +100,23 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | 4:3 | 2048 × 1536 | iPad |
 | Fold 펼침 | 2176 × 1812 | Galaxy Z Fold |
 
+**기기별** — 많이 쓰는 iPhone · Galaxy 폰. Z Fold · Z Flip · iPhone Air 같은 예외 모델은 넣지 않는다. 해상도는 기기의 실제 화면 픽셀을 가로로 놓은 값이다.
+
+| 이름 | 크기 |
+| --- | --- |
+| iPhone 11 · XR | 1792 × 828 |
+| iPhone 12 · 13 · 14 · 16e | 2532 × 1170 |
+| iPhone 15 · 15 Pro · 16 | 2556 × 1179 |
+| iPhone 16 Pro · 17 · 17 Pro | 2622 × 1206 |
+| iPhone 15 Plus · 15 Pro Max · 16 Plus | 2796 × 1290 |
+| iPhone 16 Pro Max · 17 Pro Max | 2868 × 1320 |
+| Galaxy S23 · S24 · S25 | 2340 × 1080 |
+| Galaxy S24+ · S25+ · Ultra (QHD+) | 3120 × 1440 |
+| Galaxy A16 · A36 · A56 | 2340 × 1080 |
+| Galaxy A05 · A06 | 1600 × 720 |
+
+등록: 메뉴 `Chapchu > Game View > Add Mobile Presets` (`Editor/GameViewSizeSetup.cs`). PC(Standalone) · Android · iOS 그룹에 넣고, 이미 있는 이름 · 크기는 건너뛴다.
+
 합격: 중앙 묶음이 잘리거나 겹치지 않는다. 가장자리 UI 가 노치에 가리지 않는다.
 
 ## 9. 반영 상태 (2026-09-25, B1-14)
@@ -126,3 +143,4 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | 2026-09-25 | 3절 전부 확정 (사용자 승인) |
 | 2026-09-25 | B1-14 반영: 씬 5곳 · 팝업 프리팹 Expand, 가로 고정, `SafeArea`. 4비율(16:9 · 4:3 · 20:9 · 16:10) 요소 bounds 확인 — 전부 화면 안 |
 | 2026-09-27 | `TmpGameScene` 좌석 · 테이블 · 손패 Stretch 화, `SeatLayout` 신설 (9절). Game 뷰 프리셋 6개(8절) 에디터에 등록 |
+| 2026-10-02 | 8절에 기기별 프리셋 10개 추가 (iPhone 6 · Galaxy 4, 폴더블 제외). 등록 스크립트 `GameViewSizeSetup` 을 다시 두고 메뉴로 실행 |
