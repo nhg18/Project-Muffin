@@ -2,6 +2,7 @@
 using Chapchu.Core;
 using Chapchu.Game;
 using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
@@ -103,6 +104,13 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
             _server.Discard(info.Sender.ActorNumber, cardId);
         }
+
+        // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.RemoveFromTurnOrder(otherPlayer.ActorNumber);
+        }
         #endregion
 
         #region IServerOutbox (방장 → 클라). UI 가 부르지 못하게 명시적 구현.
@@ -123,11 +131,11 @@ namespace Chapchu.Network
             photonView.RPC(nameof(RPC_RejectRequest), player, reason);
         }
 
-        void IServerOutbox.SendDrawnCard(int actorNumber, int cardId)
+        void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)
         {
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
-            photonView.RPC(nameof(RPC_OnDrawn), player, cardId);
+            photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);
         }
         #endregion
 
@@ -141,6 +149,15 @@ namespace Chapchu.Network
                 GameEvents.RaiseDeckCountChanged((int)deckCount);
         }
 
+        public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
+        {
+            if (changedProps.TryGetValue(PlayerProps.Hp, out object hp))
+                GameEvents.RaiseHpChanged(targetPlayer.ActorNumber, (int)hp);
+
+            if (changedProps.TryGetValue(PlayerProps.HandCount, out object handCount))
+                GameEvents.RaiseHandCountChanged(targetPlayer.ActorNumber, (int)handCount);
+        }
+
         [PunRPC]
         private void RPC_RejectRequest(string reason)
         {
@@ -148,7 +165,7 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnDrawn(int cardId)
+        private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
             GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
         }

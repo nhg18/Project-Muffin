@@ -1,8 +1,8 @@
 ﻿namespace Chapchu.Game
 {
-    // 확정 규칙 수치(06-health.md). 씬 배치가 필요 없는 상수라 Singleton MonoBehaviour 로 두지 않는다.
+    // 옛 코드(PlayerSeat)용 별칭. 규칙 수치의 원본은 GameServer — 옛 코드 정리 때 이 파일도 지운다.
     public static class GameStatus
     {
-        public const int MaxHp = 100;
+        public const int MaxHp = GameServer.MaxHp;
     }
 }

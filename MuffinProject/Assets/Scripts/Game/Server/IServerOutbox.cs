@@ -16,6 +16,6 @@
         void Reject(int actorNumber, string reason);
 
         /// <summary>드로우한 카드 내용. 요청자(카드 주인)에게만 보낸다.</summary>
-        void SendDrawnCard(int actorNumber, int cardId);
+        void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Chapchu.Core;
 
 namespace Chapchu.Game
@@ -32,7 +33,7 @@ namespace Chapchu.Game
         //
         //            // 내보내기: 모두 봐도 되는 값은 상태로, 한 사람만 볼 값은 그 사람에게만
         //            _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
-        //            _outbox.SendDrawn(requester, card.InstanceId, card.CardId); // 새 종류의 결과면 IServerOutbox 에 메서드 추가
+        //            _outbox.SendDrawnCard(requester, card.InstanceId, card.CardId); // 새 종류의 결과면 IServerOutbox 에 메서드 추가
         //        }
         //
         // 4. PunGameServer 에 요청 RPC 와 결과 받기를 잇는다 (PunGameServer 맨 위 주석).
@@ -44,9 +45,13 @@ namespace Chapchu.Game
         // 하지 말 것: 여기서 Debug.Log · PhotonNetwork · GameEvents 호출 / 클라가 보낸 actorNumber 를 요청자로 믿기.
         // ─────────────────────────────────────────────────────────────────────────────
 
+        // 확정(06-health.md 2절). 규칙 수치의 원본은 GameServer — 서버 밖(옛 GameStatus)은 이 값을 참조한다.
+        public const int MaxHp = 100;
+
         // ── 원본 상태 ──
         private readonly IServerOutbox _outbox;
         private readonly List<int> _turnOrder = new List<int>();
+        private readonly Dictionary<int, PlayerState> _players = new Dictionary<int, PlayerState>(); // actorNumber → 원본
 
         public int CurrentTurnActor { get; private set; } = -1;
 
@@ -55,14 +60,30 @@ namespace Chapchu.Game
             _outbox = outbox;
         }
 
-        // TODO: 순서를 무작위로 섞고 덱 · 손패 · HP 를 나눠 준다 (기능 1). 지금은 받은 순서 그대로 첫 사람부터.
-        public void StartGame(IReadOnlyList<int> turnOrder)
+        public void StartGame(IReadOnlyList<int> actors)
         {
-            if (turnOrder.Count == 0) return;
+            if (actors.Count == 0) return;
 
-            _turnOrder.Clear();
-            _turnOrder.AddRange(turnOrder);
-            SetTurn(_turnOrder[0]);
+            _players.Clear();
+            foreach (int actor in actors)
+            {
+                _players[actor] = new PlayerState();
+                SetHp(actor, MaxHp);
+            }
+
+            InitTurnOrder(actors);
+        }
+
+        // 덱(GameServer.Deck.cs) · 턴 순서(GameServer.Turn.cs) 공용
+        private static readonly Random _rng = new Random();
+
+        private static void Shuffle<T>(List<T> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = _rng.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
         }
     }
 }
