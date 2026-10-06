@@ -45,7 +45,6 @@ namespace Chapchu.Presentation
         /// </summary>
         public void OnCardDropped()
         {
-            Debug.Log("CardDropped!");
 
             if (Hand == null)
             {
@@ -64,18 +63,11 @@ namespace Chapchu.Presentation
 
             if(targets.Count == 0)
             {
-                Debug.Log("no player Selected");
                 cardView.ReturnToOrigin();
                 return;
             }
 
-            foreach (int player in targets)
-            {
-                Debug.Log("target : "+ player);
-            }
-
             // 판정은 서버(RequestPlayCard)가 한다. 아직 연결 전이라 손패로 되돌린다 — 옛 CardPlayManager 경로는 지웠다.
-            Debug.Log("[CardPresenter] 카드 사용은 서버 연결 전 — 손패로 되돌린다.");
             cardView.ReturnToOrigin();
         }
 
@@ -136,12 +128,10 @@ namespace Chapchu.Presentation
             targetNumber = await TargetSelectionManager.Instance.SelectPlayer(5.0f);
             if (targetNumber != 0)
             {
-                Debug.Log($"선택 완료! 타겟 : {targetNumber}");
                 return targetNumber;
             }
             else
             {
-                Debug.Log("시간 초과! 카드 사용이 취소되었습니다.");
                 return 0;
             }
         }

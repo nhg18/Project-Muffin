@@ -53,7 +53,6 @@ namespace Chapchu.Presentation
 
         private void HandleTurnChanged(int actorNumber)
         {
-            Debug.Log($"[GameEvent] TurnChanged {actorNumber}");
             _view.SetTurnActor(actorNumber);
         }
 

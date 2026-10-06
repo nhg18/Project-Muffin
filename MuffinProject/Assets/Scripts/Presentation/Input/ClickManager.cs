@@ -67,7 +67,6 @@ namespace Chapchu.Presentation
                 //RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
                 if(TargetSelectionManager.Instance != null)
                 {
-                    Debug.Log("cancel!!!");
                     TargetSelectionManager.Instance.ReceiveClick(0);
 
                 }

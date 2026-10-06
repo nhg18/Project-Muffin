@@ -52,7 +52,6 @@ namespace Chapchu.DebugTools
                 return;
             }
         
-            Debug.Log("Click join button");
 
             var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
             PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
@@ -60,11 +59,9 @@ namespace Chapchu.DebugTools
 
         private void OnJoinedRoom()
         {
-            Debug.Log("JoinRoom");
             int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
         
-            Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
 
             SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
             SceneFlow.GameSceneAfterRoom = startInTmpGame ? ScenePaths.TmpGame : ScenePaths.Game;

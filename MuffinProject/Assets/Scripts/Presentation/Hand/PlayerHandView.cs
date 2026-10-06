@@ -104,13 +104,11 @@ namespace Chapchu.Presentation
 
         public void HandsUp()//Presenter에서 CardEvent가 만들어지면 구독해서 이거 실행하기
         {
-            Debug.Log("Up!");
             playerHandPresenter.SetHandMode(true);
             HandPosition.DOMove(new Vector3(0, -3.8f, 0), 0.5f);
         }
         public void HandsDown()
         {
-            Debug.Log("down!");
             playerHandPresenter.SetHandMode(false);
             HandPosition.DOMove(new Vector3(0, -6.5f, 0), 0.5f);
         }

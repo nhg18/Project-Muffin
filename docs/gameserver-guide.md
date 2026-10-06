@@ -129,7 +129,8 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 UI 가 아직 없는 요청은 UI 담당이 뷰를 붙일 때 같이 확인한다. 그 전에 UI 는 `FakeGameServer` 로 혼자 작업한다.
 
 **테스트 방식** (2026-10-06): Test Runner(EditMode) 는 쓰지 않는다. 로직은 이 멀티 실행으로 함께 확인한다.
-* **방장 콘솔만 보면 된다.** `ServerConsoleLog` 가 서버의 출구(`IServerOutbox`)를 감싸 판 전체를 찍는다 — 턴마다 `── 턴 n · P 차례 ──` + 체력 · 손패 장수 · 덱 · 버림 요약(로그를 펼치면 모든 손패 내용), 카드 사용 `▶`, 뽑기 `+`, 거절 `✖`(노란색), 덱 재생성 `↻`.
-* `ServerDebugLog` 는 키 입력만 — D = 뽑기, P = 카드 내기, Esc = 나가기. 키는 만든 기능의 행동만 추가한다.
+* **방장 콘솔만 보면 된다.** `ServerConsoleLog` 가 서버의 출구(`IServerOutbox`)를 감싸 판 전체를 찍는다 — 턴마다 `── 턴 n · P 차례 ──` + 덱 · 버림 · 사람마다 체력 · 손패 장수[카드 ID] **한 줄** 요약, 카드 사용 `▶`, 뽑기 `+`, 거절 `✖`(노란색), 덱 재생성 `↻`.
+* `ServerDebugLog` 는 키 입력만 — D = 뽑기, P = 카드 내기, Esc = 나가기(돌아갈 씬을 로그에 찍음).
+* 그 밖의 정상 흐름 로그(접속 · 입장 · 클릭 · 호버 등)는 지웠다. 실패 · 끊김 · 방장 교체만 경고(노란색)로 남는다. 키는 만든 기능의 행동만 추가한다.
 * 사용자 입력(컨트롤러) 영역이 아직 없으니 확인용 로그는 `Start` 에서 찍는다.
 * 알려진 문제: 카드를 드롭 영역에 놓으면 `MyTurnCondition` 이 옛 `TurnManager.Instance`(이 씬에 없음)를 읽어 NRE — `plan-a-logic.md` 수정 10.
