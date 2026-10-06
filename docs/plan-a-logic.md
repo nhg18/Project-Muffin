@@ -55,7 +55,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | 5 | 카드 사용 시 **승인 전에** 손패에서 지운다. 옛 카드 관리자는 검증 없이 전원이 체인을 로컬 실행 | `PlayerHandPresenter` (B) · `CardPlayManager` | 4 행동 카드 내기 |
 | 6 | 버림을 **자신의 턴에만** 받는다 → 강제 버림 · 카운터(남의 턴)가 막힌다 | `GameServer.Deck.cs` `Discard` | 4 행동 카드 내기 · 5 카운터 |
 | ~~7~~ | ✅ `CardPlayManager` 삭제로 해결 (10/6, PR #52) — RPC 이름 문자열 리터럴 3곳 · `Invoke("…")`, 반응 시간 4.5초 하드코딩 (기획 5초). 옛 카드 관리자 교체 시 삭제 | `CardPlayManager` | 4 행동 카드 내기 · 5 카운터 |
-| 8 | 뽑을 때 빈 덱 방어 없음 (덱 < 인원 × 5 면 예외). 시작 배분은 레시피 부족 시 원인을 적은 예외로 바꿈 (10/6) — 게임 중 덱 · 버림 더미 모두 0장은 ⛔ | `GameServer.Deck.cs` `DrawOne` | 덱 구성 확정 때 |
+| 8 | 뽑을 때 빈 덱 방어 없음 (덱 < 인원 × 5 면 예외). 모든 뽑기가 `DrawOne` 에서 덱이 비면 버림 더미로 재생성 · `OnDeckRefilled` 알림 (10/6, #49 리뷰). 덱 · 버림 더미 모두 0장은 ⛔ (거절 · 배분 중단) | `GameServer.Deck.cs` `DrawOne` | 덱 구성 확정 때 |
 | 9 | 문서 — Notion 「개발 기획서」에 `05` · `09` 갱신분 미반영, 강퇴 턴 수 "2~3" 이 `03-turn` 에 없음 | Notion · `03-turn.md` | 틈날 때 |
 | ~~10~~ | ✅ `MyTurnCondition` 삭제 · 드롭은 손패로 되돌림 (10/6, PR #52) — 카드 조건 `MyTurnCondition` 이 옛 `TurnManager.Instance` 를 읽는다 → `TempGameScene`(TurnManager 없음)에서 카드를 드롭하면 NRE (10/6 발견 — #47 의 `CardDropArea` 로 드롭 경로가 처음 실행됨). 08-17 프로토타입 코드. `TurnUI` 도 같은 참조 2곳. 최소 수정은 `RoomProps.TurnActor` 읽기, 최종 판정은 방장 | `Game/Cards/CardCondition/MyTurnCondition.cs` · `Presentation/Turn/TurnUI.cs` | 4 행동 카드 내기 |
 
@@ -89,7 +89,16 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | `Presentation/Hand/PlayerHandPresenter` | `handCount` 직접 기록 | ✅ 마스터가 기록 (PR #40) |
 | `Presentation/Hand/PlayerHandPresenter` | 카드 사용 시 **승인 전에** 손패에서 먼저 지움 | 기능 4 |
 | `Presentation/Player/PlayerPresenter.Init` | HP 초기값을 **클라이언트가** 기록 | 기능 1 시작 순서 |
-| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | 기능 4 · 5 |
+| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | ✅ `CardPlayManager` 삭제 (PR #52). 드롭은 손패로 되돌림 |
+
+### 1-5. develop → HeeGeon PR 에 넣을 것 (UI 수정 필요)
+
+로직 PR 이 약속을 바꾸면서 Presenter 의 호출부를 **주석 처리**하고 `수정 필요(UI)` 메모를 남긴 곳. develop → HeeGeon PR 본문에 이 목록을 적는다.
+
+| 위치 | 주석 처리한 것 | UI 가 할 일 | 원인 PR |
+| --- | --- | --- | --- |
+| `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | `OnDrawn(actor, cardInstanceId, cardId)` 에 맞추고 인스턴스 ID 를 카드에 보관 → 다시 구독. **그 전까지 내 손패가 화면에 안 생긴다** | #53 |
+| `PlayerHandPresenter.OnEnable/OnDisable` | `OnCardPlayed += DiscardCard` (→ `RequestDiscard`) | 드롭 → `RequestPlayCard(cardInstanceId, 대상)`, `OnCardUsed` 를 받아 손패에서 뺀다. 그 뒤 `OnCardPlayed` · `RequestDiscard` 삭제 | #53 · #54 |
 
 ---
 
