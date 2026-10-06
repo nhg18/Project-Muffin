@@ -28,6 +28,7 @@ namespace Chapchu.Game
 
             Shuffle(_deck);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
+            _outbox.SetRoomState(RoomProps.DiscardCount, 0);
         }
 
         /// <summary>게임 시작 1회: 모든 플레이어에게 확정 수치(5장)만큼 나눠 준다. 턴 검증 없이 마스터가 바로 실행한다.</summary>
@@ -84,6 +85,7 @@ namespace Chapchu.Game
             hand.RemoveAt(index);
             _discardPile.Add(card);
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
+            _outbox.SetRoomState(RoomProps.DiscardCount, _discardPile.Count);
         }
 
         // 덱 맨 위 1장을 actor 손패로. 모든 뽑기(시작 배분 · 뽑기 요청 · 카드 효과)가 여기를 지난다.
@@ -116,6 +118,7 @@ namespace Chapchu.Game
             _deck.AddRange(_discardPile);
             _discardPile.Clear();
             Shuffle(_deck);
+            _outbox.SetRoomState(RoomProps.DiscardCount, 0); // 덱 장수는 이어지는 DrawOne 이 알린다
 
             _outbox.SendDeckRefilled(_deck.Count);
         }
