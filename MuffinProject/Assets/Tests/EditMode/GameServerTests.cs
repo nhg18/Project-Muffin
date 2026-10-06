@@ -145,7 +145,7 @@ namespace Chapchu.Game.Tests
 
             public void SetRoomState(string key, object value) => _roomStates.Add((key, value));
             public void SetPlayerState(int actorNumber, string key, object value) => _playerStates.Add((actorNumber, key, value));
-            public void Reject(int actorNumber, string reason) => _rejects.Add(actorNumber);
+            public void Reject(int actorNumber, int code) => _rejects.Add(actorNumber);
             public void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId) =>
                 Drawn.Add(new DrawnCard { Actor = actorNumber, InstanceId = cardInstanceId, CardId = cardId });
             public void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers) { }

@@ -21,7 +21,7 @@ namespace Chapchu.Game
         public static event Action<int> OnDeckCountChanged;            // deckCount
         public static event Action<int> OnDiscardCountChanged;         // discardCount
         public static event Action<int> OnDeckRefilled;                // deckCount — 버림 더미를 섞어 덱을 다시 채움 (연출용, 전원)
-        public static event Action<int, string> OnRequestRejected;     // actorNumber, reason
+        public static event Action<int, int> OnRequestRejected;        // actorNumber, rejectCode (RejectCode). 문구는 RejectText
         public static event Action<int, int, int, int[]> OnCardUsed;   // actorNumber, cardInstanceId, cardId, targetActorNumbers — 방장이 승인한 카드 사용 (전원)
         public static event Action<int,int> OnCardPlayed;              // cardID,   HandIndex — 옛 경로(로컬). UI 가 OnCardUsed 로 바꾸면 삭제
 
@@ -41,7 +41,7 @@ namespace Chapchu.Game
         public static void RaiseDeckCountChanged(int deckCount) => OnDeckCountChanged?.Invoke(deckCount);
         public static void RaiseDiscardCountChanged(int discardCount) => OnDiscardCountChanged?.Invoke(discardCount);
         public static void RaiseDeckRefilled(int deckCount) => OnDeckRefilled?.Invoke(deckCount);
-        public static void RaiseRequestRejected(int actorNumber, string reason) => OnRequestRejected?.Invoke(actorNumber, reason);
+        public static void RaiseRequestRejected(int actorNumber, int code) => OnRequestRejected?.Invoke(actorNumber, code);
         public static void RaiseCardPlayed(int cardID,int index) => OnCardPlayed?.Invoke(cardID,index);
         public static void RaiseHandModeChanged(bool isHandMode) => OnHandModeChanged?.Invoke(isHandMode);
     }

@@ -27,7 +27,7 @@ namespace Chapchu.Game
         //        public void Draw(int requester)
         //        {
         //            // 검증: 실패하면 상태를 하나도 바꾸지 않고 거절만 보낸다
-        //            if (requester != CurrentTurnActor) { _outbox.Reject(requester, "내 턴이 아닙니다."); return; }
+        //            if (requester != CurrentTurnActor) { _outbox.Reject(requester, RejectCode.NotYourTurn); return; }
         //
         //            // 적용: 원본은 여기(방장 메모리)에만 있다
         //            CardInstance card = _deck.Pop();

@@ -26,7 +26,7 @@ namespace Chapchu.Game
         {
             if (requester != CurrentTurnActor)
             {
-                _outbox.Reject(requester, "내 턴이 아닙니다.");
+                _outbox.Reject(requester, RejectCode.NotYourTurn);
                 return;
             }
 
@@ -34,7 +34,7 @@ namespace Chapchu.Game
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)
             {
-                _outbox.Reject(requester, "손패에 없는 카드입니다.");
+                _outbox.Reject(requester, RejectCode.NotInHand);
                 return;
             }
 
@@ -42,14 +42,14 @@ namespace Chapchu.Game
             CardRule rule = _cardRules[card.CardId];
             if (rule.Type != CardType.Action)
             {
-                _outbox.Reject(requester, "행동 카드만 낼 수 있습니다.");
+                _outbox.Reject(requester, RejectCode.NotActionCard);
                 return;
             }
 
             int[] targets = ResolveTargets(requester, rule.Target, requestedTargets);
             if (targets == null)
             {
-                _outbox.Reject(requester, "대상이 올바르지 않습니다.");
+                _outbox.Reject(requester, RejectCode.InvalidTarget);
                 return;
             }
 
