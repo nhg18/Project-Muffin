@@ -2,6 +2,7 @@
 using System.Linq;
 using Chapchu.Core;
 using Chapchu.Game;
+using Chapchu.Presentation;
 using UnityEngine;
 
 namespace Chapchu.DebugTools
@@ -36,10 +37,10 @@ namespace Chapchu.DebugTools
 
         public void SetPlayerState(int actorNumber, string key, object value) => _inner.SetPlayerState(actorNumber, key, value);
 
-        public void Reject(int actorNumber, string reason)
+        public void Reject(int actorNumber, int code)
         {
-            _inner.Reject(actorNumber, reason);
-            Debug.LogWarning($"✖ P{actorNumber} 거절 — {reason}");
+            _inner.Reject(actorNumber, code);
+            Debug.LogWarning($"✖ P{actorNumber} 거절 — {RejectText.Get(code)} (코드 {code})");
         }
 
         public void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)

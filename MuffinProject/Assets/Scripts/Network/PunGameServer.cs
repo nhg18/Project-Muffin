@@ -139,11 +139,11 @@ namespace Chapchu.Network
             PhotonNetwork.CurrentRoom.GetPlayer(actorNumber)?.SetCustomProperties(new Hashtable { [key] = value });
         }
 
-        void IServerOutbox.Reject(int actorNumber, string reason)
+        void IServerOutbox.Reject(int actorNumber, int code)
         {
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
-            photonView.RPC(nameof(RPC_RejectRequest), player, reason);
+            photonView.RPC(nameof(RPC_RejectRequest), player, code);
         }
 
         void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)
@@ -190,9 +190,9 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_RejectRequest(string reason)
+        private void RPC_RejectRequest(int code)
         {
-            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, reason);
+            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, code);
         }
 
         [PunRPC]

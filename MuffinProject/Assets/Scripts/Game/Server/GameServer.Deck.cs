@@ -45,7 +45,7 @@ namespace Chapchu.Game
         {
             if (requester != CurrentTurnActor)
             {
-                _outbox.Reject(requester, "내 턴이 아닙니다.");
+                _outbox.Reject(requester, RejectCode.NotYourTurn);
                 return;
             }
 
@@ -54,7 +54,7 @@ namespace Chapchu.Game
             if (!DrawOne(requester))
             {
                 // TODO(미정): 덱 · 버림 더미가 모두 0장일 때 처리는 기획 미정 (05-deck.md 5절). 확정 전까지 상태 변경 없이 거절만 한다.
-                _outbox.Reject(requester, "뽑을 카드가 없습니다.");
+                _outbox.Reject(requester, RejectCode.NoCardToDraw);
                 return;
             }
 
@@ -67,7 +67,7 @@ namespace Chapchu.Game
         {
             if (requester != CurrentTurnActor)
             {
-                _outbox.Reject(requester, "내 턴이 아닙니다.");
+                _outbox.Reject(requester, RejectCode.NotYourTurn);
                 return;
             }
 
@@ -77,7 +77,7 @@ namespace Chapchu.Game
             int index = hand.FindIndex(c => c.CardId == cardId);
             if (index < 0)
             {
-                _outbox.Reject(requester, "손패에 없는 카드입니다.");
+                _outbox.Reject(requester, RejectCode.NotInHand);
                 return;
             }
 

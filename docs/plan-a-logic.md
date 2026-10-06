@@ -100,6 +100,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | `OnDrawn(actor, cardInstanceId, cardId)` 에 맞추고 인스턴스 ID 를 카드에 보관 → 다시 구독. **그 전까지 내 손패가 화면에 안 생긴다** | #53 |
 | `PlayerHandPresenter.OnEnable/OnDisable` | `OnCardPlayed += DiscardCard` (→ `RequestDiscard`) | 드롭 → `RequestPlayCard(cardInstanceId, 대상)`, `OnCardUsed` 를 받아 손패에서 뺀다. 그 뒤 `OnCardPlayed` · `RequestDiscard` 삭제 | #53 · #54 |
 | `TurnPresenter.OnEnable/OnDisable` | `_view.EndTurnRequested += HandleEndTurnRequested` (→ `RequestEndTurn`) | 턴 종료 요청을 없앴다 (자동 넘김만). 턴 종료 버튼 · `TurnView.EndTurnRequested` 를 지운다 | 턴 종료 삭제 PR |
+| `DeckPresenter` · `TurnPresenter` `OnEnable/OnDisable` | `OnRequestRejected += HandleRequestRejected` | 거절이 `(actor, 코드 int)` 로 바뀜. 핸들러를 맞추고 문구는 `RejectText.Get(code)` → 다시 구독 (거절 토스트) | 거절 코드 PR |
 
 ---
 

@@ -28,13 +28,14 @@ namespace Chapchu.Presentation
         private void OnEnable()
         {
             deckView.DrawRequested += HandleDrawRequested;
-            GameEvents.OnRequestRejected += HandleRequestRejected;
+            // 수정 필요(UI): OnRequestRejected 가 (actor, 거절 코드 int) 로 바뀌었다. 핸들러를 (int, int) 로 맞추고 문구는 RejectText.Get(code) 로 → 다시 구독.
+            // GameEvents.OnRequestRejected += HandleRequestRejected;
         }
 
         private void OnDisable()
         {
             deckView.DrawRequested -= HandleDrawRequested;
-            GameEvents.OnRequestRejected -= HandleRequestRejected;
+            // GameEvents.OnRequestRejected -= HandleRequestRejected;
         }
 
         private void HandleDrawRequested() => _requests?.RequestDraw();
