@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Chapchu.Core;
+using Chapchu.DebugTools;
 using Chapchu.Game;
 using Chapchu.Game.Cards;
 using Photon.Pun;
@@ -53,7 +54,8 @@ namespace Chapchu.Network
 
         private void Awake()
         {
-            _server = new GameServer(this, () => PhotonNetwork.Time);
+            // 방장 콘솔 로그(ServerConsoleLog)가 서버의 출구를 감싸서 결과를 찍고 그대로 이 객체로 넘긴다.
+            _server = new GameServer(new ServerConsoleLog(this, () => _server), () => PhotonNetwork.Time);
         }
 
         // 이 씬은 방에서 LoadLevel 로 넘어오므로(Room → Game / TempGameScene) 방장이 바로 시작한다.
@@ -62,13 +64,14 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
 
             int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
+            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
+
+            // 01-game-flow.md 3절 순서: 체력 → 덱 → 5장씩 → 턴 순서
             _server.StartGame(actors);
             _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
             _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
             _server.DealInitialHands(actors);
-
-            // 멀티 확인용: 방장 콘솔에 시작 결과를 남긴다. 각 클라 결과는 ServerDebugLog 가 찍는다.
-            Debug.Log($"[PunGameServer] 게임 시작 — 참가자 {string.Join(", ", actors)} · 첫 턴 {_server.CurrentTurnActor} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
+            _server.StartFirstTurn();
         }
 
         // 턴 마감 판정은 방장만 한다 (09-network.md 8절).
