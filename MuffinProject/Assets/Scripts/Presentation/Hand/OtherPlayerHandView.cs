@@ -21,7 +21,8 @@ namespace Chapchu.Presentation
         [Header("Hands of Player")]
         [SerializeField] List<GameObject> Hands = new List<GameObject>();
 
-        private void Start()
+        // Awake 에서 찾는다 — Presenter 의 Start 가 이 뷰의 Start 보다 먼저 DrawCard 를 부를 수 있다.
+        private void Awake()
         {
             drawPosition = GameObject.FindWithTag("DrawCards").transform;
         }

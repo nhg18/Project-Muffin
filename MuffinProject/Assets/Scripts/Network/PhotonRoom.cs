@@ -100,10 +100,13 @@ namespace Chapchu.Network
     
         /// <summary>
         /// 룸 나가기시 호출되는 콜백 함수
-        /// 타이틀 씬 로드
         /// </summary>
         public void OnLeftRoom()
         {
+            // 지난 판의 내 상태(체력 · 손패 장수)를 지운다. PUN 은 방에 들어갈 때 내 CustomProperties 를 같이 보내서,
+            // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
+            PhotonNetwork.LocalPlayer.CustomProperties.Clear();
+
             RoomEvents.RaiseLeftRoom();
         }
     
