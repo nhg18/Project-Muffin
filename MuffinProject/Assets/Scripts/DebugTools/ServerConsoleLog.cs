@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
 using Chapchu.Game;
 using Chapchu.Presentation;
+using Photon.Pun;
 using UnityEngine;
 
 namespace Chapchu.DebugTools
@@ -17,6 +19,7 @@ namespace Chapchu.DebugTools
         private readonly IServerOutbox _inner;
         private readonly Func<GameServer> _server; // 턴 요약용. GameServer 가 이 객체를 받아 만들어지므로 나중에 읽는다
         private int _turnCount;
+        private readonly List<string> _chain = new List<string>(); // 체인 한 줄 표시용 — "카드 1(P1→P2)"
 
         public ServerConsoleLog(IServerOutbox inner, Func<GameServer> server)
         {
@@ -32,6 +35,16 @@ namespace Chapchu.DebugTools
             {
                 _turnCount++;
                 Debug.Log($"<b>── 턴 {_turnCount} · P{value} 차례 ──</b>  {_server().DebugState()}");
+            }
+
+            // 카드가 체인에 올라갈 때마다 체인 전체를 한 줄로. 0 은 체인 끝
+            if (key == RoomProps.ReactionDeadline)
+            {
+                double deadline = (double)value;
+                if (deadline > 0)
+                    Debug.Log($"⛓ 체인: {string.Join(" ← ", _chain)} · 반응 {deadline - PhotonNetwork.Time:0.0}초");
+                else
+                    _chain.Clear();
             }
         }
 
@@ -56,12 +69,24 @@ namespace Chapchu.DebugTools
         {
             _inner.SendCardUsed(actorNumber, cardInstanceId, cardId, targetActorNumbers);
 
-            string targets = targetActorNumbers.Length == 0 ? "대상 없음" : string.Join(", ", targetActorNumbers.Select(a => $"P{a}"));
-            Debug.Log($"▶ P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {targets}");
+            // 줄은 이어지는 반응 마감(SetRoomState) 때 체인 전체로 찍는다
+            string targets = targetActorNumbers.Length == 0 ? "" : "→" + string.Join(",", targetActorNumbers.Select(a => $"P{a}"));
+            _chain.Add($"카드 {cardId}(P{actorNumber}{targets})");
         }
 
         public void SendCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] affectedActorNumbers, bool negated)
-            => _inner.SendCardResolved(actorNumber, cardInstanceId, cardId, affectedActorNumbers, negated);
+        {
+            _inner.SendCardResolved(actorNumber, cardInstanceId, cardId, affectedActorNumbers, negated);
+
+            if (negated)
+            {
+                Debug.Log($"⊘ 무효 — 카드 {cardId} (P{actorNumber}, #{cardInstanceId})");
+                return;
+            }
+
+            string affected = affectedActorNumbers.Length == 0 ? "대상 없음" : string.Join(", ", affectedActorNumbers.Select(a => $"P{a}"));
+            Debug.Log($"✔ 처리 — 카드 {cardId} (P{actorNumber}, #{cardInstanceId}) → {affected}");
+        }
 
         public void SendDeckRefilled(int deckCount)
         {
