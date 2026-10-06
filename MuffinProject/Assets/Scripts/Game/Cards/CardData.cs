@@ -22,11 +22,15 @@ namespace Chapchu.Game.Cards
         [Header("카드 효과 리스트")]
         public List<CardEffect> effects = new List<CardEffect>();
 
+        [Header("카운터")]
+        [Tooltip("반응한 행동 카드의 효과를 나에게만 무효로 한다 (C05). 행동 카드에만 반응할 수 있다.")]
+        public bool negateForSelf;
+
         /// <summary>서버(GameServer)가 판정에 쓰는 규칙만 뽑는다. 데미지는 effects 의 DamageEffect 수치를 합친다.</summary>
         public CardRule ToRule()
         {
             int damage = effects.OfType<DamageEffect>().Sum(e => e.damageAmount);
-            return new CardRule(id, type, targetType, damage);
+            return new CardRule(id, type, targetType, damage, negateForSelf);
         }
     }
 }

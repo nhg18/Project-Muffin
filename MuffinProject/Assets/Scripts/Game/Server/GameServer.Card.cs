@@ -62,7 +62,7 @@ namespace Chapchu.Game
 
             // 적용 — 검사가 모두 끝난 뒤에만 상태를 바꾼다. 카드는 바로 손패에서 빠진다
             hand.RemoveAt(index);
-            PushChain(requester, card, rule, targets);
+            PushChain(requester, card, rule, targets, null);
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
         }
 

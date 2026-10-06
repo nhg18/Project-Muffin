@@ -42,6 +42,9 @@ namespace Chapchu.Network
         // 카드 규칙의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘긴다.
         [SerializeField] private CardDatabase cardDatabase;
 
+        /// <summary>디버그 키(ServerDebugLog)가 손패 카드의 종류(행동 · 카운터)를 고르려고 읽는다. 판정에 쓰지 않는다.</summary>
+        public CardDatabase CardDatabase => cardDatabase;
+
         public int CurrentTurnActor
         {
             get
@@ -86,10 +89,7 @@ namespace Chapchu.Network
 
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
-        // 서버 처리(GameServer.Counter)는 다음 PR — 지금은 보내지 않는다
-        public void RequestCounter(int cardInstanceId, int targetCardInstanceId)
-        {
-        }
+        public void RequestCounter(int cardInstanceId, int targetCardInstanceId) => photonView.RPC(nameof(RPC_RequestCounter), RpcTarget.MasterClient, cardInstanceId, targetCardInstanceId);
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
@@ -114,6 +114,13 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             _server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers);
+        }
+
+        [PunRPC]
+        private void RPC_RequestCounter(int cardInstanceId, int targetCardInstanceId, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.Counter(info.Sender.ActorNumber, cardInstanceId, targetCardInstanceId);
         }
 
         // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
