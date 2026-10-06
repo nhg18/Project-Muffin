@@ -50,14 +50,16 @@ namespace Chapchu.Game
 
         // ── 원본 상태 ──
         private readonly IServerOutbox _outbox;
+        private readonly Func<double> _clock; // 서버 시각(초). 턴 마감 계산에 쓴다 (09-network.md 8절)
         private readonly List<int> _turnOrder = new List<int>();
         private readonly Dictionary<int, PlayerState> _players = new Dictionary<int, PlayerState>(); // actorNumber → 원본
 
         public int CurrentTurnActor { get; private set; } = -1;
 
-        public GameServer(IServerOutbox outbox)
+        public GameServer(IServerOutbox outbox, Func<double> clock)
         {
             _outbox = outbox;
+            _clock = clock;
         }
 
         public void StartGame(IReadOnlyList<int> actors)
