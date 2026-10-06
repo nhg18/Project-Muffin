@@ -11,11 +11,11 @@ namespace Chapchu.Game
 
         private double _turnDeadline;
 
-        // 게임 시작 1회: 참가자 순서를 무작위로 섞어 턴 순서를 정하고 첫 사람에게 턴을 준다 (03-turn.md 6절).
-        private void InitTurnOrder(IReadOnlyList<int> actors)
+        // 게임 시작 1회 (배분 뒤): 참가자 순서를 무작위로 섞어 턴 순서를 정하고 첫 사람에게 턴을 준다 (01-game-flow.md 3절 · 03-turn.md 6절).
+        public void StartFirstTurn()
         {
             _turnOrder.Clear();
-            _turnOrder.AddRange(actors);
+            _turnOrder.AddRange(_players.Keys);
             Shuffle(_turnOrder);
 
             SetTurn(_turnOrder[0]);

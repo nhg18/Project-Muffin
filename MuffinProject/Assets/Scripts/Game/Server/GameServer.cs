@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Chapchu.Core;
 
 namespace Chapchu.Game
@@ -72,8 +73,17 @@ namespace Chapchu.Game
                 _players[actor] = new PlayerState();
                 SetHp(actor, MaxHp);
             }
+        }
 
-            InitTurnOrder(actors);
+        /// <summary>디버그 로그용 한 줄 요약 + 손패 내용 (방장 콘솔). 판정에 쓰지 않는다.</summary>
+        public string DebugState()
+        {
+            string players = string.Join(" │ ", _players.Select(p =>
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}{(_turnOrder.Contains(p.Key) ? "" : " (나감)")}"));
+            string hands = string.Join("\n", _players.Select(p =>
+                $"   P{p.Key} 손패: {string.Join(" ", p.Value.Hand.Select(c => c.CardId))}"));
+
+            return $"{players} │ 덱 {_deck.Count} · 버림 {_discardPile.Count}\n{hands}";
         }
 
         // 덱(GameServer.Deck.cs) · 턴 순서(GameServer.Turn.cs) 공용
