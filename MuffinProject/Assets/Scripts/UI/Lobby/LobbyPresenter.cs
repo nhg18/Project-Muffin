@@ -51,6 +51,12 @@ namespace Chapchu.UI.Lobby
 
         private void Start()
         {
+            // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다. 입장 콜백(OnJoinedRoom)에서 정하면 안 된다 —
+            // 이미 있는 방에 들어가면 PUN 씬 동기화(AutomaticallySyncScene)가 콜백보다 먼저 RoomScene 을 불러
+            // 이 오브젝트가 사라지고, 값이 기본값(Lobby)으로 남는다.
+            SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
+            SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
+
             _view.SetNickname(NetworkManager.Nickname);
         }
 
@@ -82,8 +88,6 @@ namespace Chapchu.UI.Lobby
 
         private void HandleJoinedRoom()
         {
-            SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
-            SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
             SceneManager.LoadScene(ScenePaths.Room);
         }
 
