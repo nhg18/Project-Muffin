@@ -21,17 +21,6 @@ namespace Chapchu.Game
             SetTurn(_turnOrder[0]);
         }
 
-        public void EndTurn(int requester)
-        {
-            if (requester != CurrentTurnActor)
-            {
-                _outbox.Reject(requester, "내 턴이 아닙니다.");
-                return;
-            }
-
-            AdvanceTurn();
-        }
-
         // 방장이 매 프레임 부른다. 마감이 지나면 아무것도 하지 않은 것으로 보고 넘긴다 (03-turn.md 4절 — 자동 제출 없음).
         public void Tick()
         {
@@ -52,7 +41,7 @@ namespace Chapchu.Game
             _turnOrder.Remove(actor);
         }
 
-        // 턴을 넘기는 곳은 여기 하나다 — 턴 종료 · 뽑기 · 시간 초과 · 나감이 모두 이걸 부른다.
+        // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다. 턴 종료 요청은 없다 (자동 넘김만).
         private void AdvanceTurn()
         {
             SetTurn(GetNextActor(CurrentTurnActor));
