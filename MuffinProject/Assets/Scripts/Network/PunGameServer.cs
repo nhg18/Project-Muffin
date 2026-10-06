@@ -84,8 +84,6 @@ namespace Chapchu.Network
         #region IGameRequests (UI → 방장)
         public void RequestDraw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
 
-        public void RequestDiscard(int cardId) => photonView.RPC(nameof(RPC_RequestDiscard), RpcTarget.MasterClient, cardId);
-
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
@@ -104,13 +102,6 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             _server.Draw(info.Sender.ActorNumber);
-        }
-
-        [PunRPC]
-        private void RPC_RequestDiscard(int cardId, PhotonMessageInfo info)
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-            _server.Discard(info.Sender.ActorNumber, cardId);
         }
 
         [PunRPC]

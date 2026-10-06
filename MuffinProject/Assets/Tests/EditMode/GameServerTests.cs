@@ -90,45 +90,6 @@ namespace Chapchu.Game.Tests
             Assert.AreEqual(current, _server.CurrentTurnActor);
         }
 
-        [Test]
-        public void Discard_CardInHand_LowersHandCount()
-        {
-            var (current, _) = StartTwoPlayerGame(20);
-            int cardId = _outbox.DrawnTo(current)[0].CardId;
-
-            _server.Discard(current, cardId);
-
-            Assert.AreEqual(0, _outbox.RejectCount(current));
-            Assert.AreEqual(4, _outbox.LastPlayerState(current, PlayerProps.HandCount));
-        }
-
-        [Test]
-        public void Discard_CardNotInHand_IsRejectedWithoutChange()
-        {
-            var (current, other) = StartTwoPlayerGame(20);
-            int othersCardId = _outbox.DrawnTo(other)[0].CardId; // 종류 ID 가 모두 달라 내 손패에는 없다
-
-            _server.Discard(current, othersCardId);
-
-            Assert.AreEqual(1, _outbox.RejectCount(current));
-            Assert.AreEqual(5, _outbox.LastPlayerState(current, PlayerProps.HandCount));
-        }
-
-        [Test]
-        public void Discard_KeepsInstanceId_WhenRefilledIntoDeck()
-        {
-            var (current, other) = StartTwoPlayerGame(11); // 5 + 5 배분 → 덱 1장
-            DrawnCard discarded = _outbox.DrawnTo(current)[0];
-
-            _server.Discard(current, discarded.CardId);
-            _server.Draw(current); // 덱 마지막 1장 → 턴은 상대
-            _server.Draw(other); // 덱 0장 → 버림 더미(버린 1장) 회수 → 상대가 뽑는다
-
-            DrawnCard refilled = _outbox.DrawnTo(other).Last();
-            Assert.AreEqual(discarded.InstanceId, refilled.InstanceId);
-            Assert.AreEqual(discarded.CardId, refilled.CardId);
-        }
-
         private struct DrawnCard
         {
             public int Actor;

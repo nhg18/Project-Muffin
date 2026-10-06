@@ -226,12 +226,12 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 마스터 소유 손패 | 있음 (`PlayerState.Hand`). 각 클라이언트는 자기 손패 사본만 받는다 |
 | 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
 | 처리 ID | 없음 |
-| 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn`). UI 이벤트 · 요청(버림 · 카드 사용)에는 아직 쓰지 않는다 |
+| 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn` → `GameEvents.OnDrawn`). 카드 사용 요청(`RequestPlayCard`)은 인스턴스 ID 로 받는다 |
 | 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
 | RPC `nameof` 사용 | 혼재 (`PunGameServer` · `TurnManager`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
 | 마스터 가드 | 요청 RPC 전부 있음 (`PunGameServer` · `CardPlayManager` · `TurnManager`). 옛 `RPC_RequestDrawToMaster` 는 삭제 |
 | 손패 장수 기록 | 마스터만 기록 (`GameServer` → `PlayerProps.HandCount`) |
-| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 턴 종료 · 드로우 · 버림 구현, `TempGameScene` 에만 배치 |
+| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 드로우 · 카드 사용 구현 (턴 종료 요청 · 임시 버림 요청은 삭제), `TempGameScene` 에만 배치 |
 
 ---
 

@@ -9,7 +9,7 @@ namespace Chapchu.Presentation
     /// <summary>
     /// 내 손패 모델 · 뷰를 잇는다. 카드는 드로우 순서대로 쌓인다(정렬 없음, 05-deck.md 6절).
     /// 손패 장수(PlayerProps.HandCount)는 마스터(GameServer)만 기록한다 — 여기서는 더 이상 직접 쓰지 않는다.
-    /// 카드 사용 · 버림도 서버에 <see cref="IGameRequests.RequestDiscard"/> 로 알려 장수만 마스터 권위로 갱신시킨다.
+    /// 카드 사용은 서버에 <see cref="IGameRequests.RequestPlayCard"/> 로 요청하고, 승인 결과(GameEvents.OnCardUsed)를 받아 손패에서 뺀다.
     /// 카드 효과(대상 · 체인 · 카운터) 판정은 서버(GameServer)가 한다 — 범위 밖.
     /// </summary>
     public class PlayerHandPresenter : MonoBehaviour
@@ -70,7 +70,9 @@ namespace Chapchu.Presentation
             playerHand.DiscardCard(index);
             handView.DiscardCard(index);
 
-            _requests?.RequestDiscard(cardID);
+            // 수정 필요(UI): 임시 버림 요청(RequestDiscard)과 OnCardPlayed 를 지웠다 (기능 5 전 정리 PR).
+            //  드롭 → RequestPlayCard(cardInstanceId, 대상), 승인(OnCardUsed)을 받아 이 메서드로 손패에서 뺀다.
+            // _requests?.RequestDiscard(cardID);
         }
 
         public bool IsHandMode()

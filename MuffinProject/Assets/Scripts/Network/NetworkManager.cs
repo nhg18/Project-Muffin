@@ -38,8 +38,6 @@ namespace Chapchu.Network
     
         // 퍼블릭 메서드
         #region Public Methods
-        
-        public void Initialize() => _connection.Initialize();
 
         /// <summary>
         /// 네트워크 접속 함수. 접속 실패 후 재시도에도 사용한다.

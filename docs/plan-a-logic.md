@@ -51,9 +51,9 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | 1 | HP 초기값을 **각 클라이언트가** 기록한다 (`09` 3절 위반). A 가 마스터 기록을 만들고 B 가 옛 코드를 지운다 | `PlayerPresenter.Init` (B 파일) | 1 게임 시작하기 |
 | 2 | 옛 턴 관리자가 요청자를 클라가 보낸 값으로 믿고, 다음 턴 계산이 인자를 무시한다 (C-2). `PunGameServer` 로 교체하면 삭제 — 따로 고치지 않는다 | `TurnManager` (`GameScene` 사용 중) | 1 게임 시작하기 |
 | ~~3~~ | ~~턴 주인이 나가면 턴이 멈춘다~~ ✅ `ead0c40` — `OnPlayerLeftRoom` → `RemoveFromTurnOrder` | `PunGameServer` · `GameServer.Turn.cs` | 2 턴 넘기기 |
-| 4 | 버림 요청이 클라가 보낸 **카드 종류 ID** 를 믿는다 (소유 검증 없음) → 없는 카드가 버림 더미를 거쳐 덱에 섞인다. 버릴 때 인스턴스 ID 재발급. UI 는 인스턴스 ID 를 받지 못한다 (`OnDrawn`, K-2). 버림 요청은 PR #40 의 임시 경로 — 카드 사용 요청으로 대체하면서 삭제 | `GameServer.Deck.cs` `Discard` · `GameEvents` | 4 행동 카드 내기 |
+| ~~4~~ | ✅ 임시 버림 경로 삭제로 해결 (10/6, 기능 5 전 정리 PR) — 버림 요청이 클라가 보낸 **카드 종류 ID** 를 믿는다 (소유 검증 없음) → 없는 카드가 버림 더미를 거쳐 덱에 섞인다. 버릴 때 인스턴스 ID 재발급. UI 는 인스턴스 ID 를 받지 못한다 (`OnDrawn`, K-2). 버림 요청은 PR #40 의 임시 경로 — 카드 사용 요청으로 대체하면서 삭제 | `GameServer.Deck.cs` `Discard` · `GameEvents` | 4 행동 카드 내기 |
 | 5 | 카드 사용 시 **승인 전에** 손패에서 지운다. 옛 카드 관리자는 검증 없이 전원이 체인을 로컬 실행 | `PlayerHandPresenter` (B) · `CardPlayManager` | 4 행동 카드 내기 |
-| 6 | 버림을 **자신의 턴에만** 받는다 → 강제 버림 · 카운터(남의 턴)가 막힌다 | `GameServer.Deck.cs` `Discard` | 4 행동 카드 내기 · 5 카운터 |
+| ~~6~~ | ✅ 버림 요청 삭제로 해결 (10/6) — 버림을 **자신의 턴에만** 받는다 → 강제 버림 · 카운터(남의 턴)가 막힌다. 카운터는 기능 5 의 별도 요청 | `GameServer.Deck.cs` `Discard` | 4 행동 카드 내기 · 5 카운터 |
 | ~~7~~ | ✅ `CardPlayManager` 삭제로 해결 (10/6, PR #52) — RPC 이름 문자열 리터럴 3곳 · `Invoke("…")`, 반응 시간 4.5초 하드코딩 (기획 5초). 옛 카드 관리자 교체 시 삭제 | `CardPlayManager` | 4 행동 카드 내기 · 5 카운터 |
 | 8 | 뽑을 때 빈 덱 방어 없음 (덱 < 인원 × 5 면 예외). 모든 뽑기가 `DrawOne` 에서 덱이 비면 버림 더미로 재생성 · `OnDeckRefilled` 알림 (10/6, #49 리뷰). 덱 · 버림 더미 모두 0장은 ⛔ (거절 · 배분 중단) | `GameServer.Deck.cs` `DrawOne` | 덱 구성 확정 때 |
 | 9 | 문서 — Notion 「개발 기획서」에 `05` · `09` 갱신분 미반영, 강퇴 턴 수 "2~3" 이 `03-turn` 에 없음 | Notion · `03-turn.md` | 틈날 때 |
@@ -70,7 +70,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | **1** | **게임 시작하기** (~ 10/19) | `GameScene` 의 옛 서버를 `PunGameServer` 로 교체(씬은 B, 수정 2). 첫 턴 무작위 · 섞기 · 카드 번호 · 5장 배분 · 체력 100 마스터 기록(수정 1 의 A 쪽) · 손패 원본 `PlayerState` 는 ✅. 전원 로드 대기는 넣지 않음 — 기능 2 의 20초 마감 때 테스트로 결정 (worklog 10/1) | 4클론 — 손패가 서로 다르다 · 체력 100 · 장수 5 · 첫 턴 주인이 같다 · Console — 판마다 턴 순서가 다르다 |
 | 2 | 턴 넘기기 (~ 10/26) | 턴 순서 알림 · 다음 사람 찾기(나간 사람 빼기 ✅ 수정 3) · 턴 넘김 한 곳으로(`AdvanceTurn` ✅ 10/6 도입 결정) · 20초 마감 ✅ · 전원 로드 대기 필요 여부 측정. 턴 주인 검사는 ✅. 강퇴 ⛔ | 턴 종료 → 다음 사람 · 남의 턴이면 거절 · 20초 뒤 자동 넘김 · 네 화면 동일 |
 | 3 | 카드 뽑기 (~ 10/21) | 요청 · 덱 재생성 · 뽑으면 턴 종료 ✅. 덱 · 버림 더미가 모두 0장일 때 ⛔ | 4클론 — 뽑기 · 소진 재생성 · 두 번 뽑기 거절 (Console 로그) |
-| 4 | 행동 카드 내기 (~ 10/30) | 서버 ✅ (10/6, PR 4-1 ~ 4-3): `CardRule` · 사용 요청(인스턴스 ID) · 검사(내 턴 · 손패에 있음 · 행동 카드 · 대상) · 데미지 · `OnCardUsed` · 사용 후 턴 종료. 남은 것: 카드별 조건, UI 드롭을 `RequestPlayCard` 로 교체(UI) 후 임시 버림 요청 · `OnCardPlayed` 삭제. 옛 카드 관리자는 삭제 ✅ (PR #52) (수정 4 · 5 · 6 · 7) | 공격 카드(A09)로 대상 체력 감소가 네 화면 동일 · 남의 턴에 내면 거절 · 한 턴에 뽑기와 카드 내기를 둘 다 못 한다 |
+| 4 | 행동 카드 내기 (~ 10/30) | 서버 ✅ (10/6, PR 4-1 ~ 4-3): `CardRule` · 사용 요청(인스턴스 ID) · 검사(내 턴 · 손패에 있음 · 행동 카드 · 대상) · 데미지 · `OnCardUsed` · 사용 후 턴 종료. 남은 것: 카드별 조건, UI 드롭을 `RequestPlayCard` 로 교체(UI). 임시 버림 요청 · `OnCardPlayed` 는 삭제 ✅ (기능 5 전 정리 PR). 옛 카드 관리자는 삭제 ✅ (PR #52) (수정 4 · 5 · 6 · 7) | 공격 카드(A09)로 대상 체력 감소가 네 화면 동일 · 남의 턴에 내면 거절 · 한 턴에 뽑기와 카드 내기를 둘 다 못 한다 |
 | 5 | 카운터로 막기 (~ 11/4) | 반응 5초(카운터가 오면 재시작) · 검사 · 역순 처리 · 무효(C05) | 4클론 — A09 ← C05, 5초 지나 온 카운터 거절 (Console 로그) |
 | 6 | 함정 쓰기 (~ 11/9) | 설치 · 검사 · 수동 발동 · T06 | 함정 효과 1개(T06) 경로 검증 |
 | 7 | 체력과 사망 (~ 11/11) | 한 번에 반영 · 처리 번호 · 사망 대기 5초 · 죽은 사람 제외. 나간 사람 처리 ⛔ | 4클론 — 동시 사망 · 사망 대기 중 회복 (Console 로그) |
@@ -98,7 +98,7 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | 위치 | 주석 처리한 것 | UI 가 할 일 | 원인 PR |
 | --- | --- | --- | --- |
 | `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | `OnDrawn(actor, cardInstanceId, cardId)` 에 맞추고 인스턴스 ID 를 카드에 보관 → 다시 구독. **그 전까지 내 손패가 화면에 안 생긴다** | #53 |
-| `PlayerHandPresenter.OnEnable/OnDisable` | `OnCardPlayed += DiscardCard` (→ `RequestDiscard`) | 드롭 → `RequestPlayCard(cardInstanceId, 대상)`, `OnCardUsed` 를 받아 손패에서 뺀다. 그 뒤 `OnCardPlayed` · `RequestDiscard` 삭제 | #53 · #54 |
+| `PlayerHandPresenter.OnEnable/OnDisable` · `DiscardCard` | `OnCardPlayed += DiscardCard` · `_requests?.RequestDiscard(cardID)` | `OnCardPlayed` · `RequestDiscard` 는 삭제됐다. 드롭 → `RequestPlayCard(cardInstanceId, 대상)`, `OnCardUsed` 를 받아 `DiscardCard` 로 손패에서 뺀다 | #53 · #54 · 기능 5 전 정리 |
 | `TurnPresenter.OnEnable/OnDisable` | `_view.EndTurnRequested += HandleEndTurnRequested` (→ `RequestEndTurn`) | 턴 종료 요청을 없앴다 (자동 넘김만). 턴 종료 버튼 · `TurnView.EndTurnRequested` 를 지운다 | 턴 종료 삭제 PR |
 | `DeckPresenter` · `TurnPresenter` `OnEnable/OnDisable` | `OnRequestRejected += HandleRequestRejected` | 거절이 `(actor, 코드 int)` 로 바뀜. 핸들러를 맞추고 문구는 `RejectText.Get(code)` → 다시 구독 (거절 토스트) | 거절 코드 PR |
 

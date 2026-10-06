@@ -107,8 +107,9 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 | 턴 넘김 | 자동만 — 20초 마감 · 뽑기 · 카드 사용 · 나감 (`AdvanceTurn`). 턴 종료 요청은 없음 (2026-10-06 삭제) |
 | 게임 시작 | 턴 순서 무작위 · 덱 섞기 · 카드 번호 · 5장씩 배분 · 체력 100 (방장 기록). 손패 · 체력 원본은 `PlayerState` |
 | 드로우 | 구현 — 내 턴 · 덱 재생성 · 뽑으면 턴 종료. 뽑은 카드는 주인에게만 |
-| 버림 | 임시 경로 — 손패에 있는지 검증 (기능 4 카드 사용 요청으로 대체) |
-| 카드 내기 · 함정 · 찹츄 선언 | 빈 메서드 |
+| 버림 | 클라 요청 없음 — 승인된 카드 사용만 버림 더미로 간다. 임시 버림 요청(`RequestDiscard`)은 2026-10-06 삭제 |
+| 카드 내기 | 구현 — 행동 카드 (`GameServer.PlayCard`) |
+| 함정 · 찹츄 선언 | 빈 메서드 |
 | 다음 턴 | 시작 때 섞은 순서 기준. 나간 사람은 순서에서 빠지고, 턴 주인이었으면 다음 사람에게 넘긴다 (`RemoveFromTurnOrder`). 생존자만 고르기는 기능 7 |
 | 방장 교체 | 새 방장의 `GameServer` 는 비어 있다 (`09-network` 9절 **미정**) |
 | 씬 배치 | `Scenes/TempGameScene` 의 `GameServer` 오브젝트 (`PhotonView` 씬 ID 1 + `PunGameServer` + `ServerDebugLog`). `DeckPresenter` · `PlayerHandPresenter` · `TurnPresenter` 의 `server` 가 여기 연결. `GameScene` 은 아직 옛 배치 |

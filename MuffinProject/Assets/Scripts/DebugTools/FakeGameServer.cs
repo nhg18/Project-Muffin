@@ -30,10 +30,6 @@ namespace Chapchu.DebugTools
             GameEvents.RaiseDrawn(CurrentTurnActor, 0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
         }
 
-        public void RequestDiscard(int cardId)
-        {
-        }
-
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
             

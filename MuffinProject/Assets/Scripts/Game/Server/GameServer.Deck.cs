@@ -4,7 +4,7 @@ using Chapchu.Game.Cards;
 
 namespace Chapchu.Game
 {
-    // GameServer.Deck.cs — 덱 · 버림 더미 원본과 드로우 · 버림 처리 (05-deck.md). 손패 원본은 PlayerState.Hand
+    // GameServer.Deck.cs — 덱 · 버림 더미 원본과 드로우 처리 (05-deck.md). 손패 원본은 PlayerState.Hand. 버림 더미로 보내는 건 카드 사용(GameServer.Card.cs)
     public partial class GameServer
     {
         // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 InitDeck 인자로 받는 더미 DeckRecipe 가 대신한다.
@@ -60,32 +60,6 @@ namespace Chapchu.Game
 
             // 드로우는 메인 행동 — 끝나면 턴 종료 (03-turn.md 3절). 카드 효과 드로우는 DrawOne 을 직접 써서 턴을 끝내지 않는다.
             AdvanceTurn();
-        }
-
-        /// <summary>카드 사용 · 버림으로 손패에서 카드 1장이 빠졌음을 알린다. 카드 사용(효과)은 다루지 않는다.</summary>
-        public void Discard(int requester, int cardId)
-        {
-            if (requester != CurrentTurnActor)
-            {
-                _outbox.Reject(requester, RejectCode.NotYourTurn);
-                return;
-            }
-
-            // 소유 검증: 요청자 손패에 그 종류의 카드가 있어야 한다 (09-network.md 4.1).
-            // 요청이 아직 종류 ID 라 같은 종류 중 한 장을 꺼낸다 — 인스턴스 ID 요청은 기능 4 에서.
-            List<CardInstance> hand = _players[requester].Hand;
-            int index = hand.FindIndex(c => c.CardId == cardId);
-            if (index < 0)
-            {
-                _outbox.Reject(requester, RejectCode.NotInHand);
-                return;
-            }
-
-            CardInstance card = hand[index];
-            hand.RemoveAt(index);
-            _discardPile.Add(card);
-            _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
-            _outbox.SetRoomState(RoomProps.DiscardCount, _discardPile.Count);
         }
 
         // 덱 맨 위 1장을 actor 손패로. 모든 뽑기(시작 배분 · 뽑기 요청 · 카드 효과)가 여기를 지난다.
