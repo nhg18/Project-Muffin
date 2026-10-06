@@ -26,13 +26,13 @@
     public static class SceneFlow
     {
         /// <summary>
-        /// 방(Room)에서 나갔을 때 돌아갈 씬. 방에 들어가기 직전에 진입 쪽(Lobby / DebugLobby)이 설정한다.
+        /// 방(Room)에서 나갔을 때 돌아갈 씬. 로비(Lobby / DebugLobby)가 열릴 때(Start) 설정한다.
         /// 기본값은 정식 흐름인 Lobby. (08-room.md 6절: Room ──(나가기)──→ Lobby)
         /// </summary>
         public static string ReturnSceneAfterRoom = ScenePaths.Lobby;
 
         /// <summary>
-        /// 방장이 게임을 시작하면 방 전원이 넘어갈 씬. 방에 들어가기 직전에 진입 쪽(Lobby / DebugLobby)이 설정한다.
+        /// 방장이 게임을 시작하면 방 전원이 넘어갈 씬. 로비(Lobby / DebugLobby)가 열릴 때(Start) 설정한다.
         /// 기본값은 인게임. DebugLobby 는 멀티 테스트용 TempGameScene 으로 바꿀 수 있다.
         /// </summary>
         public static string GameSceneAfterRoom = ScenePaths.Game;
