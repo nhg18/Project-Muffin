@@ -19,6 +19,7 @@ namespace Chapchu.Game
         public static event Action<int, LifeState> OnLifeStateChanged; // actorNumber, lifeState
         public static event Action<int, bool> OnChapChuChanged;        // actorNumber, isChapChu
         public static event Action<int> OnDeckCountChanged;            // deckCount
+        public static event Action<int> OnDeckRefilled;                // deckCount — 버림 더미를 섞어 덱을 다시 채움 (연출용, 전원)
         public static event Action<int, string> OnRequestRejected;     // actorNumber, reason
         public static event Action<int,int> OnCardPlayed;              // cardID,   HandIndex
 
@@ -35,6 +36,7 @@ namespace Chapchu.Game
         public static void RaiseLifeStateChanged(int actorNumber, LifeState lifeState) => OnLifeStateChanged?.Invoke(actorNumber, lifeState);
         public static void RaiseChapChuChanged(int actorNumber, bool isChapChu) => OnChapChuChanged?.Invoke(actorNumber, isChapChu);
         public static void RaiseDeckCountChanged(int deckCount) => OnDeckCountChanged?.Invoke(deckCount);
+        public static void RaiseDeckRefilled(int deckCount) => OnDeckRefilled?.Invoke(deckCount);
         public static void RaiseRequestRejected(int actorNumber, string reason) => OnRequestRejected?.Invoke(actorNumber, reason);
         public static void RaiseCardPlayed(int cardID,int index) => OnCardPlayed?.Invoke(cardID,index);
         public static void RaiseHandModeChanged(bool isHandMode) => OnHandModeChanged?.Invoke(isHandMode);

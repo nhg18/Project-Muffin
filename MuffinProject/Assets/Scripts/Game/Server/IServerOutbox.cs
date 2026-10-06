@@ -17,5 +17,8 @@
 
         /// <summary>드로우한 카드 내용. 요청자(카드 주인)에게만 보낸다.</summary>
         void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
+
+        /// <summary>버림 더미를 섞어 덱을 다시 채웠다 (연출용). 전원에게 보낸다.</summary>
+        void SendDeckRefilled(int deckCount);
     }
 }
