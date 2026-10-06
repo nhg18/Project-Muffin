@@ -40,15 +40,18 @@ namespace Chapchu.Presentation
                 Debug.LogError($"[{nameof(PlayerHandPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
         }
 
+        // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
+        //  · OnDrawn 이 (actor, cardInstanceId, cardId) 로 바뀌었다. StartDrawEvent 시그니처를 맞추고 인스턴스 ID 를 카드에 보관한 뒤 다시 구독한다.
+        //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아 손패에서 뺀다.
         private void OnEnable()
         {
-            GameEvents.OnDrawn += StartDrawEvent;
-            GameEvents.OnCardPlayed += DiscardCard;
+            // GameEvents.OnDrawn += StartDrawEvent;
+            // GameEvents.OnCardPlayed += DiscardCard;
         }
         private void OnDisable()
         {
-            GameEvents.OnDrawn -= StartDrawEvent;
-            GameEvents.OnCardPlayed -= DiscardCard;
+            // GameEvents.OnDrawn -= StartDrawEvent;
+            // GameEvents.OnCardPlayed -= DiscardCard;
         }
 
         private void StartDrawEvent(int actorNumber, int cardid)

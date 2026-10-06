@@ -89,7 +89,16 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 | `Presentation/Hand/PlayerHandPresenter` | `handCount` 직접 기록 | ✅ 마스터가 기록 (PR #40) |
 | `Presentation/Hand/PlayerHandPresenter` | 카드 사용 시 **승인 전에** 손패에서 먼저 지움 | 기능 4 |
 | `Presentation/Player/PlayerPresenter.Init` | HP 초기값을 **클라이언트가** 기록 | 기능 1 시작 순서 |
-| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | 기능 4 · 5 |
+| `Game/Rules/CardPlayManager` ↔ `Presentation/Card/CardPresenter` | 체인 · 무효화를 전원이 로컬 실행(A-2), 양방향 참조 | ✅ `CardPlayManager` 삭제 (PR #52). 드롭은 손패로 되돌림 |
+
+### 1-5. develop → HeeGeon PR 에 넣을 것 (UI 수정 필요)
+
+로직 PR 이 약속을 바꾸면서 Presenter 의 호출부를 **주석 처리**하고 `수정 필요(UI)` 메모를 남긴 곳. develop → HeeGeon PR 본문에 이 목록을 적는다.
+
+| 위치 | 주석 처리한 것 | UI 가 할 일 | 원인 PR |
+| --- | --- | --- | --- |
+| `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | `OnDrawn(actor, cardInstanceId, cardId)` 에 맞추고 인스턴스 ID 를 카드에 보관 → 다시 구독. **그 전까지 내 손패가 화면에 안 생긴다** | #53 |
+| `PlayerHandPresenter.OnEnable/OnDisable` | `OnCardPlayed += DiscardCard` (→ `RequestDiscard`) | 드롭 → `RequestPlayCard(cardInstanceId, 대상)`, `OnCardUsed` 를 받아 손패에서 뺀다. 그 뒤 `OnCardPlayed` · `RequestDiscard` 삭제 | #53 · #54 |
 
 ---
 
