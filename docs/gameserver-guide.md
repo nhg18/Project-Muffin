@@ -104,7 +104,7 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 
 | 항목 | 상태 |
 | --- | --- |
-| 턴 종료 요청 · 검증 · 거절 | 구현 |
+| 턴 넘김 | 자동만 — 20초 마감 · 뽑기 · 카드 사용 · 나감 (`AdvanceTurn`). 턴 종료 요청은 없음 (2026-10-06 삭제) |
 | 게임 시작 | 턴 순서 무작위 · 덱 섞기 · 카드 번호 · 5장씩 배분 · 체력 100 (방장 기록). 손패 · 체력 원본은 `PlayerState` |
 | 드로우 | 구현 — 내 턴 · 덱 재생성 · 뽑으면 턴 종료. 뽑은 카드는 주인에게만 |
 | 버림 | 임시 경로 — 손패에 있는지 검증 (기능 4 카드 사용 요청으로 대체) |
@@ -122,7 +122,7 @@ public override void OnRoomPropertiesUpdate(Hashtable changedProps)
 1. `DebugLobbyScene` 의 `DebugScript` 에서 **Start In Tmp Game** 이 켜져 있는지 본다 (기본 켜짐. 끄면 예전처럼 `GameScene`).
 2. 메인 에디터와 ParrelSync 클론 양쪽에서 `DebugLobbyScene` 을 열고 Play → 입장 버튼.
 3. 대기실에서 방장이 **시작** → 전원 `TempGameScene` 으로 넘어가고 방장이 바로 게임을 시작한다.
-4. 진짜 UI(턴 표시 · 턴 종료 버튼)로 요청하고, 결과는 에디터마다 화면과 Console 로 확인한다.
+4. 진짜 UI(턴 표시) · 디버그 키(`ServerDebugLog`)로 요청하고, 결과는 에디터마다 화면과 Console 로 확인한다.
    * 공개 값(턴 · HP · 장수)은 **양쪽 모두** 바뀌어야 한다.
    * 비공개 값(뽑은 카드 · 거절)은 **요청한 쪽에만** 와야 한다.
 

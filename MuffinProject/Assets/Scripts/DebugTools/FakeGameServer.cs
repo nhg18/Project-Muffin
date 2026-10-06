@@ -51,11 +51,5 @@ namespace Chapchu.DebugTools
         {
             
         }
-
-        public void RequestEndTurn()
-        {
-            Debug.Log("[FakeGameServer] Request End Turn");
-            GameEvents.RaiseTurnChanged(CurrentTurnActor);
-        }
     }
 }

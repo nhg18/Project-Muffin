@@ -93,17 +93,9 @@ namespace Chapchu.Network
         {
         }
 
-        public void RequestEndTurn() => photonView.RPC(nameof(RPC_RequestEndTurn), RpcTarget.MasterClient);
         #endregion
 
         #region 방장 — 요청 받기 (요청자 = info.Sender)
-        [PunRPC]
-        private void RPC_RequestEndTurn(PhotonMessageInfo info)
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-            _server.EndTurn(info.Sender.ActorNumber);
-        }
-
         [PunRPC]
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {

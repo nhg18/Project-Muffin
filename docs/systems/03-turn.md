@@ -60,7 +60,6 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 턴 순서 결정 | 마스터 |
 | 현재 턴 주인 저장 | 마스터 → Room CustomProperties |
 | 제한 시간 판정 | **마스터** (클라이언트 타이머는 표시 전용) |
-| 턴 종료 요청 | 클라이언트 → 마스터 검증 |
 
 상세는 [`09-network.md`](09-network.md).
 
@@ -101,7 +100,6 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 덱 탭 | 드로우 요청 | 자신의 턴 + 메인 행동 미사용 |
 | 카드 드래그 → 드롭 영역 | 행동 카드 사용 요청 | 자신의 턴 + 메인 행동 미사용 + 카드 조건 충족 |
 | 함정 슬롯으로 드래그 | 함정 설치 요청 | 자신의 턴 + 빈 슬롯 존재 | 
-| 턴 종료 버튼 | 턴 종료 요청 | **개발용 디버그 버튼** (정식 흐름 아님) |
 
 > 함정 설치 입력 방식은 **미정**. 현재 코드에 함정 설치 UI가 없다.
 
@@ -131,8 +129,8 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 항목 | 상태 |
 | --- | --- |
 | 턴 주인 Room Property 저장/동기화 | 구현됨 — `GameServer.SetTurn` → `RoomProps.TurnActor` (`TempGameScene`). 옛 `TurnManager`(`GameScene`)도 같은 키 |
-| 턴 종료 요청 → 마스터 검증 | 구현됨 — `GameServer.EndTurn`, 요청자는 `info.Sender`. 옛 `TurnManager` 는 클라이언트가 보낸 `requesterActor` 를 믿는다 (09 10절 위반, 교체 시 삭제) |
-| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `PunGameServer` (`TempGameScene`, 2026-10-06 연결. 턴 종료 버튼 영역은 비활성). 옛 `TurnManager` 는 이 계약을 구현하지 않는다 |
+| 턴 종료 요청 | **없음** — 턴은 20초 마감 · 뽑기 · 카드 사용 · 나감으로만 넘어간다 (2026-10-06 `GameServer.EndTurn` · `RequestEndTurn` 삭제). 옛 `TurnManager`(GameScene)에만 남아 있음 |
+| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `PunGameServer` (`TempGameScene`, 2026-10-06 연결. 턴 종료 버튼은 쓰지 않음). 옛 `TurnManager` 는 이 계약을 구현하지 않는다 |
 | 이탈 시 턴 이동 | 구현됨 — `GameServer.RemoveFromTurnOrder`: 나간 사람을 순서에서 빼고, 턴 주인이었으면 다음 사람에게. 옛 `TurnManager` 는 `GetNextActor` 인자 무시 버그 |
 | 첫 턴 무작위 결정 | 구현됨 — `GameServer.InitTurnOrder` 셔플 (2026-10-02). 옛 `TurnManager` 는 `PlayerList[0]` 고정 |
 | 턴 제한 시간 / 타이머 | 구현됨 — 방장이 `SetTurn` 때 마감 = `PhotonNetwork.Time` + 20초를 `RoomProps.TurnDeadline` 에 기록 → `GameEvents.OnTurnDeadlineChanged`. 남은 시간 표시는 UI (2026-10-06) |

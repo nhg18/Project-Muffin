@@ -11,7 +11,7 @@ namespace Chapchu.DebugTools
     /// <summary>
     /// 멀티 테스트용 콘솔 드라이버. 화면(Presenter) 없이 GameEvents 를 전부 로그로 찍고, 키로 요청을 보낸다.
     /// TempGameScene 의 PunGameServer 오브젝트에 같이 붙인다. 규칙 판정은 하지 않는다 — 로그와 요청뿐.
-    /// 키는 지금까지 만든 게임 흐름의 행동만 둔다 — D = 뽑기, E = 턴 종료, P = 손패 첫 카드를 다른 사람 1명에게, Esc = 나가기(들어온 로비로). 기능이 생기면 그 행동만 추가한다.
+    /// 키는 지금까지 만든 게임 흐름의 행동만 둔다 — D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, Esc = 나가기(들어온 로비로). 기능이 생기면 그 행동만 추가한다.
     /// </summary>
     public class ServerDebugLog : MonoBehaviour
     {
@@ -67,7 +67,6 @@ namespace Chapchu.DebugTools
             if (_requests == null) return;
 
             if (Input.GetKeyDown(KeyCode.D)) { Log("요청: 뽑기"); _requests.RequestDraw(); }
-            if (Input.GetKeyDown(KeyCode.E)) { Log("요청: 턴 종료"); _requests.RequestEndTurn(); }
             if (Input.GetKeyDown(KeyCode.P)) PlayFirstCard();
         }
 

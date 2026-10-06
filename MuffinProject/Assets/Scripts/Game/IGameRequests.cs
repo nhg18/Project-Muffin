@@ -15,6 +15,5 @@
         void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers);
         void RequestSetTrap(int cardInstanceId, int slotIndex);
         void RequestDeclareChapChu();
-        void RequestEndTurn();
     }
 }
