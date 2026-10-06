@@ -46,7 +46,7 @@ namespace Chapchu.DebugTools
         private void Update()
         {
             // Esc = 나가기: 방을 나가고, 들어온 로비(Lobby / DebugLobby)로 돌아간다
-            if (Input.GetKeyDown(KeyCode.Escape)) { Log("나가기"); NetworkManager.Instance.LeaveRoom(); }
+            if (Input.GetKeyDown(KeyCode.Escape)) { Log($"나가기 → {SceneFlow.ReturnSceneAfterRoom}"); NetworkManager.Instance.LeaveRoom(); }
 
             if (_requests == null) return;
 

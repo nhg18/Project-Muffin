@@ -50,7 +50,6 @@ namespace Chapchu.Network
         {
             if (PhotonNetwork.IsConnected) return false;
 
-            Debug.Log($"Connect Start: {Application.internetReachability}");
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
                 // Photon 을 거치지 않고, PUN 이 연결 실패 시 보내는 것과 같은 사유로 알린다.
@@ -93,7 +92,6 @@ namespace Chapchu.Network
         /// </summary>
         public void OnConnectedToMaster()
         {
-            Debug.Log("On Connected To Master");
             ConnectionEvents.RaiseConnected();
         }
 
@@ -110,7 +108,7 @@ namespace Chapchu.Network
                 cause = DisconnectCause.ClientTimeout;
             _isTimedOut = false;
 
-            Debug.Log($"On Disconnected: {cause}");
+            Debug.LogWarning($"[PhotonConnection] 연결 끊김: {cause}");
 
             // 앱 종료 — 알릴 화면이 없다
             if (cause == DisconnectCause.ApplicationQuit) return;

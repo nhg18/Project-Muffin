@@ -66,11 +66,10 @@ namespace Chapchu.Presentation
         {
             if (data == null)
             {
-                Debug.Log("null null null");
+                Debug.LogWarning("[CardView] CardData 가 없다.");
                 return;
             }
 
-            Debug.Log("data : "+ data.cardName+" "+ data.description);
             nameText.text = data.cardName;
             description.text = data.description;
             cardImage.sprite = data.cardImage;
@@ -150,7 +149,6 @@ namespace Chapchu.Presentation
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            Debug.Log("hover!");
             if (CanInteract)
             {
                 HoverCard();
@@ -175,7 +173,6 @@ namespace Chapchu.Presentation
             zDepth = Camera.main.WorldToScreenPoint(transform.localPosition).z;
 
             isDragging = true;
-            Debug.Log("클릭");
         }
         public void OnDrag(PointerEventData eventData)
         {

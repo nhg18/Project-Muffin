@@ -98,7 +98,6 @@ namespace Chapchu.Game
             if (!changedProperties.ContainsKey(RoomProps.TurnActor)) return;
 
             int actorNumber = (int)changedProperties[RoomProps.TurnActor];
-            Debug.Log($"turnchange : {actorNumber}/ MyTurn?:{IsMyTurn}");
         
             GameEvents.RaiseTurnChanged(actorNumber);
         }
@@ -108,7 +107,6 @@ namespace Chapchu.Game
             if (!PhotonNetwork.IsMasterClient) return;
             if (otherPlayer.ActorNumber == CurrentTurnActor)
             {
-                Debug.Log("[GameRule] TurnPlayer out, Turn is gived to nextPlayer");
                 SetTurn(GetNextActor(otherPlayer.ActorNumber));
             }
         }
