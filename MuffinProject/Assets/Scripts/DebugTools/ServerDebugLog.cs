@@ -33,6 +33,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCountChanged += OnHandCountChanged;
             GameEvents.OnDeckCountChanged += OnDeckCountChanged;
             GameEvents.OnDiscardCountChanged += OnDiscardCountChanged;
+            GameEvents.OnDeckRefilled += OnDeckRefilled;
             GameEvents.OnRequestRejected += OnRequestRejected;
         }
 
@@ -45,6 +46,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCountChanged -= OnHandCountChanged;
             GameEvents.OnDeckCountChanged -= OnDeckCountChanged;
             GameEvents.OnDiscardCountChanged -= OnDiscardCountChanged;
+            GameEvents.OnDeckRefilled -= OnDeckRefilled;
             GameEvents.OnRequestRejected -= OnRequestRejected;
         }
 
@@ -62,6 +64,7 @@ namespace Chapchu.DebugTools
         private void OnHandCountChanged(int actor, int count) => Log($"손패 장수 {actor}: {count}");
         private void OnDeckCountChanged(int count) => Log($"덱 잔여: {count}");
         private void OnDiscardCountChanged(int count) => Log($"버림 더미: {count}");
+        private void OnDeckRefilled(int count) => Log($"덱 재생성 — 버림 더미를 섞어 {count}장");
         private void OnRequestRejected(int actor, string reason) => Log($"거절 {actor}: {reason}");
 
         private void OnDrawn(int actor, int cardId)

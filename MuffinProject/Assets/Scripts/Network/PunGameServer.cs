@@ -147,6 +147,11 @@ namespace Chapchu.Network
             if (player == null) return;
             photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);
         }
+
+        void IServerOutbox.SendDeckRefilled(int deckCount)
+        {
+            photonView.RPC(nameof(RPC_OnDeckRefilled), RpcTarget.All, deckCount);
+        }
         #endregion
 
         #region 각 클라 — 결과 받기 → GameEvents
@@ -184,6 +189,12 @@ namespace Chapchu.Network
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
             GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
+        }
+
+        [PunRPC]
+        private void RPC_OnDeckRefilled(int deckCount)
+        {
+            GameEvents.RaiseDeckRefilled(deckCount);
         }
         #endregion
     }
