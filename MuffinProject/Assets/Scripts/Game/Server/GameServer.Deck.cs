@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Chapchu.Core;
 using Chapchu.Game.Cards;
 
@@ -34,10 +33,6 @@ namespace Chapchu.Game
         /// <summary>게임 시작 1회: 모든 플레이어에게 확정 수치(5장)만큼 나눠 준다. 턴 검증 없이 마스터가 바로 실행한다.</summary>
         public void DealInitialHands(IReadOnlyList<int> actors)
         {
-            // 배분 중에 덱이 바닥나면 DrawOne 이 터진다. 덱 레시피가 잘못된 개발 오류라 바로 알린다.
-            if (_deck.Count < actors.Count * InitialHandCount)
-                throw new InvalidOperationException($"덱 {_deck.Count}장으로는 {actors.Count}명에게 {InitialHandCount}장씩 나눠 줄 수 없다. 덱 레시피를 늘린다.");
-
             foreach (int actor in actors)
             {
                 for (int i = 0; i < InitialHandCount; i++)
@@ -55,17 +50,12 @@ namespace Chapchu.Game
 
             // TODO(손패 상한): 값이 확정되면 여기서 검사해 거절한다 (05-deck.md 6절 — 지금은 상한 없음).
 
-            if (_deck.Count == 0)
-                RefillFromDiscardPile();
-
-            if (_deck.Count == 0)
+            if (!DrawOne(requester))
             {
                 // TODO(미정): 덱 · 버림 더미가 모두 0장일 때 처리는 기획 미정 (05-deck.md 5절). 확정 전까지 상태 변경 없이 거절만 한다.
                 _outbox.Reject(requester, "뽑을 카드가 없습니다.");
                 return;
             }
-
-            DrawOne(requester);
 
             // 드로우는 메인 행동 — 끝나면 턴 종료 (03-turn.md 3절). 카드 효과 드로우는 DrawOne 을 직접 써서 턴을 끝내지 않는다.
             SetTurn(GetNextActor(CurrentTurnActor));
@@ -96,8 +86,16 @@ namespace Chapchu.Game
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
         }
 
-        private void DrawOne(int actor)
+        // 덱 맨 위 1장을 actor 손패로. 모든 뽑기(시작 배분 · 뽑기 요청 · 카드 효과)가 여기를 지난다.
+        // 덱이 비면 버림 더미로 다시 채운다 (05-deck.md 5절). 덱 · 버림 더미가 모두 비면 false.
+        private bool DrawOne(int actor)
         {
+            if (_deck.Count == 0)
+                RefillFromDiscardPile();
+
+            if (_deck.Count == 0)
+                return false;
+
             CardInstance card = _deck[0];
             _deck.RemoveAt(0);
 
@@ -107,8 +105,10 @@ namespace Chapchu.Game
             _outbox.SendDrawnCard(actor, card.InstanceId, card.CardId);
             _outbox.SetPlayerState(actor, PlayerProps.HandCount, hand.Count);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
+            return true;
         }
 
+        // 버림 더미를 섞어 새 덱으로. 화면이 섞는 연출을 하도록 따로 알린다.
         private void RefillFromDiscardPile()
         {
             if (_discardPile.Count == 0) return;
@@ -116,6 +116,8 @@ namespace Chapchu.Game
             _deck.AddRange(_discardPile);
             _discardPile.Clear();
             Shuffle(_deck);
+
+            _outbox.SendDeckRefilled(_deck.Count);
         }
     }
 }
