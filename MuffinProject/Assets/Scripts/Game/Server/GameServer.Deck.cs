@@ -62,7 +62,7 @@ namespace Chapchu.Game
             AdvanceTurn();
         }
 
-        /// <summary>카드 사용 · 버림으로 손패에서 카드 1장이 빠졌음을 알린다. 카드 효과 자체는 다루지 않는다 — 그건 CardPlayManager 가 별도로 처리한다.</summary>
+        /// <summary>카드 사용 · 버림으로 손패에서 카드 1장이 빠졌음을 알린다. 카드 사용(효과)은 다루지 않는다.</summary>
         public void Discard(int requester, int cardId)
         {
             if (requester != CurrentTurnActor)

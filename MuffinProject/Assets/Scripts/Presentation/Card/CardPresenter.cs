@@ -40,19 +40,6 @@ namespace Chapchu.Presentation
             Hand = hand;
         }
 
-        public bool LocalConditionCheck()
-        {
-            string conditionMet = cardModel.cardData.ValidateConditions(PhotonNetwork.LocalPlayer);
-            if (string.IsNullOrEmpty(conditionMet))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
         /// <summary>
         /// 드롭 영역에 놓였을 때 CardView 가 호출. 실제 처리는 손패가 직렬화한다 (PlayerHandPresenter.PlayCardAsync).
         /// </summary>
@@ -87,9 +74,9 @@ namespace Chapchu.Presentation
                 Debug.Log("target : "+ player);
             }
 
-            //CardPlayManager로 호출
-            CardPlayManager.Instance.RequestPlayCard(cardModel.cardData.id, targets);
-            GameEvents.RaiseCardPlayed(cardModel.cardData.id,cardModel.cardIndex);
+            // 판정은 서버(RequestPlayCard)가 한다. 아직 연결 전이라 손패로 되돌린다 — 옛 CardPlayManager 경로는 지웠다.
+            Debug.Log("[CardPresenter] 카드 사용은 서버 연결 전 — 손패로 되돌린다.");
+            cardView.ReturnToOrigin();
         }
 
         public async Task<List<int>> SelectPlayer()
