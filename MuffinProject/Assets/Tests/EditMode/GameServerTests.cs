@@ -149,6 +149,7 @@ namespace Chapchu.Game.Tests
             public void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId) =>
                 Drawn.Add(new DrawnCard { Actor = actorNumber, InstanceId = cardInstanceId, CardId = cardId });
             public void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers) { }
+            public void SendDeckRefilled(int deckCount) { }
 
             public List<DrawnCard> DrawnTo(int actor) => Drawn.Where(d => d.Actor == actor).ToList();
             public int RejectCount(int actor) => _rejects.Count(a => a == actor);
