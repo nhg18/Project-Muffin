@@ -83,9 +83,7 @@ namespace Chapchu.Network
 
         public void RequestDiscard(int cardId) => photonView.RPC(nameof(RPC_RequestDiscard), RpcTarget.MasterClient, cardId);
 
-        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
-        {
-        }
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
@@ -120,6 +118,13 @@ namespace Chapchu.Network
             _server.Discard(info.Sender.ActorNumber, cardId);
         }
 
+        [PunRPC]
+        private void RPC_RequestPlayCard(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers);
+        }
+
         // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
@@ -151,6 +156,11 @@ namespace Chapchu.Network
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
             photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);
+        }
+
+        void IServerOutbox.SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            photonView.RPC(nameof(RPC_OnCardUsed), RpcTarget.All, actorNumber, cardInstanceId, cardId, targetActorNumbers);
         }
 
         void IServerOutbox.SendDeckRefilled(int deckCount)
@@ -194,6 +204,12 @@ namespace Chapchu.Network
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
             GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardInstanceId, cardId);
+        }
+
+        [PunRPC]
+        private void RPC_OnCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            GameEvents.RaiseCardUsed(actorNumber, cardInstanceId, cardId, targetActorNumbers);
         }
 
         [PunRPC]
