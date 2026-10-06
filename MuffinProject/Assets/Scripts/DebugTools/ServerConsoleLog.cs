@@ -60,6 +60,9 @@ namespace Chapchu.DebugTools
             Debug.Log($"▶ P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {targets}");
         }
 
+        public void SendCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] affectedActorNumbers, bool negated)
+            => _inner.SendCardResolved(actorNumber, cardInstanceId, cardId, affectedActorNumbers, negated);
+
         public void SendDeckRefilled(int deckCount)
         {
             _inner.SendDeckRefilled(deckCount);

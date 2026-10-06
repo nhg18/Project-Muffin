@@ -86,6 +86,11 @@ namespace Chapchu.Network
 
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
+        // 서버 처리(GameServer.Counter)는 다음 PR — 지금은 보내지 않는다
+        public void RequestCounter(int cardInstanceId, int targetCardInstanceId)
+        {
+        }
+
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
         }
@@ -149,6 +154,11 @@ namespace Chapchu.Network
             photonView.RPC(nameof(RPC_OnCardUsed), RpcTarget.All, actorNumber, cardInstanceId, cardId, targetActorNumbers);
         }
 
+        void IServerOutbox.SendCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] affectedActorNumbers, bool negated)
+        {
+            photonView.RPC(nameof(RPC_OnCardResolved), RpcTarget.All, actorNumber, cardInstanceId, cardId, affectedActorNumbers, negated);
+        }
+
         void IServerOutbox.SendDeckRefilled(int deckCount)
         {
             photonView.RPC(nameof(RPC_OnDeckRefilled), RpcTarget.All, deckCount);
@@ -163,6 +173,9 @@ namespace Chapchu.Network
 
             if (changedProps.TryGetValue(RoomProps.TurnDeadline, out object deadline))
                 GameEvents.RaiseTurnDeadlineChanged((double)deadline);
+
+            if (changedProps.TryGetValue(RoomProps.ReactionDeadline, out object reactionDeadline))
+                GameEvents.RaiseReactionDeadlineChanged((double)reactionDeadline);
 
             if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
                 GameEvents.RaiseDeckCountChanged((int)deckCount);
@@ -196,6 +209,12 @@ namespace Chapchu.Network
         private void RPC_OnCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
         {
             GameEvents.RaiseCardUsed(actorNumber, cardInstanceId, cardId, targetActorNumbers);
+        }
+
+        [PunRPC]
+        private void RPC_OnCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] affectedActorNumbers, bool negated)
+        {
+            GameEvents.RaiseCardResolved(actorNumber, cardInstanceId, cardId, affectedActorNumbers, negated);
         }
 
         [PunRPC]

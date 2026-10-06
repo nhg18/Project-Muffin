@@ -39,8 +39,8 @@
 | 찹츄 상태 | 마스터 | 전체 공개 | Player CustomProperties |
 | 현재 턴 주인 | 마스터 | 전체 공개 | Room CustomProperties |
 | 턴 진행 방향 | 마스터 | 전체 공개 | Room CustomProperties (**미정** — `03-turn` 참고) |
-| 처리 체인 | 마스터 | 전체 공개 | 체인 변화 시 RPC 브로드캐스트 |
-| 반응 타이머 시작 시각 | 마스터 | 전체 공개 | RPC(`PhotonNetwork.Time` 기준) |
+| 처리 체인 | 마스터 | 전체 공개 | 체인 변화 시 RPC 브로드캐스트 — 올라감 `RPC_OnCardUsed`, 처리 `RPC_OnCardResolved` |
+| 반응 마감 시각 | 마스터 | 전체 공개 | Room CustomProperties `ReactionDeadline` (`PhotonNetwork.Time` 기준 절대 시각, 8절). 늦게 켜진 화면도 읽도록 RPC 대신 방 상태로 둔다 (2026-10-06) |
 | 좌석 배치 | **각 클라이언트 로컬 계산** | 로컬 | 전송 안 함 (`02-player` 참고) |
 | 카드 호버/드래그/연출 | 각 클라이언트 | 로컬 | 전송 안 함 |
 
@@ -93,6 +93,12 @@
 | 3 | `NoCardToDraw` | 덱 · 버림 더미가 모두 비었다 (05 5절 미정 — 임시 거절) |
 | 4 | `NotActionCard` | 행동 카드가 아니다 |
 | 5 | `InvalidTarget` | 대상이 카드 대상 타입에 맞지 않는다 |
+| 6 | `ChainInProgress` | 카드 처리(체인) 중 — 턴 주인이 뽑기 · 행동 카드를 낼 수 없다 (03-turn `Resolving`) |
+| 7 | `NothingToCounter` | 반응할 카드(체인)가 없다 |
+| 8 | `ReactionClosed` | 반응 시간(5초)이 끝났다 (04 8절) |
+| 9 | `NotCounterCard` | 카운터 카드가 아니다 |
+| 10 | `TargetChanged` | 반응하려던 카드가 더는 체인 맨 위가 아니다 — 동시에 오면 먼저 온 1개만 (4.2 · 04 7절) |
+| 11 | `CounterConditionNotMet` | 카운터의 반응 조건이 맞지 않는다 (예: 행동 카드에만 쓰는 카운터) |
 
 ---
 
@@ -140,7 +146,7 @@ public static class RoomProps
 }
 ```
 
-> 키 상수는 `Core/Props/PlayerProps.cs` · `Core/Props/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음). 옛 `"RoomDeck"` 덱 전체 배열 동기화는 삭제됐다.
+> 키 상수는 `Core/Props/PlayerProps.cs` · `Core/Props/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음). 반응 마감 시각은 `RoomProps.ReactionDeadline`(double, 서버 시각, 체인이 끝나면 0) (2026-10-06). 옛 `"RoomDeck"` 덱 전체 배열 동기화는 삭제됐다.
 
 ---
 

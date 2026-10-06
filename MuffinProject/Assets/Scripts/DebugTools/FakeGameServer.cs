@@ -35,6 +35,11 @@ namespace Chapchu.DebugTools
             
         }
 
+        public void RequestCounter(int cardInstanceId, int targetCardInstanceId)
+        {
+            
+        }
+
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
             

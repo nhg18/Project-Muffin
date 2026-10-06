@@ -18,8 +18,11 @@
         /// <summary>드로우한 카드 내용. 요청자(카드 주인)에게만 보낸다.</summary>
         void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
 
-        /// <summary>승인된 카드 사용 (누가 · 무엇을 · 누구에게). 전원에게 보낸다.</summary>
+        /// <summary>승인된 카드 사용 (누가 · 무엇을 · 누구에게) — 체인에 올라갔다. 효과는 아직. 전원에게 보낸다.</summary>
         void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers);
+
+        /// <summary>체인 카드 1장 처리 결과 — 실제로 효과를 받은 대상, 무효 여부. 전원에게 보낸다.</summary>
+        void SendCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] affectedActorNumbers, bool negated);
 
         /// <summary>버림 더미를 섞어 덱을 다시 채웠다 (연출용). 전원에게 보낸다.</summary>
         void SendDeckRefilled(int deckCount);
