@@ -73,6 +73,8 @@ namespace Chapchu.Game
                 _players[actor] = new PlayerState();
                 SetHp(actor, MaxHp);
             }
+
+            ResetChain();
         }
 
         /// <summary>디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패 장수[카드 ID] (방장 콘솔). 판정에 쓰지 않는다.</summary>

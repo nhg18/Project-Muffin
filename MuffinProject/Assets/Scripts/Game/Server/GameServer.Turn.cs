@@ -22,9 +22,17 @@ namespace Chapchu.Game
         }
 
         // 방장이 매 프레임 부른다. 마감이 지나면 아무것도 하지 않은 것으로 보고 넘긴다 (03-turn.md 4절 — 자동 제출 없음).
+        // 체인이 있는 동안(Resolving)은 턴 마감을 보지 않고 반응 마감만 본다 — 처리가 끝나면 ResolveChain 이 턴을 넘긴다.
         public void Tick()
         {
             if (CurrentTurnActor == -1) return;
+
+            if (IsChainOpen)
+            {
+                if (_clock() >= _reactionDeadline)
+                    ResolveChain();
+                return;
+            }
 
             if (_clock() >= _turnDeadline)
                 AdvanceTurn();

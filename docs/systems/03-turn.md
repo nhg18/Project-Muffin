@@ -134,9 +134,9 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 이탈 시 턴 이동 | 구현됨 — `GameServer.RemoveFromTurnOrder`: 나간 사람을 순서에서 빼고, 턴 주인이었으면 다음 사람에게. 옛 `TurnManager` 는 `GetNextActor` 인자 무시 버그 |
 | 첫 턴 무작위 결정 | 구현됨 — `GameServer.InitTurnOrder` 셔플 (2026-10-02). 옛 `TurnManager` 는 `PlayerList[0]` 고정 |
 | 턴 제한 시간 / 타이머 | 구현됨 — 방장이 `SetTurn` 때 마감 = `PhotonNetwork.Time` + 20초를 `RoomProps.TurnDeadline` 에 기록 → `GameEvents.OnTurnDeadlineChanged`. 남은 시간 표시는 UI (2026-10-06) |
-| 시간 초과 턴 종료 | 구현됨 — 방장 `PunGameServer.Update` → `GameServer.Tick` 이 마감을 넘기면 그냥 다음 사람으로 (자동 제출 없음). 턴 넘김은 `AdvanceTurn` 한 곳 |
+| 시간 초과 턴 종료 | 구현됨 — 방장 `PunGameServer.Update` → `GameServer.Tick` 이 마감을 넘기면 그냥 다음 사람으로 (자동 제출 없음). 턴 넘김은 `AdvanceTurn` 한 곳. 체인이 있는 동안(`Resolving`)은 턴 마감을 보지 않고 반응 마감만 본다 (2026-10-06) |
 | 연속 미제출 강제 퇴장 | **미구현** |
-| 메인 행동 1회 제한 | 부분 — 드로우는 끝나면 턴 종료 (`GameServer.Draw`). 카드 사용 후 턴 종료는 **미구현** (기능 4) |
+| 메인 행동 1회 제한 | 구현 (2026-10-06) — 드로우는 끝나면 턴 종료. 행동 카드는 체인 처리(반응 5초 포함)가 끝나면 턴 종료 (`ResolveChain` → `AdvanceTurn`). 체인 중 턴 주인의 뽑기 · 카드 내기는 `ChainInProgress` 거절. 체인 중 턴 주인이 나가면 바로 다음 사람에게 넘기고, 체인이 끝나면 그 사람의 20초를 새로 시작한다 (가정) |
 | 사망 플레이어 턴 제외 | **미구현** |
 | 턴 스킵 / 방향 | **미구현** |
 

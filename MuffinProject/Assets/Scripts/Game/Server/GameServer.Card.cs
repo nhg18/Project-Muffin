@@ -19,14 +19,21 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 행동 카드 사용 (04-card.md 5절). 검사 → 손패에서 버림 더미로 → 효과 → 알림 → 턴 넘김.
-        /// 반응 5초 · 카운터는 기능 5 — 지금은 바로 처리한다.
+        /// 행동 카드 사용 (04-card.md 5절). 검사 → 손패에서 빼 체인에 올림 → 반응 5초.
+        /// 효과 · 버림 더미 · 턴 넘김은 반응 시간이 끝난 뒤 ResolveChain 이 한다 (GameServer.Chain.cs).
         /// </summary>
         public void PlayCard(int requester, int cardInstanceId, int[] requestedTargets)
         {
             if (requester != CurrentTurnActor)
             {
                 _outbox.Reject(requester, RejectCode.NotYourTurn);
+                return;
+            }
+
+            // 메인 행동은 턴당 1회 — 낸 카드가 처리 중이면 또 낼 수 없다 (03-turn.md 3절)
+            if (IsChainOpen)
+            {
+                _outbox.Reject(requester, RejectCode.ChainInProgress);
                 return;
             }
 
@@ -53,23 +60,10 @@ namespace Chapchu.Game
                 return;
             }
 
-            // 적용 — 검사가 모두 끝난 뒤에만 상태를 바꾼다
+            // 적용 — 검사가 모두 끝난 뒤에만 상태를 바꾼다. 카드는 바로 손패에서 빠진다
             hand.RemoveAt(index);
-            _discardPile.Add(card);
-
-            if (rule.Damage > 0)
-            {
-                foreach (int target in targets)
-                    SetHp(target, _players[target].Hp - rule.Damage);
-            }
-
-            // 내보내기
-            _outbox.SendCardUsed(requester, card.InstanceId, card.CardId, targets);
+            PushChain(requester, card, rule, targets);
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
-            _outbox.SetRoomState(RoomProps.DiscardCount, _discardPile.Count);
-
-            // 행동 카드 사용은 메인 행동 — 끝나면 턴 종료 (03-turn.md 3절)
-            AdvanceTurn();
         }
 
         // 대상 타입에 맞게 대상을 정한다. 자동 타입은 서버가 정하고, 고르는 타입은 요청을 검사한다. 맞지 않으면 null.

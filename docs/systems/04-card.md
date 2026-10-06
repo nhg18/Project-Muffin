@@ -261,9 +261,9 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 서버용 카드 규칙 (`CardRule`) | 구현됨 (2026-10-06) — 서버는 순수 C# 이라 `CardData.ToRule()` 로 id · 타입 · 대상 · 데미지만 뽑아 `GameServer.InitCards` 로 받는다. `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/CardRule.cs`)로 이동. 효과는 데미지 1종만 — 나머지는 기능 9 |
 | 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`CardRule`)에 추가 |
 | 카드 효과 (`CardEffect`) | 수치 데이터만 — `DamageEffect.damageAmount` 를 `CardData.ToRule()` 이 읽는다. 실행(`Execute`)과 `StatBuffer` 는 삭제 (2026-10-06). 감소 · 무효 · 전환 계산(06 §4)은 없음 |
-| 체인 등록 / 역순 처리 | **없음** — 옛 `CardPlayManager`(클라마다 개별 실행) 삭제 (2026-10-06). 서버 체인은 기능 5 |
-| 반응 시간 | **없음** — 옛 4.5초 `Invoke` 는 `CardPlayManager` 와 함께 삭제. 서버 반응 5초는 기능 5 |
-| 마스터 검증 | 행동 카드만 구현 (2026-10-06) — `GameServer.PlayCard`: 내 턴 · 손패에 있음(인스턴스 ID) · 행동 카드 · 대상(타입별 인원 · 상대인지) 검사 → 버림 더미 → 데미지 → `OnCardUsed`(전원) → 턴 넘김. 반응 5초 · 카운터 · 카드별 조건은 아직. UI 드롭은 아직 서버에 연결 전 (드롭하면 손패로 되돌림) |
+| 체인 등록 / 역순 처리 | 구현 (2026-10-06, 기능 5-2) — `GameServer.Chain.cs`. 승인된 카드는 손패에서 빠져 체인 맨 위에 올라가고(`OnCardUsed`), 반응 시간이 끝나면 맨 위부터 처리(`OnCardResolved`) → 체인 카드 전부 버림 더미 → 행동 카드를 낸 사람의 턴 종료. 체인 깊이 제한은 미정(15절 5)이라 없음 |
+| 반응 시간 | 구현 (2026-10-06) — 방장이 마감 = `PhotonNetwork.Time` + 5초를 `RoomProps.ReactionDeadline` 에 기록 → `GameEvents.OnReactionDeadlineChanged`. 체인이 끝나면 0. 판정은 방장 `Tick` 만. 반응 타이머 표시는 UI |
+| 마스터 검증 | 행동 카드 (2026-10-06) — `GameServer.PlayCard`: 내 턴 · 체인 없음(`ChainInProgress`) · 손패에 있음(인스턴스 ID) · 행동 카드 · 대상(타입별 인원 · 상대인지) 검사 → 체인에 올림 · 반응 5초. 데미지 · 버림 더미 · 턴 넘김은 체인 처리 때. 카드별 조건은 아직. UI 드롭은 아직 서버에 연결 전 (드롭하면 손패로 되돌림) |
 | 카운터 카드 | 카드 데이터만 존재(`Card_C_002`, `Prototype_003_ACT` — 이름과 달리 타입이 카운터). 반응 입력 UI 없음 |
 | **함정 카드 / 함정 슬롯** | **전혀 미구현** |
 | 대상 선택 (`TargetSelectionManager`) | 구현됨. 5초 타임아웃, 우클릭 취소, 선택 중 다른 카드 입력 차단 (2026-09-25). 대상이 비면 요청을 보내지 않고 손패로 되돌린다 → **대상 없음(`TargetType.None`) 카드는 지금 쓸 수 없다** |

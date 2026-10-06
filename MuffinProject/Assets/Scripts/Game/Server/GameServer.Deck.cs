@@ -49,6 +49,13 @@ namespace Chapchu.Game
                 return;
             }
 
+            // 행동 카드를 낸 뒤 처리 중이면 뽑을 수 없다 — 메인 행동은 둘 중 하나 (03-turn.md 3절)
+            if (IsChainOpen)
+            {
+                _outbox.Reject(requester, RejectCode.ChainInProgress);
+                return;
+            }
+
             // TODO(손패 상한): 값이 확정되면 여기서 검사해 거절한다 (05-deck.md 6절 — 지금은 상한 없음).
 
             if (!DrawOne(requester))
