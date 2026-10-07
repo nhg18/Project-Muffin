@@ -57,5 +57,10 @@ namespace Chapchu.DebugTools
             Debug.Log("[FakeGameServer] Request End Turn");
             GameEvents.RaiseTurnChanged(CurrentTurnActor);
         }
+
+        public int GetCurrentHandCount(int actorNumber)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -9,5 +9,6 @@
     {
         /// <summary>현재 턴 주인의 actorNumber. 아직 시작 전이면 -1.</summary>
         int CurrentTurnActor { get; }
+        int GetCurrentHandCount(int actorNumber);
     }
 }

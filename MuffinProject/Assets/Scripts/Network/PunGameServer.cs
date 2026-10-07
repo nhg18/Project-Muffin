@@ -169,6 +169,11 @@ namespace Chapchu.Network
         {
             GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
         }
+
+        public int GetCurrentHandCount(int actorNumber)
+        {
+            throw new System.NotImplementedException();
+        }
         #endregion
     }
 }
