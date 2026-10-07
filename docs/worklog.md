@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-10-07 · 찹츄 버튼 (UI) · IGameState 손패 수 조회 (HeeGeon → develop PR)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `HeeGeon` → `develop` PR |
+| 범위 | `ChapChuPresenter` · `ChapChuView`(신규) · `IGameState`(약속 · 양쪽 리뷰) · `PunGameServer` · `FakeGameServer` · `DeckView` · `TempGameScene` · 버튼 스프라이트 |
+
+### 한 것
+
+- 찹츄 버튼 UI: `ChapChuView`(버튼 탭 → `DeclareChapchu` 이벤트, 외곽선 표시) · `ChapChuPresenter`(`RequestDeclareChapChu` 요청, `OnHandCountChanged` · `OnTurnChanged` 로 손패 10장일 때 외곽선).
+- 약속 추가: `IGameState.GetCurrentHandCount(actorNumber)` — 늦게 켜진 UI 가 초기 손패 수를 읽는 용도. `PunGameServer` 는 Player CustomProperties 를 그 자리에서 읽고, `FakeGameServer` 는 0.
+- `DeckView` 에 `IPointerClickHandler`(좌클릭) 추가.
+- `develop`(#49 ~ #62) 머지. `FakeGameServer` 충돌은 develop 쪽(`RequestEndTurn` 삭제) 유지.
+
+### 결정
+
+- 손패 수를 이벤트로 받아 **표시 조건**(버튼 외곽선)에 쓰는 것은 규칙 위반이 아니다. 선언 가능 여부 판정은 여전히 마스터. 초기값은 `IGameState` 로 한 번 읽고, 이후는 이벤트로만 갱신한다 (TurnPresenter 와 같은 패턴).
+
+### 다음 할 일
+
+- [ ] Unity 확인: 컴파일 · `TempGameScene` 에서 ChapChuPresenter 의 `server` · `chapChuView` 인스펙터 연결 · 멀티 실행으로 손패 10장 시 외곽선
+- [ ] `ChapChuPresenter` · `ChapChuView` 에 `Chapchu.Presentation` namespace 적용 (다른 Presenter 와 통일)
+- [ ] Presentation 의 `PhotonNetwork.LocalPlayer` 직접 참조를 `IGameState` 조회로 바꿀지 검토 (Fake 환경 호환)
+
 ## 2026-10-06 (2) · 기능 1 ~ 4 서버 · 방장 콘솔 로그 · 거절 코드 · 버그 수정 (#49 ~ #61)
 
 | 항목 | 값 |
