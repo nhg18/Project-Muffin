@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Chapchu.Core;
 
 namespace Chapchu.Game
@@ -26,7 +27,7 @@ namespace Chapchu.Game
         //        public void Draw(int requester)
         //        {
         //            // 검증: 실패하면 상태를 하나도 바꾸지 않고 거절만 보낸다
-        //            if (requester != CurrentTurnActor) { _outbox.Reject(requester, "내 턴이 아닙니다."); return; }
+        //            if (requester != CurrentTurnActor) { _outbox.Reject(requester, RejectCode.NotYourTurn); return; }
         //
         //            // 적용: 원본은 여기(방장 메모리)에만 있다
         //            CardInstance card = _deck.Pop();
@@ -50,14 +51,16 @@ namespace Chapchu.Game
 
         // ── 원본 상태 ──
         private readonly IServerOutbox _outbox;
+        private readonly Func<double> _clock; // 서버 시각(초). 턴 마감 계산에 쓴다 (09-network.md 8절)
         private readonly List<int> _turnOrder = new List<int>();
         private readonly Dictionary<int, PlayerState> _players = new Dictionary<int, PlayerState>(); // actorNumber → 원본
 
         public int CurrentTurnActor { get; private set; } = -1;
 
-        public GameServer(IServerOutbox outbox)
+        public GameServer(IServerOutbox outbox, Func<double> clock)
         {
             _outbox = outbox;
+            _clock = clock;
         }
 
         public void StartGame(IReadOnlyList<int> actors)
@@ -70,8 +73,15 @@ namespace Chapchu.Game
                 _players[actor] = new PlayerState();
                 SetHp(actor, MaxHp);
             }
+        }
 
-            InitTurnOrder(actors);
+        /// <summary>디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패 장수[카드 ID] (방장 콘솔). 판정에 쓰지 않는다.</summary>
+        public string DebugState()
+        {
+            string players = string.Join(" │ ", _players.Select(p =>
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(_turnOrder.Contains(p.Key) ? "" : " 나감")}"));
+
+            return $"덱 {_deck.Count} · 버림 {_discardPile.Count} ║ {players}";
         }
 
         // 덱(GameServer.Deck.cs) · 턴 순서(GameServer.Turn.cs) 공용

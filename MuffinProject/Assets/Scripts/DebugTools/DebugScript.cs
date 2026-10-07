@@ -24,6 +24,12 @@ namespace Chapchu.DebugTools
 
         private void Start()
         {
+            // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다. 입장 콜백(OnJoinedRoom)에서 정하면 안 된다 —
+            // 이미 있는 방에 들어가면 PUN 씬 동기화(AutomaticallySyncScene)가 콜백보다 먼저 RoomScene 을 불러
+            // 이 오브젝트가 사라지고, 값이 기본값(Lobby)으로 남는다.
+            SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
+            SceneFlow.GameSceneAfterRoom = startInTmpGame ? ScenePaths.TmpGame : ScenePaths.Game;
+
             // AutomaticallySyncScene 은 NetworkManager.Awake(PhotonConnection.Initialize) 가 true 로 켠다.
             // 여기서 false 로 덮어쓰면 방장의 LoadLevel 이 참가자에게 동기화되지 않아 마스터만 인게임으로 넘어간다.
             if (!NetworkManager.IsConnected)
@@ -52,7 +58,6 @@ namespace Chapchu.DebugTools
                 return;
             }
         
-            Debug.Log("Click join button");
 
             var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
             PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
@@ -60,14 +65,10 @@ namespace Chapchu.DebugTools
 
         private void OnJoinedRoom()
         {
-            Debug.Log("JoinRoom");
             int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");
-        
-            Debug.Log("OnJoinedRoom " + NetworkManager.Nickname);
 
-            SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
-            SceneFlow.GameSceneAfterRoom = startInTmpGame ? ScenePaths.TmpGame : ScenePaths.Game;
+            // 방을 새로 만든 사람만 여기서 넘어간다. 이미 있는 방에 들어간 사람은 PUN 씬 동기화가 먼저 넘긴다.
             SceneManager.LoadScene(ScenePaths.Room);
         }
     }

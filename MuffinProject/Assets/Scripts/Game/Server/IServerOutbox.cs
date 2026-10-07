@@ -12,10 +12,16 @@
         /// <summary>공개 상태 (플레이어). 키는 <c>PlayerProps</c>.</summary>
         void SetPlayerState(int actorNumber, string key, object value);
 
-        /// <summary>요청 거절. 요청자에게만 보낸다.</summary>
-        void Reject(int actorNumber, string reason);
+        /// <summary>요청 거절. 요청자에게만 보낸다. 코드는 <c>RejectCode</c>.</summary>
+        void Reject(int actorNumber, int code);
 
         /// <summary>드로우한 카드 내용. 요청자(카드 주인)에게만 보낸다.</summary>
         void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId);
+
+        /// <summary>승인된 카드 사용 (누가 · 무엇을 · 누구에게). 전원에게 보낸다.</summary>
+        void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers);
+
+        /// <summary>버림 더미를 섞어 덱을 다시 채웠다 (연출용). 전원에게 보낸다.</summary>
+        void SendDeckRefilled(int deckCount);
     }
 }

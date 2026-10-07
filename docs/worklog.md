@@ -6,6 +6,46 @@
 
 ---
 
+## 2026-10-06 (2) · 기능 1 ~ 4 서버 · 방장 콘솔 로그 · 거절 코드 · 버그 수정 (#49 ~ #61)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | 임시 브랜치 → `logic` PR (머지 후 임시 브랜치 삭제) |
+| 범위 | `GameServer*` · `PunGameServer` · `CardRule` · 약속(`GameEvents` · `IGameRequests` · `IServerOutbox` · `RoomProps` · `RejectCode`) · `ServerConsoleLog` · `ServerDebugLog` · 로비 복귀 |
+
+### 한 것
+
+| PR | 내용 |
+| --- | --- |
+| #49 | 임시 덱 레시피(ID 1 · 4 각 20장, 가정) · 모든 뽑기가 `DrawOne` 을 지나며 덱이 비면 버림 더미로 재생성 · `OnDeckRefilled`(연출용) |
+| #50 | 턴 넘김을 `AdvanceTurn` 한 곳으로 · 20초 마감 방장 판정(`Tick`) · `OnTurnDeadlineChanged` |
+| #51 | 버림 더미 장수 공개(`DiscardCount`) |
+| #52 | 서버가 읽는 카드 규칙 `CardRule` · 옛 카드 시스템 삭제(`CardPlayManager` · `CardCondition` · `StatBuffer` …) |
+| #53 | 약속: `OnDrawn` 에 인스턴스 ID · `OnCardUsed` |
+| #54 | 행동 카드 사용 서버 처리(검사 → 버림 → 데미지 → 알림 → 턴 넘김) · 디버그 키 P |
+| #55 | Esc = 방 나가기 → 들어온 로비로 |
+| #56 | 턴 종료 요청 삭제 — 자동 넘김만 |
+| #57 · #59 | 방장 콘솔 로그(`ServerConsoleLog`) · 턴 요약 한 줄 · 잡음 로그 삭제 |
+| #58 | 거절 사유 문자열 → 거절 코드(`RejectCode`, const int) · 문구는 `RejectText` |
+| #60 | 버그: 나가기 후 항상 LobbyScene — 돌아갈 씬을 로비 `Start` 에서 정함 (PUN 씬 동기화가 입장 콜백보다 먼저 씬을 바꿨다) |
+| #61 | 버그: 두 번째 판 시작 때 상대 손패 오류 — 방 나갈 때 내 CustomProperties 비움 · `drawPosition` 을 `Awake` 에서 |
+
+### 결정 (사용자)
+
+1. 턴 종료 요청은 없다. 턴은 20초 마감 · 뽑기 · 카드 사용 · 나감으로만 넘어간다.
+2. 거절은 **코드(const int)** 로 보낸다. enum 보다 기존 `RoomProps` 방식 · RPC 그대로 전송이 낫다.
+3. Presenter 가 바뀐 약속을 쓰는 곳은 **호출부를 주석 처리 + `수정 필요(UI)` 메모** 로 남기고, develop → HeeGeon PR 에서 UI 가 맞춘다 (`plan-a-logic.md` 1-5절).
+4. 브랜치 흐름: 작업 브랜치 → `logic` PR → (사용자 머지) → `develop` PR. develop → 트랙 브랜치도 PR. 머지한 임시 브랜치는 원격 · 로컬에서 바로 지운다.
+5. 테스트는 방장 콘솔 하나로 본다 (`ServerConsoleLog`). 정상 흐름 로그는 남기지 않는다.
+
+### 다음 할 일
+
+- [ ] `logic` → `develop` PR, develop → HeeGeon PR (UI 수정 목록 4건 전달)
+- [ ] 기능 5 카운터 · 반응 5초 — 서버부터 (약속 → 반응 대기 → 체인 역순 처리 → C05 무효)
+- [ ] 4클론 통합 확인 (시작 → 20초 → D · P → 덱 재생성 → Esc → 다시 시작)
+
+---
+
 ## 2026-10-06 · develop 통합 (#48 · #47) · 테스트 방식 변경 · 카드 드롭 NRE
 
 | 항목 | 값 |

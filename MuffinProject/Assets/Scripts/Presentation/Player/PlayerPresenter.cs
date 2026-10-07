@@ -18,7 +18,6 @@ namespace Chapchu.Presentation
         public void Init(int actorNumber, int maxHp)
         {
             Model = new PlayerModel(actorNumber, maxHp);
-            Debug.Log("현재 체력 : " + Model.CurrentHp);
 
             ExitGames.Client.Photon.Hashtable hashtable = new ExitGames.Client.Photon.Hashtable();
             hashtable[PlayerProps.Hp] = maxHp;
@@ -48,13 +47,11 @@ namespace Chapchu.Presentation
                 {
                     int newHp = (int)changedProps[PlayerProps.Hp];
                     Model.SetHp(newHp);
-                    Debug.Log(Model.ActorNumber + "의 현재 체력 : " + Model.CurrentHp);
                 }
                 if (changedProps.ContainsKey(PlayerProps.HandCount))
                 {
                     int newHandCount = (int)changedProps[PlayerProps.HandCount];
                     Model.SetHandCount(newHandCount);
-                    Debug.Log("드로우 연동 확인");
                 }
             }
         }

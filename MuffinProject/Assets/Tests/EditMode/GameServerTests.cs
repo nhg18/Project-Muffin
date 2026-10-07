@@ -21,7 +21,7 @@ namespace Chapchu.Game.Tests
         public void SetUp()
         {
             _outbox = new FakeOutbox();
-            _server = new GameServer(_outbox);
+            _server = new GameServer(_outbox, () => 0);
         }
 
         // 카드 종류 ID 가 모두 다른 덱으로 A · B 2인 게임을 시작하고 5장씩 나눠 준다. 첫 턴은 무작위라 (턴 주인, 상대) 를 돌려준다.
@@ -38,7 +38,7 @@ namespace Chapchu.Game.Tests
         [Test]
         public void NewServer_HasNoTurnActor()
         {
-            var server = new GameServer(null);
+            var server = new GameServer(null, () => 0);
 
             Assert.AreEqual(-1, server.CurrentTurnActor);
         }
@@ -145,9 +145,11 @@ namespace Chapchu.Game.Tests
 
             public void SetRoomState(string key, object value) => _roomStates.Add((key, value));
             public void SetPlayerState(int actorNumber, string key, object value) => _playerStates.Add((actorNumber, key, value));
-            public void Reject(int actorNumber, string reason) => _rejects.Add(actorNumber);
+            public void Reject(int actorNumber, int code) => _rejects.Add(actorNumber);
             public void SendDrawnCard(int actorNumber, int cardInstanceId, int cardId) =>
                 Drawn.Add(new DrawnCard { Actor = actorNumber, InstanceId = cardInstanceId, CardId = cardId });
+            public void SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers) { }
+            public void SendDeckRefilled(int deckCount) { }
 
             public List<DrawnCard> DrawnTo(int actor) => Drawn.Where(d => d.Actor == actor).ToList();
             public int RejectCount(int actor) => _rejects.Count(a => a == actor);
