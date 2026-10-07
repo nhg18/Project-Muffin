@@ -143,16 +143,17 @@
 | 항목 | 상태 |
 | --- | --- |
 | 덱 원본 | 마스터 (`GameServer.Deck.cs`, 순수 C#). Photon 전송은 `PunGameServer` — `TempGameScene` 에만 배치 |
-| `DeckRecipe`로 덱 초기화 · 인스턴스 ID 부여 | 구현됨 (`InitDeck`). 덱 구성은 미정이라 더미 레시피 |
+| `DeckRecipe`로 덱 초기화 · 인스턴스 ID 부여 | 구현됨 (`InitDeck`). 덱 구성은 미정이라 **임시 레시피(가정)** `NewDeckRecipe` — 행동 카드 ID 1 · ID 4 각 20장 = 40장 (2026-10-06). 덱이 비면 시작 배분 · 뽑기 · 카드 효과 뽑기 모두 `DrawOne` 에서 버림 더미를 섞어 다시 채우고 `GameEvents.OnDeckRefilled` 로 알린다(연출용) |
 | 셔플 | 구현됨 (Fisher–Yates) |
 | 초기 배분 | 구현됨 — 마스터가 `DealInitialHands` 로 전원에게 5장 일괄 배분 |
 | 드로우 | 구현됨 — 요청 → 턴 검증 → 덱 맨 위 1장 → **드로우 후 턴 종료** (03 3절). 메인 행동 중 카드 사용 쪽 제한은 기능 4 |
 | 덱 동기화 | 잔여 장수만 Room Property (`RoomProps.DeckCount`). 옛 덱 전체 배열 동기화는 삭제 |
-| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnDrawn`)는 아직 종류 ID 만 넘긴다 |
+| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnDrawn`)도 인스턴스 ID 를 넘긴다 (2026-10-06) |
 | 손패 장수 동기화 | 구현됨 — 마스터만 기록 (`PlayerProps.HandCount`) |
 | 손패 **내용** 원본 | 마스터 (`PlayerState.Hand`, 2026-10-01). 배분 · 드로우 때 넣고 버릴 때 꺼낸다 |
 | 덱 소진 재생성 | 구현됨 — 버림 더미 회수 → 재셔플 |
 | 버림 더미 | 마스터에 있음. 버림 요청은 손패에 그 **종류**가 있어야 받고, 같은 종류 중 한 장을 꺼내 그대로(인스턴스 ID 유지) 넣는다. 요청이 아직 종류 ID 라 정확히 어느 한 장인지는 모른다 — 인스턴스 ID 요청은 기능 4. 요청은 자신의 턴에만 받는다 — 강제 버림 · 카운터는 아직 경로 없음 |
+| 버림 더미 장수 공개 | 구현됨 — 방장이 `RoomProps.DiscardCount` 에 기록(시작 0 · 버릴 때 · 덱 재생성 때 0) → `GameEvents.OnDiscardCountChanged` (2026-10-06). 화면 표시 여부는 **미정** (11절 5) |
 | 카드 사용 시 손패에서 제거 | 부분 — 요청한 클라이언트가 승인 전에 스스로 지운다 (04 현재 구현 상태와 같음) |
 | 상대 손패 장수 보정 | 구현됨 (`OtherPlayerHandPresenter`, 늘 때 · 줄 때 모두 맞춘다) |
 

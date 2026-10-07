@@ -22,19 +22,16 @@ namespace Chapchu.DebugTools
 
         private void Start()
         {
-            Debug.Log("Starting game server");
             GameEvents.RaiseOnGameStarted(playerList.ToArray());
         }
 
         public void RequestDraw()
         {
-            Debug.Log("[FakeGameServer] Request Draw");
-            GameEvents.RaiseDrawn(CurrentTurnActor, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
+            GameEvents.RaiseDrawn(CurrentTurnActor, 0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
         }
 
         public void RequestDiscard(int cardId)
         {
-            Debug.Log($"[FakeGameServer] Request Discard {cardId}");
         }
 
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
@@ -52,15 +49,7 @@ namespace Chapchu.DebugTools
             
         }
 
-        public void RequestEndTurn()
-        {
-            Debug.Log("[FakeGameServer] Request End Turn");
-            GameEvents.RaiseTurnChanged(CurrentTurnActor);
-        }
-
-        public int GetCurrentHandCount(int actorNumber)
-        {
-            throw new NotImplementedException();
-        }
+        /// <summary>손패 흉내는 없다 — 항상 0. 이벤트 흐름만 확인용.</summary>
+        public int GetCurrentHandCount(int actorNumber) => 0;
     }
 }

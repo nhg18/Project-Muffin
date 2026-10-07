@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using Chapchu.Core;
+using Chapchu.DebugTools;
 using Chapchu.Game;
+using Chapchu.Game.Cards;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -37,6 +39,9 @@ namespace Chapchu.Network
         // 덱 구성은 미정이라 더미 레시피를 그대로 쓴다 (05-deck.md 2절 · 8절).
         [SerializeField] private DeckRecipe startingDeckRecipe;
 
+        // 카드 규칙의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘긴다.
+        [SerializeField] private CardDatabase cardDatabase;
+
         public int CurrentTurnActor
         {
             get
@@ -49,7 +54,8 @@ namespace Chapchu.Network
 
         private void Awake()
         {
-            _server = new GameServer(this);
+            // 방장 콘솔 로그(ServerConsoleLog)가 서버의 출구를 감싸서 결과를 찍고 그대로 이 객체로 넘긴다.
+            _server = new GameServer(new ServerConsoleLog(this, () => _server), () => PhotonNetwork.Time);
         }
 
         // 이 씬은 방에서 LoadLevel 로 넘어오므로(Room → Game / TempGameScene) 방장이 바로 시작한다.
@@ -58,9 +64,21 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
 
             int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
+            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
+
+            // 01-game-flow.md 3절 순서: 체력 → 덱 → 5장씩 → 턴 순서
             _server.StartGame(actors);
+            _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
             _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
             _server.DealInitialHands(actors);
+            _server.StartFirstTurn();
+        }
+
+        // 턴 마감 판정은 방장만 한다 (09-network.md 8절).
+        private void Update()
+        {
+            if (PhotonNetwork.IsMasterClient)
+                _server.Tick();
         }
 
         #region IGameRequests (UI → 방장)
@@ -68,9 +86,7 @@ namespace Chapchu.Network
 
         public void RequestDiscard(int cardId) => photonView.RPC(nameof(RPC_RequestDiscard), RpcTarget.MasterClient, cardId);
 
-        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
-        {
-        }
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)
         {
@@ -80,17 +96,9 @@ namespace Chapchu.Network
         {
         }
 
-        public void RequestEndTurn() => photonView.RPC(nameof(RPC_RequestEndTurn), RpcTarget.MasterClient);
         #endregion
 
         #region 방장 — 요청 받기 (요청자 = info.Sender)
-        [PunRPC]
-        private void RPC_RequestEndTurn(PhotonMessageInfo info)
-        {
-            if (!PhotonNetwork.IsMasterClient) return;
-            _server.EndTurn(info.Sender.ActorNumber);
-        }
-
         [PunRPC]
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {
@@ -103,6 +111,13 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             _server.Discard(info.Sender.ActorNumber, cardId);
+        }
+
+        [PunRPC]
+        private void RPC_RequestPlayCard(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers);
         }
 
         // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
@@ -124,11 +139,11 @@ namespace Chapchu.Network
             PhotonNetwork.CurrentRoom.GetPlayer(actorNumber)?.SetCustomProperties(new Hashtable { [key] = value });
         }
 
-        void IServerOutbox.Reject(int actorNumber, string reason)
+        void IServerOutbox.Reject(int actorNumber, int code)
         {
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
-            photonView.RPC(nameof(RPC_RejectRequest), player, reason);
+            photonView.RPC(nameof(RPC_RejectRequest), player, code);
         }
 
         void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId)
@@ -136,6 +151,16 @@ namespace Chapchu.Network
             var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null) return;
             photonView.RPC(nameof(RPC_OnDrawn), player, cardInstanceId, cardId);
+        }
+
+        void IServerOutbox.SendCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            photonView.RPC(nameof(RPC_OnCardUsed), RpcTarget.All, actorNumber, cardInstanceId, cardId, targetActorNumbers);
+        }
+
+        void IServerOutbox.SendDeckRefilled(int deckCount)
+        {
+            photonView.RPC(nameof(RPC_OnDeckRefilled), RpcTarget.All, deckCount);
         }
         #endregion
 
@@ -145,8 +170,14 @@ namespace Chapchu.Network
             if (changedProps.TryGetValue(RoomProps.TurnActor, out object actor))
                 GameEvents.RaiseTurnChanged((int)actor);
 
+            if (changedProps.TryGetValue(RoomProps.TurnDeadline, out object deadline))
+                GameEvents.RaiseTurnDeadlineChanged((double)deadline);
+
             if (changedProps.TryGetValue(RoomProps.DeckCount, out object deckCount))
                 GameEvents.RaiseDeckCountChanged((int)deckCount);
+
+            if (changedProps.TryGetValue(RoomProps.DiscardCount, out object discardCount))
+                GameEvents.RaiseDiscardCountChanged((int)discardCount);
         }
 
         public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
@@ -159,15 +190,27 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_RejectRequest(string reason)
+        private void RPC_RejectRequest(int code)
         {
-            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, reason);
+            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, code);
         }
 
         [PunRPC]
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
-            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
+            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardInstanceId, cardId);
+        }
+
+        [PunRPC]
+        private void RPC_OnCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            GameEvents.RaiseCardUsed(actorNumber, cardInstanceId, cardId, targetActorNumbers);
+        }
+
+        [PunRPC]
+        private void RPC_OnDeckRefilled(int deckCount)
+        {
+            GameEvents.RaiseDeckRefilled(deckCount);
         }
 
         public int GetCurrentHandCount(int actorNumber)

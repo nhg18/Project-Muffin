@@ -69,7 +69,6 @@ namespace Chapchu.Network
         /// </summary>
         public void OnCreatedRoom()
         {
-            Debug.Log("On Created Room" + PhotonNetwork.CurrentRoom.Name);
             RoomEvents.RaiseCreatedRoom();
         }
 
@@ -78,7 +77,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnCreateRoomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Create Room Failed [{returnCode}]: {message}");
+            Debug.LogWarning($"[PhotonRoom] 방 만들기 실패 [{returnCode}]: {message}");
 
             switch (returnCode)
             {
@@ -96,17 +95,18 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinedRoom()
         {
-            Debug.Log("On Joined Room");
             RoomEvents.RaiseJoinedRoom();
         }
     
         /// <summary>
         /// 룸 나가기시 호출되는 콜백 함수
-        /// 타이틀 씬 로드
         /// </summary>
         public void OnLeftRoom()
         {
-            Debug.Log("On Left Room");
+            // 지난 판의 내 상태(체력 · 손패 장수)를 지운다. PUN 은 방에 들어갈 때 내 CustomProperties 를 같이 보내서,
+            // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
+            PhotonNetwork.LocalPlayer.CustomProperties.Clear();
+
             RoomEvents.RaiseLeftRoom();
         }
     
@@ -115,7 +115,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRoomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Join Room Failed: {message}");
+            Debug.LogWarning($"[PhotonRoom] 방 입장 실패: {message}");
             RoomEvents.RaiseJoinRoomFailed(returnCode, message);
         }
 
@@ -124,8 +124,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Join Random Room Failed: {message}");
-            Debug.Log("No Empty Room -> Create New Room");
+            Debug.LogWarning($"[PhotonRoom] 랜덤 입장 실패 — 새 방을 만든다: {message}");
             CreateRoom();
         }
 
@@ -150,7 +149,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {
-            Debug.Log($"On Master Client Switched: {newMasterClient.NickName}");
+            Debug.LogWarning($"[PhotonRoom] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
             RoomEvents.RaiseMasterClientSwitched(newMasterClient);
         }
     }

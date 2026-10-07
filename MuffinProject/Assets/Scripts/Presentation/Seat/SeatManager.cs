@@ -40,7 +40,6 @@ namespace Chapchu.Presentation
 
                 if (player == null)
                 {
-                    Debug.Log($"Player {actorNumber} has no player in CurrentRoom");
                     continue;
                 }
             
@@ -129,7 +128,6 @@ namespace Chapchu.Presentation
 
                 if (player == null)
                 {
-                    Debug.Log($"Player {actorNumber} has no player in CurrentRoom");
                     continue;
                 }
             

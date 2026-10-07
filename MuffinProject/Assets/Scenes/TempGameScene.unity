@@ -2755,6 +2755,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startingDeckRecipe: {fileID: 11400000, guid: 73bc7a1541c229b4d92d7bd2195cf9ed, type: 2}
+  cardDatabase: {fileID: 11400000, guid: 6a43114b0bf04a24aa4cc52a0bd8e55d, type: 2}
 --- !u!114 &381565665
 MonoBehaviour:
   m_ObjectHideFlags: 0
