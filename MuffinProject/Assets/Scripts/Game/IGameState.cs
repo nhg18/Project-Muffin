@@ -9,6 +9,8 @@
     {
         /// <summary>현재 턴 주인의 actorNumber. 아직 시작 전이면 -1.</summary>
         int CurrentTurnActor { get; }
+
+        /// <summary>해당 플레이어의 손패 장수(공개 값). 아직 없으면 0. 늦게 켜진 UI 의 초기 표시용.</summary>
         int GetCurrentHandCount(int actorNumber);
     }
 }

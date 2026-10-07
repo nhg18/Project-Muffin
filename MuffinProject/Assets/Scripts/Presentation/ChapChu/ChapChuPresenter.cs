@@ -21,14 +21,20 @@ public class ChapChuPresenter : MonoBehaviour
     private void Awake()
     {
         _requests = server as IGameRequests;
+        _state = server as IGameState;
 
         if (_requests == null)
-            Debug.LogError($"[{nameof(DeckPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
+            Debug.LogError($"[{nameof(ChapChuPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
 
         actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
+    }
 
+    // 켜지기 전에 지나간 OnHandCountChanged 는 못 받으므로 현재 손패 수를 한 번 읽어 그린다.
+    private void Start()
+    {
+        if (_state == null) return;
         myHandCount = _state.GetCurrentHandCount(actorNumber);
-
+        chapChuView.UpdateOutline(myHandCount == 10);
     }
 
     private void OnEnable()

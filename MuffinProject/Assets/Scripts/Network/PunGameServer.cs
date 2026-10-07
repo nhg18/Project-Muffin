@@ -215,7 +215,9 @@ namespace Chapchu.Network
 
         public int GetCurrentHandCount(int actorNumber)
         {
-            throw new System.NotImplementedException();
+            if (!PhotonNetwork.InRoom) return 0;
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+            return player != null && player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object count) ? (int)count : 0;
         }
         #endregion
     }
