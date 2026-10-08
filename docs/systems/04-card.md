@@ -258,9 +258,9 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 항목 | 상태 |
 | --- | --- |
 | 카드 데이터 (`CardData` ScriptableObject) | 구현됨 (id / 이름 / 이미지 / 타입 / 대상 / 조건 / 효과) |
-| 서버용 카드 규칙 (`CardRule`) | 구현됨 (2026-10-06) — 서버는 순수 C# 이라 `CardData.ToRule()` 로 id · 타입 · 대상 · 데미지만 뽑아 `GameServer.InitCards` 로 받는다. `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/CardRule.cs`)로 이동. 효과는 데미지 1종만 — 나머지는 기능 9 |
-| 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`CardRule`)에 추가 |
-| 카드 효과 (`CardEffect`) | 수치 데이터만 — `DamageEffect.damageAmount` 를 `CardData.ToRule()` 이 읽는다. 실행(`Execute`)과 `StatBuffer` 는 삭제 (2026-10-06). 감소 · 무효 · 전환 계산(06 §4)은 없음 |
+| 서버용 카드 (`Card`) | 구현됨 (2026-10-06, 2026-10-08 `CardInstance` · `CardRule` 을 `Card` 하나로 합침) — 서버는 순수 C# 이라 `CardData.ToCard(0)` 로 id · 타입 · 대상 · 데미지를 종류 템플릿 `Card` 로 뽑아 `GameServer.InitCards` 로 받고, 덱을 만들 때 장마다 `InstanceId` 를 매긴다. `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/Card.cs`)에 있다. 효과는 데미지 1종만 — 나머지는 기능 9 |
+| 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`Card`)에 추가 |
+| 카드 효과 (`CardEffect`) | 수치 데이터만 — `DamageEffect.damageAmount` 를 `CardData.ToCard()` 가 읽는다. 실행(`Execute`)과 `StatBuffer` 는 삭제 (2026-10-06). 감소 · 무효 · 전환 계산(06 §4)은 없음 |
 | 체인 등록 / 역순 처리 | **없음** — 옛 `CardPlayManager`(클라마다 개별 실행) 삭제 (2026-10-06). 서버 체인은 기능 5 |
 | 반응 시간 | **없음** — 옛 4.5초 `Invoke` 는 `CardPlayManager` 와 함께 삭제. 서버 반응 5초는 기능 5 |
 | 마스터 검증 | 행동 카드만 구현 (2026-10-06) — `GameServer.PlayCard`: 내 턴 · 손패에 있음(인스턴스 ID) · 행동 카드 · 대상(타입별 인원 · 상대인지) 검사 → 버림 더미 → 데미지 → `OnCardUsed`(전원) → 턴 넘김. 반응 5초 · 카운터 · 카드별 조건은 아직. UI 드롭은 아직 서버에 연결 전 (드롭하면 손패로 되돌림) |

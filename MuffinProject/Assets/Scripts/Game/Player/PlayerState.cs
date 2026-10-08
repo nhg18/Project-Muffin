@@ -10,7 +10,7 @@ namespace Chapchu.Game
     public class PlayerState
     {
         // 손패 내용 — 비공개. 주인에게만 보내고, 다른 사람에게는 장수(Hand.Count)만 공개한다 (09-network.md 3절).
-        public readonly List<CardInstance> Hand = new List<CardInstance>();
+        public readonly List<Card> Hand = new List<Card>();
 
         // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md).
         public int Hp;

@@ -8,14 +8,14 @@ namespace Chapchu.Game
     // GameServer.Card.cs — 카드 규칙 원본과 카드 사용 처리 (04-card.md)
     public partial class GameServer
     {
-        private readonly Dictionary<int, CardRule> _cardRules = new Dictionary<int, CardRule>(); // CardId → 규칙
+        private readonly Dictionary<int, Card> _kinds = new Dictionary<int, Card>(); // CardId → 종류 템플릿 (InstanceId 0)
 
-        /// <summary>게임 시작 1회: 이번 게임에 쓰는 카드 규칙을 받는다. InitDeck 보다 먼저 부른다.</summary>
-        public void InitCards(IEnumerable<CardRule> rules)
+        /// <summary>게임 시작 1회: 이번 게임에 쓰는 카드 종류(템플릿)를 받는다. InitDeck 보다 먼저 부른다.</summary>
+        public void InitCards(IEnumerable<Card> kinds)
         {
-            _cardRules.Clear();
-            foreach (CardRule rule in rules)
-                _cardRules[rule.Id] = rule;
+            _kinds.Clear();
+            foreach (Card kind in kinds)
+                _kinds[kind.CardId] = kind;
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace Chapchu.Game
                 return;
             }
 
-            List<CardInstance> hand = _players[requester].Hand;
+            List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)
             {
@@ -38,15 +38,14 @@ namespace Chapchu.Game
                 return;
             }
 
-            CardInstance card = hand[index];
-            CardRule rule = _cardRules[card.CardId];
-            if (rule.Type != CardType.Action)
+            Card card = hand[index];
+            if (!card.IsAction)
             {
                 _outbox.Reject(requester, RejectCode.NotActionCard);
                 return;
             }
 
-            int[] targets = ResolveTargets(requester, rule.Target, requestedTargets);
+            int[] targets = ResolveTargets(requester, card.Target, requestedTargets);
             if (targets == null)
             {
                 _outbox.Reject(requester, RejectCode.InvalidTarget);
@@ -57,10 +56,10 @@ namespace Chapchu.Game
             hand.RemoveAt(index);
             _discardPile.Add(card);
 
-            if (rule.Damage > 0)
+            if (card.Damage > 0)
             {
                 foreach (int target in targets)
-                    SetHp(target, _players[target].Hp - rule.Damage);
+                    SetHp(target, _players[target].Hp - card.Damage);
             }
 
             // 내보내기

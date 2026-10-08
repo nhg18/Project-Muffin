@@ -23,3 +23,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 78135d3c881a56347a450706fdb200e2, type: 2}
   effects:
   - {fileID: 11400000, guid: f9ced00af9a6e5147ad6d59698a801c7, type: 2}
+  deckCount: 20

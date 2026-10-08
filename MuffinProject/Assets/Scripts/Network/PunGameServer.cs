@@ -36,10 +36,7 @@ namespace Chapchu.Network
         // 모든 클라가 만들지만 방장에서만 쓰인다.
         private GameServer _server;
 
-        // 덱 구성은 미정이라 더미 레시피를 그대로 쓴다 (05-deck.md 2절 · 8절).
-        [SerializeField] private DeckRecipe startingDeckRecipe;
-
-        // 카드 규칙의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘긴다.
+        // 카드 종류의 원본 에셋. 시작할 때 서버용 Card(종류 템플릿)로 뽑아 넘기고, 덱은 CardData.deckCount 로 만든다 (05-deck.md 2절 · 8절).
         [SerializeField] private CardDatabase cardDatabase;
 
         public int CurrentTurnActor
@@ -64,12 +61,13 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
 
             int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
-            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 레시피 {startingDeckRecipe.cardIDs.Count}장");
+            int[] deckCardIds = cardDatabase.Cards.SelectMany(c => Enumerable.Repeat(c.id, c.deckCount)).ToArray(); // 같은 ID 반복 = 매수
+            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {deckCardIds.Length}장");
 
             // 01-game-flow.md 3절 순서: 체력 → 덱 → 5장씩 → 턴 순서
             _server.StartGame(actors);
-            _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
-            _server.InitDeck(startingDeckRecipe.cardIDs.Select(c => c.ID).ToArray());
+            _server.InitCards(cardDatabase.Cards.Select(c => c.ToCard(0)));
+            _server.InitDeck(deckCardIds);
             _server.DealInitialHands(actors);
             _server.StartFirstTurn();
         }

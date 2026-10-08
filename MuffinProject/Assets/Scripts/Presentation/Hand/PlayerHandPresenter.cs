@@ -62,7 +62,7 @@ namespace Chapchu.Presentation
 
             CardPresenter cp = handView.DrawCard(data);
             cp.Setup(data, playerHand.GetHandCount(), this);
-            playerHand.Add(new Card(data.id));
+            playerHand.Add(data.ToCard(0)); // 수정 필요(UI): OnDrawn 의 cardInstanceId 를 넣어야 한다 — 옛 Card(종류 ID) 삭제로 임시 교체
         }
 
         private void DiscardCard(int cardID, int index)
