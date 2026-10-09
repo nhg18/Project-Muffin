@@ -8,18 +8,19 @@ namespace Chapchu.Game
     // GameServer.Card.cs — 카드 규칙 원본과 카드 사용 처리 (04-card.md)
     public partial class GameServer
     {
-        private readonly Dictionary<int, Card> _kinds = new Dictionary<int, Card>(); // CardId → 종류 템플릿 (InstanceId 0)
+        private readonly Dictionary<int, CardRule> _rules = new Dictionary<int, CardRule>(); // CardId → 종류 규칙
 
-        /// <summary>게임 시작 1회: 이번 게임에 쓰는 카드 종류(템플릿)를 받는다. InitDeck 보다 먼저 부른다.</summary>
-        public void InitCards(IEnumerable<Card> kinds)
+        /// <summary>게임 시작 1회: 이번 게임에 쓰는 카드 종류의 규칙을 받는다. InitDeck 보다 먼저 부른다.</summary>
+        public void InitCards(IEnumerable<CardRule> rules)
         {
-            _kinds.Clear();
-            foreach (Card kind in kinds)
-                _kinds[kind.CardId] = kind;
+            _rules.Clear();
+            foreach (CardRule rule in rules)
+                _rules[rule.Id] = rule;
         }
 
         /// <summary>
         /// 행동 카드 사용 (04-card.md 5절). 검사 → 손패에서 버림 더미로 → 효과 → 알림 → 턴 넘김.
+        /// 요청은 인스턴스 ID 만 받는다 — 종류는 서버가 손패에서 찾은 장의 CardId 로 안다 (09-network.md 7절).
         /// 반응 5초 · 카운터는 기능 5 — 지금은 바로 처리한다.
         /// </summary>
         public void PlayCard(int requester, int cardInstanceId, int[] requestedTargets)
@@ -30,6 +31,7 @@ namespace Chapchu.Game
                 return;
             }
 
+            // 1) 요청자 손패에 그 장이 있는가 (존재 · 소유 검증)
             List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)
@@ -38,14 +40,17 @@ namespace Chapchu.Game
                 return;
             }
 
+            // 2) 무슨 카드인가 → 종류 규칙
             Card card = hand[index];
-            if (!card.IsAction)
+            CardRule rule = _rules[card.CardId];
+            if (rule.Type != CardType.Action)
             {
                 _outbox.Reject(requester, RejectCode.NotActionCard);
                 return;
             }
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets);
+            // 3) 규칙에 맞는 대상인가
+            int[] targets = ResolveTargets(requester, rule.Target, requestedTargets);
             if (targets == null)
             {
                 _outbox.Reject(requester, RejectCode.InvalidTarget);
@@ -56,13 +61,13 @@ namespace Chapchu.Game
             hand.RemoveAt(index);
             _discardPile.Add(card);
 
-            if (card.Damage > 0)
+            if (rule.Damage > 0)
             {
                 foreach (int target in targets)
-                    SetHp(target, _players[target].Hp - card.Damage);
+                    SetHp(target, _players[target].Hp - rule.Damage);
             }
 
-            // 내보내기
+            // 내보내기 — 일어난 사실만. 전원에게는 (누가 · 어느 장 · 무슨 카드 · 누구에게)
             _outbox.SendCardUsed(requester, card.InstanceId, card.CardId, targets);
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
             _outbox.SetRoomState(RoomProps.DiscardCount, _discardPile.Count);

@@ -41,8 +41,10 @@ namespace Chapchu.Presentation
         }
 
         // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
-        //  · OnDrawn 이 (actor, cardInstanceId, cardId) 로 바뀌었다. StartDrawEvent 시그니처를 맞추고 인스턴스 ID 를 카드에 보관한 뒤 다시 구독한다.
-        //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아 손패에서 뺀다.
+        //  · StartDrawEvent 는 OnDrawn (actor, cardInstanceId, cardId) 에 맞춰 두었다. 인스턴스 ID 를 CardPresenter 에도 보관하고
+        //    (instanceId → CardPresenter 사전), 다시 구독한다. 드롭 때는 RequestPlayCard(instanceId, targets) 로 그 번호를 보낸다.
+        //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아
+        //    그 인스턴스 ID 의 카드를 손패에서 뺀다. 거절(OnRequestRejected)이면 잠갔던 카드를 제자리로.
         private void OnEnable()
         {
             // GameEvents.OnDrawn += StartDrawEvent;
@@ -54,15 +56,16 @@ namespace Chapchu.Presentation
             // GameEvents.OnCardPlayed -= DiscardCard;
         }
 
-        private void StartDrawEvent(int actorNumber, int cardid)
+        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 CardDatabase 에서 읽는다.
+        private void StartDrawEvent(int actorNumber, int cardInstanceId, int cardId)
         {
             if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
-            CardData data = cardDatabase.GetCard(cardid);
+            CardData data = cardDatabase.GetCard(cardId);
 
             CardPresenter cp = handView.DrawCard(data);
             cp.Setup(data, playerHand.GetHandCount(), this);
-            playerHand.Add(data.ToCard(0)); // 수정 필요(UI): OnDrawn 의 cardInstanceId 를 넣어야 한다 — 옛 Card(종류 ID) 삭제로 임시 교체
+            playerHand.Add(new Card(cardInstanceId, cardId));
         }
 
         private void DiscardCard(int cardID, int index)

@@ -14,19 +14,23 @@ namespace Chapchu.Game
         private readonly List<Card> _discardPile = new List<Card>();
         private int _nextInstanceId = 0;
 
-        /// <summary>덱을 카드 ID 목록(같은 ID 반복 = 매수)으로 채우고 장마다 인스턴스 ID(1부터)를 매긴 뒤 섞는다. InitCards 뒤에 부른다.</summary>
+        /// <summary>
+        /// 덱을 카드 ID 목록(같은 ID 반복 = 매수)으로 채우고 장마다 인스턴스 ID(1부터)를 매긴 뒤 섞는다. InitCards 뒤에 부른다.
+        /// 게임 안의 카드 한 장은 전부 여기서 만든다 — 이후 드로우 · 버림은 이 장을 존(덱 · 손패 · 버림 더미) 사이로 옮길 뿐이다.
+        /// </summary>
         public void InitDeck(IReadOnlyList<int> cardIds)
         {
             _deck.Clear();
             _discardPile.Clear();
             foreach (PlayerState player in _players.Values)
                 player.Hand.Clear();
-            _nextInstanceId = 1; // 0 은 종류 템플릿
+            _nextInstanceId = 1;
 
             foreach (int cardId in cardIds)
             {
-                Card kind = _kinds[cardId]; // 없으면 KeyNotFoundException — 카드 에셋 누락은 시작 때 바로 드러나야 한다
-                _deck.Add(new Card(_nextInstanceId++, kind.CardId, kind.Type, kind.Target, kind.Damage));
+                if (!_rules.ContainsKey(cardId)) // 카드 에셋 누락은 시작 때 바로 드러나야 한다
+                    throw new KeyNotFoundException($"카드 규칙 없음: CardId {cardId} — InitCards 에 그 종류의 CardData 가 빠졌다");
+                _deck.Add(new Card(_nextInstanceId++, cardId));
             }
 
             Shuffle(_deck);

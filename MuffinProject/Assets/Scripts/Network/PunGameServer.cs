@@ -36,7 +36,7 @@ namespace Chapchu.Network
         // 모든 클라가 만들지만 방장에서만 쓰인다.
         private GameServer _server;
 
-        // 카드 종류의 원본 에셋. 시작할 때 서버용 Card(종류 템플릿)로 뽑아 넘기고, 덱은 CardData.deckCount 로 만든다 (05-deck.md 2절 · 8절).
+        // 카드 종류의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘기고, 덱은 CardData.deckCount 로 만든다 (05-deck.md 2절 · 8절).
         [SerializeField] private CardDatabase cardDatabase;
 
         public int CurrentTurnActor
@@ -66,7 +66,7 @@ namespace Chapchu.Network
 
             // 01-game-flow.md 3절 순서: 체력 → 덱 → 5장씩 → 턴 순서
             _server.StartGame(actors);
-            _server.InitCards(cardDatabase.Cards.Select(c => c.ToCard(0)));
+            _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
             _server.InitDeck(deckCardIds);
             _server.DealInitialHands(actors);
             _server.StartFirstTurn();
