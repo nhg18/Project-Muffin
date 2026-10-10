@@ -57,6 +57,7 @@ MonoBehaviour:
   - RPC_RequestDiscard
   - RPC_OnCardUsed
   - RPC_RequestPlayCard
+  - RPC_OnDeckRefilled
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
