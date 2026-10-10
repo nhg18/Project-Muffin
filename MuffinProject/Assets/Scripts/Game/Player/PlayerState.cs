@@ -14,5 +14,8 @@ namespace Chapchu.Game
 
         // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md).
         public int Hp;
+
+        // 찹츄 선언 상태 — 공개. 자신의 턴에 손패 10장으로 선언하면 true, 이후 해제 없음 (07-win-condition.md 4절).
+        public bool IsChapChu;
     }
 }
