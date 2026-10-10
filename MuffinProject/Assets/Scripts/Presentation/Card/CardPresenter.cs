@@ -21,12 +21,7 @@ namespace Chapchu.Presentation
         /// <summary>서버가 부여한 카드 인스턴스 ID. 사용 요청과 OnCardUsed 대조에 쓴다.</summary>
         public int CardInstanceId => cardModel.cardInstanceId;
 
-        public void DownIndex()
-        {
-            cardModel.cardIndex = cardModel.cardIndex - 1;
-        }
-
-        public void Setup(CardData data, int cardInstanceId, int index = -1, PlayerHandPresenter hand = null)
+        public void Setup(CardData data, int cardInstanceId, PlayerHandPresenter hand = null)
         {
             if (data == null)
             {
@@ -34,7 +29,7 @@ namespace Chapchu.Presentation
                 return;
             }
             cardView.Setup(data);
-            cardModel.Setup(data, cardInstanceId, index);
+            cardModel.Setup(data, cardInstanceId);
             Hand = hand;
         }
 

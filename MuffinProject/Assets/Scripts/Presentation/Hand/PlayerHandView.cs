@@ -18,43 +18,29 @@ namespace Chapchu.Presentation
         [SerializeField] Transform HandPosition;
         [SerializeField] private GameObject presetCard;
 
+        // 런타임에만 채운다. 순서는 PlayerHandPresenter 의 카드 목록과 같다 (드로우 순).
         [Header("Hands of Player")]
-        [SerializeField] List<GameObject> Hands = new List<GameObject>();
+        [SerializeField] List<CardView> Hands = new List<CardView>();
 
-        public PlayerHandPresenter playerHandPresenter;
-
+        /// <summary>index 칸의 카드를 없애고 나머지를 재배치한다. 어느 칸인지는 Presenter 가 정한다.</summary>
         public void DiscardCard(int index)
         {
-            for(int i=index+1;i<Hands.Count;i++)
-            {
-                Hands[i].GetComponent<CardPresenter>().DownIndex();
-            }
             Destroy(Hands[index].gameObject);
             Hands.RemoveAt(index);
             PutAwayMyCards();
         }
 
-        /// <summary>인스턴스 ID 로 손패 칸을 찾는다. 없으면 -1.</summary>
-        public int FindIndex(int cardInstanceId)
-        {
-            for (int i = 0; i < Hands.Count; i++)
-            {
-                CardPresenter card = Hands[i].GetComponent<CardPresenter>();
-                if (card != null && card.CardInstanceId == cardInstanceId) return i;
-            }
-            return -1;
-        }
-
-        public CardPresenter DrawCard(CardData data)
+        /// <summary>카드 프리팹을 덱 위치에 만들어 손패 끝에 붙인다. 내용(Setup)은 Presenter 가 채운다.</summary>
+        public CardView DrawCard()
         {
             GameObject drawedCard = Instantiate(presetCard, HandPosition);
             drawedCard.transform.position = drawPosition.position;
 
-            CardPresenter cardPresenter = drawedCard.GetComponent<CardPresenter>();
-            Hands.Add(drawedCard);
+            CardView cardView = drawedCard.GetComponent<CardView>();
+            Hands.Add(cardView);
             PutAwayMyCards();
 
-            return cardPresenter;
+            return cardView;
         }
 
         public void PutAwayMyCards()
@@ -93,9 +79,10 @@ namespace Chapchu.Presentation
                 Vector3 localPos = HandPosition.InverseTransformPoint(worldTarget);
                 Quaternion localRot = Quaternion.Inverse(HandPosition.rotation) * rotation;
 
-                Hands[i].transform.DOKill();
-                Hands[i].transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]);
-                Hands[i].transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(Hands[i]); ;
+                GameObject card = Hands[i].gameObject;
+                card.transform.DOKill();
+                card.transform.DOLocalMove(localPos, duration).SetEase(Ease.OutQuart).SetLink(card);
+                card.transform.DOLocalRotateQuaternion(localRot, duration).SetEase(Ease.OutQuart).SetLink(card);
             }
         }
 
@@ -104,23 +91,20 @@ namespace Chapchu.Presentation
         /// </summary>
         public void CancelAllInteractions(CardView except)
         {
-            foreach (GameObject card in Hands)
+            foreach (CardView view in Hands)
             {
-                if (card == null) continue;
-                CardView view = card.GetComponent<CardView>();
                 if (view == null || view == except) continue;
                 view.CancelInteraction();
             }
         }
 
-        public void HandsUp()//Presenter에서 CardEvent가 만들어지면 구독해서 이거 실행하기
+        // 손패 올리기 · 내리기 연출만. HandMode 상태는 PlayerHandPresenter.SetHandMode 가 갖고 여기를 부른다.
+        public void HandsUp()
         {
-            playerHandPresenter.SetHandMode(true);
             HandPosition.DOMove(new Vector3(0, -3.8f, 0), 0.5f);
         }
         public void HandsDown()
         {
-            playerHandPresenter.SetHandMode(false);
             HandPosition.DOMove(new Vector3(0, -6.5f, 0), 0.5f);
         }
     }

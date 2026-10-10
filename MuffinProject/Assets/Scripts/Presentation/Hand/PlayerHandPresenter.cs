@@ -1,4 +1,5 @@
 ﻿using Photon.Pun;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using Chapchu.Game;
@@ -22,6 +23,9 @@ namespace Chapchu.Presentation
         [SerializeField] private MonoBehaviour server; // IGameRequests 를 구현한 컴포넌트를 연결한다.
 
         public PlayerHand playerHand = new PlayerHand();
+
+        // 손패의 카드 Presenter 목록. 드로우 순이며 handView.Hands · playerHand 와 같은 순서를 유지한다.
+        private readonly List<CardPresenter> _cards = new List<CardPresenter>();
 
         private IGameRequests _requests;
 
@@ -58,8 +62,11 @@ namespace Chapchu.Presentation
 
             CardData data = cardDatabase.GetCard(cardId);
 
-            CardPresenter cp = handView.DrawCard(data);
-            cp.Setup(data, cardInstanceId, playerHand.GetHandCount(), this);
+            CardView cardView = handView.DrawCard();
+            CardPresenter cp = cardView.GetComponent<CardPresenter>();
+            cp.Setup(data, cardInstanceId, this);
+
+            _cards.Add(cp);
             playerHand.Add(new Card(data.id));
         }
 
@@ -75,13 +82,14 @@ namespace Chapchu.Presentation
         {
             if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
-            int index = handView.FindIndex(cardInstanceId);
+            int index = _cards.FindIndex(c => c.CardInstanceId == cardInstanceId);
             if (index < 0)
             {
                 Debug.LogWarning($"[{nameof(PlayerHandPresenter)}] 승인된 카드가 손패에 없다. instanceId={cardInstanceId}", this);
                 return;
             }
 
+            _cards.RemoveAt(index);
             playerHand.DiscardCard(index);
             handView.DiscardCard(index);
         }
@@ -90,10 +98,16 @@ namespace Chapchu.Presentation
         {
             return playerHand.isHandMode;
         }
-        public void SetHandMode(bool setter)
+
+        /// <summary>HandMode 의 유일한 진입점. 모델 갱신 → 뷰 연출 → 카드들에 알림 (ClickManager 가 입력을 받아 부른다).</summary>
+        public void SetHandMode(bool isHandMode)
         {
-            playerHand.isHandMode = setter;
-            GameEvents.RaiseHandModeChanged(setter);
+            playerHand.isHandMode = isHandMode;
+
+            if (isHandMode) handView.HandsUp();
+            else handView.HandsDown();
+
+            GameEvents.RaiseHandModeChanged(isHandMode);
         }
 
         /// <summary>
