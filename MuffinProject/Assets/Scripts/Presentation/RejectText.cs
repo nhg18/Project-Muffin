@@ -14,6 +14,8 @@ namespace Chapchu.Presentation
                 case RejectCode.NoCardToDraw:  return "뽑을 카드가 없습니다.";
                 case RejectCode.NotActionCard: return "행동 카드만 낼 수 있습니다.";
                 case RejectCode.InvalidTarget: return "대상이 올바르지 않습니다.";
+                case RejectCode.HandNotTen:    return "손패가 정확히 10장일 때만 찹츄를 선언할 수 있습니다.";
+                case RejectCode.AlreadyChapChu: return "이미 찹츄 상태입니다.";
                 default:                       return $"거절 (코드 {code})";
             }
         }

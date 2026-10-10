@@ -35,7 +35,13 @@ namespace Chapchu.DebugTools
             }
         }
 
-        public void SetPlayerState(int actorNumber, string key, object value) => _inner.SetPlayerState(actorNumber, key, value);
+        public void SetPlayerState(int actorNumber, string key, object value)
+        {
+            _inner.SetPlayerState(actorNumber, key, value);
+
+            if (key == PlayerProps.ChapChu)
+                Debug.Log($"<b>★ P{actorNumber} 찹츄 선언!</b>");
+        }
 
         public void Reject(int actorNumber, int code)
         {
