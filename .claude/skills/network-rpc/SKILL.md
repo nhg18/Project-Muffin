@@ -38,6 +38,8 @@ UI ◀─ GameEvents 구독 ◀─ PunGameServer ◀─ CustomProperties(공개)
 
 `GameEvents` · `IGameRequests` · `IGameState` · `PlayerProps` / `RoomProps` 는 로직 · UI 양쪽이 쓰는 약속이다. 바꾸는 PR 은 양쪽 리뷰를 받고, 기능 작업보다 먼저 작게 올린다.
 
+`GameEvents` 이름 규칙: 전원에게 가는 이벤트는 `actorNumber` 를 첫 인자로 갖는다. 본인에게만 가는 이벤트(대상 지정 RPC)는 `OnMy*` (예: `OnMyDrawn` · `OnMyRequestRejected`)로 짓고 `actorNumber` 를 넣지 않는다 — 받는 사람이 곧 주인이다.
+
 ## 작업 전 확인
 
 1. 이 로직은 방장이 판정해야 하는가, 로컬 연출인가?

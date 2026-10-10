@@ -8,7 +8,7 @@ namespace Chapchu.Presentation
     /// <summary>
     /// 상대 손패의 뒷면 개수만 보여준다. 카드 내용은 절대 모른다 — 알 필요도 없다.
     /// "몇 장인지"는 공개 정보(PlayerProps.HandCount)이므로 GameEvents.OnHandCountChanged 로만 받는다.
-    /// (OnDrawn 은 카드 내용을 담은 비공개 이벤트라 카드 주인에게만 간다. 여기선 쓰지 않는다.)
+    /// (OnMyDrawn 은 카드 내용을 담은 비공개 이벤트라 카드 주인에게만 간다. 여기선 쓰지 않는다.)
     /// </summary>
     public class OtherPlayerHandPresenter : MonoBehaviour
     {

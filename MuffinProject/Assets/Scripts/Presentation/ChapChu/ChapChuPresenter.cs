@@ -40,7 +40,9 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnEnable()
     {
         chapChuView.DeclareChapchu += HandleDeclareChapchuRequest;
-        GameEvents.OnRequestRejected += HandleRequestRejected;
+        // 수정 필요(UI): OnRequestRejected → OnMyRequestRejected(거절 코드 int) 로 바뀌었다. 내 거절만 오므로
+        //   HandleRequestRejected 를 (int code) 로 맞추고(actorNumber 출력 삭제) → 다시 구독.
+        // GameEvents.OnMyRequestRejected += HandleRequestRejected;
         GameEvents.OnHandCountChanged += HandleHandCountChanged;
         GameEvents.OnTurnChanged += HandleTurnChanged;
     }
@@ -49,7 +51,7 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnDisable()
     {
         chapChuView.DeclareChapchu -= HandleDeclareChapchuRequest;
-        GameEvents.OnRequestRejected -= HandleRequestRejected;
+        // GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         GameEvents.OnHandCountChanged -= HandleHandCountChanged;
         GameEvents.OnTurnChanged -= HandleTurnChanged;
     }

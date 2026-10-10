@@ -192,13 +192,13 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RejectRequest(int code)
         {
-            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, code);
+            GameEvents.RaiseMyRequestRejected(code);
         }
 
         [PunRPC]
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
-            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardInstanceId, cardId);
+            GameEvents.RaiseMyDrawn(cardInstanceId, cardId);
         }
 
         [PunRPC]

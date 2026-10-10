@@ -6,7 +6,7 @@ namespace Chapchu.Presentation
     /// <summary>
     /// 덱 뷰와 서버를 잇는다. 서버는 <see cref="IGameRequests"/> 로만 알고,
     /// 결과(덱 잔여 장수)는 <see cref="GameEvents"/> 로만 받는다. 서버가 가짜인지 진짜인지 모른다.
-    /// 뽑은 카드 내용은 여기서 다루지 않는다 — 손패 쪽(PlayerHandPresenter)이 GameEvents.OnDrawn 을 직접 구독한다.
+    /// 뽑은 카드 내용은 여기서 다루지 않는다 — 손패 쪽(PlayerHandPresenter)이 GameEvents.OnMyDrawn 을 직접 구독한다.
     /// </summary>
     public class DeckPresenter : MonoBehaviour
     {
@@ -28,14 +28,15 @@ namespace Chapchu.Presentation
         private void OnEnable()
         {
             deckView.DrawRequested += HandleDrawRequested;
-            // 수정 필요(UI): OnRequestRejected 가 (actor, 거절 코드 int) 로 바뀌었다. 핸들러를 (int, int) 로 맞추고 문구는 RejectText.Get(code) 로 → 다시 구독.
-            // GameEvents.OnRequestRejected += HandleRequestRejected;
+            // 수정 필요(UI): OnRequestRejected → OnMyRequestRejected(거절 코드 int) 로 바뀌었다. 내 거절만 오므로
+            //   핸들러를 (int code) 로 맞추고 문구는 RejectText.Get(code) 로 → 다시 구독.
+            // GameEvents.OnMyRequestRejected += HandleRequestRejected;
         }
 
         private void OnDisable()
         {
             deckView.DrawRequested -= HandleDrawRequested;
-            // GameEvents.OnRequestRejected -= HandleRequestRejected;
+            // GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         }
 
         private void HandleDrawRequested() => _requests?.RequestDraw();

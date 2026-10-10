@@ -41,16 +41,17 @@ namespace Chapchu.Presentation
         }
 
         // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
-        //  · OnDrawn 이 (actor, cardInstanceId, cardId) 로 바뀌었다. StartDrawEvent 시그니처를 맞추고 인스턴스 ID 를 카드에 보관한 뒤 다시 구독한다.
+        //  · OnDrawn → OnMyDrawn(cardInstanceId, cardId) 로 바뀌었다. 내 카드만 오므로 actor 검사를 지우고,
+        //    StartDrawEvent(int cardInstanceId, int cardId) 로 맞춰 인스턴스 ID 를 카드에 보관한 뒤 다시 구독한다.
         //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아 손패에서 뺀다.
         private void OnEnable()
         {
-            // GameEvents.OnDrawn += StartDrawEvent;
+            // GameEvents.OnMyDrawn += StartDrawEvent;
             // GameEvents.OnCardPlayed += DiscardCard;
         }
         private void OnDisable()
         {
-            // GameEvents.OnDrawn -= StartDrawEvent;
+            // GameEvents.OnMyDrawn -= StartDrawEvent;
             // GameEvents.OnCardPlayed -= DiscardCard;
         }
 
