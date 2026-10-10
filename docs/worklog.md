@@ -6,6 +6,56 @@
 
 ---
 
+## 2026-10-10 · 게임 씬 방 코드 표시 (HeeGeon)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `HeeGeon` |
+| 범위 | `Presentation/RoomCode/RoomCodeView` · `RoomCodePresenter`(신규) · `docs/systems/10-ui.md` · `TempGameScene`(Unity 에서 연결) |
+
+### 한 것
+
+- `10-ui.md` 2절에 방 코드 표시 항목 추가(확정), 10절 구현 상태 · 12절 이력 반영. 코드보다 문서 먼저 (CLAUDE.md 0절 #3).
+- `RoomCodeView`(`SetRoomCode` 만) · `RoomCodePresenter`(`Start` 에서 `PhotonNetwork.CurrentRoom.Name` 1회 읽기, 방 밖이면 `----`). `Chapchu.Presentation` namespace.
+- **컴파일 에러 수정**: `ChapChuPresenter.HandleRequestRejected` 가 옛 시그니처 `(int, string)` 이라 10/7 develop 머지(`ad2dab6`, 거절 사유 문자열 → 코드) 이후 `Assembly-CSharp` 전체가 빌드되지 않았다. `(int actorNumber, int rejectCode)` + `RejectText.Get` 으로 맞춤. 이 때문에 새 스크립트가 "찾을 수 없음"으로 보였다.
+- **손패 복구 + 카드 사용 승인 경로 (plan-a 1-5 의 UI 할 일 1 · 2)**. 손패가 안 생기던 원인은 #53 머지 때 로직이 `OnDrawn` 구독을 주석 처리해 둔 것(`6e73fb2`, 의도된 미완성).
+  - `CardModel.cardInstanceId` 추가, `CardModel.Setup` · `CardPresenter.Setup` 에 인스턴스 ID 인자. `CardPresenter.CardInstanceId` 노출.
+  - `PlayerHandPresenter`: `HandleDrawn(actor, instanceId, cardId)` 구독 복구. `RequestPlayCard` 공개 메서드. `HandleCardUsed` 가 `OnCardUsed` 를 받아 내 카드면 인스턴스 ID 로 찾아 지운다. 옛 `DiscardCard → RequestDiscard` 경로 삭제.
+  - `PlayerHandView.FindIndex(instanceId)` 추가.
+  - `CardPresenter.PlayAsync`: 대상 선택 뒤 `Hand.RequestPlayCard` 호출. 카드는 손패에 되돌려 둔다. `TargetType.None` 은 빈 대상으로 요청(전에는 요청 자체가 안 갔다).
+  - `FakeGameServer`: 드로우마다 인스턴스 ID +1, `RequestPlayCard` 는 바로 `RaiseCardUsed` 로 승인 흉내.
+  - 문서: `04-card.md` 구현 상태 4행, `10-ui.md` 4절 경고 교체 · 10절, `plan-a-logic.md` 1-5 두 행 ✅.
+- **`PlayerHandView` 의 Presenter 역참조 제거** (View 는 표시만, 입력은 Presenter 로 — `RoomView` · `TurnView` 와 같은 패턴).
+  - HandMode: `PlayerHandPresenter.SetHandMode` 가 유일한 진입점(모델 → `handView.HandsUp/Down` → `RaiseHandModeChanged`). 뷰의 `playerHandPresenter` 필드 삭제, `HandsUp/Down` 은 `DOMove` 만. `ClickManager` 는 `playerHandView` 필드를 지우고 `SetHandMode` 만 부른다.
+  - 카드 목록 주인을 Presenter 로: `PlayerHandPresenter._cards(List<CardPresenter>)` 가 드로우 순서를 갖고 인스턴스 ID 검색을 한다. 뷰의 `Hands` 는 `List<CardView>`, `DrawCard()` 는 `CardView` 를 돌려주고 Presenter 가 `GetComponent<CardPresenter>()` 로 짝을 꺼낸다. 뷰의 `FindIndex` 삭제.
+  - `CardModel.cardIndex` · `CardPresenter.DownIndex` 삭제 — 읽는 곳이 없던 죽은 상태. `Setup(data, instanceId, hand)`.
+- **`develop` 머지 (#71 카드 구조 재정립 · `OnMy*` 이름 변경 반영)**. 텍스트 충돌 6개 파일 해소 + 의미상 깨지는 곳 수정:
+  - `PlayerHandPresenter`: `CardDatabase` → `DeckData deck`(`GetCard(cardId)`), `OnDrawn` → `OnMyDrawn(instanceId, cardId)`(actor 검사 삭제), 삭제된 `PlayerHand` 대신 `_isHandMode` bool. 손패 내용 원본은 서버, `_cards` 는 표시용 사본.
+  - `ChapChuPresenter`: `OnMyRequestRejected(int code)` 구독 복구 (develop 의 주석 처리 해제).
+  - `FakeGameServer`: `RaiseMyDrawn(_nextCardInstanceId++, 0)`.
+  - **씬 연결 필요**: `PlayerHandPresenter` 의 `cardDatabase` 슬롯이 `deck` 으로 바뀌었고 옛 에셋은 삭제됨 → `Deck_Default.asset` 연결.
+
+### 결정
+
+- **방 코드는 `IGameState` 에 넣지 않는다.** Photon 방 메타데이터(방 이름 그대로)라 마스터가 판정 · 검증할 값이 아니다. UI 가 공개 메타데이터(방 이름 · 액터 번호 · 닉네임 · 인원)를 **읽는** 것은 `10-ui.md` 1절 #2 가 허용하고, `RoomPresenter` · `SeatManager` 등 선례와 같다. 약속 파일 변경 · 로직 리뷰 불필요. 반대로 UI 가 공개 상태를 **쓰는** 것은 금지 — `PlayerPresenter.cs:24` 의 `SetCustomProperties` 호출은 이 규칙에 걸리므로 로직과 정리할 항목.
+- `RoomPresenter` 와 달리 `OnJoinedRoom` 을 구독하지 않는다. 게임 씬은 방 안에서 `LoadLevel` 로만 열리므로 `Start` 시점에 이미 `InRoom`.
+
+### 다음 할 일
+
+- [ ] Unity(ui 트랙): `TempGameScene` 의 `RoomCode` 오브젝트에 `RoomCodeView` + `RoomCodePresenter` 부착, `roomCodeText` ← `RoomCode_Text`. 씬 커밋은 코드 커밋과 분리
+- [ ] 멀티 실행 확인: `DebugLobbyScene` → `TempGameScene`, 두 클라이언트 Console 에 같은 4자리 코드 · 화면 표시. 씬 직접 Play 시 `----`
+- [ ] `GameScene`(정식) 에 같은 오브젝트가 생기면 동일 컴포넌트 부착
+- [ ] `PlayerPresenter` 의 `SetCustomProperties` 직접 호출 — 로직과 정리
+- [ ] Unity(씬): `TempGameScene` 의 `ChapChuPresenter.server` 가 `PhotonView` 를 가리킴 → `PunGameServer` 로 교체 (Awake 에서 LogError)
+- [ ] Unity(씬): `PlayerHandPresenter.deck` ← `Assets/Cards/Decks/Deck_Default.asset` (`PunGameServer.startingDeckRecipe` 와 같은 에셋)
+- [ ] 멀티 실행 확인: 드로우마다 손패 생성 · 내 턴에 행동 카드 드롭 → 대상 선택 → 방장 승인 → 내 손패에서만 제거, 상대 뒷면 장수 감소 · 남의 턴 드롭 → `NotYourTurn` 거절 → 카드 유지
+- [ ] 로직에 약속 삭제 요청: `GameEvents.OnCardPlayed` · `IGameRequests.RequestDiscard` (UI 호출부 0)
+- [ ] 거절 토스트(B2-6): `DeckPresenter` · `TurnPresenter` 의 옛 `(int, string)` 핸들러를 `RejectText.Get` 으로 맞추고 다시 구독
+- [ ] Unity(씬): `TempGameScene` 저장 — `PlayerHandView.playerHandPresenter` · `ClickManager.playerHandView` 슬롯이 사라져 잔여 직렬화 데이터 정리
+- [ ] `CardView` → `CardPresenter` 역참조 제거 (별도 플랜): `Dropped` 이벤트 + `SetInteractable(bool)`. `OtherPlayerHandView` 도 같은 유형
+
+---
+
 ## 2026-10-08 · 카드 객체 리팩토링 1단계 — 정의 `CardData` · 덱 구성 `DeckData` · 한 장 `Card` · 화면 `CardView`
 
 | 항목 | 값 |

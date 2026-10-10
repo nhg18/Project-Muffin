@@ -40,9 +40,7 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnEnable()
     {
         chapChuView.DeclareChapchu += HandleDeclareChapchuRequest;
-        // 수정 필요(UI): OnRequestRejected → OnMyRequestRejected(거절 코드 int) 로 바뀌었다. 내 거절만 오므로
-        //   HandleRequestRejected 를 (int code) 로 맞추고(actorNumber 출력 삭제) → 다시 구독.
-        // GameEvents.OnMyRequestRejected += HandleRequestRejected;
+        GameEvents.OnMyRequestRejected += HandleRequestRejected;
         GameEvents.OnHandCountChanged += HandleHandCountChanged;
         GameEvents.OnTurnChanged += HandleTurnChanged;
     }
@@ -51,7 +49,7 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnDisable()
     {
         chapChuView.DeclareChapchu -= HandleDeclareChapchuRequest;
-        // GameEvents.OnMyRequestRejected -= HandleRequestRejected;
+        GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         GameEvents.OnHandCountChanged -= HandleHandCountChanged;
         GameEvents.OnTurnChanged -= HandleTurnChanged;
     }
@@ -60,9 +58,11 @@ public class ChapChuPresenter : MonoBehaviour
     {
         _requests?.RequestDeclareChapChu();
     }
-    private void HandleRequestRejected(int actorNumber, int code)
+
+    // 내 요청이 거절됨 (OnMyRequestRejected — 나에게만 온다). 문구는 RejectText 에서 꺼낸다.
+    private void HandleRequestRejected(int rejectCode)
     {
-        Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {RejectText.Get(code)}");
+        Debug.LogWarning($"[GameEvent] RequestRejected {RejectText.Get(rejectCode)}");
     }
 
     private void HandleHandCountChanged(int actorNumber, int handCount)

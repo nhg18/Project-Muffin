@@ -18,17 +18,10 @@ namespace Chapchu.Presentation
         /// <summary>이 카드가 속한 손패. 손패 밖 카드(체인 표시용 등)는 null.</summary>
         public PlayerHandPresenter Hand { get; private set; }
 
-        private void Awake()
-        {
+        /// <summary>서버가 부여한 카드 인스턴스 ID. 사용 요청과 OnCardUsed 대조에 쓴다.</summary>
+        public int CardInstanceId => cardModel.cardInstanceId;
 
-        }
-
-        public void DownIndex()
-        {
-            cardModel.cardIndex = cardModel.cardIndex - 1;
-        }
-
-        public void Setup(CardData data, int index = -1, PlayerHandPresenter hand = null)
+        public void Setup(CardData data, int cardInstanceId, PlayerHandPresenter hand = null)
         {
             if (data == null)
             {
@@ -36,7 +29,7 @@ namespace Chapchu.Presentation
                 return;
             }
             cardView.Setup(data);
-            cardModel.Setup(data,index);
+            cardModel.Setup(data, cardInstanceId);
             Hand = hand;
         }
 
@@ -56,19 +49,24 @@ namespace Chapchu.Presentation
             _ = Hand.PlayCardAsync(this); // 예외는 PlayCardAsync 안에서 로그로 처리
         }
 
-        /// <summary>대상 선택 → 사용 요청. 취소 · 타임아웃이면 손패로 되돌린다.</summary>
+        /// <summary>
+        /// 대상 선택 → 사용 요청. 취소 · 타임아웃이면 손패로 되돌린다.
+        /// 요청 뒤에도 카드는 손패에 둔다 — 승인(OnCardUsed)이 오면 손패가 지우고, 거절이면 그대로 남는다 (04-card.md 4절).
+        /// 대상이 없는 카드(TargetType.None)는 빈 배열로 요청한다. 대상 선택을 취소한 경우만 요청하지 않는다.
+        /// </summary>
         public async Task PlayAsync()
         {
             List<int> targets = await SelectPlayer();
 
-            if(targets.Count == 0)
+            bool needsTarget = cardModel.cardData.targetType != TargetType.None;
+            if (needsTarget && targets.Count == 0)
             {
                 cardView.ReturnToOrigin();
                 return;
             }
 
-            // 판정은 서버(RequestPlayCard)가 한다. 아직 연결 전이라 손패로 되돌린다 — 옛 CardPlayManager 경로는 지웠다.
             cardView.ReturnToOrigin();
+            Hand.RequestPlayCard(CardInstanceId, targets.ToArray());
         }
 
         public async Task<List<int>> SelectPlayer()

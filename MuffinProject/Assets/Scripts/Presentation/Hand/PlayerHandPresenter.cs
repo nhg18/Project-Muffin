@@ -1,4 +1,5 @@
 ﻿using Photon.Pun;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using Chapchu.Game;
@@ -9,19 +10,24 @@ namespace Chapchu.Presentation
     /// <summary>
     /// 내 손패 모델 · 뷰를 잇는다. 카드는 드로우 순서대로 쌓인다(정렬 없음, 05-deck.md 6절).
     /// 손패 장수(PlayerProps.HandCount)는 마스터(GameServer)만 기록한다 — 여기서는 더 이상 직접 쓰지 않는다.
-    /// 카드 사용 · 버림도 서버에 <see cref="IGameRequests.RequestDiscard"/> 로 알려 장수만 마스터 권위로 갱신시킨다.
+    /// 카드 사용은 <see cref="IGameRequests.RequestPlayCard"/> 로 요청만 하고, 손패에서 빼는 것은 승인 결과 <see cref="GameEvents.OnCardUsed"/> 를 받은 뒤다 (04-card.md 4절).
     /// 카드 효과(대상 · 체인 · 카운터) 판정은 서버(GameServer)가 한다 — 범위 밖.
     /// </summary>
     public class PlayerHandPresenter : MonoBehaviour
     {
         [SerializeField] private PlayerHandView handView;
 
-        // [SerializeField] private CardDatabase cardDatabase; — 수정 필요(UI): CardDatabase 삭제. DeckData 를 참조해 GetCard(cardId) 로 바꾼다 (씬 연결 포함)
+        // 종류 ID → CardData 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할을 한다 (DeckData.GetCard).
+        [SerializeField] private DeckData deck;
 
         // 인터페이스는 인스펙터에 직렬화되지 않아 컴포넌트로 받고 Awake 에서 꺼낸다.
         [SerializeField] private MonoBehaviour server; // IGameRequests 를 구현한 컴포넌트를 연결한다.
 
-        // 손패 모드(카드를 만질 수 있는 상태). 옛 PlayerHand · CardCollection(서버 Card 를 들던 클라 모델)은 삭제 — 손패 내용은 서버가 들고, 화면은 CardPresenter 들로 표시만 한다.
+        // 손패의 카드 Presenter 목록. 드로우 순이며 handView.Hands 와 같은 순서를 유지한다.
+        // 손패 내용의 원본은 서버가 들고, 여기는 화면 표시용 사본이다 (옛 PlayerHand · CardCollection 은 삭제됨).
+        private readonly List<CardPresenter> _cards = new List<CardPresenter>();
+
+        // 손패 모드(카드를 만질 수 있는 상태). 로컬 UI 상태.
         private bool _isHandMode;
 
         private IGameRequests _requests;
@@ -41,52 +47,71 @@ namespace Chapchu.Presentation
                 Debug.LogError($"[{nameof(PlayerHandPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
         }
 
-        // 수정 필요(UI) — Card MVP(CardModel · CardPresenter · CardView)는 고치지 않고 이 파일 · PlayerHandView 만으로 할 수 있다.
-        //  1. 뽑기: OnMyDrawn 을 다시 구독한다. 인스턴스 ID 는 여기 Dictionary<int, CardPresenter>(instanceId → 화면 카드)로 든다.
-        //  2. 내기: PlayCardAsync 에서 card.PlayAsync() 대신 card.SelectPlayer() 로 대상을 받고
-        //     _requests.RequestPlayCard(instanceId, targets) 를 보낸다. 보낸 카드는 _pending 으로 기억 — 승인 전에 지우지 않는다.
-        //     TargetType.None 카드는 SelectPlayer 가 빈 목록을 주므로, 뽑을 때 받은 CardData.targetType 을 보고 빈 배열로 바로 요청한다.
-        //  3. 승인: OnCardUsed(전원에게 옴)를 구독해 사전에 있는 instanceId 일 때만 그 장을 지운다
-        //     (PlayerHandView.DiscardCard(index) → RemoveCard(CardPresenter) 처럼 카드로 지우게 바꾼다).
-        //  4. 거절: OnMyRequestRejected 를 구독해 _pending 카드를 cardView.ReturnToOrigin() 으로 제자리에 둔다.
-        //  5. 정리: 옛 OnCardPlayed · DiscardCard · RequestDiscard 경로를 지운다 (GameEvents.OnCardPlayed 도 함께).
         private void OnEnable()
         {
-            // GameEvents.OnMyDrawn += StartDrawEvent;
-            // GameEvents.OnCardPlayed += DiscardCard;
+            GameEvents.OnMyDrawn += HandleMyDrawn;
+            GameEvents.OnCardUsed += HandleCardUsed;
         }
         private void OnDisable()
         {
-            // GameEvents.OnMyDrawn -= StartDrawEvent;
-            // GameEvents.OnCardPlayed -= DiscardCard;
+            GameEvents.OnMyDrawn -= HandleMyDrawn;
+            GameEvents.OnCardUsed -= HandleCardUsed;
         }
 
-        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 DeckData.GetCard 에서 읽는다 (OnMyDrawn).
-        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. DeckData 를 참조해 GetCard(cardId) 로 바꾸고 cardInstanceId 는 위 사전에 보관한다.
-        private void StartDrawEvent(int cardInstanceId, int cardId)
+        // 내가 뽑은 카드 (OnMyDrawn 은 나에게만 온다). 표시 데이터는 종류 ID 로 덱에서 읽는다.
+        private void HandleMyDrawn(int cardInstanceId, int cardId)
         {
-            // CardData data = deck.GetCard(cardId);
-            //
-            // CardPresenter cp = handView.DrawCard(data);
-            // cp.Setup(data, 손패 장수, this);
+            CardData data = deck.GetCard(cardId);
+            if (data == null)
+            {
+                Debug.LogWarning($"[{nameof(PlayerHandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+                return;
+            }
+
+            CardView cardView = handView.DrawCard();
+            CardPresenter cp = cardView.GetComponent<CardPresenter>();
+            cp.Setup(data, cardInstanceId, this);
+
+            _cards.Add(cp);
         }
 
-        private void DiscardCard(int cardID, int index)
+        /// <summary>드롭한 카드의 사용을 서버에 요청한다. 판정 · 손패 제거는 서버 결과(OnCardUsed)를 따른다.</summary>
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
-            // playerHand.DiscardCard(index); — PlayerHand 삭제. 옛 OnCardPlayed 경로라 OnCardUsed 로 바꿀 때 함께 정리
+            _requests?.RequestPlayCard(cardInstanceId, targetActorNumbers);
+        }
+
+        // 방장이 승인한 카드 사용 (전원에게 온다). 내 카드면 인스턴스 ID 로 찾아 손패에서 뺀다.
+        // 손패 장수는 서버가 PlayerProps.HandCount 로 따로 올리므로 여기서 통보하지 않는다.
+        private void HandleCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
+
+            int index = _cards.FindIndex(c => c.CardInstanceId == cardInstanceId);
+            if (index < 0)
+            {
+                Debug.LogWarning($"[{nameof(PlayerHandPresenter)}] 승인된 카드가 손패에 없다. instanceId={cardInstanceId}", this);
+                return;
+            }
+
+            _cards.RemoveAt(index);
             handView.DiscardCard(index);
-
-            _requests?.RequestDiscard(cardID);
         }
 
         public bool IsHandMode()
         {
             return _isHandMode;
         }
-        public void SetHandMode(bool setter)
+
+        /// <summary>HandMode 의 유일한 진입점. 상태 갱신 → 뷰 연출 → 카드들에 알림 (ClickManager 가 입력을 받아 부른다).</summary>
+        public void SetHandMode(bool isHandMode)
         {
-            _isHandMode = setter;
-            GameEvents.RaiseHandModeChanged(setter);
+            _isHandMode = isHandMode;
+
+            if (isHandMode) handView.HandsUp();
+            else handView.HandsDown();
+
+            GameEvents.RaiseHandModeChanged(isHandMode);
         }
 
         /// <summary>

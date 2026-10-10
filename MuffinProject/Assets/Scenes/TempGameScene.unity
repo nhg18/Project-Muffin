@@ -5617,6 +5617,8 @@ GameObject:
   - component: {fileID: 2125907934}
   - component: {fileID: 2125907933}
   - component: {fileID: 2125907932}
+  - component: {fileID: 2125907936}
+  - component: {fileID: 2125907935}
   m_Layer: 5
   m_Name: RoomCode
   m_TagString: Untagged
@@ -5709,6 +5711,31 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2125907930}
   m_CullTransparentMesh: 1
+--- !u!114 &2125907935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2125907930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f827bd09f70bed248b96a4c4e09aa9a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  roomCodeText: {fileID: 847348641}
+--- !u!114 &2125907936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2125907930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed6f1df977cce6e47806cb75df3e801b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

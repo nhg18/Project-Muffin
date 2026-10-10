@@ -11,8 +11,8 @@ namespace Chapchu.Presentation
     public class ClickManager : MonoBehaviour
     {
         #region field
+        // 입력은 Presenter 에게만 전달한다. 뷰(PlayerHandView)는 Presenter 가 움직인다.
         public PlayerHandPresenter playerHandPresenter;
-        public PlayerHandView playerHandView;
 
         #endregion
 
@@ -40,25 +40,12 @@ namespace Chapchu.Presentation
                 Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
 
-                if (hit.collider != null && hit.collider.CompareTag("Card")) //Click Cards
-                {
-                    if (!playerHandPresenter.IsHandMode())
-                    {
-                        playerHandView.HandsUp();
-                    }
-                    else
-                    {
+                bool hitCard = hit.collider != null && hit.collider.CompareTag("Card");
 
-                    }
-                }
-
-                if (hit.collider == null || !hit.collider.CompareTag("Card"))
-                {
-                    if (playerHandPresenter.IsHandMode())
-                    {
-                        playerHandView.HandsDown();
-                    }
-                }
+                if (hitCard && !playerHandPresenter.IsHandMode())
+                    playerHandPresenter.SetHandMode(true);
+                else if (!hitCard && playerHandPresenter.IsHandMode())
+                    playerHandPresenter.SetHandMode(false);
             }
 
             if (Input.GetMouseButtonDown(1))
