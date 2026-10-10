@@ -118,7 +118,7 @@
 | 에셋 | 역할 | 위치 |
 | --- | --- | --- |
 | `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 이미지, 타입, 대상, 조건, 효과) | `Assets/Cards/*.asset` |
-| `CardDatabase` (ScriptableObject) | id → `CardData` 조회 | `Assets/Cards/CardDatabase.asset` |
+| `DeckData.GetCard(id)` | id → `CardData` 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다 (옛 `CardDatabase` 는 2026-10-10 삭제) |  |
 | `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` |
 
 * 덱 에셋이 카드와 매수를 짝으로 갖는다. 카드 정의(`CardData`)에는 매수를 두지 않는다 — 카드가 무엇인지와 덱에 몇 장인지는 다른 질문이다.

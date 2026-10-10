@@ -16,7 +16,7 @@ namespace Chapchu.Presentation
     {
         [SerializeField] private PlayerHandView handView;
 
-        [SerializeField] private CardDatabase cardDatabase;
+        // [SerializeField] private CardDatabase cardDatabase; — 수정 필요(UI): CardDatabase 삭제. DeckData 를 참조해 GetCard(cardId) 로 바꾼다 (씬 연결 포함)
 
         // 인터페이스는 인스펙터에 직렬화되지 않아 컴포넌트로 받고 Awake 에서 꺼낸다.
         [SerializeField] private MonoBehaviour server; // IGameRequests 를 구현한 컴포넌트를 연결한다.
@@ -58,16 +58,17 @@ namespace Chapchu.Presentation
             // GameEvents.OnCardPlayed -= DiscardCard;
         }
 
-        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 CardDatabase 에서 읽는다.
+        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 DeckData.GetCard 에서 읽는다.
+        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. deck.GetCard(cardId) 로 바꾸고 cardInstanceId 를 CardPresenter 에 보관한다.
         private void StartDrawEvent(int actorNumber, int cardInstanceId, int cardId)
         {
             if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
-            CardData data = cardDatabase.GetCard(cardId);
-
-            CardPresenter cp = handView.DrawCard(data);
-            cp.Setup(data, playerHand.GetHandCount(), this);
-            // playerHand.Add(...) 주석 처리 — 화면은 서버 Card 를 들지 않는다. 위 "수정 필요(UI)" 대로 cardInstanceId 를 CardPresenter 에 보관하는 쪽으로 바꾼다
+            // CardData data = cardDatabase.GetCard(cardId);
+            //
+            // CardPresenter cp = handView.DrawCard(data);
+            // cp.Setup(data, playerHand.GetHandCount(), this);
+            // playerHand.Add(...) — 화면은 서버 Card 를 들지 않는다
         }
 
         private void DiscardCard(int cardID, int index)
