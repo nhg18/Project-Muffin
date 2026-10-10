@@ -34,6 +34,17 @@ namespace Chapchu.Presentation
             PutAwayMyCards();
         }
 
+        /// <summary>인스턴스 ID 로 손패 칸을 찾는다. 없으면 -1.</summary>
+        public int FindIndex(int cardInstanceId)
+        {
+            for (int i = 0; i < Hands.Count; i++)
+            {
+                CardPresenter card = Hands[i].GetComponent<CardPresenter>();
+                if (card != null && card.CardInstanceId == cardInstanceId) return i;
+            }
+            return -1;
+        }
+
         public CardPresenter DrawCard(CardData data)
         {
             GameObject drawedCard = Instantiate(presetCard, HandPosition);

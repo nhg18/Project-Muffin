@@ -20,6 +20,9 @@ namespace Chapchu.DebugTools
         [field: SerializeField]
         public int CurrentTurnActor { get; private set; } = -1;
 
+        // 드로우마다 1씩 올려 카드를 구분한다. 진짜 서버는 덱 생성 때 부여한다 (09-network.md 10절).
+        private int _nextCardInstanceId = 1;
+
         private void Start()
         {
             GameEvents.RaiseOnGameStarted(playerList.ToArray());
@@ -27,16 +30,17 @@ namespace Chapchu.DebugTools
 
         public void RequestDraw()
         {
-            GameEvents.RaiseDrawn(CurrentTurnActor, 0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
+            GameEvents.RaiseDrawn(CurrentTurnActor, _nextCardInstanceId++, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
         }
 
         public void RequestDiscard(int cardId)
         {
         }
 
+        // 검사 없이 바로 승인한 것으로 흉내 낸다. 거절 흐름은 진짜 서버(TempGameScene)로 본다.
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
-            
+            GameEvents.RaiseCardUsed(CurrentTurnActor, cardInstanceId, 0, targetActorNumbers);
         }
 
         public void RequestSetTrap(int cardInstanceId, int slotIndex)

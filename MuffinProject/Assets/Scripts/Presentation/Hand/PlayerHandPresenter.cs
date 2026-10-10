@@ -9,7 +9,7 @@ namespace Chapchu.Presentation
     /// <summary>
     /// 내 손패 모델 · 뷰를 잇는다. 카드는 드로우 순서대로 쌓인다(정렬 없음, 05-deck.md 6절).
     /// 손패 장수(PlayerProps.HandCount)는 마스터(GameServer)만 기록한다 — 여기서는 더 이상 직접 쓰지 않는다.
-    /// 카드 사용 · 버림도 서버에 <see cref="IGameRequests.RequestDiscard"/> 로 알려 장수만 마스터 권위로 갱신시킨다.
+    /// 카드 사용은 <see cref="IGameRequests.RequestPlayCard"/> 로 요청만 하고, 손패에서 빼는 것은 승인 결과 <see cref="GameEvents.OnCardUsed"/> 를 받은 뒤다 (04-card.md 4절).
     /// 카드 효과(대상 · 체인 · 카운터) 판정은 서버(GameServer)가 한다 — 범위 밖.
     /// </summary>
     public class PlayerHandPresenter : MonoBehaviour
@@ -40,37 +40,50 @@ namespace Chapchu.Presentation
                 Debug.LogError($"[{nameof(PlayerHandPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
         }
 
-        // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
-        //  · OnDrawn 이 (actor, cardInstanceId, cardId) 로 바뀌었다. StartDrawEvent 시그니처를 맞추고 인스턴스 ID 를 카드에 보관한 뒤 다시 구독한다.
-        //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아 손패에서 뺀다.
         private void OnEnable()
         {
-            // GameEvents.OnDrawn += StartDrawEvent;
-            // GameEvents.OnCardPlayed += DiscardCard;
+            GameEvents.OnDrawn += HandleDrawn;
+            GameEvents.OnCardUsed += HandleCardUsed;
         }
         private void OnDisable()
         {
-            // GameEvents.OnDrawn -= StartDrawEvent;
-            // GameEvents.OnCardPlayed -= DiscardCard;
+            GameEvents.OnDrawn -= HandleDrawn;
+            GameEvents.OnCardUsed -= HandleCardUsed;
         }
 
-        private void StartDrawEvent(int actorNumber, int cardid)
+        // 내 드로우만 받는다 (서버가 주인에게만 보내지만, FakeGameServer 는 전원에게 올린다).
+        private void HandleDrawn(int actorNumber, int cardInstanceId, int cardId)
         {
             if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
 
-            CardData data = cardDatabase.GetCard(cardid);
+            CardData data = cardDatabase.GetCard(cardId);
 
             CardPresenter cp = handView.DrawCard(data);
-            cp.Setup(data, playerHand.GetHandCount(), this);
+            cp.Setup(data, cardInstanceId, playerHand.GetHandCount(), this);
             playerHand.Add(new Card(data.id));
         }
 
-        private void DiscardCard(int cardID, int index)
+        /// <summary>드롭한 카드의 사용을 서버에 요청한다. 판정 · 손패 제거는 서버 결과(OnCardUsed)를 따른다.</summary>
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers)
         {
+            _requests?.RequestPlayCard(cardInstanceId, targetActorNumbers);
+        }
+
+        // 방장이 승인한 카드 사용 (전원에게 온다). 내 카드면 인스턴스 ID 로 찾아 손패에서 뺀다.
+        // 손패 장수는 서버가 PlayerProps.HandCount 로 따로 올리므로 여기서 통보하지 않는다.
+        private void HandleCardUsed(int actorNumber, int cardInstanceId, int cardId, int[] targetActorNumbers)
+        {
+            if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
+
+            int index = handView.FindIndex(cardInstanceId);
+            if (index < 0)
+            {
+                Debug.LogWarning($"[{nameof(PlayerHandPresenter)}] 승인된 카드가 손패에 없다. instanceId={cardInstanceId}", this);
+                return;
+            }
+
             playerHand.DiscardCard(index);
             handView.DiscardCard(index);
-
-            _requests?.RequestDiscard(cardID);
         }
 
         public bool IsHandMode()
