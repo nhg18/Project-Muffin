@@ -21,7 +21,8 @@ namespace Chapchu.Presentation
         // 인터페이스는 인스펙터에 직렬화되지 않아 컴포넌트로 받고 Awake 에서 꺼낸다.
         [SerializeField] private MonoBehaviour server; // IGameRequests 를 구현한 컴포넌트를 연결한다.
 
-        public PlayerHand playerHand = new PlayerHand();
+        // 손패 모드(카드를 만질 수 있는 상태). 옛 PlayerHand · CardCollection(서버 Card 를 들던 클라 모델)은 삭제 — 손패 내용은 서버가 들고, 화면은 CardPresenter 들로 표시만 한다.
+        private bool _isHandMode;
 
         private IGameRequests _requests;
 
@@ -42,7 +43,7 @@ namespace Chapchu.Presentation
 
         // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
         //  · 화면은 서버의 Card 객체를 쓰지 않는다. 손패 한 장 = (cardInstanceId, CardData). CardPresenter 가 InstanceId 를 들고,
-        //    여기는 instanceId → CardPresenter 사전을 둔다. 옛 PlayerHand · CardCollection(서버 Card 를 들던 모델)은 그때 지운다.
+        //    여기는 instanceId → CardPresenter 사전을 둔다 (옛 PlayerHand · CardCollection 은 삭제됨).
         //  · OnDrawn → OnMyDrawn(cardInstanceId, cardId) 로 바뀌었다. 내 카드만 오므로 actor 검사가 없다. StartDrawEvent 는 그 시그니처에 맞춰 두었다 — 다시 구독한다.
         //    드롭 때는 RequestPlayCard(instanceId, targets) 로 그 번호를 보낸다.
         //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아
@@ -65,13 +66,12 @@ namespace Chapchu.Presentation
             // CardData data = deck.GetCard(cardId);
             //
             // CardPresenter cp = handView.DrawCard(data);
-            // cp.Setup(data, playerHand.GetHandCount(), this);
-            // playerHand.Add(...) — 화면은 서버 Card 를 들지 않는다
+            // cp.Setup(data, 손패 장수, this);
         }
 
         private void DiscardCard(int cardID, int index)
         {
-            playerHand.DiscardCard(index);
+            // playerHand.DiscardCard(index); — PlayerHand 삭제. 옛 OnCardPlayed 경로라 OnCardUsed 로 바꿀 때 함께 정리
             handView.DiscardCard(index);
 
             _requests?.RequestDiscard(cardID);
@@ -79,11 +79,11 @@ namespace Chapchu.Presentation
 
         public bool IsHandMode()
         {
-            return playerHand.isHandMode;
+            return _isHandMode;
         }
         public void SetHandMode(bool setter)
         {
-            playerHand.isHandMode = setter;
+            _isHandMode = setter;
             GameEvents.RaiseHandModeChanged(setter);
         }
 

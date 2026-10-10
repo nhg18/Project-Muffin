@@ -47,7 +47,7 @@
 
 ### 다음 할 일
 
-- **UI (노희건)**: `CardPresenter` 에 `InstanceId` 보관, `PlayerHandPresenter` 가 `instanceId → CardPresenter` 사전을 들고 `OnDrawn` 재구독 · 드롭 → `RequestPlayCard(instanceId, targets)` · `OnCardUsed` 로 그 장 지우기 · 거절이면 제자리. `PlayerHand` · `CardCollection` · `CardModel` 삭제.
+- **UI (노희건)**: `CardPresenter` 에 `InstanceId` 보관, `PlayerHandPresenter` 가 `instanceId → CardPresenter` 사전을 들고 `OnDrawn` 재구독 · 드롭 → `RequestPlayCard(instanceId, targets)` · `OnCardUsed` 로 그 장 지우기 · 거절이면 제자리. `CardModel` 은 `CardPresenter` 로 접기. (`PlayerHand` · `CardCollection` 은 10/10 `logic` 에서 삭제 — 손패 모드 플래그는 `PlayerHandPresenter._isHandMode`)
 - `RequestDiscard(int cardId)` → 인스턴스 ID (PR #63 · 기능 4).
 - **2단계 (Unity 열고)**: `CardEffect` SO → `[Serializable] struct CardEffect { EffectType type; int amount; … }` · 덱이 여러 개가 되면 클라에 "이번 방의 덱" 을 알리는 방 상태 추가.
 - 함정 · 체인이 생기면 존을 가로질러 장을 찾는 `Dictionary<int, Card>` 검토.
