@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-10-10 · 게임 씬 방 코드 표시 (HeeGeon)
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `HeeGeon` |
+| 범위 | `Presentation/RoomCode/RoomCodeView` · `RoomCodePresenter`(신규) · `docs/systems/10-ui.md` · `TempGameScene`(Unity 에서 연결) |
+
+### 한 것
+
+- `10-ui.md` 2절에 방 코드 표시 항목 추가(확정), 10절 구현 상태 · 12절 이력 반영. 코드보다 문서 먼저 (CLAUDE.md 0절 #3).
+- `RoomCodeView`(`SetRoomCode` 만) · `RoomCodePresenter`(`Start` 에서 `PhotonNetwork.CurrentRoom.Name` 1회 읽기, 방 밖이면 `----`). `Chapchu.Presentation` namespace.
+- **컴파일 에러 수정**: `ChapChuPresenter.HandleRequestRejected` 가 옛 시그니처 `(int, string)` 이라 10/7 develop 머지(`ad2dab6`, 거절 사유 문자열 → 코드) 이후 `Assembly-CSharp` 전체가 빌드되지 않았다. `(int actorNumber, int rejectCode)` + `RejectText.Get` 으로 맞춤. 이 때문에 새 스크립트가 "찾을 수 없음"으로 보였다.
+
+### 결정
+
+- **방 코드는 `IGameState` 에 넣지 않는다.** Photon 방 메타데이터(방 이름 그대로)라 마스터가 판정 · 검증할 값이 아니다. UI 가 공개 메타데이터(방 이름 · 액터 번호 · 닉네임 · 인원)를 **읽는** 것은 `10-ui.md` 1절 #2 가 허용하고, `RoomPresenter` · `SeatManager` 등 선례와 같다. 약속 파일 변경 · 로직 리뷰 불필요. 반대로 UI 가 공개 상태를 **쓰는** 것은 금지 — `PlayerPresenter.cs:24` 의 `SetCustomProperties` 호출은 이 규칙에 걸리므로 로직과 정리할 항목.
+- `RoomPresenter` 와 달리 `OnJoinedRoom` 을 구독하지 않는다. 게임 씬은 방 안에서 `LoadLevel` 로만 열리므로 `Start` 시점에 이미 `InRoom`.
+
+### 다음 할 일
+
+- [ ] Unity(ui 트랙): `TempGameScene` 의 `RoomCode` 오브젝트에 `RoomCodeView` + `RoomCodePresenter` 부착, `roomCodeText` ← `RoomCode_Text`. 씬 커밋은 코드 커밋과 분리
+- [ ] 멀티 실행 확인: `DebugLobbyScene` → `TempGameScene`, 두 클라이언트 Console 에 같은 4자리 코드 · 화면 표시. 씬 직접 Play 시 `----`
+- [ ] `GameScene`(정식) 에 같은 오브젝트가 생기면 동일 컴포넌트 부착
+- [ ] `PlayerPresenter` 의 `SetCustomProperties` 직접 호출 — 로직과 정리
+
+---
+
 ## 2026-10-07 · 찹츄 버튼 (UI) · IGameState 손패 수 조회 (HeeGeon → develop PR)
 
 | 항목 | 값 |
