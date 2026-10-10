@@ -58,9 +58,9 @@ public class ChapChuPresenter : MonoBehaviour
     {
         _requests?.RequestDeclareChapChu();
     }
-    private void HandleRequestRejected(int arg1, string arg2)
+    private void HandleRequestRejected(int actorNumber, int code)
     {
-        Debug.LogWarning($"[GameEvent] RequestRejected {arg1} {arg2}");
+        Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {RejectText.Get(code)}");
     }
 
     private void HandleHandCountChanged(int actorNumber, int handCount)
