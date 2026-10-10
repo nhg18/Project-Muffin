@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
+using Chapchu.Game.Cards;
 using NUnit.Framework;
 
 namespace Chapchu.Game.Tests
@@ -27,8 +28,10 @@ namespace Chapchu.Game.Tests
         // 카드 종류 ID 가 모두 다른 덱으로 A · B 2인 게임을 시작하고 5장씩 나눠 준다. 첫 턴은 무작위라 (턴 주인, 상대) 를 돌려준다.
         private (int current, int other) StartTwoPlayerGame(int deckSize)
         {
+            int[] cardIds = Enumerable.Range(100, deckSize).ToArray();
+
             _server.StartGame(new[] { A, B });
-            _server.InitDeck(Enumerable.Range(100, deckSize).ToArray());
+            _server.InitDeck(cardIds.Select((id, i) => new Card(i + 1, id, CardType.Action, TargetType.None, 0)).ToList());
             _server.DealInitialHands(new[] { A, B });
 
             int current = _server.CurrentTurnActor;

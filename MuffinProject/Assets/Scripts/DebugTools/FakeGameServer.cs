@@ -30,7 +30,7 @@ namespace Chapchu.DebugTools
 
         public void RequestDraw()
         {
-            GameEvents.RaiseDrawn(CurrentTurnActor, _nextCardInstanceId++, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
+            GameEvents.RaiseMyDrawn(_nextCardInstanceId++, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용. 가짜 서버는 늘 나에게 준다
         }
 
         public void RequestDiscard(int cardId)

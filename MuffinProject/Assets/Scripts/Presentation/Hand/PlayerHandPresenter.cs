@@ -17,15 +17,18 @@ namespace Chapchu.Presentation
     {
         [SerializeField] private PlayerHandView handView;
 
-        [SerializeField] private CardDatabase cardDatabase;
+        // 종류 ID → CardData 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할을 한다 (DeckData.GetCard).
+        [SerializeField] private DeckData deck;
 
         // 인터페이스는 인스펙터에 직렬화되지 않아 컴포넌트로 받고 Awake 에서 꺼낸다.
         [SerializeField] private MonoBehaviour server; // IGameRequests 를 구현한 컴포넌트를 연결한다.
 
-        public PlayerHand playerHand = new PlayerHand();
-
-        // 손패의 카드 Presenter 목록. 드로우 순이며 handView.Hands · playerHand 와 같은 순서를 유지한다.
+        // 손패의 카드 Presenter 목록. 드로우 순이며 handView.Hands 와 같은 순서를 유지한다.
+        // 손패 내용의 원본은 서버가 들고, 여기는 화면 표시용 사본이다 (옛 PlayerHand · CardCollection 은 삭제됨).
         private readonly List<CardPresenter> _cards = new List<CardPresenter>();
+
+        // 손패 모드(카드를 만질 수 있는 상태). 로컬 UI 상태.
+        private bool _isHandMode;
 
         private IGameRequests _requests;
 
@@ -46,28 +49,30 @@ namespace Chapchu.Presentation
 
         private void OnEnable()
         {
-            GameEvents.OnDrawn += HandleDrawn;
+            GameEvents.OnMyDrawn += HandleMyDrawn;
             GameEvents.OnCardUsed += HandleCardUsed;
         }
         private void OnDisable()
         {
-            GameEvents.OnDrawn -= HandleDrawn;
+            GameEvents.OnMyDrawn -= HandleMyDrawn;
             GameEvents.OnCardUsed -= HandleCardUsed;
         }
 
-        // 내 드로우만 받는다 (서버가 주인에게만 보내지만, FakeGameServer 는 전원에게 올린다).
-        private void HandleDrawn(int actorNumber, int cardInstanceId, int cardId)
+        // 내가 뽑은 카드 (OnMyDrawn 은 나에게만 온다). 표시 데이터는 종류 ID 로 덱에서 읽는다.
+        private void HandleMyDrawn(int cardInstanceId, int cardId)
         {
-            if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
-
-            CardData data = cardDatabase.GetCard(cardId);
+            CardData data = deck.GetCard(cardId);
+            if (data == null)
+            {
+                Debug.LogWarning($"[{nameof(PlayerHandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+                return;
+            }
 
             CardView cardView = handView.DrawCard();
             CardPresenter cp = cardView.GetComponent<CardPresenter>();
             cp.Setup(data, cardInstanceId, this);
 
             _cards.Add(cp);
-            playerHand.Add(new Card(data.id));
         }
 
         /// <summary>드롭한 카드의 사용을 서버에 요청한다. 판정 · 손패 제거는 서버 결과(OnCardUsed)를 따른다.</summary>
@@ -90,19 +95,18 @@ namespace Chapchu.Presentation
             }
 
             _cards.RemoveAt(index);
-            playerHand.DiscardCard(index);
             handView.DiscardCard(index);
         }
 
         public bool IsHandMode()
         {
-            return playerHand.isHandMode;
+            return _isHandMode;
         }
 
-        /// <summary>HandMode 의 유일한 진입점. 모델 갱신 → 뷰 연출 → 카드들에 알림 (ClickManager 가 입력을 받아 부른다).</summary>
+        /// <summary>HandMode 의 유일한 진입점. 상태 갱신 → 뷰 연출 → 카드들에 알림 (ClickManager 가 입력을 받아 부른다).</summary>
         public void SetHandMode(bool isHandMode)
         {
-            playerHand.isHandMode = isHandMode;
+            _isHandMode = isHandMode;
 
             if (isHandMode) handView.HandsUp();
             else handView.HandsDown();

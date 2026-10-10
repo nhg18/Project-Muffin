@@ -97,10 +97,10 @@ B 를 막지 않기 위한 A 의 규칙은 세 가지다.
 
 | 위치 | 주석 처리한 것 | UI 가 할 일 | 원인 PR |
 | --- | --- | --- | --- |
-| `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | ✅ 2026-10-10 (HeeGeon) — `HandleDrawn(actor, cardInstanceId, cardId)`, 인스턴스 ID 는 `CardModel.cardInstanceId` | #53 |
+| `PlayerHandPresenter.OnEnable/OnDisable` | `OnDrawn += StartDrawEvent` | ✅ 2026-10-10 (HeeGeon) — `HandleMyDrawn(cardInstanceId, cardId)` 로 `OnMyDrawn` 구독, 인스턴스 ID 는 `CardModel.cardInstanceId` | #53 |
 | `PlayerHandPresenter.OnEnable/OnDisable` | `OnCardPlayed += DiscardCard` (→ `RequestDiscard`) | ✅ 2026-10-10 (HeeGeon) — 드롭 → `RequestPlayCard`, `HandleCardUsed` 가 손패에서 뺀다. UI 호출부가 없어졌으니 **로직이 `GameEvents.OnCardPlayed` · `IGameRequests.RequestDiscard` 를 삭제** (약속 PR) | #53 · #54 |
 | `TurnPresenter.OnEnable/OnDisable` | `_view.EndTurnRequested += HandleEndTurnRequested` (→ `RequestEndTurn`) | 턴 종료 요청을 없앴다 (자동 넘김만). 턴 종료 버튼 · `TurnView.EndTurnRequested` 를 지운다 | 턴 종료 삭제 PR |
-| `DeckPresenter` · `TurnPresenter` `OnEnable/OnDisable` | `OnRequestRejected += HandleRequestRejected` | 거절이 `(actor, 코드 int)` 로 바뀜. 핸들러를 맞추고 문구는 `RejectText.Get(code)` → 다시 구독 (거절 토스트) | 거절 코드 PR |
+| `DeckPresenter` · `TurnPresenter` · `ChapChuPresenter` `OnEnable/OnDisable` | `OnRequestRejected += HandleRequestRejected` | 거절이 `OnMyRequestRejected(코드 int)` 로 바뀜. 핸들러를 `(int code)` 로 맞추고 문구는 `RejectText.Get(code)` → 다시 구독 (거절 토스트) | 거절 코드 PR |
 
 ---
 

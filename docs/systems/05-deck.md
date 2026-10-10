@@ -28,7 +28,7 @@
 
 | # | 처리 | 담당 |
 | --- | --- | --- |
-| 1 | `DeckRecipe`(카드 ID 목록)로 메인 덱 생성 | 마스터 |
+| 1 | `DeckData`(카드별 매수)로 메인 덱 생성 | 마스터 |
 | 2 | 카드 1장마다 **카드 인스턴스 ID** 부여 | 마스터 |
 | 3 | 덱 무작위 셔플 | 마스터 |
 | 4 | 각 플레이어에게 5장씩 배분 | 마스터 |
@@ -118,10 +118,10 @@
 | 에셋 | 역할 | 위치 |
 | --- | --- | --- |
 | `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 이미지, 타입, 대상, 조건, 효과) | `Assets/Cards/*.asset` |
-| `CardDatabase` (ScriptableObject) | id → `CardData` 조회 | `Assets/Cards/CardDatabase.asset` |
-| `DeckRecipe` (ScriptableObject) | 덱 구성 (카드 ID 목록) | `Assets/Cards/Card pool/*.asset` |
+| `DeckData.GetCard(id)` | id → `CardData` 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다 (옛 `CardDatabase` 는 2026-10-10 삭제) |  |
+| `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` |
 
-* `DeckRecipe`는 **같은 ID를 여러 번** 넣어 매수를 표현한다.
+* 덱 에셋이 카드와 매수를 짝으로 갖는다. 카드 정의(`CardData`)에는 매수를 두지 않는다 — 카드가 무엇인지와 덱에 몇 장인지는 다른 질문이다.
 * 덱 구성(어떤 카드를 몇 장)은 **미정**이다.
 
 ---
@@ -143,12 +143,12 @@
 | 항목 | 상태 |
 | --- | --- |
 | 덱 원본 | 마스터 (`GameServer.Deck.cs`, 순수 C#). Photon 전송은 `PunGameServer` — `TempGameScene` 에만 배치 |
-| `DeckRecipe`로 덱 초기화 · 인스턴스 ID 부여 | 구현됨 (`InitDeck`). 덱 구성은 미정이라 **임시 레시피(가정)** `NewDeckRecipe` — 행동 카드 ID 1 · ID 4 각 20장 = 40장 (2026-10-06). 덱이 비면 시작 배분 · 뽑기 · 카드 효과 뽑기 모두 `DrawOne` 에서 버림 더미를 섞어 다시 채우고 `GameEvents.OnDeckRefilled` 로 알린다(연출용) |
+| `DeckData` 로 덱 생성 · 인스턴스 ID 부여(1부터) | 구현됨 — 방장의 `PunGameServer.BuildDeck` 이 에셋에서 `Card` 를 만들고 `GameServer.InitDeck` 이 받아 섞는다. 덱 구성은 미정이라 **임시 에셋(가정)** `Deck_Default` — 행동 카드 ID 1 · ID 4 각 20장 = 40장 (2026-10-06). 덱이 비면 시작 배분 · 뽑기 · 카드 효과 뽑기 모두 `DrawOne` 에서 버림 더미를 섞어 다시 채우고 `GameEvents.OnDeckRefilled` 로 알린다(연출용) |
 | 셔플 | 구현됨 (Fisher–Yates) |
 | 초기 배분 | 구현됨 — 마스터가 `DealInitialHands` 로 전원에게 5장 일괄 배분 |
 | 드로우 | 구현됨 — 요청 → 턴 검증 → 덱 맨 위 1장 → **드로우 후 턴 종료** (03 3절). 메인 행동 중 카드 사용 쪽 제한은 기능 4 |
 | 덱 동기화 | 잔여 장수만 Room Property (`RoomProps.DeckCount`). 옛 덱 전체 배열 동기화는 삭제 |
-| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnDrawn`)도 인스턴스 ID 를 넘긴다 (2026-10-06) |
+| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnMyDrawn`)도 인스턴스 ID 를 넘긴다 (2026-10-06, 이름은 2026-10-10) |
 | 손패 장수 동기화 | 구현됨 — 마스터만 기록 (`PlayerProps.HandCount`) |
 | 손패 **내용** 원본 | 마스터 (`PlayerState.Hand`, 2026-10-01). 배분 · 드로우 때 넣고 버릴 때 꺼낸다 |
 | 덱 소진 재생성 | 구현됨 — 버림 더미 회수 → 재셔플 |

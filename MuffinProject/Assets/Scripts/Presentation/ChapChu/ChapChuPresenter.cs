@@ -40,7 +40,7 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnEnable()
     {
         chapChuView.DeclareChapchu += HandleDeclareChapchuRequest;
-        GameEvents.OnRequestRejected += HandleRequestRejected;
+        GameEvents.OnMyRequestRejected += HandleRequestRejected;
         GameEvents.OnHandCountChanged += HandleHandCountChanged;
         GameEvents.OnTurnChanged += HandleTurnChanged;
     }
@@ -49,7 +49,7 @@ public class ChapChuPresenter : MonoBehaviour
     private void OnDisable()
     {
         chapChuView.DeclareChapchu -= HandleDeclareChapchuRequest;
-        GameEvents.OnRequestRejected -= HandleRequestRejected;
+        GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         GameEvents.OnHandCountChanged -= HandleHandCountChanged;
         GameEvents.OnTurnChanged -= HandleTurnChanged;
     }
@@ -59,11 +59,10 @@ public class ChapChuPresenter : MonoBehaviour
         _requests?.RequestDeclareChapChu();
     }
 
-    // 거절 사유는 코드(int, RejectCode). 문구는 RejectText 에서 꺼낸다 (약속 변경 ad2dab6).
-    private void HandleRequestRejected(int actorNumber, int rejectCode)
+    // 내 요청이 거절됨 (OnMyRequestRejected — 나에게만 온다). 문구는 RejectText 에서 꺼낸다.
+    private void HandleRequestRejected(int rejectCode)
     {
-        if (this.actorNumber != actorNumber) return;
-        Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {RejectText.Get(rejectCode)}");
+        Debug.LogWarning($"[GameEvent] RequestRejected {RejectText.Get(rejectCode)}");
     }
 
     private void HandleHandCountChanged(int actorNumber, int handCount)

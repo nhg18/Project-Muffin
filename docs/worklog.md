@@ -29,6 +29,11 @@
   - HandMode: `PlayerHandPresenter.SetHandMode` 가 유일한 진입점(모델 → `handView.HandsUp/Down` → `RaiseHandModeChanged`). 뷰의 `playerHandPresenter` 필드 삭제, `HandsUp/Down` 은 `DOMove` 만. `ClickManager` 는 `playerHandView` 필드를 지우고 `SetHandMode` 만 부른다.
   - 카드 목록 주인을 Presenter 로: `PlayerHandPresenter._cards(List<CardPresenter>)` 가 드로우 순서를 갖고 인스턴스 ID 검색을 한다. 뷰의 `Hands` 는 `List<CardView>`, `DrawCard()` 는 `CardView` 를 돌려주고 Presenter 가 `GetComponent<CardPresenter>()` 로 짝을 꺼낸다. 뷰의 `FindIndex` 삭제.
   - `CardModel.cardIndex` · `CardPresenter.DownIndex` 삭제 — 읽는 곳이 없던 죽은 상태. `Setup(data, instanceId, hand)`.
+- **`develop` 머지 (#71 카드 구조 재정립 · `OnMy*` 이름 변경 반영)**. 텍스트 충돌 6개 파일 해소 + 의미상 깨지는 곳 수정:
+  - `PlayerHandPresenter`: `CardDatabase` → `DeckData deck`(`GetCard(cardId)`), `OnDrawn` → `OnMyDrawn(instanceId, cardId)`(actor 검사 삭제), 삭제된 `PlayerHand` 대신 `_isHandMode` bool. 손패 내용 원본은 서버, `_cards` 는 표시용 사본.
+  - `ChapChuPresenter`: `OnMyRequestRejected(int code)` 구독 복구 (develop 의 주석 처리 해제).
+  - `FakeGameServer`: `RaiseMyDrawn(_nextCardInstanceId++, 0)`.
+  - **씬 연결 필요**: `PlayerHandPresenter` 의 `cardDatabase` 슬롯이 `deck` 으로 바뀌었고 옛 에셋은 삭제됨 → `Deck_Default.asset` 연결.
 
 ### 결정
 
@@ -42,6 +47,7 @@
 - [ ] `GameScene`(정식) 에 같은 오브젝트가 생기면 동일 컴포넌트 부착
 - [ ] `PlayerPresenter` 의 `SetCustomProperties` 직접 호출 — 로직과 정리
 - [ ] Unity(씬): `TempGameScene` 의 `ChapChuPresenter.server` 가 `PhotonView` 를 가리킴 → `PunGameServer` 로 교체 (Awake 에서 LogError)
+- [ ] Unity(씬): `PlayerHandPresenter.deck` ← `Assets/Cards/Decks/Deck_Default.asset` (`PunGameServer.startingDeckRecipe` 와 같은 에셋)
 - [ ] 멀티 실행 확인: 드로우마다 손패 생성 · 내 턴에 행동 카드 드롭 → 대상 선택 → 방장 승인 → 내 손패에서만 제거, 상대 뒷면 장수 감소 · 남의 턴 드롭 → `NotYourTurn` 거절 → 카드 유지
 - [ ] 로직에 약속 삭제 요청: `GameEvents.OnCardPlayed` · `IGameRequests.RequestDiscard` (UI 호출부 0)
 - [ ] 거절 토스트(B2-6): `DeckPresenter` · `TurnPresenter` 의 옛 `(int, string)` 핸들러를 `RejectText.Get` 으로 맞추고 다시 구독
@@ -50,6 +56,55 @@
 
 ---
 
+## 2026-10-08 · 카드 객체 리팩토링 1단계 — 정의 `CardData` · 덱 구성 `DeckData` · 한 장 `Card` · 화면 `CardView`
+
+| 항목 | 값 |
+| --- | --- |
+| 브랜치 | `logic-card-class` → `logic` PR #71 (#68 · #69 대체. 10/9 · 10/10 구조 두 번 수정) |
+| 범위 | `Game/Server/Card.cs` · `Game/Cards/DeckData.cs` · `CardData` · `GameServer.Card/.Deck` · `PlayerState` · `PunGameServer` · 덱 에셋 2개 · 문서. UI 는 `PlayerHandPresenter` 의 드로우 핸들러 시그니처와 주석 처리 1줄 |
+
+### 구조 (하스스톤 식 — 정의 · 서버 엔티티 · 클라 뷰)
+
+| 역할 | 클래스 | 들고 있는 것 | 누가 만드나 |
+| --- | --- | --- | --- |
+| 카드 정의 | `CardData` (SO) | id · 이름 · 그림 · 타입 · 대상 · 효과 수치. **매수 없음** | 에셋 |
+| 덱 구성 | `DeckData` (SO) | `Entry { CardData card; int count }` 목록 | 에셋 (`Assets/Cards/Decks/`). 덱 구성은 미정 — 임시 |
+| 게임 안의 한 장 | `Card` (서버 어셈블리, 순수 C#) | `InstanceId` · `CardId` · `Type` · `Target` · `Damage` — 서버가 판정에 쓰는 전부 | 방장 `PunGameServer.BuildDeck` 이 게임 시작 때 1회, 번호 1부터 |
+| 화면 | `CardView` · `CardPresenter` | 인스턴스 ID + `CardData` 참조 (UI 트랙에서) | 클라가 `OnDrawn` 받을 때 |
+| 조회 | `DeckData.GetCard(id)` | `cardId → CardData` | 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다. `CardDatabase` 삭제 (10/10) |
+
+* 네트워크 · 요청 · 통지에는 int 두 개(`instanceId` · `cardId`)만. 요청은 `instanceId` 만, 통지는 둘 다.
+* 서버 어셈블리는 `UnityEngine` 을 못 보므로 "에셋 → `Card`" 변환은 Unity 층(`PunGameServer.BuildDeck`) 한 곳. 에셋(`CardData`)은 장을 만들지 않는다. 서버에 별도 규칙 테이블(옛 `CardRule`)을 두지 않고 `Card` 가 규칙값을 든다.
+* `GameServer.InitDeck(IReadOnlyList<Card>)` 은 받아서 섞기만. `PlayCard` 는 손패에서 인스턴스 ID 로 장을 찾아 `card.Type · Target · Damage` 로 판정.
+
+### 한 것
+
+| 무엇 | 내용 |
+| --- | --- |
+| `Card` | `CardInstance.cs` 이름 변경(`.meta` GUID 유지) + 규칙값. 생성자 하나, 템플릿 없음 |
+| `DeckData` | `DeckRecipe.cs` 이름 · 형식 변경(`.meta` GUID 유지, `Game/Cards/` 로 이동). ID 반복 목록 → `(card, count)` 목록 |
+| 덱 에셋 | `Card pool/NewDeckRecipe*.asset` → `Decks/Deck_Default.asset`(ID 1 · 4 각 20) · `Deck_Test.asset`(ID 3 ×15 · ID 4 ×5). GUID 유지 — `TempGameScene` · `GameScene` 의 `startingDeckRecipe` 참조 그대로 |
+| 삭제 | `CardInstance` · `CardRule` · `CardDatabase`(클래스 · 에셋) · 옛 `Game/Cards/Card`(종류 ID 하나) · `Game/Deck/` 폴더 · `CardData.ToRule/ToCard` · `CardData.deckCount` · `GameServer.InitCards/_rules/_nextInstanceId` |
+| `PunGameServer` | `startingDeckRecipe : DeckData` 필드(이름 유지 — 씬 참조 보존). `cardDatabase` 필드 삭제. `BuildDeck()` 추가 |
+| `PlayerHandPresenter` | `StartDrawEvent(actor, cardInstanceId, cardId)` 시그니처. `cardDatabase` 필드와 본문은 주석 처리 — UI 트랙에서 `DeckData.GetCard` 로 바꾼다 |
+| 컴파일 | **Unity 없이 작성 — Unity 에서 확인 필요** |
+
+### 결정 (사용자)
+
+1. 카드는 역할당 1개 — `CardData`(정의) · `Card`(게임 안의 한 장) · `CardView`(화면). 덱 구성은 카드 정의가 아니라 `DeckData`.
+2. `Card` 가 규칙값을 든다. 서버에 규칙 테이블을 따로 두지 않는다 (10/10).
+3. 판정 · 효과 적용은 `GameServer` 에만. `WithInstance` 같은 편의 함수 없음.
+
+### 다음 할 일
+
+- **UI (노희건)**: `CardPresenter` 에 `InstanceId` 보관, `PlayerHandPresenter` 가 `instanceId → CardPresenter` 사전을 들고 `OnDrawn` 재구독 · 드롭 → `RequestPlayCard(instanceId, targets)` · `OnCardUsed` 로 그 장 지우기 · 거절이면 제자리. `CardModel` 은 `CardPresenter` 로 접기. (`PlayerHand` · `CardCollection` 은 10/10 `logic` 에서 삭제 — 손패 모드 플래그는 `PlayerHandPresenter._isHandMode`)
+- `RequestDiscard(int cardId)` → 인스턴스 ID (PR #63 · 기능 4).
+- **2단계 (Unity 열고)**: `CardEffect` SO → `[Serializable] struct CardEffect { EffectType type; int amount; … }` · 덱이 여러 개가 되면 클라에 "이번 방의 덱" 을 알리는 방 상태 추가.
+- 함정 · 체인이 생기면 존을 가로질러 장을 찾는 `Dictionary<int, Card>` 검토.
+- `GameEvents` 의 나에게만 오는 통지 `OnMy…` 구분 — PR #64 ~ #66 머지 뒤.
+- PR #63(`logic-cleanup`)과 `GameServer.Deck.cs` `Discard` · `PlayerHandPresenter` 에서 충돌 — #63 이 지우는 쪽을 택한다.
+
+---
 ## 2026-10-07 · 찹츄 버튼 (UI) · IGameState 손패 수 조회 (HeeGeon → develop PR)
 
 | 항목 | 값 |
@@ -73,6 +128,8 @@
 - [ ] Unity 확인: 컴파일 · `TempGameScene` 에서 ChapChuPresenter 의 `server` · `chapChuView` 인스펙터 연결 · 멀티 실행으로 손패 10장 시 외곽선
 - [ ] `ChapChuPresenter` · `ChapChuView` 에 `Chapchu.Presentation` namespace 적용 (다른 Presenter 와 통일)
 - [ ] Presentation 의 `PhotonNetwork.LocalPlayer` 직접 참조를 `IGameState` 조회로 바꿀지 검토 (Fake 환경 호환)
+
+---
 
 ## 2026-10-06 (2) · 기능 1 ~ 4 서버 · 방장 콘솔 로그 · 거절 코드 · 버그 수정 (#49 ~ #61)
 

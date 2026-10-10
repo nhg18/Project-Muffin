@@ -51,7 +51,7 @@ public void Draw(int requester)
     if (requester != CurrentTurnActor) { _outbox.Reject(requester, "내 턴이 아닙니다."); return; }
     if (_deck.Count == 0) { _outbox.Reject(requester, "덱이 비었습니다."); return; }
 
-    CardInstance card = _deck.Pop();
+    Card card = _deck.Pop();
     _hands[requester].Add(card);
 
     _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);                            // 공개
@@ -73,7 +73,7 @@ void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId
 
 [PunRPC]
 private void RPC_OnDrawn(int cardInstanceId, int cardId)
-    => GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
+    => GameEvents.RaiseMyDrawn(cardInstanceId, cardId);   // 본인 전용 → OnMy*, actorNumber 없음
 
 // 공개 상태는 콜백에 한 줄씩
 public override void OnRoomPropertiesUpdate(Hashtable changedProps)
