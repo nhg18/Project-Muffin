@@ -41,13 +41,15 @@ namespace Chapchu.Presentation
                 Debug.LogError($"[{nameof(PlayerHandPresenter)}] server 에 {nameof(IGameRequests)} 를 구현한 컴포넌트를 연결해야 한다.", this);
         }
 
-        // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
-        //  · 화면은 서버의 Card 객체를 쓰지 않는다. 손패 한 장 = (cardInstanceId, CardData). CardPresenter 가 InstanceId 를 들고,
-        //    여기는 instanceId → CardPresenter 사전을 둔다 (옛 PlayerHand · CardCollection 은 삭제됨).
-        //  · OnDrawn → OnMyDrawn(cardInstanceId, cardId) 로 바뀌었다. 내 카드만 오므로 actor 검사가 없다. StartDrawEvent 는 그 시그니처에 맞춰 두었다 — 다시 구독한다.
-        //    드롭 때는 RequestPlayCard(instanceId, targets) 로 그 번호를 보낸다.
-        //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아
-        //    그 인스턴스 ID 의 카드를 손패에서 뺀다. 거절(OnMyRequestRejected)이면 잠갔던 카드를 제자리로.
+        // 수정 필요(UI) — Card MVP(CardModel · CardPresenter · CardView)는 고치지 않고 이 파일 · PlayerHandView 만으로 할 수 있다.
+        //  1. 뽑기: OnMyDrawn 을 다시 구독한다. 인스턴스 ID 는 여기 Dictionary<int, CardPresenter>(instanceId → 화면 카드)로 든다.
+        //  2. 내기: PlayCardAsync 에서 card.PlayAsync() 대신 card.SelectPlayer() 로 대상을 받고
+        //     _requests.RequestPlayCard(instanceId, targets) 를 보낸다. 보낸 카드는 _pending 으로 기억 — 승인 전에 지우지 않는다.
+        //     TargetType.None 카드는 SelectPlayer 가 빈 목록을 주므로, 뽑을 때 받은 CardData.targetType 을 보고 빈 배열로 바로 요청한다.
+        //  3. 승인: OnCardUsed(전원에게 옴)를 구독해 사전에 있는 instanceId 일 때만 그 장을 지운다
+        //     (PlayerHandView.DiscardCard(index) → RemoveCard(CardPresenter) 처럼 카드로 지우게 바꾼다).
+        //  4. 거절: OnMyRequestRejected 를 구독해 _pending 카드를 cardView.ReturnToOrigin() 으로 제자리에 둔다.
+        //  5. 정리: 옛 OnCardPlayed · DiscardCard · RequestDiscard 경로를 지운다 (GameEvents.OnCardPlayed 도 함께).
         private void OnEnable()
         {
             // GameEvents.OnMyDrawn += StartDrawEvent;
@@ -60,7 +62,7 @@ namespace Chapchu.Presentation
         }
 
         // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 DeckData.GetCard 에서 읽는다 (OnMyDrawn).
-        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. DeckData 를 참조해 GetCard(cardId) 로 바꾸고 cardInstanceId 를 CardPresenter 에 보관한다.
+        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. DeckData 를 참조해 GetCard(cardId) 로 바꾸고 cardInstanceId 는 위 사전에 보관한다.
         private void StartDrawEvent(int cardInstanceId, int cardId)
         {
             // CardData data = deck.GetCard(cardId);
