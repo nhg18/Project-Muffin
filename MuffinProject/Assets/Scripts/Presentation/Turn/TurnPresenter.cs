@@ -33,15 +33,16 @@ namespace Chapchu.Presentation
             // 수정 필요(UI): 턴 종료 요청은 없앴다 — 턴은 20초 마감 · 뽑기 · 카드 사용으로만 넘어간다. 턴 종료 버튼 · 이 구독을 지운다.
             // _view.EndTurnRequested += HandleEndTurnRequested;
             GameEvents.OnTurnChanged += HandleTurnChanged;
-            // 수정 필요(UI): OnRequestRejected 가 (actor, 거절 코드 int) 로 바뀌었다. 핸들러를 (int, int) 로 맞추고 문구는 RejectText.Get(code) 로 → 다시 구독.
-            // GameEvents.OnRequestRejected += HandleRequestRejected;
+            // 수정 필요(UI): OnRequestRejected → OnMyRequestRejected(거절 코드 int) 로 바뀌었다. 내 거절만 오므로
+            //   핸들러를 (int code) 로 맞추고 문구는 RejectText.Get(code) 로 → 다시 구독.
+            // GameEvents.OnMyRequestRejected += HandleRequestRejected;
         }
 
         private void OnDisable()
         {
             // _view.EndTurnRequested -= HandleEndTurnRequested;
             GameEvents.OnTurnChanged -= HandleTurnChanged;
-            // GameEvents.OnRequestRejected -= HandleRequestRejected;
+            // GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         }
 
         // 켜지기 전에 지나간 이벤트는 못 받으므로 현재 상태를 한 번 읽어 그린다.

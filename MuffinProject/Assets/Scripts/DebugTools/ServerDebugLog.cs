@@ -32,14 +32,14 @@ namespace Chapchu.DebugTools
         private void OnEnable()
         {
             RoomEvents.OnLeftRoom += HandleLeftRoom;
-            GameEvents.OnDrawn += HandleDrawn;
+            GameEvents.OnMyDrawn += HandleMyDrawn;
             GameEvents.OnCardUsed += HandleCardUsed;
         }
 
         private void OnDisable()
         {
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
-            GameEvents.OnDrawn -= HandleDrawn;
+            GameEvents.OnMyDrawn -= HandleMyDrawn;
             GameEvents.OnCardUsed -= HandleCardUsed;
         }
 
@@ -68,10 +68,7 @@ namespace Chapchu.DebugTools
         private void HandleLeftRoom() => SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
 
         // P 키가 낼 카드를 알도록 내 손패 인스턴스 ID 만 따라간다
-        private void HandleDrawn(int actor, int cardInstanceId, int cardId)
-        {
-            if (actor == Me) _myHand.Add(cardInstanceId);
-        }
+        private void HandleMyDrawn(int cardInstanceId, int cardId) => _myHand.Add(cardInstanceId);
 
         private void HandleCardUsed(int actor, int cardInstanceId, int cardId, int[] targets)
         {

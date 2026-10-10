@@ -73,7 +73,7 @@ void IServerOutbox.SendDrawnCard(int actorNumber, int cardInstanceId, int cardId
 
 [PunRPC]
 private void RPC_OnDrawn(int cardInstanceId, int cardId)
-    => GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardId);
+    => GameEvents.RaiseMyDrawn(cardInstanceId, cardId);   // 본인 전용 → OnMy*, actorNumber 없음
 
 // 공개 상태는 콜백에 한 줄씩
 public override void OnRoomPropertiesUpdate(Hashtable changedProps)

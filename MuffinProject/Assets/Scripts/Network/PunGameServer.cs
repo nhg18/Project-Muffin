@@ -210,13 +210,13 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RejectRequest(int code)
         {
-            GameEvents.RaiseRequestRejected(PhotonNetwork.LocalPlayer.ActorNumber, code);
+            GameEvents.RaiseMyRequestRejected(code);
         }
 
         [PunRPC]
         private void RPC_OnDrawn(int cardInstanceId, int cardId)
         {
-            GameEvents.RaiseDrawn(PhotonNetwork.LocalPlayer.ActorNumber, cardInstanceId, cardId);
+            GameEvents.RaiseMyDrawn(cardInstanceId, cardId);
         }
 
         [PunRPC]
@@ -229,6 +229,13 @@ namespace Chapchu.Network
         private void RPC_OnDeckRefilled(int deckCount)
         {
             GameEvents.RaiseDeckRefilled(deckCount);
+        }
+
+        public int GetCurrentHandCount(int actorNumber)
+        {
+            if (!PhotonNetwork.InRoom) return 0;
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+            return player != null && player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object count) ? (int)count : 0;
         }
         #endregion
     }

@@ -148,7 +148,7 @@
 | 초기 배분 | 구현됨 — 마스터가 `DealInitialHands` 로 전원에게 5장 일괄 배분 |
 | 드로우 | 구현됨 — 요청 → 턴 검증 → 덱 맨 위 1장 → **드로우 후 턴 종료** (03 3절). 메인 행동 중 카드 사용 쪽 제한은 기능 4 |
 | 덱 동기화 | 잔여 장수만 Room Property (`RoomProps.DeckCount`). 옛 덱 전체 배열 동기화는 삭제 |
-| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnDrawn`)도 인스턴스 ID 를 넘긴다 (2026-10-06) |
+| 손패 내용 비공개 | 구현됨 — 뽑은 카드(인스턴스 ID · 종류 ID)는 주인에게만 (`SendDrawnCard` → `RPC_OnDrawn`). UI 이벤트(`GameEvents.OnMyDrawn`)도 인스턴스 ID 를 넘긴다 (2026-10-06, 이름은 2026-10-10) |
 | 손패 장수 동기화 | 구현됨 — 마스터만 기록 (`PlayerProps.HandCount`) |
 | 손패 **내용** 원본 | 마스터 (`PlayerState.Hand`, 2026-10-01). 배분 · 드로우 때 넣고 버릴 때 꺼낸다 |
 | 덱 소진 재생성 | 구현됨 — 버림 더미 회수 → 재셔플 |

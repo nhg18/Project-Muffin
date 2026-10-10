@@ -27,7 +27,7 @@ namespace Chapchu.DebugTools
 
         public void RequestDraw()
         {
-            GameEvents.RaiseDrawn(CurrentTurnActor, 0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용
+            GameEvents.RaiseMyDrawn(0, 0); // 카드 종류 흉내는 없다 — 이벤트 흐름만 확인용. 가짜 서버는 늘 나에게 준다
         }
 
         public void RequestDiscard(int cardId)
@@ -48,5 +48,8 @@ namespace Chapchu.DebugTools
         {
             
         }
+
+        /// <summary>손패 흉내는 없다 — 항상 0. 이벤트 흐름만 확인용.</summary>
+        public int GetCurrentHandCount(int actorNumber) => 0;
     }
 }

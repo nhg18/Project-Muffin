@@ -43,28 +43,26 @@ namespace Chapchu.Presentation
         // 수정 필요(UI) — develop → HeeGeon PR 에서 맞춘다 (PR #53 리뷰)
         //  · 화면은 서버의 Card 객체를 쓰지 않는다. 손패 한 장 = (cardInstanceId, CardData). CardPresenter 가 InstanceId 를 들고,
         //    여기는 instanceId → CardPresenter 사전을 둔다. 옛 PlayerHand · CardCollection(서버 Card 를 들던 모델)은 그때 지운다.
-        //  · StartDrawEvent 는 OnDrawn (actor, cardInstanceId, cardId) 에 맞춰 두었다. 다시 구독한다.
+        //  · OnDrawn → OnMyDrawn(cardInstanceId, cardId) 로 바뀌었다. 내 카드만 오므로 actor 검사가 없다. StartDrawEvent 는 그 시그니처에 맞춰 두었다 — 다시 구독한다.
         //    드롭 때는 RequestPlayCard(instanceId, targets) 로 그 번호를 보낸다.
         //  · 카드 사용 결과는 서버 GameEvents.OnCardUsed 로 온다. 옛 OnCardPlayed → DiscardCard → RequestDiscard 경로 대신 그걸 받아
-        //    그 인스턴스 ID 의 카드를 손패에서 뺀다. 거절(OnRequestRejected)이면 잠갔던 카드를 제자리로.
+        //    그 인스턴스 ID 의 카드를 손패에서 뺀다. 거절(OnMyRequestRejected)이면 잠갔던 카드를 제자리로.
         private void OnEnable()
         {
-            // GameEvents.OnDrawn += StartDrawEvent;
+            // GameEvents.OnMyDrawn += StartDrawEvent;
             // GameEvents.OnCardPlayed += DiscardCard;
         }
         private void OnDisable()
         {
-            // GameEvents.OnDrawn -= StartDrawEvent;
+            // GameEvents.OnMyDrawn -= StartDrawEvent;
             // GameEvents.OnCardPlayed -= DiscardCard;
         }
 
-        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 DeckData.GetCard 에서 읽는다.
-        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. deck.GetCard(cardId) 로 바꾸고 cardInstanceId 를 CardPresenter 에 보관한다.
-        private void StartDrawEvent(int actorNumber, int cardInstanceId, int cardId)
+        // 서버가 준 (인스턴스 ID, 종류 ID) 로 손패 한 장을 그린다. 표시 데이터는 종류 ID 로 DeckData.GetCard 에서 읽는다 (OnMyDrawn).
+        // 수정 필요(UI): CardDatabase 삭제로 본문 주석 처리. DeckData 를 참조해 GetCard(cardId) 로 바꾸고 cardInstanceId 를 CardPresenter 에 보관한다.
+        private void StartDrawEvent(int cardInstanceId, int cardId)
         {
-            if (PhotonNetwork.LocalPlayer.ActorNumber != actorNumber) return;
-
-            // CardData data = cardDatabase.GetCard(cardId);
+            // CardData data = deck.GetCard(cardId);
             //
             // CardPresenter cp = handView.DrawCard(data);
             // cp.Setup(data, playerHand.GetHandCount(), this);
