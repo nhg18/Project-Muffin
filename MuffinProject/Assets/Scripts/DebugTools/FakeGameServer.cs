@@ -48,9 +48,10 @@ namespace Chapchu.DebugTools
             
         }
 
+        // 검사 없이 바로 선언된 것으로 흉내 낸다. 턴 · 10장 검사는 진짜 서버(TempGameScene)로 본다.
         public void RequestDeclareChapChu()
         {
-            
+            GameEvents.RaiseChapChuChanged(CurrentTurnActor, true);
         }
 
         /// <summary>손패 흉내는 없다 — 항상 0. 이벤트 흐름만 확인용.</summary>

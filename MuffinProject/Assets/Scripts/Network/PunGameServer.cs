@@ -110,9 +110,7 @@ namespace Chapchu.Network
         {
         }
 
-        public void RequestDeclareChapChu()
-        {
-        }
+        public void RequestDeclareChapChu() => photonView.RPC(nameof(RPC_RequestDeclareChapChu), RpcTarget.MasterClient);
 
         #endregion
 
@@ -136,6 +134,13 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             _server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers);
+        }
+
+        [PunRPC]
+        private void RPC_RequestDeclareChapChu(PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _server.DeclareChapChu(info.Sender.ActorNumber);
         }
 
         // TODO: 나간 사람의 카드 · 플레이어 슬롯 오브젝트 삭제 (02-player.md 6절. 카드 처리는 01-game-flow.md 제안 — 최종 사망과 동일).
@@ -205,6 +210,9 @@ namespace Chapchu.Network
 
             if (changedProps.TryGetValue(PlayerProps.HandCount, out object handCount))
                 GameEvents.RaiseHandCountChanged(targetPlayer.ActorNumber, (int)handCount);
+
+            if (changedProps.TryGetValue(PlayerProps.ChapChu, out object chapChu))
+                GameEvents.RaiseChapChuChanged(targetPlayer.ActorNumber, (bool)chapChu);
         }
 
         [PunRPC]

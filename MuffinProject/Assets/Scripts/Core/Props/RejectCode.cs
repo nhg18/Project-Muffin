@@ -11,5 +11,7 @@
         public const int NoCardToDraw = 3;  // 덱 · 버림 더미가 모두 비었다 (미정 — 임시 거절)
         public const int NotActionCard = 4; // 행동 카드가 아니다
         public const int InvalidTarget = 5; // 대상이 카드 대상 타입에 맞지 않는다
+        public const int HandNotTen = 6;    // 손패가 정확히 10장이 아니라 찹츄 선언 불가
+        public const int AlreadyChapChu = 7; // 이미 찹츄 상태
     }
 }

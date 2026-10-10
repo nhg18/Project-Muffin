@@ -79,7 +79,7 @@ namespace Chapchu.Game
         public string DebugState()
         {
             string players = string.Join(" │ ", _players.Select(p =>
-                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(_turnOrder.Contains(p.Key) ? "" : " 나감")}"));
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.IsChapChu ? " 찹츄!" : "")}{(_turnOrder.Contains(p.Key) ? "" : " 나감")}"));
 
             return $"덱 {_deck.Count} · 버림 {_discardPile.Count} ║ {players}";
         }
