@@ -58,9 +58,12 @@ public class ChapChuPresenter : MonoBehaviour
     {
         _requests?.RequestDeclareChapChu();
     }
-    private void HandleRequestRejected(int arg1, string arg2)
+
+    // 거절 사유는 코드(int, RejectCode). 문구는 RejectText 에서 꺼낸다 (약속 변경 ad2dab6).
+    private void HandleRequestRejected(int actorNumber, int rejectCode)
     {
-        Debug.LogWarning($"[GameEvent] RequestRejected {arg1} {arg2}");
+        if (this.actorNumber != actorNumber) return;
+        Debug.LogWarning($"[GameEvent] RequestRejected {actorNumber} {RejectText.Get(rejectCode)}");
     }
 
     private void HandleHandCountChanged(int actorNumber, int handCount)
