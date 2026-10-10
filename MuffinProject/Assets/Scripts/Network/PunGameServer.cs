@@ -212,6 +212,13 @@ namespace Chapchu.Network
         {
             GameEvents.RaiseDeckRefilled(deckCount);
         }
+
+        public int GetCurrentHandCount(int actorNumber)
+        {
+            if (!PhotonNetwork.InRoom) return 0;
+            var player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+            return player != null && player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object count) ? (int)count : 0;
+        }
         #endregion
     }
 }

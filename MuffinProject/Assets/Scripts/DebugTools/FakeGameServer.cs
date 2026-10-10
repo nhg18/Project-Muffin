@@ -48,5 +48,8 @@ namespace Chapchu.DebugTools
         {
             
         }
+
+        /// <summary>손패 흉내는 없다 — 항상 0. 이벤트 흐름만 확인용.</summary>
+        public int GetCurrentHandCount(int actorNumber) => 0;
     }
 }
