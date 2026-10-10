@@ -6,52 +6,53 @@
 
 ---
 
-## 2026-10-08 · 카드 객체 리팩토링 1단계 — 카드 한 장 = `Card(InstanceId, CardId)`, 규칙 = `CardRule`, `DeckRecipe` → `deckCount`
+## 2026-10-08 · 카드 객체 리팩토링 1단계 — 정의 `CardData` · 덱 구성 `DeckData` · 한 장 `Card` · 화면 `CardView`
 
 | 항목 | 값 |
 | --- | --- |
-| 브랜치 | `logic-card-class` → `logic` PR #68 (10/9 구조 수정) |
-| 범위 | `Game/Server/Card.cs` · `CardRule.cs` · `CardData` · `GameServer.Card/.Deck` · `PlayerState` · `PunGameServer` · 카드 에셋 4개 · 문서. UI 는 `PlayerHandPresenter` 의 드로우 핸들러 시그니처만 |
+| 브랜치 | `logic-card-class` → `logic` PR #69 (#68 대체. 10/9 · 10/10 구조 두 번 수정) |
+| 범위 | `Game/Server/Card.cs` · `Game/Cards/DeckData.cs` · `CardData` · `GameServer.Card/.Deck` · `PlayerState` · `PunGameServer` · 덱 에셋 2개 · 문서. UI 는 `PlayerHandPresenter` 의 드로우 핸들러 시그니처와 주석 처리 1줄 |
 
-### 구조 (하스스톤 식 — 서버 엔티티 · 카드 정의 · 클라 뷰)
+### 구조 (하스스톤 식 — 정의 · 서버 엔티티 · 클라 뷰)
 
 | 역할 | 클래스 | 들고 있는 것 | 누가 만드나 |
 | --- | --- | --- | --- |
-| 카드 정의 (양쪽 공통, 읽기 전용) | `CardData` (SO) · 서버용 거울 `CardRule` | 이름 · 그림 · 타입 · 대상 · 효과 수치 · `deckCount` | 에셋. `CardRule` 은 게임 시작 때 방장이 `ToRule()` 로 1회 |
-| 게임 안의 한 장 | `Card` (서버 어셈블리, `[Serializable] struct`) | `InstanceId` + `CardId` 만. 같음 비교는 `InstanceId` | 서버 `InitDeck` 만. 이후는 존 사이 이동 |
-| 화면 | `CardView` · `CardPresenter` | 인스턴스 ID + `CardData` 참조 | 클라가 `OnDrawn` 받을 때 |
+| 카드 정의 | `CardData` (SO) | id · 이름 · 그림 · 타입 · 대상 · 효과 수치. **매수 없음** | 에셋 |
+| 덱 구성 | `DeckData` (SO) | `Entry { CardData card; int count }` 목록 | 에셋 (`Assets/Cards/Decks/`). 덱 구성은 미정 — 임시 |
+| 게임 안의 한 장 | `Card` (서버 어셈블리, 순수 C#) | `InstanceId` · `CardId` · `Type` · `Target` · `Damage` — 서버가 판정에 쓰는 전부 | 방장 `PunGameServer.BuildDeck` 이 게임 시작 때 1회, 번호 1부터 |
+| 화면 | `CardView` · `CardPresenter` | 인스턴스 ID + `CardData` 참조 (UI 트랙에서) | 클라가 `OnDrawn` 받을 때 |
+| 조회 | `CardDatabase` (SO) | `cardId → CardData` | 화면이 그릴 때 쓴다. 2단계에서 `CardData.Get(id)` 로 접을지 결정 |
 
-* 네트워크 · 요청 · 통지에는 int 두 개(`instanceId` · `cardId`)만 다닌다. 요청은 `instanceId` 만(종류는 서버가 손패에서 찾은 장으로 안다), 통지는 둘 다(남은 내 손패를 모르니까).
-* 서버 검색 순서: 손패에 그 `instanceId` 가 있는가 → 그 장의 `CardId` 로 `_rules` 에서 규칙 → 규칙으로 대상 · 조건 검사 → 적용 → 사실만 통지.
-* 에셋이 장을 만들지 않는다 (`CardData.ToCard` 삭제). 템플릿 · `InstanceId 0` 같은 "카드 아닌 카드" 없음.
+* 네트워크 · 요청 · 통지에는 int 두 개(`instanceId` · `cardId`)만. 요청은 `instanceId` 만, 통지는 둘 다.
+* 서버 어셈블리는 `UnityEngine` 을 못 보므로 "에셋 → `Card`" 변환은 Unity 층(`PunGameServer.BuildDeck`) 한 곳. 에셋(`CardData`)은 장을 만들지 않는다. 서버에 별도 규칙 테이블(옛 `CardRule`)을 두지 않고 `Card` 가 규칙값을 든다.
+* `GameServer.InitDeck(IReadOnlyList<Card>)` 은 받아서 섞기만. `PlayCard` 는 손패에서 인스턴스 ID 로 장을 찾아 `card.Type · Target · Damage` 로 판정.
 
 ### 한 것
 
 | 무엇 | 내용 |
 | --- | --- |
-| `Card` | `CardInstance` 를 이름만 바꾼 것 (`.meta` GUID 유지). 규칙 필드 없음 |
-| `CardRule` | `logic` 의 파일 · `.meta` 그대로 복구. `CardType` · `TargetType` enum 도 여기 |
-| 삭제 | `CardInstance`(→ `Card`) · 옛 `Game/Cards/Card`(종류 ID 하나) · `DeckRecipe` + 레시피 에셋 2개 |
-| `CardData` | `ToRule()` 유지. `deckCount`(덱 매수, 임시 값: ID 1 · 4 각 20) 추가 — 레시피 흡수 |
-| `GameServer` | `_rules`(`CardId → CardRule`). `InitDeck` 이 `new Card(번호, cardId)` 로 장을 찍는다(**1부터**). 규칙 없는 ID 면 시작 때 `KeyNotFoundException`. `PlayCard` 는 손패 → 규칙 순으로 찾는다 |
-| `PunGameServer` | `startingDeckRecipe` 필드 삭제. 덱 ID 목록은 `cardDatabase.Cards × deckCount` |
-| `PlayerHandPresenter` | `StartDrawEvent(actor, cardInstanceId, cardId)` 로 시그니처만 맞춤. 구독은 여전히 주석 (UI 트랙) |
-| 컴파일 | 10/9 수정분은 Unity 없이 작성 — **Unity 에서 컴파일 확인 필요** |
+| `Card` | `CardInstance.cs` 이름 변경(`.meta` GUID 유지) + 규칙값. 생성자 하나, 템플릿 없음 |
+| `DeckData` | `DeckRecipe.cs` 이름 · 형식 변경(`.meta` GUID 유지, `Game/Cards/` 로 이동). ID 반복 목록 → `(card, count)` 목록 |
+| 덱 에셋 | `Card pool/NewDeckRecipe*.asset` → `Decks/Deck_Default.asset`(ID 1 · 4 각 20) · `Deck_Test.asset`(ID 3 ×15 · ID 4 ×5). GUID 유지 — `TempGameScene` · `GameScene` 의 `startingDeckRecipe` 참조 그대로 |
+| 삭제 | `CardInstance` · `CardRule` · 옛 `Game/Cards/Card`(종류 ID 하나) · `Game/Deck/` 폴더 · `CardData.ToRule/ToCard` · `CardData.deckCount` · `GameServer.InitCards/_rules/_nextInstanceId` |
+| `PunGameServer` | `startingDeckRecipe : DeckData` 필드(이름 유지 — 씬 참조 보존). `cardDatabase` 필드 삭제. `BuildDeck()` 추가 |
+| `PlayerHandPresenter` | `StartDrawEvent(actor, cardInstanceId, cardId)` 시그니처. `playerHand.Add(...)` 는 주석 처리 — 화면은 서버 `Card` 를 들지 않는다 |
+| 컴파일 | **Unity 없이 작성 — Unity 에서 확인 필요** |
 
 ### 결정 (사용자)
 
-1. 카드는 역할당 1개 — `CardData`(정의) · `Card`(게임 안의 한 장, 두 int) · `CardView`(화면). 판정 · 효과 적용은 `GameServer` 에만.
-2. `Card` 는 규칙 값을 복사해 들지 않는다. 서버가 `CardId` 로 `CardRule` 을 찾는다 (10/9, PR #68 리뷰).
-3. `WithInstance` 같은 편의 함수는 두지 않는다. 생성자 하나로.
+1. 카드는 역할당 1개 — `CardData`(정의) · `Card`(게임 안의 한 장) · `CardView`(화면). 덱 구성은 카드 정의가 아니라 `DeckData`.
+2. `Card` 가 규칙값을 든다. 서버에 규칙 테이블을 따로 두지 않는다 (10/10).
+3. 판정 · 효과 적용은 `GameServer` 에만. `WithInstance` 같은 편의 함수 없음.
 
 ### 다음 할 일
 
-- **UI (노희건)**: `CardPresenter` 에 `InstanceId` 보관, `PlayerHandPresenter` 가 `instanceId → CardPresenter` 사전을 들고 `OnDrawn` 을 다시 구독 · 드롭 → `RequestPlayCard(instanceId, targets)` · `OnCardUsed` 로 그 장 지우기 · 거절이면 제자리. `PlayerHand` · `CardCollection` · `CardModel` 정리는 그때.
-- `RequestDiscard(int cardId)` → 인스턴스 ID 로 (PR #63 · 기능 4).
-- **2단계 (Unity 열고, 에셋 변경)**: `CardEffect` SO → `[Serializable] struct CardEffect { EffectType type; int amount; … }` (11-card-list 5절 효과 타입을 enum 으로) · `CardDatabase` → `CardData.Get(id)` + `Resources.LoadAll`.
-- 함정 · 체인이 생기면 존을 가로질러 장을 찾을 일이 생긴다 → 그때 `Dictionary<int, Card>` 전체 테이블 검토.
-- `GameEvents` 의 나에게만 오는 통지(`OnDrawn` · `OnRequestRejected`)를 `OnMy…` 로 구분 — PR #64 ~ #66 머지 뒤.
-- 이 PR 은 PR #63(`logic-cleanup`) 과 `GameServer.Deck.cs` `Discard` · `PlayerHandPresenter` 에서 충돌한다 — #63 이 지우는 쪽을 택하면 된다.
+- **UI (노희건)**: `CardPresenter` 에 `InstanceId` 보관, `PlayerHandPresenter` 가 `instanceId → CardPresenter` 사전을 들고 `OnDrawn` 재구독 · 드롭 → `RequestPlayCard(instanceId, targets)` · `OnCardUsed` 로 그 장 지우기 · 거절이면 제자리. `PlayerHand` · `CardCollection` · `CardModel` 삭제.
+- `RequestDiscard(int cardId)` → 인스턴스 ID (PR #63 · 기능 4).
+- **2단계 (Unity 열고)**: `CardEffect` SO → `[Serializable] struct CardEffect { EffectType type; int amount; … }` · `CardDatabase` → `CardData.Get(id)` + `Resources.LoadAll` 여부.
+- 함정 · 체인이 생기면 존을 가로질러 장을 찾는 `Dictionary<int, Card>` 검토.
+- `GameEvents` 의 나에게만 오는 통지 `OnMy…` 구분 — PR #64 ~ #66 머지 뒤.
+- PR #63(`logic-cleanup`)과 `GameServer.Deck.cs` `Discard` · `PlayerHandPresenter` 에서 충돌 — #63 이 지우는 쪽을 택한다.
 
 ---
 

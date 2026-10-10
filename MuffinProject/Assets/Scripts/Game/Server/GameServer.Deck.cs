@@ -7,32 +7,24 @@ namespace Chapchu.Game
     // GameServer.Deck.cs — 덱 · 버림 더미 원본과 드로우 · 버림 처리 (05-deck.md). 손패 원본은 PlayerState.Hand
     public partial class GameServer
     {
-        // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 CardData.deckCount 의 임시 값이 대신한다.
+        // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 임시 DeckData 에셋이 대신한다.
         private const int InitialHandCount = 5;
 
         private readonly List<Card> _deck = new List<Card>();
         private readonly List<Card> _discardPile = new List<Card>();
-        private int _nextInstanceId = 0;
 
         /// <summary>
-        /// 덱을 카드 ID 목록(같은 ID 반복 = 매수)으로 채우고 장마다 인스턴스 ID(1부터)를 매긴 뒤 섞는다. InitCards 뒤에 부른다.
-        /// 게임 안의 카드 한 장은 전부 여기서 만든다 — 이후 드로우 · 버림은 이 장을 존(덱 · 손패 · 버림 더미) 사이로 옮길 뿐이다.
+        /// 방장이 만든 덱(장마다 고유 InstanceId, 1부터)을 받아 섞는다. 게임 안의 카드는 전부 여기로 들어온다 —
+        /// 이후 드로우 · 버림은 이 장을 존(덱 · 손패 · 버림 더미) 사이로 옮길 뿐이다. 카드를 만드는 쪽은 PunGameServer.BuildDeck.
         /// </summary>
-        public void InitDeck(IReadOnlyList<int> cardIds)
+        public void InitDeck(IReadOnlyList<Card> cards)
         {
             _deck.Clear();
             _discardPile.Clear();
             foreach (PlayerState player in _players.Values)
                 player.Hand.Clear();
-            _nextInstanceId = 1;
 
-            foreach (int cardId in cardIds)
-            {
-                if (!_rules.ContainsKey(cardId)) // 카드 에셋 누락은 시작 때 바로 드러나야 한다
-                    throw new KeyNotFoundException($"카드 규칙 없음: CardId {cardId} — InitCards 에 그 종류의 CardData 가 빠졌다");
-                _deck.Add(new Card(_nextInstanceId++, cardId));
-            }
-
+            _deck.AddRange(cards);
             Shuffle(_deck);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
             _outbox.SetRoomState(RoomProps.DiscardCount, 0);

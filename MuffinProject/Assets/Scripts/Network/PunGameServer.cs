@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Chapchu.Core;
 using Chapchu.DebugTools;
 using Chapchu.Game;
@@ -36,8 +37,8 @@ namespace Chapchu.Network
         // 모든 클라가 만들지만 방장에서만 쓰인다.
         private GameServer _server;
 
-        // 카드 종류의 원본 에셋. 시작할 때 서버용 규칙(CardRule)으로 뽑아 넘기고, 덱은 CardData.deckCount 로 만든다 (05-deck.md 2절 · 8절).
-        [SerializeField] private CardDatabase cardDatabase;
+        // 이번 게임의 덱 구성 (05-deck.md 2절 · 8절). 덱 구성은 미정이라 임시 에셋(Deck_Default)을 쓴다.
+        [SerializeField] private DeckData startingDeckRecipe;
 
         public int CurrentTurnActor
         {
@@ -61,15 +62,34 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient) return;
 
             int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
-            int[] deckCardIds = cardDatabase.Cards.SelectMany(c => Enumerable.Repeat(c.id, c.deckCount)).ToArray(); // 같은 ID 반복 = 매수
-            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {deckCardIds.Length}장");
+            List<Card> deck = BuildDeck();
+            Debug.Log($"<b>════ 게임 시작 ════</b>  참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {deck.Count}장");
 
             // 01-game-flow.md 3절 순서: 체력 → 덱 → 5장씩 → 턴 순서
             _server.StartGame(actors);
-            _server.InitCards(cardDatabase.Cards.Select(c => c.ToRule()));
-            _server.InitDeck(deckCardIds);
+            _server.InitDeck(deck);
             _server.DealInitialHands(actors);
             _server.StartFirstTurn();
+        }
+
+        // 에셋(DeckData · CardData) → 서버용 Card. 게임 안의 카드는 전부 여기서, 방장이, 게임 시작 때 한 번 만든다.
+        // 서버 어셈블리는 UnityEngine 을 못 보므로 에셋을 읽는 변환은 이 Unity 층이 한다. 규칙 판정은 아니다.
+        // 장 번호(InstanceId)는 1부터 (09-network.md 7절). 데미지는 효과 중 DamageEffect 수치의 합 — 효과 종류는 기능 9 에서 늘린다.
+        private List<Card> BuildDeck()
+        {
+            var deck = new List<Card>();
+            int nextInstanceId = 1;
+
+            foreach (DeckData.Entry entry in startingDeckRecipe.entries)
+            {
+                CardData data = entry.card;
+                int damage = data.effects.OfType<DamageEffect>().Sum(e => e.damageAmount);
+
+                for (int i = 0; i < entry.count; i++)
+                    deck.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, damage));
+            }
+
+            return deck;
         }
 
         // 턴 마감 판정은 방장만 한다 (09-network.md 8절).

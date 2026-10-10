@@ -258,10 +258,9 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 항목 | 상태 |
 | --- | --- |
 | 카드 데이터 (`CardData` ScriptableObject) | 구현됨 (id / 이름 / 이미지 / 타입 / 대상 / 조건 / 효과) |
-| 카드 한 장 (`Card`) | 구현됨 (2026-10-08) — `InstanceId` + `CardId` 두 값. 서버(`GameServer.InitDeck`)만 만들고, 이후 드로우 · 버림은 존(덱 · 손패 · 버림 더미) 사이로 옮기기만 한다. 네트워크에는 이 두 int 만 다닌다 (09-network 7절) |
-| 서버용 카드 규칙 (`CardRule`) | 구현됨 (2026-10-06) — 서버는 순수 C# 이라 `CardData.ToRule()` 로 id · 타입 · 대상 · 데미지만 뽑아 `GameServer.InitCards` 로 받아 `CardId → CardRule` 테이블에 둔다. `PlayCard` 는 손패에서 인스턴스 ID 로 장을 찾고, 그 장의 `CardId` 로 규칙을 찾는다. `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/CardRule.cs`)에 있다. 효과는 데미지 1종만 — 나머지는 기능 9 |
-| 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`CardRule`)에 추가 |
-| 카드 효과 (`CardEffect`) | 수치 데이터만 — `DamageEffect.damageAmount` 를 `CardData.ToRule()` 이 읽는다. 실행(`Execute`)과 `StatBuffer` 는 삭제 (2026-10-06). 감소 · 무효 · 전환 계산(06 §4)은 없음 |
+| 카드 한 장 (`Card`) | 구현됨 (2026-10-08, 2026-10-10 구조 확정) — `InstanceId` · `CardId` · `Type` · `Target` · `Damage`. 서버가 판정에 쓰는 전부. 방장의 `PunGameServer.BuildDeck` 이 게임 시작 때 `DeckData` × `CardData` 로 한 번에 만들고 `GameServer.InitDeck` 이 받아 섞는다. 이후 드로우 · 버림은 존 사이 이동. 네트워크에는 `InstanceId` · `CardId` 두 int 만 다닌다 (09-network 7절). `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/Card.cs`). 효과는 데미지 1종만 — 나머지는 기능 9 |
+| 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`Card`)에 추가 |
+| 카드 효과 (`CardEffect`) | 수치 데이터만 — `DamageEffect.damageAmount` 를 `PunGameServer.BuildDeck` 이 읽어 `Card.Damage` 로 넘긴다. 실행(`Execute`)과 `StatBuffer` 는 삭제 (2026-10-06). 감소 · 무효 · 전환 계산(06 §4)은 없음 |
 | 체인 등록 / 역순 처리 | **없음** — 옛 `CardPlayManager`(클라마다 개별 실행) 삭제 (2026-10-06). 서버 체인은 기능 5 |
 | 반응 시간 | **없음** — 옛 4.5초 `Invoke` 는 `CardPlayManager` 와 함께 삭제. 서버 반응 5초는 기능 5 |
 | 마스터 검증 | 행동 카드만 구현 (2026-10-06) — `GameServer.PlayCard`: 내 턴 · 손패에 있음(인스턴스 ID) · 행동 카드 · 대상(타입별 인원 · 상대인지) 검사 → 버림 더미 → 데미지 → `OnCardUsed`(전원) → 턴 넘김. 반응 5초 · 카운터 · 카드별 조건은 아직. UI 드롭은 아직 서버에 연결 전 (드롭하면 손패로 되돌림) |
@@ -270,7 +269,7 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 대상 선택 (`TargetSelectionManager`) | 구현됨. 5초 타임아웃, 우클릭 취소, 선택 중 다른 카드 입력 차단 (2026-09-25). 대상이 비면 요청을 보내지 않고 손패로 되돌린다 → **대상 없음(`TargetType.None`) 카드는 지금 쓸 수 없다** |
 | 사용한 카드 손패에서 제거 | UI 드롭은 서버 연결 전이라 **손패로 되돌린다** (옛 `CardPlayManager` 경로 삭제, 2026-10-06). 연결 뒤에는 `OnCardUsed`(방장 승인)를 받고 지운다 |
 | 버림 더미 | **미구현** |
-| 카드 인스턴스 ID | 서버: 덱 생성 때 부여 · `OnDrawn` · `OnCardUsed` 로 전송 · `PlayCard` 요청은 인스턴스 ID. UI: 손패(`PlayerHand`)에 보관만 — 드롭 → `RequestPlayCard` 연결과 `OnCardUsed` 로 지우기는 **아직** (UI 트랙) |
+| 카드 인스턴스 ID | 서버: 덱 생성 때 부여 · `OnDrawn` · `OnCardUsed` 로 전송 · `PlayCard` 요청은 인스턴스 ID. UI: **아직** — `CardPresenter` 에 보관 · 드롭 → `RequestPlayCard` · `OnCardUsed` 로 지우기는 UI 트랙 |
 | 등록된 카드 에셋 | 4장 (`Card_A_001`, `Card_C_002`, `Prototype_003_ACT`, `Prototype_004_ACT`) / 기획 59장 |
 
 ---
