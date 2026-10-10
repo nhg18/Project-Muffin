@@ -74,7 +74,7 @@ namespace Chapchu.Network
 
         // 에셋(DeckData · CardData) → 서버용 Card. 게임 안의 카드는 전부 여기서, 방장이, 게임 시작 때 한 번 만든다.
         // 서버 어셈블리는 UnityEngine 을 못 보므로 에셋을 읽는 변환은 이 Unity 층이 한다. 규칙 판정은 아니다.
-        // 장 번호(InstanceId)는 1부터 (09-network.md 7절). 데미지는 효과 중 DamageEffect 수치의 합 — 효과 종류는 기능 9 에서 늘린다.
+        // 장 번호(InstanceId)는 1부터 (09-network.md 7절). 효과 목록은 에셋 값을 복사해 넘긴다 — 에셋 리스트를 서버와 공유하지 않는다.
         private List<Card> BuildDeck()
         {
             var deck = new List<Card>();
@@ -83,10 +83,10 @@ namespace Chapchu.Network
             foreach (DeckData.Entry entry in startingDeckRecipe.entries)
             {
                 CardData data = entry.card;
-                int damage = data.effects.OfType<DamageEffect>().Sum(e => e.damageAmount);
+                CardEffect[] effects = data.effects.ToArray();
 
                 for (int i = 0; i < entry.count; i++)
-                    deck.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, damage));
+                    deck.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects));
             }
 
             return deck;

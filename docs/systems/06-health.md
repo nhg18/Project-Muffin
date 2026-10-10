@@ -189,8 +189,8 @@ Alive → (HP 0) → DeathPending → 사망 관련 카드 연쇄 처리 →  HP
 | --- | --- |
 | 초기 HP 100 | 방장이 `GameServer.StartGame` 에서 전원 100 을 기록(`GameServer.MaxHp`, 원본은 `PlayerState`) → `PunGameServer` 가 `GameEvents.OnHpChanged` (2026-10-01). 단, 옛 `PlayerPresenter.Init` 이 **각 클라이언트에서 모든 좌석 HP 를** 다시 기록하는 코드가 남아 있다 (UI 쪽 제거 대기, `plan-a-logic.md` 수정 1) |
 | HP UI 텍스트 / 게이지 | UI 컴포넌트는 있으나 **갱신되지 않음** |
-| `DamageEffect` 클래스 | 데미지 수치 데이터만 (`damageAmount`). 옛 `StatBuffer` 실행 경로는 삭제 (2026-10-06) |
-| **피해 적용** | 부분 — 방장 `GameServer.PlayCard` 가 대상마다 `SetHp(체력 - Damage)` (2026-10-06). 단순 차감만. 감소 · 무효 · 전환을 모은 뒤 1회 반영(4절), 처리 ID, 다중 대상 일괄 계산은 없음 |
+| 데미지 효과 | `CardEffect(EffectType.Damage, 받는 사람, 수치)` — 카드 에셋에 수치를 바로 입력 (2026-10-10, 옛 `DamageEffect` SO 삭제) |
+| **피해 적용** | 부분 — 방장 `GameServer.ApplyEffect` 가 받는 사람마다 `SetHp(체력 - 수치)` (2026-10-06, 효과 구조는 2026-10-10). 단순 차감만. 감소 · 무효 · 전환을 모은 뒤 1회 반영(4절), 처리 ID, 다중 대상 일괄 계산은 없음 |
 | 회복 | **미구현** |
 | 사망 대기 | **미구현** |
 | 최종 사망 | **미구현** |
