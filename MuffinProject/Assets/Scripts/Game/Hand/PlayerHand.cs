@@ -10,6 +10,15 @@ namespace Chapchu.Game
     {
         public bool isHandMode = false;
 
+        public void AddHandCard(Card card)
+        {
+            Add(card);
+        }
+
+        public void DiscardCard(Card card)
+        {
+            Remove(card);
+        }
         public void DiscardCard(int index)
         {
             cards.RemoveAt(index);
