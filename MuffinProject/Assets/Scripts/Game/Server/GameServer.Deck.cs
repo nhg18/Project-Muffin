@@ -7,25 +7,24 @@ namespace Chapchu.Game
     // GameServer.Deck.cs — 덱 · 버림 더미 원본과 드로우 · 버림 처리 (05-deck.md). 손패 원본은 PlayerState.Hand
     public partial class GameServer
     {
-        // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 InitDeck 인자로 받는 더미 DeckRecipe 가 대신한다.
+        // 확정(05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 임시 DeckData 에셋이 대신한다.
         private const int InitialHandCount = 5;
 
-        private readonly List<CardInstance> _deck = new List<CardInstance>();
-        private readonly List<CardInstance> _discardPile = new List<CardInstance>();
-        private int _nextInstanceId = 0;
+        private readonly List<Card> _deck = new List<Card>();
+        private readonly List<Card> _discardPile = new List<Card>();
 
-        /// <summary>덱을 카드 ID 목록으로 채우고 인스턴스 ID를 부여한 뒤 섞는다.</summary>
-        public void InitDeck(IReadOnlyList<int> cardIds)
+        /// <summary>
+        /// 방장이 만든 덱(장마다 고유 InstanceId, 1부터)을 받아 섞는다. 게임 안의 카드는 전부 여기로 들어온다 —
+        /// 이후 드로우 · 버림은 이 장을 존(덱 · 손패 · 버림 더미) 사이로 옮길 뿐이다. 카드를 만드는 쪽은 PunGameServer.BuildDeck.
+        /// </summary>
+        public void InitDeck(IReadOnlyList<Card> cards)
         {
             _deck.Clear();
             _discardPile.Clear();
             foreach (PlayerState player in _players.Values)
                 player.Hand.Clear();
-            _nextInstanceId = 0;
 
-            foreach (int cardId in cardIds)
-                _deck.Add(new CardInstance(_nextInstanceId++, cardId));
-
+            _deck.AddRange(cards);
             Shuffle(_deck);
             _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
             _outbox.SetRoomState(RoomProps.DiscardCount, 0);
@@ -73,7 +72,7 @@ namespace Chapchu.Game
 
             // 소유 검증: 요청자 손패에 그 종류의 카드가 있어야 한다 (09-network.md 4.1).
             // 요청이 아직 종류 ID 라 같은 종류 중 한 장을 꺼낸다 — 인스턴스 ID 요청은 기능 4 에서.
-            List<CardInstance> hand = _players[requester].Hand;
+            List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.CardId == cardId);
             if (index < 0)
             {
@@ -81,7 +80,7 @@ namespace Chapchu.Game
                 return;
             }
 
-            CardInstance card = hand[index];
+            Card card = hand[index];
             hand.RemoveAt(index);
             _discardPile.Add(card);
             _outbox.SetPlayerState(requester, PlayerProps.HandCount, hand.Count);
@@ -98,10 +97,10 @@ namespace Chapchu.Game
             if (_deck.Count == 0)
                 return false;
 
-            CardInstance card = _deck[0];
+            Card card = _deck[0];
             _deck.RemoveAt(0);
 
-            List<CardInstance> hand = _players[actor].Hand;
+            List<Card> hand = _players[actor].Hand;
             hand.Add(card);
 
             _outbox.SendDrawnCard(actor, card.InstanceId, card.CardId);

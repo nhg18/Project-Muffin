@@ -19,7 +19,7 @@ namespace Chapchu.Game
         //    한 클래스라 다른 파일의 필드 · 메서드(CurrentTurnActor, SetTurn, GetNextActor …)를 그대로 쓴다.
         //    규칙을 별도 클래스로 떼지 않는다. 게임 상태를 두루 봐야 해서 서로 참조가 꼬인다.
         //
-        // 2. 원본 상태는 이 파일 아래 "원본 상태" 에 모은다. 예: private readonly Stack<CardInstance> _deck
+        // 2. 원본 상태는 이 파일 아래 "원본 상태" 에 모은다. 예: private readonly Stack<Card> _deck
         //    플레이어별 값(HP · 손패 · 함정)이 생기면 필드만 있는 PlayerState 클래스로 묶어
         //    Dictionary<int, PlayerState> 로 둔다. PlayerState 에는 로직 · 이벤트를 넣지 않는다.
         //
@@ -30,7 +30,7 @@ namespace Chapchu.Game
         //            if (requester != CurrentTurnActor) { _outbox.Reject(requester, RejectCode.NotYourTurn); return; }
         //
         //            // 적용: 원본은 여기(방장 메모리)에만 있다
-        //            CardInstance card = _deck.Pop();
+        //            Card card = _deck.Pop();
         //
         //            // 내보내기: 모두 봐도 되는 값은 상태로, 한 사람만 볼 값은 그 사람에게만
         //            _outbox.SetRoomState(RoomProps.DeckCount, _deck.Count);
