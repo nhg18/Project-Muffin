@@ -77,7 +77,7 @@ namespace Chapchu.Presentation
         
             switch (cardModel.cardData.targetType)
             {
-                case TargetType.SingleEnemy:
+                case TargetType.OneOther:
                     int pNum = 0;
                     pNum = await CardTargetPlayerSelector();
                     if (pNum != 0)
@@ -85,7 +85,7 @@ namespace Chapchu.Presentation
                         ActorNumbers.Add(pNum);
                     }
                     break;
-                case TargetType.TwoEnemy:
+                case TargetType.TwoOthers:
                     int p1Num = 0;
                     p1Num = await CardTargetPlayerSelector();
                     if (p1Num != 0)
@@ -99,20 +99,20 @@ namespace Chapchu.Presentation
                         ActorNumbers.Add(p2Num);
                     }
                     break;
-                case TargetType.AllEnemies:
+                case TargetType.AllOthers:
                     foreach (var player in PhotonNetwork.PlayerList)
                     {
                         if (player.IsLocal) continue; // 나 자신 제외
                         ActorNumbers.Add(player.ActorNumber);
                     }
                     break;
-                case TargetType.AllPlayers:
+                case TargetType.Everyone:
                     foreach (var player in PhotonNetwork.PlayerList)
                     {
                         ActorNumbers.Add(player.ActorNumber);
                     }
                     break;
-                case TargetType.Me:
+                case TargetType.Self:
                     ActorNumbers.Add(PhotonNetwork.LocalPlayer.ActorNumber);
                     break;
                 case TargetType.None:
