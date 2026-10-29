@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Chapchu.Game.Cards
 {
-    // CardType · TargetType 은 서버도 쓰므로 서버 어셈블리(Game/Server/Card.cs)에 있다.
+    // CardType · TargetType · CardEffect 는 서버도 쓰므로 서버 어셈블리(Game/Server/Card.cs)에 있다.
 
     /// <summary>
     /// 카드 종류 1개의 정의 (에셋). "이 카드가 무엇인가" 만 담는다 — 덱에 몇 장 들어가는지는 DeckData, 게임 안의 한 장은 Card.
@@ -22,7 +22,7 @@ namespace Chapchu.Game.Cards
         [TextArea]
         public string description;
 
-        [Header("카드 효과 리스트")]
+        [Header("카드 효과 — 종류 · 받는 사람 · 수치. 위에서부터 순서대로 실행")]
         public List<CardEffect> effects = new List<CardEffect>();
     }
 }

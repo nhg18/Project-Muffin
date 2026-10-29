@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Chapchu.Game.Cards
 {
@@ -9,14 +10,40 @@ namespace Chapchu.Game.Cards
         Trap
     }
 
+    // 카드 에셋에는 이름이 아니라 순서 번호로 저장된다. 이름은 바꿔도 되지만 순서를 바꾸거나 중간에 끼우지 않는다 (04-card.md 11절).
     public enum TargetType
     {
-        None,
-        SingleEnemy,
-        TwoEnemy,
-        AllEnemies,
-        Me,
-        AllPlayers
+        None,       // 대상 없음 — 효과 1회
+        OneOther,   // 나를 뺀 1명 고름
+        TwoOthers,  // 나를 뺀 2명 고름
+        AllOthers,  // 나를 뺀 전원 (자동)
+        Self,       // 나 (자동)
+        Everyone    // 나를 포함한 전원 (자동)
+    }
+
+    /// <summary>효과 종류 (11-card-list.md 5절). 필요한 것부터 늘린다 — 실행은 GameServer.ApplyEffect 의 switch 한 곳. 끝에만 추가한다.</summary>
+    public enum EffectType
+    {
+        Damage      // amount 만큼 HP 감소
+    }
+
+    /// <summary>효과를 받는 사람. 한 카드 안에서도 효과마다 다르다 (예: A19 대상에게 피해 · 본인 회복).</summary>
+    public enum EffectSubject
+    {
+        Target,     // 카드의 대상 (TargetType 으로 정해진 사람들)
+        Self        // 카드를 쓴 사람
+    }
+
+    /// <summary>
+    /// 카드 효과 하나 = 종류 · 받는 사람 · 수치. CardData 인스펙터에 바로 입력하고, 방장이 덱을 만들 때 Card 로 그대로 옮긴다.
+    /// 수치의 뜻은 종류마다 정해진다 (데미지량 · 회복량 · 장수 …). 순수 데이터 — 실행은 서버.
+    /// </summary>
+    [Serializable]
+    public struct CardEffect
+    {
+        public EffectType type;
+        public EffectSubject subject;
+        public int amount;
     }
 
     /// <summary>
@@ -36,16 +63,16 @@ namespace Chapchu.Game.Cards
         public CardType Type { get; }
         public TargetType Target { get; }
 
-        /// <summary>대상마다 체력 감소량. 0 이면 데미지 없음. 효과는 기능 9 에서 늘린다 (11-card-list.md 5절).</summary>
-        public int Damage { get; }
+        /// <summary>카드에 적힌 순서대로 실행할 효과들. 비어 있으면 효과 없음.</summary>
+        public IReadOnlyList<CardEffect> Effects { get; }
 
-        public Card(int instanceId, int cardId, CardType type, TargetType target, int damage)
+        public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects)
         {
             InstanceId = instanceId;
             CardId = cardId;
             Type = type;
             Target = target;
-            Damage = damage;
+            Effects = effects ?? Array.Empty<CardEffect>();
         }
 
         // 같음 비교는 InstanceId 만 본다. 손패 · 덱 · 체인에서 "그 한 장" 을 찾는 기준.

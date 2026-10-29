@@ -31,7 +31,7 @@ namespace Chapchu.Game.Tests
             int[] cardIds = Enumerable.Range(100, deckSize).ToArray();
 
             _server.StartGame(new[] { A, B });
-            _server.InitDeck(cardIds.Select((id, i) => new Card(i + 1, id, CardType.Action, TargetType.None, 0)).ToList());
+            _server.InitDeck(cardIds.Select((id, i) => new Card(i + 1, id, CardType.Action, TargetType.None, null)).ToList());
             _server.DealInitialHands(new[] { A, B });
 
             int current = _server.CurrentTurnActor;
