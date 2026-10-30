@@ -1,15 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Chapchu.Game.Core;
 
 namespace Chapchu.Game.Cards
 {
-    // CardType · TargetType · CardEffect 는 서버도 쓰므로 서버 어셈블리(Game/Server/Card.cs)에 있다.
+    // CardType · TargetType · CardEffect 는 판정하는 쪽도 쓰므로 Core 어셈블리(_Game/Core/Card.cs)에 있다.
 
     /// <summary>
     /// 카드 종류 1개의 정의 (에셋). "이 카드가 무엇인가" 만 담는다 — 덱에 몇 장 들어가는지는 DeckData, 게임 안의 한 장은 Card.
-    /// 화면은 CardId 로 이것을 찾아 그린다. 방장은 게임 시작 때 이것과 DeckData 로 Card 를 만든다 (PunGameServer.BuildDeck).
+    /// 화면은 CardId 로 이것을 찾아 그린다. 방장은 게임 시작 때 이것과 DeckData 로 Card 를 만든다 (DeckData.CreateCards).
     /// </summary>
     [CreateAssetMenu(fileName = "Card_", menuName = "CardSystem/Card Data")]
     public class CardData : ScriptableObject

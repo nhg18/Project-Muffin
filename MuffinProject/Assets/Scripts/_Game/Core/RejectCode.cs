@@ -1,7 +1,7 @@
 ﻿namespace Chapchu.Game.Core
 {
     /// <summary>
-    /// 요청 거절 코드 (09-network.md 4.3). 방장이 요청자에게 이 숫자만 보내고, 화면 문구는 UI(RejectText)가 정한다.
+    /// 요청 거절 코드 (09-network.md 4.3). 방장이 요청자에게 이 숫자만 보내고, 화면 문구는 화면 쪽이 정한다.
     /// 네트워크로 오가는 값이라 번호는 뒤에만 추가하고 바꾸거나 재사용하지 않는다.
     /// </summary>
     public static class RejectCode

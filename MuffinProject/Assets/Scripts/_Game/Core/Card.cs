@@ -21,7 +21,7 @@ namespace Chapchu.Game.Core
         Everyone    // 나를 포함한 전원 (자동)
     }
 
-    /// <summary>효과 종류 (11-card-list.md 5절). 필요한 것부터 늘린다 — 실행은 GameServer.ApplyEffect 의 switch 한 곳. 끝에만 추가한다.</summary>
+    /// <summary>효과 종류 (11-card-list.md 5절). 필요한 것부터 늘린다 — 실행은 Match.ApplyEffects 의 switch 한 곳. 끝에만 추가한다.</summary>
     public enum EffectType
     {
         Damage      // Amount 만큼 HP 감소
@@ -36,7 +36,7 @@ namespace Chapchu.Game.Core
 
     /// <summary>
     /// 카드 효과 하나 = 종류 · 받는 사람 · 수치. CardData 인스펙터에 바로 입력하고, 방장이 덱을 만들 때 Card 로 그대로 옮긴다.
-    /// 수치의 뜻은 종류마다 정해진다 (데미지량 · 회복량 · 장수 …). 순수 데이터 — 실행은 서버.
+    /// 수치의 뜻은 종류마다 정해진다 (데미지량 · 회복량 · 장수 …). 순수 데이터 — 실행은 Match.
     /// </summary>
     [Serializable]
     public struct CardEffect
@@ -47,10 +47,10 @@ namespace Chapchu.Game.Core
     }
 
     /// <summary>
-    /// 게임 안의 카드 한 장. 서버(GameServer)가 판정에 쓰는 전부가 여기 있다 — 어느 장(InstanceId) · 무슨 카드(CardId) · 그 카드의 규칙값.
-    /// 방장이 게임 시작 때 DeckData × CardData 로 한 번에 만들고(PunGameServer.BuildDeck), 그 뒤로는 존(덱 · 손패 · 버림 더미) 사이로 옮기기만 한다.
+    /// 게임 안의 카드 한 장. 판정하는 쪽(Match)이 쓰는 전부가 여기 있다 — 어느 장(InstanceId) · 무슨 카드(CardId) · 그 카드의 규칙값.
+    /// 방장이 게임 시작 때 DeckData × CardData 로 한 번에 만들고(DeckData.CreateCards), 그 뒤로는 존(덱 · 손패 · 버림 더미) 사이로 옮기기만 한다.
     /// 네트워크에는 이 객체가 아니라 InstanceId · CardId 두 int 만 다닌다. 화면은 CardId 로 CardData 를 찾아 그리고, 이 객체를 쓰지 않는다.
-    /// 순수 C# (서버 어셈블리) — UnityEngine 참조 금지.
+    /// 순수 C# (Chapchu.Game.Core 어셈블리) — UnityEngine 참조 금지.
     /// </summary>
     public sealed class Card : IEquatable<Card>
     {

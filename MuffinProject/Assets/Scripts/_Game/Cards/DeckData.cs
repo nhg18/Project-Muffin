@@ -26,7 +26,7 @@ namespace Chapchu.Game.Cards
 
         private Dictionary<int, CardData> _byId;
 
-        /// <summary>이 덱에 들어가는 카드를 종류 ID(CardData.id)로 찾는다. 화면이 OnDrawn · OnCardUsed 의 cardId 로 그릴 때 쓴다. 없으면 null.</summary>
+        /// <summary>이 덱에 들어가는 카드를 종류 ID(CardData.id)로 찾는다. 화면이 OnCardDrawn · OnCardPlayed 의 cardId 로 그릴 때 쓴다. 없으면 null.</summary>
         public CardData GetCard(int cardId)
         {
             if (_byId == null)
@@ -41,7 +41,7 @@ namespace Chapchu.Game.Cards
         }
 
         /// <summary>
-        /// 이 덱 구성으로 게임 안의 카드를 만든다. 판정하는 쪽(MatchHost)이 게임 시작 때 한 번 부른다.
+        /// 이 덱 구성으로 게임 안의 카드를 만든다. 방장의 전달 계층(PhotonMatchTransport)이 게임 시작 때 한 번 불러 MatchHost 에 넘긴다.
         /// 장 번호는 1부터 (09-network.md 7절). 효과 목록은 복사한다 — 에셋 리스트를 규칙 쪽과 공유하지 않는다.
         /// </summary>
         public List<Card> CreateCards()
