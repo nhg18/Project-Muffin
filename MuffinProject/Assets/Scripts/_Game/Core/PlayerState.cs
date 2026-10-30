@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using Chapchu.Game.Core;
 
-namespace Chapchu.Game
+namespace Chapchu.Game.Core
 {
     /// <summary>
     /// 플레이어 한 명의 원본 상태 (방장 메모리에만 있다). 필드만 둔다 — 로직 · 이벤트는 GameServer 에.

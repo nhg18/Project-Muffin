@@ -1,5 +1,6 @@
 ﻿using System;
 using Chapchu.Core;
+using Chapchu.Game.Core;
 
 namespace Chapchu.Game
 {
