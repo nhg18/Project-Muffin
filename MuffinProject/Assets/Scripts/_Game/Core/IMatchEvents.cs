@@ -20,8 +20,11 @@ namespace Chapchu.Game.Core
 
         void OnPileCountChanged(int drawCount, int discardCount);
 
-        /// <summary>뽑은 카드 내용. 비공개 — 뽑은 본인에게만 전달한다 (09-network.md 3절).</summary>
-        void OnCardDrawn(int playerId, Card card);
+        /// <summary>
+        /// 뽑은 카드. 비공개 — 뽑은 본인에게만 전달한다 (09-network.md 3절).
+        /// 규칙값이 든 Card 대신 번호만 넘긴다. 화면은 cardId 로 그림을 찾고, 규칙값은 판정하는 쪽만 가진다.
+        /// </summary>
+        void OnCardDrawn(int playerId, int instanceId, int cardId);
 
         /// <summary>요청 거절. 요청한 본인에게만 전달한다. code 는 RejectCode.</summary>
         void OnRejected(int playerId, int code);

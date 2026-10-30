@@ -86,7 +86,7 @@ namespace Chapchu.Game.Core
 
             PlayerState player = _players[playerId];
             player.Hand.Add(card);
-            _events.OnCardDrawn(playerId, card);
+            _events.OnCardDrawn(playerId, card.InstanceId, card.CardId);
             _events.OnHandCountChanged(playerId, player.Hand.Count);
             return true;
         }
