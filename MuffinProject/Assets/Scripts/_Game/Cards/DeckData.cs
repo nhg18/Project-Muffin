@@ -52,6 +52,12 @@ namespace Chapchu.Game.Cards
             foreach (Entry entry in entries)
             {
                 CardData data = entry.card;
+                if (data == null)
+                {
+                    Debug.LogError($"[Deck] {name} 에 카드가 빈 칸이 있다 — 그 칸은 건너뛴다", this);
+                    continue;
+                }
+
                 CardEffect[] effects = data.effects.ToArray();
 
                 for (int i = 0; i < entry.count; i++)
