@@ -44,6 +44,13 @@ namespace Chapchu.Game.View
         public void OnCardDrawn(int playerId, int instanceId, int cardId) =>
             Log($"드로우 — {Who(playerId)} #{instanceId} (카드 {cardId})");
 
+        public void OnCardPlayed(int playerId, int instanceId, int cardId, IReadOnlyList<int> targets) =>
+            Log($"사용 — {Who(playerId)} #{instanceId} (카드 {cardId}) → 대상 [{string.Join(", ", targets)}]");
+
+        public void OnReactionStarted(double deadline) => Log($"반응 대기 — 마감 {deadline:F1}");
+
+        public void OnCardResolved(int instanceId, bool isNegated) => Log($"처리 — #{instanceId}{(isNegated ? " (무효화)" : "")}");
+
         public void OnRejected(int playerId, int code) => Log($"거절 — {Who(playerId)} 코드 {code}");
 
         private string Who(int playerId) => playerId == _transport.LocalPlayerId ? $"{playerId}(나)" : playerId.ToString();

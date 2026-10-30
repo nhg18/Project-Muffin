@@ -26,6 +26,15 @@ namespace Chapchu.Game.Core
         /// </summary>
         void OnCardDrawn(int playerId, int instanceId, int cardId);
 
+        /// <summary>카드가 체인에 올라갔다. 공개 — 사용한 카드는 모두에게 보인다.</summary>
+        void OnCardPlayed(int playerId, int instanceId, int cardId, IReadOnlyList<int> targets);
+
+        /// <summary>반응 시간이 (다시) 시작됐다. deadline 은 now 와 같은 단위.</summary>
+        void OnReactionStarted(double deadline);
+
+        /// <summary>체인의 카드 한 장이 처리됐다. 무효화됐으면 효과 없이 버려진다.</summary>
+        void OnCardResolved(int instanceId, bool isNegated);
+
         /// <summary>요청 거절. 요청한 본인에게만 전달한다. code 는 RejectCode.</summary>
         void OnRejected(int playerId, int code);
     }

@@ -13,5 +13,6 @@
         public const int InvalidTarget = 5; // 대상이 카드 대상 타입에 맞지 않는다
         public const int HandNotTen = 6;    // 손패가 정확히 10장이 아니라 찹츄 선언 불가
         public const int AlreadyChapChu = 7; // 이미 찹츄 상태
+        public const int MainActionUsed = 8; // 이번 턴 메인 행동을 이미 했다 (카드 처리 중 포함)
     }
 }

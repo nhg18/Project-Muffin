@@ -62,6 +62,9 @@ namespace Chapchu.Game.Net
         [PunRPC] private void RPC_HandCountChanged(int playerId, int handCount) => Notify(l => l.OnHandCountChanged(playerId, handCount));
         [PunRPC] private void RPC_PileCountChanged(int drawCount, int discardCount) => Notify(l => l.OnPileCountChanged(drawCount, discardCount));
         [PunRPC] private void RPC_CardDrawn(int playerId, int instanceId, int cardId) => Notify(l => l.OnCardDrawn(playerId, instanceId, cardId));
+        [PunRPC] private void RPC_CardPlayed(int playerId, int instanceId, int cardId, int[] targets) => Notify(l => l.OnCardPlayed(playerId, instanceId, cardId, targets));
+        [PunRPC] private void RPC_ReactionStarted(double deadline) => Notify(l => l.OnReactionStarted(deadline));
+        [PunRPC] private void RPC_CardResolved(int instanceId, bool isNegated) => Notify(l => l.OnCardResolved(instanceId, isNegated));
         [PunRPC] private void RPC_Rejected(int playerId, int code) => Notify(l => l.OnRejected(playerId, code));
 
         private void Notify(Action<IMatchEvents> call)
@@ -83,6 +86,9 @@ namespace Chapchu.Game.Net
             public void OnHandCountChanged(int playerId, int handCount) => ToAll(nameof(RPC_HandCountChanged), playerId, handCount);
             public void OnPileCountChanged(int drawCount, int discardCount) => ToAll(nameof(RPC_PileCountChanged), drawCount, discardCount);
             public void OnCardDrawn(int playerId, int instanceId, int cardId) => ToPlayer(playerId, nameof(RPC_CardDrawn), playerId, instanceId, cardId);
+            public void OnCardPlayed(int playerId, int instanceId, int cardId, IReadOnlyList<int> targets) => ToAll(nameof(RPC_CardPlayed), playerId, instanceId, cardId, targets.ToArray());
+            public void OnReactionStarted(double deadline) => ToAll(nameof(RPC_ReactionStarted), deadline);
+            public void OnCardResolved(int instanceId, bool isNegated) => ToAll(nameof(RPC_CardResolved), instanceId, isNegated);
             public void OnRejected(int playerId, int code) => ToPlayer(playerId, nameof(RPC_Rejected), playerId, code);
 
             private void ToAll(string rpc, params object[] args) => _owner.photonView.RPC(rpc, RpcTarget.All, args);

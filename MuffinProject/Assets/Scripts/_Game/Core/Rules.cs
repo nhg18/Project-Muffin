@@ -16,5 +16,8 @@
 
         /// <summary>턴 제한 시간, 초 (03-turn.md 2절).</summary>
         public const double TurnSeconds = 20;
+
+        /// <summary>카드가 체인에 올라갈 때마다 기다리는 반응 시간, 초 (04-card.md 8절).</summary>
+        public const double ReactionSeconds = 5;
     }
 }
