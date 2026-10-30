@@ -4,6 +4,7 @@ using Chapchu.Core;
 using Chapchu.DebugTools;
 using Chapchu.Game;
 using Chapchu.Game.Cards;
+using Chapchu.Game.Core;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;

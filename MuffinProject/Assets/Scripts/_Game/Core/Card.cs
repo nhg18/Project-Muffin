@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Chapchu.Game.Cards
+namespace Chapchu.Game.Core
 {
     public enum CardType
     {

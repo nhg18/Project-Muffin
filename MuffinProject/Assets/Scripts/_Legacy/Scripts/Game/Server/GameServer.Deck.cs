@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using Chapchu.Core;
-using Chapchu.Game.Cards;
+using Chapchu.Game.Core;
 
 namespace Chapchu.Game
 {

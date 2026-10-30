@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
-using Chapchu.Game.Cards;
+using Chapchu.Game.Core;
 using NUnit.Framework;
 
 namespace Chapchu.Game.Tests

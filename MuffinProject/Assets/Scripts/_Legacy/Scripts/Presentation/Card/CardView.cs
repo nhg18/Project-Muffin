@@ -10,6 +10,7 @@ using UnityEngine.UI;
 using UnityEngine.UIElements;
 using Chapchu.Game;
 using Chapchu.Game.Cards;
+using Chapchu.Game.Core;
 
 namespace Chapchu.Presentation
 {

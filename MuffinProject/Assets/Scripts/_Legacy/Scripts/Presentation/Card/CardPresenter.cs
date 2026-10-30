@@ -6,6 +6,7 @@ using UnityEngine;
 using Chapchu.Game;
 using Chapchu.Game.Cards;
 using Chapchu.Core;
+using Chapchu.Game.Core;
 
 namespace Chapchu.Presentation
 {
