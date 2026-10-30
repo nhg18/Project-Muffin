@@ -39,5 +39,11 @@ namespace Chapchu.Game.Core
             if (_isStarted)
                 _match.Draw(senderId, _clock());
         }
+
+        public void PlayCard(int senderId, int instanceId, int[] targets)
+        {
+            if (_isStarted)
+                _match.PlayCard(senderId, instanceId, targets, _clock());
+        }
     }
 }

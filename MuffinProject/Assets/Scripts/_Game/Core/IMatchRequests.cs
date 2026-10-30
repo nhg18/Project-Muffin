@@ -8,5 +8,8 @@
     {
         /// <summary>메인 행동: 드로우 1장.</summary>
         void Draw();
+
+        /// <summary>메인 행동: 행동 카드 1장. 대상은 고르는 카드(OneOther · TwoOthers)만 의미가 있다.</summary>
+        void PlayCard(int instanceId, int[] targets);
     }
 }

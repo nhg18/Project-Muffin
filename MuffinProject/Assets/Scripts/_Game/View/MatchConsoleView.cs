@@ -13,6 +13,8 @@ namespace Chapchu.Game.View
         [SerializeField] private MonoBehaviour transport; // IMatchTransport 를 구현한 컴포넌트
 
         private IMatchTransport _transport;
+        private readonly List<int> _myHand = new List<int>();   // 내 손패의 장 번호 (확인용)
+        private readonly List<int> _players = new List<int>();
 
         private void Awake()
         {
@@ -27,10 +29,21 @@ namespace Chapchu.Game.View
         {
             if (Input.GetKeyDown(KeyCode.D))
                 _transport?.Draw();
+
+            // 확인용: 내 손패 첫 장을 나 말고 첫 번째 플레이어에게 쓴다. 대상을 고르지 않는 카드면 방장이 대상을 정한다.
+            if (Input.GetKeyDown(KeyCode.A) && _myHand.Count > 0)
+            {
+                int target = _players.Find(id => id != _transport.LocalPlayerId);
+                _transport.PlayCard(_myHand[0], new[] { target });
+            }
         }
 
-        public void OnGameStarted(IReadOnlyList<int> turnOrder) =>
+        public void OnGameStarted(IReadOnlyList<int> turnOrder)
+        {
+            _players.Clear();
+            _players.AddRange(turnOrder);
             Log($"시작 — 턴 순서 {string.Join(", ", turnOrder)} / 나 {_transport.LocalPlayerId}");
+        }
 
         public void OnTurnChanged(int playerId, double deadline) =>
             Log($"턴 — {Who(playerId)} (마감 {deadline:F1})");
@@ -41,11 +54,17 @@ namespace Chapchu.Game.View
 
         public void OnPileCountChanged(int drawCount, int discardCount) => Log($"더미 — 덱 {drawCount} / 버림 {discardCount}");
 
-        public void OnCardDrawn(int playerId, int instanceId, int cardId) =>
+        public void OnCardDrawn(int playerId, int instanceId, int cardId)
+        {
+            _myHand.Add(instanceId);
             Log($"드로우 — {Who(playerId)} #{instanceId} (카드 {cardId})");
+        }
 
-        public void OnCardPlayed(int playerId, int instanceId, int cardId, IReadOnlyList<int> targets) =>
+        public void OnCardPlayed(int playerId, int instanceId, int cardId, IReadOnlyList<int> targets)
+        {
+            _myHand.Remove(instanceId);
             Log($"사용 — {Who(playerId)} #{instanceId} (카드 {cardId}) → 대상 [{string.Join(", ", targets)}]");
+        }
 
         public void OnReactionStarted(double deadline) => Log($"반응 대기 — 마감 {deadline:F1}");
 

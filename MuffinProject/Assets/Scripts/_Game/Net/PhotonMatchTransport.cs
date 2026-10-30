@@ -29,6 +29,9 @@ namespace Chapchu.Game.Net
 
         public void Draw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
 
+        public void PlayCard(int instanceId, int[] targets) =>
+            photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, instanceId, targets ?? Array.Empty<int>());
+
         // 화면들이 Start 에서 AddListener 하므로, 한 프레임 뒤에 시작해야 방장 자신의 화면도 첫 결과를 받는다.
         private IEnumerator Start()
         {
@@ -52,6 +55,13 @@ namespace Chapchu.Game.Net
         {
             if (!PhotonNetwork.IsMasterClient) return;
             _host?.Draw(info.Sender.ActorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_RequestPlayCard(int instanceId, int[] targets, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            _host?.PlayCard(info.Sender.ActorNumber, instanceId, targets);
         }
 
         // ---------- 방장 → 클라 ----------
