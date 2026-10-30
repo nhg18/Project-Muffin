@@ -8,7 +8,7 @@ path=$(printf '%s' "$input" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]
   | sed 's/.*:[[:space:]]*"\(.*\)"/\1/; s#\\\\#/#g')
 
 case "$path" in
-  *MuffinProject/Assets/_Game/*.cs|*MuffinProject/Assets/_Legacy/*.cs) ;;
+  *MuffinProject/Assets/Scripts/*.cs) ;;
   *) exit 0 ;;
 esac
 [ -f "$path" ] || exit 0
