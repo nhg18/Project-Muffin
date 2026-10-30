@@ -1,7 +1,9 @@
 {
     "name": "Chapchu.Game.Core",
     "rootNamespace": "Chapchu.Game.Core",
-    "references": [],
+    "references": [
+        "Muffin.Game.Server"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
