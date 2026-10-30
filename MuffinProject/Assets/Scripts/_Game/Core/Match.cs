@@ -125,7 +125,8 @@ namespace Chapchu.Game.Core
                 EndTurn(now);
         }
 
-        // 내 턴이고, 이번 턴 메인 행동(드로우 · 행동 카드)을 아직 안 했는가. 아니면 거절을 보낸다.
+        // 메인 행동(드로우 · 행동 카드)은 턴에 한 번. 드로우는 그 자리에서, 행동 카드는 체인 처리 뒤에 턴이 끝나므로
+        // 체인이 열려 있다는 것이 곧 이번 턴 메인 행동을 이미 했다는 뜻이다. 거절도 여기서 보낸다 — 부르는 쪽은 false 면 돌아가기만 한다.
         private bool CanTakeMainAction(int playerId)
         {
             if (playerId != _turns.Current)
@@ -158,15 +159,21 @@ namespace Chapchu.Game.Core
                 case TargetType.Everyone:
                     return _turns.Order.ToArray();
                 case TargetType.OneOther:
-                    return requested.Count == 1 && IsOther(requested[0], playerId) ? new[] { requested[0] } : null;
+                    return PickOthers(requested, 1, playerId);
                 case TargetType.TwoOthers:
-                    return requested.Count == 2 && requested[0] != requested[1]
-                           && IsOther(requested[0], playerId) && IsOther(requested[1], playerId)
-                        ? new[] { requested[0], requested[1] }
-                        : null;
+                    return PickOthers(requested, 2, playerId);
                 default:
                     return null;
             }
+        }
+
+        // 나를 뺀 서로 다른 count 명을 정확히 골랐으면 그 목록, 아니면 null.
+        private int[] PickOthers(IReadOnlyList<int> requested, int count, int playerId)
+        {
+            if (requested.Count != count || requested.Distinct().Count() != count)
+                return null;
+
+            return requested.All(id => IsOther(id, playerId)) ? requested.ToArray() : null;
         }
 
         private bool IsOther(int targetId, int playerId) => targetId != playerId && _players.ContainsKey(targetId);
