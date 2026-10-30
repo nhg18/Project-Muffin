@@ -367,6 +367,7 @@ MonoBehaviour:
   joinButton: {fileID: 1035314154}
   nickname: Player
   roomName: Debug
+  startInTmpGame: 0
 --- !u!4 &1097364831
 Transform:
   m_ObjectHideFlags: 0
