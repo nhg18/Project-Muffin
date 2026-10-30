@@ -64,13 +64,13 @@ namespace Chapchu.Game
         // 감소 · 무효 · 전환을 모은 뒤 1회 반영(06-health.md 4절)은 아직 — 지금은 바로 적용한다.
         private void ApplyEffect(int requester, int[] targets, CardEffect effect)
         {
-            int[] receivers = effect.subject == EffectSubject.Self ? new[] { requester } : targets;
+            int[] receivers = effect.Subject == EffectSubject.Self ? new[] { requester } : targets;
 
-            switch (effect.type)
+            switch (effect.Type)
             {
                 case EffectType.Damage:
                     foreach (int actor in receivers)
-                        SetHp(actor, _players[actor].Hp - effect.amount);
+                        SetHp(actor, _players[actor].Hp - effect.Amount);
                     break;
             }
         }

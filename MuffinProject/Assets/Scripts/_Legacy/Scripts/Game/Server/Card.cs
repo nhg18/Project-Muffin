@@ -24,7 +24,7 @@ namespace Chapchu.Game.Cards
     /// <summary>효과 종류 (11-card-list.md 5절). 필요한 것부터 늘린다 — 실행은 GameServer.ApplyEffect 의 switch 한 곳. 끝에만 추가한다.</summary>
     public enum EffectType
     {
-        Damage      // amount 만큼 HP 감소
+        Damage      // Amount 만큼 HP 감소
     }
 
     /// <summary>효과를 받는 사람. 한 카드 안에서도 효과마다 다르다 (예: A19 대상에게 피해 · 본인 회복).</summary>
@@ -41,9 +41,9 @@ namespace Chapchu.Game.Cards
     [Serializable]
     public struct CardEffect
     {
-        public EffectType type;
-        public EffectSubject subject;
-        public int amount;
+        public EffectType Type;
+        public EffectSubject Subject;
+        public int Amount;
     }
 
     /// <summary>
