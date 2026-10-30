@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Chapchu.Game.Core;
 
 namespace Chapchu.Game.Cards
 {
@@ -37,6 +38,27 @@ namespace Chapchu.Game.Cards
             }
 
             return _byId.TryGetValue(cardId, out CardData data) ? data : null;
+        }
+
+        /// <summary>
+        /// 이 덱 구성으로 게임 안의 카드를 만든다. 판정하는 쪽(MatchHost)이 게임 시작 때 한 번 부른다.
+        /// 장 번호는 1부터 (09-network.md 7절). 효과 목록은 복사한다 — 에셋 리스트를 규칙 쪽과 공유하지 않는다.
+        /// </summary>
+        public List<Card> CreateCards()
+        {
+            var cards = new List<Card>();
+            int nextInstanceId = 1;
+
+            foreach (Entry entry in entries)
+            {
+                CardData data = entry.card;
+                CardEffect[] effects = data.effects.ToArray();
+
+                for (int i = 0; i < entry.count; i++)
+                    cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects));
+            }
+
+            return cards;
         }
 
         private void OnValidate()
