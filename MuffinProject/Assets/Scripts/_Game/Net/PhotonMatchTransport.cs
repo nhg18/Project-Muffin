@@ -13,17 +13,18 @@ namespace Chapchu.Game.Net
     /// <summary>
     /// 멀티 전달 계층 (Photon). 방장만 MatchHost 를 들고 판정한다.
     /// 요청은 방장에게 RPC 로 보내고, 방장의 결과는 공개면 전원 · 비공개면 본인에게만 RPC 로 보낸다.
-    /// 이 기기 화면은 IMatchRequests 로 요청하고, AddListener 로 결과를 받는다 — 화면은 멀티인지 모른다.
+    /// 이 기기 화면은 IMatchTransport 로 요청하고 결과를 받는다 — 화면은 멀티인지 모른다.
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
-    public class PhotonMatchTransport : MonoBehaviourPun, IMatchRequests
+    public class PhotonMatchTransport : MonoBehaviourPun, IMatchTransport
     {
         [SerializeField] private DeckData deck;
 
         private readonly List<IMatchEvents> _listeners = new List<IMatchEvents>();
         private MatchHost _host;
 
-        /// <summary>이 기기에서 결과를 받을 쪽을 등록한다. Start 에서 부른다.</summary>
+        public int LocalPlayerId => PhotonNetwork.LocalPlayer.ActorNumber;
+
         public void AddListener(IMatchEvents listener) => _listeners.Add(listener);
 
         public void Draw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
