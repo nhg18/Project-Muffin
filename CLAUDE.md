@@ -132,10 +132,11 @@
 
 | 항목 | 값 |
 | --- | --- |
-| Unity | 2022.3.62f3 (LTS) |
-| 언어 수준 | C# 9 (Unity 2022.3 기준). C# 10+ 문법(file-scoped namespace, record struct 등) 사용 금지 |
+| Unity | 6000.3.27f1 (6.3 LTS) — 2026-10-31 2022.3.62f3 에서 업그레이드 |
+| 렌더 파이프라인 | Built-in (URP 는 아직 안 씀) |
+| 언어 수준 | C# 9 (Unity 6.3 기준). C# 10+ 문법(file-scoped namespace, record struct 등) 사용 금지 |
 | 네트워크 | Photon PUN2 (`Assets/Photon`) |
-| 주요 패키지 | com.unity.splines 2.8.4, TextMeshPro 3.0.7, DOTween(Assets/Plugins) |
+| 주요 패키지 | com.unity.splines 2.9.1, uGUI 2.0.0 (TextMeshPro 포함 — 별도 패키지 아님), DOTween(Assets/Plugins) |
 | 멀티 테스트 | ParrelSync (`Assets/ParrelSync`) |
 | 프로젝트 루트 | `MuffinProject/` |
 | 타겟 플랫폼 | 모바일 (Android / iOS) |
