@@ -140,8 +140,6 @@ public static class RoomProps
 }
 ```
 
-> 키 상수는 `Core/Props/PlayerProps.cs` · `Core/Props/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음). 옛 `"RoomDeck"` 덱 전체 배열 동기화는 삭제됐다.
-
 ---
 
 ## 7. 카드 인스턴스 ID
@@ -214,24 +212,6 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 서버 접속 제한 시간 | 접속 시작 후 **15초** 안에 마스터 서버 접속이 끝나지 않으면 끊고 `ClientTimeout` 으로 알림 | 확정 |
 | 인터넷 없음 (접속 전) | Photon 을 호출하지 않고 `ExceptionOnConnect` 로 알림 (PUN 이 연결 실패 시 보내는 값과 동일) | 확정 |
 | 접속 실패 후 재시도 | 자동 재시도 없음. UI 가 사유를 표시하고 사용자가 재시도(`NetworkManager.Connect`). 타이틀은 접속 버튼을 다시 누르면 재시도 (`12-title-ui.md` 6절 · 10-5) | 확정 |
-
----
-
-## 12. 현재 구현 상태
-
-| 항목 | 상태 |
-| --- | --- |
-| 마스터 경유 카드 요청 (`CardPlayManager.RPC_RequestPush`) | 있음. **검증 로직 없음** (`isResolutioning` 체크만) |
-| 마스터 소유 덱 · 버림 더미 | 있음 (`GameServer.Deck.cs`). 잔여 장수만 Room Property |
-| 마스터 소유 손패 | 있음 (`PlayerState.Hand`). 각 클라이언트는 자기 손패 사본만 받는다 |
-| 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
-| 처리 ID | 없음 |
-| 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn`). UI 이벤트 · 요청(버림 · 카드 사용)에는 아직 쓰지 않는다 |
-| 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
-| RPC `nameof` 사용 | 혼재 (`PunGameServer` · `TurnManager`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
-| 마스터 가드 | 요청 RPC 전부 있음 (`PunGameServer` · `CardPlayManager` · `TurnManager`). 옛 `RPC_RequestDrawToMaster` 는 삭제 |
-| 손패 장수 기록 | 마스터만 기록 (`GameServer` → `PlayerProps.HandCount`) |
-| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 턴 종료 · 드로우 · 버림 구현, `TempGameScene` 에만 배치 |
 
 ---
 

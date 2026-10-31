@@ -150,8 +150,6 @@
 * 제한 시간 내 **마스터에 도착해 승인된** 요청만 인정한다. 이후 도착 요청은 거절.
 * 시간 기준은 `PhotonNetwork.Time` ([`09-network.md`](09-network.md) 8절).
 
-> ⚠ 현재 코드는 `waitTimeforNextCard = 4f` + `0.5f` 로 4.5초를 `Invoke`로 대기한다. 기획의 5초와 다르고, 서버 시각 기준도 아니다.
-
 ---
 
 ## 9. 처리 순서
@@ -194,8 +192,6 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 다중 대상 중 일부만 사망 | 생존 대상 효과는 계속 처리 | 확정 |
 | 대상이 없는 카드 (`TargetType.None`) | 대상 없이 효과 1회 실행 | 확정 |
 
-> ⚠ 현재 코드 `CardData.PlayCard`는 대상 배열을 순회하며 효과를 실행하므로, 대상이 0개면 **효과가 한 번도 실행되지 않는다.** A07(턴 방향 반전)처럼 대상 없는 카드를 구현할 수 없다.
-
 ---
 
 ## 11. 대상 지정 타입
@@ -234,9 +230,6 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 효과 실행 | **마스터** (결과만 전파) |
 | 카드 연출 | 각 클라이언트 |
 
-> ⚠ 현재 코드는 `RPC_BroadcastPush`로 **모든 클라이언트가 각자 체인에 추가하고 각자 효과를 실행**한다.
-> `RequestCancelNext()`는 로컬에서만 `isCanceled`를 바꾸므로 **클라이언트마다 무효화 결과가 달라진다.**
-
 ---
 
 ## 13. UI
@@ -253,27 +246,6 @@ A(행동 카드) ← B(카운터, A 무효화) ← C(카운터, B 무효화)
 | 대상 선택 | 대상 지정 필요 시 | 선택 가능 플레이어 강조 |
 
 상세는 [`10-ui.md`](10-ui.md).
-
----
-
-## 14. 현재 구현 상태
-
-| 항목 | 상태 |
-| --- | --- |
-| 카드 데이터 (`CardData` ScriptableObject) | 구현됨 (id / 이름 / 이미지 / 타입 / 대상 / 조건 / 효과) |
-| 카드 한 장 (`Card`) | 구현됨 (2026-10-08, 2026-10-10 구조 확정) — `InstanceId` · `CardId` · `Type` · `Target` · `Effects`. 서버가 판정에 쓰는 전부. 방장의 `PunGameServer.BuildDeck` 이 게임 시작 때 `DeckData` × `CardData` 로 한 번에 만들고 `GameServer.InitDeck` 이 받아 섞는다. 이후 드로우 · 버림은 존 사이 이동. 네트워크에는 `InstanceId` · `CardId` 두 int 만 다닌다 (09-network 7절). `CardType` · `TargetType` 은 서버 어셈블리(`Game/Server/Card.cs`). 효과는 `CardEffect` 목록 — 지금은 `Damage` 1종만, 나머지는 기능 9 |
-| 카드 조건 (`CardCondition`) | **삭제** (2026-10-06, PR #52) — 옛 클라 조건(`MyTurnCondition` 등)과 `IsMyTurn` 에셋. "내 턴"은 서버 공통 검사. 카드별 조건은 필요한 카드가 생기면 서버(`Card`)에 추가 |
-| 카드 효과 (`CardEffect`) | 구현됨 (2026-10-10) — 순수 데이터 struct `(EffectType 종류, EffectSubject 받는 사람, int 수치)`. `CardData.effects` 인스펙터에 바로 입력하고, `PunGameServer.BuildDeck` 이 `Card.Effects` 로 복사한다. 실행은 `GameServer.ApplyEffect` 의 `switch` 한 곳 (`11-card-list.md` 5절). 옛 `CardEffect`/`DamageEffect` ScriptableObject 와 효과 에셋은 삭제. `EffectType` 은 `Damage` 1종만. 감소 · 무효 · 전환 계산(06 §4)은 없음 |
-| 체인 등록 / 역순 처리 | **없음** — 옛 `CardPlayManager`(클라마다 개별 실행) 삭제 (2026-10-06). 서버 체인은 기능 5 |
-| 반응 시간 | **없음** — 옛 4.5초 `Invoke` 는 `CardPlayManager` 와 함께 삭제. 서버 반응 5초는 기능 5 |
-| 마스터 검증 | 행동 카드만 구현 (2026-10-06) — `GameServer.PlayCard`: 내 턴 · 손패에 있음(인스턴스 ID) · 행동 카드 · 대상(타입별 인원 · 상대인지) 검사 → 버림 더미 → 데미지 → `OnCardUsed`(전원) → 턴 넘김. 반응 5초 · 카운터 · 카드별 조건은 아직. UI 드롭 → `RequestPlayCard(cardInstanceId, 대상)` 연결됨 (2026-10-10) |
-| 카운터 카드 | 카드 데이터만 존재(`Card_C_002`, `Prototype_003_ACT` — 이름과 달리 타입이 카운터). 반응 입력 UI 없음 |
-| **함정 카드 / 함정 슬롯** | **전혀 미구현** |
-| 대상 선택 (`TargetSelectionManager`) | 구현됨. 5초 타임아웃, 우클릭 취소, 선택 중 다른 카드 입력 차단 (2026-09-25). 대상 선택을 취소 · 타임아웃하면 요청을 보내지 않고 손패로 되돌린다. 대상 없음(`TargetType.None`) 카드는 빈 대상으로 요청한다 (2026-10-10) |
-| 사용한 카드 손패에서 제거 | 구현됨 (2026-10-10) — 드롭 뒤 카드는 손패에 남고, `OnCardUsed`(방장 승인)를 받아 인스턴스 ID 로 찾아 지운다. 거절이면 그대로 남는다 (`PlayerHandPresenter.HandleCardUsed`) |
-| 버림 더미 | **미구현** |
-| 카드 인스턴스 ID | 서버: 덱 생성 때 부여 · `OnMyDrawn` · `OnCardUsed` 로 전송. UI: `CardModel.cardInstanceId` 에 보관하고 사용 요청에 보낸다 (2026-10-10) |
-| 등록된 카드 에셋 | 4장 (`Card_A_001`, `Card_C_002`, `Prototype_003_ACT`, `Prototype_004_ACT`) / 기획 59장 |
 
 ---
 

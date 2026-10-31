@@ -41,9 +41,6 @@
 | 7 | 좌석 배치 계산 (각 클라이언트 로컬) | 각 클라이언트 | 확정 |
 | 8 | 플레이 시작 | — | 확정 |
 
-> ⚠ 현재 코드는 2번(로드 완료 대기), 3번(셔플·인스턴스 ID), 4번(HP 초기화)이 없고,
-> 5번은 각 클라이언트가 자기 몫을 각자 요청하는 방식이며, 6번은 무작위가 아니라 `PlayerList[0]` 고정이다.
-
 ---
 
 ## 4. 씬 구성
@@ -55,8 +52,6 @@
 | `RoomScene` | 방 대기 | 2 | 사용 중 |
 | `GameScene` | 인게임 | 3 | 사용 중 |
 | `DebugLobbyScene` | 개발용 즉시 입장 | 4 | 개발 전용 |
-
-> ⚠ **현재 `EditorBuildSettings` 순서는 표와 다르다** — `DebugLobby 0 · Title 1 · Lobby 2 · Room 3 · Game 4` (2026-09-23 `bbf48bc`). 이대로 빌드하면 시작 씬이 디버그 로비다. 테스트 빌드 전 Title 을 0 으로 되돌린다 (기능 10 안드로이드 빌드 전 확인).
 
 > 씬 경로는 `Scripts/Core/ScenePaths.cs` 에서 관리한다. 문자열을 직접 쓰지 않는다.
 > 방(Room)에서 나가면 **들어온 씬으로 돌아간다**: `LobbyScene` 에서 왔으면 `LobbyScene`, `DebugLobbyScene` 에서 왔으면 `DebugLobbyScene`.
