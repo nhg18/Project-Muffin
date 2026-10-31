@@ -20,6 +20,7 @@
 | 트랙별 작업 목록 | `docs/plan-a-logic.md` (A · 로직) · `docs/plan-b-ui.md` (B · UI 개발) · `docs/plan-c-planning.md` (C · 기획) · `docs/plan-d-art.md` (D · 디자인) | 병렬 분업용 |
 | 작업 진행 기록 | `docs/worklog.md` | 구현 세션이 완료 내용 · 결정 · 다음 할 일을 남긴다. 다음 세션은 여기서 이어간다 |
 | 버전 규칙 | `docs/versioning.md` | `MAJOR.MINOR.PATCH`, MINOR = 마일스톤 |
+| 참고 코드 | `upgrade/unity6` 브랜치의 `Assets/Scripts/_Game/` | 새로 짜 본 구조(처리 체인 · 반응 5초 `ResolveChain`, 방장 판정 `MatchHost` · `PhotonMatchTransport` 등). **옮기지 않고 참고만** 한다. 기존 코드와 클래스 이름이 겹친다 |
 | 아이디어 / 회의록 / 사업 / 아트 | 노션 | 확정되면 `docs/systems/`로 내려온다 |
 
 ### 규칙
