@@ -67,3 +67,15 @@
 ## 8. C# 버전
 
 C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 10+ 문법은 hook 이 막는다.
+
+## 9. 게임 규칙 계층
+
+게임 규칙(검증 · 상태 변경)은 Unity · Photon 을 모르는 순수 C# 으로 만들고, 방장만 실행한다.
+
+* 위치는 `Scripts/Game/`. 어셈블리를 따로 둔다 (`Chapchu.Game.asmdef`, `noEngineReferences: true`, 참조 없음). UnityEngine · Photon · UI 를 쓰면 컴파일이 안 된다.
+* 게임 상태(덱 · 손패 · 버림 더미 · HP · 처리 체인 · 처리 ID)는 객체 하나에 모은다. 방장 이주(`09-network` 9절)를 나중에 붙일 수 있게 하기 위해서다.
+* 규칙은 요청을 검증하고, 상태를 바꾸고, **일어난 일 목록**을 돌려준다. 누구에게 무엇을 보낼지(전체 · 소유자만)는 네트워크 계층이 정한다.
+* 난수와 시간은 밖에서 받는다. 반응 · 턴 타이머는 네트워크 계층이 재고 만료를 규칙에 알린다.
+* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다.
+* 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
+* 클라이언트는 받은 일을 연출 큐에 넣고 하나씩 재생한다. 화면 값은 재생하면서 이벤트에 담긴 값으로 바꾼다.
