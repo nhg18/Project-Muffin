@@ -1,6 +1,6 @@
 # CLAUDE.md — 찹츄
 
-2~4인 모바일 파티 카드 대전 게임.
+2~4인 파티 카드 대전 게임 (PC · 모바일).
 
 ## 기준 문서
 
@@ -19,8 +19,7 @@
 2. 문서에 없는 규칙, `미정` 값은 구현하지 않고 묻는다.
 3. 게임 규칙 판정은 방장(마스터 클라이언트)만 한다 → skill `network-rpc`.
 4. 요청 범위만 고친다. 더 좋은 구조는 제안까지만. 지금 필요 없는 분리 · 추상화는 만들지 않는다.
-5. Claude 는 Unity 결과를 볼 수 없다. 코드를 바꾸면 Unity 에서 확인할 항목(컴파일 · 씬 동작 · 인스펙터 연결)을 보고한다.
-6. 답변은 한국어.
+5. 답변은 한국어.
 
 ## 환경
 
@@ -29,22 +28,17 @@
 | Unity | 6000.3.27f1 (6.3 LTS) · Built-in 렌더 파이프라인 · 프로젝트 루트 `MuffinProject/` |
 | 언어 | C# 9 — C# 10+ 문법 금지 |
 | 패키지 | Photon PUN2 · ParrelSync · DOTween · uGUI 2.0(TMP 포함) · splines 2.9.1 |
-| 플랫폼 | Android / iOS |
+| 플랫폼 | PC / Android / iOS |
 | 색 공간 | Gamma — 반투명 UI 를 HTML 시안과 같게 섞기 위해 |
 
-## Unity
+## 작업 방식
 
-* 규칙 수치는 코드 · ScriptableObject, 연출값 · 참조는 Inspector.
-* `Awake` 자기 초기화, `Start` 다른 오브젝트 참조, `OnEnable` 이벤트 구독(다른 `Instance` 접근 금지).
-* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 쓴다.
-* RPC 이름은 `nameof(RPC_Xxx)`. `async void` · `[SerializeField] static` 금지.
-* 테스트는 Test Runner 없이 멀티 실행: `DebugLobbyScene` → 게임 씬을 ParrelSync 클론과 돌리고 Console 로그로 본다.
-* 씬을 스크립트로 다시 열기 전에 `isDirty` 를 확인한다(저장 안 한 편집이 사라진다). `.unity` 를 직접 고치기 전에는 Unity 에서 저장해 달라고 하고, 사용자가 추가한 오브젝트를 지우지 않는다.
-* `.cs` 는 UTF-8 BOM, 파일명은 영문.
-* `MuffinProject_clone_*/` 는 ParrelSync 복제본이다. 읽지도 고치지도 않는다.
+* 바꾼 것은 직접 실행해서 확인한다. 확인하지 못한 것은 못 했다고 말한다.
+* 코드 규칙은 `docs/CODE_CONVENTION.md` 를 따르고, 새 규칙도 거기에 적는다.
+* 다음 작업이 이어받아 고치고 조합할 수 있게 만든다.
+* 사람이 Unity 에서 하고 있는 작업(저장 안 한 씬 · 에셋)을 덮어쓰지 않는다.
+* 막히면 우회하지 말고 멈추고 묻는다.
 
 ## Git
 
 `main` ← `develop` ← `feature/<기능>`. `develop` 머지는 PM 만 → skill `git-workflow`.
-
-`.claude/hooks/` 가 금지 경로 · BOM · 금지 문법을 자동 검사한다. 막히면 규칙을 우회하지 말고 코드를 고친다.
