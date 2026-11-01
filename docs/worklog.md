@@ -11,6 +11,7 @@
 - 모든 문서는 현재 코드가 아니라 되어야 할 상태를 적는다. 코드가 다르면 코드를 고친다 (`GDD_GUIDE` 4-5).
 - 플랫폼: PC / Android / iOS.
 - 아키텍처: 규칙은 순수 C# (`Scripts/Game/`, 별도 asmdef) 으로 방장만 실행 → 일어난 일 목록 전파 → 클라이언트 연출 큐. 카드 효과는 `[SerializeReference]` 조립식 (`CODE_CONVENTION` 9절 · `00` · `09` 6.1).
+- 브랜치: 개인 브랜치(`logic`) 대신 `feature/<기능>` 작업 브랜치 → PR → develop, 머지 후 삭제. 접은 작업은 `archive/<이름>` 태그 (`git-workflow` skill). 희건 브랜치는 그대로.
 - `_Project/` 로 폴더 모으기는 보류. 방장 이주 복원 방식은 보류 유지 — 상태를 한 객체에 모으는 것까지만 지금 한다.
 
 ### 한 것
