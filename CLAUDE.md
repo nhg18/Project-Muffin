@@ -7,11 +7,11 @@
 | 대상 | 위치 |
 | --- | --- |
 | 게임 규칙 · 수치 | `docs/systems/*.md` |
-| 화면 · 연출 | HTML 시안 → Unity 로 옮긴다 |
+| 화면 · 연출 | `docs/mockups/` 의 HTML 시안 → Unity 로 옮긴다 |
 | 기능 목록 | `docs/development-plan.md` |
 | 작업 기록 | `docs/worklog.md` — 세션 시작 때 읽고, 끝날 때 쓴다 |
-| 코드 컨벤션 · 기획서 작성 · 버전 · 출시 | `docs/CODE_CONVENTION.md` · `docs/GDD_GUIDE.md` · `docs/versioning.md` · `docs/store-release.md` |
-| 참고 코드 (옮기지 않음) | `Assets/Scripts old/` · `upgrade/unity6` 브랜치의 `Assets/Scripts/_Game/` |
+| 코드 규칙 | `docs/CODE_CONVENTION.md` — 새 규칙도 여기에만 적는다 |
+| 기획서 작성 · 버전 · 출시 | `docs/GDD_GUIDE.md` · `docs/versioning.md` · `docs/store-release.md` |
 
 ## 규칙
 
@@ -23,22 +23,17 @@
 
 ## 환경
 
-| 항목 | 값 |
-| --- | --- |
-| Unity | 6000.3.27f1 (6.3 LTS) · Built-in 렌더 파이프라인 · 프로젝트 루트 `MuffinProject/` |
-| 언어 | C# 9 — C# 10+ 문법 금지 |
-| 패키지 | Photon PUN2 · ParrelSync · DOTween · uGUI 2.0(TMP 포함) · splines 2.9.1 |
-| 플랫폼 | PC / Android / iOS |
-| 색 공간 | Gamma — 반투명 UI 를 HTML 시안과 같게 섞기 위해 |
+Unity 6 · Built-in 렌더 파이프라인 · C# 9 · Photon PUN2 · PC / Android / iOS.
+프로젝트 루트 `MuffinProject/`, 정확한 버전은 `ProjectVersion.txt` · `Packages/manifest.json`.
+색 공간 Gamma — 반투명 UI 를 HTML 시안과 같게 섞기 위해.
 
 ## 작업 방식
 
-* 바꾼 것은 직접 실행해서 확인한다. 확인하지 못한 것은 못 했다고 말한다.
-* 코드 규칙은 `docs/CODE_CONVENTION.md` 를 따르고, 새 규칙도 거기에 적는다.
+* 바꾼 것은 직접 실행해서 확인한다 → skill `play-test`. 확인하지 못한 것은 못 했다고 말한다.
 * 다음 작업이 이어받아 고치고 조합할 수 있게 만든다.
 * 사람이 Unity 에서 하고 있는 작업(저장 안 한 씬 · 에셋)을 덮어쓰지 않는다.
 * 막히면 우회하지 말고 멈추고 묻는다.
 
 ## Git
 
-`main` ← `develop` ← `feature/<기능>`. `develop` 머지는 PM 만 → skill `git-workflow`.
+`main` ← `develop` ← 작업 브랜치. `develop` 머지는 PM 만 → skill `git-workflow`.

@@ -11,7 +11,7 @@ block() { echo "차단: $1 ($path)" >&2; exit 2; }
 
 case "$path" in
   *_clone_*/*)            block "ParrelSync 복제본은 고치지 않는다. MuffinProject/ 에서 작업한다" ;;
-  */Library/*|*/Temp/*)   block "Unity 생성 폴더(Library/Temp)는 고치지 않는다" ;;
+  *MuffinProject/Library/*|*MuffinProject/Temp/*) block "Unity 생성 폴더(Library/Temp)는 고치지 않는다" ;;
   *.meta)                 block ".meta 는 Unity 가 만든다. 손으로 만들거나 고치지 않는다 (GUID 가 바뀌면 참조가 끊긴다)" ;;
 esac
 

@@ -8,7 +8,7 @@ description: 찹츄 저장소의 브랜치 · 커밋 · PR 규칙. 커밋, 브�
 ```
 main     ← 점검 · 출시 빌드 때만 develop 을 머지
 develop  ← 통합. PR 로만 들어온다. 머지는 PM 만
- └─ feature/<기능>  ← develop 에서 만들고, 끝나면 PR → 머지 후 삭제
+ └─ 작업 브랜치  ← develop 에서 만들고, 끝나면 PR. 임시 브랜치는 머지 후 삭제
 ```
 
 * 작업 시작 전에 `develop` 을 받아 최신으로 만든다.
