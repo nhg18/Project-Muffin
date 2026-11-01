@@ -25,6 +25,7 @@
 ## 2. 파일 구조
 
 * 네임스페이스 루트는 `Chapchu`, 하위는 `Assets/Scripts/` 아래 폴더 경로. 흔한 타입을 가리는 폴더 이름 금지 (`Debug` → `DebugTools`, `UI/Room` → `UI/RoomScreen`).
+* 에디터 전용 스크립트는 `Scripts/Editor/` (Unity 특수 폴더라 이름을 바꿀 수 없다). 네임스페이스는 `Chapchu.EditorTools` — `UnityEditor.Editor` 를 가리지 않게.
 * 선언 순서: `const` → `static` → `[SerializeField]` → private 필드 → 프로퍼티 → 이벤트 → Unity 생명주기(실행 순서대로) → public → protected → private 메서드.
 * 중괄호는 줄을 바꿔 연다(Allman). 들여쓰기 4칸. 한 줄에 한 문장. 조건이 하나면 early return.
 * `.cs` 는 UTF-8 BOM (hook 이 붙인다).

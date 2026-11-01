@@ -115,7 +115,7 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | Galaxy A16 · A36 · A56 | 2340 × 1080 |
 | Galaxy A05 · A06 | 1600 × 720 |
 
-등록: 에디터 메뉴 `Chapchu > Game View > Add Mobile Presets` 로 위 크기를 Game View 에 한 번에 넣는다. PC(Standalone) · Android · iOS 그룹에 넣고, 이미 있는 이름 · 크기는 건너뛴다. (스크립트는 `Scripts old/Editor/` 에 있다 — 옮겨 와야 쓸 수 있다)
+등록: 에디터 메뉴 `Chapchu > Game View > Add Mobile Presets` 로 위 크기를 Game View 에 한 번에 넣는다. PC(Standalone) · Android · iOS 그룹에 넣고, 이미 있는 이름 · 크기는 건너뛴다.
 
 합격: 중앙 묶음이 잘리거나 겹치지 않는다. 가장자리 UI 가 노치에 가리지 않는다.
 

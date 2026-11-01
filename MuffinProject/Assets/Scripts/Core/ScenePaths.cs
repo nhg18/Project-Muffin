@@ -16,7 +16,6 @@
         public const string Room = "RoomScene";
         public const string Game = "GameScene";
         public const string DebugLobby = "DebugLobbyScene";
-        public const string TmpGame = "TempGameScene";
     }
 
     /// <summary>
@@ -33,7 +32,7 @@
 
         /// <summary>
         /// 방장이 게임을 시작하면 방 전원이 넘어갈 씬. 로비(Lobby / DebugLobby)가 열릴 때(Start) 설정한다.
-        /// 기본값은 인게임. DebugLobby 는 멀티 테스트용 TempGameScene 으로 바꿀 수 있다.
+        /// 기본값은 인게임.
         /// </summary>
         public static string GameSceneAfterRoom = ScenePaths.Game;
     }

@@ -19,14 +19,21 @@
 - 기획서에서 구현 위치(클래스 · 메서드 이름 · "현재 구현") 제거: 01 · 08 · 10 · 14 · 15 · 16.
 - "방 나가기 → 들어온 씬으로 복귀" 규칙 삭제 (디버그 로비 테스트용이었음). 나가기는 항상 로비.
 - `store-release.md` 를 Unity 6000.3.27f1 기준으로 (결정 7 완료).
+- 인게임 규칙을 새 구조로: 옛 `GameServer` 를 `Scripts/Game/`(asmdef `Chapchu.Game`, 엔진 참조 없음)로 옮기고 결과를 "일어난 일 목록"(`GameEvent`)으로 돌려주게 바꿈. `PunGameServer` 가 받을 사람별로 RPC + Props 스냅샷. 카드 에셋 스크립트는 `Scripts/Cards/`.
+- `Scripts old/` · `Tests/EditMode` · `TempGameScene` 삭제. `GameViewSizeSetup` 은 `Scripts/Editor/` 로. 옛 GameScene 은 `OldGameScene` 으로 복사해 두고, `GameScene` 은 카메라 + GameServer 오브젝트만 남김.
+- 찹츄 선언(옛 코드는 "내 턴에만", 07 4.1 은 "언제든")과 `Discard` 요청(문서에 없음)은 옮기지 않음 — 기능 8 에서 문서대로.
+- 확인 (2클론, Unity CLI 로 직접 실행): 손패 서로 다름 · 상대 손패 내용 안 보임 · 모두 손5 ♥100 · 첫 턴 같음 / 20초 자동 넘김 · 뽑기 후 턴 넘김 · 남의 턴 뽑기는 요청자에게만 거절(코드 1) · 카드 사용 피해가 두 화면 같음. 규칙 계층만 4인으로 따로 돌려 대상 거절(코드 5) · 나감 처리도 확인.
+- RPC 를 새로 만들면 `PhotonServerSettings` 의 RpcList 가 바뀐다 — 이 파일을 같이 커밋해야 클라이언트끼리 RPC 번호가 맞는다 (안 맞으면 "Could not find RPC with index").
+- Unity CLI 용 `com.unity.pipeline` 패키지 설치 — 에디터를 명령줄로 조종해 멀티 테스트를 직접 돌린다.
 
 ### 다음 할 일
 - [ ] 코드를 `CODE_CONVENTION.md` 에 맞추기 — 요청 이벤트 7개 `On` 접두사, 로그 접두사 · 한국어 7곳, `DebugScript:62` `var`, `RoomPresenter` 문구 모으기, `[SerializeField]` 참조 누락 LogError (11 파일)
 - [ ] 방 나가기는 항상 `LobbyScene` — `SceneFlow.ReturnSceneAfterRoom` 과 관련 코드 삭제, `docs/diagrams/ui-flow.workflow.json` 의 "들어온 씬" 흐름도 고치고 도식 다시 생성
 - [ ] 테스트 절차 skill 만들기 (Unity CLI 로 멀티 실행이 되는지 먼저 확인)
-- [ ] `Scripts old/Editor/GameViewSizeSetup.cs` 를 `Scripts/Editor/` 로 옮기기 (15-screen 등록 메뉴)
-- [ ] `Scripts/Game/` + `Chapchu.Game.asmdef` 는 규칙 코드를 처음 만들 때 함께 만든다
-- [ ] `Scripts old/` 삭제 — 아직 참조가 남아 있다: `CardData` (`Cards/*.asset` 4개), `DeckData` (`Deck_*.asset` 2개), 카드 · 손패 프리팹 5개, `GameScene` · `TempGameScene`. 새 카드 정의로 옮기고 게임 씬을 다시 만든 뒤 지운다
+- [ ] 기능 1 멀티 확인을 4클론으로 — 2클론은 통과(아래). DebugLobbyScene → 입장 → 방장 시작 → 각 콘솔의 `[GameDebugInput]` 턴 줄 비교. D = 뽑기, P = 첫 카드 사용
+- [ ] 인게임 화면 — 새 `GameScene` 에 UI 를 조립한다. 값은 `Network/Events/GameEvents` 로만 받는다 (`OnMy*` 는 나에게만 온다)
+- [ ] 카드 효과를 `[SerializeReference]` 조립식으로 (기능 4 에서, `CODE_CONVENTION` 9절). 지금은 옛 `CardEffect` 구조체 그대로
+- [ ] 옛 카드 · 손패 프리팹 5개(`Assets/Prefab/Player*Card*` · `OtherPlayerHand`)와 `OldGameScene` 은 스크립트가 Missing — 화면을 새로 만들면 지운다
 
 ---
 
