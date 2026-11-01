@@ -1,6 +1,6 @@
 # 01. 게임플레이 흐름
 
-**최종 수정일**: 2026-10-30
+**최종 수정일**: 2026-11-01
 **분류**: Core(플레이) / MVP(로비·방) / 미정(로그인)
 
 ---
@@ -53,18 +53,14 @@
 | `GameScene` | 인게임 | 3 | 사용 중 |
 | `DebugLobbyScene` | 개발용 즉시 입장 | 4 | 개발 전용 |
 
-> 씬 경로는 `Scripts/Core/ScenePaths.cs` 에서 관리한다. 문자열을 직접 쓰지 않는다.
-> 방(Room)에서 나가면 **들어온 씬으로 돌아간다**: `LobbyScene` 에서 왔으면 `LobbyScene`, `DebugLobbyScene` 에서 왔으면 `DebugLobbyScene`.
-> 진입 쪽이 `SceneFlow.ReturnSceneAfterRoom` 을 설정하고 `RoomPresenter` 가 읽는다. 기본값은 `LobbyScene`.
+> 방(Room)에서 나가면 `LobbyScene` 으로 돌아간다.
 
 > **UI 흐름 도식**: [`docs/diagrams/ui-flow.html`](../diagrams/ui-flow.html) (브라우저에서 열기) · 온라인: https://claude.ai/artifact/Dm6eTgxoUYTuNQHKt18Ggi (공유 설정 필요).
 > 원본은 [`ui-flow.workflow.json`](../diagrams/ui-flow.workflow.json) — 흐름이 바뀌면 원본을 고치고 `archify deliver` 로 다시 만든다.
 
 ### 전역 매니저 (부트스트랩 씬 없음)
 
-`BootstrapScene` 은 **제거됐다.** 대신 `Scripts/Core/GameBootstrap.cs` 가
-`[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]` 로 `Resources/Bootstrap/` 의 매니저 프리팹을
-첫 씬이 로드되기 전에 생성한다.
+부트스트랩 씬은 없다. 전역 매니저는 `Resources/Bootstrap/` 의 프리팹으로 두고, 첫 씬이 로드되기 전에 자동으로 생성된다. 어느 씬에서 시작해도 매니저가 있다.
 
 | 매니저 | 프리팹 | 비고 |
 | --- | --- | --- |
@@ -73,7 +69,7 @@
 
 덕분에 **어느 씬에서 Play 를 눌러도 동일하게 동작한다.** 매니저를 씬에 배치할 필요가 없고,
 씬에 이미 배치돼 있어도 싱글톤 중복 방지 로직이 씬 쪽 사본을 정리한다.
-매니저를 추가할 때는 프리팹을 `Resources/Bootstrap/` 에 넣고 `GameBootstrap.ManagerPrefabs` 에 이름을 추가한다.
+매니저를 추가할 때는 프리팹을 `Resources/Bootstrap/` 에 넣고 생성 목록에 이름을 추가한다.
 
 ---
 

@@ -1,6 +1,6 @@
 # 15. 화면 규격 (방향 · 해상도 · 스케일)
 
-**최종 수정일**: 2026-09-25
+**최종 수정일**: 2026-11-01
 **분류**: MVP
 **출처**: 노션 「모바일 화면 비율 · Unity 해상도 대응안 (제안)」(2026-09-24, Statcounter 2026-08 데이터) → 이 문서로 이관
 **상태**: **확정** (2026-09-25 승인). 모든 씬 캔버스가 이 문서를 따른다.
@@ -115,7 +115,7 @@ Expand 로 바꾸면 **폰에서는 아무것도 달라지지 않고**, 태블�
 | Galaxy A16 · A36 · A56 | 2340 × 1080 |
 | Galaxy A05 · A06 | 1600 × 720 |
 
-등록: 메뉴 `Chapchu > Game View > Add Mobile Presets` (`Editor/GameViewSizeSetup.cs`). PC(Standalone) · Android · iOS 그룹에 넣고, 이미 있는 이름 · 크기는 건너뛴다.
+등록: 에디터 메뉴 `Chapchu > Game View > Add Mobile Presets` 로 위 크기를 Game View 에 한 번에 넣는다. PC(Standalone) · Android · iOS 그룹에 넣고, 이미 있는 이름 · 크기는 건너뛴다. (스크립트는 `Scripts old/Editor/` 에 있다 — 옮겨 와야 쓸 수 있다)
 
 합격: 중앙 묶음이 잘리거나 겹치지 않는다. 가장자리 UI 가 노치에 가리지 않는다.
 
