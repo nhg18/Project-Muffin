@@ -17,7 +17,7 @@
 | 이벤트 발생 함수 (다른 클래스가 발생시킬 때만) | `Raise` + 이벤트 이름에서 `On` 을 뺀 것 | `RaiseJoinedRoom()` |
 | RPC 메서드 | `RPC_` + 동사. 방장에게 보내는 요청은 `RPC_Request` + 동사 | `RPC_RequestPlayCard` · `RPC_ApplyDamage` |
 | 코루틴 | 동사 + `Routine` | `CountdownRoutine()` |
-| 파일 | 클래스 이름과 같게, 파일 하나에 클래스 하나. 영문 | `RoomPresenter.cs` |
+| 파일 | 클래스 이름과 같게, 영문. 작은 enum · struct 는 쓰는 클래스 파일에 둬도 된다 | `RoomPresenter.cs` |
 
 * `var` 는 오른쪽에서 타입이 바로 보일 때만 (`new X()` · `Load<X>()`). 메서드 반환값은 타입을 쓴다.
 * 축약하지 않는다 (`mgr` ✗ → `manager`). 약어는 두 글자까지만 대문자 (`UI` · `Rpc` · `Hp`).
@@ -38,12 +38,12 @@
 ## 4. 컴포넌트
 
 * 기능 하나 = 컴포넌트 하나. 씬이나 프리팹에 붙여서 쓸 수 있는 단위로 만든다.
-* 다른 컴포넌트는 `[SerializeField]` 로 받는다. 같은 오브젝트면 `[RequireComponent]` + `GetComponent`(Awake 에서 1회). `Find` 계열은 쓰지 않는다.
+* 다른 컴포넌트는 `[SerializeField]` 로 받는다. 같은 오브젝트면 `[RequireComponent]` + `GetComponent`(Awake 에서 1회). `Find` 계열은 초기화 때 1회만, 매 프레임 금지.
 * 필수 참조가 비어 있으면 `Awake` 에서 `Debug.LogError` 로 어느 참조인지 알린다. 조용히 넘어가지 않는다.
 * 생명주기: `Awake` 자기 초기화 · `OnEnable`/`OnDisable` 이벤트 구독/해제(`+=` 와 `-=` 는 항상 짝) · `Start` 다른 오브젝트 참조. `OnEnable` 에서 다른 `Instance` 에 접근하지 않는다.
-* 필드는 전부 private. 밖에 보일 것은 읽기 전용 프로퍼티나 메서드로 연다.
-* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 그 밖의 `static` 변경 가능 상태는 두지 않는다.
-* UI 는 화면 영역 하나에 컴포넌트 하나. 네트워크 · 규칙을 아는 코드는 화면을 그리는 코드와 파일을 나눈다.
+* 필드는 private, 밖에 보일 것은 읽기 전용 프로퍼티나 메서드로 연다. 순수 데이터(ScriptableObject · struct) 는 public 필드로 둬도 된다.
+* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다.
+* UI 는 화면 영역 하나에 컴포넌트 하나. 한 파일이 길어지면 화면을 그리는 코드와 네트워크 · 규칙을 아는 코드로 나눈다.
 
 ## 5. 수치와 문자열
 

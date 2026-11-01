@@ -14,7 +14,7 @@ develop  ← 통합. PR 로만 들어온다. 머지는 PM 만
 * 작업 시작 전에 `develop` 을 받아 최신으로 만든다.
 * 문서(`docs/` · `CLAUDE.md` · `.claude/`)도 같은 흐름으로 PR 한다.
 * 같은 씬 · 프리팹을 두 사람이 동시에 고치지 않는다.
-* 커밋 메시지: `type(scope): 한국어 요약` — `feat` · `fix` · `refactor` · `chore` · `docs`. 기능 단위로 커밋하고, 씬 변경과 코드 변경은 나눈다.
+* 커밋 메시지: `type(scope): 한국어 요약` — `feat` · `fix` · `refactor` · `chore` · `docs`. 기능 단위로 커밋한다.
 * `.meta` 는 에셋과 같이 커밋 · 이동한다. 손으로 만들거나 지우지 않는다. 새 `.cs` · 에셋은 Unity 가 `.meta` 를 만든 뒤 함께 커밋한다.
 * 커밋하지 않는 것: `*_clone_*/` · `Library/` · `Temp/` · 빌드 산출물.
 * revert · reset · 강제 푸시는 실행 전에 허락을 받는다.
