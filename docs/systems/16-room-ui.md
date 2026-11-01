@@ -1,6 +1,6 @@
 # 16. 방 화면 UI (크기 · 배치)
 
-**최종 수정일**: 2026-09-25
+**최종 수정일**: 2026-11-01
 **분류**: MVP
 **출처**: 이 문서가 원본. 규칙은 [`08-room.md`](08-room.md) 5절(2026-09-25 확정), 화면 규격은 [`15-screen.md`](15-screen.md)
 **디자인**: 없음 — 타이틀 · 로비와 같은 스타일(배경 키 아트 · `PillButton` · 둥근 박스 · 학교안심 폰트)로 먼저 만든다. 디자인이 나오면 크기 · 배치는 유지한 채 색 · 스프라이트만 바꾼다.
@@ -51,7 +51,7 @@
 | 입력 | 동작 | 조건 |
 | --- | --- | --- |
 | 게임 시작 탭 | 방을 닫고(`IsOpen · IsVisible = false`) `PhotonNetwork.LoadLevel(GameScene)` | 방장 · 인원 ≥ 2 |
-| 나가기 탭 | `NetworkManager.LeaveRoom()` → 들어온 씬으로 복귀 (`SceneFlow.ReturnSceneAfterRoom`) | 항상 |
+| 나가기 탭 | 방을 나가고 로비로 돌아간다 | 항상 |
 
 ## 6. 화면 상태
 
@@ -106,7 +106,7 @@
 **하이어라키**
 
 ```
-RoomCanvas             [RoomView · RoomPresenter]  1920×1080 · Expand
+RoomCanvas             1920×1080 · Expand
 ├ BG_Illust
 ├ BG_Overlay
 ├ PlayerSlots          중앙 1720×400 · 간격 40
@@ -119,32 +119,12 @@ RoomCanvas             [RoomView · RoomPresenter]  1920×1080 · Expand
    └ LogText           좌하단 640×200
 ```
 
-| 스크립트 | 역할 |
-| --- | --- |
-| `UI/RoomScreen/RoomView` | 표시 setter(`SetRoomCode` · `SetPlayerCount` · `SetPlayers` · `SetStartButton` · `AddLog`)와 버튼 이벤트(`StartRequested` · `LeaveRequested`). 네트워크를 모른다 |
-| `UI/RoomScreen/RoomPresenter` | `RoomEvents` · `PhotonNetwork` 상태 → 뷰, 시작 · 나가기 요청. 방에서 네트워크를 아는 유일한 파일 |
-
-옛 `RoomPanel` · `RoomInfoPanel` 은 삭제 (문자열 누적 목록 → 칸 4개, `ui-refactoring-plan` U-24).
 
 ## 8. 배경 · 색
 
 디자인 없음 — 타이틀 팔레트를 그대로 쓴다 (12-title-ui 9절). 디자인이 정해지면 7-1 배치는 유지한 채 색 · 스프라이트만 교체.
 
-## 9. 현재 구현 상태 (2026-09-25)
-
-| 항목 | 상태 |
-| --- | --- |
-| 7-1 배치 · 8 배경 (뷰) | 구현됨 |
-| `RoomView` + `RoomPresenter` | 구현됨 — 칸 4개 · 방장 표기 · 시작 버튼 조건 · 로그 3종 · 나가기 복귀 |
-| 실기기 Safe Area | 미확인 (기기 없음) |
-
 ## 10. 미정 / 결정 필요
 
 1. 디자인 (색 · 스프라이트)
 2. 방 코드 복사 · 공유 버튼 (친구 시스템과 함께)
-
-## 11. 변경 이력
-
-| 날짜 | 내용 |
-| --- | --- |
-| 2026-09-25 | 신규. 08-room 5절 확정 규칙 기준으로 배치 · 크기 확정, 뷰 + 프레젠터 구조로 재구성 |

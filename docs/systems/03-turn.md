@@ -1,6 +1,6 @@
 # 03. 턴 시스템
 
-**최종 수정일**: 2026-09-30
+**최종 수정일**: 2026-10-30
 **분류**: Core
 
 ---
@@ -71,9 +71,6 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 2. 이 배열을 모든 클라이언트에 1회 브로드캐스트한다. (제안)
 3. 이후 턴 이동은 이 배열에서 다음 **생존** 플레이어를 찾는다. (확정)
 
-> 현재 코드 (2026-10-06): 새 서버 `GameServer.InitTurnOrder` 는 시작 때 참가자를 섞어 순서 배열을 만든다 (1 · 3 구현, 2 브로드캐스트는 없음). `TempGameScene` 기준.
-> ⚠ 옛 `TurnManager.StartFirstTurn`(`GameScene`)은 여전히 `PhotonNetwork.PlayerList[0]` 고정이고, `GetNextActor` 가 현재 접속자를 매번 순회해 이탈 시 순서가 흔들린다. `GameScene` 을 `PunGameServer` 로 교체하면 사라진다.
-
 ---
 
 ## 7. 턴 이동 규칙
@@ -83,9 +80,9 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 정상 종료 | 다음 생존 플레이어로 이동 | 확정 |
 | 현재 턴 플레이어가 사망 확정 | 해당 턴 종료 후 다음 생존 플레이어로 | 확정 |
 | 다른 플레이어 사망 | 처리 후 기존 턴 플레이어 진행으로 복귀 | 확정 |
-| 최종 사망 / 사망 대기 플레이어 | 턴 순서에서 제외 | 확정 |
-| 현재 턴 플레이어가 퇴장 | 다음 플레이어에게 턴 이동 | 확정 (구현됨) |
-| 턴 스킵 효과 (A01, T05) | 해당 플레이어의 다음 턴 1회 건너뜀 | 확정(카드 존재) / **미정**(중첩 처리) |
+| 최종 사망 플레이어 | 턴 순서에서 제외. 사망 대기 중에는 게임이 멈추므로(`06` 8절) 순서를 건드리지 않는다 | 확정 (2026-10-30) |
+| 현재 턴 플레이어가 퇴장 | 다음 플레이어에게 턴 이동 | 확정 |
+| 턴 스킵 효과 (A01, T05) | 해당 플레이어에게 "다음 턴 스킵"을 **설정**. 겹쳐 받아도 쌓이지 않고 1회만 건너뜀 | 확정 (2026-10-30) |
 | 턴 방향 반전 (A07) | 진행 방향을 반대로 | **미정 — 방향 개념 자체가 정의되지 않음** |
 
 > A07(턴 진행 방향 반전)과 A10(다음 플레이어에게 전달)은 "진행 방향"이라는 개념을 전제한다.
@@ -101,7 +98,7 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 | 카드 드래그 → 드롭 영역 | 행동 카드 사용 요청 | 자신의 턴 + 메인 행동 미사용 + 카드 조건 충족 |
 | 함정 슬롯으로 드래그 | 함정 설치 요청 | 자신의 턴 + 빈 슬롯 존재 | 
 
-> 함정 설치 입력 방식은 **미정**. 현재 코드에 함정 설치 UI가 없다.
+> 함정 설치 입력 방식은 **미정**.
 
 ---
 
@@ -119,26 +116,8 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 
 | 상황 | 처리 | 구분 |
 | --- | --- | --- |
-| 게임 종료 / 연결 끊김 | 미제출로 판정 | 확정 |
+| 게임 종료 / 연결 끊김 | 즉시 퇴장 — 최종 사망과 같은 처리 (`09-network.md` 11절) | 확정 (2026-10-30) |
 | 손패가 0장인데 시간 초과 | 일반 시간 초과와 동일 (턴 종료) | 확정 |
-
----
-
-## 11. 현재 구현 상태
-
-| 항목 | 상태 |
-| --- | --- |
-| 턴 주인 Room Property 저장/동기화 | 구현됨 — `GameServer.SetTurn` → `RoomProps.TurnActor` (`TempGameScene`). 옛 `TurnManager`(`GameScene`)도 같은 키 |
-| 턴 종료 요청 | **없음** — 턴은 20초 마감 · 뽑기 · 카드 사용 · 나감으로만 넘어간다 (2026-10-06 `GameServer.EndTurn` · `RequestEndTurn` 삭제). 옛 `TurnManager`(GameScene)에만 남아 있음 |
-| 턴 표시 새 경로 | `TurnView` · `TurnPresenter` → `IGameRequests` / `IGameState` → `PunGameServer` (`TempGameScene`, 2026-10-06 연결. 턴 종료 버튼은 쓰지 않음). 옛 `TurnManager` 는 이 계약을 구현하지 않는다 |
-| 이탈 시 턴 이동 | 구현됨 — `GameServer.RemoveFromTurnOrder`: 나간 사람을 순서에서 빼고, 턴 주인이었으면 다음 사람에게. 옛 `TurnManager` 는 `GetNextActor` 인자 무시 버그 |
-| 첫 턴 무작위 결정 | 구현됨 — `GameServer.InitTurnOrder` 셔플 (2026-10-02). 옛 `TurnManager` 는 `PlayerList[0]` 고정 |
-| 턴 제한 시간 / 타이머 | 구현됨 — 방장이 `SetTurn` 때 마감 = `PhotonNetwork.Time` + 20초를 `RoomProps.TurnDeadline` 에 기록 → `GameEvents.OnTurnDeadlineChanged`. 남은 시간 표시는 UI (2026-10-06) |
-| 시간 초과 턴 종료 | 구현됨 — 방장 `PunGameServer.Update` → `GameServer.Tick` 이 마감을 넘기면 그냥 다음 사람으로 (자동 제출 없음). 턴 넘김은 `AdvanceTurn` 한 곳 |
-| 연속 미제출 강제 퇴장 | **미구현** |
-| 메인 행동 1회 제한 | 부분 — 드로우는 끝나면 턴 종료 (`GameServer.Draw`). 카드 사용 후 턴 종료는 **미구현** (기능 4) |
-| 사망 플레이어 턴 제외 | **미구현** |
-| 턴 스킵 / 방향 | **미구현** |
 
 ---
 
@@ -146,7 +125,7 @@ WaitingTurn → MyTurn → (Draw | PlayAction | 시간 초과) → Resolving →
 
 1. 연속 미제출 강제 퇴장 기준 N (턴 수)
 2. 턴 진행 방향 개념 도입 여부 (A07, A10 카드 전제)
-3. 턴 스킵 중첩 시 처리 (2회 스킵이 쌓이면?)
+3. ~~턴 스킵 중첩 시 처리~~ — 2026-10-30 확정: 쌓이지 않음 (7절)
 4. 함정 설치 입력 방식
 
 > 2026-09-22 노션 「개발 기획서」(9/18) 반영: 턴 제한 시간 20초 확정, **자동 제출 폐기**(시간 초과 시 턴만 넘김), 연속 미제출은 강제 퇴장으로 확정(N 미정).

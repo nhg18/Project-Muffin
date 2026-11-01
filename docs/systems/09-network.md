@@ -1,6 +1,6 @@
 # 09. 네트워크 권한 · 동기화 규약
 
-**최종 수정일**: 2026-09-30
+**최종 수정일**: 2026-11-01
 **분류**: Core
 **전제**: Photon PUN2. 마스터 클라이언트(방장)가 서버 역할을 겸한다.
 
@@ -83,8 +83,8 @@
 
 ### 4.3 거절 코드
 
-* 방장은 거절 **문구가 아니라 코드(`int`)** 만 요청자에게 보낸다. 화면 문구는 클라이언트가 코드로 정한다 (`Presentation/RejectText`).
-* 코드는 `Core/Props/RejectCode` 상수. 네트워크로 오가는 값이라 번호는 **뒤에만 추가**하고 바꾸거나 재사용하지 않는다.
+* 방장은 거절 **문구가 아니라 코드(`int`)** 만 요청자에게 보낸다. 화면 문구는 클라이언트(UI)가 코드로 정한다.
+* 코드는 규칙 계층의 `RejectCode` 상수. 네트워크로 오가는 값이라 번호는 **뒤에만 추가**하고 바꾸거나 재사용하지 않는다.
 
 | 코드 | 이름 | 뜻 |
 | --- | --- | --- |
@@ -111,6 +111,9 @@
 
 * 모두가 항상 봐도 되는 **작은 값**: HP(int), 손패 장수(int), 함정 개수(int), 생존 상태(byte), 찹츄 상태(bool), 턴 주인(int)
 * 늦게 들어온 클라이언트가 현재 상태를 복원해야 하는 값
+
+> CustomProperties 는 **지금 값**이고, 연출 순서는 **일어난 일**(RPC)이 정한다.
+> 게임 중 화면은 일어난 일을 차례로 재생하면서 값을 바꾼다. Props 가 바뀌었다고 바로 갱신하면 연출보다 숫자가 먼저 바뀐다 (예: 공격 연출 전에 HP 바가 줄어듦).
 
 ### 6.2 쓰면 안 되는 것
 
@@ -139,8 +142,6 @@ public static class RoomProps
     public const string TurnDirection = "turnDir";
 }
 ```
-
-> 키 상수는 `Core/Props/PlayerProps.cs` · `Core/Props/RoomProps.cs` 로 통일됐다 (`TurnDirection` 은 미정이라 아직 없음). 옛 `"RoomDeck"` 덱 전체 배열 동기화는 삭제됐다.
 
 ---
 
@@ -171,10 +172,11 @@ public static class RoomProps
 | 상황 | 처리 | 구분 |
 | --- | --- | --- |
 | 마스터가 나감 | Photon이 다음 클라이언트를 마스터로 승격 | 확정(Photon 동작) |
-| 승격된 새 마스터가 게임 상태를 복원 | **미정 — 결정 필요** | 미정 |
+| 승격된 새 마스터가 게임 상태를 복원 | **이주** — 게임을 끝내지 않고 새 마스터가 이어받는다. 복원 방식은 **보류** (아래) | 확정 (방향, 2026-10-30) / **보류** (방식) |
 
 > 마스터 메모리에만 있던 덱 순서·손패 내용은 마스터 교체 시 소실된다.
-> MVP에서는 **"마스터가 나가면 게임 종료"** 로 처리하는 것을 제안한다. (제안)
+> 이주하려면 덱 · 버림 더미를 Room Property 에 두고(덱 순서가 클라이언트에 노출됨), 손패는 각자 새 마스터에게 다시 보내는 식의 설계가 필요하다. 일이 커서 보류 (2026-10-30). "마스터가 나가면 게임 종료" 안은 채택하지 않았다.
+> 보류하는 동안 지킬 것: 마스터의 게임 상태를 한 곳에 모아 통째로 넘길 수 있게 둔다 (`CODE_CONVENTION` 9절). 나중에 이주를 붙일 때 남는 일이 "어디에 저장하고 누가 다시 보내나" 로 줄어든다.
 
 ---
 
@@ -209,7 +211,7 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 조건 미충족 요청 | 거절, 카드 원위치 유지 | 확정 |
 | 처리 중 요청자가 사망 | 이미 승인된 카드는 끝까지 처리 | 확정 |
 | 처리 중 대상이 사망 | 대상 유지, 해당 효과만 불발 | 확정 |
-| 연결 끊김 | 미제출로 판정 | 확정 |
+| 연결 끊김 | **즉시 퇴장** — 게임 중이면 최종 사망과 같은 처리. PUN 기본(`PlayerTtl` 0)은 끊기는 즉시 방을 나간 것으로 본다. 자리를 남기는 "미제출" 처리는 재접속(13절 #2)과 함께 정한다 | 확정 (2026-10-30) |
 | 재접속 시 상태 복원 | **미정 — 결정 필요** | 미정 |
 | 서버 접속 제한 시간 | 접속 시작 후 **15초** 안에 마스터 서버 접속이 끝나지 않으면 끊고 `ClientTimeout` 으로 알림 | 확정 |
 | 인터넷 없음 (접속 전) | Photon 을 호출하지 않고 `ExceptionOnConnect` 로 알림 (PUN 이 연결 실패 시 보내는 값과 동일) | 확정 |
@@ -217,26 +219,8 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 
 ---
 
-## 12. 현재 구현 상태
-
-| 항목 | 상태 |
-| --- | --- |
-| 마스터 경유 카드 요청 (`CardPlayManager.RPC_RequestPush`) | 있음. **검증 로직 없음** (`isResolutioning` 체크만) |
-| 마스터 소유 덱 · 버림 더미 | 있음 (`GameServer.Deck.cs`). 잔여 장수만 Room Property |
-| 마스터 소유 손패 | 있음 (`PlayerState.Hand`). 각 클라이언트는 자기 손패 사본만 받는다 |
-| 마스터 소유 HP | 부분. `DamageEffect` 가 마스터에서만 프로퍼티를 기록하지만, 초기값은 각 클라이언트가 기록하고 검증 · 처리 ID 는 없음 |
-| 처리 ID | 없음 |
-| 카드 인스턴스 ID | 덱 생성 때 부여 · 드로우 때 주인에게 전송 (`RPC_OnDrawn`). UI 이벤트 · 요청(버림 · 카드 사용)에는 아직 쓰지 않는다 |
-| 시간 동기화 | 없음 (`Invoke` 하드코딩 4.5초, 기획 5초와 불일치) |
-| RPC `nameof` 사용 | 혼재 (`PunGameServer` · `TurnManager`는 사용, `CardPlayManager`는 문자열 리터럴 3곳) |
-| 마스터 가드 | 요청 RPC 전부 있음 (`PunGameServer` · `CardPlayManager` · `TurnManager`). 옛 `RPC_RequestDrawToMaster` 는 삭제 |
-| 손패 장수 기록 | 마스터만 기록 (`GameServer` → `PlayerProps.HandCount`) |
-| 새 계약 | `IGameRequests` · `IGameState` · `GameEvents` 가 있다. 에디터용 `FakeGameServer` 와 Photon 판 `PunGameServer`(규칙은 순수 C# `GameServer`, [`gameserver-guide.md`](../gameserver-guide.md)) 가 구현한다. `PunGameServer` 는 턴 종료 · 드로우 · 버림 구현, `TempGameScene` 에만 배치 |
-
----
-
 ## 13. 미정 / 결정 필요
 
-1. 마스터 교체 시 게임 상태 복원 방식 (또는 "마스터 이탈 = 게임 종료" 확정)
+1. 마스터 교체 시 게임 상태 복원 방식 — 방향은 이주로 확정, 방식은 보류 (9절)
 2. 재접속 허용 시간과 복원 범위 (손패·함정·HP·턴)
 3. 턴 진행 방향을 Room Property로 둘지 여부 (A07 카드가 요구)

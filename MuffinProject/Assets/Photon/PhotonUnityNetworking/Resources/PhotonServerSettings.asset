@@ -58,6 +58,12 @@ MonoBehaviour:
   - RPC_OnCardUsed
   - RPC_RequestPlayCard
   - RPC_OnDeckRefilled
+  - RPC_RequestDeclareChapChu
+  - RPC_OnCardDrawn
+  - RPC_OnCardPlayed
+  - RPC_OnHpChanged
+  - RPC_OnMyCardDrawn
+  - RPC_OnTurnStarted
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

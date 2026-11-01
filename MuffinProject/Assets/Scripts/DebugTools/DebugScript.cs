@@ -19,8 +19,6 @@ namespace Chapchu.DebugTools
         [SerializeField] private Button joinButton;
         [SerializeField] private string nickname = "Player";    
         [SerializeField] private string roomName = "Debug";
-        [Tooltip("켜면 게임 시작 시 GameScene 대신 TempGameScene 으로 넘어간다 (새 GameServer 멀티 테스트). 끄면 예전처럼 GameScene.")]
-        [SerializeField] private bool startInTmpGame = true;
 
         private void Start()
         {
@@ -28,7 +26,7 @@ namespace Chapchu.DebugTools
             // 이미 있는 방에 들어가면 PUN 씬 동기화(AutomaticallySyncScene)가 콜백보다 먼저 RoomScene 을 불러
             // 이 오브젝트가 사라지고, 값이 기본값(Lobby)으로 남는다.
             SceneFlow.ReturnSceneAfterRoom = ScenePaths.DebugLobby;
-            SceneFlow.GameSceneAfterRoom = startInTmpGame ? ScenePaths.TmpGame : ScenePaths.Game;
+            SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
 
             // AutomaticallySyncScene 은 NetworkManager.Awake(PhotonConnection.Initialize) 가 true 로 켠다.
             // 여기서 false 로 덮어쓰면 방장의 LoadLevel 이 참가자에게 동기화되지 않아 마스터만 인게임으로 넘어간다.
