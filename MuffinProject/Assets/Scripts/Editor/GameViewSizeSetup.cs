@@ -54,7 +54,7 @@ namespace Chapchu.EditorTools
             Type sizeKindType = editorAssembly.GetType("UnityEditor.GameViewSizeType");
             if (sizesType == null || sizeType == null || sizeKindType == null)
             {
-                Debug.LogError("[GameViewSizeSetup] Game 뷰 내부 타입을 찾지 못했다. Unity 버전을 확인할 것.");
+                Debug.LogError($"[{nameof(GameViewSizeSetup)}] Game 뷰 내부 타입을 찾지 못했다. Unity 버전을 확인할 것.");
                 return;
             }
 
@@ -81,7 +81,7 @@ namespace Chapchu.EditorTools
             }
 
             sizesType.GetMethod("SaveToHDD")?.Invoke(sizes, null);
-            Debug.Log($"[GameViewSizeSetup] 프리셋 {added}개 추가 (PC · Android · iOS 그룹)");
+            Debug.Log($"[{nameof(GameViewSizeSetup)}] 프리셋 {added}개 추가 (PC · Android · iOS 그룹)");
         }
 
         private static bool Contains(object group, string name, int width, int height)

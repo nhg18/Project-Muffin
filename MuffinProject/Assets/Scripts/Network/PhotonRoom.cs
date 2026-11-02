@@ -4,9 +4,11 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Chapchu.Core;
+using Chapchu.Network.Events;
 
 namespace Chapchu.Network
 {
+    /// <summary>방 만들기 · 입장 · 나가기 요청과 그 콜백 (08-room.md). NetworkManager 가 갖고 있고, 결과는 RoomEvents 로 알린다.</summary>
     public class PhotonRoom
     {
         public void JoinRoom(string roomName)
@@ -56,7 +58,7 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.InRoom)
             {
-                Debug.LogWarning("Must be in room");
+                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 안에서만 방 설정을 바꿀 수 있다");
                 return;
             }
             PhotonNetwork.CurrentRoom.IsVisible = isVisible;
@@ -77,7 +79,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnCreateRoomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[PhotonRoom] 방 만들기 실패 [{returnCode}]: {message}");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 만들기 실패 [{returnCode}]: {message}");
 
             switch (returnCode)
             {
@@ -115,7 +117,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRoomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[PhotonRoom] 방 입장 실패: {message}");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 입장 실패: {message}");
             RoomEvents.RaiseJoinRoomFailed(returnCode, message);
         }
 
@@ -124,7 +126,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[PhotonRoom] 랜덤 입장 실패 — 새 방을 만든다: {message}");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 방을 만든다: {message}");
             CreateRoom();
         }
 
@@ -149,7 +151,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {
-            Debug.LogWarning($"[PhotonRoom] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
             RoomEvents.RaiseMasterClientSwitched(newMasterClient);
         }
     }

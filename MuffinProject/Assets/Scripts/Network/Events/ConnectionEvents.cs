@@ -4,12 +4,9 @@ using System.Collections.Generic;
 using Photon.Realtime;
 using UnityEngine;
 
-/// <summary>
-/// Connect 관련 외부로 노출되는 Event Hub
-/// </summary>
-
-namespace Chapchu.Network
+namespace Chapchu.Network.Events
 {
+    /// <summary>서버 연결 결과 통지 (09-network.md). UI 는 Photon 콜백 대신 이것을 구독한다 (CODE_CONVENTION 6절).</summary>
     public static class ConnectionEvents
     {
         public static event Action OnConnected;
