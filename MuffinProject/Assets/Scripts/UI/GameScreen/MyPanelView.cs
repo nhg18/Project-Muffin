@@ -37,7 +37,9 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text secondsText;
         [Tooltip("남은 초가 이 값 이하면 숫자를 경고 색으로 (시안: 5).")]
         [SerializeField] private int urgentSeconds = 5;
+        [Tooltip("남은 초 기본 글자 색.")]
         [SerializeField] private Color secondsColor = new Color32(0x11, 0x11, 0x11, 0xFF);
+        [Tooltip("남은 초가 urgentSeconds 이하일 때 글자 색.")]
         [SerializeField] private Color urgentSecondsColor = new Color32(0xF5, 0x4A, 0x18, 0xFF);
         [SerializeField] private TMP_Text handCountText;
 
@@ -49,19 +51,29 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text chapchuTagText;
         [SerializeField] private GameObject chapchuRing;
         [SerializeField] private Image chapchuShadow;
+        [Tooltip("누를 수 있을 때(10장 · 선언함) 버튼 바탕 색.")]
         [SerializeField] private Color readyFillColor = new Color32(0xF5, 0x4A, 0x18, 0xFF);
+        [Tooltip("누를 수 있을 때 버튼 글자 색.")]
         [SerializeField] private Color readyInkColor = Color.white;
+        [Tooltip("누를 수 있을 때 태그 바탕 색.")]
         [SerializeField] private Color readyTagFillColor = Color.white;
+        [Tooltip("누를 수 있을 때 태그 글자 색.")]
         [SerializeField] private Color readyTagInkColor = new Color32(0xF5, 0x4A, 0x18, 0xFF);
+        [Tooltip("누를 수 있을 때 버튼 그림자 색.")]
         [SerializeField] private Color readyShadowColor = new Color32(0x11, 0x11, 0x11, 0xFF);
+        [Tooltip("누를 수 없을 때(10장 아님) 버튼 바탕 색.")]
         [SerializeField] private Color unavailableFillColor = Color.white;
+        [Tooltip("누를 수 없을 때 버튼 글자 색.")]
         [SerializeField] private Color unavailableInkColor = new Color32(0x9A, 0xA3, 0xAD, 0xFF);
+        [Tooltip("누를 수 없을 때 태그 바탕 색.")]
         [SerializeField] private Color unavailableTagFillColor = new Color32(0xE6, 0xE9, 0xED, 0xFF);
+        [Tooltip("누를 수 없을 때 태그 글자 색.")]
         [SerializeField] private Color unavailableTagInkColor = new Color32(0x6B, 0x74, 0x80, 0xFF);
+        [Tooltip("누를 수 없을 때 버튼 그림자 색.")]
         [SerializeField] private Color unavailableShadowColor = new Color32(0x9A, 0xA3, 0xAD, 0xFF);
 
         /// <summary>찹츄 버튼을 눌렀다. 누를 수 있는지는 서버가 거절로 알려준다.</summary>
-        public event Action ChapchuClicked;
+        public event Action OnChapchuRequested;
 
         private void Awake()
         {
@@ -71,16 +83,18 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
-            chapchuButton.onClick.AddListener(HandleChapchuClicked);
+            chapchuButton.onClick.AddListener(HandleChapchuRequested);
         }
 
         private void OnDisable()
         {
-            chapchuButton.onClick.RemoveListener(HandleChapchuClicked);
+            chapchuButton.onClick.RemoveListener(HandleChapchuRequested);
         }
 
+        /// <summary>닉네임 표시 ("|닉네임")</summary>
         public void SetNickname(string nickname) => nicknameText.text = string.Format(NicknameFormat, nickname);
 
+        /// <summary>HP 숫자 · 막대. maxHp 가 0 이하면 막대를 비운다.</summary>
         public void SetHp(int hp, int maxHp)
         {
             float ratio = maxHp > 0 ? Mathf.Clamp01((float)hp / maxHp) : 0f;
@@ -88,6 +102,7 @@ namespace Chapchu.UI.GameScreen
             hpText.text = string.Format(HpFormat, hp);
         }
 
+        /// <summary>손패 수 표시 ("n/max장")</summary>
         public void SetHandCount(int count, int max) => handCountText.text = string.Format(HandCountFormat, count, max);
 
         /// <summary>내 턴 태그 표시 (03-turn.md 턴 표시).</summary>
@@ -122,6 +137,6 @@ namespace Chapchu.UI.GameScreen
             };
         }
 
-        private void HandleChapchuClicked() => ChapchuClicked?.Invoke();
+        private void HandleChapchuRequested() => OnChapchuRequested?.Invoke();
     }
 }

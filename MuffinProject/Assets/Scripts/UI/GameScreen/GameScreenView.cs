@@ -16,11 +16,17 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private RectTransform handArea;
         [SerializeField] private VictoryOverlayView victoryOverlay;
 
+        /// <summary>좌상단 방 코드</summary>
         public RoomCodeView RoomCode => roomCode;
+        /// <summary>왼쪽 히스토리</summary>
         public HistoryView History => history;
+        /// <summary>좌하단 내 패널</summary>
         public MyPanelView MyPanel => myPanel;
+        /// <summary>덱 더미</summary>
         public DeckView Deck => deck;
+        /// <summary>내 손패 영역</summary>
         public RectTransform HandArea => handArea;
+        /// <summary>승리 오버레이</summary>
         public VictoryOverlayView VictoryOverlay => victoryOverlay;
 
         private void Awake()

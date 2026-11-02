@@ -18,8 +18,11 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Button restartButton;
         [SerializeField] private Button toRoomButton;
 
-        public event Action RestartClicked;
-        public event Action ToRoomClicked;
+        /// <summary>다시 하기 버튼을 누름. 동작은 미정 (10-ui.md 11절 #6)</summary>
+        public event Action OnRestartRequested;
+
+        /// <summary>방으로 버튼을 누름. 동작은 미정 (10-ui.md 11절 #6)</summary>
+        public event Action OnToRoomRequested;
 
         private void Awake()
         {
@@ -29,16 +32,17 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
-            restartButton.onClick.AddListener(HandleRestartClicked);
-            toRoomButton.onClick.AddListener(HandleToRoomClicked);
+            restartButton.onClick.AddListener(HandleRestartRequested);
+            toRoomButton.onClick.AddListener(HandleToRoomRequested);
         }
 
         private void OnDisable()
         {
-            restartButton.onClick.RemoveListener(HandleRestartClicked);
-            toRoomButton.onClick.RemoveListener(HandleToRoomClicked);
+            restartButton.onClick.RemoveListener(HandleRestartRequested);
+            toRoomButton.onClick.RemoveListener(HandleToRoomRequested);
         }
 
+        /// <summary>승자 · 문구를 넣고 보인다.</summary>
         public void Show(string winnerNickname, string message)
         {
             winnerText.text = string.Format(WinnerFormat, winnerNickname);
@@ -46,10 +50,11 @@ namespace Chapchu.UI.GameScreen
             gameObject.SetActive(true);
         }
 
+        /// <summary>감춘다.</summary>
         public void Hide() => gameObject.SetActive(false);
 
-        private void HandleRestartClicked() => RestartClicked?.Invoke();
+        private void HandleRestartRequested() => OnRestartRequested?.Invoke();
 
-        private void HandleToRoomClicked() => ToRoomClicked?.Invoke();
+        private void HandleToRoomRequested() => OnToRoomRequested?.Invoke();
     }
 }

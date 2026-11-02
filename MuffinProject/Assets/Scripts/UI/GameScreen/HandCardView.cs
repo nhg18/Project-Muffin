@@ -15,6 +15,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image artImage;
         [SerializeField] private TMP_Text descriptionText;
 
+        /// <summary>이 카드의 인스턴스 ID (방장이 매긴 번호)</summary>
         public int InstanceId { get; private set; }
 
         private void Awake()
@@ -23,6 +24,7 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(HandCardView)}] 이름 · 그림 · 설명 참조 중 비어 있는 것이 있습니다.", this);
         }
 
+        /// <summary>어느 장인지와 카드 정의(이름 · 그림 · 설명)를 넣는다.</summary>
         public void Setup(int instanceId, CardData data)
         {
             InstanceId = instanceId;

@@ -27,14 +27,14 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
-            _view.DrawClicked += HandleDrawClicked;
+            _view.OnDrawRequested += HandleDrawRequested;
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnDeckRefilled += HandleDeckRefilled;
         }
 
         private void OnDisable()
         {
-            _view.DrawClicked -= HandleDrawClicked;
+            _view.OnDrawRequested -= HandleDrawRequested;
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnDeckRefilled -= HandleDeckRefilled;
         }
@@ -42,13 +42,14 @@ namespace Chapchu.UI.GameScreen
         // 씬이 늦게 열려 첫 분배 이벤트를 놓쳤을 때를 위해 지금 값 스냅샷에서 한 번 읽는다 (09-network.md 6.1).
         private void Start()
         {
-            if (!PhotonNetwork.InRoom) return;
+            if (!PhotonNetwork.InRoom)
+                return;
 
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.DeckCount, out object value) && value is int deckCount)
                 _view.SetDeckCount(deckCount);
         }
 
-        private void HandleDrawClicked() => server?.RequestDraw();
+        private void HandleDrawRequested() => server.RequestDraw();
 
         // 누가 뽑든 전원에게 온다.
         private void HandleCardDrawn(int actorNumber, int handCount, int deckCount) => _view.SetDeckCount(deckCount);

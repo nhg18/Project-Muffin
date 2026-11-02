@@ -31,6 +31,7 @@ namespace Chapchu.UI.GameScreen
                 Destroy(content.GetChild(content.childCount - 1).gameObject);
         }
 
+        /// <summary>항목을 모두 지운다.</summary>
         public void Clear()
         {
             for (int i = content.childCount - 1; i >= 0; i--)

@@ -16,7 +16,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Button button;
         [SerializeField] private TMP_Text countText;
 
-        public event Action DrawClicked;
+        /// <summary>덱 더미를 누름 — 드로우 요청 (10-ui.md 9절)</summary>
+        public event Action OnDrawRequested;
 
         private void Awake()
         {
@@ -34,8 +35,9 @@ namespace Chapchu.UI.GameScreen
             button.onClick.RemoveListener(HandleClicked);
         }
 
+        /// <summary>덱 남은 장수 표시 ("DRAW n")</summary>
         public void SetDeckCount(int count) => countText.text = string.Format(CountFormat, count);
 
-        private void HandleClicked() => DrawClicked?.Invoke();
+        private void HandleClicked() => OnDrawRequested?.Invoke();
     }
 }

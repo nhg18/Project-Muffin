@@ -25,11 +25,13 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HandCardView trapCardPrefab;
 
         [Header("연출")]
+        [Tooltip("카드가 손패 자리로 움직이는 시간(초). OutQuart.")]
         [SerializeField] private float moveDuration = 1f;
 
         private readonly List<HandCardView> _cards = new List<HandCardView>();
         private SplineContainer _spline;
 
+        /// <summary>손패 장수</summary>
         public int Count => _cards.Count;
 
         private void Awake()
@@ -56,7 +58,8 @@ namespace Chapchu.UI.GameScreen
         public bool RemoveCard(int instanceId)
         {
             int index = _cards.FindIndex(c => c.InstanceId == instanceId);
-            if (index < 0) return false;
+            if (index < 0)
+                return false;
 
             HandCardView card = _cards[index];
             _cards.RemoveAt(index);
@@ -70,7 +73,8 @@ namespace Chapchu.UI.GameScreen
         /// <summary>가운데(0.5)를 기준으로 좌우 대칭으로 놓는다. 오른쪽 카드가 위에 그려진다.</summary>
         public void Layout()
         {
-            if (_cards.Count == 0) return;
+            if (_cards.Count == 0)
+                return;
 
             float spacing = _cards.Count > SpacingBaseCount ? 1f / (_cards.Count + 1f) : 1f / SpacingBaseCount;
             float first = 0.5f - (_cards.Count - 1) * spacing / 2f;
@@ -91,14 +95,11 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        private HandCardView PrefabOf(CardType type)
+        private HandCardView PrefabOf(CardType type) => type switch
         {
-            switch (type)
-            {
-                case CardType.Counter: return counterCardPrefab;
-                case CardType.Trap:    return trapCardPrefab;
-                default:               return actionCardPrefab;
-            }
-        }
+            CardType.Counter => counterCardPrefab,
+            CardType.Trap    => trapCardPrefab,
+            _                => actionCardPrefab,
+        };
     }
 }

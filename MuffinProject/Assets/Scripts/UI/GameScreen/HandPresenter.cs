@@ -55,7 +55,8 @@ namespace Chapchu.UI.GameScreen
         // 전원에게 오지만 내 손패에서 뺄 것은 내 카드뿐이다.
         private void HandleCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
         {
-            if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber) return;
+            if (actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
+                return;
 
             if (!_view.RemoveCard(cardInstanceId))
                 Debug.LogWarning($"[{nameof(HandPresenter)}] 승인된 카드가 손패에 없다. instanceId={cardInstanceId}", this);
