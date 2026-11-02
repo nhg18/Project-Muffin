@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-02 · 실행 확인 skill (`docs/multi-test-skill`)
+
+### 결정
+- AI 전용. 평소 2클라이언트, 기능을 마칠 때만 4클라이언트.
+- 화면 조작은 컴포넌트의 private 처리 함수를 리플렉션으로 부른다. 이름이 바뀌면 `MultiTest.cs` 맨 위 표만 고친다 (테스트용 진입점을 코드에 따로 두지 않는다).
+
+### 한 것
+- `.claude/skills/multi-test/` — `SKILL.md` · `run.sh`(rules / ui / multi) · `MultiTest.cs`(`unity command script.run` 진입점, 프로젝트 밖).
+- 저장 안 한 씬이 있으면 멈춤 · Refresh 와 컴파일 대기 · 끝나면 시작 씬 · Run In Background 되돌림.
+- `CLAUDE.md` "직접 실행해서 확인" 에 skill 연결.
+- 확인: `rules 4 6` · `ui` · `multi 2 4` · `multi 4 4`(clone_1 · clone_2 를 스크립트가 열어서) 통과. 4클라이언트 첫 턴 줄(♥100 · 손5 · 첫 턴 주인)이 네 화면 같음.
+
+---
+
 ## 2026-11-02 · 카드 효과를 조립식으로 (`feature/card-effect-compose`)
 
 ### 결정
@@ -51,7 +65,7 @@
 ### 다음 할 일
 - [ ] 코드를 `CODE_CONVENTION.md` 에 맞추기 — 요청 이벤트 7개 `On` 접두사, 로그 접두사 · 한국어 7곳, `DebugScript:62` `var`, `RoomPresenter` 문구 모으기, `[SerializeField]` 참조 누락 LogError (11 파일)
 - [ ] 방 나가기는 항상 `LobbyScene` — `SceneFlow.ReturnSceneAfterRoom` 과 관련 코드 삭제, `docs/diagrams/ui-flow.workflow.json` 의 "들어온 씬" 흐름도 고치고 도식 다시 생성
-- [ ] 테스트 절차 skill 만들기 (Unity CLI 로 멀티 실행이 되는지 먼저 확인)
+- [x] 테스트 절차 skill 만들기 (Unity CLI 로 멀티 실행이 되는지 먼저 확인)
 - [ ] 기능 1 멀티 확인을 4클론으로 — 2클론은 통과(아래). DebugLobbyScene → 입장 → 방장 시작 → 각 콘솔의 `[GameDebugInput]` 턴 줄 비교. D = 뽑기, P = 첫 카드 사용
 - [ ] 인게임 화면 — 새 `GameScene` 에 UI 를 조립한다. 값은 `Network/Events/GameEvents` 로만 받는다 (`OnMy*` 는 나에게만 온다)
 - [x] 카드 효과를 `[SerializeReference]` 조립식으로 (기능 4 에서, `CODE_CONVENTION` 9절). 지금은 옛 `CardEffect` 구조체 그대로
