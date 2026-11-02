@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>찹츄 인게임 화면 시안</title>
+<!--
+  출처: Claude 아티팩트 「인게임 화면 UI」 (2026-09-28 판) 의 템플릿을 그대로 둔 정적 사본.
+  동적 템플릿(sc-for · sc-if) 은 표본 값으로 펼쳤고, 글꼴 · 배경은 프로젝트 에셋을 상대 경로로 가리킨다.
+  Unity 수치는 docs/systems/10-ui.md 2-1 — 이 파일의 CSS px × 2 가 캔버스 px (vh · vw 는 1920 × 1080 기준).
+  아티팩트에 없던 그림(치와와 캐릭터 3색 · 카드 앞면 3종)은 여기에도 없다 — 빈 자리로 둔다.
+-->
+<style>
+  @font-face { font-family: Galmuri11; font-weight: 400; src: url("../../MuffinProject/Assets/Fonts/GlaMuri/Galmuri11.ttf") format("truetype"); }
+  @font-face { font-family: Galmuri11; font-weight: 700; src: url("../../MuffinProject/Assets/Fonts/GlaMuri/Galmuri11-Bold.ttf") format("truetype"); }
+  html, body { margin:0; height:100%; background:#E7BDB6; overflow:hidden; }
+  .root { position:fixed; inset:0; overflow:hidden; font-family:'Galmuri11',monospace; color:#111; background:#E7BDB6; }
+  .bg { position:absolute; inset:0; background:url("../../MuffinProject/Assets/Sprites/UI/Background/bg_ingame.png") center/cover no-repeat; }
+  .tag { background:#111; color:#FFF; padding:8px 14px; font-weight:700; font-size:14px; white-space:nowrap; clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%); }
+  .box { background:#FFF; border:3px solid #111; }
+  .sq-btn { width:40px; height:40px; background:#FFF; border:3px solid #111; box-shadow:3px 3px 0 #111; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; cursor:pointer; }
+  .sq-btn:active { transform:translate(3px,3px); box-shadow:none; }
+  .card { aspect-ratio:9/13; }
+  .seat-name { color:#FFF; padding:4px 22px 4px 10px; font-size:14px; font-weight:700; white-space:nowrap; clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%); }
+  .hand-count { font-size:12px; font-weight:700; min-width:22px; padding:1px 5px; background:#FFF; border:2px solid #111; text-align:center; box-sizing:border-box; }
+  .chap-badge { font-size:11px; font-weight:700; padding:2px 7px; background:#F54A18; color:#FFF; border:2px solid #111; box-shadow:2px 2px 0 #111; white-space:nowrap; }
+  .hp-bar { flex:1; height:12px; border:3px solid #111; background:#FFF; }
+  .hp-bar > div { height:100%; }
+  .trap { height:100%; aspect-ratio:3/4; }
+  .trap.empty { background:rgba(255,255,255,.6); border:3px dashed #999; }
+  .trap.set { border:3px solid #111; }
+  .fan span { position:absolute; left:50%; bottom:0; height:100%; aspect-ratio:9/13; background:#0A9CFF; border:2px solid #FFF; box-shadow:0 0 0 2px #111; transform-origin:bottom center; }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="bg"></div>
+
+  <!-- 상단 바 (ROUND · ? · ≡ 는 Unity 에 넣지 않는다 — 10-ui.md 2-1) -->
+  <div style="position:absolute; left:18px; right:18px; top:16px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+    <div style="display:flex; gap:8px;">
+      <div class="tag">| ROOM CHU742</div>
+      <div class="box" style="padding:5px 12px; font-size:13px; font-weight:700; white-space:nowrap;">ROUND 3</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <div class="sq-btn">?</div>
+      <div class="sq-btn">≡</div>
+    </div>
+  </div>
+
+  <!-- 왼쪽: 히스토리 -->
+  <div style="position:absolute; left:18px; top:74px; bottom:calc(18px + clamp(190px,26vh,230px) + 14px); width:clamp(120px,10vw,150px); background:#FFF; border:4px solid #111; box-shadow:5px 5px 0 rgba(17,17,17,.35); display:flex; flex-direction:column; overflow:hidden;">
+    <div style="background:#111; color:#FFF; padding:6px 10px; font-size:12px; font-weight:700; white-space:nowrap;">| HISTORY</div>
+    <div style="flex:1; min-height:0; padding:10px; display:flex; flex-direction:column; gap:10px; overflow:hidden;">
+      <div style="flex:none; display:flex; flex-direction:column; gap:4px;">
+        <div class="card" style="width:100%; max-height:22vh; background:#FFF; box-shadow:0 0 0 3px #F54A18;"></div>
+        <div style="font-size:10px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Player#3 · 함정</div>
+      </div>
+      <div style="flex:none; display:flex; flex-direction:column; gap:4px;">
+        <div class="card" style="width:100%; max-height:22vh; background:#FFF; box-shadow:0 0 0 3px #6FA33A;"></div>
+        <div style="font-size:10px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Player#2 · 칠와와</div>
+      </div>
+      <div style="flex:none; display:flex; flex-direction:column; gap:4px;">
+        <div class="card" style="width:100%; max-height:22vh; background:#FFF; box-shadow:0 0 0 3px #0A9CFF;"></div>
+        <div style="font-size:10px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Player#4 · 공격</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상단: 상대 좌석 3 -->
+  <div style="position:absolute; left:calc(clamp(120px,10vw,150px) + 48px); right:18px; top:62px; height:32vh; display:flex; justify-content:space-around; align-items:flex-start; gap:16px;">
+
+    <div style="flex:0 1 230px; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div style="align-self:stretch; display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="seat-name" style="background:#0A9CFF;">|Player#2</span>
+          <span class="hand-count">5</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;"><div class="hp-bar"><div style="width:100%; background:#0A9CFF;"></div></div><span style="font-size:11px; font-weight:700;">100</span></div>
+      </div>
+      <div style="flex:1; min-height:11vh; aspect-ratio:3/4; max-width:100%; position:relative;">
+        <div style="position:absolute; inset:0;"></div>
+        <div class="fan" style="position:absolute; left:50%; bottom:20%; width:30%; height:24%;">
+          <span style="transform:translateX(-50%) rotate(-20deg);"></span><span style="transform:translateX(-50%) rotate(-10deg);"></span><span style="transform:translateX(-50%) rotate(0deg);"></span><span style="transform:translateX(-50%) rotate(10deg);"></span><span style="transform:translateX(-50%) rotate(20deg);"></span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; height:clamp(16px,3.2vh,30px);">
+        <span class="trap set" style="background:#0A9CFF;"></span><span class="trap set" style="background:#0A9CFF;"></span><span class="trap empty"></span>
+      </div>
+    </div>
+
+    <div style="flex:0 1 230px; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div style="align-self:stretch; display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="seat-name" style="background:#F54A18;">|Player#3</span>
+          <span class="hand-count">8</span>
+          <span class="chap-badge">찹츄!</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;"><div class="hp-bar"><div style="width:62%; background:#F54A18;"></div></div><span style="font-size:11px; font-weight:700;">62</span></div>
+      </div>
+      <div style="flex:1; min-height:11vh; aspect-ratio:3/4; max-width:100%; position:relative;">
+        <div style="position:absolute; inset:0;"></div>
+        <div class="fan" style="position:absolute; left:50%; bottom:20%; width:30%; height:24%;">
+          <span style="transform:translateX(-50%) rotate(-20deg);"></span><span style="transform:translateX(-50%) rotate(-10deg);"></span><span style="transform:translateX(-50%) rotate(0deg);"></span><span style="transform:translateX(-50%) rotate(10deg);"></span><span style="transform:translateX(-50%) rotate(20deg);"></span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; height:clamp(16px,3.2vh,30px);">
+        <span class="trap set" style="background:#F54A18;"></span><span class="trap empty"></span><span class="trap empty"></span>
+      </div>
+    </div>
+
+    <div style="flex:0 1 230px; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div style="align-self:stretch; display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="seat-name" style="background:#6FA33A;">|Player#4</span>
+          <span class="hand-count">3</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;"><div class="hp-bar"><div style="width:14%; background:#F54A18;"></div></div><span style="font-size:11px; font-weight:700;">14</span></div>
+      </div>
+      <div style="flex:1; min-height:11vh; aspect-ratio:3/4; max-width:100%; position:relative;">
+        <div style="position:absolute; inset:0;"></div>
+        <div class="fan" style="position:absolute; left:50%; bottom:20%; width:30%; height:24%;">
+          <span style="transform:translateX(-50%) rotate(-10deg);"></span><span style="transform:translateX(-50%) rotate(0deg);"></span><span style="transform:translateX(-50%) rotate(10deg);"></span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; height:clamp(16px,3.2vh,30px);">
+        <span class="trap empty"></span><span class="trap empty"></span><span class="trap empty"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 중앙: 덱 · 버림 -->
+  <div style="position:absolute; left:calc(clamp(120px,10vw,150px) + 48px); right:18px; top:calc(62px + 32vh); bottom:calc(14px + clamp(140px,24vh,300px)); display:flex; justify-content:center; align-items:center; gap:clamp(24px,5vw,80px);">
+    <div class="card" style="position:relative; height:clamp(110px,24vh,290px); cursor:pointer;">
+      <div style="position:absolute; inset:0; background:#0A9CFF; border:4px solid #FFF; box-shadow:0 0 0 3px #111, 5px 5px 0 3px rgba(17,17,17,.35); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#FFF; font-weight:700;">
+        <span style="font-size:clamp(28px,4vh,44px); line-height:1;">+</span>
+        <span style="font-size:10px; letter-spacing:.1em;">DRAW 18</span>
+      </div>
+    </div>
+    <div class="card" style="position:relative; height:clamp(110px,24vh,290px);">
+      <div style="position:absolute; inset:0; transform:translate(-12px,4px) rotate(-6deg); background:#FFF; border:3px solid #111;"></div>
+      <div style="position:absolute; inset:0; transform:translate(-6px,2px) rotate(-3deg); background:#FFF; border:3px solid #111;"></div>
+      <div style="position:absolute; inset:0; background:#FFF; box-shadow:0 0 0 3px #111;"></div>
+    </div>
+  </div>
+
+  <!-- 왼쪽 아래: 내 정보 · 턴 · 찹츄 -->
+  <div style="position:absolute; left:18px; bottom:18px; width:clamp(230px,19vw,270px); height:clamp(190px,26vh,230px); background:#FFF; border:4px solid #6FA33A; box-shadow:5px 5px 0 rgba(17,17,17,.35); display:flex; flex-direction:column; box-sizing:border-box;">
+    <div style="background:#6FA33A; color:#FFF; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px; font-weight:700; white-space:nowrap;">
+      <span style="display:flex; align-items:center; gap:6px;">|Player#1 <span style="font-size:10px; padding:2px 5px; background:#FFF; color:#6FA33A;">나</span></span>
+      <span style="font-size:11px;">HP 78</span>
+    </div>
+    <div style="flex:1; padding:10px 12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+      <div style="height:10px; border:2px solid #111;"><div style="width:78%; height:100%; background:#6FA33A;"></div></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; white-space:nowrap;">
+        <span style="font-size:12px; font-weight:700; background:#F54A18; color:#FFF; padding:4px 8px;">나의 턴!</span>
+        <span style="display:flex; align-items:baseline; gap:3px;"><span style="font-size:26px; font-weight:700; color:#111;">20</span><span style="font-size:11px;">초</span></span>
+        <span style="font-size:11px;">7/10장</span>
+      </div>
+      <!-- 비활성 상태. 활성: background #F54A18 · color #FFF · box-shadow 4px 4px 0 #111, 0 0 0 4px #FFF, 0 0 0 8px #F54A18 · 태그 #FFF/#F54A18 "지금 외치기!" -->
+      <div style="height:52px; background:#FFF; color:#9AA3AD; border:4px solid #111; box-shadow:4px 4px 0 #9AA3AD; display:flex; align-items:center; justify-content:center; gap:10px; cursor:not-allowed; white-space:nowrap;">
+        <span style="font-size:24px; font-weight:700; letter-spacing:.06em;">찹츄!</span>
+        <span style="font-size:11px; font-weight:700; padding:3px 6px; background:#E6E9ED; color:#6B7480;">7 / 10장</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 아래: 내 손패 (Unity 에서는 영역만 — 카드 배치는 이후 작업) -->
+  <div style="position:absolute; left:calc(clamp(230px,19vw,270px) + 48px); right:18px; bottom:14px; height:clamp(140px,24vh,300px); display:flex; justify-content:center; align-items:flex-end;">
+    <div class="card" style="height:100%; margin-left:0; transform:translateY(9px) rotate(-4.5deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(6px) rotate(-3deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(3px) rotate(-1.5deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(0) rotate(0deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(3px) rotate(1.5deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(6px) rotate(3deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+    <div class="card" style="height:100%; margin-left:-12px; transform:translateY(9px) rotate(4.5deg); transform-origin:bottom center; background:#FFF; box-shadow:5px 5px 0 rgba(17,17,17,.35);"></div>
+  </div>
+
+  <!-- 승리 오버레이 (기본 숨김 — display:flex 로 바꾸면 보인다) -->
+  <div style="position:absolute; inset:0; z-index:50; background:rgba(17,17,17,.55); display:none; align-items:center; justify-content:center; padding:20px;">
+    <div style="position:relative; width:min(460px,100%);">
+      <div style="position:absolute; left:0; top:0; z-index:2; width:84px; height:84px; border-radius:999px; background:#F54A18; border:5px solid #FFF; box-shadow:0 0 0 4px #F54A18; display:flex; align-items:center; justify-content:center; color:#FFF; font-size:30px; font-weight:700;">찹</div>
+      <div style="margin-left:56px; margin-top:10px; height:58px; background:#F54A18; color:#FFF; display:flex; align-items:center; padding-left:40px; font-size:28px; font-weight:700; white-space:nowrap; clip-path:polygon(0 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,0 100%);">|찹츄! 승리</div>
+      <div style="margin:-2px 16px 0 28px; background:#FFF; border:5px solid #F54A18; border-top:none; padding:36px 24px 24px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
+        <div style="font-size:18px; font-weight:700; line-height:1.5; white-space:nowrap;">Player#1 승리!</div>
+        <div style="font-size:13px; line-height:1.7;">손패 10장을 모아 찹츄를 외쳤습니다.</div>
+        <div style="display:flex; gap:10px;">
+          <div style="height:50px; padding:0 20px; background:#F54A18; color:#FFF; border:4px solid #111; box-shadow:4px 4px 0 #111; display:flex; align-items:center; font-size:16px; font-weight:700; white-space:nowrap; cursor:pointer;">다시 하기</div>
+          <div style="height:50px; padding:0 20px; background:#FFF; border:4px solid #111; box-shadow:4px 4px 0 #111; display:flex; align-items:center; font-size:16px; font-weight:700; white-space:nowrap; cursor:pointer;">룸으로</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

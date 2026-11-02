@@ -4,6 +4,132 @@
 
 ---
 
+## 2026-11-03 · 인게임 배치 조정 — 내 패널 축소 · 히스토리 연장 · 손패 가운데 · 카드 확대 · 덱 위로
+
+### 결정 (사용자 요청)
+- 내 패널을 히스토리(폭 240)보다 조금 크게: 시안 기준 수치를 × 0.65 → 300 × 248. 구성은 그대로.
+- 히스토리 아래 끝을 내 패널 위 28 로 → 위아래로 길어짐 (아래 444 → 312).
+- 손패를 화면 가운데로: 손패 영역 좌우 356 (내 패널 오른쪽 끝 336 + 20). 부채꼴 반폭 664 → 520, 양 끝 낙차 43 → 34 (한 칸 1.5° 유지).
+- 카드 188 × 280 → 226 × 336 (× 1.2), 손패 영역 높이도 336. 덱 중심 y 621 → 540 (손패 위 약 46 여백).
+
+### 한 것
+- 빌더 수치 반영(`MyPanelScale` · `MyPanelSize` · `HandAreaSideInset`), `BuildChapchuBadge` 에 크기 비율 인자. 씬은 `GameScene` 을 추가로 열어 내 패널 · 손패 · 카드 프리팹만 다시 만들고 위치값만 고쳐 저장 (사용자가 연 `DebugLobbyScene` 은 그대로).
+- 플레이 모드 확인: 5 · 10장 캡처. 10장일 때 카드 왼쪽 끝 ≈ 350 > 내 패널 오른쪽 336 — 겹치지 않음.
+
+### 다음 할 일
+- [x] 카드 지글거림 — 밉맵은 효과가 없어 되돌림(사용자 확인). 가장 큰 원인은 에디터 Game 뷰가 1920 × 1080 을 0.54 배로 줄여 보여 주는 것(1x 로 볼 것). 1:1 에서도 남던 기울어진 가는 선 계단은 카드 틀 3장 · `Sprites/Cards/Images` 26장의 **최대 크기 2048 → 512** 로 줄임(틀 344 × 512 · 그림 512 × 512, 화면 축소 3.6 → 1.5 배). 같은 장면 1:1 전후 캡처로 테두리 · 외곽선이 고르게 된 것 확인. 카드를 크게 보여 줄 일이 생기면 다시 올린다
+- [ ] 내 패널 글자(13 ~ 34)가 더 작아졌다 — 15-screen 최소 30 과 함께 QA
+
+---
+
+## 2026-11-02 · 내 손패 표시 — 스플라인 부채꼴 · 종류별 카드 틀 프리팹
+
+### 결정
+- 범위는 표시(뷰)와 서버 결과 연결(프레젠터)까지. 입력(HandMode · 호버 · 드래그 · 드롭)은 다음 작업 — 드롭 영역 수치가 없고 대상 선택용 상대 좌석을 빼 둔 상태.
+- 카드 종류 색은 `CardType` 기준: 행동 파랑 · 카운터 초록 · 함정 주황 (사용자 결정). `10-ui.md` 2-1 색표의 「공격 · 칠와와」를 고쳤다.
+- 카드는 `Assets/Prefab/PlayerActionCard Dummy` 와 같은 구성(틀 → 그림 → 이름 · 설명)을 UGUI 로 옮긴 프리팹 3개(`Assets/Prefab/UI/GameScreen/HandCard_Action|Counter|Trap`). 종류마다 틀 이미지(`Sprites/Cards/ActionCard|CounterCard|TrapCard.png`)만 다르고, 그 위에 `CardData` 의 이름 · 그림 · 설명을 입힌다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 처음 만든 임의 디자인(색 테두리 · 띠)은 사용자 요청으로 버렸다.
+- 더미의 설명 글자는 흰색인데 흰 바탕이라 잉크로 바꿨다. 글꼴은 `10-ui` 2-1 대로 Galmuri (더미는 둥근미소).
+- 카드 188 × 280(틀 비율 · 손패 영역 높이), 부채꼴은 시안처럼 한 칸 약 1.5° 인 원호 — 수치는 `10-ui.md` 2-1 「손패」. 옛 `origin/upgrade/unity6` `PlayerHandView.PutAwayMyCards` 의 배치 계산(1/10 간격, 10장 초과 시 축소, 1초 OutQuart)을 UGUI 2D(z 회전 · 형제 순서)로 옮겼다.
+- 옛 `Assets/Prefab/PlayerActionCard` 등은 SpriteRenderer · 없는 스크립트 기반이라 쓰지 않고 그대로 뒀다.
+
+### 한 것
+- `UI/GameScreen/`: `HandCardView`(한 장 표시) · `HandView`(SplineContainer 부채꼴, 추가 · 제거 · 배치) · `HandPresenter`(`OnMyCardDrawn` → 덱 에셋으로 CardData → 덱 더미 자리에서 추가, 내 `OnCardPlayed` → 제거).
+- 빌더: `BuildHand`(스플라인 · 뷰 · 프레젠터, 덱 에셋은 씬의 `PunGameServer.deck`), `EnsureHandCardPrefab(이름, 틀 경로)`(있으면 덮어쓰지 않음 — 다시 만들려면 프리팹을 지우고 실행). 씬은 `BuildHand` 만 CLI 로 실행.
+- 플레이 모드 확인(혼자 방장): 첫 5장이 덱에서 날아와 부채꼴, 덱 탭으로 10장(1/10 간격) · 13장(간격 축소) 캡처. 내 카드 사용 승인 이벤트(흉내)로 13 → 5장, 남의 이벤트는 무시. 카운터(카드 2) · 함정(메모리 임시 데이터) 틀 이미지 확인.
+- 카드 4(「찹츄 야호~」)의 그림 참조(guid `18436c33…`)는 프로젝트에 없는 파일이라 그림 칸이 빈다 — 데이터 문제.
+
+### 다음 할 일
+- [ ] 손패 입력 — HandMode · 호버 · 드래그 · 드롭 → `RequestPlayCard` (10-ui 4 · 6 · 9절). 드롭 영역 수치 · 상대 좌석 먼저
+- [ ] 2클론에서 실제 카드 사용 승인 → 손패에서 빠지는지 (혼자서는 대상 카드가 거절됨)
+- [ ] 씬이 늦게 열리면 첫 5장을 놓친다 — 내 손패 내용은 스냅샷이 없다 (09-network 6.1 확인 필요)
+- [ ] `Assets/Cards/Prototype_004_ACT` 그림 파일 다시 연결
+
+---
+
+## 2026-11-02 · 덱 더미 탭 → 드로우 요청 · 덱 잔여 장수 · 거절 토스트
+
+### 결정
+- 버튼 대신 시안의 덱 더미를 누르면 드로우를 요청한다. `DeckView`(`e49831f`)를 되살렸다 — 더미 전체가 `Button`.
+- 요청과 표시는 따로 흐른다. 탭 → `PunGameServer.RequestDraw()`(매개변수 없음, 요청자는 방장이 `info.Sender` 로). `DRAW n` 의 n = 덱 잔여 장수(05-deck 9절)로, `OnCardDrawn`(누가 뽑든) · `OnDeckRefilled` · 시작 때 `RoomProps.DeckCount` 로만 갱신 — 요청 뒤 미리 줄이지 않는다.
+- `IGameRequests` 는 2026-10-29(`8b0ab0a`) 옛 코드와 함께 빠졌다. 지금은 `PunGameServer` 를 `[SerializeField]` 로 직접 받는다 (`GameDebugInput` 과 같음).
+- 거절 문구는 옛 `RejectText` 그대로 → `10-ui.md` 8-2 로 확정, 11절 #7 닫음. 요청 종류와 무관한 `RejectToastPresenter` 하나가 받는다.
+- 덱 위치는 시안대로(중심 972, 621) — 오른쪽에 버림 더미 자리를 비워 둔다. 나중에 바꿔도 된다.
+- 씬은 재조립하지 않고 빌더의 `BuildDeck` 만 CLI 로 실행해 기존 캔버스에 넣었다.
+
+### 한 것
+- `UI/GameScreen/`: `DeckView` 복구, `DeckPresenter` · `RejectText` · `RejectToastPresenter` 추가. `GameScreenView.deck` 복구.
+- 빌더: `BuildDeck`(프레젠터 · 씬의 `PunGameServer` 연결), `GameCanvas` 에 `RejectToastPresenter`. 덱 글자 기본값 `DRAW -`.
+- 플레이 모드 확인(혼자 방을 만들고 `LoadLevel` 로 방장 시작): 덱 40 → 분배 뒤 `DRAW 35` → 덱 클릭 → `DRAW 34` · 손패 6장. 손패에 없는 카드 요청 → 방장 거절 코드 2 → 토스트 오브젝트가 「손패에 없는 카드입니다.」로 생성됨.
+- **확인 못 함**: 토스트가 화면에 보이는지. CLI 캡처에 팝업 캔버스(`DontDestroyOnLoad`)가 찍히지 않았다 — 오브젝트 · 위치 · 알파는 정상.
+
+### 다음 할 일
+- [ ] 에디터 Game 뷰에서 거절 토스트가 보이는지 눈으로 확인
+- [ ] 2클론: 남의 턴에 덱 탭 → 「내 턴이 아닙니다.」, 상대가 뽑을 때 내 `DRAW n` 감소
+
+---
+
+## 2026-11-02 · 게임 화면 방 코드 표시 (`RoomCodePresenter`)
+
+### 결정
+- 방 코드는 방장 판정 · 게임 상태를 거치지 않고 UI 가 방 이름을 직접 읽는다 (`10-ui.md` 2절). `GameScreenPresenter` 에 넣지 않고 따로 둔다 — 게임 이벤트와 무관.
+- `origin/upgrade/unity6` 의 `RoomCodePresenter`(`751e05e`)를 현재 `RoomCodeView` 에 맞춰 옮겼다.
+- 씬은 다시 조립하지 않고 기존 `RoomCodeTag` 에 컴포넌트만 붙였다 — 재조립하면 fileID 가 전부 바뀌어 diff 가 1만 줄이 된다. 빌더에도 같은 줄을 넣어 재조립 결과는 같다.
+
+### 한 것
+- `UI/GameScreen/RoomCodePresenter.cs` — `Start` 에서 `PhotonNetwork.CurrentRoom.Name` → `RoomCodeView`, 방 밖이면 `----`.
+- 빌더 `BuildRoomCodeTag` 에 프레젠터 부착, `GameScene.unity` 의 `RoomCodeTag` 에 부착.
+- 플레이 모드 확인: 방 밖 `| ROOM ----`, Photon 접속 · 시험 방 생성 후 프레젠터를 다시 붙여 `| ROOM DIPK` · 로그 `[RoomCodePresenter] 방 코드 DIPK`.
+
+### 다음 할 일
+- [ ] 로비 → 방 → 게임 시작 정상 흐름(2클론)에서 방 코드가 대기실과 같은지 확인
+
+---
+
+## 2026-11-02 · 상대 좌석 · 덱 · 버림 더미 UI 일단 제거
+
+### 결정
+- 사용자 요청으로 상대 좌석 UI(이름 줄 · 손패 수 · 찹츄 배지 · HP 바 · 캐릭터 자리 · 함정 슬롯 · 턴 외곽선 · 대상 강조)와 덱 · 버림 더미 UI 를 **우선** 뺐다. `10-ui.md` 2-1 은 되어야 할 상태라 그대로 둔다 — 다시 만들 때 기준.
+- 게임 로직의 덱 · 버림 더미(`GameServer.Deck.cs` 등)는 화면과 무관해 그대로.
+
+### 한 것
+- `OpponentSeatView` · `DeckView` · `DiscardPileView` 삭제. `GameScreenView` 의 해당 참조, 빌더의 `BuildOpponentSeat(s)` · `BuildDeck` · `BuildDiscardPile` · `BuildBackCard` · `WireArray` · 안 쓰게 된 색 상수 삭제.
+- Unity CLI 1.0.0-beta.15 설치 (`%LOCALAPPDATA%\unity\bin\unity.exe`). 열린 에디터에서 컴파일 확인 → `GameCanvas` 삭제 → `Chapchu/Game Screen/Build UI` 재조립 → 씬 저장 → 플레이 모드 캡처로 방 코드 · 히스토리 · 내 패널만 남은 것 확인.
+- 폰트 SDF 에셋 2개가 재조립 · 플레이 중 동적 글리프 추가로 바뀌었다 — 이번 변경과 무관.
+
+### 다음 할 일
+- [ ] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고)
+
+---
+
+## 2026-11-02 · 인게임 화면 UI 조립 (HTML 시안 → GameScene, 표시만)
+
+브랜치 `feature/game-screen`. 요청 · 이벤트는 잇지 않았다 — 뷰는 값을 받아 그리고 입력을 C# 이벤트로만 내보낸다.
+
+### 결정
+- HTML 시안 CSS px × 2 = 캔버스 px. `vh` · `vw` 는 1920 × 1080 기준 (`10-ui.md` 2-1).
+- 시안에 있지만 넣지 않은 것: `ROUND` · `?` · `≡` (기획에 없음), 화살꼬리 태그 · 점선 (직사각형 · 실선으로 대체).
+- 이번 범위 밖: 내 손패 카드, 상대 뒷면 부채꼴, 히스토리 카드 항목. 영역 · 앵커만 둠 (`HandArea` · `HandFanAnchor` · `HistoryView.Content`).
+- 아티팩트에 없던 그림(치와와 3색 · 카드 앞면 3종)은 빈 자리로. `CharacterImage` 는 Image 비활성, 스프라이트를 끼우면 `SetCharacter` 로 켠다.
+- 씬은 손으로 고치지 않고 에디터 메뉴(`Chapchu/Game Screen/Build UI`, `Scripts/Editor/GameScreenBuilder.cs`)가 조립한다. `GameCanvas` 가 이미 있으면 멈춘다 — 지우고 다시 실행. 수치를 바꿀 때는 빌더를 고치고 재조립하는 쪽이 Inspector 에서 손보는 것보다 재현이 쉽다.
+- Unity CLI(`com.unity.pipeline`)로 열린 에디터를 조종해 컴파일 · 메뉴 실행 · 저장 · 플레이 모드 캡처까지 확인했다. CLI 는 `%LOCALAPPDATA%\unity\bin\unity.exe` (새 셸에서는 `unity`). 캡처 `save_path` 는 프로젝트 안이어야 하고 `Assets/` 아래로 떨어지므로 끝나면 지운다.
+
+### 한 것
+- `docs/systems/10-ui.md` 2-1 「주요 수치」 — 색 · 글꼴 · 배치 · 좌석 슬롯 · 내 패널 · 승리 오버레이 · 넣지 않는 것.
+- `docs/mockups/ingame.html` — 아티팩트 「인게임 화면 UI」 정적 사본 (글꼴 · 배경은 프로젝트 에셋 상대 경로).
+- `Scripts/UI/GameScreen/` 8개: `GameScreenView`(영역 모음) · `RoomCodeView` · `HistoryView` · `OpponentSeatView` ×3 슬롯 · `MyPanelView`(`ChapchuButtonState`) · `DeckView` · `DiscardPileView` · `VictoryOverlayView`.
+- `Assets/Fonts/GlaMuri/Galmuri11 SDF` · `Galmuri11-Bold SDF` — 빌더가 TMP 동적 폰트로 생성 (SDFAA · 여백 5 · 2048). ttf 는 사용자가 넣음.
+- `GameScene.unity` — `GameCanvas`(1920 × 1080 · Expand) + `SafeArea` + `EventSystem`(StandaloneInputModule). 캡처로 확인: 기본 상태, 상태 변경(턴 외곽선 · 찹츄 활성 · 배지 · 함정 2/3 · 저체력 · 대상 강조 · 버림 비움), 승리 오버레이.
+
+### 다음 할 일
+- [ ] `GameScreenPresenter` — `GameEvents` 7개 구독 → 연출 큐 → 뷰. 좌석 인덱스 ↔ actorNumber 는 `02-player` 3절대로 한 곳에서. 초기값은 `PlayerProps` · `RoomProps`. 방 코드는 `PhotonNetwork.CurrentRoom.Name`
+- [ ] 입력 연결: `DeckView.DrawClicked` → `RequestDraw`, 좌석 `Clicked` → 대상 선택, `OnMyRequestRejected` → `MessageToast`. 찹츄 버튼 · 승리 오버레이는 요청 API 가 생기면 (기능 8)
+- [ ] 내 손패(`HandArea`) · 상대 뒷면 부채꼴(`HandFanAnchor`) · 히스토리 항목 프리팹(`HistoryView.AddEntry`)
+- [ ] 글자 22 ~ 28 의 모바일 가독성 보정 (`15-screen` 최소 30) — `12-title-ui` 4-3 방식으로 결정
+- [ ] 디자인 그림이 오면 `CharacterImage` · 카드 앞면 스프라이트 연결
+- [ ] `GameDebugInput`(D · P 키)과 화면이 같은 값을 보이는지 2클론으로 확인
+
+---
+
 ## 2026-11-02 · 로비 코드 컨벤션 (`feature/lobby-screen`)
 
 ### 한 것
