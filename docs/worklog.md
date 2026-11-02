@@ -18,6 +18,23 @@
 
 ---
 
+## 2026-11-02 · 코드를 컨벤션에 맞추기 (`fix/code-convention`)
+
+### 한 것
+- 요청 이벤트 7개 `On` 접두사 (`LobbyView` 3 · `RoomView` 2 · `TitleView` · `NicknameFieldView`). `DebugScript` 구독 함수 `OnJoinedRoom` → `HandleJoinedRoom`.
+- 로그 접두사를 `[{nameof(클래스)}]` 로, 영어 로그 7곳 한국어로 (`PhotonConnection` · `PhotonRoom` · `DebugScript` 외 문자열 접두사 10곳).
+- `var` 3곳 (`DebugScript` · `GameBootstrap`).
+- 화면 문구를 한 곳에: `LobbyPresenter` 상수, `RoomPresenter` 로그 문구 함수.
+- `[SerializeField]` 참조 누락 `Awake` LogError — 10 파일.
+- 기록에 없던 위반도 고침: `Network/Events/` 네임스페이스 `Chapchu.Network` → `Chapchu.Network.Events` (폴더 경로), 클래스 요약 없던 9 파일, 값 필드 `[Tooltip]` 10개, `PhotonConnection` 선언 순서.
+- 확인: 컴파일 · 타이틀 → 로비 → 없는 방 코드(경고 팝업) → 토스트 → 방 만들기 → 방 → 나가기, 2클론 디버그 로비 → 게임 → 카드 피해 두 화면 같음. 콘솔 에러 0.
+
+### 다음 할 일
+- [ ] public 멤버 XML 주석 없는 곳 약 98개 (Photon 콜백 · 단순 필드 포함) — 손댈지 결정
+- [x] 테스트 절차 skill — 위 항목에서 만듦
+
+---
+
 ## 2026-11-02 · 카드 효과를 조립식으로 (`feature/card-effect-compose`)
 
 ### 결정
@@ -63,7 +80,7 @@
 - Unity CLI 용 `com.unity.pipeline` 패키지 설치 — 에디터를 명령줄로 조종해 멀티 테스트를 직접 돌린다.
 
 ### 다음 할 일
-- [ ] 코드를 `CODE_CONVENTION.md` 에 맞추기 — 요청 이벤트 7개 `On` 접두사, 로그 접두사 · 한국어 7곳, `DebugScript:62` `var`, `RoomPresenter` 문구 모으기, `[SerializeField]` 참조 누락 LogError (11 파일)
+- [x] 코드를 `CODE_CONVENTION.md` 에 맞추기 — 요청 이벤트 7개 `On` 접두사, 로그 접두사 · 한국어 7곳, `DebugScript:62` `var`, `RoomPresenter` 문구 모으기, `[SerializeField]` 참조 누락 LogError (11 파일)
 - [ ] 방 나가기는 항상 `LobbyScene` — `SceneFlow.ReturnSceneAfterRoom` 과 관련 코드 삭제, `docs/diagrams/ui-flow.workflow.json` 의 "들어온 씬" 흐름도 고치고 도식 다시 생성
 - [x] 테스트 절차 skill 만들기 (Unity CLI 로 멀티 실행이 되는지 먼저 확인)
 - [ ] 기능 1 멀티 확인을 4클론으로 — 2클론은 통과(아래). DebugLobbyScene → 입장 → 방장 시작 → 각 콘솔의 `[GameDebugInput]` 턴 줄 비교. D = 뽑기, P = 첫 카드 사용

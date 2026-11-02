@@ -1,5 +1,6 @@
 ﻿using Chapchu.Core;
 using Chapchu.Network;
+using Chapchu.Network.Events;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -26,14 +27,14 @@ namespace Chapchu.UI.Title
 
         private void OnEnable()
         {
-            _view.ConnectRequested += HandleConnectRequested;
+            _view.OnConnectRequested += HandleConnectRequested;
             ConnectionEvents.OnConnected += HandleConnected;
             ConnectionEvents.OnDisconnected += HandleDisconnected;
         }
 
         private void OnDisable()
         {
-            _view.ConnectRequested -= HandleConnectRequested;
+            _view.OnConnectRequested -= HandleConnectRequested;
             ConnectionEvents.OnConnected -= HandleConnected;
             ConnectionEvents.OnDisconnected -= HandleDisconnected;
         }

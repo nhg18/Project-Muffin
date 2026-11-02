@@ -22,23 +22,23 @@ namespace Chapchu.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void SpawnManagers()
         {
-            foreach (var prefabName in ManagerPrefabs)
+            foreach (string prefabName in ManagerPrefabs)
                 Spawn(prefabName);
         }
 
         private static void Spawn(string prefabName)
         {
-            var path = PrefabRoot + prefabName;
+            string path = PrefabRoot + prefabName;
             var prefab = Resources.Load<GameObject>(path);
 
             if (prefab == null)
             {
-                Debug.LogError($"[GameBootstrap] 매니저 프리팹을 찾을 수 없습니다: Resources/{path}");
+                Debug.LogError($"[{nameof(GameBootstrap)}] 매니저 프리팹을 찾을 수 없습니다: Resources/{path}");
                 return;
             }
 
             // 프리팹의 Awake 에서 DontDestroyOnLoad 와 중복 검사가 수행된다.
-            var instance = Object.Instantiate(prefab);
+            GameObject instance = Object.Instantiate(prefab);
             instance.name = prefab.name;
         }
     }

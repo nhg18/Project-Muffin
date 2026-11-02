@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Chapchu.Core;
 using Chapchu.Network;
+using Chapchu.Network.Events;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -28,8 +29,8 @@ namespace Chapchu.UI.RoomScreen
 
         private void OnEnable()
         {
-            _view.StartRequested += HandleStartRequested;
-            _view.LeaveRequested += HandleLeaveRequested;
+            _view.OnStartRequested += HandleStartRequested;
+            _view.OnLeaveRequested += HandleLeaveRequested;
 
             RoomEvents.OnPlayerEntered += HandlePlayerEntered;
             RoomEvents.OnPlayerLeft += HandlePlayerLeft;
@@ -41,8 +42,8 @@ namespace Chapchu.UI.RoomScreen
 
         private void OnDisable()
         {
-            _view.StartRequested -= HandleStartRequested;
-            _view.LeaveRequested -= HandleLeaveRequested;
+            _view.OnStartRequested -= HandleStartRequested;
+            _view.OnLeaveRequested -= HandleLeaveRequested;
 
             RoomEvents.OnPlayerEntered -= HandlePlayerEntered;
             RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
@@ -65,25 +66,25 @@ namespace Chapchu.UI.RoomScreen
             _initialized = true;
 
             _view.SetRoomCode(PhotonNetwork.CurrentRoom.Name);
-            _view.AddLog($"{NetworkManager.Nickname}님이 입장했습니다.");
+            _view.AddLog(GetEnteredLog(NetworkManager.Nickname));
             Refresh();
         }
 
         private void HandlePlayerEntered(Player player)
         {
-            _view.AddLog($"{player.NickName}님이 입장했습니다.");
+            _view.AddLog(GetEnteredLog(player.NickName));
             Refresh();
         }
 
         private void HandlePlayerLeft(Player player)
         {
-            _view.AddLog($"{player.NickName}님이 퇴장했습니다.");
+            _view.AddLog(GetLeftLog(player.NickName));
             Refresh();
         }
 
         private void HandleMasterClientSwitched(Player newMaster)
         {
-            _view.AddLog($"{newMaster.NickName}님이 방장이 되었습니다.");
+            _view.AddLog(GetHostChangedLog(newMaster.NickName));
             Refresh();
         }
 
@@ -124,5 +125,10 @@ namespace Chapchu.UI.RoomScreen
             _view.SetPlayerCount(PhotonNetwork.CurrentRoom.PlayerCount, PhotonNetwork.CurrentRoom.MaxPlayers);
             _view.SetStartButton(PhotonNetwork.IsMasterClient, CanStartGame());
         }
+
+        // 방 로그 문구 (16-room-ui · 08-room.md 5절)
+        private static string GetEnteredLog(string nickname) => $"{nickname}님이 입장했습니다.";
+        private static string GetLeftLog(string nickname) => $"{nickname}님이 퇴장했습니다.";
+        private static string GetHostChangedLog(string nickname) => $"{nickname}님이 방장이 되었습니다.";
     }
 }

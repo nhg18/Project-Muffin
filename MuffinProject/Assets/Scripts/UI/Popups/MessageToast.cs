@@ -14,5 +14,11 @@ namespace Chapchu.UI.Popups
         {
             set => messageText.text = value;
         }
+
+        private void Awake()
+        {
+            if (messageText == null)
+                Debug.LogError($"[{nameof(MessageToast)}] {nameof(messageText)} 참조가 비어 있습니다.", this);
+        }
     }
 }

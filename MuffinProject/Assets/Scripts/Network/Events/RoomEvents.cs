@@ -4,12 +4,9 @@ using System.Collections.Generic;
 using Photon.Realtime;
 using UnityEngine;
 
-/// <summary>
-/// Room에서 외부로 노출되는 Event Bus
-/// </summary>
-
-namespace Chapchu.Network
+namespace Chapchu.Network.Events
 {
+    /// <summary>방 만들기 · 입장 · 나가기 · 인원 변화 통지 (08-room.md). UI 는 Photon 콜백 대신 이것을 구독한다 (CODE_CONVENTION 6절).</summary>
     public static class RoomEvents
     {
         public static event Action OnCreatedRoom;

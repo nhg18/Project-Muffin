@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Network;
+using Chapchu.Network.Events;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -12,13 +13,22 @@ using UnityEngine.Serialization;
 
 namespace Chapchu.DebugTools
 {
-
-
+    /// <summary>
+    /// 디버그 로비 씬의 입장 버튼. 정해진 이름의 방에 바로 들어간다 — 멀티 테스트용이라 로비 · 방 코드 흐름(08-room.md)을 거치지 않는다.
+    /// </summary>
     public class DebugScript : MonoBehaviour
     {
         [SerializeField] private Button joinButton;
-        [SerializeField] private string nickname = "Player";    
+        [Tooltip("입장할 때 쓸 닉네임. 뒤에 #번호가 붙는다")]
+        [SerializeField] private string nickname = "Player";
+        [Tooltip("들어갈 방 이름. 클라이언트끼리 같아야 한 방에 모인다")]
         [SerializeField] private string roomName = "Debug";
+
+        private void Awake()
+        {
+            if (joinButton == null)
+                Debug.LogError($"[{nameof(DebugScript)}] {nameof(joinButton)} 참조가 비어 있습니다.", this);
+        }
 
         private void Start()
         {
@@ -40,28 +50,28 @@ namespace Chapchu.DebugTools
 
         private void OnEnable()
         {
-            RoomEvents.OnJoinedRoom += OnJoinedRoom;
+            RoomEvents.OnJoinedRoom += HandleJoinedRoom;
         }
 
         private void OnDisable()
         {
-            RoomEvents.OnJoinedRoom -= OnJoinedRoom;
+            RoomEvents.OnJoinedRoom -= HandleJoinedRoom;
         }
     
         private void ClickJoinButton()
         {
             if (!PhotonNetwork.IsConnectedAndReady)
             {
-                Debug.LogError("JoinRoom failed. Client is not connected.");
+                Debug.LogError($"[{nameof(DebugScript)}] 서버에 연결되지 않아 방에 들어갈 수 없다");
                 return;
             }
         
 
-            var roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
+            RoomOptions roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
             PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
         }
 
-        private void OnJoinedRoom()
+        private void HandleJoinedRoom()
         {
             int actorNum = PhotonNetwork.LocalPlayer.ActorNumber;
             NetworkManager.Instance.SetNickname(NetworkManager.Nickname + $"#{actorNum}");

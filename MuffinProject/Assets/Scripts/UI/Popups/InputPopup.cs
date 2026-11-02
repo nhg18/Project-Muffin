@@ -35,6 +35,24 @@ namespace Chapchu.UI.Popups
         /// <summary>제출 버튼을 누름. 인자는 입력값</summary>
         public event Action<string> OnSubmitted;
 
+        private void Awake()
+        {
+            if (inputField == null)
+                Debug.LogError($"[{nameof(InputPopup)}] {nameof(inputField)} 참조가 비어 있습니다.", this);
+
+            if (placeholderText == null)
+                Debug.LogError($"[{nameof(InputPopup)}] {nameof(placeholderText)} 참조가 비어 있습니다.", this);
+
+            if (submitButton == null)
+                Debug.LogError($"[{nameof(InputPopup)}] {nameof(submitButton)} 참조가 비어 있습니다.", this);
+
+            if (submitButtonText == null)
+                Debug.LogError($"[{nameof(InputPopup)}] {nameof(submitButtonText)} 참조가 비어 있습니다.", this);
+
+            if (exitButton == null)
+                Debug.LogError($"[{nameof(InputPopup)}] {nameof(exitButton)} 참조가 비어 있습니다.", this);
+        }
+
         private void OnEnable()
         {
             submitButton.onClick.AddListener(HandleSubmitClicked);
