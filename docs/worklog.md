@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-11-02 · 카드 효과를 조립식으로 (`feature/card-effect-compose`)
+
+### 결정
+- 효과 클래스는 `Scripts/Game/Effects/` (`Chapchu.Game.Effects`), 이름은 `종류 + Effect`. 에셋에 클래스 이름으로 저장되므로 만든 뒤 바꾸지 않는다 (`CODE_CONVENTION` 9절에 추가).
+- 효과는 자기 `Apply` 로 실행하고, 상태는 `GameServer` 의 internal 메서드(`DealDamage`)로만 바꾼다. `EffectType` · `switch` 는 없앴다.
+- 지금 효과는 `Damage` 하나. 다른 종류는 수치(N)가 정해지는 기능에서 추가한다.
+
+### 한 것
+- `CardEffect`(추상) · `DamageEffect` · `EffectSubject` → `Game/Effects/`. 옛 `CardEffect` 구조체 · `EffectType` 삭제.
+- `CardData.effects` 를 `[SerializeReference]` 로. `DeckData.CreateCards` 는 빈 효과 칸을 빼고 LogError.
+- `Editor/CardDataEditor`: 효과 목록 + 메뉴(상속 클래스 자동 나열) · 끌어서 순서 바꾸기.
+- 카드 에셋 4개를 새 저장 형식으로 옮김 (값 그대로). 없는 에셋을 가리키던 옛 `conditions` 필드 제거.
+- `11-card-list` 5절을 조립식 기준으로 고침 (옛 구조체 설명이 남아 있었음).
+- 확인: 에셋 4개 효과 로드 · 덱 생성 · 에디터 추가 동작(메모리 임시 카드) · 규칙 계층 4인(대상 30 + 본인 7) · 2클론 멀티(카드 1 피해 20 · 카드 4 피해 5 가 두 화면 같음, 남의 턴 거절 코드 1). 인스펙터 화면 자체는 눈으로 보지 못했다.
+
+### 다음 할 일
+- [ ] 인스펙터에서 카드 에셋을 열어 효과 목록이 제대로 그려지는지 확인 (사람)
+- [ ] `11-card-list` 4절 "현재 상태" 열 · 15행의 클래스 이름은 "되어야 할 상태" 문서 규칙과 맞지 않음 — 정리 제안
+
+---
+
 ## 2026-11-01 · 지침 · 문서를 "되어야 할 상태" 기준으로
 
 ### 결정
@@ -33,7 +54,7 @@
 - [ ] 테스트 절차 skill 만들기 (Unity CLI 로 멀티 실행이 되는지 먼저 확인)
 - [ ] 기능 1 멀티 확인을 4클론으로 — 2클론은 통과(아래). DebugLobbyScene → 입장 → 방장 시작 → 각 콘솔의 `[GameDebugInput]` 턴 줄 비교. D = 뽑기, P = 첫 카드 사용
 - [ ] 인게임 화면 — 새 `GameScene` 에 UI 를 조립한다. 값은 `Network/Events/GameEvents` 로만 받는다 (`OnMy*` 는 나에게만 온다)
-- [ ] 카드 효과를 `[SerializeReference]` 조립식으로 (기능 4 에서, `CODE_CONVENTION` 9절). 지금은 옛 `CardEffect` 구조체 그대로
+- [x] 카드 효과를 `[SerializeReference]` 조립식으로 (기능 4 에서, `CODE_CONVENTION` 9절). 지금은 옛 `CardEffect` 구조체 그대로
 - [ ] 옛 카드 · 손패 프리팹 5개(`Assets/Prefab/Player*Card*` · `OtherPlayerHand`)와 `OldGameScene` 은 스크립트가 Missing — 화면을 새로 만들면 지운다
 
 ---

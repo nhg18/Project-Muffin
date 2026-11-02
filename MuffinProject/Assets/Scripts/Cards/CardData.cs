@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Chapchu.Game;
+using Chapchu.Game.Effects;
 using UnityEngine;
 
 namespace Chapchu.Cards
@@ -20,7 +21,8 @@ namespace Chapchu.Cards
         [TextArea]
         public string description;
 
-        [Header("카드 효과 — 종류 · 받는 사람 · 수치. 위에서부터 순서대로 실행")]
+        // 위에서부터 순서대로 실행. 인스펙터의 + 메뉴(Editor/CardDataEditor)로 종류를 골라 추가한다.
+        [SerializeReference]
         public List<CardEffect> effects = new List<CardEffect>();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Chapchu.Game.Effects;
 
 namespace Chapchu.Game
 {
@@ -35,24 +36,10 @@ namespace Chapchu.Game
             _events.Add(new CardPlayed(requester, card.InstanceId, card.CardId, targets, hand.Count, _discardPile.Count));
 
             foreach (CardEffect effect in card.Effects)
-                ApplyEffect(requester, targets, effect);
+                effect.Apply(this, requester, targets);
 
             AdvanceTurn(); // 행동 카드 사용은 메인 행동 (03-turn.md 3절)
             return TakeEvents();
-        }
-
-        // 효과 하나를 적용한다. 받는 사람은 효과마다 — 카드의 대상이거나 쓴 사람 본인.
-        private void ApplyEffect(int requester, int[] targets, CardEffect effect)
-        {
-            int[] receivers = effect.subject == EffectSubject.Self ? new[] { requester } : targets;
-
-            switch (effect.type)
-            {
-                case EffectType.Damage:
-                    foreach (int actor in receivers)
-                        SetHp(actor, _players[actor].Hp - effect.amount);
-                    break;
-            }
         }
 
         // 대상 타입에 맞게 대상을 정한다. 자동 타입은 서버가 정하고, 고르는 타입은 요청을 검사한다. 맞지 않으면 null.
