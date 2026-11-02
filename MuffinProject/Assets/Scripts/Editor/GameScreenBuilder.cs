@@ -35,7 +35,6 @@ namespace Chapchu.EditorTools
 
         // 10-ui.md 2-1 「색 · 글꼴」
         private static readonly Color Ink = Hex(0x111111);
-        private static readonly Color Blue = Hex(0x0A9CFF);
         private static readonly Color Orange = Hex(0xF54A18);
         private static readonly Color Green = Hex(0x6FA33A);
         private static readonly Color White = Color.white;
@@ -44,9 +43,6 @@ namespace Chapchu.EditorTools
         private static readonly Color DisabledInk = Hex(0x9AA3AD);
         private static readonly Color DisabledTagFill = Hex(0xE6E9ED);
         private static readonly Color DisabledTagInk = Hex(0x6B7480);
-        private static readonly Color TrapEmptyBorder = Hex(0x999999);
-        private static readonly Color TrapEmptyFill = new Color(1f, 1f, 1f, 0.6f);
-        private static readonly Color[] SeatColors = { Blue, Orange, Green };
 
         private static TMP_FontAsset _regularFont;
         private static TMP_FontAsset _boldFont;
@@ -66,16 +62,12 @@ namespace Chapchu.EditorTools
             GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
             BuildBackground(canvasRect);
 
-            DeckView deck = BuildDeck(canvasRect);
-            DiscardPileView discardPile = BuildDiscardPile(canvasRect);
-
             RectTransform safeArea = NewRect("SafeArea", canvasRect);
             Stretch(safeArea);
             safeArea.gameObject.AddComponent<SafeArea>();
 
             RoomCodeView roomCode = BuildRoomCodeTag(safeArea);
             HistoryView history = BuildHistory(safeArea);
-            OpponentSeatView[] seats = BuildOpponentSeats(safeArea);
             MyPanelView myPanel = BuildMyPanel(safeArea);
             RectTransform handArea = BuildHandArea(safeArea);
 
@@ -84,9 +76,8 @@ namespace Chapchu.EditorTools
             EnsureEventSystem();
 
             Wire(screen,
-                ("roomCode", roomCode), ("history", history), ("myPanel", myPanel), ("deck", deck),
-                ("discardPile", discardPile), ("handArea", handArea), ("victoryOverlay", victory));
-            WireArray(screen, "opponentSeats", seats);
+                ("roomCode", roomCode), ("history", history), ("myPanel", myPanel),
+                ("handArea", handArea), ("victoryOverlay", victory));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -175,103 +166,6 @@ namespace Chapchu.EditorTools
 
             var view = root.gameObject.AddComponent<HistoryView>();
             Wire(view, ("content", content));
-            return view;
-        }
-
-        private static OpponentSeatView[] BuildOpponentSeats(RectTransform parent)
-        {
-            RectTransform area = NewRect("OpponentSeats", parent);
-            area.anchorMin = new Vector2(0f, 1f);
-            area.anchorMax = new Vector2(1f, 1f);
-            area.pivot = new Vector2(0.5f, 1f);
-            area.offsetMin = new Vector2(336f, -124f - 346f);
-            area.offsetMax = new Vector2(-36f, -124f);
-
-            var seats = new OpponentSeatView[3];
-            for (int i = 0; i < 3; i++)
-                seats[i] = BuildOpponentSeat(area, i);
-            return seats;
-        }
-
-        // 좌석 인덱스 1 · 2 · 3 (02-player.md 3절) = 슬롯 0 · 1 · 2. 영역을 3등분한 가운데에 둔다.
-        private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot)
-        {
-            Color seatColor = SeatColors[slot];
-            int seatIndex = slot + 1;
-
-            Image root = NewImage($"Seat{seatIndex}", area, Color.clear, null, true);
-            float centerX = (slot + 0.5f) / 3f;
-            Anchor(root.rectTransform, new Vector2(centerX, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(460f, 346f));
-
-            RectTransform turnOutline = BuildFrame("TurnOutline", root.transform, Green, 8f);
-            turnOutline.gameObject.SetActive(false);
-
-            Image targetHighlight = NewImage("TargetHighlight", root.transform, new Color(1f, 1f, 1f, 0.4f));
-            Stretch(targetHighlight.rectTransform, -8f, -8f, -8f, -8f);
-            targetHighlight.gameObject.SetActive(false);
-
-            // 이름 줄
-            RectTransform nameRow = NewRect("NameRow", root.transform);
-            nameRow.anchorMin = new Vector2(0f, 1f);
-            nameRow.anchorMax = new Vector2(1f, 1f);
-            nameRow.pivot = new Vector2(0f, 1f);
-            nameRow.anchoredPosition = Vector2.zero;
-            nameRow.sizeDelta = new Vector2(0f, 50f);
-            HorizontalLayout(nameRow, new RectOffset(), 12f, TextAnchor.MiddleLeft, true, true);
-
-            Image nameTag = NewImage("NameTag", nameRow, seatColor);
-            HorizontalLayout(nameTag.rectTransform, new RectOffset(20, 44, 8, 8), 0f, TextAnchor.MiddleLeft, true, true);
-            nameTag.gameObject.AddComponent<LayoutElement>().minHeight = 50f;
-            TMP_Text nicknameText = NewText("NicknameText", nameTag.transform, $"|Player#{seatIndex + 1}", 28f, White, true, TextAlignmentOptions.Left);
-
-            Image handCountFill = LayoutBox("HandCountBox", nameRow, Ink, 4, White, new RectOffset(10, 10, 2, 2));
-            handCountFill.transform.parent.gameObject.AddComponent<LayoutElement>().minWidth = 44f;
-            TMP_Text handCountText = NewText("HandCountText", handCountFill.transform, "5", 24f, Ink, true);
-
-            Image badge = BuildChapchuBadge(nameRow);
-
-            // HP 줄
-            RectTransform hpBar = NewRect("HpBar", root.transform);
-            hpBar.anchorMin = new Vector2(0f, 1f);
-            hpBar.anchorMax = new Vector2(1f, 1f);
-            hpBar.pivot = new Vector2(0f, 1f);
-            hpBar.offsetMin = new Vector2(0f, -58f - 24f);
-            hpBar.offsetMax = new Vector2(-72f, -58f);
-            Image hpTrack = Box("Track", hpBar, Ink, 6f, White);
-            Image hpFill = NewImage("Fill", hpTrack.transform, seatColor);
-            Stretch(hpFill.rectTransform);
-            hpFill.rectTransform.anchorMax = new Vector2(1f, 1f);
-            TMP_Text hpText = NewText("HpText", root.transform, "100", 22f, Ink, true, TextAlignmentOptions.Left);
-            Anchor(hpText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -58f), new Vector2(60f, 24f));
-
-            // 캐릭터 — 그림은 아직 없다 (10-ui.md 2-1)
-            Image character = NewImage("CharacterImage", root.transform, White);
-            Anchor(character.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -98f), new Vector2(141f, 188f));
-            character.enabled = false;
-            RectTransform fanAnchor = NewRect("HandFanAnchor", character.rectTransform);
-            Anchor(fanAnchor, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 38f), new Vector2(42f, 45f));
-
-            // 함정 슬롯
-            RectTransform traps = NewRect("TrapSlots", root.transform);
-            Anchor(traps, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -302f), new Vector2(105f, 36f));
-            var trapBorders = new Image[3];
-            var trapFills = new Image[3];
-            for (int i = 0; i < 3; i++)
-            {
-                trapFills[i] = Box($"Slot{i}", traps, TrapEmptyBorder, 6f, TrapEmptyFill);
-                trapBorders[i] = trapFills[i].transform.parent.GetComponent<Image>();
-                Anchor(trapBorders[i].rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 39f, 0f), new Vector2(27f, 36f));
-            }
-
-            var view = root.gameObject.AddComponent<OpponentSeatView>();
-            Wire(view,
-                ("nicknameText", nicknameText), ("handCountText", handCountText), ("chapchuBadge", badge.gameObject),
-                ("hpFill", hpFill.rectTransform), ("hpFillImage", hpFill), ("hpText", hpText),
-                ("characterImage", character), ("handFanAnchor", fanAnchor),
-                ("turnOutline", turnOutline.gameObject), ("targetHighlight", targetHighlight.gameObject));
-            WireArray(view, "trapSlotBorders", trapBorders);
-            WireArray(view, "trapSlotFills", trapFills);
-            SetColor(view, "seatColor", seatColor);
             return view;
         }
 
@@ -390,60 +284,6 @@ namespace Chapchu.EditorTools
                 ("chapchuButton", chapchuButton), ("chapchuFill", buttonFill), ("chapchuLabel", label),
                 ("chapchuTag", tag), ("chapchuTagText", tagText), ("chapchuRing", ring.gameObject), ("chapchuShadow", shadow));
             return view;
-        }
-
-        private static DeckView BuildDeck(RectTransform parent)
-        {
-            RectTransform root = NewRect("Deck", parent);
-            Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(12f, -81f), new Vector2(179f, 259f));
-
-            HardShadow(root, Shadow, 10f, 10f, 6f);
-            Image ringImage = NewImage("Ring", root, Ink);
-            Stretch(ringImage.rectTransform, -6f, -6f, -6f, -6f);
-            Image fill = Box("Box", root, White, 8f, Blue, true);
-
-            TMP_Text plus = NewText("PlusText", fill.transform, "+", 56f, White, true);
-            Anchor(plus.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 16f), new Vector2(160f, 64f));
-            TMP_Text count = NewText("CountText", fill.transform, "DRAW 18", 20f, White, true);
-            count.characterSpacing = 10f;
-            Anchor(count.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(160f, 30f));
-
-            Button button = root.gameObject.AddComponent<Button>();
-            button.targetGraphic = fill;
-            button.transition = Selectable.Transition.None;
-
-            var view = root.gameObject.AddComponent<DeckView>();
-            Wire(view, ("button", button), ("countText", count));
-            return view;
-        }
-
-        private static DiscardPileView BuildDiscardPile(RectTransform parent)
-        {
-            RectTransform root = NewRect("DiscardPile", parent);
-            Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(288f, -81f), new Vector2(179f, 259f));
-
-            BuildBackCard(root, "BackCard2", new Vector2(-24f, -8f), -6f);
-            BuildBackCard(root, "BackCard1", new Vector2(-12f, -4f), -3f);
-
-            RectTransform top = NewRect("TopCard", root);
-            Stretch(top);
-            Image topRing = NewImage("Ring", top, Ink);
-            Stretch(topRing.rectTransform, -6f, -6f, -6f, -6f);
-            Image face = NewImage("Face", top, White);
-            Stretch(face.rectTransform);
-
-            var view = root.gameObject.AddComponent<DiscardPileView>();
-            Wire(view, ("topCard", top.gameObject), ("topCardImage", face));
-            return view;
-        }
-
-        private static void BuildBackCard(RectTransform parent, string name, Vector2 offset, float rotation)
-        {
-            Image fill = Box(name, parent, Ink, 6f, White);
-            RectTransform border = fill.transform.parent.GetComponent<RectTransform>();
-            Stretch(border);
-            border.anchoredPosition = offset;
-            border.localRotation = Quaternion.Euler(0f, 0f, rotation);
         }
 
         private static RectTransform BuildHandArea(RectTransform parent)
@@ -754,23 +594,6 @@ namespace Chapchu.EditorTools
 
                 property.objectReferenceValue = value;
             }
-
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        private static void WireArray(Component target, string field, Object[] values)
-        {
-            var serialized = new SerializedObject(target);
-            SerializedProperty property = serialized.FindProperty(field);
-            if (property == null)
-            {
-                Debug.LogError($"[{nameof(GameScreenBuilder)}] {target.GetType().Name} 에 {field} 필드가 없다.");
-                return;
-            }
-
-            property.arraySize = values.Length;
-            for (int i = 0; i < values.Length; i++)
-                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
