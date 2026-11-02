@@ -16,8 +16,10 @@ namespace Chapchu.UI.Title
             _label = GetComponent<TMP_Text>();
         }
 
+        /// <summary>문구를 띄운다 (즉시, 12-title-ui.md 10-3).</summary>
         public void Show(string message) => _label.text = message;
 
+        /// <summary>문구를 지운다. 자리는 남는다.</summary>
         public void Clear() => _label.text = string.Empty;
     }
 }

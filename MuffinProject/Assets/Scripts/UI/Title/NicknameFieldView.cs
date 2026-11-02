@@ -12,9 +12,11 @@ namespace Chapchu.UI.Title
         [SerializeField] private TMP_InputField inputField;
         [SerializeField] private TMP_Text countText;
 
-        public event Action<string> OnValueChanged;
-
+        /// <summary>지금 입력값 (앞뒤 공백 포함 — 검증 쪽이 자른다)</summary>
         public string Text => inputField.text;
+
+        /// <summary>사람이 입력을 바꿈. 인자는 바뀐 입력값. SetText 로 바꿀 때는 오지 않는다.</summary>
+        public event Action<string> OnValueChanged;
 
         private void Awake()
         {
