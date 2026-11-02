@@ -1,11 +1,15 @@
 ﻿using System.IO;
+using Chapchu.Cards;
+using Chapchu.Network;
 using Chapchu.UI;
 using Chapchu.UI.GameScreen;
 using TMPro;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Splines;
 using UnityEngine.TextCore.LowLevel;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -14,7 +18,7 @@ namespace Chapchu.EditorTools
 {
     /// <summary>
     /// 인게임 화면 UI 를 열려 있는 씬에 조립한다 (메뉴 Chapchu/Game Screen/Build UI).
-    /// 수치 · 색은 docs/systems/10-ui.md 2-1 (HTML 시안 × 2). 손패 · 상대 손패 · 히스토리 항목은 영역만 두고 만들지 않는다 (2026-11-02).
+    /// 수치 · 색은 docs/systems/10-ui.md 2-1 (HTML 시안 × 2). 손패는 부채꼴 · 카드 프리팹(종류별 3개)까지, 상대 손패 · 히스토리 항목은 만들지 않는다.
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
     /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다.
     /// </summary>
@@ -27,6 +31,7 @@ namespace Chapchu.EditorTools
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
         private const string BackgroundPath = "Assets/Sprites/UI/Background/bg_ingame.png";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
+        private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
 
         // TMP 동적 폰트 생성값 — Galmuri9 SDF 와 같은 방식(SDFAA · 여백 5), 아틀라스는 2048 로 시작해 필요하면 늘어난다.
         private const int FontSamplingPointSize = 44;
@@ -35,6 +40,7 @@ namespace Chapchu.EditorTools
 
         // 10-ui.md 2-1 「색 · 글꼴」
         private static readonly Color Ink = Hex(0x111111);
+        private static readonly Color Blue = Hex(0x0A9CFF);
         private static readonly Color Orange = Hex(0xF54A18);
         private static readonly Color Green = Hex(0x6FA33A);
         private static readonly Color White = Color.white;
@@ -62,6 +68,8 @@ namespace Chapchu.EditorTools
             GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
             BuildBackground(canvasRect);
 
+            DeckView deck = BuildDeck(canvasRect);
+
             RectTransform safeArea = NewRect("SafeArea", canvasRect);
             Stretch(safeArea);
             safeArea.gameObject.AddComponent<SafeArea>();
@@ -70,14 +78,16 @@ namespace Chapchu.EditorTools
             HistoryView history = BuildHistory(safeArea);
             MyPanelView myPanel = BuildMyPanel(safeArea);
             RectTransform handArea = BuildHandArea(safeArea);
+            BuildHand(handArea, deck);
 
             VictoryOverlayView victory = BuildVictoryOverlay(canvasRect);
 
             EnsureEventSystem();
 
             Wire(screen,
-                ("roomCode", roomCode), ("history", history), ("myPanel", myPanel),
+                ("roomCode", roomCode), ("history", history), ("myPanel", myPanel), ("deck", deck),
                 ("handArea", handArea), ("victoryOverlay", victory));
+            screen.gameObject.AddComponent<RejectToastPresenter>();
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -139,7 +149,7 @@ namespace Chapchu.EditorTools
             root.anchorMin = new Vector2(0f, 0f);
             root.anchorMax = new Vector2(0f, 1f);
             root.pivot = new Vector2(0f, 1f);
-            root.offsetMin = new Vector2(36f, 444f);
+            root.offsetMin = new Vector2(36f, 36f + MyPanelSize.y + 28f); // 내 패널 위 28
             root.offsetMax = new Vector2(36f + 240f, -148f);
 
             HardShadow(root, Shadow, 10f, 10f);
@@ -170,23 +180,31 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        private static Image BuildChapchuBadge(Transform parent)
+        private static Image BuildChapchuBadge(Transform parent, float scale = 1f)
         {
-            Image fill = LayoutBox("ChapchuBadge", parent, Ink, 4, Orange, new RectOffset(14, 14, 4, 4));
+            int S(float v) => Mathf.RoundToInt(v * scale);
+            Image fill = LayoutBox("ChapchuBadge", parent, Ink, S(4), Orange, new RectOffset(S(14), S(14), S(4), S(4)));
             Image border = fill.transform.parent.GetComponent<Image>();
-            HardShadow(border.rectTransform, Ink, 4f, 4f);
-            NewText("Text", fill.transform, "찹츄!", 22f, White, true);
+            HardShadow(border.rectTransform, Ink, S(4), S(4));
+            NewText("Text", fill.transform, "찹츄!", S(22), White, true);
             border.gameObject.SetActive(false);
             return border;
         }
 
+        // 내 패널은 시안 수치(460 × 380 기준)를 MyPanelScale 배로 줄여 히스토리(폭 240)보다 조금 크게 둔다 (2026-11-03).
+        private const float MyPanelScale = 0.65f;
+        private static readonly Vector2 MyPanelSize = new Vector2(300f, 248f);
+
         private static MyPanelView BuildMyPanel(RectTransform parent)
         {
+            float S(float v) => Mathf.Round(v * MyPanelScale);
+            int I(float v) => Mathf.RoundToInt(v * MyPanelScale);
+
             RectTransform root = NewRect("MyPanel", parent);
-            Anchor(root, Vector2.zero, Vector2.zero, new Vector2(36f, 36f), new Vector2(460f, 380f));
+            Anchor(root, Vector2.zero, Vector2.zero, new Vector2(36f, 36f), MyPanelSize);
 
             HardShadow(root, Shadow, 10f, 10f);
-            Image fill = Box("Box", root, Green, 8f, White);
+            Image fill = Box("Box", root, Green, S(8), White);
 
             // 헤더
             Image header = NewImage("Header", fill.transform, Green);
@@ -194,30 +212,30 @@ namespace Chapchu.EditorTools
             header.rectTransform.anchorMax = new Vector2(1f, 1f);
             header.rectTransform.pivot = new Vector2(0.5f, 1f);
             header.rectTransform.anchoredPosition = Vector2.zero;
-            header.rectTransform.sizeDelta = new Vector2(0f, 52f);
-            HorizontalLayout(header.rectTransform, new RectOffset(20, 20, 0, 0), 12f, TextAnchor.MiddleLeft, true, true);
+            header.rectTransform.sizeDelta = new Vector2(0f, S(52));
+            HorizontalLayout(header.rectTransform, new RectOffset(I(20), I(20), 0, 0), S(12), TextAnchor.MiddleLeft, true, true);
 
-            TMP_Text nicknameText = NewText("NicknameText", header.transform, "|Player#1", 28f, White, true, TextAlignmentOptions.Left);
+            TMP_Text nicknameText = NewText("NicknameText", header.transform, "|Player#1", S(28), White, true, TextAlignmentOptions.Left);
 
             Image meTag = NewImage("MeTag", header.transform, White);
-            HorizontalLayout(meTag.rectTransform, new RectOffset(10, 10, 4, 4), 0f, TextAnchor.MiddleCenter, true, true);
-            NewText("Text", meTag.transform, "나", 20f, Green, false);
+            HorizontalLayout(meTag.rectTransform, new RectOffset(I(10), I(10), I(4), I(4)), 0f, TextAnchor.MiddleCenter, true, true);
+            NewText("Text", meTag.transform, "나", S(20), Green, false);
 
-            Image badge = BuildChapchuBadge(header.transform);
+            Image badge = BuildChapchuBadge(header.transform, MyPanelScale);
 
             RectTransform spacer = NewRect("Spacer", header.transform);
             spacer.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            TMP_Text hpText = NewText("HpText", header.transform, "HP 100", 22f, White, false, TextAlignmentOptions.Right);
+            TMP_Text hpText = NewText("HpText", header.transform, "HP 100", S(22), White, false, TextAlignmentOptions.Right);
 
             // HP 바
             RectTransform hpBar = NewRect("HpBar", fill.transform);
             hpBar.anchorMin = new Vector2(0f, 1f);
             hpBar.anchorMax = new Vector2(1f, 1f);
             hpBar.pivot = new Vector2(0f, 1f);
-            hpBar.offsetMin = new Vector2(24f, -72f - 20f);
-            hpBar.offsetMax = new Vector2(-24f, -72f);
-            Image hpTrack = Box("Track", hpBar, Ink, 4f, White);
+            hpBar.offsetMin = new Vector2(S(24), -S(72) - S(20));
+            hpBar.offsetMax = new Vector2(-S(24), -S(72));
+            Image hpTrack = Box("Track", hpBar, Ink, S(4), White);
             Image hpFill = NewImage("Fill", hpTrack.transform, Green);
             Stretch(hpFill.rectTransform);
 
@@ -226,52 +244,52 @@ namespace Chapchu.EditorTools
             turnRow.anchorMin = new Vector2(0f, 1f);
             turnRow.anchorMax = new Vector2(1f, 1f);
             turnRow.pivot = new Vector2(0f, 1f);
-            turnRow.offsetMin = new Vector2(24f, -108f - 52f);
-            turnRow.offsetMax = new Vector2(-24f, -108f);
+            turnRow.offsetMin = new Vector2(S(24), -S(108) - S(52));
+            turnRow.offsetMax = new Vector2(-S(24), -S(108));
 
             Image turnTag = NewImage("TurnTag", turnRow, Orange);
-            Anchor(turnTag.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(120f, 44f));
-            HorizontalLayout(turnTag.rectTransform, new RectOffset(16, 16, 8, 8), 0f, TextAnchor.MiddleCenter, true, true);
+            Anchor(turnTag.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(S(120), S(44)));
+            HorizontalLayout(turnTag.rectTransform, new RectOffset(I(16), I(16), I(8), I(8)), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(turnTag.gameObject);
-            NewText("Text", turnTag.transform, "나의 턴!", 24f, White, true);
+            NewText("Text", turnTag.transform, "나의 턴!", S(24), White, true);
 
             RectTransform timer = NewRect("Timer", turnRow);
-            Anchor(timer, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(100f, 52f));
-            HorizontalLayout(timer, new RectOffset(), 6f, TextAnchor.LowerCenter, true, true);
+            Anchor(timer, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(S(100), S(52)));
+            HorizontalLayout(timer, new RectOffset(), S(6), TextAnchor.LowerCenter, true, true);
             FitBoth(timer.gameObject);
-            TMP_Text secondsText = NewText("SecondsText", timer, "20", 52f, Ink, true);
-            NewText("UnitText", timer, "초", 22f, Ink, false);
+            TMP_Text secondsText = NewText("SecondsText", timer, "20", S(52), Ink, true);
+            NewText("UnitText", timer, "초", S(22), Ink, false);
 
-            TMP_Text handCountText = NewText("HandCountText", turnRow, "5/10장", 22f, Ink, false, TextAlignmentOptions.Right);
-            Anchor(handCountText.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), Vector2.zero, new Vector2(120f, 52f));
+            TMP_Text handCountText = NewText("HandCountText", turnRow, "5/10장", S(22), Ink, false, TextAlignmentOptions.Right);
+            Anchor(handCountText.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), Vector2.zero, new Vector2(S(120), S(52)));
 
             // 찹츄 버튼 (기본: 비활성 모양)
             RectTransform button = NewRect("ChapchuButton", fill.transform);
             button.anchorMin = new Vector2(0f, 0f);
             button.anchorMax = new Vector2(1f, 0f);
             button.pivot = new Vector2(0f, 0f);
-            button.offsetMin = new Vector2(24f, 20f);
-            button.offsetMax = new Vector2(-24f, 20f + 104f);
+            button.offsetMin = new Vector2(S(24), S(20));
+            button.offsetMax = new Vector2(-S(24), S(20) + S(104));
 
             RectTransform ring = NewRect("Ring", button);
             Stretch(ring);
             Image ringOuter = NewImage("Outer", ring, Orange);
-            Stretch(ringOuter.rectTransform, -16f, -16f, -16f, -16f);
+            Stretch(ringOuter.rectTransform, -S(16), -S(16), -S(16), -S(16));
             Image ringInner = NewImage("Inner", ring, White);
-            Stretch(ringInner.rectTransform, -8f, -8f, -8f, -8f);
+            Stretch(ringInner.rectTransform, -S(8), -S(8), -S(8), -S(8));
             ring.gameObject.SetActive(false);
 
-            Image shadow = HardShadow(button, DisabledInk, 8f, 8f);
+            Image shadow = HardShadow(button, DisabledInk, S(8), S(8));
             shadow.transform.SetAsLastSibling();
-            Image buttonFill = Box("Box", button, Ink, 8f, White, true);
+            Image buttonFill = Box("Box", button, Ink, S(8), White, true);
 
             RectTransform content = NewRect("Content", buttonFill.transform);
             Stretch(content);
-            HorizontalLayout(content, new RectOffset(), 20f, TextAnchor.MiddleCenter, true, true);
-            TMP_Text label = NewText("Label", content, "찹츄!", 48f, DisabledInk, true);
+            HorizontalLayout(content, new RectOffset(), S(20), TextAnchor.MiddleCenter, true, true);
+            TMP_Text label = NewText("Label", content, "찹츄!", S(48), DisabledInk, true);
             Image tag = NewImage("Tag", content, DisabledTagFill);
-            HorizontalLayout(tag.rectTransform, new RectOffset(12, 12, 6, 6), 0f, TextAnchor.MiddleCenter, true, true);
-            TMP_Text tagText = NewText("Text", tag.transform, "5 / 10장", 22f, DisabledTagInk, true);
+            HorizontalLayout(tag.rectTransform, new RectOffset(I(12), I(12), I(6), I(6)), 0f, TextAnchor.MiddleCenter, true, true);
+            TMP_Text tagText = NewText("Text", tag.transform, "5 / 10장", S(22), DisabledTagInk, true);
 
             Button chapchuButton = button.gameObject.AddComponent<Button>();
             chapchuButton.targetGraphic = buttonFill;
@@ -287,14 +305,47 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        // 중앙 묶음 — 시안처럼 덱 오른쪽에 버림 더미 자리를 비워 둔다 (10-ui.md 2-1).
+        private static DeckView BuildDeck(RectTransform parent)
+        {
+            RectTransform root = NewRect("Deck", parent);
+            Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(12f, 0f), new Vector2(179f, 259f)); // 손패 위로 올림 (2026-11-03)
+
+            HardShadow(root, Shadow, 10f, 10f, 6f);
+            Image ringImage = NewImage("Ring", root, Ink);
+            Stretch(ringImage.rectTransform, -6f, -6f, -6f, -6f);
+            Image fill = Box("Box", root, White, 8f, Blue, true);
+
+            TMP_Text plus = NewText("PlusText", fill.transform, "+", 56f, White, true);
+            Anchor(plus.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 16f), new Vector2(160f, 64f));
+            TMP_Text count = NewText("CountText", fill.transform, "DRAW -", 20f, White, true);
+            count.characterSpacing = 10f;
+            Anchor(count.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(160f, 30f));
+
+            Button button = root.gameObject.AddComponent<Button>();
+            button.targetGraphic = fill;
+            button.transition = Selectable.Transition.None;
+
+            var view = root.gameObject.AddComponent<DeckView>();
+            Wire(view, ("button", button), ("countText", count));
+
+            var presenter = root.gameObject.AddComponent<DeckPresenter>();
+            var server = Object.FindFirstObjectByType<PunGameServer>();
+            if (server == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {nameof(PunGameServer)} 가 없다 — {nameof(DeckPresenter)}.server 를 직접 연결할 것.");
+            Wire(presenter, ("server", server));
+            return view;
+        }
+
         private static RectTransform BuildHandArea(RectTransform parent)
         {
             RectTransform area = NewRect("HandArea", parent);
             area.anchorMin = new Vector2(0f, 0f);
             area.anchorMax = new Vector2(1f, 0f);
             area.pivot = new Vector2(0f, 0f);
-            area.offsetMin = new Vector2(556f, 28f);
-            area.offsetMax = new Vector2(-36f, 28f + 280f);
+            // 화면 가운데 정렬 — 좌우를 같게 비워 내 패널(오른쪽 끝 336)과 겹치지 않게 (2026-11-03).
+            area.offsetMin = new Vector2(HandAreaSideInset, 28f);
+            area.offsetMax = new Vector2(-HandAreaSideInset, 28f + HandCardSize.y);
             return area;
         }
 
@@ -387,6 +438,114 @@ namespace Chapchu.EditorTools
 
             // 프로젝트는 옛 Input Manager 를 쓴다 (다른 씬과 같은 StandaloneInputModule)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        }
+
+        #endregion
+
+        #region 손패
+
+        // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역. 부채꼴은 시안처럼 한 칸에 약 1.5° (10-ui.md 2-1 「손패」).
+        private static readonly Vector2 HandCardSize = new Vector2(226f, 336f);
+        private const float HandAreaSideInset = 356f; // 손패 영역 좌우 여백 — 내 패널 오른쪽 끝(336) + 20
+        private const string ActionCardFramePath = "Assets/Sprites/Cards/ActionCard.png";
+        private const string CounterCardFramePath = "Assets/Sprites/Cards/CounterCard.png";
+        private const string TrapCardFramePath = "Assets/Sprites/Cards/TrapCard.png";
+        // 10장일 때 맨 왼쪽 카드(원호의 5% 지점, 약 -0.9 × 반폭)의 왼쪽 끝이 내 패널 오른쪽(336)보다 오른쪽에 오게 한다.
+        private const float HandFanHalfWidth = 520f;
+        private const float HandFanDrop = 34f;       // 양 끝이 가운데보다 내려가는 정도 — 한 칸 1.5° 인 원호
+
+        private static void BuildHand(RectTransform handArea, DeckView deck)
+        {
+            RectTransform root = NewRect("Hand", handArea);
+            Anchor(root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, Vector2.zero);
+
+            SplineContainer container = root.gameObject.AddComponent<SplineContainer>();
+            Spline spline = container.Spline;
+            spline.Clear();
+            spline.Add(new BezierKnot(new float3(-HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
+            spline.Add(new BezierKnot(float3.zero), TangentMode.AutoSmooth);
+            spline.Add(new BezierKnot(new float3(HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
+
+            var view = root.gameObject.AddComponent<HandView>();
+            Wire(view,
+                ("actionCardPrefab", EnsureHandCardPrefab("HandCard_Action", ActionCardFramePath)),
+                ("counterCardPrefab", EnsureHandCardPrefab("HandCard_Counter", CounterCardFramePath)),
+                ("trapCardPrefab", EnsureHandCardPrefab("HandCard_Trap", TrapCardFramePath)));
+
+            var presenter = root.gameObject.AddComponent<HandPresenter>();
+            Wire(presenter, ("deck", FindGameDeck()), ("drawOrigin", deck.transform));
+        }
+
+        // 손패 카드 프리팹 — Assets/Prefab/PlayerActionCard Dummy 와 같은 구성(틀 · 그림 · 이름 · 설명)을 UGUI 로.
+        // 종류마다 틀 이미지만 다르다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존).
+        private static HandCardView EnsureHandCardPrefab(string name, string framePath)
+        {
+            string path = $"{HandCardPrefabFolder}/{name}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<HandCardView>(path);
+            if (existing != null)
+                return existing;
+
+            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+
+            var frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(framePath);
+            if (frameSprite == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 카드 틀 이미지가 없다: {framePath}");
+
+            RectTransform root = NewRect(name, null);
+            root.sizeDelta = HandCardSize;
+            root.pivot = new Vector2(0.5f, 0f);
+
+            // 그리는 순서는 더미와 같다 — 틀 → 그림 → 이름 · 설명.
+            Image frame = NewImage("CardImage", root, White, frameSprite);
+            Stretch(frame.rectTransform);
+
+            Image art = NewImage("Image", root, White);
+            AnchorBox(art.rectTransform, 0.1925f, 0.389f, 0.8075f, 0.801f); // 그림 칸 (점선 위 · 이름 띠 아래)
+            art.preserveAspect = true;
+            art.enabled = false;
+
+            TMP_Text nameText = NewText("Name", root, "Name", 18f, White, true, TextAlignmentOptions.Left);
+            AnchorBox(nameText.rectTransform, 0.3256f, 0.8482f, 0.8896f, 0.9502f); // 위쪽 띠
+            nameText.enableAutoSizing = true;
+            nameText.fontSizeMin = 12f;
+            nameText.fontSizeMax = 18f;
+            nameText.overflowMode = TextOverflowModes.Ellipsis;
+
+            // 더미는 흰 글자인데 흰 바탕 위라 보이지 않아 잉크로 쓴다.
+            TMP_Text description = NewText("Description", root, "Description", 15f, Ink, false, TextAlignmentOptions.Top);
+            AnchorBox(description.rectTransform, 0.11f, 0.074f, 0.89f, 0.336f); // 점선 아래
+            description.textWrappingMode = TextWrappingModes.Normal;
+            description.enableAutoSizing = true;
+            description.fontSizeMin = 10f;
+            description.fontSizeMax = 15f;
+            description.overflowMode = TextOverflowModes.Ellipsis;
+
+            var view = root.gameObject.AddComponent<HandCardView>();
+            Wire(view, ("nameText", nameText), ("artImage", art), ("descriptionText", description));
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, path);
+            Object.DestroyImmediate(root.gameObject);
+            return saved.GetComponent<HandCardView>();
+        }
+
+        // 손패가 카드 정보를 찾는 덱은 서버가 쓰는 덱과 같아야 한다.
+        private static DeckData FindGameDeck()
+        {
+            var server = Object.FindFirstObjectByType<PunGameServer>();
+            DeckData deck = server != null ? new SerializedObject(server).FindProperty("deck").objectReferenceValue as DeckData : null;
+            if (deck == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] {nameof(PunGameServer)}.deck 을 찾지 못했다 — {nameof(HandPresenter)}.deck 을 직접 연결할 것.");
+            return deck;
+        }
+
+        // 부모 크기 비율(0~1)로 붙는 상자 — 카드 틀 이미지 위의 칸을 비율로 잡는다.
+        private static void AnchorBox(RectTransform rect, float minX, float minY, float maxX, float maxY)
+        {
+            rect.anchorMin = new Vector2(minX, minY);
+            rect.anchorMax = new Vector2(maxX, maxY);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         #endregion
