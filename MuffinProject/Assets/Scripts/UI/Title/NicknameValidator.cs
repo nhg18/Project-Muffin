@@ -2,6 +2,7 @@
 
 namespace Chapchu.UI.Title
 {
+    /// <summary>닉네임 검사 결과. Valid 가 아니면 GetErrorMessage 로 문구를 얻는다.</summary>
     public enum NicknameValidationResult
     {
         Valid,
@@ -10,7 +11,8 @@ namespace Chapchu.UI.Title
         TooLong,
         InvalidCharacters,
     }
-    
+
+    /// <summary>닉네임 길이 · 글자 검사와 실패 문구 (12-title-ui.md 4-2절). 검사는 입력한 클라이언트가 한다.</summary>
     public static class NicknameValidator
     {
         public const int MaxLength = 16;

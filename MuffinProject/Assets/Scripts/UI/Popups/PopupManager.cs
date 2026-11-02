@@ -27,6 +27,15 @@ namespace Chapchu.UI.Popups
         protected override void Awake()
         {
             base.Awake();
+            if (modalLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(modalLayer)} 참조가 비어 있습니다.", this);
+
+            if (nonModalLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(nonModalLayer)} 참조가 비어 있습니다.", this);
+
+            if (toastLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(toastLayer)} 참조가 비어 있습니다.", this);
+
             _modalBlocker = modalLayer.GetComponent<Image>();
             RefreshBlocker();
         }
@@ -75,7 +84,7 @@ namespace Chapchu.UI.Popups
 
             if (!_modals.Remove(popup) && !_nonModals.Remove(popup) && !_toasts.Remove(popup))
             {
-                Debug.LogWarning($"[PopupManager] 열려 있지 않은 팝업: {popup.name}");
+                Debug.LogWarning($"[{nameof(PopupManager)}] 열려 있지 않은 팝업: {popup.name}");
                 return;
             }
 
@@ -114,7 +123,7 @@ namespace Chapchu.UI.Popups
             T prefab = Resources.Load<T>(path);
             // 규약이 어긋나면 Resources.Load 는 조용히 null 을 준다. 원인이 보이게 남긴다.
             if (prefab == null)
-                Debug.LogError($"[PopupManager] Resources/{path}.prefab 이 없거나 루트에 {typeof(T).Name} 컴포넌트가 없다");
+                Debug.LogError($"[{nameof(PopupManager)}] Resources/{path}.prefab 이 없거나 루트에 {typeof(T).Name} 컴포넌트가 없다");
             return prefab;
         }
 
@@ -158,7 +167,7 @@ namespace Chapchu.UI.Popups
             yield return null;
 
             int leftover = modalLayer.childCount + nonModalLayer.childCount + toastLayer.childCount;
-            Debug.Log($"[PopupManager] 씬 재로드 후 남은 팝업 오브젝트 {leftover}개 (0이면 정상), 차단막 {(_modalBlocker.enabled ? "켜짐(비정상)" : "꺼짐")}");
+            Debug.Log($"[{nameof(PopupManager)}] 씬 재로드 후 남은 팝업 오브젝트 {leftover}개 (0이면 정상), 차단막 {(_modalBlocker.enabled ? "켜짐(비정상)" : "꺼짐")}");
         }
 #endif
     }

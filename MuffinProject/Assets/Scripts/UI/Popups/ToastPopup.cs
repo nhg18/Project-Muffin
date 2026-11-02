@@ -9,7 +9,9 @@ namespace Chapchu.UI.Popups
     /// </summary>
     public abstract class ToastPopup : Popup, IPointerClickHandler
     {
+        [Tooltip("떠 있는 시간 (초, 실제 시간)")]
         [SerializeField] private float duration = 3f;
+        [Tooltip("누르면 바로 닫는다")]
         [SerializeField] private bool dismissOnClick = true;
 
         private Coroutine _autoClose;

@@ -26,6 +26,18 @@ namespace Chapchu.UI.Popups
 
         public event Action OnConfirmed;
 
+        private void Awake()
+        {
+            if (mainText == null)
+                Debug.LogError($"[{nameof(WarningPopup)}] {nameof(mainText)} 참조가 비어 있습니다.", this);
+
+            if (subText == null)
+                Debug.LogError($"[{nameof(WarningPopup)}] {nameof(subText)} 참조가 비어 있습니다.", this);
+
+            if (okButton == null)
+                Debug.LogError($"[{nameof(WarningPopup)}] {nameof(okButton)} 참조가 비어 있습니다.", this);
+        }
+
         private void OnEnable()
         {
             okButton.onClick.AddListener(HandleOkClicked);

@@ -4,9 +4,14 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using Chapchu.Core;
+using Chapchu.Network.Events;
 
 namespace Chapchu.Network
 {
+    /// <summary>
+    /// Photon 연결 · 방 요청의 창구 (09-network.md). 씬이 바뀌어도 남고, 다른 코드는 PhotonNetwork 대신 이것을 부른다.
+    /// 연결은 PhotonConnection, 방은 PhotonRoom 이 하고, 결과는 Network/Events 로 알린다.
+    /// </summary>
     public class NetworkManager : SingletonPersistentPun<NetworkManager>
     {
         public const int MinPlayers = 2;

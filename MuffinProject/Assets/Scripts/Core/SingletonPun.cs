@@ -5,8 +5,7 @@ using UnityEngine;
 
 namespace Chapchu.Core
 {
-
-
+    /// <summary>Photon 콜백을 받는 StaticInstance (MonoBehaviourPunCallbacks).</summary>
     public abstract class StaticInstancePun<T> : MonoBehaviourPunCallbacks where T : MonoBehaviourPunCallbacks
     {
         public static T Instance { get; private set; }
@@ -24,6 +23,7 @@ namespace Chapchu.Core
         }
     }
 
+    /// <summary>Photon 콜백을 받는 Singleton.</summary>
     public abstract class SingletonPun<T> : StaticInstancePun<T> where T : MonoBehaviourPunCallbacks
     {
         protected override void Awake()
@@ -37,6 +37,7 @@ namespace Chapchu.Core
         }
     }
 
+    /// <summary>Photon 콜백을 받는 SingletonPersistent.</summary>
     public abstract class SingletonPersistentPun<T> : SingletonPun<T> where T : MonoBehaviourPunCallbacks
     {
         protected override void Awake()
