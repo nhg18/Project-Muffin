@@ -19,9 +19,13 @@ MonoBehaviour:
   targetType: 1
   description: "\uBC1C\uB3D9 \uC2DC \uB300\uC0C1\uC744 \uC120\uD0DD \uD574, 20\uC758
     \uD53C\uD574\uB97C \uC785\uD799\uB2C8\uB2E4."
-  conditions:
-  - {fileID: 11400000, guid: 78135d3c881a56347a450706fdb200e2, type: 2}
   effects:
-  - type: 0
-    subject: 0
-    amount: 20
+  - rid: 7469210000000000001
+  references:
+    version: 2
+    RefIds:
+    - rid: 7469210000000000001
+      type: {class: DamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        subject: 0
+        amount: 20

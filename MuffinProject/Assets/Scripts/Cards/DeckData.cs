@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Chapchu.Game;
+using Chapchu.Game.Effects;
 using UnityEngine;
 
 namespace Chapchu.Cards
@@ -56,13 +57,31 @@ namespace Chapchu.Cards
                     continue;
 
                 CardData data = entry.card;
-                CardEffect[] effects = data.effects.ToArray();
+                CardEffect[] effects = GetEffects(data);
 
                 for (int i = 0; i < entry.count; i++)
                     cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects));
             }
 
             return cards;
+        }
+
+        // 비어 있는 효과는 빼고 알린다 — 효과 클래스 이름 · 네임스페이스가 바뀌면 에셋에서 그 칸이 비어 버린다.
+        private static CardEffect[] GetEffects(CardData data)
+        {
+            var effects = new List<CardEffect>();
+            for (int i = 0; i < data.effects.Count; i++)
+            {
+                if (data.effects[i] == null)
+                {
+                    Debug.LogError($"[{nameof(DeckData)}] {data.name} 의 효과 {i}번이 비어 있다 — 인스펙터에서 지우고 다시 추가", data);
+                    continue;
+                }
+
+                effects.Add(data.effects[i]);
+            }
+
+            return effects.ToArray();
         }
 
         private void OnValidate()
