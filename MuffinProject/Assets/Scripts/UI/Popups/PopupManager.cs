@@ -8,7 +8,7 @@ namespace Chapchu.UI.Popups
 {
     /// <summary>
     /// 팝업 3계층(모달 · 일반 · 토스트)을 열고 닫는다. 씬이 바뀌면 전부 닫는다.
-    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트.
+    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트. 기준 문서: docs/systems/10-ui.md 8절
     /// </summary>
     public class PopupManager : SingletonPersistent<PopupManager>
     {
@@ -80,7 +80,8 @@ namespace Chapchu.UI.Popups
         /// </summary>
         public void Close(Popup popup)
         {
-            if (popup == null) return;
+            if (popup == null)
+                return;
 
             if (!_modals.Remove(popup) && !_nonModals.Remove(popup) && !_toasts.Remove(popup))
             {
@@ -108,7 +109,8 @@ namespace Chapchu.UI.Popups
         private T Open<T>(RectTransform layer, List<Popup> opened) where T : Popup
         {
             T prefab = Load<T>();
-            if (prefab == null) return null;
+            if (prefab == null)
+                return null;
 
             T popup = Instantiate(prefab, layer);
             opened.Add(popup);
@@ -157,7 +159,9 @@ namespace Chapchu.UI.Popups
         private System.Collections.IEnumerator DebugOpenModalThenReloadRoutine()
         {
             WarningPopup popup = OpenModal<WarningPopup>();
-            if (popup == null) yield break;
+            if (popup == null)
+                yield break;
+
             popup.MainText = "테스트";
             popup.SubText = "2초 뒤 씬을 다시 불러옵니다.";
 

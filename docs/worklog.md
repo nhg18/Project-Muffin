@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-02 · 로비 코드 컨벤션 (`feature/lobby-screen`)
+
+### 한 것
+- `LobbyPresenter`: 한 줄 `if … return;` 2곳, 실패 문구를 switch 식으로, 코드 입력 팝업 구독을 람다 → `HandleSubmitted` (`+=` · `-=` 짝).
+- `LobbyView`: 요청 이벤트 3개 XML 주석.
+- 로비가 쓰는 공용 팝업 5개(`InputPopup` · `WarningPopup` · `LoadingPopup` · `Popup` · `PopupManager`): 기준 문서(`10-ui` 8절), public 멤버 주석, 한 줄 `if` 3곳 · 한 줄 `{ }`. `LoadingPopup` 요약의 옛 계획서 문구 정리.
+- `LobbyScene` 하이어라키는 `14-lobby-ui` 7-1 과 같아 씬은 그대로.
+- 확인: `multi-test ui` 통과 (없는 방 코드 경고 문구 08-room 7절대로, 콘솔 에러 0).
+
+### 다음 할 일
+- [ ] `LobbyPresenter.Start` 가 아직 `SceneFlow.ReturnSceneAfterRoom` 을 정한다 — 11-01 할 일 "방 나가기는 항상 LobbyScene" 과 같이 지운다
+- [ ] `ProjectSettings.asset` · `EditorPipelineConfig.json` 이 테스트마다 변경으로 뜬다 — Unity 는 LF 로 쓰는데 `.gitattributes` 가 CRLF 를 요구해서 (내용은 같음). `ProjectSettings/` 를 `eol=lf` 로 둘지 결정
+
+---
+
 ## 2026-11-02 · 타이틀 코드 컨벤션 (`feature/title-screen`)
 
 ### 결정

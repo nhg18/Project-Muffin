@@ -33,6 +33,9 @@ namespace Chapchu.UI.Lobby
         // 요청을 보낸 뒤 결과가 올 때까지 띄우는 대기 표시. 성공하면 씬 전환이 닫고, 실패하면 여기서 닫는다.
         private LoadingPopup _loading;
 
+        // 방 코드 입력 팝업. 닫기 버튼으로 닫히면 팝업과 함께 구독도 사라진다.
+        private InputPopup _joinPopup;
+
         private void Awake()
         {
             _view = GetComponent<LobbyView>();
@@ -87,16 +90,21 @@ namespace Chapchu.UI.Lobby
 
         private void HandleJoinRoomRequested()
         {
-            InputPopup joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
-            joinPopup.PlaceholderText = JoinPlaceholderText;
-            joinPopup.SubmitButtonText = JoinSubmitText;
-            joinPopup.CharacterLimit = RandomCode.Length;
-            joinPopup.OnSubmitted += roomCode =>
-            {
-                joinPopup.Close();
-                ShowLoading();
-                NetworkManager.Instance.JoinRoom(roomCode);
-            };
+            _joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
+            _joinPopup.PlaceholderText = JoinPlaceholderText;
+            _joinPopup.SubmitButtonText = JoinSubmitText;
+            _joinPopup.CharacterLimit = RandomCode.Length;
+            _joinPopup.OnSubmitted += HandleSubmitted;
+        }
+
+        private void HandleSubmitted(string roomCode)
+        {
+            _joinPopup.OnSubmitted -= HandleSubmitted;
+            _joinPopup.Close();
+            _joinPopup = null;
+
+            ShowLoading();
+            NetworkManager.Instance.JoinRoom(roomCode);
         }
 
         private void HandleJoinedRoom()
@@ -120,28 +128,29 @@ namespace Chapchu.UI.Lobby
         }
 
         // 08-room.md 7절. Photon 원문(message)은 우리 코드가 직접 만든 사유(InvalidOperation)일 때만 그대로 쓴다.
-        private static string GetFailureMessage(short code, string message)
+        private static string GetFailureMessage(short code, string message) => code switch
         {
-            switch (code)
-            {
-                case ErrorCode.GameDoesNotExist: return RoomNotFoundText;
-                case ErrorCode.GameFull: return RoomFullText;
-                case ErrorCode.GameClosed: return RoomClosedText;
-                case ErrorCode.NoRandomMatchFound: return NoRandomRoomText;
-                case ErrorCode.InvalidOperation: return message;
-                default: return RetryLaterText;
-            }
-        }
+            ErrorCode.GameDoesNotExist   => RoomNotFoundText,
+            ErrorCode.GameFull           => RoomFullText,
+            ErrorCode.GameClosed         => RoomClosedText,
+            ErrorCode.NoRandomMatchFound => NoRandomRoomText,
+            ErrorCode.InvalidOperation   => message,
+            _                            => RetryLaterText,
+        };
 
         private void ShowLoading()
         {
-            if (_loading != null) return;
+            if (_loading != null)
+                return;
+
             _loading = PopupManager.Instance.OpenModal<LoadingPopup>();
         }
 
         private void HideLoading()
         {
-            if (_loading == null) return;
+            if (_loading == null)
+                return;
+
             _loading.Close();
             _loading = null;
         }

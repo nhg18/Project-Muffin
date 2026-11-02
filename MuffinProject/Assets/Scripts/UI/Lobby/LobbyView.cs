@@ -16,8 +16,13 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button createRoomButton;
         [SerializeField] private Button joinRoomButton;
 
+        /// <summary>랜덤 매칭 버튼을 누름 (14-lobby-ui 5절)</summary>
         public event Action OnRandomMatchRequested;
+
+        /// <summary>방 만들기 버튼을 누름 (14-lobby-ui 5절)</summary>
         public event Action OnCreateRoomRequested;
+
+        /// <summary>방 참가 버튼을 누름. 코드 입력 팝업은 받는 쪽이 연다 (14-lobby-ui 5절)</summary>
         public event Action OnJoinRoomRequested;
 
         private void Awake()
