@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-11-02 · 게임 화면 방 코드 표시 (`RoomCodePresenter`)
+
+### 결정
+- 방 코드는 방장 판정 · 게임 상태를 거치지 않고 UI 가 방 이름을 직접 읽는다 (`10-ui.md` 2절). `GameScreenPresenter` 에 넣지 않고 따로 둔다 — 게임 이벤트와 무관.
+- `origin/upgrade/unity6` 의 `RoomCodePresenter`(`751e05e`)를 현재 `RoomCodeView` 에 맞춰 옮겼다.
+- 씬은 다시 조립하지 않고 기존 `RoomCodeTag` 에 컴포넌트만 붙였다 — 재조립하면 fileID 가 전부 바뀌어 diff 가 1만 줄이 된다. 빌더에도 같은 줄을 넣어 재조립 결과는 같다.
+
+### 한 것
+- `UI/GameScreen/RoomCodePresenter.cs` — `Start` 에서 `PhotonNetwork.CurrentRoom.Name` → `RoomCodeView`, 방 밖이면 `----`.
+- 빌더 `BuildRoomCodeTag` 에 프레젠터 부착, `GameScene.unity` 의 `RoomCodeTag` 에 부착.
+- 플레이 모드 확인: 방 밖 `| ROOM ----`, Photon 접속 · 시험 방 생성 후 프레젠터를 다시 붙여 `| ROOM DIPK` · 로그 `[RoomCodePresenter] 방 코드 DIPK`.
+
+### 다음 할 일
+- [ ] 로비 → 방 → 게임 시작 정상 흐름(2클론)에서 방 코드가 대기실과 같은지 확인
+
+---
+
 ## 2026-11-02 · 상대 좌석 · 덱 · 버림 더미 UI 일단 제거
 
 ### 결정
