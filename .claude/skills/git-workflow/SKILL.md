@@ -15,6 +15,7 @@ develop  ← 통합. PR 로만 들어온다. 머지는 PM 만
 * 작업 시작 전에 `develop` 을 받아 최신으로 만든다.
 * 접은 작업은 브랜치 대신 `archive/<이름>` 태그로 원격에 남기고 브랜치는 지운다 (예: `archive/upgrade-unity6`).
 * 문서(`docs/` · `CLAUDE.md` · `.claude/`)도 같은 흐름으로 PR 한다.
+* PR 은 CI(`.github/workflows/ci.yml`, PC 컴파일 · 빌드)가 통과한 뒤 머지한다. Android · iOS 확인은 Actions 탭에서 수동 실행. `main` 머지는 CD 가 PC · Android 빌드를 첨부한다.
 * 같은 씬 · 프리팹을 두 사람이 동시에 고치지 않는다.
 * 커밋 메시지: `type(scope): 한국어 요약` — `feat` · `fix` · `refactor` · `chore` · `docs`. 기능 단위로 커밋한다.
 * `.meta` 는 에셋과 같이 커밋 · 이동한다. 손으로 만들거나 지우지 않는다. 새 `.cs` · 에셋은 Unity 가 `.meta` 를 만든 뒤 함께 커밋한다.

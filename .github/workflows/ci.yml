@@ -1,0 +1,66 @@
+# CI — PR 이 컴파일되는지 확인한다 (PC 빌드). 깨지면 PR 에 빨간 표시.
+# Android · iOS 는 필요할 때만 Actions 탭 → CI → Run workflow 로 돌린다.
+# Unity 버전은 MuffinProject/ProjectSettings/ProjectVersion.txt 에서 읽는다.
+# 필요한 Secrets: UNITY_LICENSE · UNITY_EMAIL · UNITY_PASSWORD (없으면 activation.yml 로 라이선스 파일을 만든다)
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main] # 문서만 바뀐 PR 도 돈다 — 경로 필터를 걸면 "필수 체크" 가 영영 기다린다
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 확인할 플랫폼
+        type: choice
+        default: StandaloneWindows64
+        options: [StandaloneWindows64, Android, iOS]
+
+# 같은 PR 에 새 커밋이 오면 돌고 있던 것은 취소한다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PLATFORM: ${{ inputs.platform || 'StandaloneWindows64' }}
+
+jobs:
+  build:
+    name: 컴파일 · 빌드
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Unity 이미지가 커서 기본 러너 디스크가 모자랄 수 있다
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: ${{ env.PLATFORM != 'Android' }}
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      # Library/ 를 캐시한다 — 없으면 에셋 임포트만 20분 이상
+      - uses: actions/cache@v4
+        with:
+          path: MuffinProject/Library
+          key: Library-${{ env.PLATFORM }}-${{ hashFiles('MuffinProject/Assets/**', 'MuffinProject/Packages/**', 'MuffinProject/ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ env.PLATFORM }}-
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: MuffinProject
+          targetPlatform: ${{ env.PLATFORM }}
+          buildName: Chapchu
+
+      # PR 확인용 빌드 — 7일 뒤 지워진다
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chapchu-${{ env.PLATFORM }}-pr
+          path: build/${{ env.PLATFORM }}
+          retention-days: 7
