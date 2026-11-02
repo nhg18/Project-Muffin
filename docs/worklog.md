@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-11-02 · 상대 좌석 · 덱 · 버림 더미 UI 일단 제거
+
+### 결정
+- 사용자 요청으로 상대 좌석 UI(이름 줄 · 손패 수 · 찹츄 배지 · HP 바 · 캐릭터 자리 · 함정 슬롯 · 턴 외곽선 · 대상 강조)와 덱 · 버림 더미 UI 를 **우선** 뺐다. `10-ui.md` 2-1 은 되어야 할 상태라 그대로 둔다 — 다시 만들 때 기준.
+- 게임 로직의 덱 · 버림 더미(`GameServer.Deck.cs` 등)는 화면과 무관해 그대로.
+
+### 한 것
+- `OpponentSeatView` · `DeckView` · `DiscardPileView` 삭제. `GameScreenView` 의 해당 참조, 빌더의 `BuildOpponentSeat(s)` · `BuildDeck` · `BuildDiscardPile` · `BuildBackCard` · `WireArray` · 안 쓰게 된 색 상수 삭제.
+- Unity CLI 1.0.0-beta.15 설치 (`%LOCALAPPDATA%\unity\bin\unity.exe`). 열린 에디터에서 컴파일 확인 → `GameCanvas` 삭제 → `Chapchu/Game Screen/Build UI` 재조립 → 씬 저장 → 플레이 모드 캡처로 방 코드 · 히스토리 · 내 패널만 남은 것 확인.
+- 폰트 SDF 에셋 2개가 재조립 · 플레이 중 동적 글리프 추가로 바뀌었다 — 이번 변경과 무관.
+
+### 다음 할 일
+- [ ] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고)
+
+---
+
 ## 2026-11-02 · 인게임 화면 UI 조립 (HTML 시안 → GameScene, 표시만)
 
 브랜치 `feature/game-screen`. 요청 · 이벤트는 잇지 않았다 — 뷰는 값을 받아 그리고 입력을 C# 이벤트로만 내보낸다.
