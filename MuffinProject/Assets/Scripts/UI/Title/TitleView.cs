@@ -79,7 +79,8 @@ namespace Chapchu.UI.Title
         private void HandleConnectClicked()
         {
             // 12-title-ui 5절: 접속 중에는 중복 요청을 막는다.
-            if (_connecting) return;
+            if (_connecting)
+                return;
 
             string nickname = nicknameField.Text.Trim();
             NicknameValidationResult result = NicknameValidator.Validate(nickname);

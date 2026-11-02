@@ -54,12 +54,14 @@ namespace Chapchu.UI.Title
             Apply();
         }
 
+        /// <summary>호버 시작 — 몸체가 뜬다.</summary>
         public void OnPointerEnter(PointerEventData eventData)
         {
             _isHovered = true;
             Apply();
         }
 
+        /// <summary>호버 끝 — 누르던 중이어도 원위치.</summary>
         public void OnPointerExit(PointerEventData eventData)
         {
             _isHovered = false;
@@ -67,16 +69,22 @@ namespace Chapchu.UI.Title
             Apply();
         }
 
+        /// <summary>누름 — 몸체가 그림자 쪽으로 가라앉는다. 왼쪽 버튼(터치)만.</summary>
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Left) return;
+            if (eventData.button != PointerEventData.InputButton.Left)
+                return;
+
             _isPressed = true;
             Apply();
         }
 
+        /// <summary>뗌 — 호버 상태로 돌아간다. 왼쪽 버튼(터치)만.</summary>
         public void OnPointerUp(PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Left) return;
+            if (eventData.button != PointerEventData.InputButton.Left)
+                return;
+
             _isPressed = false;
             Apply();
         }

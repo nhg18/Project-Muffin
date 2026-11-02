@@ -66,14 +66,16 @@ namespace Chapchu.UI.Title
 
         private void HandleConnected()
         {
-            if (!_waitingForConnection) return;
+            if (!_waitingForConnection)
+                return;
 
             LoadLobby();
         }
 
         private void HandleDisconnected(DisconnectCause cause)
         {
-            if (!_waitingForConnection) return;
+            if (!_waitingForConnection)
+                return;
 
             _waitingForConnection = false;
             _view.ShowError(GetDisconnectMessage(cause));
