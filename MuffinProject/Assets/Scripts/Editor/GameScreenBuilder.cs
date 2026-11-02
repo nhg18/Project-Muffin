@@ -129,6 +129,7 @@ namespace Chapchu.EditorTools
 
             var view = tag.gameObject.AddComponent<RoomCodeView>();
             Wire(view, ("codeText", text));
+            tag.gameObject.AddComponent<RoomCodePresenter>();
             return view;
         }
 
