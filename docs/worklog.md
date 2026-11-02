@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-11-02 · 인게임 화면 UI 조립 (HTML 시안 → GameScene, 표시만)
+
+브랜치 `feature/game-screen`. 요청 · 이벤트는 잇지 않았다 — 뷰는 값을 받아 그리고 입력을 C# 이벤트로만 내보낸다.
+
+### 결정
+- HTML 시안 CSS px × 2 = 캔버스 px. `vh` · `vw` 는 1920 × 1080 기준 (`10-ui.md` 2-1).
+- 시안에 있지만 넣지 않은 것: `ROUND` · `?` · `≡` (기획에 없음), 화살꼬리 태그 · 점선 (직사각형 · 실선으로 대체).
+- 이번 범위 밖: 내 손패 카드, 상대 뒷면 부채꼴, 히스토리 카드 항목. 영역 · 앵커만 둠 (`HandArea` · `HandFanAnchor` · `HistoryView.Content`).
+- 아티팩트에 없던 그림(치와와 3색 · 카드 앞면 3종)은 빈 자리로. `CharacterImage` 는 Image 비활성, 스프라이트를 끼우면 `SetCharacter` 로 켠다.
+- 씬은 손으로 고치지 않고 에디터 메뉴(`Chapchu/Game Screen/Build UI`, `Scripts/Editor/GameScreenBuilder.cs`)가 조립한다. `GameCanvas` 가 이미 있으면 멈춘다 — 지우고 다시 실행. 수치를 바꿀 때는 빌더를 고치고 재조립하는 쪽이 Inspector 에서 손보는 것보다 재현이 쉽다.
+- Unity CLI(`com.unity.pipeline`)로 열린 에디터를 조종해 컴파일 · 메뉴 실행 · 저장 · 플레이 모드 캡처까지 확인했다. CLI 는 `%LOCALAPPDATA%\unity\bin\unity.exe` (새 셸에서는 `unity`). 캡처 `save_path` 는 프로젝트 안이어야 하고 `Assets/` 아래로 떨어지므로 끝나면 지운다.
+
+### 한 것
+- `docs/systems/10-ui.md` 2-1 「주요 수치」 — 색 · 글꼴 · 배치 · 좌석 슬롯 · 내 패널 · 승리 오버레이 · 넣지 않는 것.
+- `docs/mockups/ingame.html` — 아티팩트 「인게임 화면 UI」 정적 사본 (글꼴 · 배경은 프로젝트 에셋 상대 경로).
+- `Scripts/UI/GameScreen/` 8개: `GameScreenView`(영역 모음) · `RoomCodeView` · `HistoryView` · `OpponentSeatView` ×3 슬롯 · `MyPanelView`(`ChapchuButtonState`) · `DeckView` · `DiscardPileView` · `VictoryOverlayView`.
+- `Assets/Fonts/GlaMuri/Galmuri11 SDF` · `Galmuri11-Bold SDF` — 빌더가 TMP 동적 폰트로 생성 (SDFAA · 여백 5 · 2048). ttf 는 사용자가 넣음.
+- `GameScene.unity` — `GameCanvas`(1920 × 1080 · Expand) + `SafeArea` + `EventSystem`(StandaloneInputModule). 캡처로 확인: 기본 상태, 상태 변경(턴 외곽선 · 찹츄 활성 · 배지 · 함정 2/3 · 저체력 · 대상 강조 · 버림 비움), 승리 오버레이.
+
+### 다음 할 일
+- [ ] `GameScreenPresenter` — `GameEvents` 7개 구독 → 연출 큐 → 뷰. 좌석 인덱스 ↔ actorNumber 는 `02-player` 3절대로 한 곳에서. 초기값은 `PlayerProps` · `RoomProps`. 방 코드는 `PhotonNetwork.CurrentRoom.Name`
+- [ ] 입력 연결: `DeckView.DrawClicked` → `RequestDraw`, 좌석 `Clicked` → 대상 선택, `OnMyRequestRejected` → `MessageToast`. 찹츄 버튼 · 승리 오버레이는 요청 API 가 생기면 (기능 8)
+- [ ] 내 손패(`HandArea`) · 상대 뒷면 부채꼴(`HandFanAnchor`) · 히스토리 항목 프리팹(`HistoryView.AddEntry`)
+- [ ] 글자 22 ~ 28 의 모바일 가독성 보정 (`15-screen` 최소 30) — `12-title-ui` 4-3 방식으로 결정
+- [ ] 디자인 그림이 오면 `CharacterImage` · 카드 앞면 스프라이트 연결
+- [ ] `GameDebugInput`(D · P 키)과 화면이 같은 값을 보이는지 2클론으로 확인
+
+---
+
 ## 2026-11-01 · 지침 · 문서를 "되어야 할 상태" 기준으로
 
 ### 결정
