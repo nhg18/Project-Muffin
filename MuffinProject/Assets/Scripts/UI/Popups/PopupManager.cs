@@ -8,7 +8,7 @@ namespace Chapchu.UI.Popups
 {
     /// <summary>
     /// 팝업 3계층(모달 · 일반 · 토스트)을 열고 닫는다. 씬이 바뀌면 전부 닫는다.
-    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트.
+    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트. 기준 문서: docs/systems/10-ui.md 8절
     /// </summary>
     public class PopupManager : SingletonPersistent<PopupManager>
     {
@@ -27,6 +27,15 @@ namespace Chapchu.UI.Popups
         protected override void Awake()
         {
             base.Awake();
+            if (modalLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(modalLayer)} 참조가 비어 있습니다.", this);
+
+            if (nonModalLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(nonModalLayer)} 참조가 비어 있습니다.", this);
+
+            if (toastLayer == null)
+                Debug.LogError($"[{nameof(PopupManager)}] {nameof(toastLayer)} 참조가 비어 있습니다.", this);
+
             _modalBlocker = modalLayer.GetComponent<Image>();
             RefreshBlocker();
         }
@@ -71,11 +80,12 @@ namespace Chapchu.UI.Popups
         /// </summary>
         public void Close(Popup popup)
         {
-            if (popup == null) return;
+            if (popup == null)
+                return;
 
             if (!_modals.Remove(popup) && !_nonModals.Remove(popup) && !_toasts.Remove(popup))
             {
-                Debug.LogWarning($"[PopupManager] 열려 있지 않은 팝업: {popup.name}");
+                Debug.LogWarning($"[{nameof(PopupManager)}] 열려 있지 않은 팝업: {popup.name}");
                 return;
             }
 
@@ -99,7 +109,8 @@ namespace Chapchu.UI.Popups
         private T Open<T>(RectTransform layer, List<Popup> opened) where T : Popup
         {
             T prefab = Load<T>();
-            if (prefab == null) return null;
+            if (prefab == null)
+                return null;
 
             T popup = Instantiate(prefab, layer);
             opened.Add(popup);
@@ -114,7 +125,7 @@ namespace Chapchu.UI.Popups
             T prefab = Resources.Load<T>(path);
             // 규약이 어긋나면 Resources.Load 는 조용히 null 을 준다. 원인이 보이게 남긴다.
             if (prefab == null)
-                Debug.LogError($"[PopupManager] Resources/{path}.prefab 이 없거나 루트에 {typeof(T).Name} 컴포넌트가 없다");
+                Debug.LogError($"[{nameof(PopupManager)}] Resources/{path}.prefab 이 없거나 루트에 {typeof(T).Name} 컴포넌트가 없다");
             return prefab;
         }
 
@@ -148,7 +159,9 @@ namespace Chapchu.UI.Popups
         private System.Collections.IEnumerator DebugOpenModalThenReloadRoutine()
         {
             WarningPopup popup = OpenModal<WarningPopup>();
-            if (popup == null) yield break;
+            if (popup == null)
+                yield break;
+
             popup.MainText = "테스트";
             popup.SubText = "2초 뒤 씬을 다시 불러옵니다.";
 
@@ -158,7 +171,7 @@ namespace Chapchu.UI.Popups
             yield return null;
 
             int leftover = modalLayer.childCount + nonModalLayer.childCount + toastLayer.childCount;
-            Debug.Log($"[PopupManager] 씬 재로드 후 남은 팝업 오브젝트 {leftover}개 (0이면 정상), 차단막 {(_modalBlocker.enabled ? "켜짐(비정상)" : "꺼짐")}");
+            Debug.Log($"[{nameof(PopupManager)}] 씬 재로드 후 남은 팝업 오브젝트 {leftover}개 (0이면 정상), 차단막 {(_modalBlocker.enabled ? "켜짐(비정상)" : "꺼짐")}");
         }
 #endif
     }

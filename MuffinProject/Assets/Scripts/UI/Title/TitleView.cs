@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Title
 {
     /// <summary>
-    /// 타이틀 화면 루트 뷰. 닉네임을 검증하고, 통과하면 ConnectRequested 로 알린다.
+    /// 타이틀 화면 루트 뷰. 닉네임을 검증하고, 통과하면 OnConnectRequested 로 알린다.
     /// 네트워크 · 씬 전환은 모른다. 기준 문서: docs/systems/12-title-ui.md
     /// </summary>
     public class TitleView : MonoBehaviour
@@ -22,18 +22,33 @@ namespace Chapchu.UI.Title
         private bool _connecting;
 
         /// <summary>검증을 통과한 닉네임(앞뒤 공백 제거)</summary>
-        public event Action<string> ConnectRequested;
+        public event Action<string> OnConnectRequested;
+
+        private void Awake()
+        {
+            if (nicknameField == null)
+                Debug.LogError($"[{nameof(TitleView)}] {nameof(nicknameField)} 참조가 비어 있습니다.", this);
+
+            if (connectButton == null)
+                Debug.LogError($"[{nameof(TitleView)}] {nameof(connectButton)} 참조가 비어 있습니다.", this);
+
+            if (connectLabel == null)
+                Debug.LogError($"[{nameof(TitleView)}] {nameof(connectLabel)} 참조가 비어 있습니다.", this);
+
+            if (errorLabel == null)
+                Debug.LogError($"[{nameof(TitleView)}] {nameof(errorLabel)} 참조가 비어 있습니다.", this);
+        }
 
         private void OnEnable()
         {
             connectButton.onClick.AddListener(HandleConnectClicked);
-            nicknameField.ValueChanged += HandleNicknameChanged;
+            nicknameField.OnValueChanged += HandleNicknameChanged;
         }
 
         private void OnDisable()
         {
             connectButton.onClick.RemoveListener(HandleConnectClicked);
-            nicknameField.ValueChanged -= HandleNicknameChanged;
+            nicknameField.OnValueChanged -= HandleNicknameChanged;
         }
 
         /// <summary>
@@ -64,7 +79,8 @@ namespace Chapchu.UI.Title
         private void HandleConnectClicked()
         {
             // 12-title-ui 5절: 접속 중에는 중복 요청을 막는다.
-            if (_connecting) return;
+            if (_connecting)
+                return;
 
             string nickname = nicknameField.Text.Trim();
             NicknameValidationResult result = NicknameValidator.Validate(nickname);
@@ -76,7 +92,7 @@ namespace Chapchu.UI.Title
 
             errorLabel.Clear();
             SetConnecting(true);
-            ConnectRequested?.Invoke(nickname);
+            OnConnectRequested?.Invoke(nickname);
         }
     }
 }

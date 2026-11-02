@@ -33,13 +33,33 @@ namespace Chapchu.UI.RoomScreen
         [SerializeField] private Button leaveButton;
 
         // 빈 칸 · 찬 칸의 박스 투명도 (16-room-ui 7-1 스타일)
+        [Tooltip("사람이 있는 칸의 박스 투명도")]
         [SerializeField] private float filledBoxAlpha = 0.92f;
+        [Tooltip("빈 칸의 박스 투명도")]
         [SerializeField] private float emptyBoxAlpha = 0.4f;
 
         private readonly Queue<string> _logLines = new Queue<string>();
 
-        public event Action StartRequested;
-        public event Action LeaveRequested;
+        public event Action OnStartRequested;
+        public event Action OnLeaveRequested;
+
+        private void Awake()
+        {
+            if (roomCodeText == null)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(roomCodeText)} 참조가 비어 있습니다.", this);
+
+            if (playerCountText == null)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(playerCountText)} 참조가 비어 있습니다.", this);
+
+            if (logText == null)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(logText)} 참조가 비어 있습니다.", this);
+
+            if (startButton == null)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(startButton)} 참조가 비어 있습니다.", this);
+
+            if (leaveButton == null)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(leaveButton)} 참조가 비어 있습니다.", this);
+        }
 
         private void OnEnable()
         {
@@ -90,7 +110,7 @@ namespace Chapchu.UI.RoomScreen
             logText.text = string.Join("\n", _logLines);
         }
 
-        private void HandleStartClicked() => StartRequested?.Invoke();
-        private void HandleLeaveClicked() => LeaveRequested?.Invoke();
+        private void HandleStartClicked() => OnStartRequested?.Invoke();
+        private void HandleLeaveClicked() => OnLeaveRequested?.Invoke();
     }
 }

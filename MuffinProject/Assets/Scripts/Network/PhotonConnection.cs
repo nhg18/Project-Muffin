@@ -3,27 +3,13 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using Chapchu.Core;
+using Chapchu.Network.Events;
 
 namespace Chapchu.Network
 {
+    /// <summary>서버 연결 · 끊김 처리 (09-network.md). NetworkManager 가 갖고 있고, 결과는 ConnectionEvents 로 알린다.</summary>
     public class PhotonConnection
     {
-        public static bool ValidConnect
-        {
-            get
-            {
-                if (!PhotonNetwork.IsConnectedAndReady)
-                {
-                    Debug.LogWarning("Not connected and ready");
-                    // 팝업 매니저 호출
-                    return false;
-                }
-
-                Debug.LogWarning("Connected and ready");
-                return true;
-            }
-        }
-
         /// <summary>
         /// 접속 시작부터 마스터 서버 접속 완료까지 기다리는 최대 시간 (초)
         /// </summary>
@@ -31,6 +17,22 @@ namespace Chapchu.Network
 
         // 제한 시간 초과로 직접 끊었는지. 사용자 의도 종료(DisconnectByClientLogic)와 구분한다.
         private bool _isTimedOut;
+
+        public static bool ValidConnect
+        {
+            get
+            {
+                if (!PhotonNetwork.IsConnectedAndReady)
+                {
+                    Debug.LogWarning($"[{nameof(PhotonConnection)}] 서버에 연결되지 않아 요청을 보낼 수 없다");
+                    // 팝업 매니저 호출
+                    return false;
+                }
+
+                Debug.LogWarning($"[{nameof(PhotonConnection)}] 서버 연결됨 — 요청을 보낸다");
+                return true;
+            }
+        }
 
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
@@ -53,7 +55,7 @@ namespace Chapchu.Network
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
                 // Photon 을 거치지 않고, PUN 이 연결 실패 시 보내는 것과 같은 사유로 알린다.
-                Debug.LogWarning($"No Internet: {DisconnectCause.ExceptionOnConnect}");
+                Debug.LogWarning($"[{nameof(PhotonConnection)}] 인터넷 연결 없음 — {DisconnectCause.ExceptionOnConnect} 로 알린다");
                 ConnectionEvents.RaiseDisconnected(DisconnectCause.ExceptionOnConnect);
                 return false;
             }
@@ -69,7 +71,7 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsConnected || PhotonNetwork.IsConnectedAndReady) return;
 
-            Debug.LogWarning($"Connect Timeout: {ConnectTimeoutSeconds}s");
+            Debug.LogWarning($"[{nameof(PhotonConnection)}] 접속 제한 시간 {ConnectTimeoutSeconds}초 초과 — 연결을 끊는다");
             _isTimedOut = true;
             PhotonNetwork.Disconnect();
         }
@@ -78,7 +80,7 @@ namespace Chapchu.Network
         {
             if (string.IsNullOrEmpty(nickname))
             {
-                Debug.LogError("Nickname cannot be null or empty");
+                Debug.LogError($"[{nameof(PhotonConnection)}] 닉네임이 비어 있다");
                 return;
             }
         
@@ -108,7 +110,7 @@ namespace Chapchu.Network
                 cause = DisconnectCause.ClientTimeout;
             _isTimedOut = false;
 
-            Debug.LogWarning($"[PhotonConnection] 연결 끊김: {cause}");
+            Debug.LogWarning($"[{nameof(PhotonConnection)}] 연결 끊김: {cause}");
 
             // 앱 종료 — 알릴 화면이 없다
             if (cause == DisconnectCause.ApplicationQuit) return;

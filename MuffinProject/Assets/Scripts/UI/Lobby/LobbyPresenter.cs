@@ -1,5 +1,6 @@
 ﻿using Chapchu.Core;
 using Chapchu.Network;
+using Chapchu.Network.Events;
 using Chapchu.UI.Popups;
 using Photon.Realtime;
 using UnityEngine;
@@ -15,10 +16,25 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(LobbyView))]
     public class LobbyPresenter : MonoBehaviour
     {
+        // 화면 문구 (14-lobby-ui · 08-room.md 7절)
+        private const string JoinPlaceholderText = "방 코드 입력";
+        private const string JoinSubmitText = "참가";
+        private const string CreateFailedTitle = "방 생성 실패";
+        private const string JoinFailedTitle = "방 참가 실패";
+        private const string RandomMatchFailedTitle = "랜덤 매칭 실패";
+        private const string RoomNotFoundText = "방을 찾을 수 없습니다.";
+        private const string RoomFullText = "방이 가득 찼습니다.";
+        private const string RoomClosedText = "이미 시작된 방입니다.";
+        private const string NoRandomRoomText = "참가할 수 있는 방이 없습니다.";
+        private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
+
         private LobbyView _view;
 
         // 요청을 보낸 뒤 결과가 올 때까지 띄우는 대기 표시. 성공하면 씬 전환이 닫고, 실패하면 여기서 닫는다.
         private LoadingPopup _loading;
+
+        // 방 코드 입력 팝업. 닫기 버튼으로 닫히면 팝업과 함께 구독도 사라진다.
+        private InputPopup _joinPopup;
 
         private void Awake()
         {
@@ -27,9 +43,9 @@ namespace Chapchu.UI.Lobby
 
         private void OnEnable()
         {
-            _view.RandomMatchRequested += HandleRandomMatchRequested;
-            _view.CreateRoomRequested += HandleCreateRoomRequested;
-            _view.JoinRoomRequested += HandleJoinRoomRequested;
+            _view.OnRandomMatchRequested += HandleRandomMatchRequested;
+            _view.OnCreateRoomRequested += HandleCreateRoomRequested;
+            _view.OnJoinRoomRequested += HandleJoinRoomRequested;
 
             RoomEvents.OnJoinedRoom += HandleJoinedRoom;
             RoomEvents.OnCreateRoomFailed += HandleCreateRoomFailed;
@@ -39,9 +55,9 @@ namespace Chapchu.UI.Lobby
 
         private void OnDisable()
         {
-            _view.RandomMatchRequested -= HandleRandomMatchRequested;
-            _view.CreateRoomRequested -= HandleCreateRoomRequested;
-            _view.JoinRoomRequested -= HandleJoinRoomRequested;
+            _view.OnRandomMatchRequested -= HandleRandomMatchRequested;
+            _view.OnCreateRoomRequested -= HandleCreateRoomRequested;
+            _view.OnJoinRoomRequested -= HandleJoinRoomRequested;
 
             RoomEvents.OnJoinedRoom -= HandleJoinedRoom;
             RoomEvents.OnCreateRoomFailed -= HandleCreateRoomFailed;
@@ -74,16 +90,21 @@ namespace Chapchu.UI.Lobby
 
         private void HandleJoinRoomRequested()
         {
-            InputPopup joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
-            joinPopup.PlaceholderText = "방 코드 입력";
-            joinPopup.SubmitButtonText = "참가";
-            joinPopup.CharacterLimit = RandomCode.Length;
-            joinPopup.OnSubmitted += roomCode =>
-            {
-                joinPopup.Close();
-                ShowLoading();
-                NetworkManager.Instance.JoinRoom(roomCode);
-            };
+            _joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
+            _joinPopup.PlaceholderText = JoinPlaceholderText;
+            _joinPopup.SubmitButtonText = JoinSubmitText;
+            _joinPopup.CharacterLimit = RandomCode.Length;
+            _joinPopup.OnSubmitted += HandleSubmitted;
+        }
+
+        private void HandleSubmitted(string roomCode)
+        {
+            _joinPopup.OnSubmitted -= HandleSubmitted;
+            _joinPopup.Close();
+            _joinPopup = null;
+
+            ShowLoading();
+            NetworkManager.Instance.JoinRoom(roomCode);
         }
 
         private void HandleJoinedRoom()
@@ -93,42 +114,43 @@ namespace Chapchu.UI.Lobby
 
         private void HandleCreateRoomFailed(short code, string message)
         {
-            ShowError("방 생성 실패", GetFailureMessage(code, message));
+            ShowError(CreateFailedTitle, GetFailureMessage(code, message));
         }
 
         private void HandleJoinRoomFailed(short code, string message)
         {
-            ShowError("방 참가 실패", GetFailureMessage(code, message));
+            ShowError(JoinFailedTitle, GetFailureMessage(code, message));
         }
 
         private void HandleJoinRandomFailed(short code, string message)
         {
-            ShowError("랜덤 매칭 실패", GetFailureMessage(code, message));
+            ShowError(RandomMatchFailedTitle, GetFailureMessage(code, message));
         }
 
         // 08-room.md 7절. Photon 원문(message)은 우리 코드가 직접 만든 사유(InvalidOperation)일 때만 그대로 쓴다.
-        private static string GetFailureMessage(short code, string message)
+        private static string GetFailureMessage(short code, string message) => code switch
         {
-            switch (code)
-            {
-                case ErrorCode.GameDoesNotExist: return "방을 찾을 수 없습니다.";
-                case ErrorCode.GameFull: return "방이 가득 찼습니다.";
-                case ErrorCode.GameClosed: return "이미 시작된 방입니다.";
-                case ErrorCode.NoRandomMatchFound: return "참가할 수 있는 방이 없습니다.";
-                case ErrorCode.InvalidOperation: return message;
-                default: return "잠시 후 다시 시도해 주세요.";
-            }
-        }
+            ErrorCode.GameDoesNotExist   => RoomNotFoundText,
+            ErrorCode.GameFull           => RoomFullText,
+            ErrorCode.GameClosed         => RoomClosedText,
+            ErrorCode.NoRandomMatchFound => NoRandomRoomText,
+            ErrorCode.InvalidOperation   => message,
+            _                            => RetryLaterText,
+        };
 
         private void ShowLoading()
         {
-            if (_loading != null) return;
+            if (_loading != null)
+                return;
+
             _loading = PopupManager.Instance.OpenModal<LoadingPopup>();
         }
 
         private void HideLoading()
         {
-            if (_loading == null) return;
+            if (_loading == null)
+                return;
+
             _loading.Close();
             _loading = null;
         }

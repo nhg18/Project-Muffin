@@ -1,0 +1,316 @@
+#!/usr/bin/env bash
+# 찹츄 멀티 테스트 — 열린 Unity 에디터를 Unity CLI 로 조종해 결과를 비교한다. 사용법은 SKILL.md.
+#
+#   run.sh rules [인원=4] [턴=8]      규칙 계층만 (네트워크 · 플레이 모드 없음)
+#   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
+#   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
+#
+# 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
+
+set -u
+
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+MAIN="$ROOT/MuffinProject"
+CS="$SKILL_DIR/MultiTest.cs"
+LOBBY_SCENE="Assets/Scenes/DebugLobbyScene.unity"
+TITLE_SCENE="Assets/Scenes/TitleScene.unity"
+WAIT_TRIES=30   # 대기 단계 최대 시도 (2초 간격)
+
+FAILED=0
+EDITORS=()
+
+log()  { printf '%s\n' "$*"; }
+fail() { log "  ✗ $*"; FAILED=1; }
+
+# unity command <이름> ... — 에디터 하나에 명령. stdin 을 막아야 CLI 가 멈추지 않는다.
+ucmd() {
+    local project="$1"; shift
+    unity command "$@" --project-path "$project" --caller plugin --skill multi-test </dev/null 2>&1
+}
+
+# MultiTest.<entry>(args...) 를 실행하고 반환 문자열을 찍는다. CLI · 컴파일 오류면 "WAIT ..." / "FAIL ...".
+call() {
+    local project="$1" entry="$2"; shift 2
+    local args="[]"
+    if [ $# -gt 0 ]; then
+        args=$(python -c 'import json,sys; print(json.dumps(sys.argv[1:]))' "$@")
+    fi
+    ucmd "$project" script.run --file "$CS" --entry "MultiTest.$entry" --args "$args" --result-only | python -c '
+import json, sys
+sys.stdin.reconfigure(encoding="utf-8", errors="replace"); sys.stdout.reconfigure(encoding="utf-8")
+raw = sys.stdin.read()
+try:
+    r = json.loads(raw[raw.index("{"):])
+except Exception:
+    print("WAIT cli " + raw.strip().replace("\n", " ")[:200]); sys.exit()
+errors = [d for d in r.get("diagnostics", []) if str(d.get("severity", "")).lower() == "error"]
+if errors:
+    print("FAIL MultiTest.cs 컴파일 — " + "; ".join(str(d.get("message", d)) for d in errors)[:400]); sys.exit()
+if "errors" in r and not r.get("success"):
+    # CLI 가 에디터에 못 붙음 — 플레이 진입 · 컴파일 중 도메인 리로드. 잠시 뒤 다시 시도한다.
+    print("WAIT cli " + "; ".join(e.get("message", "") for e in r["errors"])[:200]); sys.exit()
+if not r.get("success"):
+    print("FAIL " + str(r.get("error") or r)[:400]); sys.exit()
+print(str(r.get("result", "")).replace("\r\n", "\n"))
+'
+}
+
+# OK 가 나올 때까지 되풀이한다. FAIL 이면 바로 실패.
+until_ok() {
+    local project="$1" entry="$2"; shift 2
+    local out
+    for _ in $(seq 1 $WAIT_TRIES); do
+        out=$(call "$project" "$entry" "$@")
+        case "$out" in
+            OK*)   log "  $(name_of "$project"): $out"; return 0 ;;
+            FAIL*) fail "$(name_of "$project"): $out"; return 1 ;;
+        esac
+        sleep 2
+    done
+    fail "$(name_of "$project"): 시간 초과 — 마지막 응답 $out"
+    return 1
+}
+
+name_of() { basename "$1"; }
+
+# 컴파일이 끝날 때까지 기다린다. 실패면 종료 2.
+wait_compile() {
+    local project="$1" status
+    sleep 3
+    for _ in $(seq 1 60); do
+        status=$(ucmd "$project" console.status --result-only)
+        if printf '%s' "$status" | grep -q '"compilationFailed": *true'; then
+            log "✗ $(name_of "$project"): 컴파일 실패 — 에디터 콘솔을 본다"; exit 2
+        fi
+        printf '%s' "$status" | grep -q '"compiling": *false' && return 0
+        sleep 3
+    done
+    log "✗ $(name_of "$project"): 컴파일이 끝나지 않는다"; exit 2
+}
+
+# 에디터가 떠 있지 않으면 연다 (클론). 메인이 없으면 종료 2.
+ensure_editor() {
+    local project="$1" win
+    win=$(cygpath -w "$project" 2>/dev/null || printf '%s' "$project")
+    if unity status --format json </dev/null 2>/dev/null | python -c '
+import json, sys
+sys.stdin.reconfigure(encoding="utf-8", errors="replace"); sys.stdout.reconfigure(encoding="utf-8")
+want = sys.argv[1].replace("/", "\\").lower()
+d = json.load(sys.stdin)["data"]["instances"]
+sys.exit(0 if any(i["project"].lower() == want and i["state"] == "ready" for i in d) else 1)' "$win"; then
+        return 0
+    fi
+
+    if [ "$project" = "$MAIN" ]; then
+        log "✗ 메인 에디터가 열려 있지 않다 — 사람에게 열어 달라고 한다"; exit 2
+    fi
+
+    log "  $(name_of "$project") 에디터를 연다 (처음엔 몇 분 걸린다)"
+    unity open "$project" --non-interactive </dev/null >/dev/null 2>&1
+    for _ in $(seq 1 100); do
+        sleep 6
+        unity status --format json </dev/null 2>/dev/null | python -c '
+import json, sys
+sys.stdin.reconfigure(encoding="utf-8", errors="replace"); sys.stdout.reconfigure(encoding="utf-8")
+want = sys.argv[1].replace("/", "\\").lower()
+d = json.load(sys.stdin)["data"]["instances"]
+sys.exit(0 if any(i["project"].lower() == want and i["state"] == "ready" for i in d) else 1)' "$win" && return 0
+    done
+    log "✗ $(name_of "$project") 에디터가 준비되지 않는다"; exit 2
+}
+
+# 준비: 저장 안 한 씬 검사 → Refresh → 컴파일 대기 → 시작 씬 · 백그라운드 실행 → 콘솔 비우기 → 플레이
+prepare() {
+    local scene="$1" project out
+    for project in "${EDITORS[@]}"; do
+        ensure_editor "$project"
+        out=$(call "$project" Preflight)
+        case "$out" in
+            OK*) log "  $(name_of "$project"): $out" ;;
+            *)   log "✗ $(name_of "$project"): $out"; exit 2 ;;
+        esac
+    done
+    for project in "${EDITORS[@]}"; do
+        wait_compile "$project"
+    done
+
+    trap cleanup EXIT
+    for project in "${EDITORS[@]}"; do
+        call "$project" SetStartScene "$scene" >/dev/null
+        ucmd "$project" set_run_in_background --enable true >/dev/null
+        ucmd "$project" console.clear >/dev/null
+        ucmd "$project" start >/dev/null
+    done
+}
+
+# 뒷정리 — 실패해도 항상 돈다.
+cleanup() {
+    local project
+    for project in "${EDITORS[@]}"; do
+        ucmd "$project" stop >/dev/null
+    done
+    sleep 2
+    for project in "${EDITORS[@]}"; do
+        call "$project" SetStartScene "" >/dev/null
+        ucmd "$project" set_run_in_background --enable false >/dev/null
+    done
+}
+
+# 콘솔 줄을 "레벨<TAB>첫 줄" 로 받는다. 스택에 게임 · Photon 코드가 없는 에러는 에디터 내부 것이라
+# (예: 에디터를 막 열었을 때 Unity Search 색인) "editor-error" 로 따로 둔다.
+console_lines() {
+    ucmd "$1" console.get --tail 300 --result-only | python -c '
+import json, sys
+sys.stdin.reconfigure(encoding="utf-8", errors="replace"); sys.stdout.reconfigure(encoding="utf-8")
+raw = sys.stdin.read()
+r = json.loads(raw[raw.index("{"):])
+for e in r.get("entries", []):
+    level = e["level"]
+    stack = e.get("stackTrace", "")
+    if level == "error" and stack and not any(k in stack for k in ("Chapchu", "Photon", "Assets/")):
+        level = "editor-error"
+    print(level + "\t" + e["message"].split("\n")[0])
+'
+}
+
+check_errors() {
+    local project="$1" errors
+    errors=$(console_lines "$project" | awk -F'\t' '$1 == "error"')
+    if [ -n "$errors" ]; then
+        fail "$(name_of "$project") 콘솔 에러:"
+        printf '%s\n' "$errors" | sed 's/^/      /'
+    else
+        log "  $(name_of "$project"): 콘솔 에러 0"
+    fi
+    console_lines "$project" | awk -F'\t' '$1 == "editor-error" { print "      (참고 · 에디터 내부 에러, 판정 제외) " $2 }'
+}
+
+# ── 시나리오 ──
+
+run_rules() {
+    local players="${1:-4}" rounds="${2:-8}" out
+    EDITORS=("$MAIN")
+    ensure_editor "$MAIN"
+    wait_compile "$MAIN"
+    log "▶ 규칙 계층 — ${players}인 ${rounds}턴"
+    out=$(call "$MAIN" Rules "$players" "$rounds")
+    printf '%s\n' "$out" | sed 's/^/  /'
+    case "$out" in OK*) ;; *) FAILED=1 ;; esac
+}
+
+run_ui() {
+    EDITORS=("$MAIN")
+    log "▶ 준비"
+    prepare "$TITLE_SCENE"
+    log "▶ UI 흐름"
+    until_ok "$MAIN" Ui title &&
+    until_ok "$MAIN" Ui bad-code &&
+    until_ok "$MAIN" Ui warning &&
+    until_ok "$MAIN" Ui create &&
+    until_ok "$MAIN" Ui leave
+    local out=""
+    for _ in $(seq 1 $WAIT_TRIES); do
+        out=$(call "$MAIN" Ui scene)
+        [ "$out" = "OK LobbyScene" ] && break
+        sleep 2
+    done
+    [ "$out" = "OK LobbyScene" ] && log "  나간 뒤 로비로 돌아옴" || fail "나간 뒤 씬: $out"
+    sleep 2
+    log "▶ 판정"
+    check_errors "$MAIN"
+}
+
+run_multi() {
+    local clients="${1:-2}" rounds="${2:-4}" i project out
+    EDITORS=("$MAIN")
+    for i in $(seq 0 $((clients - 2))); do
+        EDITORS+=("$ROOT/MuffinProject_clone_$i")
+    done
+
+    log "▶ 준비 — 클라이언트 ${clients}개"
+    prepare "$LOBBY_SCENE"
+
+    log "▶ 입장 · 시작 (메인이 먼저 들어가 방장이 된다)"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" Join || return
+        sleep 2
+    done
+    until_ok "$MAIN" StartGame "$clients" || return
+
+    # 모든 클라이언트가 게임 화면에 올 때까지
+    for project in "${EDITORS[@]}"; do
+        for _ in $(seq 1 $WAIT_TRIES); do
+            out=$(call "$project" Ui scene)
+            [ "$out" = "OK GameScene" ] && break
+            sleep 2
+        done
+        [ "$out" = "OK GameScene" ] || { fail "$(name_of "$project") 게임 화면에 오지 않음: $out"; return; }
+    done
+    sleep 2
+
+    log "▶ 남의 턴에 카드 내기 (거절돼야 한다)"
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" PlayOutOfTurn)
+        case "$out" in OK*) log "  $(name_of "$project"): $out"; break ;; esac
+    done
+    sleep 2
+
+    log "▶ 턴 ${rounds}번 — 차례인 클라이언트가 행동"
+    local done_rounds=0 acted
+    for _ in $(seq 1 $((rounds * 10))); do
+        [ $done_rounds -ge "$rounds" ] && break
+        acted=0
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ActIfMyTurn)
+            case "$out" in
+                OK*)   log "  $(name_of "$project"): $out"; acted=1; done_rounds=$((done_rounds + 1)); sleep 2; break ;;
+                FAIL*) fail "$(name_of "$project"): $out"; return ;;
+            esac
+        done
+        [ $acted -eq 0 ] && sleep 1
+    done
+    sleep 3
+
+    log "▶ 판정"
+    compare_screens
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 클라이언트마다 [GameDebugInput] 턴 줄의 "모두의 손패 장수 · 체력" 부분을 순서대로 모아 비교한다.
+compare_screens() {
+    local project first="" current rejects
+    for project in "${EDITORS[@]}"; do
+        current=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep ' 턴 P' | sed -E 's/.* · //')
+        rejects=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절')
+        log "  $(name_of "$project"): 턴 줄 $(printf '%s\n' "$current" | grep -c .)개 · 마지막 「$(printf '%s\n' "$current" | tail -1)」 · 내 요청 거절 ${rejects}번"
+        if [ -z "$first" ]; then
+            first="$current"
+        elif [ "$current" != "$first" ]; then
+            fail "$(name_of "$project") 의 화면 값이 메인과 다르다"
+            diff <(printf '%s\n' "$first") <(printf '%s\n' "$current") | sed 's/^/      /'
+        fi
+    done
+    local total=0 count
+    for project in "${EDITORS[@]}"; do
+        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절')
+        total=$((total + count))
+    done
+    [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
+}
+
+case "${1:-}" in
+    rules) shift; run_rules "$@" ;;
+    ui)    shift; run_ui ;;
+    multi) shift; run_multi "$@" ;;
+    *)     sed -n '2,9p' "$0"; exit 2 ;;
+esac
+
+if [ $FAILED -eq 0 ]; then
+    log "■ 통과"
+    exit 0
+fi
+log "■ 실패"
+exit 1

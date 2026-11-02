@@ -15,10 +15,14 @@ namespace Chapchu.UI.Title
         [SerializeField] private RectTransform body;
         [SerializeField] private RectTransform hardShadow;
         [SerializeField] private Graphic fill;
+        [Tooltip("평소 몸체 색")]
         [SerializeField] private Color normalColor = new Color32(0xB1, 0x8A, 0xE0, 0xFF);
+        [Tooltip("호버 · 누름 때 몸체 색")]
         [SerializeField] private Color hoverColor = new Color32(0xBF, 0x9C, 0xE9, 0xFF);
+        [Tooltip("호버 때 몸체가 뜨는 거리 (px)")]
         [SerializeField] private float hoverLift = 2f;
         // 누르면 몸체는 이만큼 내려가고 그림자는 이만큼 올라와 둘이 맞닿는다 (그림자 아래 7 → 3).
+        [Tooltip("누를 때 몸체가 내려가고 그림자가 올라오는 거리 (px)")]
         [SerializeField] private float pressDepth = 4f;
 
         private Button _button;
@@ -29,6 +33,15 @@ namespace Chapchu.UI.Title
 
         private void Awake()
         {
+            if (body == null)
+                Debug.LogError($"[{nameof(PressableButton)}] {nameof(body)} 참조가 비어 있습니다.", this);
+
+            if (hardShadow == null)
+                Debug.LogError($"[{nameof(PressableButton)}] {nameof(hardShadow)} 참조가 비어 있습니다.", this);
+
+            if (fill == null)
+                Debug.LogError($"[{nameof(PressableButton)}] {nameof(fill)} 참조가 비어 있습니다.", this);
+
             _button = GetComponent<Button>();
             _bodyOrigin = body.anchoredPosition;
             _shadowOrigin = hardShadow.anchoredPosition;
@@ -41,12 +54,14 @@ namespace Chapchu.UI.Title
             Apply();
         }
 
+        /// <summary>호버 시작 — 몸체가 뜬다.</summary>
         public void OnPointerEnter(PointerEventData eventData)
         {
             _isHovered = true;
             Apply();
         }
 
+        /// <summary>호버 끝 — 누르던 중이어도 원위치.</summary>
         public void OnPointerExit(PointerEventData eventData)
         {
             _isHovered = false;
@@ -54,16 +69,22 @@ namespace Chapchu.UI.Title
             Apply();
         }
 
+        /// <summary>누름 — 몸체가 그림자 쪽으로 가라앉는다. 왼쪽 버튼(터치)만.</summary>
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Left) return;
+            if (eventData.button != PointerEventData.InputButton.Left)
+                return;
+
             _isPressed = true;
             Apply();
         }
 
+        /// <summary>뗌 — 호버 상태로 돌아간다. 왼쪽 버튼(터치)만.</summary>
         public void OnPointerUp(PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Left) return;
+            if (eventData.button != PointerEventData.InputButton.Left)
+                return;
+
             _isPressed = false;
             Apply();
         }

@@ -16,9 +16,29 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button createRoomButton;
         [SerializeField] private Button joinRoomButton;
 
-        public event Action RandomMatchRequested;
-        public event Action CreateRoomRequested;
-        public event Action JoinRoomRequested;
+        /// <summary>랜덤 매칭 버튼을 누름 (14-lobby-ui 5절)</summary>
+        public event Action OnRandomMatchRequested;
+
+        /// <summary>방 만들기 버튼을 누름 (14-lobby-ui 5절)</summary>
+        public event Action OnCreateRoomRequested;
+
+        /// <summary>방 참가 버튼을 누름. 코드 입력 팝업은 받는 쪽이 연다 (14-lobby-ui 5절)</summary>
+        public event Action OnJoinRoomRequested;
+
+        private void Awake()
+        {
+            if (nicknameText == null)
+                Debug.LogError($"[{nameof(LobbyView)}] {nameof(nicknameText)} 참조가 비어 있습니다.", this);
+
+            if (randomMatchButton == null)
+                Debug.LogError($"[{nameof(LobbyView)}] {nameof(randomMatchButton)} 참조가 비어 있습니다.", this);
+
+            if (createRoomButton == null)
+                Debug.LogError($"[{nameof(LobbyView)}] {nameof(createRoomButton)} 참조가 비어 있습니다.", this);
+
+            if (joinRoomButton == null)
+                Debug.LogError($"[{nameof(LobbyView)}] {nameof(joinRoomButton)} 참조가 비어 있습니다.", this);
+        }
 
         private void OnEnable()
         {
@@ -37,8 +57,8 @@ namespace Chapchu.UI.Lobby
         /// <summary>좌상단 닉네임 표시 (14-lobby-ui 7절)</summary>
         public void SetNickname(string nickname) => nicknameText.text = nickname;
 
-        private void HandleRandomMatchClicked() => RandomMatchRequested?.Invoke();
-        private void HandleCreateRoomClicked() => CreateRoomRequested?.Invoke();
-        private void HandleJoinRoomClicked() => JoinRoomRequested?.Invoke();
+        private void HandleRandomMatchClicked() => OnRandomMatchRequested?.Invoke();
+        private void HandleCreateRoomClicked() => OnCreateRoomRequested?.Invoke();
+        private void HandleJoinRoomClicked() => OnJoinRoomRequested?.Invoke();
     }
 }

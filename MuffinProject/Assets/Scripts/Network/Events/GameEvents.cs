@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Chapchu.Network
+namespace Chapchu.Network.Events
 {
     /// <summary>
     /// 인게임 결과 통지 (방장 → 각 클라이언트). 화면은 여기서 받은 값만 보여 주고 판정하지 않는다 (09-network.md 2절).

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Chapchu.Game.Effects;
 
 namespace Chapchu.Game
 {
@@ -19,30 +20,6 @@ namespace Chapchu.Game
         AllOthers,  // 나를 뺀 전원 (자동)
         Self,       // 나 (자동)
         Everyone    // 나를 포함한 전원 (자동)
-    }
-
-    /// <summary>효과 종류 (11-card-list.md). 실행은 GameServer.ApplyEffect 한 곳. 끝에만 추가한다.</summary>
-    public enum EffectType
-    {
-        Damage      // amount 만큼 HP 감소
-    }
-
-    /// <summary>효과를 받는 사람. 한 카드 안에서도 효과마다 다르다 (예: A19 대상에게 피해 · 본인 회복).</summary>
-    public enum EffectSubject
-    {
-        Target,     // 카드의 대상 (TargetType 으로 정해진 사람들)
-        Self        // 카드를 쓴 사람
-    }
-
-    /// <summary>
-    /// 카드 효과 하나 = 종류 · 받는 사람 · 수치. 카드 에셋(CardData) 인스펙터에 입력한다. 순수 데이터 — 실행은 GameServer.
-    /// </summary>
-    [Serializable]
-    public struct CardEffect
-    {
-        public EffectType type;
-        public EffectSubject subject;
-        public int amount;
     }
 
     /// <summary>

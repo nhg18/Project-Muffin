@@ -12,12 +12,20 @@ namespace Chapchu.UI.Title
         [SerializeField] private TMP_InputField inputField;
         [SerializeField] private TMP_Text countText;
 
-        public event Action<string> ValueChanged;
-
+        /// <summary>지금 입력값 (앞뒤 공백 포함 — 검증 쪽이 자른다)</summary>
         public string Text => inputField.text;
+
+        /// <summary>사람이 입력을 바꿈. 인자는 바뀐 입력값. SetText 로 바꿀 때는 오지 않는다.</summary>
+        public event Action<string> OnValueChanged;
 
         private void Awake()
         {
+            if (inputField == null)
+                Debug.LogError($"[{nameof(NicknameFieldView)}] {nameof(inputField)} 참조가 비어 있습니다.", this);
+
+            if (countText == null)
+                Debug.LogError($"[{nameof(NicknameFieldView)}] {nameof(countText)} 참조가 비어 있습니다.", this);
+
             inputField.characterLimit = NicknameValidator.MaxLength;
             UpdateCount(inputField.text);
         }
@@ -33,7 +41,7 @@ namespace Chapchu.UI.Title
         }
 
         /// <summary>
-        /// 값만 바꾸고 ValueChanged 는 발행하지 않는다.
+        /// 값만 바꾸고 OnValueChanged 는 발행하지 않는다.
         /// </summary>
         public void SetText(string text)
         {
@@ -48,7 +56,7 @@ namespace Chapchu.UI.Title
         private void HandleValueChanged(string text)
         {
             UpdateCount(text);
-            ValueChanged?.Invoke(text);
+            OnValueChanged?.Invoke(text);
         }
 
         // IME 조합 중인 글자는 text 에 들어오지 않으므로 조합이 끝난 글자 기준으로 센다.
