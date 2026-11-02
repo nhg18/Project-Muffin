@@ -11,6 +11,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private RoomCodeView roomCode;
         [SerializeField] private HistoryView history;
         [SerializeField] private MyPanelView myPanel;
+        [SerializeField] private DeckView deck;
         [Tooltip("내 손패가 들어갈 영역. 카드 배치는 이후 작업 (10-ui.md 4절).")]
         [SerializeField] private RectTransform handArea;
         [SerializeField] private VictoryOverlayView victoryOverlay;
@@ -18,12 +19,13 @@ namespace Chapchu.UI.GameScreen
         public RoomCodeView RoomCode => roomCode;
         public HistoryView History => history;
         public MyPanelView MyPanel => myPanel;
+        public DeckView Deck => deck;
         public RectTransform HandArea => handArea;
         public VictoryOverlayView VictoryOverlay => victoryOverlay;
 
         private void Awake()
         {
-            if (roomCode == null || history == null || myPanel == null || handArea == null || victoryOverlay == null)
+            if (roomCode == null || history == null || myPanel == null || deck == null || handArea == null || victoryOverlay == null)
                 Debug.LogError($"[{nameof(GameScreenView)}] 영역 뷰 참조 중 비어 있는 것이 있습니다.", this);
         }
     }
