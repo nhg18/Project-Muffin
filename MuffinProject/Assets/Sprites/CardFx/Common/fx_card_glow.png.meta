@@ -1,15 +1,15 @@
 fileFormatVersion: 2
-guid: feb4b6334e302f547a5db51ef751e8f1
+guid: c6bf7847838cf7a49885b03127cc4997
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1503865298957320593
-    second: hellblade_boom_0
+      213: 1543980421089629041
+    second: fx_card_glow_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 0
+    enableMipMap: 1
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 2
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: hellblade_boom_0
+      name: fx_card_glow_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 360
-        height: 360
+        width: 380
+        height: 488
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f6ebc997a72312be0800000000000000
-      internalID: -1503865298957320593
+      spriteID: 173943b33025d6510800000000000000
+      internalID: 1543980421089629041
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      hellblade_boom_0: -1503865298957320593
+      fx_card_glow_0: 1543980421089629041
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

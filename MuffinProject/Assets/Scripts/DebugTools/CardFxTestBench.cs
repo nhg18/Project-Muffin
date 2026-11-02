@@ -13,13 +13,16 @@ using UnityEngine.UI;
 namespace Chapchu.DebugTools
 {
     /// <summary>
-    /// 카드 연출 테스트 씬 (RPG 스킬 시험장처럼). 아래 손패에서 카드를 누르면 가운데로 날아가 그 카드의 연출이 재생되고,
-    /// 연출이 결과를 보이라고 할 때 허수아비 자리의 체력이 준다. 규칙 · 네트워크는 거치지 않는다.
-    /// 새 카드 연출은 <see cref="CardFx"/> 를 상속한 프리팹을 만들고 <see cref="entries"/> 에 한 줄 더한다.
+    /// 카드 연출 테스트 씬 (RPG 스킬 시험장처럼). 순서와 값은 아티팩트 「찹츄 카드 이펙트」 의 runCard 와 같다:
+    /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임(playCard) → 카드 연출 → 피해(hit) → 900ms → 버림 더미로(clearSlot).
+    /// 규칙 · 네트워크는 거치지 않는다. 새 카드 연출은 <see cref="CardFx"/> 를 상속한 프리팹을 만들고 <see cref="entries"/> 에 한 줄 더한다.
     /// 키: 1~9 = 그 카드, Space = 마지막 카드 다시, R = 체력 초기화.
     /// </summary>
     public class CardFxTestBench : MonoBehaviour
     {
+        // 시안 카드 너비(px). 프리팹 카드를 이 크기 × 레이어 PixelScale 로 맞춘다
+        private const float DesignCardWidth = 110f;
+
         /// <summary>시험할 카드 한 장. 카드 에셋 없이 화면에 보일 것만 적는다.</summary>
         [Serializable]
         public class Entry
@@ -31,6 +34,8 @@ namespace Chapchu.DebugTools
             public CardFx fxPrefab;
             [Tooltip("테스트 표시용 피해. 규칙 수치가 아니다.")]
             public int damage;
+            [Tooltip("큰 피해 연출 (시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
+            public bool bigHit;
         }
 
         [SerializeField] private List<Entry> entries = new List<Entry>();
@@ -41,36 +46,39 @@ namespace Chapchu.DebugTools
         [SerializeField] private HandCardView trapCardPrefab;
 
         [Header("화면")]
-        [Tooltip("흔들리는 판. 연출 레이어는 이 밖에 둔다.")]
-        [SerializeField] private RectTransform stage;
         [SerializeField] private RectTransform handArea;
-        [Tooltip("낸 카드가 날아가 멈추는 자리.")]
+        [Tooltip("낸 카드가 놓이는 자리 (가운데).")]
         [SerializeField] private RectTransform playSpot;
-        [Tooltip("연출 프리팹을 만드는 곳. 화면 전체를 덮는다.")]
-        [SerializeField] private RectTransform fxLayer;
+        [Tooltip("다 쓴 카드가 날아가는 곳.")]
+        [SerializeField] private RectTransform discardPile;
+        [Tooltip("연출 레이어. 화면 전체를 덮고, 연출 프리팹 · 날아가는 카드도 여기에 만든다.")]
+        [SerializeField] private FxLayer fxLayer;
         [SerializeField] private FxDummySeat caster;
         [SerializeField] private FxDummySeat target;
         [SerializeField] private TMP_Text captionText;
         [SerializeField] private Button replayButton;
         [SerializeField] private Button resetButton;
 
-        [Header("연출")]
-        [Tooltip("손패에서 가운데까지 날아가는 시간.")]
-        [SerializeField] private float flyDuration = 0.46f;
-        [Tooltip("가운데에서 보여 주는 크기 배율.")]
-        [SerializeField] private float playScale = 1.3f;
-        [Tooltip("가운데에 멈춰 있는 시간 (연출 시작 전).")]
-        [SerializeField] private float holdDuration = 0.35f;
+        [Header("놓인 카드")]
+        [Tooltip("행동 카드가 놓였을 때 테두리 빛 (시안 glow-act).")]
+        [SerializeField] private Sprite playedGlow;
+
+        [Header("색")]
+        [SerializeField] private Color[] landColors = { new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white, new Color32(0xff, 0x5c, 0x8a, 0xff) };
+        [SerializeField] private Color hitColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
+        [SerializeField] private Color[] hitColors = { new Color32(0xff, 0x4f, 0x2e, 0xff), new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white };
 
         private readonly List<HandCardView> _handCards = new List<HandCardView>();
         private int _lastIndex = -1;
         private bool _busy;
 
+        private float CardScale => fxLayer.PixelScale * DesignCardWidth / ((RectTransform)actionCardPrefab.transform).sizeDelta.x;
+
         private void Awake()
         {
-            if (actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || stage == null || handArea == null
-                || playSpot == null || fxLayer == null || caster == null || target == null || captionText == null
-                || replayButton == null || resetButton == null)
+            if (actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || handArea == null || playSpot == null
+                || discardPile == null || fxLayer == null || caster == null || target == null || captionText == null
+                || replayButton == null || resetButton == null || playedGlow == null)
                 Debug.LogError($"[{nameof(CardFxTestBench)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -121,48 +129,127 @@ namespace Chapchu.DebugTools
             _lastIndex = index;
             Entry entry = entries[index];
             captionText.text = $"{entry.cardName} — {entry.description}";
+            HandleResetClicked();
 
-            // 손패 자리에서 같은 카드를 하나 더 만들어 가운데로 날린다 (손패 카드는 남겨 둔다 — 몇 번이고 다시 낼 수 있게)
-            HandCardView source = _handCards[index];
-            HandCardView flying = Instantiate(PrefabOf(entry.type), fxLayer);
-            flying.Setup(index, CreateCardData(entry));
-            var flyingRect = (RectTransform)flying.transform;
-            flyingRect.position = source.transform.position;
-            flyingRect.localScale = source.transform.lossyScale.x / fxLayer.lossyScale.x * Vector3.one;
-            CanvasGroup group = flying.gameObject.AddComponent<CanvasGroup>();
-            group.blocksRaycasts = false;
-
-            yield return DOTween.Sequence().SetLink(flying.gameObject)
-                .Append(flyingRect.DOMove(playSpot.position, flyDuration).SetEase(Ease.OutCubic))
-                .Join(flyingRect.DOScale(playScale, flyDuration).SetEase(Ease.OutBack))
-                .Join(flyingRect.DOLocalRotate(new Vector3(0f, 0f, 360f), flyDuration, RotateMode.LocalAxisAdd).SetEase(Ease.OutCubic))
-                .AppendInterval(holdDuration)
-                .Append(group.DOFade(0f, 0.2f))
-                .Join(flyingRect.DOScale(playScale * 1.15f, 0.2f))
-                .WaitForCompletion();
-            Destroy(flying.gameObject);
+            yield return new WaitForSeconds(0.25f);
+            RectTransform played = CreateFlyingCard(entry, index);
+            yield return FlyRoutine(played, fxLayer.CenterOf((RectTransform)_handCards[index].transform), fxLayer.CenterOf(playSpot),
+                0.46f, 0.45f, 1.1f, -20f, 0f, 80f);
+            Land(played);
 
             if (entry.fxPrefab != null)
             {
-                CardFx fx = Instantiate(entry.fxPrefab, fxLayer);
+                CardFx fx = Instantiate(entry.fxPrefab, fxLayer.transform);
                 Stretch((RectTransform)fx.transform);
                 var context = new CardFxContext
                 {
-                    Stage = stage,
+                    Layer = fxLayer,
                     Caster = (RectTransform)caster.transform,
                     Targets = new[] { (RectTransform)target.transform },
-                    Impact = _ => target.TakeDamage(entry.damage),
+                    Impact = _ => Hit(entry),
                 };
                 yield return fx.PlayRoutine(context);
+                yield return ClearRoutine(played);
                 Destroy(fx.gameObject);
             }
             else
             {
                 Debug.LogWarning($"[{nameof(CardFxTestBench)}] {entry.cardName} 에 연출 프리팹이 없다 — 결과만 보인다.");
-                target.TakeDamage(entry.damage);
+                Hit(entry);
+                yield return new WaitForSeconds(0.9f);
+                yield return ClearRoutine(played);
             }
 
             _busy = false;
+        }
+
+        // 시안 hit: 터짐 숫자 · 파편 · (큰 피해면) 번짐 · 판 흔들림 · 자리 흔들림 + 체력
+        private void Hit(Entry entry)
+        {
+            var seat = (RectTransform)target.transform;
+            Vector2 center = fxLayer.CenterOf(seat);
+            float px = fxLayer.PixelScale;
+            fxLayer.Boom(center + new Vector2(UnityEngine.Random.Range(-30f, 30f), UnityEngine.Random.Range(30f, 60f)) * px, hitColor, $"-{entry.damage}");
+            fxLayer.Burst(center, entry.bigHit ? 40 : 20, hitColors, new Vector2(200f, 520f), 500f);
+            if (entry.bigHit)
+                fxLayer.Bloom(center, hitColor, 260f, 0.4f);
+            fxLayer.ShakeStage(entry.bigHit ? 14f : 6f, false);
+            target.TakeDamage(entry.damage);
+        }
+
+        // 시안 playCard 의 착지: 흰 고리 · 파편 16
+        private void Land(RectTransform card)
+        {
+            Vector2 center = fxLayer.CenterOf(card);
+            fxLayer.Ring(center, Color.white, 150f, 0.4f, 8f);
+            fxLayer.Burst(center, 16, landColors, new Vector2(120f, 320f), 300f);
+        }
+
+        // 시안 clearSlot: 버림 더미로 날아가며 작아진다 (380ms) → 400ms 기다림
+        private IEnumerator ClearRoutine(RectTransform card)
+        {
+            StartCoroutine(FlyRoutine(card, card.anchoredPosition, fxLayer.CenterOf(discardPile), 0.38f, 1.1f, 0.6f, 0f, 8f, 30f, true));
+            yield return new WaitForSeconds(0.4f);
+        }
+
+        // 시안 fly(): 가운데에서 위로 휘는 3점 궤적, 크기 · 기울기 보간, 전체 cubic-bezier(.3,.6,.25,1)
+        private IEnumerator FlyRoutine(RectTransform card, Vector2 from, Vector2 to, float duration, float scaleFrom, float scaleTo,
+            float angleFrom, float angleTo, float arc, bool destroyAtEnd = false)
+        {
+            float baseScale = CardScale;
+            Vector2 middle = new Vector2((from.x + to.x) / 2f, Mathf.Max(from.y, to.y) + arc * fxLayer.PixelScale);
+            float middleScale = (scaleFrom + scaleTo) / 2f + 0.15f;
+            float middleAngle = angleFrom / 2f;
+
+            for (float time = 0f; time < duration; time += Time.deltaTime)
+            {
+                float t = CubicBezier(0.3f, 0.6f, 0.25f, 1f, time / duration);
+                bool first = t < 0.5f;
+                float f = first ? t / 0.5f : (t - 0.5f) / 0.5f;
+                card.anchoredPosition = first ? Vector2.Lerp(from, middle, f) : Vector2.Lerp(middle, to, f);
+                card.localScale = Vector3.one * baseScale * (first ? Mathf.Lerp(scaleFrom, middleScale, f) : Mathf.Lerp(middleScale, scaleTo, f));
+                // 시안은 시계 방향 + — 유니티는 반시계 방향 +
+                card.localRotation = Quaternion.Euler(0f, 0f, -(first ? Mathf.Lerp(angleFrom, middleAngle, f) : Mathf.Lerp(middleAngle, angleTo, f)));
+                yield return null;
+            }
+
+            card.anchoredPosition = to;
+            card.localScale = Vector3.one * baseScale * scaleTo;
+            card.localRotation = Quaternion.Euler(0f, 0f, -angleTo);
+            if (destroyAtEnd)
+                Destroy(card.gameObject);
+        }
+
+        // 손패 카드와 같은 모양을 연출 레이어에 하나 더 만든다 (손패 카드는 남겨 둔다 — 몇 번이고 다시 낼 수 있게)
+        private RectTransform CreateFlyingCard(Entry entry, int index)
+        {
+            HandCardView card = Instantiate(PrefabOf(entry.type), fxLayer.transform);
+            card.Setup(index, CreateCardData(entry));
+            var rect = (RectTransform)card.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.SetAsFirstSibling();
+
+            if (entry.type == CardType.Action)
+            {
+                // 시안 glow-act: 노란 테두리 + 번짐 (카드 뒤)
+                var glow = new GameObject("PlayedGlow", typeof(RectTransform), typeof(Image));
+                var glowRect = (RectTransform)glow.transform;
+                glowRect.SetParent(rect, false);
+                glowRect.SetAsFirstSibling();
+                glowRect.anchorMin = Vector2.zero;
+                glowRect.anchorMax = Vector2.one;
+                Vector2 margin = rect.sizeDelta * new Vector2(0.36f, 0.24f);
+                glowRect.offsetMin = -margin;
+                glowRect.offsetMax = margin;
+                Image image = glow.GetComponent<Image>();
+                image.sprite = playedGlow;
+                image.raycastTarget = false;
+            }
+
+            CanvasGroup group = card.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            return rect;
         }
 
         private void HandleReplayClicked()
@@ -210,6 +297,27 @@ namespace Chapchu.DebugTools
                 case CardType.Trap: return trapCardPrefab;
                 default: return actionCardPrefab;
             }
+        }
+
+        // CSS cubic-bezier(x1, y1, x2, y2) — 진행률 x 에 대한 y
+        private static float CubicBezier(float x1, float y1, float x2, float y2, float x)
+        {
+            float t = x;
+            for (int i = 0; i < 8; i++)
+            {
+                float current = Bezier(x1, x2, t) - x;
+                float slope = 3f * (1f - t) * (1f - t) * x1 + 6f * (1f - t) * t * (x2 - x1) + 3f * t * t * (1f - x2);
+                if (Mathf.Abs(slope) < 1e-5f)
+                    break;
+                t = Mathf.Clamp01(t - current / slope);
+            }
+            return Bezier(y1, y2, t);
+        }
+
+        private static float Bezier(float p1, float p2, float t)
+        {
+            float u = 1f - t;
+            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
         }
 
         private static void Stretch(RectTransform rect)

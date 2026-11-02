@@ -9,8 +9,8 @@ namespace Chapchu.UI.Fx
     /// </summary>
     public class CardFxContext
     {
-        /// <summary>흔들거나 확대할 판 전체. 연출 레이어는 이 밖에 있어야 같이 흔들리지 않는다.</summary>
-        public RectTransform Stage;
+        /// <summary>같이 쓰는 파티클 · 터짐 글자 · 판 흔들기.</summary>
+        public FxLayer Layer;
 
         /// <summary>카드를 낸 사람의 자리.</summary>
         public RectTransform Caster;
