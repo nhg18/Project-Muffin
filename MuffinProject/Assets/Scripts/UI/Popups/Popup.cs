@@ -4,7 +4,7 @@ namespace Chapchu.UI.Popups
 {
     /// <summary>
     /// 모든 팝업의 기반. 생성 · 파괴는 PopupManager 가 한다 — 직접 Instantiate / Destroy 하지 않는다.
-    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트.
+    /// 프리팹 규약: Resources/Popups/{타입명}.prefab, 루트에 같은 타입의 컴포넌트. 기준 문서: docs/systems/10-ui.md 8절
     /// </summary>
     public abstract class Popup : MonoBehaviour
     {
@@ -17,8 +17,12 @@ namespace Chapchu.UI.Popups
         internal void NotifyOpened() => OnOpen();
         internal void NotifyClosed() => OnClose();
 
-        protected virtual void OnOpen() { }
+        protected virtual void OnOpen()
+        {
+        }
 
-        protected virtual void OnClose() { }
+        protected virtual void OnClose()
+        {
+        }
     }
 }

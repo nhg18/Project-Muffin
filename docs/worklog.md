@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-02 · 로비 코드 컨벤션 (`feature/lobby-screen`)
+
+### 한 것
+- `LobbyPresenter`: 한 줄 `if … return;` 2곳, 실패 문구를 switch 식으로, 코드 입력 팝업 구독을 람다 → `HandleSubmitted` (`+=` · `-=` 짝).
+- `LobbyView`: 요청 이벤트 3개 XML 주석.
+- 로비가 쓰는 공용 팝업 5개(`InputPopup` · `WarningPopup` · `LoadingPopup` · `Popup` · `PopupManager`): 기준 문서(`10-ui` 8절), public 멤버 주석, 한 줄 `if` 3곳 · 한 줄 `{ }`. `LoadingPopup` 요약의 옛 계획서 문구 정리.
+- `LobbyScene` 하이어라키는 `14-lobby-ui` 7-1 과 같아 씬은 그대로.
+- 확인: `multi-test ui` 통과 (없는 방 코드 경고 문구 08-room 7절대로, 콘솔 에러 0).
+
+### 다음 할 일
+- [ ] `LobbyPresenter.Start` 가 아직 `SceneFlow.ReturnSceneAfterRoom` 을 정한다 — 11-01 할 일 "방 나가기는 항상 LobbyScene" 과 같이 지운다
+- [ ] `ProjectSettings.asset` · `EditorPipelineConfig.json` 이 테스트마다 변경으로 뜬다 — Unity 는 LF 로 쓰는데 `.gitattributes` 가 CRLF 를 요구해서 (내용은 같음). `ProjectSettings/` 를 `eol=lf` 로 둘지 결정
+
+---
+
 ## 2026-11-02 · 타이틀 코드 컨벤션 (`feature/title-screen`)
 
 ### 결정
@@ -20,7 +35,8 @@
 ### 다음 할 일
 - [ ] 타이틀 연결 중 · 연결 실패 상태 (`12-title-ui` 3절 6~8 · 6절 · 9-3 · 10-5) — 지금 코드는 폐기된 "접속 중…" 흐름이고 실패 문구도 옛 문구. 씬에 로딩 묶음 · 링 · 다시 시도 버튼이 필요
 - [x] 게임성 보완 4가지 HTML 아티팩트 시안 — 캔버스 「찹츄 타이틀 게임성 시안」 `https://claude.ai/artifact/Fxy6WDjLUDq4pjvpMEhKEp` 의 "연출 (나중에)" 페이지에 보관. 연출은 UI 를 고른 뒤 얹는다
-- [ ] 타이틀 디자인 시안 고르기 — 같은 캔버스 "UI 시안" 페이지. 배치는 가운데 묶음으로 정하고, 디자인 6안: ① 핑크 스티커 ② 버터 ③ 민트 · 하늘 ④ 밤하늘 ⑤ 이름표 판 ⑥ 카드. 게임 화면은 따로 작업한다
+- [ ] 타이틀 디자인 시안 고르기 — 같은 캔버스 "UI 시안" 페이지. 배치는 가운데 묶음으로 정하고, 현재안(스티커) + 생김새가 다른 6안: A 아케이드 간판 · B 카드 테이블 · C 만화 컷 · D 콜로세움 깃발 · E 출입증 · F 큰 글자 미니멀 (색만 바꾼 5안은 비슷해서 지움). 게임 화면은 따로 작업한다
+- [ ] 로비 시안 확인 — 같은 페이지 아래 「로비」 1장 (① 디자인). `14-lobby-ui` 범위 안: 닉네임 이름표 · 버튼 3개(아이콘 + 한 줄 설명) · 방 코드 팝업 · 요청 중 · 실패 안내(08-room 7절 문구) · 방으로 이동. 버튼 안 한 줄 설명은 기획서에 없는 문구 — 확정 시 14 에 넣는다
 - [ ] 디자인 언어를 「찹츄 테이블」의 스티커 · Jua 로 정함 (2026-11-02). `12-title-ui` (학교안심 둥근미소 · 보라)와 지금 TitleScene 은 옛 판 — 시안을 고른 뒤 기획서부터 고친다. 타이틀 · 로비 · 룸 · 인게임 아티팩트(Galmuri 픽셀)도 옛 판
 
 ---
