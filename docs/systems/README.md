@@ -23,6 +23,7 @@
 | [16-room-ui.md](16-room-ui.md) | 방 화면 | MVP |
 | [17-lobby-ui-full.md](17-lobby-ui-full.md) | 로비 화면 — 확장 (가로 허브: 왼쪽 열 · 우하단 플레이 · 보관함 · 상점 전체 화면 섹션, 프로필 · 친구 · 설정 팝업) | Optional |
 | [19-character-items.md](19-character-items.md) | 플레이어 캐릭터 · 이펙트 아이템 (등급 · 슬롯 4 · 보유 · 공개. 18 은 봇 상대 예약) | Optional |
+| [20-title-ui-full.md](20-title-ui-full.md) | 타이틀 화면 — 확장 (로그인 수단 · 자동 로그인 · 첫 닉네임, UI 요소별 명세) | Optional |
 
 **문서가 없는 시스템**: 인게임 화면 배치 · 로그인 · 재접속 · 설정 / 프로필(로비 **화면**만 17 에 있음, 규칙 문서는 없음).
 
