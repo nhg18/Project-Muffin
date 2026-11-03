@@ -476,7 +476,7 @@ namespace Chapchu.EditorTools
                 ("slashBackground", slashBackground), ("flash", flash), ("finish", finish), ("dimmer", dimmer),
                 ("finishFlash", finishFlash), ("slashBand", HellBlade("hellblade_slash_band")),
                 ("slashThin", HellBlade("hellblade_slash_thin")), ("finishSlash", HellBlade("hellblade_finish_slash")),
-                ("boomGlyph", HellBlade("hellblade_boom_glyph")));
+                ("boomGlyph", HellBlade("hellblade_boom_glyph")), ("eyeClosedSprite", HellBlade("hellblade_eye_closed")));
             WireArray(fx, "drawSprites", drawSprites);
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, HellBladePrefabPath);

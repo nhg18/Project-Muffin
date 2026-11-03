@@ -13,6 +13,9 @@ namespace Chapchu.UI.Fx
     public class HellBladeFx : CardFx
     {
         // 컷인 시간표 (ms)
+        // 눈 뜨기와 칼 뽑기가 600ms(빨간 눈 · 칼날 빛 시각)에 끝나도록 시작 시각을 거꾸로 잡는다
+        private const float DrawPop = 50f;
+        private const float DrawStart = 600f - DrawPop;
         private const float FlurryStart = 1540f;
         private const float FinalCutStart = 3000f;
         private const float SheathStart = 3200f;
@@ -27,6 +30,9 @@ namespace Chapchu.UI.Fx
         private static readonly Vector2 CamFocusLandscape = new Vector2(0.46f, 0.4f);
         private static readonly Vector2 CamFocusPortrait = new Vector2(0.47f, 0.4f);
 
+        private static readonly Vector3 EyeOpenFrom = new Vector3(1.04f, 0.05f, 1f);
+        private static readonly Vector3 EyeOpenPeak = new Vector3(1.08f, 1.3f, 1f);
+
         [Header("컷인 — 틀")]
         [SerializeField] private CanvasGroup cutIn;
         [Tooltip("컷인 안에서 흔들리는 것들. 화면보다 넉넉하게 커서 흔들려도 가장자리가 비지 않는다.")]
@@ -39,6 +45,7 @@ namespace Chapchu.UI.Fx
         [Tooltip("칼집에서 칼을 뽑는 프레임. 0 = 칼집에 들어감, 마지막 = 다 뽑힘.")]
         [SerializeField] private Sprite[] drawSprites;
         [SerializeField] private Image eyeCover;
+        [Tooltip("처음엔 eyeClosedSprite 를 보이고, 눈 뜨는 시각(550ms)에 원래 그림(뜬 눈)으로 바뀐다.")]
         [SerializeField] private Image eyeOpen;
         [SerializeField] private Image eyeRed;
         [SerializeField] private Image tint;
@@ -75,6 +82,8 @@ namespace Chapchu.UI.Fx
         [SerializeField] private Sprite finishSlash;
         [Tooltip("마무리 터짐 글자 絶.")]
         [SerializeField] private Sprite boomGlyph;
+        [Tooltip("감은 눈. eyeOpen 그림과 같은 칸 크기(200×179)로 그려야 자리가 맞는다.")]
+        [SerializeField] private Sprite eyeClosedSprite;
 
         [Header("색")]
         [Tooltip("난도질 배경. 110ms 마다 바뀐다 (가운데 색, 가장자리는 검정).")]
@@ -91,6 +100,7 @@ namespace Chapchu.UI.Fx
 
         private int _frame;
         private float _start;
+        private Sprite _eyeOpenSprite;
 
         private void Awake()
         {
@@ -101,8 +111,11 @@ namespace Chapchu.UI.Fx
                 Debug.LogError($"[{nameof(HellBladeFx)}] 장면 참조 중 비어 있는 것이 있습니다.", this);
 
             if (drawSprites == null || drawSprites.Length < 2 || additive == null || slashBand == null || slashThin == null
-                || finishSlash == null || boomGlyph == null)
+                || finishSlash == null || boomGlyph == null || eyeClosedSprite == null)
                 Debug.LogError($"[{nameof(HellBladeFx)}] 그림 참조 중 비어 있는 것이 있습니다.", this);
+
+            if (eyeOpen != null)
+                _eyeOpenSprite = eyeOpen.sprite;
 
             // 투명도 0 인 그림은 GPU 가 그리지 않게 (화면 전체를 덮는 판이 많아서 모바일에서 크다)
             foreach (Graphic graphic in GetComponentsInChildren<Graphic>(true))
@@ -150,19 +163,22 @@ namespace Chapchu.UI.Fx
             PlayFrames(0, 2, 110f);
             SwordBurst(520f);
 
-            // 2) 눈 팍
-            yield return At(380f);
-            eyeCover.DOFade(1f, Seconds(60f)).SetLink(gameObject);
-            SetAlpha(eyeOpen, 1f);
-            eyeOpen.rectTransform.localScale = new Vector3(1f, 0.1f, 1f);
+            // 2) 눈 뜨기 + 칼 뽑기 — 같은 DrawPop 시간, 같은 DrawEase 곡선
+            yield return At(DrawStart);
+            PlayFrames(2, lastFrame, DrawPop);
+            RectTransform eyeRect = eyeOpen.rectTransform;
+            eyeOpen.sprite = _eyeOpenSprite;
+            eyeRect.localScale = EyeOpenFrom;
             DOTween.Sequence().SetLink(gameObject)
-                .Append(eyeOpen.rectTransform.DOScaleY(1.12f, Seconds(66f)))
-                .Append(eyeOpen.rectTransform.DOScaleY(1f, Seconds(44f)));
+                .Append(DOVirtual.Float(0f, 1f, Seconds(DrawPop), k =>
+                    eyeRect.localScale = Vector3.LerpUnclamped(EyeOpenFrom, EyeOpenPeak, DrawEase(k))).SetEase(Ease.Linear))
+                .Append(eyeRect.DOScale(new Vector3(0.98f, 0.94f, 1f), Seconds(55f)).SetEase(Ease.InOutQuad))
+                .Append(eyeRect.DOScale(Vector3.one, Seconds(60f)).SetEase(Ease.OutQuad))
+                // 빨간 눈은 뜬 눈 위에 겹쳐 그 모양을 대신하는 그림이라, 크기가 다르면 두 눈이 어긋나 보인다
+                .OnUpdate(() => eyeRed.rectTransform.localScale = eyeRect.localScale);
 
-            // 3) 쭉 뽑으며 칼날 번쩍 + 붉은 기운
-            yield return At(470f);
-            PlayFrames(2, lastFrame, 190f);
-            yield return At(600f);
+            // 3) 빨간 눈 · 붉은 기운 · 칼날 빛
+            yield return At(DrawStart + DrawPop);
             tint.DOFade(1f, Seconds(100f)).SetLink(gameObject);
             eyeRed.DOFade(1f, Seconds(70f)).SetLink(gameObject);
             eyeGlow.transform.localScale = Vector3.one * 0.3f;
@@ -444,11 +460,11 @@ namespace Chapchu.UI.Fx
         private void PlayFrames(int from, int to, float durationMs)
         {
             DOVirtual.Float(0f, 1f, Seconds(durationMs), k =>
-            {
-                float eased = 1f - Mathf.Pow(1f - k, 2.2f);
-                SetFrame(Mathf.RoundToInt(Mathf.Lerp(from, to, eased)));
-            }).SetEase(Ease.Linear).SetLink(gameObject);
+                SetFrame(Mathf.RoundToInt(Mathf.Lerp(from, to, DrawEase(k))))).SetEase(Ease.Linear).SetLink(gameObject);
         }
+
+        // 칼 프레임(PlayFrames)과 눈 크기가 같은 곡선을 써야 같은 순간에 같은 비율로 진행된다
+        private static float DrawEase(float k) => 1f - Mathf.Pow(1f - k, 2.2f);
 
         private void SetFrame(int index)
         {
@@ -488,8 +504,18 @@ namespace Chapchu.UI.Fx
             _frame = -1;
             SetFrame(0);
 
-            foreach (Image image in new[] { eyeCover, eyeOpen, eyeRed, tint, swordGlow, swordGleam, swordRing, swordStreak, swordSpark, black, kanji, kanjiGlow, kanjiRing, flash, dimmer, finishFlash })
+            foreach (Image image in new[] { eyeRed, tint, swordGlow, swordGleam, swordRing, swordStreak, swordSpark, black, kanji, kanjiGlow, kanjiRing, flash, dimmer, finishFlash })
                 SetAlpha(image, 0f);
+
+            // 장면 그림에 그려진 눈을 eyeCover 로 가리고, 그 자리에 감은 눈을 보인다
+            SetAlpha(eyeCover, 1f);
+            SetAlpha(eyeOpen, 1f);
+            eyeOpen.rectTransform.DOKill();
+            eyeOpen.sprite = eyeClosedSprite;
+            eyeOpen.rectTransform.localScale = Vector3.one;
+            // 빨간 눈을 뜬 눈과 같은 pivot 에서 커지게. 둘 다 앵커가 같은 칸에 늘어나 있어서 pivot 을 바꿔도 자리는 그대로다
+            eyeRed.rectTransform.pivot = eyeOpen.rectTransform.pivot;
+            eyeRed.rectTransform.localScale = Vector3.one;
         }
 
         #endregion

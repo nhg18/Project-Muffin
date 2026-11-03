@@ -521,6 +521,7 @@ MonoBehaviour:
   slashThin: {fileID: 21300000, guid: 043051a59db701541b6c0063027c4309, type: 3}
   finishSlash: {fileID: 21300000, guid: c3b04a05d395c044da3b02ca7689ec24, type: 3}
   boomGlyph: {fileID: 21300000, guid: 3c46bf2ddb4f2ec4286d1168d4fb6f09, type: 3}
+  eyeClosedSprite: {fileID: 21300000, guid: ed0754a074a16364699cfd5229e424f1, type: 3}
   flurryBackgrounds:
   - {r: 0.2901961, g: 0.023529412, b: 0.0627451, a: 1}
   - {r: 0.16470589, g: 0.011764706, b: 0.03137255, a: 1}
