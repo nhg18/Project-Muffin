@@ -16,7 +16,7 @@ namespace Chapchu.DebugTools
     /// 카드 연출 테스트 씬 (RPG 스킬 시험장처럼). 순서와 값은 아티팩트 「찹츄 카드 이펙트」 의 runCard 와 같다:
     /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임(playCard) → 카드 연출 → 피해(hit) → 900ms → 버림 더미로(clearSlot).
     /// 규칙 · 네트워크는 거치지 않는다. 새 카드 연출은 <see cref="CardFx"/> 를 상속한 프리팹을 만들고 <see cref="entries"/> 에 한 줄 더한다.
-    /// 키: 1~9 = 그 카드, Space = 마지막 카드 다시, R = 체력 초기화.
+    /// 키: 1~9 = 그 카드, Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>.
     /// </summary>
     public class CardFxTestBench : MonoBehaviour
     {
@@ -39,6 +39,11 @@ namespace Chapchu.DebugTools
         }
 
         [SerializeField] private List<Entry> entries = new List<Entry>();
+
+        [Header("재생 속도")]
+        [Tooltip("모든 카드 연출의 배속 (Time.timeScale). 1 = 원래 속도. 플레이 중에 바꿔도 바로 적용된다.")]
+        [Range(0.05f, 2f)]
+        [SerializeField] private float speed = 1f;
 
         [Header("카드 프리팹 (손패와 같은 것)")]
         [SerializeField] private HandCardView actionCardPrefab;
@@ -94,8 +99,22 @@ namespace Chapchu.DebugTools
             resetButton.onClick.RemoveListener(HandleResetClicked);
         }
 
+        // 인스펙터에서 배속을 바꾸면 플레이 중에도 바로 적용
+        private void OnValidate()
+        {
+            if (Application.isPlaying)
+                Time.timeScale = speed;
+        }
+
+        // timeScale 은 씬을 넘어 남는다 — 시험장을 벗어나면 원래 속도로
+        private void OnDestroy()
+        {
+            Time.timeScale = 1f;
+        }
+
         private void Start()
         {
+            Time.timeScale = speed;
             for (int i = 0; i < entries.Count; i++)
                 _handCards.Add(CreateHandCard(i));
             captionText.text = entries.Count > 0 ? "카드를 누르면 연출이 나옵니다." : "entries 에 카드를 추가하세요.";
