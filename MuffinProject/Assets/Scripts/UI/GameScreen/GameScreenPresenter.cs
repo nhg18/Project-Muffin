@@ -105,10 +105,7 @@ namespace Chapchu.UI.GameScreen
             {
                 deck.ShowDeckCount(deckCount);
                 if (!isMe)
-                {
-                    seats.ShowHandCount(actorNumber, handCount);
-                    return null;
-                }
+                    return seats.DrawRoutine(actorNumber, handCount);
 
                 myPanel.ShowHandCount(handCount);
                 return hasCard ? hand.DrawRoutine(cardInstanceId, cardId) : null;

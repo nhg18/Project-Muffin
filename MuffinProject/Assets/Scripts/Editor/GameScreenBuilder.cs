@@ -79,7 +79,7 @@ namespace Chapchu.EditorTools
 
             RoomCodeView roomCode = BuildRoomCodeTag(safeArea);
             HistoryView history = BuildHistory(safeArea);
-            OpponentSeatsPresenter seats = BuildOpponentSeats(safeArea);
+            OpponentSeatsPresenter seats = BuildOpponentSeats(safeArea, deck);
             MyPanelView myPanel = BuildMyPanel(safeArea);
             RectTransform handArea = BuildHandArea(safeArea);
             HandPresenter hand = BuildHand(handArea, deck);
@@ -191,7 +191,7 @@ namespace Chapchu.EditorTools
         }
 
         // 상대 좌석 영역 — 좌 336 · 우 36 · 위 124 · 높이 346 (10-ui.md 2-1 「배치」). 슬롯 3개 = 좌석 인덱스 1 · 2 · 3.
-        private static OpponentSeatsPresenter BuildOpponentSeats(RectTransform parent)
+        private static OpponentSeatsPresenter BuildOpponentSeats(RectTransform parent, DeckView deck)
         {
             RectTransform area = NewRect("OpponentSeats", parent);
             area.anchorMin = new Vector2(0f, 1f);
@@ -202,7 +202,7 @@ namespace Chapchu.EditorTools
 
             var seats = new OpponentSeatView[3];
             for (int i = 0; i < seats.Length; i++)
-                seats[i] = BuildOpponentSeat(area, i);
+                seats[i] = BuildOpponentSeat(area, i, deck);
 
             var presenter = area.gameObject.AddComponent<OpponentSeatsPresenter>();
             WireArray(presenter, "seats", seats);
@@ -210,9 +210,9 @@ namespace Chapchu.EditorTools
         }
 
         // 슬롯 460 × 346 — 영역을 3등분한 가운데(중심 x 594 · 1110 · 1626). 이름 줄 50 · HP 줄 24 (10-ui.md 2-1 「좌석 슬롯」).
-        // 캐릭터 · 함정 슬롯 · 뒷면 부채꼴은 보류 (2026-11-03) — 아래쪽은 비워 둔다.
-        // 턴 외곽선(초록, 바깥 8)은 이름 줄 + HP 줄(위 82)만 감싼다 — 캐릭터를 덮지 않는다 (사용자 결정 2026-11-03). 슬롯 뒤, 기본 비활성.
-        private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot)
+        // 캐릭터 그림 · 함정 슬롯은 보류 (2026-11-03) — 캐릭터 자리(141 × 188)는 뒷면 부채꼴 앵커의 기준으로만 둔다.
+        // 턴 외곽선(초록, 바깥 8)은 이름 줄 + HP 줄(위 82)만 감싼다 — 캐릭터를 덮지 않는다 (사용자 결정 2026-11-03). 슬롯 뒤, 기본 활성 아님.
+        private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot, DeckView deck)
         {
             Color seatColor = SeatColors[slot];
             int seatIndex = slot + 1;
@@ -262,12 +262,69 @@ namespace Chapchu.EditorTools
             TMP_Text hpText = NewText("HpText", root, "100", 22f, Ink, true, TextAlignmentOptions.Left);
             Anchor(hpText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -58f), new Vector2(60f, 24f));
 
+            // 캐릭터 자리 — HP 줄 아래 16 (줄 간격 8 · 16 · 16). 그림은 보류라 빈 Rect.
+            RectTransform character = NewRect("Character", root);
+            Anchor(character, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(SeatHeaderHeight + 16f)), OpponentCharacterSize);
+
+            OpponentHandView hand = BuildOpponentHand(character, deck);
+
             var view = root.gameObject.AddComponent<OpponentSeatView>();
             Wire(view,
-                ("nicknameText", nicknameText), ("handCountText", handCountText), ("chapchuBadge", badge.gameObject),
+                ("nicknameText", nicknameText), ("handCountText", handCountText), ("hand", hand), ("chapchuBadge", badge.gameObject),
                 ("hpFill", hpFill.rectTransform), ("hpFillImage", hpFill), ("hpText", hpText), ("turnOutline", turnOutline.gameObject));
             SetColor(view, "seatColor", seatColor);
             return view;
+        }
+
+        // 뒷면 부채꼴 — 캐릭터 상자의 30% × 24%(42 × 45), 아래에서 20%(38) 위, 아래 가운데 기준 (시안 .fan). 카드는 상자 높이 45 · 9:13.
+        // 스플라인은 내 손패와 같은 3점 원호 — 양 끝 (±8, −4) 면 1/10 간격 한 칸에 약 10° (시안 rotate ±20° / 5장).
+        private static readonly Vector2 OpponentCharacterSize = new Vector2(141f, 188f);
+        private static readonly Vector2 OpponentFanSize = new Vector2(42f, 45f);
+        private const float OpponentFanBottom = 38f;
+        private const float OpponentFanHalfWidth = 8f;
+        private const float OpponentFanDrop = 4f;
+        private static readonly Vector2 BackCardSize = new Vector2(31f, 45f); // 9:13, 높이 = 부채꼴 상자
+
+        private static OpponentHandView BuildOpponentHand(RectTransform character, DeckView deck)
+        {
+            RectTransform fan = NewRect("HandFan", character);
+            Anchor(fan, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, OpponentFanBottom), OpponentFanSize);
+
+            SplineContainer container = fan.gameObject.AddComponent<SplineContainer>();
+            Spline spline = container.Spline;
+            spline.Clear();
+            spline.Add(new BezierKnot(new float3(-OpponentFanHalfWidth, -OpponentFanDrop, 0f)), TangentMode.AutoSmooth);
+            spline.Add(new BezierKnot(float3.zero), TangentMode.AutoSmooth);
+            spline.Add(new BezierKnot(new float3(OpponentFanHalfWidth, -OpponentFanDrop, 0f)), TangentMode.AutoSmooth);
+
+            var view = fan.gameObject.AddComponent<OpponentHandView>();
+            Wire(view, ("backCardPrefab", EnsureBackCardPrefab()), ("drawOrigin", deck.transform));
+            return view;
+        }
+
+        // 뒷면 카드 프리팹 — 시안 .fan span: 파랑 바탕 · 흰 테두리 2 · 바깥 검정 링 2, 피벗 아래 가운데. 이미 있으면 덮어쓰지 않는다.
+        private static RectTransform EnsureBackCardPrefab()
+        {
+            string path = $"{HandCardPrefabFolder}/HandCard_Back.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+                return (RectTransform)existing.transform;
+
+            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+
+            RectTransform root = NewRect("HandCard_Back", null);
+            root.sizeDelta = BackCardSize;
+            root.pivot = new Vector2(0.5f, 0f);
+
+            Image ring = NewImage("Ring", root, Ink);
+            Stretch(ring.rectTransform);
+            Image fill = Box("Box", root, White, 2f, Blue);
+            Stretch((RectTransform)fill.transform.parent, 2f, 2f, 2f, 2f);
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, path);
+            Object.DestroyImmediate(root.gameObject);
+            return (RectTransform)saved.transform;
         }
 
         private static Image BuildChapchuBadge(Transform parent, float scale = 1f)

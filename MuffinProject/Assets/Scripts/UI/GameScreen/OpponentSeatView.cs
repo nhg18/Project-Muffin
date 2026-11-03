@@ -7,7 +7,8 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 상대 좌석 슬롯 하나 — 이름 줄 · HP 줄 · 턴 외곽선 (10-ui.md 2-1 「좌석 슬롯」 · 3절). 값을 받아 표시만 한다.
     /// 어느 플레이어(actorNumber)의 좌석인지는 모른다 — 대응은 OpponentSeatsPresenter 가 한다 (02-player.md 3절).
-    /// 캐릭터 · 함정 슬롯 · 뒷면 부채꼴 · 대상 선택 탭은 보류 (2026-11-03) — 자리만 비워 둔다.
+    /// 손패 수는 숫자 상자와 뒷면 부채꼴(OpponentHandView)에 같이 넣는다 (10-ui.md 4절 「상대 손패」).
+    /// 캐릭터 · 함정 슬롯 · 대상 선택 탭은 보류 (2026-11-03) — 자리만 비워 둔다.
     /// </summary>
     public class OpponentSeatView : MonoBehaviour
     {
@@ -16,6 +17,8 @@ namespace Chapchu.UI.GameScreen
         [Header("이름 줄")]
         [SerializeField] private TMP_Text nicknameText;
         [SerializeField] private TMP_Text handCountText;
+        [Tooltip("뒷면 부채꼴 — 캐릭터 아래 가운데 앵커.")]
+        [SerializeField] private OpponentHandView hand;
         [Tooltip("찹츄 선언 배지. 선언 이벤트가 생기기 전까지는 꺼 둔다 (기능 8).")]
         [SerializeField] private GameObject chapchuBadge;
 
@@ -34,13 +37,18 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (nicknameText == null || handCountText == null || chapchuBadge == null || hpFill == null || hpFillImage == null || hpText == null || turnOutline == null)
+            if (nicknameText == null || handCountText == null || hand == null || chapchuBadge == null || hpFill == null || hpFillImage == null || hpText == null || turnOutline == null)
                 Debug.LogError($"[{nameof(OpponentSeatView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         public void SetNickname(string nickname) => nicknameText.text = string.Format(NicknameFormat, nickname);
 
-        public void SetHandCount(int count) => handCountText.text = count.ToString();
+        /// <summary>손패 장수 — 숫자 상자와 뒷면 부채꼴을 같이 맞춘다.</summary>
+        public void SetHandCount(int count)
+        {
+            handCountText.text = count.ToString();
+            hand.SetCount(count);
+        }
 
         /// <summary>HP 게이지 · 수치. 게이지 폭 = hp / maxHp.</summary>
         public void SetHp(int hp, int maxHp)

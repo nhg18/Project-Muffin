@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Game;
@@ -23,6 +24,8 @@ namespace Chapchu.UI.GameScreen
 
         [Tooltip("좌석 인덱스 1 · 2 · 3 순서 (02-player.md 3절). 빈 좌석은 숨긴다.")]
         [SerializeField] private OpponentSeatView[] seats = new OpponentSeatView[SeatCount];
+        [Tooltip("상대가 뽑은 뒷면을 꺼낸 뒤 다음 일로 넘어가기까지 초. 내 손패(HandPresenter.dealInterval)와 같게 — 첫 분배 때 한 장씩 날아온다.")]
+        [SerializeField] private float dealInterval = 0.15f;
 
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
 
@@ -97,11 +100,21 @@ namespace Chapchu.UI.GameScreen
                 seat.SetHp(hp, GameServer.MaxHp);
         }
 
-        /// <summary>상대의 손패 장수 (OnCardDrawn · OnCardPlayed 의 handCount).</summary>
+        /// <summary>상대의 손패 장수 (OnCardPlayed 의 handCount). 뒷면 부채꼴도 같이 준다.</summary>
         public void ShowHandCount(int actorNumber, int handCount)
         {
             if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
                 seat.SetHandCount(handCount);
+        }
+
+        /// <summary>상대가 뽑았다 (OnCardDrawn) — 뒷면이 덱에서 날아온다. 연출 큐가 기다릴 코루틴.</summary>
+        public IEnumerator DrawRoutine(int actorNumber, int handCount)
+        {
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                yield break;
+
+            seat.SetHandCount(handCount);
+            yield return new WaitForSeconds(dealInterval);
         }
 
         /// <summary>턴 주인의 좌석에만 외곽선. 내 턴이면 모두 끈다.</summary>

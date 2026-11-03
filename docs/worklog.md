@@ -1,6 +1,27 @@
-# 작업 기록
+﻿# 작업 기록
 
 세션이 끝날 때 **한 것 · 결정 · 다음 할 일**을 남긴다. 최신 항목이 위. 이전 기록은 git 이력(`c67a110` 이전).
+
+---
+
+## 2026-11-03 · 상대 손패 뒷면 부채꼴 (캐릭터 그림 보류)
+
+### 결정 (사용자 요청)
+- 시안 `.fan` 대로: 캐릭터 상자(141 × 188) 아래 가운데에서 38 위, 42 × 45 상자, 뒷면 45 × 31(9:13) 파랑 바탕 · 흰 테두리 · 검정 링. 캐릭터 그림은 계속 보류.
+- 배치는 내 손패와 같은 **스플라인 부채꼴**로 통일 — 양 끝 (±8, −4) · 가운데 (0, 0), 1/10 간격(한 칸 약 10°). 10-ui 4절 「상대 손패」에 수치를 적음.
+- 뒷면은 서로 구분되지 않으므로 `handCount` 만 맞춘다 — 늘면 덱 자리에서 날아오고(1초 OutQuart) 줄면 맨 뒤를 지운다. 상대의 뽑기도 큐 단계에서 `dealInterval`(0.15초)만 기다린다 — 첫 분배 때 한 장씩 날아온다.
+
+### 한 것
+- 새 파일 `OpponentHandView.cs`(SplineContainer · `SetCount`). `OpponentSeatView.SetHandCount` 가 숫자 상자와 부채꼴을 같이 맞춘다. `OpponentSeatsPresenter.DrawRoutine(actor, handCount)` 추가, `GameScreenPresenter` 의 CardDrawn 단계가 상대면 이것을 기다린다.
+- 빌더: `BuildOpponentHand`(캐릭터 상자 아래 앵커 · 스플라인 3점), `EnsureBackCardPrefab` → `Assets/Prefab/UI/GameScreen/HandCard_Back.prefab`(있으면 덮어쓰지 않음). GameCanvas 다시 조립 · 저장.
+- 확인(2클론): 시작 때 정면 좌석 `hand=5 backs=5`, 상대가 카드를 내면 `4 / 4`, 상대 쪽에서 본 내 좌석도 5장. 퇴장하면 좌석과 함께 숨김. 콘솔 에러 0. 캡처로 좌석 2 아래 파란 뒷면 5장 → 4장 부채꼴 확인.
+- 3클론(좌석 1 · 2) 확인은 못 함 — clone_1 이 준비되지 않았다.
+
+### 다음 할 일
+- [ ] 3클론으로 좌석 1 · 3 의 부채꼴 위치 확인
+- [ ] 제안: `OpponentHandView.Layout` 이 `HandView.Layout` 과 같다 — 세 번째 부채꼴이 생기면 배치 계산을 한곳으로. `dealInterval` 도 `HandPresenter` · `OpponentSeatsPresenter` 두 곳
+- [ ] 옛 `Assets/Prefab/OtherPlayerHand` · `CardBack`(없는 스크립트) 은 안 쓴다 — 지울지 결정
+- [ ] 캐릭터 그림 · 함정 슬롯 · 대상 선택 탭 (보류 중)
 
 ---
 
