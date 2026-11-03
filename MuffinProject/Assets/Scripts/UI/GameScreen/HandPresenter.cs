@@ -1,5 +1,6 @@
 ﻿using Chapchu.Cards;
 using Chapchu.Network;
+using Chapchu.Network.Events;
 using Photon.Pun;
 using UnityEngine;
 

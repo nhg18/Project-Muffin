@@ -1,4 +1,5 @@
 ﻿using Chapchu.Network;
+using Chapchu.Network.Events;
 using Chapchu.UI.Popups;
 using UnityEngine;
 

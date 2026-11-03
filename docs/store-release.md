@@ -239,7 +239,7 @@
 - Photon 개인정보: https://www.photonengine.com/terms/gdpr
 - 확률형 아이템: https://www.korea.kr/news/policyNewsView.do?newsId=148924297 · https://www.etnews.com/20250806000278
 - 게임제작업 등록: https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=13700000177
-- 폰트(학교안심 둥근미소, OFL — 상업 이용 가능): https://copyright.keris.or.kr/wft/fntDwnldView?fntGrpId=GFT202408200000000000003
+- 폰트 라이선스 전체 목록(상업 이용 가능 여부 · 확인 방법): [`systems/21-font.md`](systems/21-font.md) 3절. 학교안심 둥근미소(OFL, 폐기 예정): https://copyright.keris.or.kr/wft/fntDwnldView?fntGrpId=GFT202408200000000000003
 
 ---
 
