@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-11-03 · 상대 좌석 — 닉네임 · HP · 손패 수 · 턴 외곽선 (캐릭터 · 함정 · 부채꼴 보류)
+
+### 결정 (사용자 요청)
+- 좌석은 이름 줄 · HP 줄 · 턴 외곽선까지. 캐릭터 · 함정 슬롯 · 뒷면 부채꼴 · 대상 선택 탭은 보류, 자리만 비워 둔다. 찹츄 배지는 자리만 두고 꺼 둔다(선언 이벤트 없음, 기능 8).
+- 턴 외곽선은 이름 줄 + HP 줄(위 82)만 감싼다 — 캐릭터를 덮지 않는다 (사용자 요청). 10-ui 2-1 좌석 슬롯에 반영.
+- 좌석 인덱스 ↔ actorNumber 계산은 `OpponentSeatsPresenter` 한 곳 (02-player 3절). 퇴장은 `RoomEvents.OnPlayerLeft` 로 받아 좌석을 숨김 (02-player 6절) — 게임 이벤트가 아니라 큐 밖.
+- HP 20 이하 주황(10-ui 2-1 HP 줄 **제안**)은 예전 뷰(e49831f)대로 구현해 둠. 확정되면 제안 표기를 지운다.
+
+### 한 것
+- 새 파일 `OpponentSeatView.cs`(e49831f 의 것에서 캐릭터 · 함정 · 부채꼴 · 탭 제거) · `OpponentSeatsPresenter.cs`. `GameScreenPresenter` 가 HpChanged · CardDrawn · CardPlayed · TurnStarted 를 내 것이면 내 패널, 아니면 좌석으로 보낸다. `GameScreenView` 에 좌석 배열.
+- 빌더: `BuildOpponentSeats` 되살림(이름 줄 · HP 줄 · 턴 외곽선만), `WireArray` 복구. GameCanvas 다시 조립 · 저장.
+- 확인(2클론): 상대가 정면(2번, 주황) 좌석에 닉네임 · HP 100 · 손패 5, 1 · 3번 숨김. 공격 뒤 상대 쪽에서 본 내 좌석 HP 80 · 바 0.80, 카드 낸 쪽 손패 4. 초록 외곽선이 턴 주인 좌석에만. 클론을 멈추자(퇴장) 좌석이 사라짐. 콘솔 에러 0.
+- 좌석 영역(위 124 ~ 470)과 덱(중심 540, 높이 259 → 위 410)이 60 겹친다 — 11-03 "덱 위로" 조정 때 생긴 것. 지금은 좌석 아래쪽이 비어 있어 턴 외곽선만 덱 위를 지난다. 캐릭터 · 함정을 넣을 때 덱 위치나 좌석 높이를 다시 정해야 한다.
+
+### 다음 할 일
+- [ ] 좌석 영역과 덱 겹침 60 — 10-ui 2-1 「배치」 덱 중심 y 또는 좌석 높이 결정
+- [ ] 보류한 캐릭터 · 함정 슬롯 · 뒷면 부채꼴(`HandFanAnchor`) · 대상 선택 탭 — e49831f 의 `OpponentSeatView` · 빌더 코드 참고
+- [ ] 찹츄 선언 이벤트가 생기면 `OpponentSeatView.SetChapchu` 연결
+
+---
+
+## 2026-11-03 · 연출 큐(`GameScreenPresenter`) · 내 패널에 닉네임 · HP · 턴 · 남은 초 · 손패 수 반영
+
+### 결정
+- 영역 프레젠터가 각자 `GameEvents` 를 구독하던 것을 **중앙 프레젠터 하나가 구독 → 연출 큐 → 영역 프레젠터 호출**로 바꿈 (CODE_CONVENTION 9절, 사용자 결정). 순서는 받은 순서 그대로(GameServer 가 쌓은 순서 = PunGameServer 가 보낸 순서 = 같은 보낸이의 RPC 도착 순서)라 큐가 따로 정하지 않는다. 묶음은 하나만: 내가 뽑을 때 `OnMyCardDrawn`(내용) 다음 `OnCardDrawn`(장수) → 한 단계.
+- 큐를 타지 않는 것: 내 요청 거절 토스트 · 남은 초(매 프레임) · 늦게 열렸을 때의 CustomProperties 복구. CODE_CONVENTION 9절에 적음.
+- 뽑기 단계는 카드가 날아오는 1초를 다 기다리지 않고 `dealInterval`(0.15초) 만 기다린다 — 첫 5장에 5초가 걸리는 것을 피함. 연출을 끝까지 기다리는 단계는 아직 없다.
+- 남은 초는 **내 턴에만** (03-turn 7절대로, 사용자 결정). 남의 턴엔 턴 태그를 「상대 턴!」 파랑 바탕으로 — 10-ui 2-1 턴 줄에 반영. 닉네임이 비면 `P{actorNumber}` (사용자 결정).
+- 찹츄 버튼은 손패 10장이면 활성 모양까지만. 탭하면 경고 로그 — 선언 요청 API 는 기능 8.
+
+### 한 것
+- 새 파일 `UI/GameScreen/GameScreenPresenter.cs`(큐 · 6개 이벤트 구독) · `MyPanelPresenter.cs`(닉네임 · HP · 손패 수 · 찹츄 상태 · 턴 태그 · 남은 초 · Start 스냅샷). `DeckPresenter` · `HandPresenter` 는 구독을 떼고 `ShowDeckCount` · `DrawRoutine` · `ShowCardPlayed` 로. `RejectToastPresenter` 는 그대로(큐 밖).
+- 머지 후 컴파일 오류 — develop 에서 `GameEvents` 네임스페이스가 `Chapchu.Network.Events` 로 옮겨져 프레젠터 3개의 using 수정.
+- 빌더: `BuildMyPanel` 에 `MyPanelPresenter`, 캔버스 루트에 `GameScreenPresenter` 를 붙이고 영역 프레젠터 연결. `GameScene` 의 GameCanvas 를 지우고 다시 조립해 저장.
+- 확인: `multi-test multi 2` 통과(콘솔 에러 0). 별도로 2클론 플레이 중 `MyPanelView` 값을 리플렉션으로 읽고 캡처 — 닉네임 `|Player#1` / `|Player`(Photon NickName 그대로), HP 100 → 맞은 쪽 80(바 0.80), 턴 주인은 「나의 턴!」 주황 + 초 14 → 8, 상대는 「상대 턴!」 파랑 + 초 숨김, 턴이 바뀌면 서로 바뀜, 카드 사용 뒤 5/10장 → 4/10장.
+- 큐 동작 확인: GameScene 을 혼자 플레이로 띄워 뽑기 3장 → HP 50 → 턴 시작을 한 프레임에 주입하고 뽑기 간격을 2초로 늘림 — 손패가 0 · 2 · 4초에 1 → 2 → 3장, HP 는 세 장이 다 나온 뒤(6초)에야 50. 앞 연출이 끝날 때까지 뒤 단계를 안 꺼내는 것 확인 (스크래치 `QueueProbe.cs`, 커밋 안 함).
+- 참고: 캡처를 `Assets/Temp` 에 저장하면 클론 에디터가 임포트에 걸려 Photon 이 타임아웃된다 — 캡처는 메인에서만, 저장 뒤 바로 지울 것. `docs/mockups` 의 인게임 HTML 시안에는 「상대 턴!」 이 없다 — 시안을 손볼 때 같이.
+
+### 다음 할 일
+- [ ] 버림 더미 · 히스토리가 생기면 `GameScreenPresenter` 에 단계 추가 (상대 좌석은 11-03 에 들어감)
+- [ ] 큐가 N개 이상 밀리면 연출 건너뛰기 — 끝까지 기다리는 연출(피해 등)이 생길 때
+- [ ] `MultiTest.Join` 이 `IsConnectedAndReady` 만 보고 눌러 NameServer 단계에서 `JoinOrCreateRoom failed` 가 가끔 난다 — `NetworkClientState == ConnectedToMasterServer` 로 바꿀 것
+
+---
+
 ## 2026-11-03 · 인게임 배치 조정 — 내 패널 축소 · 히스토리 연장 · 손패 가운데 · 카드 확대 · 덱 위로
 
 ### 결정 (사용자 요청)
@@ -97,7 +142,7 @@
 - 폰트 SDF 에셋 2개가 재조립 · 플레이 중 동적 글리프 추가로 바뀌었다 — 이번 변경과 무관.
 
 ### 다음 할 일
-- [ ] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고)
+- [x] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고) — 덱 11-02, 좌석 11-03. 버림 더미는 아직
 
 ---
 
@@ -121,7 +166,7 @@
 - `GameScene.unity` — `GameCanvas`(1920 × 1080 · Expand) + `SafeArea` + `EventSystem`(StandaloneInputModule). 캡처로 확인: 기본 상태, 상태 변경(턴 외곽선 · 찹츄 활성 · 배지 · 함정 2/3 · 저체력 · 대상 강조 · 버림 비움), 승리 오버레이.
 
 ### 다음 할 일
-- [ ] `GameScreenPresenter` — `GameEvents` 7개 구독 → 연출 큐 → 뷰. 좌석 인덱스 ↔ actorNumber 는 `02-player` 3절대로 한 곳에서. 초기값은 `PlayerProps` · `RoomProps`. 방 코드는 `PhotonNetwork.CurrentRoom.Name`
+- [x] `GameScreenPresenter` — `GameEvents` 구독 → 연출 큐 → 영역 프레젠터 (11-03). 좌석 인덱스 ↔ actorNumber 는 상대 좌석을 만들 때
 - [ ] 입력 연결: `DeckView.DrawClicked` → `RequestDraw`, 좌석 `Clicked` → 대상 선택, `OnMyRequestRejected` → `MessageToast`. 찹츄 버튼 · 승리 오버레이는 요청 API 가 생기면 (기능 8)
 - [ ] 내 손패(`HandArea`) · 상대 뒷면 부채꼴(`HandFanAnchor`) · 히스토리 항목 프리팹(`HistoryView.AddEntry`)
 - [ ] 글자 22 ~ 28 의 모바일 가독성 보정 (`15-screen` 최소 30) — `12-title-ui` 4-3 방식으로 결정

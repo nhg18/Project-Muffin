@@ -19,6 +19,7 @@ namespace Chapchu.EditorTools
     /// <summary>
     /// 인게임 화면 UI 를 열려 있는 씬에 조립한다 (메뉴 Chapchu/Game Screen/Build UI).
     /// 수치 · 색은 docs/systems/10-ui.md 2-1 (HTML 시안 × 2). 손패는 부채꼴 · 카드 프리팹(종류별 3개)까지, 상대 손패 · 히스토리 항목은 만들지 않는다.
+    /// 프레젠터도 같이 붙인다 — 영역마다 하나, 캔버스 루트에 연출 큐(GameScreenPresenter) 하나.
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
     /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다.
     /// </summary>
@@ -49,6 +50,8 @@ namespace Chapchu.EditorTools
         private static readonly Color DisabledInk = Hex(0x9AA3AD);
         private static readonly Color DisabledTagFill = Hex(0xE6E9ED);
         private static readonly Color DisabledTagInk = Hex(0x6B7480);
+        private static readonly Color[] SeatColors = { Blue, Orange, Green }; // 좌석 1 · 2 · 3 (10-ui.md 2-1 「색 · 글꼴」)
+        private const float SeatHeaderHeight = 82f; // 이름 줄 50 + 간격 8 + HP 줄 24 — 턴 외곽선이 감싸는 범위
 
         private static TMP_FontAsset _regularFont;
         private static TMP_FontAsset _boldFont;
@@ -76,9 +79,10 @@ namespace Chapchu.EditorTools
 
             RoomCodeView roomCode = BuildRoomCodeTag(safeArea);
             HistoryView history = BuildHistory(safeArea);
+            OpponentSeatsPresenter seats = BuildOpponentSeats(safeArea);
             MyPanelView myPanel = BuildMyPanel(safeArea);
             RectTransform handArea = BuildHandArea(safeArea);
-            BuildHand(handArea, deck);
+            HandPresenter hand = BuildHand(handArea, deck);
 
             VictoryOverlayView victory = BuildVictoryOverlay(canvasRect);
 
@@ -87,7 +91,13 @@ namespace Chapchu.EditorTools
             Wire(screen,
                 ("roomCode", roomCode), ("history", history), ("myPanel", myPanel), ("deck", deck),
                 ("handArea", handArea), ("victoryOverlay", victory));
+            WireArray(screen, "opponentSeats", seats.GetComponentsInChildren<OpponentSeatView>(true));
             screen.gameObject.AddComponent<RejectToastPresenter>();
+
+            // 연출 큐 — GameEvents 를 받아 영역 프레젠터에 순서대로 넘긴다 (CODE_CONVENTION 9절)
+            var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
+            Wire(presenter,
+                ("deck", deck.GetComponent<DeckPresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -180,6 +190,86 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        // 상대 좌석 영역 — 좌 336 · 우 36 · 위 124 · 높이 346 (10-ui.md 2-1 「배치」). 슬롯 3개 = 좌석 인덱스 1 · 2 · 3.
+        private static OpponentSeatsPresenter BuildOpponentSeats(RectTransform parent)
+        {
+            RectTransform area = NewRect("OpponentSeats", parent);
+            area.anchorMin = new Vector2(0f, 1f);
+            area.anchorMax = new Vector2(1f, 1f);
+            area.pivot = new Vector2(0.5f, 1f);
+            area.offsetMin = new Vector2(336f, -124f - 346f);
+            area.offsetMax = new Vector2(-36f, -124f);
+
+            var seats = new OpponentSeatView[3];
+            for (int i = 0; i < seats.Length; i++)
+                seats[i] = BuildOpponentSeat(area, i);
+
+            var presenter = area.gameObject.AddComponent<OpponentSeatsPresenter>();
+            WireArray(presenter, "seats", seats);
+            return presenter;
+        }
+
+        // 슬롯 460 × 346 — 영역을 3등분한 가운데(중심 x 594 · 1110 · 1626). 이름 줄 50 · HP 줄 24 (10-ui.md 2-1 「좌석 슬롯」).
+        // 캐릭터 · 함정 슬롯 · 뒷면 부채꼴은 보류 (2026-11-03) — 아래쪽은 비워 둔다.
+        // 턴 외곽선(초록, 바깥 8)은 이름 줄 + HP 줄(위 82)만 감싼다 — 캐릭터를 덮지 않는다 (사용자 결정 2026-11-03). 슬롯 뒤, 기본 비활성.
+        private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot)
+        {
+            Color seatColor = SeatColors[slot];
+            int seatIndex = slot + 1;
+
+            RectTransform root = NewRect($"Seat{seatIndex}", area);
+            Anchor(root, new Vector2((slot + 0.5f) / 3f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(460f, 346f));
+
+            RectTransform turnOutline = NewRect("TurnOutline", root);
+            turnOutline.anchorMin = new Vector2(0f, 1f);
+            turnOutline.anchorMax = new Vector2(1f, 1f);
+            turnOutline.pivot = new Vector2(0f, 1f);
+            turnOutline.anchoredPosition = Vector2.zero;
+            turnOutline.sizeDelta = new Vector2(0f, SeatHeaderHeight);
+            BuildFrame("Frame", turnOutline, Green, 8f);
+            turnOutline.gameObject.SetActive(false);
+
+            // 이름 줄
+            RectTransform nameRow = NewRect("NameRow", root);
+            nameRow.anchorMin = new Vector2(0f, 1f);
+            nameRow.anchorMax = new Vector2(1f, 1f);
+            nameRow.pivot = new Vector2(0f, 1f);
+            nameRow.anchoredPosition = Vector2.zero;
+            nameRow.sizeDelta = new Vector2(0f, 50f);
+            HorizontalLayout(nameRow, new RectOffset(), 12f, TextAnchor.MiddleLeft, true, true);
+
+            Image nameTag = NewImage("NameTag", nameRow, seatColor);
+            HorizontalLayout(nameTag.rectTransform, new RectOffset(20, 44, 8, 8), 0f, TextAnchor.MiddleLeft, true, true);
+            nameTag.gameObject.AddComponent<LayoutElement>().minHeight = 50f;
+            TMP_Text nicknameText = NewText("NicknameText", nameTag.transform, $"|Player#{seatIndex + 1}", 28f, White, true, TextAlignmentOptions.Left);
+
+            Image handCountFill = LayoutBox("HandCountBox", nameRow, Ink, 4, White, new RectOffset(10, 10, 2, 2));
+            handCountFill.transform.parent.gameObject.AddComponent<LayoutElement>().minWidth = 44f;
+            TMP_Text handCountText = NewText("HandCountText", handCountFill.transform, "5", 24f, Ink, true);
+
+            Image badge = BuildChapchuBadge(nameRow);
+
+            // HP 줄 — 바는 수치 폭(60) + 간격 12 만큼 짧게
+            RectTransform hpBar = NewRect("HpBar", root);
+            hpBar.anchorMin = new Vector2(0f, 1f);
+            hpBar.anchorMax = new Vector2(1f, 1f);
+            hpBar.pivot = new Vector2(0f, 1f);
+            hpBar.offsetMin = new Vector2(0f, -58f - 24f);
+            hpBar.offsetMax = new Vector2(-72f, -58f);
+            Image hpTrack = Box("Track", hpBar, Ink, 6f, White);
+            Image hpFill = NewImage("Fill", hpTrack.transform, seatColor);
+            Stretch(hpFill.rectTransform);
+            TMP_Text hpText = NewText("HpText", root, "100", 22f, Ink, true, TextAlignmentOptions.Left);
+            Anchor(hpText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -58f), new Vector2(60f, 24f));
+
+            var view = root.gameObject.AddComponent<OpponentSeatView>();
+            Wire(view,
+                ("nicknameText", nicknameText), ("handCountText", handCountText), ("chapchuBadge", badge.gameObject),
+                ("hpFill", hpFill.rectTransform), ("hpFillImage", hpFill), ("hpText", hpText), ("turnOutline", turnOutline.gameObject));
+            SetColor(view, "seatColor", seatColor);
+            return view;
+        }
+
         private static Image BuildChapchuBadge(Transform parent, float scale = 1f)
         {
             int S(float v) => Mathf.RoundToInt(v * scale);
@@ -251,7 +341,7 @@ namespace Chapchu.EditorTools
             Anchor(turnTag.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(S(120), S(44)));
             HorizontalLayout(turnTag.rectTransform, new RectOffset(I(16), I(16), I(8), I(8)), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(turnTag.gameObject);
-            NewText("Text", turnTag.transform, "나의 턴!", S(24), White, true);
+            TMP_Text turnTagText = NewText("Text", turnTag.transform, "나의 턴!", S(24), White, true);
 
             RectTransform timer = NewRect("Timer", turnRow);
             Anchor(timer, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(S(100), S(52)));
@@ -299,9 +389,10 @@ namespace Chapchu.EditorTools
             var view = root.gameObject.AddComponent<MyPanelView>();
             Wire(view,
                 ("nicknameText", nicknameText), ("hpText", hpText), ("chapchuBadge", badge.gameObject),
-                ("hpFill", hpFill.rectTransform), ("turnTag", turnTag.gameObject), ("secondsText", secondsText), ("handCountText", handCountText),
+                ("hpFill", hpFill.rectTransform), ("turnTag", turnTag), ("turnTagText", turnTagText), ("timer", timer.gameObject), ("secondsText", secondsText), ("handCountText", handCountText),
                 ("chapchuButton", chapchuButton), ("chapchuFill", buttonFill), ("chapchuLabel", label),
                 ("chapchuTag", tag), ("chapchuTagText", tagText), ("chapchuRing", ring.gameObject), ("chapchuShadow", shadow));
+            root.gameObject.AddComponent<MyPanelPresenter>();
             return view;
         }
 
@@ -454,7 +545,7 @@ namespace Chapchu.EditorTools
         private const float HandFanHalfWidth = 520f;
         private const float HandFanDrop = 34f;       // 양 끝이 가운데보다 내려가는 정도 — 한 칸 1.5° 인 원호
 
-        private static void BuildHand(RectTransform handArea, DeckView deck)
+        private static HandPresenter BuildHand(RectTransform handArea, DeckView deck)
         {
             RectTransform root = NewRect("Hand", handArea);
             Anchor(root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, Vector2.zero);
@@ -474,6 +565,7 @@ namespace Chapchu.EditorTools
 
             var presenter = root.gameObject.AddComponent<HandPresenter>();
             Wire(presenter, ("deck", FindGameDeck()), ("drawOrigin", deck.transform));
+            return presenter;
         }
 
         // 손패 카드 프리팹 — Assets/Prefab/PlayerActionCard Dummy 와 같은 구성(틀 · 그림 · 이름 · 설명)을 UGUI 로.
@@ -754,6 +846,23 @@ namespace Chapchu.EditorTools
 
                 property.objectReferenceValue = value;
             }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void WireArray(Component target, string field, Object[] values)
+        {
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(field);
+            if (property == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] {target.GetType().Name} 에 {field} 필드가 없다.");
+                return;
+            }
+
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
