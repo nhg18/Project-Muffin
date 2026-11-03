@@ -82,3 +82,5 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
   * 효과는 같은 종류의 카드 여러 장이 한 인스턴스를 같이 쓴다. 실행 중에 필드를 바꾸지 않는다.
 * 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
 * 클라이언트는 받은 일을 연출 큐에 넣고 하나씩 재생한다. 화면 값은 재생하면서 이벤트에 담긴 값으로 바꾼다.
+  * 큐는 화면마다 하나(`GameScreenPresenter`). 큐만 `GameEvents` 를 구독하고, 영역 프레젠터는 큐가 부르는 함수(`Show*` 즉시 · `*Routine` 연출)만 둔다. 받은 순서가 곧 일어난 순서라 큐는 순서를 바꾸지 않는다.
+  * 큐를 타지 않는 것: 내 요청의 거절(바로 토스트) · 매 프레임 계산하는 값(남은 초) · 늦게 열렸을 때 CustomProperties 로 복구하는 초기값(각 프레젠터 `Start`).
