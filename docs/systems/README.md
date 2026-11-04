@@ -21,6 +21,7 @@
 | [14-lobby-ui.md](14-lobby-ui.md) | 로비 화면 | MVP |
 | [15-screen.md](15-screen.md) | 화면 규격 (방향 · 해상도 · 스케일) | MVP |
 | [16-room-ui.md](16-room-ui.md) | 방 화면 | MVP |
+| [16-room-ui-full.md](16-room-ui-full.md) | 방 화면 — 전면 (UI 요소 · 기능 명세: 코드 복사 · 공유, 캐릭터 칸 4, 빈 칸 초대, 방장 시작 / 참가자 대기 안내, 로그 접기, 시작 중 잠금. 수치 · 디자인 없음) | MVP · Optional |
 | [17-lobby-ui-full.md](17-lobby-ui-full.md) | 로비 화면 — 확장 (가로 허브: 왼쪽 캐릭터 + 꾸미기 · 우상단 상점 · 우하단 플레이 · 보관함 · 상점 전체 화면 섹션, 프로필 · 친구 · 설정 팝업) | Optional |
 | [19-character-items.md](19-character-items.md) | 플레이어 캐릭터 · 이펙트 아이템 (등급 · 슬롯 4 · 보유 · 공개. 18 은 봇 상대 예약) | Optional |
 | [20-title-ui-full.md](20-title-ui-full.md) | 타이틀 화면 — 확장 (로그인 수단 · 자동 로그인 · 첫 닉네임, UI 요소별 명세) | Optional |
