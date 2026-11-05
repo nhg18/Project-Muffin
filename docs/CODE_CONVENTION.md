@@ -51,7 +51,8 @@
 
 * 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
 * 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
-* 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys`).
+* 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
+* 카드별 연출 프리팹은 `Resources/CardFx/{연출 컴포넌트 이름}.prefab` 에 두고 `CardFxLoader` 로 이름으로 불러온다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
 * 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
 ## 6. 네트워크

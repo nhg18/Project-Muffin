@@ -2241,7 +2241,7 @@ MonoBehaviour:
     type: 0
     art: {fileID: 21300000, guid: 8973c9287627cb748ab193e25d1bab54, type: 3}
     description: "\uB300\uC0C1 40 \uD53C\uD574"
-    fxPrefab: {fileID: 5198592340203253540, guid: dcf66ce987ffaa546812474c97aa1646, type: 3}
+    fxName: HellBladeFx
     damage: 40
     bigHit: 1
   actionCardPrefab: {fileID: 8746199917930865594, guid: 95d440bff65d429449b4867ea850aded, type: 3}
