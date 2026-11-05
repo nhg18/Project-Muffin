@@ -104,6 +104,19 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(GameScreenBuilder)}] {CanvasName} 조립 완료 — 씬을 저장할 것.");
         }
 
+        /// <summary>손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지 — 씬 · HandView 참조가 그대로). 사람이 프리팹을 손봤다면 지워진다.</summary>
+        [MenuItem("Chapchu/Game Screen/Rebuild Hand Card Prefabs")]
+        public static void RebuildHandCardPrefabs()
+        {
+            _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
+            _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
+
+            EnsureHandCardPrefab("HandCard_Action", ActionCardFramePath, true);
+            EnsureHandCardPrefab("HandCard_Counter", CounterCardFramePath, true);
+            EnsureHandCardPrefab("HandCard_Trap", TrapCardFramePath, true);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 손패 카드 프리팹 3개 다시 만듦.");
+        }
+
         #region 영역
 
         private static GameScreenView BuildCanvas(out RectTransform canvasRect)
@@ -626,12 +639,14 @@ namespace Chapchu.EditorTools
         }
 
         // 손패 카드 프리팹 — Assets/Prefab/PlayerActionCard Dummy 와 같은 구성(틀 · 그림 · 이름 · 설명)을 UGUI 로.
-        // 종류마다 틀 이미지만 다르다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존).
-        private static HandCardView EnsureHandCardPrefab(string name, string framePath)
+        // 종류마다 틀 이미지만 다르다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존) — overwrite 는 RebuildHandCardPrefabs 만.
+        // 구조는 루트(이동 · z 회전 · 호버 확대) → Face(앞 · 뒤 — 뒤집기 연출용 Y 회전 자리, 아직 안 씀) → 틀 · 그림 · 글자.
+        // 포인터는 틀 이미지만 받는다 — 그림 · 글자는 raycastTarget 을 끈다 (HandCardView 가 루트에서 이벤트를 받는다).
+        private static HandCardView EnsureHandCardPrefab(string name, string framePath, bool overwrite = false)
         {
             string path = $"{HandCardPrefabFolder}/{name}.prefab";
             var existing = AssetDatabase.LoadAssetAtPath<HandCardView>(path);
-            if (existing != null)
+            if (existing != null && !overwrite)
                 return existing;
 
             if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
@@ -645,16 +660,19 @@ namespace Chapchu.EditorTools
             root.sizeDelta = HandCardSize;
             root.pivot = new Vector2(0.5f, 0f);
 
+            RectTransform face = NewRect("Face", root);
+            Stretch(face);
+
             // 그리는 순서는 더미와 같다 — 틀 → 그림 → 이름 · 설명.
-            Image frame = NewImage("CardImage", root, White, frameSprite);
+            Image frame = NewImage("CardImage", face, White, frameSprite, true);
             Stretch(frame.rectTransform);
 
-            Image art = NewImage("Image", root, White);
+            Image art = NewImage("Image", face, White);
             AnchorBox(art.rectTransform, 0.1925f, 0.389f, 0.8075f, 0.801f); // 그림 칸 (점선 위 · 이름 띠 아래)
             art.preserveAspect = true;
             art.enabled = false;
 
-            TMP_Text nameText = NewText("Name", root, "Name", 18f, White, true, TextAlignmentOptions.Left);
+            TMP_Text nameText = NewText("Name", face, "Name", 18f, White, true, TextAlignmentOptions.Left);
             AnchorBox(nameText.rectTransform, 0.3256f, 0.8482f, 0.8896f, 0.9502f); // 위쪽 띠
             nameText.enableAutoSizing = true;
             nameText.fontSizeMin = 12f;
@@ -662,7 +680,7 @@ namespace Chapchu.EditorTools
             nameText.overflowMode = TextOverflowModes.Ellipsis;
 
             // 더미는 흰 글자인데 흰 바탕 위라 보이지 않아 잉크로 쓴다.
-            TMP_Text description = NewText("Description", root, "Description", 15f, Ink, false, TextAlignmentOptions.Top);
+            TMP_Text description = NewText("Description", face, "Description", 15f, Ink, false, TextAlignmentOptions.Top);
             AnchorBox(description.rectTransform, 0.11f, 0.074f, 0.89f, 0.336f); // 점선 아래
             description.textWrappingMode = TextWrappingModes.Normal;
             description.enableAutoSizing = true;

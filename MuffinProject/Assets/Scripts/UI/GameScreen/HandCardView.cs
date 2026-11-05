@@ -1,21 +1,31 @@
-﻿using Chapchu.Cards;
+﻿using System;
+using Chapchu.Cards;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 내 손패 카드 한 장 (10-ui.md 2-1 「손패」). 종류별 틀 이미지는 프리팹(행동 · 카운터 · 함정)이 갖고, 여기서는 CardData 의 이름 · 그림 · 설명만 입힌다.
-    /// 어느 장인지(InstanceId)만 기억한다 — 판정 · 입력은 없다 (입력은 이후 작업).
+    /// 포인터 진입 · 이탈 · 클릭을 이벤트로만 알린다 — 올리기 · 호버 판정은 HandView 가 한다 (10-ui.md 4절). 드래그는 이후 작업.
+    /// 어느 장인지(InstanceId)만 기억한다.
     /// </summary>
-    public class HandCardView : MonoBehaviour
+    public class HandCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private Image artImage;
         [SerializeField] private TMP_Text descriptionText;
 
         public int InstanceId { get; private set; }
+
+        /// <summary>포인터가 이 카드 위에 들어왔다.</summary>
+        public event Action<HandCardView> OnHoverEntered;
+        /// <summary>포인터가 이 카드에서 나갔다.</summary>
+        public event Action<HandCardView> OnHoverExited;
+        /// <summary>이 카드를 탭(클릭)했다.</summary>
+        public event Action<HandCardView> OnClicked;
 
         private void Awake()
         {
@@ -35,5 +45,11 @@ namespace Chapchu.UI.GameScreen
 
             gameObject.name = $"HandCard_{instanceId}_{data.id}";
         }
+
+        public void OnPointerEnter(PointerEventData eventData) => OnHoverEntered?.Invoke(this);
+
+        public void OnPointerExit(PointerEventData eventData) => OnHoverExited?.Invoke(this);
+
+        public void OnPointerClick(PointerEventData eventData) => OnClicked?.Invoke(this);
     }
 }
