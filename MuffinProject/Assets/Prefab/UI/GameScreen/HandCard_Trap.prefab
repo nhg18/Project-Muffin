@@ -335,6 +335,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4488232572445808639}
+  - component: {fileID: 4224720669865981127}
   - component: {fileID: 6172520783396854157}
   m_Layer: 5
   m_Name: HandCard_Trap
@@ -363,6 +364,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 226, y: 336}
   m_Pivot: {x: 0.5, y: 0}
+--- !u!225 &4224720669865981127
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8260237717915785013}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!114 &6172520783396854157
 MonoBehaviour:
   m_ObjectHideFlags: 0

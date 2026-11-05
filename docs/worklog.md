@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-11-06 · 손패 드래그 → 드롭 영역 → 대상 선택 → 카드 사용 요청 (`feature/game-screen`)
+
+### 결정 (사용자)
+- 드롭 영역은 손패 영역 위쪽 화면 전체(y ≥ 364). 씬 오브젝트 `DropZone`(투명 `Image`, 레이캐스트 끔)의 Rect 포함으로 판정 — Inspector 에서 위치 · 크기를 바꿀 수 있다. `IDropHandler` 는 안 씀(포인터 바로 아래 맨 위 오브젝트에만 가서 덱 · 좌석 위에 놓으면 못 받는다).
+- 대상 선택 강조는 상대 좌석에 파란 외곽선(턴 외곽선과 같은 범위) — 임시. PC 만(마우스 드래그 · 우클릭 취소). 드래그 중 카드는 호버와 같은 1.3배.
+- 대상 선택 중 카드는 놓은 자리에 떠 있다가 끝나면 복귀 (옛 코드의 즉시 복귀는 거절처럼 보여서). 제한 시간 5초는 10-ui 6절 제안값 유지.
+- 드롭 영역 시각 강조(04-card 13절)는 보류 표기. 로컬 조건 검사는 하지 않는다 — 방장이 거절하면 토스트.
+
+### 한 것
+- `HandCardView`: `IBeginDrag/IDrag/IEndDragHandler` → `OnDragStarted · OnDragged · OnDragEnded` 이벤트, `CardId` 노출, `CanvasGroup` 로 `SetRaycastBlocking`.
+- `HandView`: 드래그(잡은 지점 유지 · 확대 · 세움 · 최상단, 드래그 중 포인터 이탈 무시) · `OnCardDropped(card, 화면 좌표)` · `ReturnCard` · `SetLocked`(호버 · 드래그 · 올리기 · 내리기 차단 + 카드 전부 레이캐스트 끔). `Enlarge` 를 호버 · 드래그가 공유.
+- `HandPresenter`: `server · dropZone · seats` 참조. 드롭 영역 밖 → 복귀. 안이면 자동 대상 타입은 빈 배열로 즉시 요청, `OneOther · TwoOthers` 는 잠그고 `seats.SelectTargetsRoutine` 을 `yield return` 으로 기다린 뒤 요청 · 취소.
+- `OpponentSeatView`: `IPointerClickHandler` + `OnClicked`, `SetTargetable`(파란 외곽선 + 탭 영역 레이캐스트). 탭 영역은 선택 중에만 켠다 — 좌석이 덱과 60 겹쳐 평소엔 덱 탭을 막기 때문.
+- `OpponentSeatsPresenter.SelectTargetsRoutine(count, done)`: 코루틴 프레임 루프로 5초 · 우클릭 · 고른 수를 본다. 고른 좌석은 강조를 꺼 중복 방지. 새 컴포넌트 · 싱글톤 없음.
+- 빌더: `BuildDropZone`, 좌석 `TargetOutline` · `TapArea`, 카드 프리팹에 `CanvasGroup`, `HandPresenter` 참조 Wire, `HandAreaBottom` 상수. GameCanvas 다시 조립 · 저장, 프리팹 3개 재생성(GUID 유지).
+- **발견 · 수정**: 놓은 자리에 떠 있는 카드가 좌석 위를 덮으면 레이캐스트가 카드에 먼저 맞아 좌석 탭이 안 됐다(혼자 테스트는 잡은 지점 차이로 통과). 잠금 중 카드 `CanvasGroup.blocksRaycasts = false` 로 해결 — 2클론에서 카드 너머로 좌석이 맞는 것 확인.
+- `MultiTest.Join` 이 `IsConnectedAndReady` 만 보고 NameServer 단계에서 눌러 `JoinOrCreateRoom failed` 가 났다 — `ConnectedToMasterServer` 로 고침 (11-03 다음 할 일).
+- 확인: `multi 2` 통과(콘솔 에러 0). 혼자 플레이(스크래치 `HandProbe.cs`, 이벤트 주입): 손패 영역 안 드롭 → 복귀, 위쪽 드롭 → 잠금 · 카드 떠 있음 · 좌석 2개 파란 외곽선 · 호버 무시, 좌석 레이캐스트가 `TapArea` 에 맞고 요청 `targets=[2]`, 시간 초과 → 취소 · 복귀. 2클론(스크래치 `drag2.sh`): 턴 주인 드래그 → 드롭 → 좌석 탭 → 승인 → 손패 5 → 4 · 상대 ♥100 → 80 · 턴 넘어감, 같은 사람이 남의 턴에 드롭 → 거절 코드 1 · 손패 4 그대로. 캡처 `hand_select.png`(스크래치).
+- 못 한 것: 자동 대상 타입(`None` 등) 즉시 요청 경로 — 덱(`Deck_Default`)에 `OneOther` 카드(1 · 4)뿐이라 실행으로 못 봤다. `TwoOthers` 도 같다. 실제 마우스 드래그 · 우클릭 취소는 사람 확인.
+
+### 다음 할 일
+- [ ] 사람 확인: 실제 마우스로 드래그 · 드롭 · 좌석 탭 · 우클릭 취소. 덱 위 · 좌석 위에 놓아도 영역 안으로 잡히는지
+- [ ] 떠 있는 카드가 좌석을 **가린다**(탭은 통과하지만 외곽선이 안 보일 수 있다) — 선택 중 카드를 1배로 줄이거나 버림 더미 자리로 옮기는 안 (제안)
+- [ ] 자동 대상 · `TwoOthers` 카드가 덱에 들어오면 즉시 요청 · 2명 선택 경로 확인
+- [ ] 모바일: 카드 탭 → 선택 + 확대, 대상 선택 취소 입력 (10-ui 4 · 6절 미정)
+- [ ] 드롭 영역 시각 강조(04-card 13절 보류) 모양 결정
+- [ ] 좌석 탭 영역이 선택 중 덱을 60 덮는다 — 선택 중엔 덱 탭이 막히는데 어차피 내 턴 메인 행동 중이라 문제 없음. 좌석 · 덱 겹침 자체는 11-03 항목
+
+---
+
 ## 2026-11-05 · 내 손패 올리기 · 내리기 · 호버 (`feature/game-screen`)
 
 ### 결정 (사용자 승인)

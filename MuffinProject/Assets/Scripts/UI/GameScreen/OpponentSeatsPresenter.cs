@@ -16,6 +16,7 @@ namespace Chapchu.UI.GameScreen
     /// 상대 손패 부채꼴 등 다른 UI 도 이 결과를 쓴다. HP · 손패 수 · 턴은 GameScreenPresenter 가 연출 큐 순서로 넘긴다.
     /// 퇴장은 RoomEvents.OnPlayerLeft 로 받아 좌석을 숨긴다 (02-player.md 6절) — 게임 이벤트가 아니라 큐 밖.
     /// 늦게 열렸을 때는 Start 에서 각 Player 의 CustomProperties 를 한 번 읽는다 (09-network.md 6.1).
+    /// 대상 선택(10-ui.md 6절)도 여기서 — 좌석을 파랗게 강조하고 탭을 모아 actorNumber 로 돌려준다. PC 우클릭 취소만 (모바일 취소는 미정).
     /// </summary>
     public class OpponentSeatsPresenter : MonoBehaviour
     {
@@ -26,8 +27,16 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private OpponentSeatView[] seats = new OpponentSeatView[SeatCount];
         [Tooltip("상대가 뽑은 뒷면을 꺼낸 뒤 다음 일로 넘어가기까지 초. 내 손패(HandPresenter.dealInterval)와 같게 — 첫 분배 때 한 장씩 날아온다.")]
         [SerializeField] private float dealInterval = 0.15f;
+        [Tooltip("대상 선택 제한 초. 지나면 취소 (10-ui.md 6절 — 제안값 5).")]
+        [SerializeField] private float targetSelectTimeout = 5f;
 
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
+        private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
+        private bool _selecting;
+        private bool _selectCancelled;
+
+        /// <summary>대상 선택 중인가 — 그동안 손패는 잠긴다 (HandPresenter).</summary>
+        public bool IsSelectingTargets => _selecting;
 
         private void Awake()
         {
@@ -38,11 +47,15 @@ namespace Chapchu.UI.GameScreen
         private void OnEnable()
         {
             RoomEvents.OnPlayerLeft += HandlePlayerLeft;
+            foreach (OpponentSeatView seat in seats)
+                seat.OnClicked += HandleSeatClicked;
         }
 
         private void OnDisable()
         {
             RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
+            foreach (OpponentSeatView seat in seats)
+                seat.OnClicked -= HandleSeatClicked;
         }
 
         private void Start()
@@ -71,6 +84,7 @@ namespace Chapchu.UI.GameScreen
                 seat.SetNickname(string.IsNullOrEmpty(player.NickName) ? string.Format(NicknameFallbackFormat, player.ActorNumber) : player.NickName);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
+                seat.SetTargetable(false);
 
                 // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다.
                 if (player.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
@@ -122,6 +136,55 @@ namespace Chapchu.UI.GameScreen
         {
             foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
                 pair.Value.SetTurn(pair.Key == turnActorNumber);
+        }
+
+        /// <summary>
+        /// 상대 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 앉은 상대 전부에 파란 외곽선 + 탭, 고른 좌석은 강조를 꺼서 같은 사람을 두 번 못 고른다.
+        /// 다 고르면 actorNumber 배열, 우클릭 · 제한 시간이면 null 을 done 으로 돌려준다. 호출한 코루틴은 yield return 으로 끝까지 기다린다.
+        /// </summary>
+        public IEnumerator SelectTargetsRoutine(int count, Action<int[]> done)
+        {
+            if (_selecting)
+            {
+                Debug.LogWarning($"[{nameof(OpponentSeatsPresenter)}] 이미 대상 선택 중 — 새 요청은 취소로 처리", this);
+                done(null);
+                yield break;
+            }
+
+            _selecting = true;
+            _selectCancelled = false;
+            _picked.Clear();
+            foreach (OpponentSeatView seat in _seatOf.Values)
+                seat.SetTargetable(true);
+
+            float elapsed = 0f;
+            while (elapsed < targetSelectTimeout && _picked.Count < count && !_selectCancelled)
+            {
+                if (Input.GetMouseButtonDown(1)) // PC 우클릭 취소 (10-ui.md 6절). 모바일 취소 입력은 미정
+                    _selectCancelled = true;
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            foreach (OpponentSeatView seat in _seatOf.Values)
+                seat.SetTargetable(false);
+            _selecting = false;
+
+            bool complete = _picked.Count == count;
+            if (!complete)
+                Debug.Log($"[{nameof(OpponentSeatsPresenter)}] 대상 선택 {(_selectCancelled ? "취소" : "시간 초과")} — {_picked.Count}/{count}명", this);
+            done(complete ? _picked.ToArray() : null);
+        }
+
+        private void HandleSeatClicked(OpponentSeatView seat)
+        {
+            if (!_selecting) return;
+
+            int actorNumber = _seatOf.FirstOrDefault(pair => pair.Value == seat).Key;
+            if (actorNumber == 0 || _picked.Contains(actorNumber)) return;
+
+            _picked.Add(actorNumber);
+            seat.SetTargetable(false);
         }
 
         private void HandlePlayerLeft(Player player)

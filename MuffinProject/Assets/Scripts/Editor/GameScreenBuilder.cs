@@ -81,8 +81,9 @@ namespace Chapchu.EditorTools
             HistoryView history = BuildHistory(safeArea);
             OpponentSeatsPresenter seats = BuildOpponentSeats(safeArea, deck);
             MyPanelView myPanel = BuildMyPanel(safeArea);
+            RectTransform dropZone = BuildDropZone(safeArea);
             RectTransform handArea = BuildHandArea(safeArea);
-            HandPresenter hand = BuildHand(handArea, deck);
+            HandPresenter hand = BuildHand(handArea, deck, dropZone, seats);
 
             VictoryOverlayView victory = BuildVictoryOverlay(canvasRect);
 
@@ -90,7 +91,7 @@ namespace Chapchu.EditorTools
 
             Wire(screen,
                 ("roomCode", roomCode), ("history", history), ("myPanel", myPanel), ("deck", deck),
-                ("handArea", handArea), ("victoryOverlay", victory));
+                ("handArea", handArea), ("dropZone", dropZone), ("victoryOverlay", victory));
             WireArray(screen, "opponentSeats", seats.GetComponentsInChildren<OpponentSeatView>(true));
             screen.gameObject.AddComponent<RejectToastPresenter>();
 
@@ -242,6 +243,21 @@ namespace Chapchu.EditorTools
             BuildFrame("Frame", turnOutline, Green, 8f);
             turnOutline.gameObject.SetActive(false);
 
+            // 대상 선택 외곽선(파랑) — 턴 외곽선과 같은 범위. 기본 활성 아님 (10-ui.md 6절, 사용자 결정 2026-11-05).
+            RectTransform targetOutline = NewRect("TargetOutline", root);
+            targetOutline.anchorMin = new Vector2(0f, 1f);
+            targetOutline.anchorMax = new Vector2(1f, 1f);
+            targetOutline.pivot = new Vector2(0f, 1f);
+            targetOutline.anchoredPosition = Vector2.zero;
+            targetOutline.sizeDelta = new Vector2(0f, SeatHeaderHeight);
+            BuildFrame("Frame", targetOutline, Blue, 8f);
+            targetOutline.gameObject.SetActive(false);
+
+            // 탭 영역 — 슬롯 전체를 덮는 투명 이미지. 레이캐스트는 대상 선택 중에만 켠다 (덱과 60 겹치므로 평소엔 덱 탭을 막지 않게).
+            Image tapArea = NewImage("TapArea", root, Color.clear);
+            Stretch(tapArea.rectTransform);
+            tapArea.transform.SetAsFirstSibling();
+
             // 이름 줄
             RectTransform nameRow = NewRect("NameRow", root);
             nameRow.anchorMin = new Vector2(0f, 1f);
@@ -284,7 +300,7 @@ namespace Chapchu.EditorTools
             var view = root.gameObject.AddComponent<OpponentSeatView>();
             Wire(view,
                 ("nicknameText", nicknameText), ("handCountText", handCountText), ("hand", hand), ("chapchuBadge", badge.gameObject),
-                ("hpFill", hpFill.rectTransform), ("hpFillImage", hpFill), ("hpText", hpText), ("turnOutline", turnOutline.gameObject));
+                ("hpFill", hpFill.rectTransform), ("hpFillImage", hpFill), ("hpText", hpText), ("turnOutline", turnOutline.gameObject), ("targetOutline", targetOutline.gameObject), ("tapArea", tapArea));
             SetColor(view, "seatColor", seatColor);
             return view;
         }
@@ -505,9 +521,18 @@ namespace Chapchu.EditorTools
             area.anchorMax = new Vector2(1f, 0f);
             area.pivot = new Vector2(0f, 0f);
             // 화면 가운데 정렬 — 좌우를 같게 비워 내 패널(오른쪽 끝 336)과 겹치지 않게 (2026-11-03).
-            area.offsetMin = new Vector2(HandAreaSideInset, 28f);
-            area.offsetMax = new Vector2(-HandAreaSideInset, 28f + HandCardSize.y);
+            area.offsetMin = new Vector2(HandAreaSideInset, HandAreaBottom);
+            area.offsetMax = new Vector2(-HandAreaSideInset, HandAreaBottom + HandCardSize.y);
             return area;
+        }
+
+        // 드롭 영역 — 손패 영역 위쪽 화면 전체 (10-ui.md 2-1 「드롭 영역」, 사용자 결정 2026-11-05). 투명 이미지는 디버그 때 색을 켜 보라고 둔다.
+        // 레이캐스트는 끈다 — 판정은 HandPresenter 가 Rect 포함으로 하므로 덱 · 좌석 탭을 가리지 않는다. 위치 · 크기는 씬에서 바꾼다.
+        private static RectTransform BuildDropZone(RectTransform parent)
+        {
+            Image image = NewImage("DropZone", parent, Color.clear);
+            Stretch(image.rectTransform, 0f, 0f, 0f, HandAreaBottom + HandCardSize.y);
+            return image.rectTransform;
         }
 
         private static VictoryOverlayView BuildVictoryOverlay(RectTransform parent)
@@ -608,6 +633,7 @@ namespace Chapchu.EditorTools
         // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역. 부채꼴은 시안처럼 한 칸에 약 1.5° (10-ui.md 2-1 「손패」).
         private static readonly Vector2 HandCardSize = new Vector2(226f, 336f);
         private const float HandAreaSideInset = 356f; // 손패 영역 좌우 여백 — 내 패널 오른쪽 끝(336) + 20
+        private const float HandAreaBottom = 28f;     // 손패 영역 아래 여백. 드롭 영역은 그 위(28 + 336)부터
         private const string ActionCardFramePath = "Assets/Sprites/Cards/ActionCard.png";
         private const string CounterCardFramePath = "Assets/Sprites/Cards/CounterCard.png";
         private const string TrapCardFramePath = "Assets/Sprites/Cards/TrapCard.png";
@@ -615,7 +641,7 @@ namespace Chapchu.EditorTools
         private const float HandFanHalfWidth = 520f;
         private const float HandFanDrop = 34f;       // 양 끝이 가운데보다 내려가는 정도 — 한 칸 1.5° 인 원호
 
-        private static HandPresenter BuildHand(RectTransform handArea, DeckView deck)
+        private static HandPresenter BuildHand(RectTransform handArea, DeckView deck, RectTransform dropZone, OpponentSeatsPresenter seats)
         {
             RectTransform root = NewRect("Hand", handArea);
             Anchor(root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, Vector2.zero);
@@ -634,7 +660,10 @@ namespace Chapchu.EditorTools
                 ("trapCardPrefab", EnsureHandCardPrefab("HandCard_Trap", TrapCardFramePath)));
 
             var presenter = root.gameObject.AddComponent<HandPresenter>();
-            Wire(presenter, ("deck", FindGameDeck()), ("drawOrigin", deck.transform));
+            var server = Object.FindFirstObjectByType<PunGameServer>();
+            if (server == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {nameof(PunGameServer)} 가 없다 — {nameof(HandPresenter)}.server 를 직접 연결할 것.");
+            Wire(presenter, ("deck", FindGameDeck()), ("drawOrigin", deck.transform), ("server", server), ("dropZone", dropZone), ("seats", seats));
             return presenter;
         }
 
@@ -659,6 +688,7 @@ namespace Chapchu.EditorTools
             RectTransform root = NewRect(name, null);
             root.sizeDelta = HandCardSize;
             root.pivot = new Vector2(0.5f, 0f);
+            root.gameObject.AddComponent<CanvasGroup>(); // 잠금 중 레이캐스트 끄기 (HandCardView.SetRaycastBlocking)
 
             RectTransform face = NewRect("Face", root);
             Stretch(face);
