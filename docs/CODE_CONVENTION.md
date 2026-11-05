@@ -17,6 +17,7 @@
 | 이벤트 발생 함수 (다른 클래스가 발생시킬 때만) | `Raise` + 이벤트 이름에서 `On` 을 뺀 것 | `RaiseJoinedRoom()` |
 | RPC 메서드 | `RPC_` + 동사. 방장에게 보내는 요청은 `RPC_Request` + 동사 | `RPC_RequestPlayCard` · `RPC_ApplyDamage` |
 | 코루틴 | 동사 + `Routine` | `CountdownRoutine()` |
+| 카드 연출 이펙트 컴포넌트 (화면 연출) | 종류 + `Fx` — 카드 규칙 효과(`…Effect`)와 구분 | `FlashFx` · `SlashFlurryFx` |
 | 파일 | 클래스 이름과 같게, 영문. 작은 enum · struct 는 쓰는 클래스 파일에 둬도 된다 | `RoomPresenter.cs` |
 
 * `var` 는 오른쪽에서 타입이 바로 보일 때만 (`new X()` · `Load<X>()`). 메서드 반환값은 타입을 쓴다.

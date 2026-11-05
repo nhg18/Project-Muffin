@@ -2,6 +2,8 @@
 using Chapchu.DebugTools;
 using Chapchu.Game;
 using Chapchu.UI.Fx;
+using Chapchu.UI.Fx.Common;
+using Chapchu.UI.Fx.HellBlade;
 using Chapchu.UI.GameScreen;
 using TMPro;
 using UnityEditor;
@@ -16,15 +18,18 @@ using Object = UnityEngine.Object;
 namespace Chapchu.EditorTools
 {
     /// <summary>
-    /// 카드 연출 테스트 씬(CardFxTestScene)과 카드별 연출 프리팹을 만들고 고친다 (메뉴 Chapchu/Card Fx).
-    /// 테스트 씬은 열어 둔 채로 계속 쓴다 — 열려 있으면 그 자리에서 없는 것만 만들고 연결을 맞춘 뒤 저장한다. 있는 오브젝트는 건드리지 않는다.
-    /// 프리팹은 이미 있으면 그대로 쓴다. 다시 만들려면 Rebuild 메뉴 (사람이 고친 프리팹이면 쓰지 않는다).
+    /// 카드 연출 테스트 씬(CardFxTestScene) · 이펙트 시험장(CardFxLabScene) · 공통 이펙트 프리팹(Prefab/UI/CardFx/Common) · 카드별 연출 프리팹을 만들고 고친다 (메뉴 Chapchu/Card Fx).
+    /// 씬은 열어 둔 채로 계속 쓴다 — 열려 있으면 그 자리에서 없는 것만 만들고 연결을 맞춘 뒤 저장한다. 있는 오브젝트는 건드리지 않는다.
+    /// 프리팹은 이미 있으면 그대로 쓴다 (사람이 고친 값일 수 있다). 카드 연출을 처음부터 다시 만들려면 Rebuild 메뉴.
     /// </summary>
     public static class CardFxTestBuilder
     {
         private const string ScenePath = "Assets/Scenes/CardFxTestScene.unity";
         private const string CanvasName = "CardFxTestCanvas";
+        private const string LabScenePath = "Assets/Scenes/CardFxLabScene.unity";
+        private const string LabCanvasName = "CardFxLabCanvas";
         private const string FxPrefabFolder = "Assets/Prefab/UI/CardFx";
+        private const string CommonFxFolder = FxPrefabFolder + "/Common";
         private const string HellBladePrefabPath = FxPrefabFolder + "/HellBladeFx.prefab";
         private const string HellBladeName = "지옥참마도";
         private const string SpriteFolder = "Assets/Sprites/CardFx";
@@ -39,6 +44,8 @@ namespace Chapchu.EditorTools
         private const string MaterialFolder = "Assets/Materials/CardFx";
         private const string AdditivePath = MaterialFolder + "/FxAdditive.mat";
         private const string MultiplyPath = MaterialFolder + "/FxMultiply.mat";
+        private const string LabFloorTexturePath = MaterialFolder + "/Bench/fx_bench_checker.png";
+        private const string LabFloorMaterialPath = MaterialFolder + "/Bench/FxLabFloor.mat";
 
         // 시안 「찹츄 카드 이펙트」 지옥참마도 장면 좌표 (정사각형 장면의 왼쪽 위 기준 %)
         private static readonly Rect DrawFrameBox = new Rect(0f, 0f, 45f, 76f);
@@ -57,6 +64,8 @@ namespace Chapchu.EditorTools
 
         private static readonly Color Ink = new Color32(0x2b, 0x28, 0x56, 0xff);
         private static readonly Color Red = new Color32(0xff, 0x2a, 0x3a, 0xff);
+        // 번쩍임 그림은 투명하게 두고 이펙트가 켠다 — 불투명하면 쓰지 않는 프리팹에서 화면을 덮는다
+        private static readonly Color Clear = new Color(1f, 1f, 1f, 0f);
 
         private static TMP_FontAsset _font;
 
@@ -100,12 +109,52 @@ namespace Chapchu.EditorTools
             EnsureHellBladePrefab();
         }
 
-        /// <summary>지옥참마도 프리팹을 지우고 다시 만든다. 테스트 씬의 연결이 끊기므로 이어서 Build Or Update Test Scene 을 실행한다.</summary>
+        /// <summary>지옥참마도 프리팹 안을 처음부터 다시 만든다 (사람이 고친 값은 사라진다). 루트는 그대로라 씬의 연결은 유지된다.</summary>
         [MenuItem("Chapchu/Card Fx/Rebuild Hell Blade Prefab")]
         public static void RebuildHellBladePrefab()
         {
-            AssetDatabase.DeleteAsset(HellBladePrefabPath);
-            EnsureHellBladePrefab();
+            EnsureHellBladePrefab(true);
+        }
+
+        /// <summary>공통 이펙트 프리팹 중 없는 것만 만든다.</summary>
+        [MenuItem("Chapchu/Card Fx/Build Common Fx Prefabs")]
+        public static void BuildCommonFxPrefabs()
+        {
+            EnsureCommonFxPrefabs();
+        }
+
+        /// <summary>이펙트 시험장(CardFxLabScene)이 열려 있으면 그 자리에서 맞추고 저장, 없으면 새로 만든다.</summary>
+        [MenuItem("Chapchu/Card Fx/Build Or Update Fx Lab Scene")]
+        public static void BuildOrUpdateLabScene()
+        {
+            _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(BoldFontAssetPath);
+            HellBladeFx hellBlade = EnsureHellBladePrefab();
+
+            Scene active = SceneManager.GetActiveScene();
+            if (active.path == LabScenePath)
+            {
+                ApplyLab(active, hellBlade);
+                EditorSceneManager.SaveScene(active);
+                Debug.Log($"[{nameof(CardFxTestBuilder)}] 열린 {LabScenePath} 을 맞추고 저장했다.");
+                return;
+            }
+
+            if (File.Exists(LabScenePath))
+            {
+                Debug.LogError($"[{nameof(CardFxTestBuilder)}] {LabScenePath} 가 이미 있다 — 그 씬을 열고 다시 실행할 것.");
+                return;
+            }
+
+            // 열린 씬은 건드리지 않는다 — 새 씬을 옆에 만들어 저장하고 닫는다
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            SceneManager.SetActiveScene(scene);
+            ApplyLab(scene, hellBlade);
+            if (!EditorSceneManager.SaveScene(scene, LabScenePath))
+                Debug.LogError($"[{nameof(CardFxTestBuilder)}] {LabScenePath} 저장 실패.");
+            if (active.IsValid())
+                SceneManager.SetActiveScene(active);
+            EditorSceneManager.CloseScene(scene, true);
+            Debug.Log($"[{nameof(CardFxTestBuilder)}] {LabScenePath} 생성 완료.");
         }
 
         #region 테스트 씬
@@ -227,6 +276,154 @@ namespace Chapchu.EditorTools
             EnsureHellBladeEntry(bench, hellBlade);
 
             EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        // 이펙트 시험장 — 원근으로 깔린 어두운 체크 바닥(3D) 위에 대상 자리 하나, 그 위에 UI(판 · 연출 레이어 · 설명).
+        // 없는 것만 만들고, 참조는 매번 다시 연결한다
+        private static void ApplyLab(Scene scene, HellBladeFx hellBlade)
+        {
+            Color backdrop = new Color32(0x0b, 0x08, 0x12, 0xff);
+            if (FindRoot(scene, "Main Camera") == null)
+            {
+                var camera = new GameObject("Main Camera", typeof(Camera)).GetComponent<Camera>();
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = backdrop;
+                camera.fieldOfView = 40f;
+                camera.farClipPlane = 80f;
+                camera.transform.SetPositionAndRotation(new Vector3(0f, 2.4f, -7f), Quaternion.Euler(16f, 0f, 0f));
+                camera.tag = "MainCamera";
+            }
+
+            // 멀어질수록 어둠에 묻히게
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogDensity = 0.07f;
+            RenderSettings.fogColor = backdrop;
+
+            if (FindRoot(scene, "Floor") == null)
+            {
+                GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                floor.name = "Floor";
+                Object.DestroyImmediate(floor.GetComponent<Collider>());
+                floor.transform.SetPositionAndRotation(new Vector3(0f, 0f, 8f), Quaternion.Euler(90f, 0f, 0f));
+                floor.transform.localScale = new Vector3(60f, 60f, 1f);
+                floor.GetComponent<MeshRenderer>().sharedMaterial = EnsureLabFloorMaterial();
+            }
+
+            GameObject canvasGo = FindRoot(scene, LabCanvasName);
+            if (canvasGo == null)
+            {
+                canvasGo = new GameObject(LabCanvasName, typeof(Canvas), typeof(CanvasScaler));
+                canvasGo.layer = LayerMask.NameToLayer("UI");
+                canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+                CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+            }
+            var canvas = (RectTransform)canvasGo.transform;
+
+            // 판 — 대상 자리 · 바닥 빛. 마무리 이펙트가 이 판을 흔든다
+            RectTransform stage = Child(canvas, "Stage");
+            if (stage == null)
+                stage = NewStretch("Stage", canvas);
+
+            if (Child(stage, "Spot") == null)
+            {
+                Image spot = NewImage("Spot", stage, new Color(0.55f, 0.3f, 1f, 0.22f), Common("fx_glow_soft"),
+                    AssetDatabase.LoadAssetAtPath<Material>(AdditivePath));
+                Anchor(spot.rectTransform, new Vector2(0.5f, 0.36f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100f, 380f));
+            }
+
+            // 대상 — 가운데가 이펙트가 터지는 점. 발밑 그림자와 이름표
+            RectTransform target = Child(stage, "Target");
+            if (target == null)
+            {
+                target = NewRect("Target", stage);
+                Anchor(target, new Vector2(0.5f, 0.45f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(220f, 220f));
+                Image shadow = NewImage("Shadow", target, new Color(0f, 0f, 0f, 0.6f), Common("fx_glow_soft"));
+                Anchor(shadow.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300f, 70f));
+                TMP_Text label = NewText("Label", target, "대상", 26f, new Color(1f, 1f, 1f, 0.35f));
+                Anchor(label.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(200f, 40f));
+            }
+
+            // 연출 레이어는 판 위 — 따로 Canvas 라 연출이 매 프레임 움직여도 판 쪽은 다시 계산되지 않는다
+            RectTransform fxLayerRect = Child(canvas, "FxLayer");
+            if (fxLayerRect == null)
+                fxLayerRect = NewStretch("FxLayer", canvas);
+            fxLayerRect.SetAsLastSibling();
+            GetOrAdd<Canvas>(fxLayerRect.gameObject);
+            FxLayer fxLayer = GetOrAdd<FxLayer>(fxLayerRect.gameObject);
+            Wire(fxLayer,
+                ("stage", stage), ("additive", AssetDatabase.LoadAssetAtPath<Material>(AdditivePath)), ("star", Common("fx_star")),
+                ("dot", Common("fx_dot")), ("glow", Common("fx_glow_soft")), ("streak", Common("fx_streak")),
+                ("starburst", Common("fx_starburst")), ("boomFont", _font));
+
+            RectTransform captionRect = Child(canvas, "Caption");
+            TMP_Text caption = captionRect != null ? captionRect.GetComponent<TMP_Text>() : null;
+            if (caption == null)
+            {
+                caption = NewText("Caption", canvas, "", 30f, Color.white);
+                Anchor(caption.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(240f, 30f), new Vector2(1300f, 50f));
+            }
+            // 설명은 연출(컷인 위아래 검은 띠)에 가리지 않게 맨 위
+            caption.transform.SetAsLastSibling();
+
+            CardFxLab lab = GetOrAdd<CardFxLab>(canvasGo);
+            Wire(lab, ("fxLayer", fxLayer), ("target", target), ("captionText", caption));
+            EnsureLabCard(lab, HellBladeName, hellBlade);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        // 시험장 카드 목록에 그 카드 줄이 없으면 더하고, 연출 프리팹 연결을 맞춘다. 다른 줄은 건드리지 않는다
+        private static void EnsureLabCard(CardFxLab lab, string cardName, CardFx fx)
+        {
+            var serialized = new SerializedObject(lab);
+            SerializedProperty cards = serialized.FindProperty("cards");
+            SerializedProperty entry = null;
+            for (int i = 0; i < cards.arraySize; i++)
+            {
+                if (cards.GetArrayElementAtIndex(i).FindPropertyRelative("cardName").stringValue == cardName)
+                    entry = cards.GetArrayElementAtIndex(i);
+            }
+
+            if (entry == null)
+            {
+                cards.arraySize++;
+                entry = cards.GetArrayElementAtIndex(cards.arraySize - 1);
+                entry.FindPropertyRelative("cardName").stringValue = cardName;
+            }
+
+            entry.FindPropertyRelative("fx").objectReferenceValue = fx;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // 바닥 — 체크 텍스처를 반복해 까는 Unlit 머티리얼 (안개를 받는다)
+        private static Material EnsureLabFloorMaterial()
+        {
+            var importer = (TextureImporter)AssetImporter.GetAtPath(LabFloorTexturePath);
+            if (importer.wrapMode != TextureWrapMode.Repeat)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = 8;
+                importer.mipmapEnabled = true;
+                importer.SaveAndReimport();
+            }
+
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(LabFloorMaterialPath);
+            if (existing != null)
+                return existing;
+
+            var material = new Material(Shader.Find("Unlit/Texture"))
+            {
+                mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(LabFloorTexturePath),
+                mainTextureScale = new Vector2(30f, 30f),
+            };
+            AssetDatabase.CreateAsset(material, LabFloorMaterialPath);
+            return material;
         }
 
         // 목록에 지옥참마도 줄이 없으면 더하고, 연출 프리팹 연결을 맞춘다. 다른 줄은 건드리지 않는다
@@ -358,29 +555,221 @@ namespace Chapchu.EditorTools
 
         #endregion
 
-        #region 지옥참마도 프리팹
+        #region 공통 이펙트 프리팹
 
-        private static HellBladeFx EnsureHellBladePrefab()
+        // 공통 이펙트 프리팹 — 카드 연출이 중첩 프리팹으로 가져다 놓고 시각 · 값만 바꿔 쓴다. 이미 있으면 그대로 쓴다 (사람이 고친 값일 수 있다)
+        private static readonly string[] CommonFxNames =
         {
-            var existing = AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath);
-            if (existing != null)
-                return existing;
+            "Flash", "Shake", "Blackout", "FlareBurst", "GlowPop", "GleamSweep", "GlyphSlam", "SlashFlurry", "BigSlash", "TargetSlash", "TargetBoom",
+        };
 
+        private static Scene _preview;
+
+        private static string CommonFxPath(string name) => $"{CommonFxFolder}/{name}.prefab";
+
+        private static void EnsureCommonFxPrefabs()
+        {
             ImportAsSprites(SpriteFolder);
             if (!AssetDatabase.IsValidFolder(FxPrefabFolder))
                 AssetDatabase.CreateFolder("Assets/Prefab/UI", "CardFx");
+            if (!AssetDatabase.IsValidFolder(CommonFxFolder))
+                AssetDatabase.CreateFolder(FxPrefabFolder, "Common");
             Material additive = EnsureMaterial(AdditivePath, BlendMode.SrcAlpha, BlendMode.One, false);
+
+            foreach (string name in CommonFxNames)
+            {
+                if (AssetDatabase.LoadAssetAtPath<CardFxStep>(CommonFxPath(name)) != null)
+                    continue;
+
+                RectTransform root = BuildCommonFx(name, additive);
+                PrefabUtility.SaveAsPrefabAsset(root.gameObject, CommonFxPath(name));
+                Object.DestroyImmediate(root.gameObject);
+                Debug.Log($"[{nameof(CardFxTestBuilder)}] {CommonFxPath(name)} 생성 완료.");
+            }
+            ClosePreview();
+        }
+
+        // 기본값은 지옥참마도에서 가장 많이 쓰는 값. 한 점 이펙트는 크기를 가진 가운데 앵커, 화면을 덮는 이펙트는 늘어난 앵커
+        private static RectTransform BuildCommonFx(string name, Material additive)
+        {
+            RectTransform root = NewPrefabRoot(name);
+            switch (name)
+            {
+                case "Flash":
+                {
+                    Overscan(root);
+                    AddImage(root, Color.white);
+                    Configure(root.gameObject.AddComponent<FlashFx>(), ("alpha", 0.5f), ("durationMs", 160f));
+                    break;
+                }
+                case "Shake":
+                    Configure(root.gameObject.AddComponent<ShakeFx>(), ("amount", 6f), ("durationMs", 160f));
+                    break;
+                case "Blackout":
+                {
+                    Overscan(root);
+                    AddImage(root, Color.black);
+                    Configure(root.gameObject.AddComponent<FadeFx>(), ("alpha", 1f), ("inMs", 40f));
+                    break;
+                }
+                case "FlareBurst":
+                {
+                    // 시안 칼집 이음새: 고리 18 · 줄 빛 44×3 · 별 7 (장면 %) — 고리 칸 기준 비율
+                    root.sizeDelta = new Vector2(240f, 240f);
+                    Image ring = NewImage("Ring", root, Color.white, Common("fx_flare_ring"), additive);
+                    Stretch(ring.rectTransform);
+                    Image streak = NewImage("Streak", root, Color.white, Common("fx_flare_streak"), additive);
+                    AnchorRange(streak.rectTransform, new Vector2(0.5f - 22f / 18f, 0.5f - 1.5f / 18f), new Vector2(0.5f + 22f / 18f, 0.5f + 1.5f / 18f));
+                    Image spark = NewImage("Spark", root, Color.white, Common("fx_spark"), additive);
+                    AnchorRange(spark.rectTransform, new Vector2(0.5f - 3.5f / 18f, 0.5f - 3.5f / 18f), new Vector2(0.5f + 3.5f / 18f, 0.5f + 3.5f / 18f));
+                    Configure(root.gameObject.AddComponent<FlareBurstFx>(), ("ring", ring), ("streak", streak), ("spark", spark), ("durationMs", 520f));
+                    break;
+                }
+                case "GlowPop":
+                {
+                    root.sizeDelta = new Vector2(86f, 86f);
+                    NoInput(root.gameObject.AddComponent<CanvasGroup>());
+                    Image halo = NewImage("Halo", root, new Color32(0xff, 0x28, 0x3c, 0xff), Common("fx_glow_soft"), additive);
+                    AnchorRange(halo.rectTransform, new Vector2(-1.8f, -1.8f), new Vector2(2.8f, 2.8f));
+                    Image flare = NewImage("Flare", root, new Color32(0xff, 0x80, 0x90, 0xff), Common("fx_flare_streak"), additive);
+                    AnchorRange(flare.rectTransform, new Vector2(-12.5f, 0.2f), new Vector2(13.5f, 0.8f));
+                    root.gameObject.AddComponent<GlowPopFx>();
+                    break;
+                }
+                case "GleamSweep":
+                {
+                    root.sizeDelta = new Vector2(560f, 430f);
+                    Image glow = AddImage(root, Red, Common("fx_glow_soft"), additive);
+                    Image gleam = NewImage("Gleam", root, Color.white, Common("fx_glow_soft"), additive);
+                    AnchorRange(gleam.rectTransform, new Vector2(0.2f, 0.4f), new Vector2(0.8f, 0.6f));
+                    Configure(root.gameObject.AddComponent<GleamSweepFx>(), ("glow", glow), ("gleam", gleam));
+                    break;
+                }
+                case "GlyphSlam":
+                {
+                    Stretch(root);
+                    Image glyph = NewImage("Glyph", root, Color.white, HellBlade("hellblade_kanji"));
+                    Anchor(glyph.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 520f));
+                    Image glow = NewImage("Glow", glyph.rectTransform, Color.white, HellBlade("hellblade_kanji_glow"), additive);
+                    Stretch(glow.rectTransform);
+                    Image ring = NewImage("Ring", root, Color.white, Common("fx_ring_glow"), additive);
+                    Anchor(ring.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(324f, 324f));
+                    Configure(root.gameObject.AddComponent<GlyphSlamFx>(), ("glyph", glyph), ("glow", glow), ("ring", ring));
+                    break;
+                }
+                case "SlashFlurry":
+                case "BigSlash":
+                {
+                    bool flurry = name == "SlashFlurry";
+                    Overscan(root);
+                    NoInput(root.gameObject.AddComponent<CanvasGroup>());
+                    Image background = NewImage("Background", root, flurry ? (Color)new Color32(0x4a, 0x06, 0x10, 0xff) : Color.black, Common("fx_radial_bg"));
+                    Stretch(background.rectTransform);
+                    RectTransform container = NewRect("Slashes", root);
+                    Stretch(container);
+                    Image flash = NewImage("Flash", root, Clear);
+                    Stretch(flash.rectTransform);
+                    Configure(root.gameObject.AddComponent<SlashLayer>(), ("background", background), ("container", container), ("additive", additive));
+                    if (flurry)
+                        Configure(root.gameObject.AddComponent<SlashFlurryFx>(), ("flash", flash), ("bandSprite", Common("fx_slash_band")),
+                            ("thinSprite", Common("fx_slash_thin")), ("durationMs", 1460f));
+                    else
+                        Configure(root.gameObject.AddComponent<BigSlashFx>(), ("flash", flash), ("bandSprite", Common("fx_slash_band")));
+                    break;
+                }
+                case "TargetSlash":
+                {
+                    Stretch(root);
+                    Image flash = NewImage("Flash", root, Clear);
+                    Stretch(flash.rectTransform);
+                    Configure(root.gameObject.AddComponent<TargetSlashFx>(), ("sprite", Common("fx_target_slash")), ("additive", additive));
+                    break;
+                }
+                case "TargetBoom":
+                    Configure(root.gameObject.AddComponent<TargetBoomFx>(), ("glyph", HellBlade("hellblade_boom_glyph")));
+                    break;
+            }
+            return root;
+        }
+
+        // 프리팹을 만들 임시 오브젝트는 미리보기 씬에 — 열린 씬을 건드리지 않게
+        private static RectTransform NewPrefabRoot(string name)
+        {
+            if (!_preview.IsValid())
+                _preview = EditorSceneManager.NewPreviewScene();
+            RectTransform root = NewRect(name, null);
+            SceneManager.MoveGameObjectToScene(root.gameObject, _preview);
+            return root;
+        }
+
+        private static void ClosePreview()
+        {
+            if (_preview.IsValid())
+                EditorSceneManager.ClosePreviewScene(_preview);
+            _preview = default;
+        }
+
+        private static Image AddImage(RectTransform rect, Color color, Sprite sprite = null, Material material = null)
+        {
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            image.sprite = sprite;
+            image.material = material;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        #endregion
+
+        #region 지옥참마도 프리팹
+
+        // 프리팹을 지우지 않고 그 자리에서 고친다 — 루트와 HellBladeFx 컴포넌트가 그대로라 씬의 연결(GUID · fileID)이 끊기지 않는다.
+        // 장면 조각(CutInSceneStep)이 이미 있으면 사람이 고친 값일 수 있어 건드리지 않는다 (force 면 다시 만든다)
+        private static HellBladeFx EnsureHellBladePrefab(bool force = false)
+        {
+            EnsureCommonFxPrefabs();
             Material multiply = EnsureMaterial(MultiplyPath, BlendMode.DstColor, BlendMode.Zero, true);
 
-            RectTransform root = NewRect("HellBladeFx", null);
-            Stretch(root);
+            if (AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath) == null)
+            {
+                RectTransform empty = NewPrefabRoot("HellBladeFx");
+                Stretch(empty);
+                empty.gameObject.AddComponent<HellBladeFx>();
+                PrefabUtility.SaveAsPrefabAsset(empty.gameObject, HellBladePrefabPath);
+                Object.DestroyImmediate(empty.gameObject);
+                ClosePreview();
+            }
 
+            GameObject contents = PrefabUtility.LoadPrefabContents(HellBladePrefabPath);
+            try
+            {
+                if (!force && contents.GetComponentInChildren<CutInSceneStep>(true) != null)
+                    return AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath);
+
+                for (int i = contents.transform.childCount - 1; i >= 0; i--)
+                    Object.DestroyImmediate(contents.transform.GetChild(i).gameObject);
+                BuildHellBlade((RectTransform)contents.transform, multiply);
+                PrefabUtility.SaveAsPrefabAsset(contents, HellBladePrefabPath);
+                Debug.Log($"[{nameof(CardFxTestBuilder)}] {HellBladePrefabPath} 를 장면 + 공통 이펙트로 만들었다.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+            return AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath);
+        }
+
+        // 그림은 그려질 순서대로 (위가 먼저 그려진다). 공통 이펙트는 그려질 자리에 중첩 프리팹으로 놓고 시각 · 값만 바꾼다.
+        // 값은 시안 SPECIAL · FINISH 지옥참마도
+        private static void BuildHellBlade(RectTransform root, Material multiply)
+        {
             // 컷인 — 흔들림은 Shaker 에만, 장면 확대는 Cam 에만
             RectTransform cutInRect = NewRect("CutIn", root);
             Stretch(cutInRect);
             CanvasGroup cutIn = NoInput(cutInRect.gameObject.AddComponent<CanvasGroup>());
             RectTransform shaker = NewRect("Shaker", cutInRect);
             Stretch(shaker);
+            shaker.gameObject.AddComponent<FxShaker>();
 
             Image shotImage = NewImage("Shot", shaker, new Color32(0x12, 0x0a, 0x08, 0xff));
             Overscan(shotImage.rectTransform);
@@ -393,29 +782,27 @@ namespace Chapchu.EditorTools
             sceneBlur.rectTransform.anchorMin = new Vector2(-0.1f, -0.1f);
             sceneBlur.rectTransform.anchorMax = new Vector2(1.1f, 1.1f);
             sceneBlur.rectTransform.offsetMin = sceneBlur.rectTransform.offsetMax = Vector2.zero;
-            Stretch(NewImage("Scene", cam, Color.white, HellBlade("hellblade_scene")).rectTransform);
+            Image scene = NewImage("Scene", cam, Color.white, HellBlade("hellblade_scene"));
+            Stretch(scene.rectTransform);
 
-            var drawSprites = new Sprite[10];
+            var drawSprites = new Object[10];
             for (int i = 0; i < drawSprites.Length; i++)
                 drawSprites[i] = HellBlade($"hellblade_draw_{i}");
-            Image drawFrame = NewImage("DrawFrame", cam, Color.white, drawSprites[0]);
+            Image drawFrame = NewImage("DrawFrame", cam, Color.white, (Sprite)drawSprites[0]);
             Box(drawFrame.rectTransform, DrawFrameBox);
+            FramePlayer frames = drawFrame.gameObject.AddComponent<FramePlayer>();
+            WireArray(frames, "frames", drawSprites);
 
             // 칼: 장면 기준으로 기울어진 칼집 이음새에 빛
             RectTransform sword = NewRect("Sword", cam);
             Stretch(sword);
             sword.pivot = new Vector2(SwordPivot.x / 100f, 1f - SwordPivot.y / 100f);
             sword.localRotation = Quaternion.Euler(0f, 0f, SwordAngle);
-            Image swordGlow = NewImage("Glow", sword, Red, Common("fx_glow_soft"), additive);
-            Box(swordGlow.rectTransform, Grow(SwordGlowBox, 1.9f));
-            Image swordGleam = NewImage("Gleam", swordGlow.rectTransform, Color.white, Common("fx_glow_soft"), additive);
-            AnchorRange(swordGleam.rectTransform, new Vector2(0.2f, 0.4f), new Vector2(0.8f, 0.6f));
-            Image swordRing = NewImage("Ring", sword, Color.white, HellBlade("hellblade_ring"), additive);
-            Box(swordRing.rectTransform, Around(SwordJoint, 18f, 18f));
-            Image swordStreak = NewImage("Streak", sword, Color.white, HellBlade("hellblade_streak"), additive);
-            Box(swordStreak.rectTransform, Around(SwordJoint, 44f, 3f));
-            Image swordSpark = NewImage("Spark", sword, Color.white, Common("fx_spark"), additive);
-            Box(swordSpark.rectTransform, Around(SwordJoint, 7f, 7f));
+            GleamSweepFx gleam = Instance<GleamSweepFx>("GleamSweep", sword, "칼날 빛", 600f);
+            Box((RectTransform)gleam.transform, Grow(SwordGlowBox, 1.9f));
+            Box((RectTransform)Instance<FlareBurstFx>("FlareBurst", sword, "칼집 빛 — 살짝", 130f, ("durationMs", 520f)).transform, Around(SwordJoint, 18f, 18f));
+            Box((RectTransform)Instance<FlareBurstFx>("FlareBurst", sword, "칼집 빛 — 뽑기", 600f, ("durationMs", 480f)).transform, Around(SwordJoint, 18f, 18f));
+            Box((RectTransform)Instance<FlareBurstFx>("FlareBurst", sword, "칼집 빛 — 납도", 3550f, ("durationMs", 560f)).transform, Around(SwordJoint, 18f, 18f));
 
             Image eyeCover = NewImage("EyeCover", cam, Color.white, HellBlade("hellblade_eye_cover"));
             Box(eyeCover.rectTransform, EyeBox);
@@ -427,62 +814,122 @@ namespace Chapchu.EditorTools
             Image eyeRed = NewImage("EyeRed", cam, Color.white, HellBlade("hellblade_eye_red"));
             Box(eyeRed.rectTransform, EyeBox);
 
-            RectTransform eyeGlowRect = NewRect("EyeGlow", cam);
-            Box(eyeGlowRect, Around(EyeCenter, 4f, 4f));
-            CanvasGroup eyeGlow = NoInput(eyeGlowRect.gameObject.AddComponent<CanvasGroup>());
-            Image halo = NewImage("Halo", eyeGlowRect, new Color32(0xff, 0x28, 0x3c, 0xff), Common("fx_glow_soft"), additive);
-            AnchorRange(halo.rectTransform, new Vector2(-1.8f, -1.8f), new Vector2(2.8f, 2.8f));
-            Image flare = NewImage("Flare", eyeGlowRect, new Color32(0xff, 0x80, 0x90, 0xff), HellBlade("hellblade_streak"), additive);
-            AnchorRange(flare.rectTransform, new Vector2(-12.5f, 0.2f), new Vector2(13.5f, 0.8f));
+            GlowPopFx eyeGlow = Instance<GlowPopFx>("GlowPop", cam, "눈빛", 600f);
+            Box((RectTransform)eyeGlow.transform, Around(EyeCenter, 4f, 4f));
+            Step<FadeFx>(cam, "남은 눈빛", 3260f, ("target", eyeGlow.gameObject), ("resetAlpha", -1f), ("alpha", 0.85f), ("inMs", 0f));
+            Step<FadeFx>(cam, "남은 칼날 빛", 3260f, ("target", gleam.gameObject), ("resetAlpha", -1f), ("alpha", 0.7f), ("inMs", 0f));
 
-            Image black = NewImage("Black", shaker, Color.black);
-            Overscan(black.rectTransform);
-            Image kanji = NewImage("Kanji", shaker, Color.white, HellBlade("hellblade_kanji"));
-            Anchor(kanji.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 520f));
-            Image kanjiGlow = NewImage("Glow", kanji.rectTransform, Color.white, HellBlade("hellblade_kanji_glow"), additive);
-            Stretch(kanjiGlow.rectTransform);
-            Image kanjiRing = NewImage("KanjiRing", shaker, Color.white, Common("fx_ring_glow"), additive);
-            Anchor(kanjiRing.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(324f, 324f));
+            // 장면 — 그림 애니메이션. 앞 장면은 암전이 다 덮은 뒤(870ms) 숨고, 뒤 장면은 일섬이 끝난 3260ms 부터 컷인 끝까지
+            var painting = new Object[] { shotImage, sceneBlur, scene, eyeCover };
+            (string, object)[] sceneRefs =
+            {
+                ("shot", shot), ("cam", cam), ("swordFrames", frames), ("eye", eyeOpen), ("eyeOpenSprite", HellBlade("hellblade_eye_open")),
+                ("eyeClosedSprite", HellBlade("hellblade_eye_closed")), ("redEye", eyeRed), ("tint", tint),
+            };
+            WireArray(Step<DrawSceneStep>(cam, "칼 뽑기", 0f, With(sceneRefs, ("durationMs", 870f))), "painting", painting);
+            WireArray(Step<SheathSceneStep>(cam, "납도", 3260f, With(sceneRefs, ("durationMs", 890f))), "painting", painting);
 
-            RectTransform slashRect = NewRect("Slashes", shaker);
-            Overscan(slashRect);
-            CanvasGroup slashLayer = NoInput(slashRect.gameObject.AddComponent<CanvasGroup>());
-            Image slashBackground = NewImage("Background", slashRect, new Color32(0x4a, 0x06, 0x10, 0xff), Common("fx_radial_bg"));
-            Stretch(slashBackground.rectTransform);
-
-            Image flash = NewImage("Flash", shaker, Color.white);
-            Overscan(flash.rectTransform);
+            // 장면 위 겹 — 암전 · 글자 · 칼선 판 · 번쩍 · 흔들림
+            Instance<FadeFx>("Blackout", shaker, "암전", 830f, ("holdMs", 2390f), ("outMs", 0f));
+            Instance<GlyphSlamFx>("GlyphSlam", shaker, "절 글자", 950f);
+            SlashFlurryFx flurry = Instance<SlashFlurryFx>("SlashFlurry", shaker, "난도질", 1540f);
+            BigSlashFx bigSlash = Instance<BigSlashFx>("BigSlash", shaker, "마지막 일섬", 3000f);
+            Instance<FlashFx>("Flash", shaker, "들어올 때 번쩍", 0f);
+            Instance<FlashFx>("Flash", shaker, "절 번쩍", 950f, ("alpha", 0.55f), ("durationMs", 140f));
+            Instance<ShakeFx>("Shake", shaker, "뽑을 때 흔들림", 600f);
+            Instance<ShakeFx>("Shake", shaker, "절 흔들림", 950f, ("amount", 14f), ("durationMs", 300f));
+            Instance<ShakeFx>("Shake", shaker, "납도 흔들림", 3550f, ("amount", 5f), ("durationMs", 140f));
 
             RectTransform bars = NewRect("Bars", cutInRect);
             Stretch(bars);
             AnchorRange(NewImage("Top", bars, Color.black).rectTransform, new Vector2(0f, 0.93f), Vector2.one);
             AnchorRange(NewImage("Bottom", bars, Color.black).rectTransform, Vector2.zero, new Vector2(1f, 0.07f));
+            Step<FadeFx>(cutInRect, "컷인 사라짐", 3930f, ("target", cutInRect.gameObject), ("resetAlpha", -1f), ("alpha", 0f), ("inMs", 220f));
 
-            // 마무리 — 대상 자리에 찍는다
+            // 마무리 — 대상 자리에 찍는다 (시각은 마무리 시작 기준)
             RectTransform finish = NewRect("Finish", root);
             Stretch(finish);
-            Image dimmer = NewImage("Dimmer", finish, Color.black);
-            Stretch(dimmer.rectTransform);
-            Image finishFlash = NewImage("Flash", finish, Color.white);
-            Stretch(finishFlash.rectTransform);
+            FadeFx dim = Instance<FadeFx>("Blackout", finish, "대상 어둡게", 0f, ("alpha", 0.88f), ("inMs", 93f), ("holdMs", 279f), ("outMs", 248f));
+            Stretch((RectTransform)dim.transform);
+            Instance<TargetSlashFx>("TargetSlash", finish, "짧은 칼질 ×7", 0f);
+            TargetSlashFx big = Instance<TargetSlashFx>("TargetSlash", finish, "큰 칼질", 360f, ("count", 1), ("jitter", 0f),
+                ("lengthRange", new Vector2(560f, 560f)), ("widthRange", new Vector2(22f, 22f)), ("angleRange", new Vector2(-38f, -38f)),
+                ("lifeMs", 380f), ("shake", 22f), ("punch", 0.05f));
+            Configure(big, ("flash", big.transform.Find("Flash").GetComponent<Image>()));
+            SetColors(big, "colors", new Color32(0xff, 0x2a, 0x3a, 0xff));
+            Instance<TargetBoomFx>("TargetBoom", finish, "절 터짐", 420f);
 
-            HellBladeFx fx = root.gameObject.AddComponent<HellBladeFx>();
-            Wire(fx,
-                ("cutIn", cutIn), ("shaker", shaker), ("shot", shot), ("cam", cam),
-                ("swordGleam", swordGleam), ("kanjiGlow", kanjiGlow), ("kanjiRing", kanjiRing), ("additive", additive),
-                ("drawFrame", drawFrame), ("eyeCover", eyeCover), ("eyeOpen", eyeOpen), ("eyeRed", eyeRed), ("tint", tint),
-                ("eyeGlow", eyeGlow), ("swordGlow", swordGlow), ("swordRing", swordRing), ("swordStreak", swordStreak),
-                ("swordSpark", swordSpark), ("black", black), ("kanji", kanji), ("slashLayer", slashLayer),
-                ("slashBackground", slashBackground), ("flash", flash), ("finish", finish), ("dimmer", dimmer),
-                ("finishFlash", finishFlash), ("slashBand", HellBlade("hellblade_slash_band")),
-                ("slashThin", HellBlade("hellblade_slash_thin")), ("finishSlash", HellBlade("hellblade_finish_slash")),
-                ("boomGlyph", HellBlade("hellblade_boom_glyph")), ("eyeClosedSprite", HellBlade("hellblade_eye_closed")));
-            WireArray(fx, "drawSprites", drawSprites);
+            Configure(root.GetComponent<HellBladeFx>(), ("cutIn", cutIn), ("finish", finish), ("shot", shot), ("cam", cam));
+            WireArray(root.GetComponent<HellBladeFx>(), "hideWhenClear", new Object[]
+            {
+                cutIn, eyeGlow.GetComponent<CanvasGroup>(), flurry.GetComponent<CanvasGroup>(), bigSlash.GetComponent<CanvasGroup>(),
+            });
+        }
 
-            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, HellBladePrefabPath);
-            Object.DestroyImmediate(root.gameObject);
-            Debug.Log($"[{nameof(CardFxTestBuilder)}] {HellBladePrefabPath} 생성 완료.");
-            return saved.GetComponent<HellBladeFx>();
+        // 공통 이펙트 프리팹을 중첩 프리팹으로 놓고 시각 · 값을 바꾼다 (프리팹 원본과 다른 값은 Inspector 에서 굵게 보인다)
+        private static T Instance<T>(string prefabName, Transform parent, string name, float startMs, params (string, object)[] values) where T : CardFxStep
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CommonFxPath(prefabName));
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.name = name;
+            T step = go.GetComponent<T>();
+            Configure(step, With(values, ("startMs", startMs)));
+            return step;
+        }
+
+        // 장면 · 그림 없는 이펙트처럼 프리팹이 아닌 조각 오브젝트 하나 — 이름은 계층에서 보이는 연출 이름
+        private static T Step<T>(RectTransform parent, string name, float startMs, params (string, object)[] values) where T : CardFxStep
+        {
+            RectTransform rect = NewRect(name, parent);
+            Stretch(rect);
+            T step = rect.gameObject.AddComponent<T>();
+            Configure(step, With(values, ("startMs", startMs)));
+            return step;
+        }
+
+        private static void Configure(Component target, params (string field, object value)[] values)
+        {
+            var serialized = new SerializedObject(target);
+            foreach ((string field, object value) in values)
+            {
+                SerializedProperty property = serialized.FindProperty(field);
+                if (property == null)
+                {
+                    Debug.LogError($"[{nameof(CardFxTestBuilder)}] {target.GetType().Name} 에 {field} 필드가 없다.");
+                    continue;
+                }
+
+                switch (value)
+                {
+                    case float number: property.floatValue = number; break;
+                    case int number: property.intValue = number; break;
+                    case bool flag: property.boolValue = flag; break;
+                    case Vector2 vector: property.vector2Value = vector; break;
+                    case Color color: property.colorValue = color; break;
+                    case Object reference: property.objectReferenceValue = reference; break;
+                    default: Debug.LogError($"[{nameof(CardFxTestBuilder)}] {target.GetType().Name}.{field} — 넣을 수 없는 값 {value}"); break;
+                }
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static (string, object)[] With((string, object)[] values, params (string, object)[] more)
+        {
+            var all = new (string, object)[values.Length + more.Length];
+            values.CopyTo(all, 0);
+            more.CopyTo(all, values.Length);
+            return all;
+        }
+
+        private static void SetColors(Component target, string field, params Color[] colors)
+        {
+            var serialized = new SerializedObject(target);
+            SerializedProperty property = serialized.FindProperty(field);
+            property.arraySize = colors.Length;
+            for (int i = 0; i < colors.Length; i++)
+                property.GetArrayElementAtIndex(i).colorValue = colors[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // 연출 이미지는 전부 한 장짜리 스프라이트로 (투명 그대로). 밉맵은 켠다 — 얇은 칼선 · 고리를 작게 그릴 때 깨지지 않게.
