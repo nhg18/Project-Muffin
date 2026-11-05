@@ -69,15 +69,21 @@ namespace Chapchu.UI.Fx.HellBlade
 
         public override void Play(CardFxContext context, RectTransform target)
         {
-            StopRoutines();
-            StartRoutine(SceneRoutine());
+            PlayFrom(0f);
         }
 
-        /// <summary>장면의 첫 모습을 움직이지 않고 보인다 (이펙트를 장면 위에서 볼 때).</summary>
-        public abstract void ShowStill();
+        /// <summary>장면 시작부터 offsetMs 가 지난 모습에서 이어 재생한다 (이펙트를 실제 연출의 그 순간 장면 위에서 볼 때).</summary>
+        public void PlayFrom(float offsetMs)
+        {
+            StopRoutines();
+            StartRoutine(SceneRoutine(offsetMs));
+        }
 
-        /// <summary>장면을 처음부터. 끝나면 <see cref="CutInSceneStep"/> 이 장면 길이에 맞춰 숨긴다.</summary>
-        protected abstract IEnumerator PlaySceneRoutine();
+        /// <summary>
+        /// 장면을 재생한다. start 는 장면이 시작한 시각(Time.time — offsetMs 만큼 앞당겨진 값).
+        /// offsetMs 보다 앞선 일은 끝난 모습으로 바로 맞추고, 남은 일만 제 시각에 한다. 끝나면 <see cref="CutInSceneStep"/> 이 장면 길이에 맞춰 숨긴다.
+        /// </summary>
+        protected abstract IEnumerator PlaySceneRoutine(float start, float offsetMs);
 
         /// <summary>장면 그림 · 칼 · 눈을 보이거나 숨긴다. 붉은 눈 · 붉은 기운은 숨길 때만 함께.</summary>
         protected void SetVisible(bool visible)
@@ -98,10 +104,10 @@ namespace Chapchu.UI.Fx.HellBlade
             eye.sprite = open ? eyeOpenSprite : eyeClosedSprite;
         }
 
-        private IEnumerator SceneRoutine()
+        private IEnumerator SceneRoutine(float offsetMs)
         {
-            float start = Time.time;
-            StartRoutine(PlaySceneRoutine());
+            float start = Time.time - Seconds(offsetMs);
+            StartRoutine(PlaySceneRoutine(start, offsetMs));
             if (durationMs <= 0f)
                 yield break;
             yield return WaitUntilMs(start, durationMs);

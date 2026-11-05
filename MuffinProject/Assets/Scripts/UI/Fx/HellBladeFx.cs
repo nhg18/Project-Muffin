@@ -48,6 +48,9 @@ namespace Chapchu.UI.Fx
         [Tooltip("세로 화면: 장면 한 변 = max(화면 너비 × x, 화면 높이 × y).")]
         [SerializeField] private Vector2 sidePortrait = new Vector2(1.1f, 0.9f);
 
+        [Tooltip("장면이 없는 구간(암전 · 난도질 · 일섬)의 이펙트를 「이펙트 뒤에 장면」 으로 볼 때 깔 어두운 바탕.")]
+        [SerializeField] private Graphic backdrop;
+
         [Header("최적화")]
         [Tooltip("판째 투명해지면 꺼서 안의 그림까지 그리지 않을 판 (화면 전체를 덮는 판이 많아서 모바일에서 크다).")]
         [SerializeField] private CanvasGroup[] hideWhenClear;
@@ -61,7 +64,7 @@ namespace Chapchu.UI.Fx
 
         private void Awake()
         {
-            if (cutIn == null || finish == null || shot == null || cam == null || hideWhenClear == null)
+            if (cutIn == null || finish == null || shot == null || cam == null || backdrop == null || hideWhenClear == null)
                 Debug.LogError($"[{nameof(HellBladeFx)}] 참조 중 비어 있는 것이 있습니다.", this);
 
             List<CardFxStep> cutInSteps = Collect(cutIn.transform);
@@ -116,9 +119,9 @@ namespace Chapchu.UI.Fx
         {
             ResetState();
             FitCamera();
-            // 이펙트를 장면 위에서 보고 싶을 때 — 그 시각의 장면 첫 모습을 뒤에 깐다. 아니면 한 점 이펙트를 대상 자리 가운데로
+            // 이펙트를 실제 연출의 그 순간 위에서 보고 싶을 때 — 그 시각의 장면을 이어 재생한다. 아니면 한 점 이펙트를 대상 자리 가운데로
             if (showScenery && GroupOf(step) == EffectGroup)
-                SceneAt(step.StartMs)?.ShowStill();
+                PlaySceneAt(step.StartMs);
             else if (!step.IsScene && context.Targets != null && context.Targets.Count > 0)
                 CenterOn(step.Visual, context.Targets[0]);
 
@@ -182,11 +185,20 @@ namespace Chapchu.UI.Fx
             visual.position += to - from;
         }
 
-        // 그 시각에 걸친 장면, 없으면 그 앞의 마지막 장면, 그것도 없으면 첫 장면
-        private CutInSceneStep SceneAt(float ms)
+        // ms 에 걸친 장면을 그 순간부터 재생한다. 걸친 장면이 없으면(암전 · 난도질 구간) 실제처럼 어두운 바탕만
+        private void PlaySceneAt(float ms)
         {
-            CardFxStep found = _scenes.LastOrDefault(scene => scene.StartMs <= ms) ?? _scenes.FirstOrDefault();
-            return found as CutInSceneStep;
+            var scene = _scenes.LastOrDefault(step => step.StartMs <= ms) as CutInSceneStep;
+            float offset = scene != null ? ms - scene.StartMs : 0f;
+            if (scene != null && (scene.DurationMs <= 0f || offset < scene.DurationMs))
+            {
+                scene.PlayFrom(offset);
+                return;
+            }
+
+            Color color = backdrop.color;
+            color.a = 1f;
+            backdrop.color = color;
         }
 
         // 모든 조각을 처음 상태로 — 장면 그림은 숨겨지고(장면이 재생될 때 나타난다), 판은 보이는 채로 둔다

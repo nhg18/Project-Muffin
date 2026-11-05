@@ -224,6 +224,7 @@ MonoBehaviour:
   focusPortrait: {x: 0.47, y: 0.4}
   sideLandscape: {x: 1.12, y: 1.65}
   sidePortrait: {x: 1.1, y: 0.9}
+  backdrop: {fileID: 7428526676507345543}
   hideWhenClear:
   - {fileID: 8682932380993406360}
   - {fileID: 8815075372093564468}

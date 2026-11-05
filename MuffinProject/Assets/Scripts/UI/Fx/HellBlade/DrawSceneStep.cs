@@ -55,35 +55,59 @@ namespace Chapchu.UI.Fx.HellBlade
         [SerializeField] private float zoomSettle = 1.1f;
         [SerializeField] private float zoomSettleMs = 110f;
 
-        public override void ShowStill()
+        protected override IEnumerator PlaySceneRoutine(float start, float offsetMs)
         {
             SetVisible(true);
-            Shot.alpha = 1f;
-        }
-
-        protected override IEnumerator PlaySceneRoutine()
-        {
-            float start = Time.time;
-            SetVisible(true);
-            Shot.alpha = 0f;
-            Shot.DOFade(1f, Seconds(fadeInMs)).SetLink(gameObject);
+            // 등장 · 천천히 다가가기 — 지난 만큼은 된 채로, 남은 만큼 마저
+            Shot.alpha = fadeInMs > 0f ? Mathf.Clamp01(offsetMs / fadeInMs) : 1f;
+            if (offsetMs < fadeInMs)
+                Shot.DOFade(1f, Seconds(fadeInMs - offsetMs)).SetLink(gameObject);
             Cam.DOKill();
-            Cam.DOScale(zoomScale, Seconds(zoomMs)).SetEase(Ease.Linear).SetTarget(Cam).SetLink(gameObject);
+            if (offsetMs < redAtMs)
+            {
+                Cam.localScale = Vector3.one * Mathf.Lerp(1f, zoomScale, zoomMs > 0f ? Mathf.Clamp01(offsetMs / zoomMs) : 1f);
+                if (offsetMs < zoomMs)
+                    Cam.DOScale(zoomScale, Seconds(zoomMs - offsetMs)).SetEase(Ease.Linear).SetTarget(Cam).SetLink(gameObject);
+            }
 
-            yield return WaitUntilMs(start, peekAtMs);
-            SwordFrames.Play(0, peekFrame, peekMs, easePower).SetLink(gameObject);
+            if (offsetMs <= peekAtMs)
+            {
+                yield return WaitUntilMs(start, peekAtMs);
+                SwordFrames.Play(0, peekFrame, peekMs, easePower).SetLink(gameObject);
+            }
+            else
+            {
+                SwordFrames.Show(peekFrame);
+            }
 
-            yield return WaitUntilMs(start, drawAtMs);
-            SwordFrames.Play(peekFrame, SwordFrames.LastFrame, drawMs, easePower).SetLink(gameObject);
-            OpenEye();
+            if (offsetMs <= drawAtMs)
+            {
+                yield return WaitUntilMs(start, drawAtMs);
+                SwordFrames.Play(peekFrame, SwordFrames.LastFrame, drawMs, easePower).SetLink(gameObject);
+                OpenEye();
+            }
+            else
+            {
+                SwordFrames.Show(-1);
+                ShowEye(true);
+            }
 
-            yield return WaitUntilMs(start, redAtMs);
-            Tint.DOFade(1f, Seconds(tintMs)).SetLink(gameObject);
-            RedEye.DOFade(1f, Seconds(redEyeMs)).SetLink(gameObject);
-            Cam.DOKill();
-            DOTween.Sequence().SetTarget(Cam).SetLink(gameObject)
-                .Append(Cam.DOScale(zoomPeak, Seconds(zoomPeakMs)))
-                .Append(Cam.DOScale(zoomSettle, Seconds(zoomSettleMs)));
+            if (offsetMs <= redAtMs)
+            {
+                yield return WaitUntilMs(start, redAtMs);
+                Tint.DOFade(1f, Seconds(tintMs)).SetLink(gameObject);
+                RedEye.DOFade(1f, Seconds(redEyeMs)).SetLink(gameObject);
+                Cam.DOKill();
+                DOTween.Sequence().SetTarget(Cam).SetLink(gameObject)
+                    .Append(Cam.DOScale(zoomPeak, Seconds(zoomPeakMs)))
+                    .Append(Cam.DOScale(zoomSettle, Seconds(zoomSettleMs)));
+            }
+            else
+            {
+                SetAlpha(Tint, 1f);
+                SetAlpha(RedEye, 1f);
+                Cam.localScale = Vector3.one * zoomSettle;
+            }
         }
 
         // 감은 눈 → 뜬 눈: 세로로 튀어 열리고, 살짝 눌렸다 제 크기로. 빨간 눈도 같은 크기로 (어긋나 보이지 않게)

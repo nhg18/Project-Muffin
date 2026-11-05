@@ -859,7 +859,7 @@ namespace Chapchu.EditorTools
             SetColors(big, "colors", new Color32(0xff, 0x2a, 0x3a, 0xff));
             Instance<TargetBoomFx>("TargetBoom", finish, "절 터짐", 420f);
 
-            Configure(root.GetComponent<HellBladeFx>(), ("cutIn", cutIn), ("finish", finish), ("shot", shot), ("cam", cam));
+            Configure(root.GetComponent<HellBladeFx>(), ("cutIn", cutIn), ("finish", finish), ("shot", shot), ("cam", cam), ("backdrop", shotImage));
             WireArray(root.GetComponent<HellBladeFx>(), "hideWhenClear", new Object[]
             {
                 cutIn, eyeGlow.GetComponent<CanvasGroup>(), flurry.GetComponent<CanvasGroup>(), bigSlash.GetComponent<CanvasGroup>(),

@@ -53,7 +53,7 @@ namespace Chapchu.DebugTools
         [Tooltip("배속 (Time.timeScale). 1 = 원래 속도. 플레이 중에 바꿔도 바로 적용된다.")]
         [Range(0.05f, 2f)]
         [SerializeField] private float speed = 1f;
-        [Tooltip("이펙트 하나만 볼 때 그 시각의 장면(첫 모습)을 뒤에 깔고, 이펙트를 장면 속 제자리에서 낸다.")]
+        [Tooltip("이펙트 하나만 볼 때 실제 연출의 그 순간 장면을 뒤에 이어 재생하고, 이펙트를 장면 속 제자리에서 낸다.")]
         [SerializeField] private bool showScenery;
         [Tooltip("끝나면 같은 것을 다시 재생한다.")]
         [SerializeField] private bool loop;

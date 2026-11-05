@@ -25,15 +25,15 @@ namespace Chapchu.UI.Fx.HellBlade
         [Tooltip("끝으로 갈수록 느려지는 정도 (1 = 고르게).")]
         [SerializeField] private float easePower = 2.2f;
 
-        public override void ShowStill()
+        protected override IEnumerator PlaySceneRoutine(float start, float offsetMs)
         {
             ShowStart();
-        }
+            if (offsetMs > sheatheAtMs)
+            {
+                SwordFrames.Show(0);
+                yield break;
+            }
 
-        protected override IEnumerator PlaySceneRoutine()
-        {
-            float start = Time.time;
-            ShowStart();
             yield return WaitUntilMs(start, sheatheAtMs);
             SwordFrames.Play(SwordFrames.LastFrame, 0, sheatheMs, easePower).SetLink(gameObject);
         }
