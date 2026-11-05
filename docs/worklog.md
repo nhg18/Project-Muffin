@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-11-05 · 카드 연출 그림을 재생할 때만 불러오고 끝나면 내린다 (`10-ui` 5-1)
+
+### 한 것
+- `HellBladeFx.prefab` 을 `Prefab/UI/CardFx/` → `Resources/CardFx/` 로 옮김 (GUID 유지). 공통 이펙트 프리팹은 그 안에 중첩돼 있어 그대로 둠.
+- `UI/Fx/CardFxLoader`: `CreateRoutine(이름, 부모, 받을 함수)` = `Resources.LoadAsync` 후 생성 (읽는 동안 화면이 멈추지 않게) · `ReleaseRoutine(연출)` = 지우고 다음 프레임에 `UnloadUnusedAssets`.
+  - 내릴 때는 `StartCoroutine(ReleaseRoutine(fx)); fx = null;` 로 따로 돌린다. `yield return` 으로 기다리면 부른 코루틴 변수가 지워진 연출을 계속 가리켜 그 필드의 그림이 내려가지 않는다 (실측: 34장 그대로 남음).
+- `CardFxTestBench` 목록은 프리팹 대신 이름(`fxName`)으로 불러온다. `CardFxTestScene` 은 이제 지옥참마도 그림에 의존하지 않는다 (의존성 0).
+- `Core/ResourcePaths` 신규 (CODE_CONVENTION 5절 「Resources 경로는 상수 클래스」) — `PopupManager` · `GameBootstrap` 의 private const 도 여기로 옮김. 카드 연출 프리팹 위치 규칙을 CODE_CONVENTION 5절에 추가.
+- 확인 (에디터 플레이, 두 번 재생): 재생 전 10장 3.9MB → 재생 중 34장 41.1MB → 끝난 뒤 7장 2.8MB. 콘솔 에러 0. `multi-test ui` 통과. **모바일 빌드에서는 재지 않았고, 연출을 눈으로 보지는 않았다.**
+
+### 다음 할 일
+- [ ] 이펙트 시험장(`CardFxLabScene`)은 프리팹을 직접 참조한다 — 조각 목록을 시작할 때 읽어야 해서 그대로 둠 (디버그 씬이라 미리 올라와도 됨).
+- [ ] 게임 화면에 카드 연출을 붙일 때 `CardFxLoader` 를 쓴다. 3 단계 시작 때 읽기 시작하면 모바일에서 늦을 수 있다 — 1 · 2 단계 동안 미리 읽을지는 정하지 않았다.
+- [ ] `UnloadUnusedAssets` 는 전체를 훑어 모바일에서 수십 ms 걸릴 수 있다 — 카드가 버림 더미로 간 뒤에 부르지만 실기기에서 끊김 확인 필요.
+
+---
+
 ## 2026-11-05 · 「지옥참마도」 스프라이트를 노션 원본(2000px)으로 교체
 
 ### 결정 (사용자)

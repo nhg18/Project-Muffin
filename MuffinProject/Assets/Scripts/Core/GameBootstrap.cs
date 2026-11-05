@@ -9,9 +9,6 @@ namespace Chapchu.Core
     /// </summary>
     public static class GameBootstrap
     {
-        /// <summary>Resources 기준 매니저 프리팹 경로</summary>
-        private const string PrefabRoot = "Bootstrap/";
-
         /// <summary>생성 순서대로 나열한다. 먼저 필요한 매니저를 앞에 둔다.</summary>
         private static readonly string[] ManagerPrefabs =
         {
@@ -28,7 +25,7 @@ namespace Chapchu.Core
 
         private static void Spawn(string prefabName)
         {
-            string path = PrefabRoot + prefabName;
+            string path = ResourcePaths.Bootstrap + prefabName;
             var prefab = Resources.Load<GameObject>(path);
 
             if (prefab == null)

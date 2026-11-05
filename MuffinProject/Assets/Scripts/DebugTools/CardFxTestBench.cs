@@ -31,7 +31,8 @@ namespace Chapchu.DebugTools
             public CardType type;
             public Sprite art;
             [TextArea] public string description;
-            public CardFx fxPrefab;
+            [Tooltip("Resources/CardFx/ 의 연출 프리팹 이름 (= 연출 컴포넌트 이름, 예: HellBladeFx). 재생할 때 불러온다. 비우면 결과만 보인다.")]
+            public string fxName;
             [Tooltip("테스트 표시용 피해. 규칙 수치가 아니다.")]
             public int damage;
             [Tooltip("큰 피해 연출 (시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
@@ -156,9 +157,12 @@ namespace Chapchu.DebugTools
                 0.46f, 0.45f, 1.1f, -20f, 0f, 80f);
             Land(played);
 
-            if (entry.fxPrefab != null)
+            CardFx fx = null;
+            if (!string.IsNullOrEmpty(entry.fxName))
+                yield return CardFxLoader.CreateRoutine(entry.fxName, fxLayer.transform, created => fx = created);
+
+            if (fx != null)
             {
-                CardFx fx = Instantiate(entry.fxPrefab, fxLayer.transform);
                 Stretch((RectTransform)fx.transform);
                 var context = new CardFxContext
                 {
@@ -169,7 +173,8 @@ namespace Chapchu.DebugTools
                 };
                 yield return fx.PlayRoutine(context);
                 yield return ClearRoutine(played);
-                Destroy(fx.gameObject);
+                StartCoroutine(CardFxLoader.ReleaseRoutine(fx));
+                fx = null;
             }
             else
             {

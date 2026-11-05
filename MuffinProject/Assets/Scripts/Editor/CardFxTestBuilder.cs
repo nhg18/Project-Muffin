@@ -30,7 +30,9 @@ namespace Chapchu.EditorTools
         private const string LabCanvasName = "CardFxLabCanvas";
         private const string FxPrefabFolder = "Assets/Prefab/UI/CardFx";
         private const string CommonFxFolder = FxPrefabFolder + "/Common";
-        private const string HellBladePrefabPath = FxPrefabFolder + "/HellBladeFx.prefab";
+        // 카드별 연출 프리팹은 재생할 때만 불러오므로 Resources 아래 (CardFxLoader)
+        private const string CardFxResourceFolder = "Assets/Resources/CardFx";
+        private const string HellBladePrefabPath = CardFxResourceFolder + "/" + nameof(HellBladeFx) + ".prefab";
         private const string HellBladeName = "지옥참마도";
         private const string SpriteFolder = "Assets/Sprites/CardFx";
         private const string HellBladeSprites = SpriteFolder + "/HellBlade/";
@@ -449,7 +451,7 @@ namespace Chapchu.EditorTools
                 entry.FindPropertyRelative("damage").intValue = 40;
             }
 
-            entry.FindPropertyRelative("fxPrefab").objectReferenceValue = hellBlade;
+            entry.FindPropertyRelative("fxName").stringValue = hellBlade.GetType().Name;
             entry.FindPropertyRelative("bigHit").boolValue = true;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -730,6 +732,8 @@ namespace Chapchu.EditorTools
             EnsureCommonFxPrefabs();
             Material multiply = EnsureMaterial(MultiplyPath, BlendMode.DstColor, BlendMode.Zero, true);
 
+            if (!AssetDatabase.IsValidFolder(CardFxResourceFolder))
+                AssetDatabase.CreateFolder("Assets/Resources", "CardFx");
             if (AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath) == null)
             {
                 RectTransform empty = NewPrefabRoot("HellBladeFx");
