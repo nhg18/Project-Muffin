@@ -59,6 +59,34 @@
 
 ---
 
+## 2026-11-06 · 카드 · 덱을 3D 층으로 — 월드 Quad 카드 · 원근 카메라 · 뒤집기 · 드래그 기울기 · 카드 내기 1단계 (`feature/game-screen-real3d`)
+
+### 결정 (사용자)
+- 캔버스 기울이기(`feature/game-screen-ui3d`, 커밋 `d857dd6`) 대신 진짜 3D 로 간다. 시작 단위는 카드 · 덱 · 손패만 — 좌석 · 테이블은 아직 2D. 10-ui 2-1 의 층 표(3D / 2D) 그대로. 렌더 파이프라인은 Built-in 유지.
+- 제안값 그대로: 100px = 1 유닛, 카메라 거리 14.85 · FOV 40°, 카드 내는 자리 · 버림 자리는 덱 양옆 276, 뒷면 `CardBack.jpg`.
+- 카드 내는 자리를 처음 제안한 화면 중앙(960)은 덱과 같은 자리라 덱에 가려졌다 → 덱 왼쪽(696)으로. `DRAW n` 은 흰 글자가 뒷면 그림의 흰 얼굴에 묻혀 더미 위쪽 바깥에 잉크로.
+- 브랜치는 `feature/game-screen` 이 develop 에 전부 머지돼 있어 develop(`76068f0`, 2.5D 시안 전환 포함)에서 땄다.
+
+### 한 것
+- `CardView`(새, 3D): 루트 BoxCollider + 포인터 이벤트 → `Front`(틀 · 그림 · 이름 · 설명 TMP 3D) · `Back` Quad. 그림은 스프라이트 텍스처를 프로퍼티 블록으로 입히고 비율을 지킨다. 편집 모드에서도 쓰게 콜라이더 · 그림 칸은 늦게 잡는다. uGUI `HandCardView` · `HandCard_*` 프리팹은 `CardFxTestBench` 가 아직 써서 남겼다.
+- `HandView` 를 월드 좌표로 다시 씀: 스플라인 부채꼴 · 올리기 · 내리기 · 호버(카메라 쪽 0.5) 그대로, 자리 기울기 4°, 뽑기는 뒷면 · 40° 로 생성해 1초 동안 뒤집히며 선다, 드래그는 높이에 비례해 0 → 40°. 포인터 좌표는 카메라 광선을 손패 평면에 맞춰 푼다. `TakeCard` 가 카드를 떼어 돌려준다. 재배치(`Layout`)는 떠 있는 카드를 건너뛴다 — PR #89 리뷰의 "드래그 중 카드가 들어오면 자리로 튄다" 를 고침.
+- `DeckView` 3D: 뒷면 5장 더미 + `DRAW n` + 콜라이더 클릭. `HandPresenter.PlayCardRoutine`: 손패 → 카드 내는 자리(0.46초 · 40°) → 0.9초 → 버림 자리(0.38초 · 0.8배) → 삭제. `GameScreenPresenter` 큐가 기다린다. `OpponentHandView` 는 3D 덱 자리를 화면 좌표로 바꿔 쓴다. `GameScreenView.handArea` 삭제.
+- `TableBuilder`(새, Editor): 카메라 · `PhysicsRaycaster` · `Table` 루트 · 덱 · 손패 · 자리 2개 · 머티리얼(`Assets/Materials/Cards/`, Unlit 컷아웃) · 프리팹(`Assets/Prefab/Table/`). `GameScreenBuilder.Build` 가 부른다. HUD 캔버스는 Overlay 로 되돌리고 배경은 카메라 캔버스(거리 50)로 분리. `GameScene` 다시 조립 · 저장.
+- 문서: `10-ui` 2-1 「3D 층 구현」 절 · 덱 · 손패 표 · 5절 · 5-1 메모, `15-screen` 3D 층 비율 한 줄.
+- 확인: 편집 모드 캡처(앞면 · 그림 · 글자 · 뒷면 · 덱 · 원근). 플레이 모드 혼자(이벤트 · 포인터 주입): 뽑기 중간 자세(Y 300° 부근, 카드가 모서리로 보이며 뒤집힘) · 올리기 · `PhysicsRaycaster` 가 덱 · 카드를 맞춤 · 호버 확대 · 드래그 350px 에 38.9° · 드롭 → 대상 선택 잠금 · 카드 내기 1단계가 덱 왼쪽에 눕고 버림으로 사라짐. `multi 2` 통과(콘솔 에러 0) — 실제 뽑기 · 카드 사용 흐름.
+- 못 한 것: 실제 마우스 조작. 4:3 화면에서 손패 좌우 잘림 여부. 혼자 플레이 중 PUN 이 스크립트 컴파일을 감지하면 플레이를 끊는다 — 확인 스크립트는 편집 모드에서 한 번 돌려 컴파일해 두고 쓴다.
+
+### 다음 할 일
+- [ ] 사람 확인: 마우스로 호버 · 드래그 · 드롭 · 덱 탭. 기울기 · 자리 수치는 `HandView` · `HandPresenter` Inspector 와 `TableBuilder` 상수
+- [ ] `feature/game-screen-ui3d` 는 `archive/game-screen-ui3d` 태그로 남기고 지운다 (태그 푸시는 사람)
+- [ ] 좌석 이름표 · 상대 손패 · 테이블 판 · `perspective-origin 22%` — 10-ui 2-1 미정 항목을 뽑은 뒤 3D 층으로
+- [ ] 버림 더미 그림(쌓임) · 체인 자리 — 카드 이펙트 2 · 3 · 4단계와 함께
+- [ ] `CardFxTestBench` 를 3D 카드로 옮기고 uGUI `HandCardView` · `HandCard_*` 삭제 (카드 이펙트 쪽)
+- [ ] 상대 손패 2D 뒷면을 `CardBack.jpg` 로 맞출지
+- [ ] 에디터에서 `GameScene` 을 열면 레이아웃 그룹 · TMP 가 씬을 더럽힌다(앵커 · 글자색 해시) — 저장해 두면 그 뒤로는 조용하다
+
+---
+
 ## 2026-11-06 · 손패 드래그 → 드롭 영역 → 대상 선택 → 카드 사용 요청 (`feature/game-screen`)
 
 ### 결정 (사용자)

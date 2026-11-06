@@ -133,7 +133,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 버림 더미 · 히스토리 항목은 이후 작업.
+        // 히스토리 항목은 이후 작업. 내 카드는 1단계 연출(테이블 위로 → 버림)이 끝날 때까지 큐가 기다린다.
         private void HandleCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
         {
             bool isMe = IsMe(actorNumber);
@@ -146,9 +146,8 @@ namespace Chapchu.UI.GameScreen
                     return null;
                 }
 
-                hand.ShowCardPlayed(cardInstanceId);
                 myPanel.ShowHandCount(handCount);
-                return null;
+                return hand.PlayCardRoutine(cardInstanceId);
             });
         }
 

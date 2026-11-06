@@ -19,8 +19,8 @@ namespace Chapchu.UI.GameScreen
 
         [Tooltip("뒷면 카드 프리팹 (피벗 아래 가운데).")]
         [SerializeField] private RectTransform backCardPrefab;
-        [Tooltip("새 뒷면이 날아오기 시작하는 자리 — 덱 더미.")]
-        [SerializeField] private RectTransform drawOrigin;
+        [Tooltip("새 뒷면이 날아오기 시작하는 자리 — 덱 더미 (3D 층). 화면 좌표로 바꿔 캔버스에 놓는다.")]
+        [SerializeField] private Transform drawOrigin;
         [Tooltip("자리 이동 연출 초. 내 손패(HandView)와 같게.")]
         [SerializeField] private float moveDuration = 1f;
 
@@ -37,13 +37,23 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(OpponentHandView)}] {nameof(backCardPrefab)} 또는 {nameof(drawOrigin)} 참조가 비어 있습니다.", this);
         }
 
+        // 3D 층의 덱 자리 → 이 캔버스 위치. Overlay 캔버스는 월드 단위가 화면 px 라 화면 좌표를 그대로 쓴다.
+        private Vector3 DrawOriginOnCanvas()
+        {
+            Camera camera = Camera.main;
+            if (camera == null) return drawOrigin.position;
+
+            Vector3 screen = camera.WorldToScreenPoint(drawOrigin.position);
+            return new Vector3(screen.x, screen.y, 0f);
+        }
+
         /// <summary>장수를 맞춘다 — 모자라면 덱 자리에서 뒷면이 날아오고, 넘치면 맨 뒤를 지운다.</summary>
         public void SetCount(int count)
         {
             while (_cards.Count < count)
             {
                 RectTransform card = Instantiate(backCardPrefab, transform);
-                card.position = drawOrigin.position;
+                card.position = DrawOriginOnCanvas();
                 _cards.Add(card);
             }
 

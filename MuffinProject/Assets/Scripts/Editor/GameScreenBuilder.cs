@@ -18,7 +18,8 @@ namespace Chapchu.EditorTools
 {
     /// <summary>
     /// 인게임 화면 UI 를 열려 있는 씬에 조립한다 (메뉴 Chapchu/Game Screen/Build UI).
-    /// 수치 · 색은 docs/systems/10-ui.md 2-1 (HTML 시안 × 2). 손패는 부채꼴 · 카드 프리팹(종류별 3개)까지, 상대 손패 · 히스토리 항목은 만들지 않는다.
+    /// 10-ui.md 2-1 의 층 표대로 — 3D 층(카드 · 덱 · 손패)은 TableBuilder 가 만들고, HUD 는 Overlay 캔버스, 배경은 3D 층 뒤의 카메라 캔버스에 둔다.
+    /// 수치 · 색은 docs/systems/10-ui.md 2-1 (HTML 시안 × 2). 히스토리 항목은 만들지 않는다.
     /// 프레젠터도 같이 붙인다 — 영역마다 하나, 캔버스 루트에 연출 큐(GameScreenPresenter) 하나.
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
     /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다.
@@ -26,6 +27,8 @@ namespace Chapchu.EditorTools
     public static class GameScreenBuilder
     {
         private const string CanvasName = "GameCanvas";
+        private const string BackgroundCanvasName = "BackgroundCanvas";
+        private const float BackgroundPlaneDistance = 50f; // 테이블 면(카메라 거리 약 14.85)보다 멀리
         private const string RegularFontPath = "Assets/Fonts/GlaMuri/Galmuri11.ttf";
         private const string BoldFontPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold.ttf";
         private const string RegularFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11 SDF.asset";
@@ -56,6 +59,9 @@ namespace Chapchu.EditorTools
         private static TMP_FontAsset _regularFont;
         private static TMP_FontAsset _boldFont;
 
+        internal static TMP_FontAsset RegularFont => _regularFont != null ? _regularFont : _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
+        internal static TMP_FontAsset BoldFont => _boldFont != null ? _boldFont : _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
+
         [MenuItem("Chapchu/Game Screen/Build UI")]
         public static void Build()
         {
@@ -68,10 +74,14 @@ namespace Chapchu.EditorTools
             _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
             _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
 
-            GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
-            BuildBackground(canvasRect);
+            Camera camera = TableBuilder.SetupCamera();
+            Transform table = TableBuilder.BuildTable();
+            if (camera == null || table == null)
+                return;
+            DeckView deck = TableBuilder.BuildDeck(table);
 
-            DeckView deck = BuildDeck(canvasRect);
+            GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
+            BuildBackgroundCanvas(camera);
 
             RectTransform safeArea = NewRect("SafeArea", canvasRect);
             Stretch(safeArea);
@@ -82,8 +92,7 @@ namespace Chapchu.EditorTools
             OpponentSeatsPresenter seats = BuildOpponentSeats(safeArea, deck);
             MyPanelView myPanel = BuildMyPanel(safeArea);
             RectTransform dropZone = BuildDropZone(safeArea);
-            RectTransform handArea = BuildHandArea(safeArea);
-            HandPresenter hand = BuildHand(handArea, deck, dropZone, seats);
+            HandPresenter hand = TableBuilder.BuildHand(table, deck, dropZone, seats, FindGameDeck());
 
             VictoryOverlayView victory = BuildVictoryOverlay(canvasRect);
 
@@ -91,7 +100,7 @@ namespace Chapchu.EditorTools
 
             Wire(screen,
                 ("roomCode", roomCode), ("history", history), ("myPanel", myPanel), ("deck", deck),
-                ("handArea", handArea), ("dropZone", dropZone), ("victoryOverlay", victory));
+                ("dropZone", dropZone), ("victoryOverlay", victory));
             WireArray(screen, "opponentSeats", seats.GetComponentsInChildren<OpponentSeatView>(true));
             screen.gameObject.AddComponent<RejectToastPresenter>();
 
@@ -105,7 +114,7 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(GameScreenBuilder)}] {CanvasName} 조립 완료 — 씬을 저장할 것.");
         }
 
-        /// <summary>손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지 — 씬 · HandView 참조가 그대로). 사람이 프리팹을 손봤다면 지워진다.</summary>
+        /// <summary>uGUI 손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지). CardFxTestBench 가 쓴다 — 인게임 손패는 3D 카드(TableBuilder). 사람이 프리팹을 손봤다면 지워진다.</summary>
         [MenuItem("Chapchu/Game Screen/Rebuild Hand Card Prefabs")]
         public static void RebuildHandCardPrefabs()
         {
@@ -126,15 +135,31 @@ namespace Chapchu.EditorTools
             go.layer = LayerMask.NameToLayer("UI");
             canvasRect = (RectTransform)go.transform;
 
-            go.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            go.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay; // HUD — 3D 층 위에 (10-ui.md 2-1 2D 층)
+            SetupScaler(go.GetComponent<CanvasScaler>());
 
-            // 15-screen.md 3절 #3
-            CanvasScaler scaler = go.GetComponent<CanvasScaler>();
+            return go.AddComponent<GameScreenView>();
+        }
+
+        // 15-screen.md 3절 #3
+        private static void SetupScaler(CanvasScaler scaler)
+        {
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+        }
 
-            return go.AddComponent<GameScreenView>();
+        // 배경은 2D 층이지만 3D 층 뒤에 있어야 하므로 Overlay 가 아니라 카메라에 붙은 캔버스(테이블보다 먼 거리)에 둔다.
+        private static void BuildBackgroundCanvas(Camera camera)
+        {
+            var go = new GameObject(BackgroundCanvasName, typeof(Canvas), typeof(CanvasScaler));
+            go.layer = LayerMask.NameToLayer("UI");
+            Canvas canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = BackgroundPlaneDistance;
+            SetupScaler(go.GetComponent<CanvasScaler>());
+            BuildBackground((RectTransform)go.transform);
         }
 
         private static void BuildBackground(RectTransform parent)
@@ -482,50 +507,6 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 중앙 묶음 — 시안처럼 덱 오른쪽에 버림 더미 자리를 비워 둔다 (10-ui.md 2-1).
-        private static DeckView BuildDeck(RectTransform parent)
-        {
-            RectTransform root = NewRect("Deck", parent);
-            Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(12f, 0f), new Vector2(179f, 259f)); // 손패 위로 올림 (2026-11-03)
-
-            HardShadow(root, Shadow, 10f, 10f, 6f);
-            Image ringImage = NewImage("Ring", root, Ink);
-            Stretch(ringImage.rectTransform, -6f, -6f, -6f, -6f);
-            Image fill = Box("Box", root, White, 8f, Blue, true);
-
-            TMP_Text plus = NewText("PlusText", fill.transform, "+", 56f, White, true);
-            Anchor(plus.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 16f), new Vector2(160f, 64f));
-            TMP_Text count = NewText("CountText", fill.transform, "DRAW -", 20f, White, true);
-            count.characterSpacing = 10f;
-            Anchor(count.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(160f, 30f));
-
-            Button button = root.gameObject.AddComponent<Button>();
-            button.targetGraphic = fill;
-            button.transition = Selectable.Transition.None;
-
-            var view = root.gameObject.AddComponent<DeckView>();
-            Wire(view, ("button", button), ("countText", count));
-
-            var presenter = root.gameObject.AddComponent<DeckPresenter>();
-            var server = Object.FindFirstObjectByType<PunGameServer>();
-            if (server == null)
-                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {nameof(PunGameServer)} 가 없다 — {nameof(DeckPresenter)}.server 를 직접 연결할 것.");
-            Wire(presenter, ("server", server));
-            return view;
-        }
-
-        private static RectTransform BuildHandArea(RectTransform parent)
-        {
-            RectTransform area = NewRect("HandArea", parent);
-            area.anchorMin = new Vector2(0f, 0f);
-            area.anchorMax = new Vector2(1f, 0f);
-            area.pivot = new Vector2(0f, 0f);
-            // 화면 가운데 정렬 — 좌우를 같게 비워 내 패널(오른쪽 끝 336)과 겹치지 않게 (2026-11-03).
-            area.offsetMin = new Vector2(HandAreaSideInset, HandAreaBottom);
-            area.offsetMax = new Vector2(-HandAreaSideInset, HandAreaBottom + HandCardSize.y);
-            return area;
-        }
-
         // 드롭 영역 — 손패 영역 위쪽 화면 전체 (10-ui.md 2-1 「드롭 영역」, 사용자 결정 2026-11-05). 투명 이미지는 디버그 때 색을 켜 보라고 둔다.
         // 레이캐스트는 끈다 — 판정은 HandPresenter 가 Rect 포함으로 하므로 덱 · 좌석 탭을 가리지 않는다. 위치 · 크기는 씬에서 바꾼다.
         private static RectTransform BuildDropZone(RectTransform parent)
@@ -632,40 +613,10 @@ namespace Chapchu.EditorTools
 
         // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역. 부채꼴은 시안처럼 한 칸에 약 1.5° (10-ui.md 2-1 「손패」).
         private static readonly Vector2 HandCardSize = new Vector2(226f, 336f);
-        private const float HandAreaSideInset = 356f; // 손패 영역 좌우 여백 — 내 패널 오른쪽 끝(336) + 20
         private const float HandAreaBottom = 28f;     // 손패 영역 아래 여백. 드롭 영역은 그 위(28 + 336)부터
-        private const string ActionCardFramePath = "Assets/Sprites/Cards/ActionCard.png";
-        private const string CounterCardFramePath = "Assets/Sprites/Cards/CounterCard.png";
-        private const string TrapCardFramePath = "Assets/Sprites/Cards/TrapCard.png";
-        // 10장일 때 맨 왼쪽 카드(원호의 5% 지점, 약 -0.9 × 반폭)의 왼쪽 끝이 내 패널 오른쪽(336)보다 오른쪽에 오게 한다.
-        private const float HandFanHalfWidth = 520f;
-        private const float HandFanDrop = 34f;       // 양 끝이 가운데보다 내려가는 정도 — 한 칸 1.5° 인 원호
-
-        private static HandPresenter BuildHand(RectTransform handArea, DeckView deck, RectTransform dropZone, OpponentSeatsPresenter seats)
-        {
-            RectTransform root = NewRect("Hand", handArea);
-            Anchor(root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, Vector2.zero);
-
-            SplineContainer container = root.gameObject.AddComponent<SplineContainer>();
-            Spline spline = container.Spline;
-            spline.Clear();
-            spline.Add(new BezierKnot(new float3(-HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
-            spline.Add(new BezierKnot(float3.zero), TangentMode.AutoSmooth);
-            spline.Add(new BezierKnot(new float3(HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
-
-            var view = root.gameObject.AddComponent<HandView>();
-            Wire(view,
-                ("actionCardPrefab", EnsureHandCardPrefab("HandCard_Action", ActionCardFramePath)),
-                ("counterCardPrefab", EnsureHandCardPrefab("HandCard_Counter", CounterCardFramePath)),
-                ("trapCardPrefab", EnsureHandCardPrefab("HandCard_Trap", TrapCardFramePath)));
-
-            var presenter = root.gameObject.AddComponent<HandPresenter>();
-            var server = Object.FindFirstObjectByType<PunGameServer>();
-            if (server == null)
-                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {nameof(PunGameServer)} 가 없다 — {nameof(HandPresenter)}.server 를 직접 연결할 것.");
-            Wire(presenter, ("deck", FindGameDeck()), ("drawOrigin", deck.transform), ("server", server), ("dropZone", dropZone), ("seats", seats));
-            return presenter;
-        }
+        internal const string ActionCardFramePath = "Assets/Sprites/Cards/ActionCard.png";
+        internal const string CounterCardFramePath = "Assets/Sprites/Cards/CounterCard.png";
+        internal const string TrapCardFramePath = "Assets/Sprites/Cards/TrapCard.png";
 
         // 손패 카드 프리팹 — Assets/Prefab/PlayerActionCard Dummy 와 같은 구성(틀 · 그림 · 이름 · 설명)을 UGUI 로.
         // 종류마다 틀 이미지만 다르다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존) — overwrite 는 RebuildHandCardPrefabs 만.
@@ -937,7 +888,7 @@ namespace Chapchu.EditorTools
 
         #region 참조 연결 ([SerializeField] private 를 SerializedObject 로)
 
-        private static void Wire(Component target, params (string field, Object value)[] references)
+        internal static void Wire(Component target, params (string field, Object value)[] references)
         {
             var serialized = new SerializedObject(target);
             foreach ((string field, Object value) in references)
