@@ -81,7 +81,7 @@
 - [ ] `feature/game-screen-ui3d` 는 `archive/game-screen-ui3d` 태그로 남기고 지운다 (태그 푸시는 사람)
 - [ ] 좌석 이름표 · 상대 손패 · 테이블 판 · `perspective-origin 22%` — 10-ui 2-1 미정 항목을 뽑은 뒤 3D 층으로
 - [ ] 버림 더미 그림(쌓임) · 체인 자리 — 카드 이펙트 2 · 3 · 4단계와 함께
-- [ ] `CardFxTestBench` 를 3D 카드로 옮기고 uGUI `HandCardView` · `HandCard_*` 삭제 (카드 이펙트 쪽)
+- [ ] 카드 이펙트 씬(`CardFxTestScene` · `CardFxLabScene`)도 이후 3D 손패 · 카드(`HandView` · `CardView` · `Assets/Prefab/Table`)로 바꾼다. 바꾸거나 그 씬을 더 쓰지 않게 되면, 옛 2D uGUI 카드 · 손패(`HandCardView` · `Assets/Prefab/UI/GameScreen/HandCard_*` · `GameScreenBuilder.EnsureHandCardPrefab` · `Rebuild Hand Card Prefabs` 메뉴)는 지운다 — 지금은 그 씬이 써서 남겨 둔 것 (카드 이펙트 쪽)
 - [ ] 상대 손패 2D 뒷면을 `CardBack.jpg` 로 맞출지
 - [ ] 에디터에서 `GameScene` 을 열면 레이아웃 그룹 · TMP 가 씬을 더럽힌다(앵커 · 글자색 해시) — 저장해 두면 그 뒤로는 조용하다
 
