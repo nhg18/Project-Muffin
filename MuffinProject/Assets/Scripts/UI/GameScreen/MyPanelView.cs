@@ -25,6 +25,8 @@ namespace Chapchu.UI.GameScreen
         private const string ChapchuUnavailableFormat = "{0} / {1}장";
         private const string ChapchuReadyText = "지금 외치기!";
         private const string ChapchuDeclaredText = "찹츄 완료";
+        private const string MyTurnText = "나의 턴!";
+        private const string OtherTurnText = "상대 턴!";
 
         [Header("헤더")]
         [SerializeField] private TMP_Text nicknameText;
@@ -33,7 +35,12 @@ namespace Chapchu.UI.GameScreen
 
         [Header("HP · 턴")]
         [SerializeField] private RectTransform hpFill;
-        [SerializeField] private GameObject turnTag;
+        [SerializeField] private Image turnTag;
+        [SerializeField] private TMP_Text turnTagText;
+        [SerializeField] private Color myTurnTagColor = new Color32(0xF5, 0x4A, 0x18, 0xFF);
+        [SerializeField] private Color otherTurnTagColor = new Color32(0x0A, 0x9C, 0xFF, 0xFF);
+        [Tooltip("남은 초 묶음(숫자 · 초). 내 턴에만 보인다.")]
+        [SerializeField] private GameObject timer;
         [SerializeField] private TMP_Text secondsText;
         [Tooltip("남은 초가 이 값 이하면 숫자를 경고 색으로 (시안: 5).")]
         [SerializeField] private int urgentSeconds = 5;
@@ -65,7 +72,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (nicknameText == null || hpText == null || hpFill == null || secondsText == null || handCountText == null || chapchuButton == null)
+            if (nicknameText == null || hpText == null || hpFill == null || turnTag == null || turnTagText == null || timer == null || secondsText == null || handCountText == null || chapchuButton == null)
                 Debug.LogError($"[{nameof(MyPanelView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -90,8 +97,13 @@ namespace Chapchu.UI.GameScreen
 
         public void SetHandCount(int count, int max) => handCountText.text = string.Format(HandCountFormat, count, max);
 
-        /// <summary>내 턴 태그 표시 (03-turn.md 턴 표시).</summary>
-        public void SetMyTurn(bool isMyTurn) => turnTag.SetActive(isMyTurn);
+        /// <summary>턴 태그 — 내 턴 「나의 턴!」(주황) · 남의 턴 「상대 턴!」(파랑). 남은 초는 내 턴에만 보인다 (10-ui.md 2-1 턴 줄 · 03-turn.md 7절).</summary>
+        public void SetMyTurn(bool isMyTurn)
+        {
+            turnTag.color = isMyTurn ? myTurnTagColor : otherTurnTagColor;
+            turnTagText.text = isMyTurn ? MyTurnText : OtherTurnText;
+            timer.SetActive(isMyTurn);
+        }
 
         /// <summary>턴 남은 초. 프레젠터가 마감 시각에서 계산해 넘긴다 (09-network.md 8절).</summary>
         public void SetRemainingSeconds(int seconds)
