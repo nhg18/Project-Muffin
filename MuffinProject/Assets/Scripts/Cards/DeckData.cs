@@ -61,7 +61,7 @@ namespace Chapchu.Cards
                 CardType[] reactsTo = data.reactsTo.ToArray();
 
                 for (int i = 0; i < entry.count; i++)
-                    cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects, reactsTo, data.revealSeconds, data.resolveSeconds));
+                    cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects, reactsTo, data.revealSeconds, data.resolveSeconds, data.trapTrigger, data.triggerValue));
             }
 
             return cards;

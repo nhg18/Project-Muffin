@@ -39,10 +39,11 @@ namespace Chapchu.Game
             if (card.Type != CardType.Counter)
                 return Reject(requester, RejectCode.NotCounterCard);
 
-            if (!card.ReactsTo.Contains(_chain[_chain.Count - 1].Card.Type))
+            ChainEntry top = _chain[_chain.Count - 1];
+            if (!card.ReactsTo.Contains(top.Card.Type))
                 return Reject(requester, RejectCode.CannotReact);
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets);
+            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User);
             if (targets == null)
                 return Reject(requester, RejectCode.InvalidTarget);
 
@@ -52,11 +53,14 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
-        // 손패에서 나온 카드를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 5초 반응 시간을 연다 (04 8절).
-        private void AddToChain(Card card, int user, int[] targets)
+        // 손패(함정은 슬롯)에서 나온 카드를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 5초 반응 시간을 연다 (04 8절).
+        private void AddToChain(Card card, int user, int[] targets, bool fromTrapSlot = false)
         {
             _chain.Add(new ChainEntry(card, user, targets));
-            _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
+            if (fromTrapSlot)
+                _events.Add(new TrapActivated(user, card.InstanceId, card.CardId, targets, _players[user].Traps.Count));
+            else
+                _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
 
             _reactionOpensAt = _clock() + card.RevealSeconds;
             _reactionDeadline = _reactionOpensAt + ReactionTimeLimit;
@@ -64,7 +68,8 @@ namespace Chapchu.Game
         }
 
         // Tick 이 반응 마감 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
-        // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절). 다음 턴은 맨 아래 카드의 후처리 연출 뒤 (04 8절) — 사망 대기가 생기면 그 뒤.
+        // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절). 맨 아래 카드의 후처리 연출 뒤에 —
+        // 메인 행동의 체인이면 다음 턴, 메인 행동 전에 끼어든 체인(함정)이면 턴을 이어 간다. 함정 시간 · 사망 대기가 생기면 그 뒤.
         private void ResolveChain()
         {
             for (int i = _chain.Count - 1; i >= 0; i--)
@@ -85,10 +90,16 @@ namespace Chapchu.Game
                     effect.Apply(this, entry);
             }
 
-            _nextTurnAt = _clock() + _chain[0].Card.ResolveSeconds;
+            double animationEnd = _clock() + _chain[0].Card.ResolveSeconds;
+            if (_mainActionUsed)
+                _nextTurnAt = System.Math.Max(_nextTurnAt, animationEnd);
+            else
+                _resumeAt = animationEnd;
+
             _chain.Clear();
-            CheckDeathPending(_nextTurnAt); // HP 가 0 이 되는 연출(4 단계) 뒤부터 대응 5초 (06 8절)
-            CheckElimination();             // 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
+            CheckDeathPending(animationEnd);       // HP 가 0 이 되는 연출(4 단계) 뒤부터 대응 5초 (06 8절)
+            OpenTrapWindowIfNeeded(animationEnd);  // 「피해 받은 후」 함정 (04 6절)
+            CheckElimination();                    // 함정 시간 · 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
         }
 
         /// <summary>entry 바로 아래 카드를 무효화한다 — 카운터는 낼 때의 맨 위 카드에 반응한다 (04 7절). 무효화 효과(Effects/)가 부른다.</summary>

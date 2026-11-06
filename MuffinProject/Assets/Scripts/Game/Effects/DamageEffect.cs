@@ -12,7 +12,7 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))
-                server.DealDamage(actor, amount);
+                server.DealDamage(actor, amount, entry.User);
         }
     }
 }

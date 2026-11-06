@@ -18,6 +18,9 @@ namespace Chapchu.Game
         // 손패 내용 — 비공개. 주인에게만 보내고, 다른 사람에게는 장수만 공개한다 (09-network.md 3절).
         public readonly List<Card> Hand = new List<Card>();
 
+        // 설치한 함정 — 내용은 소유자만, 개수는 공개. 최대 3 (04-card.md 6절).
+        public readonly List<Card> Traps = new List<Card>();
+
         // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md).
         public int Hp;
 

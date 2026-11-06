@@ -19,5 +19,10 @@
         public const int NotTenCards = 11;    // 찹츄 선언 — 손패가 정확히 10장이 아니다 (07 4.1)
         public const int AlreadyChapchu = 12; // 찹츄 선언 — 이미 찹츄 상태
         public const int GameOver = 13;       // 게임이 끝났다
+        public const int NotTrapCard = 14;    // 함정 카드가 아니다
+        public const int TrapSlotFull = 15;   // 함정 슬롯 3칸이 다 찼다 (04 6절)
+        public const int NotSetTrap = 16;     // 설치되지 않은 함정
+        public const int TrapConditionNotMet = 17; // 함정 발동 조건 · 시점이 맞지 않는다 (04 6절)
+        public const int Resolving = 18;      // 체인 · 함정 시간 · 사망 대기 중 — 메인 행동은 끝난 뒤에 (03 4절)
     }
 }

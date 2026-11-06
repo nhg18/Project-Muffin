@@ -60,6 +60,8 @@ namespace Chapchu.Game
             _chain.Clear();
             _deathDeadline = -1;
             _gameOver = false;
+            _trapWindowDeadline = -1;
+            _damagedBy.Clear();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();
@@ -78,7 +80,7 @@ namespace Chapchu.Game
         public string DebugState()
         {
             string players = string.Join(" │ ", _players.Select(p =>
-                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.IsChapchu ? " 찹츄" : "")}{(p.Value.HasLeft ? " 나감" : p.Value.Life == LifeState.Dead ? " 사망" : p.Value.Life == LifeState.DeathPending ? " 사망대기" : "")}"));
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.Traps.Count > 0 ? $" 함정{p.Value.Traps.Count}" : "")}{(p.Value.IsChapchu ? " 찹츄" : "")}{(p.Value.HasLeft ? " 나감" : p.Value.Life == LifeState.Dead ? " 사망" : p.Value.Life == LifeState.DeathPending ? " 사망대기" : "")}"));
 
             string chain = _chain.Count == 0 ? "" : $" · 체인 [{string.Join(" ← ", _chain.Select(e => $"P{e.User}:{e.Card.CardId}"))}]";
             return $"덱 {_deck.Count} · 버림 {_discardPile.Count}{chain} ║ {players}";

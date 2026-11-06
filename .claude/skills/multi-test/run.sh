@@ -4,7 +4,7 @@
 #   run.sh rules [인원=4] [턴=8]      규칙 계층만 (네트워크 · 플레이 모드 없음)
 #   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
-#   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 사망 · 게임 종료 · 방 복귀
+#   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 · 방 복귀
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -208,7 +208,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'
@@ -288,6 +288,11 @@ run_full() {
             esac
         done
         [ $ended -eq 1 ] && break
+        # 함정 시간이면 맞은 사람이 함정을 낸다
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" TrapProbe)
+            case "$out" in OK*) log "  $(name_of "$project"): $out" ;; esac
+        done
         sleep 1
     done
     [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
@@ -295,7 +300,7 @@ run_full() {
     log "▶ 판정"
     for project in "${EDITORS[@]}"; do
         line=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
-        log "  $(name_of "$project"): 「${line:-없음}」 · 사망 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 사망 · 버림')번"
+        log "  $(name_of "$project"): 「${line:-없음}」 · 사망 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 사망 · 버림')번 · 함정 설치 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 함정 설치 — ')번 · 함정 발동 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 함정 발동 — ')번"
         [ -n "$line" ] || fail "$(name_of "$project") 게임 종료를 받지 못했다"
         if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
     done

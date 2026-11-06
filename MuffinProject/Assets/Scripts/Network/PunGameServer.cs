@@ -82,6 +82,12 @@ namespace Chapchu.Network
         /// <summary>행동 카드 사용. 대상은 고르는 카드일 때만 쓰인다 (자동 대상이면 방장이 무시).</summary>
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
+        /// <summary>함정 설치 — 내 턴 · 메인 행동 전 · 빈 슬롯 (04-card.md 6절). 메인 행동이 아니다.</summary>
+        public void RequestSetTrap(int cardInstanceId) => photonView.RPC(nameof(RPC_RequestSetTrap), RpcTarget.MasterClient, cardInstanceId);
+
+        /// <summary>설치한 함정 발동 — 조건 · 시점은 방장이 본다 (04-card.md 6절 「발동 시점」). 대상은 고르는 카드일 때만 쓰인다.</summary>
+        public void RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestActivateTrap), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
+
         /// <summary>찹츄 선언 — 손패가 정확히 10장일 때 언제든 (07-win-condition.md 4.1).</summary>
         public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
 
@@ -100,6 +106,20 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
+        }
+
+        [PunRPC]
+        private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
+        }
+
+        [PunRPC]
+        private void RPC_RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            Send(_server.ActivateTrap(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
         [PunRPC]
@@ -198,12 +218,34 @@ namespace Chapchu.Network
                         photonView.RPC(nameof(RPC_OnPlayerDied), RpcTarget.All, died.Actor, died.DiscardCount);
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.LifeState] = (byte)LifeState.Dead;
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.HandCount] = 0;
+                        PlayerPropsOf(playerProps, died.Actor)[PlayerProps.TrapCount] = 0;
                         roomProps[RoomProps.DiscardCount] = died.DiscardCount;
                         break;
 
                     case PlayerLeft left:
                         photonView.RPC(nameof(RPC_OnPlayerLeftGame), RpcTarget.All, left.Actor, left.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
+                        break;
+
+                    case TurnResumed resumed:
+                        photonView.RPC(nameof(RPC_OnTurnResumed), RpcTarget.All, resumed.Actor, resumed.Deadline);
+                        roomProps[RoomProps.TurnDeadline] = resumed.Deadline;
+                        break;
+
+                    case TrapSet set:
+                        SendTo(set.Actor, nameof(RPC_OnMyTrapSet), set.CardInstanceId, set.CardId); // 종류는 소유자만 (09 3절)
+                        photonView.RPC(nameof(RPC_OnTrapSet), RpcTarget.All, set.Actor, set.HandCount, set.TrapCount);
+                        PlayerPropsOf(playerProps, set.Actor)[PlayerProps.HandCount] = set.HandCount;
+                        PlayerPropsOf(playerProps, set.Actor)[PlayerProps.TrapCount] = set.TrapCount;
+                        break;
+
+                    case TrapActivated trap:
+                        photonView.RPC(nameof(RPC_OnTrapActivated), RpcTarget.All, trap.Actor, trap.CardInstanceId, trap.CardId, trap.Targets, trap.TrapCount);
+                        PlayerPropsOf(playerProps, trap.Actor)[PlayerProps.TrapCount] = trap.TrapCount;
+                        break;
+
+                    case TrapWindowStarted window:
+                        photonView.RPC(nameof(RPC_OnTrapWindowStarted), RpcTarget.All, window.OpensAt, window.Deadline);
                         break;
 
                     case ChapchuChanged chapchu:
@@ -312,6 +354,22 @@ namespace Chapchu.Network
 
         [PunRPC]
         private void RPC_OnPlayerLeftGame(int actorNumber, int discardCount) => GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
+
+        [PunRPC]
+        private void RPC_OnTurnResumed(int actorNumber, double deadline) => GameEvents.RaiseTurnResumed(actorNumber, deadline);
+
+        [PunRPC]
+        private void RPC_OnTrapSet(int actorNumber, int handCount, int trapCount) => GameEvents.RaiseTrapSet(actorNumber, handCount, trapCount);
+
+        [PunRPC]
+        private void RPC_OnMyTrapSet(int cardInstanceId, int cardId) => GameEvents.RaiseMyTrapSet(cardInstanceId, cardId);
+
+        [PunRPC]
+        private void RPC_OnTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount)
+            => GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, targets, trapCount);
+
+        [PunRPC]
+        private void RPC_OnTrapWindowStarted(double opensAt, double deadline) => GameEvents.RaiseTrapWindowStarted(opensAt, deadline);
 
         [PunRPC]
         private void RPC_OnChapchuChanged(int actorNumber, bool isChapchu) => GameEvents.RaiseChapchuChanged(actorNumber, isChapchu);

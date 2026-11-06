@@ -194,6 +194,73 @@
         }
     }
 
+    /// <summary>
+    /// 메인 행동 전에 멈췄던 턴이 이어진다 (03-turn.md 4절 — 함정 · 함정 시간 · 사망 대기 뒤). 새 마감 서버 시각.
+    /// 턴 시작이 아니다 — 찹츄 판정 · 연출은 TurnStarted 에만.
+    /// </summary>
+    public sealed class TurnResumed : GameEvent
+    {
+        public int Actor { get; }
+        public double Deadline { get; }
+
+        public TurnResumed(int actor, double deadline)
+        {
+            Actor = actor;
+            Deadline = deadline;
+        }
+    }
+
+    /// <summary>함정을 설치했다 (04-card.md 6절). 종류(InstanceId · CardId)는 소유자만 알아야 한다 — 다른 사람에겐 장수만.</summary>
+    public sealed class TrapSet : GameEvent
+    {
+        public int Actor { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int HandCount { get; }
+        public int TrapCount { get; }
+
+        public TrapSet(int actor, int cardInstanceId, int cardId, int handCount, int trapCount)
+        {
+            Actor = actor;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            HandCount = handCount;
+            TrapCount = trapCount;
+        }
+    }
+
+    /// <summary>함정을 발동했다 — 공개되고 체인 맨 위에 올라갔다 (04-card.md 6절, 연출 1 단계는 함정 슬롯에서). 뒤에 ReactionStarted.</summary>
+    public sealed class TrapActivated : GameEvent
+    {
+        public int Actor { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int[] Targets { get; }
+        public int TrapCount { get; }
+
+        public TrapActivated(int actor, int cardInstanceId, int cardId, int[] targets, int trapCount)
+        {
+            Actor = actor;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            Targets = targets;
+            TrapCount = trapCount;
+        }
+    }
+
+    /// <summary>「피해 받은 후」 함정을 낼 수 있는 함정 시간 (04-card.md 6절). 조건이 맞는 함정을 가진 사람이 있을 때만 온다.</summary>
+    public sealed class TrapWindowStarted : GameEvent
+    {
+        public double OpensAt { get; }
+        public double Deadline { get; }
+
+        public TrapWindowStarted(double opensAt, double deadline)
+        {
+            OpensAt = opensAt;
+            Deadline = deadline;
+        }
+    }
+
     /// <summary>찹츄 상태가 바뀌었다 (07-win-condition.md 4절) — 선언 또는 손패가 10장이 아니게 되어 해제.</summary>
     public sealed class ChapchuChanged : GameEvent
     {
