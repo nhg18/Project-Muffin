@@ -7,7 +7,7 @@
 | 대상 | 위치 |
 | --- | --- |
 | 게임 규칙 · 수치 | `docs/systems/*.md` |
-| 화면 · 연출 | `docs/mockups/` 의 HTML 시안 — 있으면 따른다 |
+| 화면 · 연출 | 각 UI 문서(`docs/systems/`)가 가리키는 HTML 시안 아티팩트 — 적힌 게시본(버전 ID)을 따른다 |
 | 기능 목록 | `docs/development-plan.md` |
 | 작업 기록 | `docs/worklog.md` — 세션 시작 때 읽고, 끝날 때 쓴다 |
 | 코드 규칙 | `docs/CODE_CONVENTION.md` — 새 규칙도 여기에만 적는다 |
