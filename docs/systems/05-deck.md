@@ -1,6 +1,6 @@
 # 05. 덱 · 손패 · 버림 더미
 
-**최종 수정일**: 2026-10-30
+**최종 수정일**: 2026-11-06
 **분류**: Core
 
 ---
@@ -111,7 +111,7 @@
 
 | 에셋 | 역할 | 위치 |
 | --- | --- | --- |
-| `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 이미지, 타입, 대상, 조건, 효과) | `Assets/Cards/*.asset` |
+| `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 이미지, 타입, 대상, 조건, 효과, 카운터의 반응 대상, 연출 시간 — `10-ui` 5-1) | `Assets/Cards/*.asset` |
 | `DeckData.GetCard(id)` | id → `CardData` 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다 (옛 `CardDatabase` 는 2026-10-10 삭제) |  |
 | `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` |
 
