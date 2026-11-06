@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-11-06 · PR #89(인게임 화면) 리뷰 · develop 머지
+
+### 한 것
+- `feature/game-screen` 에 develop 을 합쳐 충돌 4곳을 풀고 #89 를 머지 (`f0d35df`).
+  - `HandPresenter` · `RejectToastPresenter`: `using` 줄만 겹침. `10-ui` 좌석 슬롯 「캐릭터」 줄: 보류 · 부채꼴 구현 + 2-2 제안 문구 둘 다. `worklog`: 양쪽 항목을 날짜순으로.
+  - `CardFxTestBench`: 손패 카드 프리팹에 `CanvasGroup` 이 생겨(`HandCardView` 의 `RequireComponent`) `AddComponent` → `GetComponent`.
+- `10-ui` 6절에 「선택 중 턴 종료」 **미정** 줄 추가.
+- **확인 못 함**: 열린 에디터가 다른 작업 브랜치라 머지 결과를 컴파일 · 실행하지 못했다. #89 자체는 작성자가 `multi 2` 통과.
+
+### PM 결정 필요
+1. **문서 확정** — #89 가 작성자 세션 결정으로 바꾼 것
+   - [ ] `10-ui` 4절 「드롭 성공」에서 **로컬 조건 검사를 뺐다** — 놓으면 바로 요청, 방장이 거절하면 토스트
+   - [ ] `10-ui` 6절 대상 선택 강조 = 좌석 **파란 외곽선** — 「확정 (2026-11-05, 임시)」를 확정 / 임시 중 하나로
+   - [ ] `10-ui` 2-1 드롭 영역 = 손패 영역 위쪽 화면 전체(아래 364 위)
+   - [ ] `10-ui` 2-1 손패 수치 — 내려간 상태 위 100 · 올리기 0.3초 · 호버 1.3배 · 위로 40 · 0.12초
+   - [ ] `10-ui` 2-1 내 패널 턴 태그 — 남의 턴 `상대 턴!` 파랑, 남은 초는 내 턴에만
+   - [ ] `04-card` 13절 드롭 영역 강조 **보류**
+   - [ ] `02-player` 3절 좌석 계산 = `OpponentSeatsPresenter` 한 곳
+   - [ ] `CODE_CONVENTION` 9절 연출 큐 규칙(큐 하나만 `GameEvents` 구독, 영역은 `Show*` · `*Routine`)
+   - [ ] 문서 정리: `10-ui` 좌석 슬롯 메모의 「대상 선택 탭은 **보류**」 지우기(6절에서 구현됨) · `CODE_CONVENTION` 9절 「큐를 타지 않는 것」에 퇴장(`RoomEvents.OnPlayerLeft`) 추가
+2. **기획**
+   - [ ] 대상 선택 중 턴이 넘어가면 — 취소 / 그대로 (`10-ui` 6절 **미정**)
+   - [ ] 자동 대상 · `TwoOthers` 카드 확인 방법 — `Deck_Default` 에 `OneOther` 카드(1 · 4)만 있어 두 경로를 실행으로 못 봤다. 덱에 넣을지 카드 데이터 쪽과 정한다
+3. **코드 (Game)**
+   - [ ] `GameServer` 에 찹츄 선언 장수 상수(10, `07-win-condition` 4.1) — 지금은 `MyPanelPresenter.ChapchuHandCount` 가 따로 들고 있다
+4. **기타**
+   - [ ] #79(CI) 머지 · 닫기
+
+### 코드 수정 요청 (#89 작성자)
+- [ ] `OpponentSeatsPresenter.Start` 가 `RoomProps.TurnActor` 스냅샷을 안 읽는다 — 씬이 늦게 열리면 다음 턴까지 상대 좌석 턴 외곽선이 꺼져 있다 (`MyPanelPresenter.Start` 처럼)
+- [ ] 위 3 이 정해지면 `MyPanelPresenter.ChapchuHandCount` → `GameServer` 상수
+- [ ] 위 2 첫째가 「취소」로 정해지면 `SelectTargetsRoutine` 에서 턴이 바뀔 때 취소
+- [ ] (참고) 드래그 · 대상 선택 중 카드가 들어오면 `HandView.Layout()` 이 들고 있던 카드를 자리로 돌린다 — 드래그 중이면 놓은 동작이 무시된다
+
+---
+
 ## 2026-11-06 · 손패 드래그 → 드롭 영역 → 대상 선택 → 카드 사용 요청 (`feature/game-screen`)
 
 ### 결정 (사용자)
