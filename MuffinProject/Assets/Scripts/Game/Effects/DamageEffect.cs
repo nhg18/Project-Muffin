@@ -9,9 +9,9 @@ namespace Chapchu.Game.Effects
         public EffectSubject subject;
         public int amount;
 
-        internal override void Apply(GameServer server, int user, int[] targets)
+        internal override void Apply(GameServer server, ChainEntry entry)
         {
-            foreach (int actor in GetReceivers(subject, user, targets))
+            foreach (int actor in server.ReceiversOf(subject, entry))
                 server.DealDamage(actor, amount);
         }
     }

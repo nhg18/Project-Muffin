@@ -33,6 +33,9 @@ namespace Chapchu.Network
 
         private GameServer _server; // 모든 클라가 만들지만 방장에서만 쓰인다
 
+        /// <summary>이번 게임의 덱 — 카드 ID 로 카드 정의를 찾는 사전으로도 쓴다 (DeckData.GetCard).</summary>
+        public DeckData Deck => deck;
+
         private void Awake()
         {
             if (deck == null)
@@ -69,6 +72,9 @@ namespace Chapchu.Network
         /// <summary>행동 카드 사용. 대상은 고르는 카드일 때만 쓰인다 (자동 대상이면 방장이 무시).</summary>
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
+        /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
+        public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCounter), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
+
         [PunRPC]
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {
@@ -83,7 +89,14 @@ namespace Chapchu.Network
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
-        // 나간 사람은 턴 순서에서 뺀다 (01-game-flow.md 6절). 손패 · 함정을 버림 더미로 보내는 것은 기능 7.
+        [PunRPC]
+        private void RPC_RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
+        }
+
+        // 나간 사람은 턴 순서 · 대상 후보에서 뺀다 (01-game-flow.md 6절). 손패 · 함정을 버림 더미로 보내는 것은 기능 7.
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
             if (!PhotonNetwork.IsMasterClient) return;
@@ -136,7 +149,20 @@ namespace Chapchu.Network
                     case CardPlayed played:
                         photonView.RPC(nameof(RPC_OnCardPlayed), RpcTarget.All, played.Actor, played.CardInstanceId, played.CardId, played.Targets, played.HandCount, played.DiscardCount);
                         PlayerPropsOf(playerProps, played.Actor)[PlayerProps.HandCount] = played.HandCount;
-                        roomProps[RoomProps.DiscardCount] = played.DiscardCount;
+                        break;
+
+                    case ReactionStarted reaction:
+                        photonView.RPC(nameof(RPC_OnReactionStarted), RpcTarget.All, reaction.OpensAt, reaction.Deadline);
+                        break;
+
+                    case CardResolved resolved:
+                        photonView.RPC(nameof(RPC_OnCardResolved), RpcTarget.All, resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
+                        roomProps[RoomProps.DiscardCount] = resolved.DiscardCount;
+                        break;
+
+                    case CardNegated negated:
+                        photonView.RPC(nameof(RPC_OnCardNegated), RpcTarget.All, negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
+                        roomProps[RoomProps.DiscardCount] = negated.DiscardCount;
                         break;
 
                     case RequestRejected rejected:
@@ -199,6 +225,17 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
             => GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
+
+        [PunRPC]
+        private void RPC_OnReactionStarted(double opensAt, double deadline) => GameEvents.RaiseReactionStarted(opensAt, deadline);
+
+        [PunRPC]
+        private void RPC_OnCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
+            => GameEvents.RaiseCardResolved(actorNumber, cardInstanceId, cardId, targets, discardCount);
+
+        [PunRPC]
+        private void RPC_OnCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
+            => GameEvents.RaiseCardNegated(actorNumber, cardInstanceId, cardId, discardCount);
 
         [PunRPC]
         private void RPC_RejectRequest(int code) => GameEvents.RaiseMyRequestRejected(code);

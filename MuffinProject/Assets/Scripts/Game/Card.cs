@@ -40,13 +40,26 @@ namespace Chapchu.Game
         /// <summary>카드에 적힌 순서대로 실행할 효과들. 비어 있으면 효과 없음.</summary>
         public IReadOnlyList<CardEffect> Effects { get; }
 
-        public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects)
+        /// <summary>카운터만: 체인 맨 위 카드가 이 종류일 때 낼 수 있다 (04-card.md 7절). 비어 있으면 어디에도 못 낸다.</summary>
+        public IReadOnlyList<CardType> ReactsTo { get; }
+
+        /// <summary>연출 1 ~ 3 단계 길이(초). 반응 시간이 이만큼 뒤에 열린다 (04-card.md 8절 · 10-ui.md 5-1).</summary>
+        public double RevealSeconds { get; }
+
+        /// <summary>연출 4 단계 + 버림 더미로 이동 길이(초). 체인 맨 아래 카드면 체인 처리 뒤 이만큼 지나 다음 턴 (04-card.md 8절).</summary>
+        public double ResolveSeconds { get; }
+
+        public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects,
+            IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds)
         {
             InstanceId = instanceId;
             CardId = cardId;
             Type = type;
             Target = target;
             Effects = effects ?? Array.Empty<CardEffect>();
+            ReactsTo = reactsTo ?? Array.Empty<CardType>();
+            RevealSeconds = revealSeconds;
+            ResolveSeconds = resolveSeconds;
         }
 
         // 같음 비교는 InstanceId 만 본다. 손패 · 덱에서 "그 한 장" 을 찾는 기준.
