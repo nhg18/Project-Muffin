@@ -47,7 +47,7 @@ namespace Chapchu.Game
 
         // 대상 타입에 맞게 대상을 정한다. 자동 타입은 서버가 정하고, 고르는 타입은 요청을 검사한다. 맞지 않으면 null.
         // 대상 후보 = 게임에 남은 사람. source = 발동시킨 사람(TriggerSource) — 없으면 -1.
-        private int[] ResolveTargets(int requester, TargetType type, int[] requested, int source = -1)
+        private int[] ResolveTargets(int requester, TargetType type, int[] requested, int source = -1, bool fromHand = true)
         {
             int[] inGame = _turnOrder.Where(IsInGame).ToArray();
             int[] others = inGame.Where(actor => actor != requester).ToArray();
@@ -61,6 +61,12 @@ namespace Chapchu.Game
                 case TargetType.OneOther:  return PickOthers(requested, 1, others);
                 case TargetType.TwoOthers: return PickOthers(requested, 2, others);
                 case TargetType.TriggerSource: return source >= 0 && others.Contains(source) ? new[] { source } : null;
+                case TargetType.ChapchuPlayers: return inGame.Where(a => _players[a].IsChapchu).ToArray();
+                case TargetType.ChapchuOthers:  return others.Where(a => _players[a].IsChapchu).ToArray();
+                case TargetType.MoreHandThanMe:
+                    // 이 카드를 낸 뒤의 내 장수와 비교 — 손패에서 낸 카드면 1장 줄어든 값 (04 11절)
+                    int mine = _players[requester].Hand.Count - (fromHand ? 1 : 0);
+                    return others.Where(a => _players[a].Hand.Count > mine).ToArray();
                 default:                   return null;
             }
         }

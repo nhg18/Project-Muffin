@@ -295,6 +295,157 @@
         }
     }
 
+    /// <summary>손패 카드가 한 사람에게서 다른 사람에게 갔다 (훔치기 · 교환, 09-network.md 3절). 어떤 카드인지는 두 사람만, 장수는 전원.</summary>
+    public sealed class HandCardsMoved : GameEvent
+    {
+        public int From { get; }
+        public int To { get; }
+        public int[] CardInstanceIds { get; }
+        public int[] CardIds { get; }
+        public int FromHandCount { get; }
+        public int ToHandCount { get; }
+
+        public HandCardsMoved(int from, int to, int[] cardInstanceIds, int[] cardIds, int fromHandCount, int toHandCount)
+        {
+            From = from;
+            To = to;
+            CardInstanceIds = cardInstanceIds;
+            CardIds = cardIds;
+            FromHandCount = fromHandCount;
+            ToHandCount = toHandCount;
+        }
+    }
+
+    /// <summary>손패에서 카드가 버림 더미로 갔다 (강제 버림 · 생존 대가, 05-deck.md 7절). 버림 더미는 공개라 카드도 공개.</summary>
+    public sealed class CardsDiscarded : GameEvent
+    {
+        public int Actor { get; }
+        public int[] CardInstanceIds { get; }
+        public int[] CardIds { get; }
+        public int HandCount { get; }
+        public int DiscardCount { get; }
+
+        public CardsDiscarded(int actor, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
+        {
+            Actor = actor;
+            CardInstanceIds = cardInstanceIds;
+            CardIds = cardIds;
+            HandCount = handCount;
+            DiscardCount = discardCount;
+        }
+    }
+
+    /// <summary>설치 함정이 파괴돼 버림 더미로 갔다 — 공개 (A03 · T17).</summary>
+    public sealed class TrapDestroyed : GameEvent
+    {
+        public int Owner { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int TrapCount { get; }
+        public int DiscardCount { get; }
+
+        public TrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
+        {
+            Owner = owner;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            TrapCount = trapCount;
+            DiscardCount = discardCount;
+        }
+    }
+
+    /// <summary>설치 함정이 주인 손패로 돌아갔다 (A16 · C12). 종류는 주인만.</summary>
+    public sealed class TrapReturned : GameEvent
+    {
+        public int Owner { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int TrapCount { get; }
+        public int HandCount { get; }
+
+        public TrapReturned(int owner, int cardInstanceId, int cardId, int trapCount, int handCount)
+        {
+            Owner = owner;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            TrapCount = trapCount;
+            HandCount = handCount;
+        }
+    }
+
+    /// <summary>설치 함정을 다른 사람이 빼앗아 자기 칸에 놓았다 (A17). 종류는 두 사람만.</summary>
+    public sealed class TrapMoved : GameEvent
+    {
+        public int From { get; }
+        public int To { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int FromTrapCount { get; }
+        public int ToTrapCount { get; }
+
+        public TrapMoved(int from, int to, int cardInstanceId, int cardId, int fromTrapCount, int toTrapCount)
+        {
+            From = from;
+            To = to;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            FromTrapCount = fromTrapCount;
+            ToTrapCount = toTrapCount;
+        }
+    }
+
+    /// <summary>다음 턴 스킵이 걸렸다 (A01 · T05, 03-turn.md 7절).</summary>
+    public sealed class TurnSkipMarked : GameEvent
+    {
+        public int Actor { get; }
+
+        public TurnSkipMarked(int actor)
+        {
+            Actor = actor;
+        }
+    }
+
+    /// <summary>턴이 스킵됐다 — 그 사람의 턴은 시작하지 않고 다음 사람으로.</summary>
+    public sealed class TurnSkipped : GameEvent
+    {
+        public int Actor { get; }
+
+        public TurnSkipped(int actor)
+        {
+            Actor = actor;
+        }
+    }
+
+    /// <summary>체인의 카드가 효과 없이 시전자 손패로 돌아갔다 (C01). 체인에 공개된 카드라 전원.</summary>
+    public sealed class CardReturnedToHand : GameEvent
+    {
+        public int Actor { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int HandCount { get; }
+
+        public CardReturnedToHand(int actor, int cardInstanceId, int cardId, int handCount)
+        {
+            Actor = actor;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            HandCount = handCount;
+        }
+    }
+
+    /// <summary>사망 대기에서 살아났다 (T17, 06-health.md 8절). 체력은 뒤따르거나 앞선 HpChanged.</summary>
+    public sealed class DeathAvoided : GameEvent
+    {
+        public int Actor { get; }
+        public int Hp { get; }
+
+        public DeathAvoided(int actor, int hp)
+        {
+            Actor = actor;
+            Hp = hp;
+        }
+    }
+
     /// <summary>요청을 거절했다 (09-network.md 4.3). 상태는 바뀌지 않았다. 요청자에게만 보낸다.</summary>
     public sealed class RequestRejected : GameEvent
     {

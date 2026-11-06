@@ -27,8 +27,11 @@ namespace Chapchu.Cards
         [Tooltip("함정만: 발동 조건 종류 (04-card.md 6절 「발동 시점」).")]
         public TrapTrigger trapTrigger;
 
-        [Tooltip("함정 발동 조건의 값 — HpAtMost 면 이 HP 이하일 때.")]
+        [Tooltip("함정 발동 조건의 값 — HpAtMost 면 이 HP 이하일 때, AfterDrewMany 면 이 장수 이상.")]
         public int triggerValue;
+
+        [Tooltip("카운터 · 「카드 반응」 함정: 반응 조건 (04-card.md 7절 「반응 조건」).")]
+        public ReactCondition reactCondition;
 
         [Header("연출 시간 (10-ui.md 5-1) — 방장이 반응 · 턴 시각 계산에 쓴다. 연출 길이를 바꾸면 같이 바꾼다")]
         [Tooltip("1 ~ 3 단계(내는 중 · 테이블 · 카드 이펙트) 초. 반응 시간 5초가 이 뒤에 열린다.")]

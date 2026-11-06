@@ -106,9 +106,20 @@ namespace Chapchu.Game
 
         // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다.
         // 다음 사람이 찹츄 상태면 그 턴이 시작되는 순간 승리 (07 4.3 · 5절 — 가장 먼저 자기 턴이 돌아온 사람).
+        // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 시간.
         private void AdvanceTurn()
         {
             int next = GetNextActor(CurrentTurnActor);
+            bool skipped = false;
+            for (int guard = 0; guard < _turnOrder.Count && _players[next].SkipNextTurn; guard++)
+            {
+                _players[next].SkipNextTurn = false;
+                _events.Add(new TurnSkipped(next));
+                RecordAfter(AfterKind.TurnSkipped, next, -1, 1);
+                skipped = true;
+                next = GetNextActor(next);
+            }
+
             if (_players[next].IsChapchu)
             {
                 EndGame(next, GameEndReason.Chapchu);
@@ -116,6 +127,8 @@ namespace Chapchu.Game
             }
 
             SetTurn(next);
+            if (skipped)
+                OpenTrapWindowIfNeeded(_clock());
         }
 
         private void SetTurn(int actor)
@@ -130,6 +143,12 @@ namespace Chapchu.Game
             TurnSerial++;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
+
+            // 다음 실제 턴 시작에 더 뽑기 (T15) — 메인 행동이 아니다
+            int extra = _players[actor].TurnStartDraws;
+            _players[actor].TurnStartDraws = 0;
+            for (int i = 0; i < extra; i++)
+                DrawOne(actor);
         }
 
         // 체인 · 함정 시간 · 사망 대기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.

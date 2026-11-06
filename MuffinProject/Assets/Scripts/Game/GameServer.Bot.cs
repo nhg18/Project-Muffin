@@ -33,8 +33,8 @@ namespace Chapchu.Game
 
         internal double TrapWindowOpensAt => _trapWindowOpensAt;
 
-        /// <summary>직전 체인에서 다른 사람에게 피해를 받아 「피해 받은 후」 함정을 낼 수 있다.</summary>
-        internal bool WasDamagedByOther(int actor) => _damagedBy.ContainsKey(actor);
+        /// <summary>actor 의 「~한 후」 함정 trap 을 지금 쓸 사건이 있다 (04 6절).</summary>
+        internal bool HasAfterTrigger(int actor, Card trap) => IsAfterTrigger(trap.Trigger) && FindAfterRecord(actor, trap) != null;
 
         internal double DeathDeadline => _deathDeadline;
     }

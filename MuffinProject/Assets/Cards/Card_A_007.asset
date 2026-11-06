@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
+  m_Name: Card_A_007
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
+  id: 7
+  cardName: "\uD14C\uC2A4\uD2B8 \uBC84\uB9AC\uAE30"
+  cardImage: {fileID: 0}
+  type: 0
+  targetType: 1
+  description: "\uB300\uC0C1\uC758 \uC190\uD328\uC5D0\uC11C \uBB34\uC791\uC704 1\uC7A5\uC744
+    \uBC84\uB9AC\uAC8C \uD55C\uB2E4."
+  reactsTo: 
+  trapTrigger: 0
+  triggerValue: 0
+  reactCondition: 0
+  revealSeconds: 1.46
+  resolveSeconds: 1.28
+  effects:
+  - rid: 5046878355598344262
+  references:
+    version: 2
+    RefIds:
+    - rid: 5046878355598344262
+      type: {class: DiscardEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        subject: 0
+        count: 1

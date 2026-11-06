@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-11-06 · 카드 효과 종류 · 반응 조건 · 「~한 후」 함정 (기능 9 규칙, `feature/card-effects`)
+
+### 결정 · 해석 (문서에 적음 — 다르면 고친다)
+- 카드는 효과를 **조립**한다 — 카드별 조립표 `11-card-list` 5-1 (51장). 수치 N · M 은 에셋 값으로 비워 둔다.
+- **보류 8장**: A07 · A10(턴 방향 개념 없음), A15 · A24 · A25 · A27(사람이 고르는 입력 미정), C14 · T11(공개 효과가 카드 목록에 없음).
+- 해석: 찹츄 부여는 손패 정확히 10장일 때만 붙는다 · A26 차이 = 대상 − 본인(음수면 1) · C02 · C04 는 대상 전체를 새 1명으로 · C08 은 그 카드 전체를 나에게만 무효 + 드로우 · T13 은 누구든 · T14 는 효과로 뽑은 장수만.
+
+### 한 것
+- 문서: `04` 6절(「~한 후」 9종 · 사건 한 번에 함정 한 번) · 7절(반응 조건 10종 · 아래 카드를 바꾸는 카운터 표) · 11절(대상 타입 `ChapchuPlayers` · `ChapchuOthers` · `MoreHandThanMe`), `11` 5절 · 5-1(카드별 조립 · 보류 · 해석), `03` 7절(스킵된 턴 · T15 턴 시작 드로우), `06` 6절(T17 생존 복귀), `09` 3절(손패 이동 · 버림 · 함정 반환의 공개 범위).
+- 효과 22종 (`Game/Effects`): Heal · Draw · Discard · Steal · SwapHand · DestroyTrap · ReturnTrap · StealTrap · SkipTurn · SetChapChu · ClearChapChu · MoveChapChu · DamagePerTrap · HandDiffDamage · DrawAtTurnStart · Redirect · ReturnToHand · ConvertDamageToHeal · ConvertHealToDamage · ReduceDamage · SurviveAt · ProtectTrap. 효과는 하는 일(`EffectTag`)과 받을 사람(`Affected`)을 알린다 — 반응 조건 판정용.
+- 규칙: `GameServer.Effects`(상태 변경은 여기서만 — 체인 표시를 반영해 HP 한 번에), `GameServer.After`(사건 기록 → 함정 시간), `CanReactTo`(반응 대상 종류 + 조건, 카운터 · 「카드 반응」 함정 공용), `ChainEntry` 표시(반환 · 대상 변경 · 전환 · 감소 · 사망 방지 · 함정 보호), 턴 스킵 · 턴 시작 추가 드로우, `CardData.reactCondition`.
+- 이벤트 9종: `OnHandCardsMoved`(+ 나에게 `OnMyCardsGained` · `OnMyCardsLost`) · `OnCardsDiscarded` · `OnTrapDestroyed` · `OnTrapReturned` · `OnTrapMoved`(+ `OnMyTrapRemoved`) · `OnTurnSkipMarked` · `OnTurnSkipped` · `OnCardReturnedToHand` · `OnDeathAvoided`.
+- 봇: 카운터 · 「카드 반응」 함정을 같은 반응 조건으로, 「~한 후」 함정 전부, 새 자동 대상 타입. 훔치기 · 버리기 = 손패 변동, 회복 = 회복 묶음.
+- 기본 덱에 시험 카드 3종 × 5 (`Card_A_006` 훔치기 1 · `A_007` 버리기 1 · `A_008` 회복 20).
+- `multi-test`: rules 에 **Effects** 시나리오(41개), 시험 공격 대상이 죽은 사람을 건너뛰게.
+- 확인: `rules` 통과 (체인 · 사망 · 승리 · 함정 · 봇 · 효과 41). `multi 2 6` 통과 — 「테스트 훔치기」 손패 이동이 두 화면 같음. `full 2 45` 통과. `solo 30` 통과 — 봇 P1003 승리, 봇이 카운터 · 함정 설치 · 함정 발동, 방 복귀 뒤 봇 3 · 비공개 그대로, 콘솔 에러 0 (첫 시도는 시험 도구가 죽은 봇을 계속 노려 시간 초과 — 도구 수정).
+
+### 다음 할 일
+- [ ] 게임 화면: 새 이벤트 9종 (손패 이동 · 버림 · 함정 파괴 · 반환 · 빼앗김 · 턴 스킵 · 카드 반환 · 생존 복귀) 연출
+- [ ] 카드 에셋 51장 — 카드 데이터 담당과 5-1 표대로 (수치 N 확정 뒤)
+- [ ] 보류 8장 — 턴 방향 · 고르는 입력 결정
+- [ ] 늦게 열린 화면의 내 손패 · 함정 복구, 처리 ID (09 5절)
+
+---
+
 ## 2026-11-06 · 봇 1 · 2단계 — 추가 · 제거 · 혼자 하기 · 뽑기 · 공격 · 찹츄 · 카운터 · 함정 (8B, `feature/bot` ← `feature/trap` + develop)
 
 ### 결정 (PM)

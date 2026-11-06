@@ -269,7 +269,7 @@ namespace Chapchu.Game.Bots
             if (reactionOpen && top.User != bot && top.Targets.Contains(bot))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
-                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && c.ReactsTo.Contains(top.Card.Type)).OrderBy(c => c.CardId).FirstOrDefault();
+                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top)).OrderBy(c => c.CardId).FirstOrDefault();
                 if (counter != null)
                 {
                     int[] targets = counter.Target == TargetType.OneOther ? SortedOpponents(bot).Take(1).ToArray() : Array.Empty<int>();
@@ -279,7 +279,7 @@ namespace Chapchu.Game.Bots
                     return true;
                 }
 
-                Card react = me.Traps.FirstOrDefault(c => c.Trigger == TrapTrigger.ReactToCard && c.ReactsTo.Contains(top.Card.Type));
+                Card react = me.Traps.FirstOrDefault(c => c.Trigger == TrapTrigger.ReactToCard && _server.CanReactTo(c, bot, top));
                 if (react != null)
                 {
                     reaction = TrapReaction(bot, react, key, _server.ReactionOpensAt, $"7-4 나를 노린 카드 {top.Card.CardId} 에 함정");
@@ -287,13 +287,13 @@ namespace Chapchu.Game.Bots
                 }
             }
 
-            // ③ 함정 시간 — 다른 사람에게 맞았으면 「피해 받은 후」 함정
-            if (_server.IsTrapWindowOpenAt(now) && _server.WasDamagedByOther(bot))
+            // ③ 함정 시간 — 「~한 후」 조건(맞음 · 훔쳐짐 · 버려짐 · 파괴 · 스킵 …)이 맞는 함정, 설치 순서
+            if (_server.IsTrapWindowOpenAt(now))
             {
-                Card after = me.Traps.FirstOrDefault(c => c.Trigger == TrapTrigger.AfterDamaged);
+                Card after = me.Traps.FirstOrDefault(c => _server.HasAfterTrigger(bot, c));
                 if (after != null)
                 {
-                    reaction = TrapReaction(bot, after, $"trapwin:{_server.TrapWindowOpensAt}", _server.TrapWindowOpensAt, "7-4 피해 받은 뒤 함정 시간 → 함정");
+                    reaction = TrapReaction(bot, after, $"trapwin:{_server.TrapWindowOpensAt}", _server.TrapWindowOpensAt, $"7-4 함정 시간 ({after.Trigger}) → 함정");
                     return true;
                 }
             }
@@ -409,6 +409,15 @@ namespace Chapchu.Game.Bots
                 case TargetType.Self:
                 case TargetType.None:
                     return role == BotRole.Heal;
+
+                case TargetType.ChapchuPlayers: // 나도 찹츄면 나도 맞는다 — 찹츄 상대가 있고 나는 아닐 때만 (7-3 ㄱ A02)
+                    return !me.IsChapchu && opponents.Any(a => _server.StateOf(a).IsChapchu);
+
+                case TargetType.ChapchuOthers:
+                    return opponents.Any(a => _server.StateOf(a).IsChapchu);
+
+                case TargetType.MoreHandThanMe:
+                    return opponents.Any(a => _server.StateOf(a).Hand.Count > me.Hand.Count - 1);
 
                 default:
                     return false;

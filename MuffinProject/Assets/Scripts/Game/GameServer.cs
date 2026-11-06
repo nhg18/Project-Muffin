@@ -61,7 +61,7 @@ namespace Chapchu.Game
             _deathDeadline = -1;
             _gameOver = false;
             _trapWindowDeadline = -1;
-            _damagedBy.Clear();
+            _afterRecords.Clear();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();

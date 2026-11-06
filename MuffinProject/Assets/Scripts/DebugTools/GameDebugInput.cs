@@ -56,6 +56,15 @@ namespace Chapchu.DebugTools
             GameEvents.OnTrapActivated += HandleTrapActivated;
             GameEvents.OnTrapWindowStarted += HandleTrapWindowStarted;
             GameEvents.OnTurnResumed += HandleTurnResumed;
+            GameEvents.OnMyCardsGained += HandleMyCardsGained;
+            GameEvents.OnMyCardsLost += HandleMyCardsLost;
+            GameEvents.OnMyTrapRemoved += HandleMyTrapRemoved;
+            GameEvents.OnHandCardsMoved += HandleHandCardsMoved;
+            GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
+            GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
+            GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
+            GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnGameEnded += HandleGameEnded;
             GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
@@ -79,6 +88,15 @@ namespace Chapchu.DebugTools
             GameEvents.OnTrapActivated -= HandleTrapActivated;
             GameEvents.OnTrapWindowStarted -= HandleTrapWindowStarted;
             GameEvents.OnTurnResumed -= HandleTurnResumed;
+            GameEvents.OnMyCardsGained -= HandleMyCardsGained;
+            GameEvents.OnMyCardsLost -= HandleMyCardsLost;
+            GameEvents.OnMyTrapRemoved -= HandleMyTrapRemoved;
+            GameEvents.OnHandCardsMoved -= HandleHandCardsMoved;
+            GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
+            GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
+            GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
+            GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnGameEnded -= HandleGameEnded;
             GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
@@ -250,6 +268,65 @@ namespace Chapchu.DebugTools
             _trapWindowOpensAt = opensAt;
             _trapWindowDeadline = deadline;
             Log($"함정 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
+        }
+
+        private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds)
+        {
+            _myHandInstances.AddRange(cardInstanceIds);
+            _myHand.AddRange(cardIds);
+        }
+
+        private void HandleMyCardsLost(int[] cardInstanceIds) => RemoveFromMyHand(cardInstanceIds);
+
+        private void HandleMyTrapRemoved(int cardInstanceId) => _myTraps.Remove(cardInstanceId);
+
+        private void HandleHandCardsMoved(int from, int to, int count, int fromHandCount, int toHandCount)
+        {
+            _handCounts[from] = fromHandCount;
+            _handCounts[to] = toHandCount;
+            Log($"P{from} → P{to} 손패 {count}장 이동");
+        }
+
+        private void HandleCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
+        {
+            _handCounts[actorNumber] = handCount;
+            if (actorNumber == Me)
+                RemoveFromMyHand(cardInstanceIds);
+            Log($"P{actorNumber} 손패 버림 [{string.Join(" ", cardIds)}] · 버림 {discardCount}");
+        }
+
+        private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)
+        {
+            _handCounts[actorNumber] = handCount;
+            if (actorNumber == Me)
+            {
+                _myHandInstances.Add(cardInstanceId);
+                _myHand.Add(cardId);
+            }
+            Log($"P{actorNumber} 카드 {cardId} 손패로 반환");
+        }
+
+        private void HandleTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
+        {
+            if (owner == Me)
+                _myTraps.Remove(cardInstanceId);
+            Log($"P{owner} 함정 파괴 — 카드 {cardId} · 함정 {trapCount}장");
+        }
+
+        private void HandleTurnSkipped(int actorNumber) => Log($"P{actorNumber} 턴 스킵");
+
+        private void HandleDeathAvoided(int actorNumber, int hp) => Log($"P{actorNumber} 생존 — ♥{hp}");
+
+        private void RemoveFromMyHand(int[] cardInstanceIds)
+        {
+            foreach (int id in cardInstanceIds)
+            {
+                int index = _myHandInstances.IndexOf(id);
+                if (index < 0)
+                    continue;
+                _myHandInstances.RemoveAt(index);
+                _myHand.RemoveAt(index);
+            }
         }
 
         private void HandleTurnResumed(int actorNumber, double deadline) => Log($"턴 이어짐 P{actorNumber} (남은 {deadline - PhotonNetwork.Time:0.0}초)");
