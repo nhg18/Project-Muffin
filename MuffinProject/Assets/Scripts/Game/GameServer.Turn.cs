@@ -127,6 +127,7 @@ namespace Chapchu.Game
             _nextTurnAt = -1;
             _resumeAt = -1;
             _turnPaused = false;
+            TurnSerial++;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
         }

@@ -264,6 +264,37 @@ public static class MultiTest
         return "OK P" + me + " 함정 시간에 함정 발동";
     }
 
+    /// <summary>디버그 로비에서 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 비공개 방을 만든다. 방 화면 이동은 DebugScript 가 한다.</summary>
+    public static string Solo()
+    {
+        if (Object.FindFirstObjectByType<DebugScript>() == null)
+            return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer)
+            return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
+
+        NetworkManager.Instance.CreateSoloRoom();
+        return "OK 혼자 하기 요청";
+    }
+
+    /// <summary>방의 봇 목록 · 정원 · 공개 여부가 기대와 같을 때까지 WAIT. bots = "1,2,3" 처럼.</summary>
+    public static string ExpectBots(string bots, string maxPlayers, string visible)
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        string now = string.Join(",", BotRoster.Numbers);
+        string state = "봇 [" + now + "] · 정원 " + PhotonNetwork.CurrentRoom.MaxPlayers + " · 공개 " + PhotonNetwork.CurrentRoom.IsVisible + " · 열림 " + PhotonNetwork.CurrentRoom.IsOpen;
+        if (now != bots || PhotonNetwork.CurrentRoom.MaxPlayers.ToString() != maxPlayers || PhotonNetwork.CurrentRoom.IsVisible.ToString() != visible)
+            return "WAIT " + state;
+
+        return "OK " + state;
+    }
+
+    public static string RemoveBot(string number) => NetworkManager.Instance.RemoveBot(int.Parse(number)) ? "OK 봇 " + number + " 제거 요청" : "FAIL 봇 제거 안 됨";
+
+    public static string AddBot() => NetworkManager.Instance.AddBot() ? "OK 봇 추가 요청" : "FAIL 봇 추가 안 됨";
+
     /// <summary>방장의 규칙 원본에서 모두의 체력을 hp 로 — 한 판을 빨리 끝내 보는 full 시나리오용. 화면 값은 다음 HpChanged 부터 맞는다.</summary>
     public static string SetAllHp(string hp)
     {
@@ -960,9 +991,10 @@ public static class MultiTest
         return true;
     }
 
+    // 사람 + 봇 중 내 다음 (봇은 사람 뒤 — 02-player.md 3절). 사망한 사람은 거르지 않는다 — 거절되면 다음 턴에 다시
     private static int NextActor(int me)
     {
-        int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(a => a).ToArray();
+        int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(a => a).Concat(BotRoster.Actors).ToArray();
         return actors[(Array.IndexOf(actors, me) + 1) % actors.Length];
     }
 
