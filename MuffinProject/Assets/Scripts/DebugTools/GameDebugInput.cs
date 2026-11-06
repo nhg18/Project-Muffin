@@ -41,6 +41,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnReactionStarted += HandleReactionStarted;
             GameEvents.OnCardResolved += HandleCardResolved;
             GameEvents.OnCardNegated += HandleCardNegated;
+            GameEvents.OnEmptyDeckDamaged += HandleEmptyDeckDamaged;
+            GameEvents.OnDeathPending += HandleDeathPending;
+            GameEvents.OnPlayerDied += HandlePlayerDied;
             GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
 
@@ -54,6 +57,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnReactionStarted -= HandleReactionStarted;
             GameEvents.OnCardResolved -= HandleCardResolved;
             GameEvents.OnCardNegated -= HandleCardNegated;
+            GameEvents.OnEmptyDeckDamaged -= HandleEmptyDeckDamaged;
+            GameEvents.OnDeathPending -= HandleDeathPending;
+            GameEvents.OnPlayerDied -= HandlePlayerDied;
             GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
 
@@ -142,6 +148,17 @@ namespace Chapchu.DebugTools
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Log($"P{actorNumber} 카드 무효 — 카드 {cardId} (#{cardInstanceId}) · 버림 {discardCount}");
+
+        private void HandleEmptyDeckDamaged(int actorNumber, int amount) => Log($"P{actorNumber} 빈 덱 피해 {amount}");
+
+        private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
+            => Log($"P{actorNumber} 사망 대기 — {startsAt - PhotonNetwork.Time:0.0}초 뒤부터 {deadline - PhotonNetwork.Time:0.0}초 뒤까지");
+
+        private void HandlePlayerDied(int actorNumber, int discardCount)
+        {
+            _handCounts[actorNumber] = 0;
+            Log($"P{actorNumber} 사망 · 버림 {discardCount}");
+        }
 
         private void HandleMyRequestRejected(int code) => Log($"내 요청 거절 — 코드 {code}");
 

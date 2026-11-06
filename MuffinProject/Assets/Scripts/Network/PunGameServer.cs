@@ -96,7 +96,7 @@ namespace Chapchu.Network
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
-        // 나간 사람은 턴 순서 · 대상 후보에서 뺀다 (01-game-flow.md 6절). 손패 · 함정을 버림 더미로 보내는 것은 기능 7.
+        // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
             if (!PhotonNetwork.IsMasterClient) return;
@@ -163,6 +163,27 @@ namespace Chapchu.Network
                     case CardNegated negated:
                         photonView.RPC(nameof(RPC_OnCardNegated), RpcTarget.All, negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = negated.DiscardCount;
+                        break;
+
+                    case EmptyDeckDamaged empty:
+                        photonView.RPC(nameof(RPC_OnEmptyDeckDamaged), RpcTarget.All, empty.Actor, empty.Amount);
+                        break;
+
+                    case DeathPending pending:
+                        photonView.RPC(nameof(RPC_OnDeathPending), RpcTarget.All, pending.Actor, pending.StartsAt, pending.Deadline);
+                        PlayerPropsOf(playerProps, pending.Actor)[PlayerProps.LifeState] = (byte)LifeState.DeathPending;
+                        break;
+
+                    case PlayerDied died:
+                        photonView.RPC(nameof(RPC_OnPlayerDied), RpcTarget.All, died.Actor, died.DiscardCount);
+                        PlayerPropsOf(playerProps, died.Actor)[PlayerProps.LifeState] = (byte)LifeState.Dead;
+                        PlayerPropsOf(playerProps, died.Actor)[PlayerProps.HandCount] = 0;
+                        roomProps[RoomProps.DiscardCount] = died.DiscardCount;
+                        break;
+
+                    case PlayerLeft left:
+                        photonView.RPC(nameof(RPC_OnPlayerLeftGame), RpcTarget.All, left.Actor, left.DiscardCount);
+                        roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
                         break;
 
                     case RequestRejected rejected:
@@ -236,6 +257,18 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => GameEvents.RaiseCardNegated(actorNumber, cardInstanceId, cardId, discardCount);
+
+        [PunRPC]
+        private void RPC_OnEmptyDeckDamaged(int actorNumber, int amount) => GameEvents.RaiseEmptyDeckDamaged(actorNumber, amount);
+
+        [PunRPC]
+        private void RPC_OnDeathPending(int actorNumber, double startsAt, double deadline) => GameEvents.RaiseDeathPending(actorNumber, startsAt, deadline);
+
+        [PunRPC]
+        private void RPC_OnPlayerDied(int actorNumber, int discardCount) => GameEvents.RaisePlayerDied(actorNumber, discardCount);
+
+        [PunRPC]
+        private void RPC_OnPlayerLeftGame(int actorNumber, int discardCount) => GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
 
         [PunRPC]
         private void RPC_RejectRequest(int code) => GameEvents.RaiseMyRequestRejected(code);

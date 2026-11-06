@@ -206,10 +206,13 @@ run_rules() {
     out=$(call "$MAIN" Rules "$players" "$rounds")
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
-    log "▶ 규칙 계층 — 체인 · 카운터 (3인, 메모리 카드)"
-    out=$(call "$MAIN" Chain)
-    printf '%s\n' "$out" | sed 's/^/  /'
-    case "$out" in OK*) ;; *) FAILED=1 ;; esac
+    local scenario
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감"; do
+        log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
+        out=$(call "$MAIN" "${scenario%%:*}")
+        printf '%s\n' "$out" | sed 's/^/  /'
+        case "$out" in OK*) ;; *) FAILED=1 ;; esac
+    done
 }
 
 run_ui() {

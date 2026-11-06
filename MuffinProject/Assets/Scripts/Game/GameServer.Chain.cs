@@ -20,6 +20,9 @@ namespace Chapchu.Game
         /// </summary>
         public IReadOnlyList<GameEvent> PlayCounter(int requester, int cardInstanceId, int[] requestedTargets)
         {
+            if (!IsInGame(requester))
+                return Reject(requester, RejectCode.NotAlive);
+
             double now = _clock();
             if (_chain.Count == 0 || now < _reactionOpensAt || now >= _reactionDeadline)
                 return Reject(requester, RejectCode.NotReactionTime);
@@ -57,7 +60,7 @@ namespace Chapchu.Game
         }
 
         // Tick 이 반응 마감 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
-        // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절). 다음 턴은 맨 아래 카드의 후처리 연출 뒤 (04 8절).
+        // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절). 다음 턴은 맨 아래 카드의 후처리 연출 뒤 (04 8절) — 사망 대기가 생기면 그 뒤.
         private void ResolveChain()
         {
             for (int i = _chain.Count - 1; i >= 0; i--)
@@ -80,6 +83,7 @@ namespace Chapchu.Game
 
             _nextTurnAt = _clock() + _chain[0].Card.ResolveSeconds;
             _chain.Clear();
+            CheckDeathPending(_nextTurnAt); // HP 가 0 이 되는 연출(4 단계) 뒤부터 대응 5초 (06 8절)
         }
 
         /// <summary>entry 바로 아래 카드를 무효화한다 — 카운터는 낼 때의 맨 위 카드에 반응한다 (04 7절). 무효화 효과(Effects/)가 부른다.</summary>

@@ -137,6 +137,63 @@
         }
     }
 
+    /// <summary>덱 · 버림 더미가 모두 비어 카드 대신 피해를 받는다 (05-deck.md 5절). 체력 변화는 뒤따르는 HpChanged 로.</summary>
+    public sealed class EmptyDeckDamaged : GameEvent
+    {
+        public int Actor { get; }
+        public int Amount { get; }
+
+        public EmptyDeckDamaged(int actor, int amount)
+        {
+            Actor = actor;
+            Amount = amount;
+        }
+    }
+
+    /// <summary>
+    /// HP 0 — 사망 대기 (06-health.md 8절). 게임이 멈춘다. 대응 시간은 StartsAt(피해 연출이 끝나는 서버 시각)부터 Deadline 까지.
+    /// 여럿이 함께 0 이 되면 같은 시각으로 하나씩 온다 (06 11절).
+    /// </summary>
+    public sealed class DeathPending : GameEvent
+    {
+        public int Actor { get; }
+        public double StartsAt { get; }
+        public double Deadline { get; }
+
+        public DeathPending(int actor, double startsAt, double deadline)
+        {
+            Actor = actor;
+            StartsAt = startsAt;
+            Deadline = deadline;
+        }
+    }
+
+    /// <summary>최종 사망 (06-health.md 9절). 손패(와 함정)가 버림 더미로 갔다 — 손패 0. 턴 순서 · 대상 후보에서 빠진다.</summary>
+    public sealed class PlayerDied : GameEvent
+    {
+        public int Actor { get; }
+        public int DiscardCount { get; }
+
+        public PlayerDied(int actor, int discardCount)
+        {
+            Actor = actor;
+            DiscardCount = discardCount;
+        }
+    }
+
+    /// <summary>게임 중 방을 나갔다 (01-game-flow.md 6절) — 최종 사망과 같은 처리. 손패(와 함정)가 버림 더미로 갔다.</summary>
+    public sealed class PlayerLeft : GameEvent
+    {
+        public int Actor { get; }
+        public int DiscardCount { get; }
+
+        public PlayerLeft(int actor, int discardCount)
+        {
+            Actor = actor;
+            DiscardCount = discardCount;
+        }
+    }
+
     /// <summary>요청을 거절했다 (09-network.md 4.3). 상태는 바뀌지 않았다. 요청자에게만 보낸다.</summary>
     public sealed class RequestRejected : GameEvent
     {

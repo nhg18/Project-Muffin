@@ -13,12 +13,20 @@ namespace Chapchu.Game
         private double _nextTurnAt = -1;  // 체인을 처리했고, 이 시각에 다음 턴 (04-card.md 8절). 음수면 없음
 
         /// <summary>
-        /// 방장이 매 프레임 부른다. 반응 마감 → 체인 처리, 후처리 시간 → 다음 턴, 턴 마감 → 넘김 (03-turn.md 4절 — 자동 제출 없음).
-        /// 카드를 낸 뒤(Resolving)에는 턴 제한 시간이 멈춘다 (03-turn.md 4절).
+        /// 방장이 매 프레임 부른다. 사망 대기 마감 → 최종 사망, 반응 마감 → 체인 처리, 후처리 시간 → 다음 턴, 턴 마감 → 넘김 (03-turn.md 4절 — 자동 제출 없음).
+        /// 카드를 낸 뒤(Resolving)와 사망 대기 중에는 턴 제한 시간이 멈춘다 (03-turn.md 4절 · 06-health.md 8절).
         /// </summary>
         public IReadOnlyList<GameEvent> Tick()
         {
             double now = _clock();
+            if (IsDeathPending)
+            {
+                if (now < _deathDeadline)
+                    return TakeEvents();
+
+                FinalizeDeaths();
+            }
+
             if (_chain.Count > 0)
             {
                 if (now >= _reactionDeadline)
@@ -47,7 +55,10 @@ namespace Chapchu.Game
                 return TakeEvents();
 
             player.HasLeft = true;
-            if (actor == CurrentTurnActor && !_mainActionUsed)
+            DiscardAll(actor);
+            _events.Add(new PlayerLeft(actor, _discardPile.Count));
+
+            if (actor == CurrentTurnActor && !_mainActionUsed && !IsDeathPending)
                 AdvanceTurn();
 
             return TakeEvents();
@@ -79,8 +90,7 @@ namespace Chapchu.Game
             _events.Add(new TurnStarted(actor, _turnDeadline));
         }
 
-        // 턴 순서에서 다음으로 게임에 남은 사람. 지금 사람이 나갔어도 그 자리를 기준으로 찾는다.
-        // TODO: 사망한 사람도 건너뛴다 (기능 7) — IsInGame 에 더한다.
+        // 턴 순서에서 다음으로 게임에 남은 사람(나감 · 최종 사망 제외). 지금 사람이 빠졌어도 그 자리를 기준으로 찾는다.
         private int GetNextActor(int currentActor)
         {
             int index = _turnOrder.IndexOf(currentActor);
@@ -94,6 +104,7 @@ namespace Chapchu.Game
             return currentActor;
         }
 
-        private bool IsInGame(int actor) => !_players[actor].HasLeft;
+        // 게임에 남은 사람 = 나가지 않았고 최종 사망하지 않았다. 사망 대기는 아직 남아 있다 (06 12절).
+        private bool IsInGame(int actor) => !_players[actor].HasLeft && _players[actor].Life != LifeState.Dead;
     }
 }
