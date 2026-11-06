@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.Game;
 
 namespace Chapchu.Network.Events
 {
@@ -22,6 +23,8 @@ namespace Chapchu.Network.Events
         public static event Action<int, double, double> OnDeathPending;      // actorNumber, startsAt, deadline — 사망 대기, 게임이 멈춘다
         public static event Action<int, int> OnPlayerDied;                   // actorNumber, discardCount — 최종 사망, 손패 0
         public static event Action<int, int> OnPlayerLeftGame;               // actorNumber, discardCount — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
+        public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
+        public static event Action<int, GameEndReason, double> OnGameEnded;  // winner(무승부 -1), reason, returnAt(방으로 이동하는 서버 시각)
 
         // ── 나에게만 ──
         public static event Action<int, int> OnMyCardDrawn;                  // cardInstanceId, cardId
@@ -39,6 +42,8 @@ namespace Chapchu.Network.Events
         public static void RaiseDeathPending(int actorNumber, double startsAt, double deadline) => OnDeathPending?.Invoke(actorNumber, startsAt, deadline);
         public static void RaisePlayerDied(int actorNumber, int discardCount) => OnPlayerDied?.Invoke(actorNumber, discardCount);
         public static void RaisePlayerLeftGame(int actorNumber, int discardCount) => OnPlayerLeftGame?.Invoke(actorNumber, discardCount);
+        public static void RaiseChapchuChanged(int actorNumber, bool isChapchu) => OnChapchuChanged?.Invoke(actorNumber, isChapchu);
+        public static void RaiseGameEnded(int winner, GameEndReason reason, double returnAt) => OnGameEnded?.Invoke(winner, reason, returnAt);
         public static void RaiseMyCardDrawn(int cardInstanceId, int cardId) => OnMyCardDrawn?.Invoke(cardInstanceId, cardId);
         public static void RaiseMyRequestRejected(int code) => OnMyRequestRejected?.Invoke(code);
     }

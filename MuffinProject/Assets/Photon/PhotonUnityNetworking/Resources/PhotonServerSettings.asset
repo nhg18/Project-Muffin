@@ -72,6 +72,9 @@ MonoBehaviour:
   - RPC_OnEmptyDeckDamaged
   - RPC_OnPlayerDied
   - RPC_OnPlayerLeftGame
+  - RPC_OnChapchuChanged
+  - RPC_OnGameEnded
+  - RPC_RequestDeclareChapchu
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-11-06 · 찹츄 선언 · 해제 · 승리, 처치 승리 · 무승부, 종료 뒤 방으로 (기능 8, `feature/chapchu-win` ← `feature/death`)
+
+### 결정 (PM)
+- 게임이 끝나면 결과 표시 시간(기본 5초, `PunGameServer.resultSeconds`) 뒤 방장이 방을 다시 열고(공개 · 열림) 전원을 방 씬으로. 재대전은 방에서 다시 시작. 결과 화면 구성은 여전히 미정.
+
+### 한 것
+- 문서: `07` 3절(판정 시점에 사망 대기 포함 · 혼자 시작한 게임은 판정 안 함 — **제안**) · 9 · 10 · 12절, `08` 4절 「게임 종료」 행, `01` 2절 결과 화면 행, `09` 4.3 코드 11 ~ 13, `development-plan` 결정 표.
+- 규칙 `GameServer.Win.cs`: `DeclareChapchu`(살아 있음 · 정확히 10장 · 이미 찹츄 아님 — 턴 무관), 손패가 바뀌는 곳마다 10장이 아니면 즉시 해제, 다음 사람이 찹츄면 그 턴이 시작되는 순간 승리, 체인 · 사망 대기가 끝난 뒤 남은 1인 = 처치 승리 · 0인 = 무승부, 끝나면 모든 요청 13 · `Tick` 정지.
+- 네트워크: `RequestDeclareChapchu`, `OnChapchuChanged` · `OnGameEnded(winner, reason, returnAt)`, Props `ChapChu`. 게임 시작 때 지난 판의 `LifeState` · `ChapChu` · `TrapCount` Props 를 지운다. 종료 → `resultSeconds` 뒤 `UpdateRoomOptions(true, true)` + `LoadLevel(RoomScene)`.
+- `GameDebugInput`: K = 찹츄 선언, 찹츄 · 종료 로그.
+- `multi-test`: rules 에 Win 시나리오(12개), **`full` 시나리오**(체력을 낮춰 한 판 끝까지 → 결과 동일 · 방 복귀). multi 판정 전 대기를 10초로 (마지막 체인이 모든 화면에 닿기 전에 메인을 먼저 읽어 턴 줄 수가 달랐다).
+- 확인: `rules` 통과(체인 21 · 사망 13 · 승리 12), `full 2 20` 통과 — P1 공격 → P2 사망 대기 → 사망 → 두 화면 모두 「Elimination · 승자 P1」 → 5초 뒤 두 화면 RoomScene, 콘솔 에러 0. `multi 2 4` 통과. 찹츄 승리는 규칙 계층에서만 확인 (네트워크로 10장을 만들어 보지 않았다).
+
+### 다음 할 일
+- [ ] 게임 화면: 찹츄 버튼 → `RequestDeclareChapchu`, `OnChapchuChanged` → 좌석 배지 · 버튼 「찹츄 완료」, `OnGameEnded` → 승리 오버레이(남은 초 = returnAt)
+- [ ] 결과 화면 구성 · 통계 (미정)
+- [ ] 방장이 결과 표시 중에 나가면 방 이동이 안 된다 — 방장 이주(보류)와 함께
+
+---
+
 ## 2026-11-06 · 사망 대기 · 최종 사망 · 빈 덱 피해 · 나간 사람 손패 (기능 7, `feature/death` ← `feature/counter-chain`)
 
 ### 결정 (PM)

@@ -14,6 +14,9 @@ namespace Chapchu.Game
         /// <summary>드로우 요청 — 메인 행동이라 끝나면 턴이 넘어간다 (03-turn.md 3절).</summary>
         public IReadOnlyList<GameEvent> Draw(int requester)
         {
+            if (_gameOver)
+                return Reject(requester, RejectCode.GameOver);
+
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
@@ -77,6 +80,7 @@ namespace Chapchu.Game
             hand.Add(card);
 
             _events.Add(new CardDrawn(actor, card.InstanceId, card.CardId, hand.Count, _deck.Count));
+            OnHandChanged(actor);
             return true;
         }
 

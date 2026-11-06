@@ -194,6 +194,40 @@
         }
     }
 
+    /// <summary>찹츄 상태가 바뀌었다 (07-win-condition.md 4절) — 선언 또는 손패가 10장이 아니게 되어 해제.</summary>
+    public sealed class ChapchuChanged : GameEvent
+    {
+        public int Actor { get; }
+        public bool IsChapchu { get; }
+
+        public ChapchuChanged(int actor, bool isChapchu)
+        {
+            Actor = actor;
+            IsChapchu = isChapchu;
+        }
+    }
+
+    /// <summary>게임이 끝나는 방식 (07-win-condition.md 2절 · 3절). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
+    public enum GameEndReason : byte
+    {
+        Elimination, // 처치 승리 — 마지막 1인
+        Chapchu,     // 찹츄 승리
+        Draw         // 무승부 — 전원 최종 사망
+    }
+
+    /// <summary>게임이 끝났다 (07-win-condition.md). 무승부면 Winner = -1. 이 뒤로는 모든 요청을 거절한다.</summary>
+    public sealed class GameEnded : GameEvent
+    {
+        public int Winner { get; }
+        public GameEndReason Reason { get; }
+
+        public GameEnded(int winner, GameEndReason reason)
+        {
+            Winner = winner;
+            Reason = reason;
+        }
+    }
+
     /// <summary>요청을 거절했다 (09-network.md 4.3). 상태는 바뀌지 않았다. 요청자에게만 보낸다.</summary>
     public sealed class RequestRejected : GameEvent
     {

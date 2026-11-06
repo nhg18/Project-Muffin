@@ -12,6 +12,9 @@ namespace Chapchu.Game
         /// </summary>
         public IReadOnlyList<GameEvent> PlayCard(int requester, int cardInstanceId, int[] requestedTargets)
         {
+            if (_gameOver)
+                return Reject(requester, RejectCode.GameOver);
+
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
@@ -35,6 +38,7 @@ namespace Chapchu.Game
             _mainActionUsed = true;
             hand.RemoveAt(index);
             AddToChain(card, requester, targets);
+            OnHandChanged(requester);
             return TakeEvents();
         }
 

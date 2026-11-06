@@ -80,6 +80,7 @@ namespace Chapchu.Game
             List<Card> hand = _players[actor].Hand;
             _discardPile.AddRange(hand);
             hand.Clear();
+            OnHandChanged(actor);
         }
     }
 }
