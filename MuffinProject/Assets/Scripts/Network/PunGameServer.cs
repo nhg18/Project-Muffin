@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Cards;
+using Chapchu.Core;
 using Chapchu.Game;
 using Chapchu.Network.Events;
 using Photon.Pun;
@@ -31,6 +33,9 @@ namespace Chapchu.Network
         [Tooltip("이번 게임의 덱 구성 (05-deck.md 8절). 덱 구성은 미정이라 임시 에셋(Deck_Default)을 쓴다.")]
         [SerializeField] private DeckData deck;
 
+        [Tooltip("게임이 끝나고 결과를 보여 주는 시간(초). 지나면 방장이 방을 다시 열고 전원을 방 씬으로 옮긴다 (08-room.md 4절).")]
+        [Min(0)] [SerializeField] private float resultSeconds = 5f;
+
         private GameServer _server; // 모든 클라가 만들지만 방장에서만 쓰인다
 
         /// <summary>이번 게임의 덱 — 카드 ID 로 카드 정의를 찾는 사전으로도 쓴다 (DeckData.GetCard).</summary>
@@ -54,6 +59,11 @@ namespace Chapchu.Network
             List<Card> cards = deck.CreateCards();
             Debug.Log($"[{nameof(PunGameServer)}] 게임 시작 — 참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {cards.Count}장");
 
+            // 지난 판의 지금 값을 지운다 — 시작 일이 다시 쓰지 않는 값 (늦게 열린 화면이 지난 판 상태를 읽지 않게)
+            var reset = new Hashtable { [PlayerProps.LifeState] = (byte)LifeState.Alive, [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0 };
+            foreach (Player player in PhotonNetwork.PlayerList)
+                player.SetCustomProperties(reset);
+
             Send(_server.StartGame(actors, cards));
         }
 
@@ -72,6 +82,9 @@ namespace Chapchu.Network
         /// <summary>행동 카드 사용. 대상은 고르는 카드일 때만 쓰인다 (자동 대상이면 방장이 무시).</summary>
         public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
+        /// <summary>찹츄 선언 — 손패가 정확히 10장일 때 언제든 (07-win-condition.md 4.1).</summary>
+        public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
+
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCounter), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
@@ -87,6 +100,13 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
+        }
+
+        [PunRPC]
+        private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            Send(_server.DeclareChapchu(info.Sender.ActorNumber));
         }
 
         [PunRPC]
@@ -186,6 +206,18 @@ namespace Chapchu.Network
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
                         break;
 
+                    case ChapchuChanged chapchu:
+                        photonView.RPC(nameof(RPC_OnChapchuChanged), RpcTarget.All, chapchu.Actor, chapchu.IsChapchu);
+                        PlayerPropsOf(playerProps, chapchu.Actor)[PlayerProps.ChapChu] = chapchu.IsChapchu;
+                        break;
+
+                    case GameEnded ended:
+                        double returnAt = PhotonNetwork.Time + resultSeconds;
+                        photonView.RPC(nameof(RPC_OnGameEnded), RpcTarget.All, ended.Winner, (byte)ended.Reason, returnAt);
+                        Debug.Log($"[{nameof(PunGameServer)}] 게임 종료 — {ended.Reason} · 승자 P{ended.Winner} — {_server.DebugState()}");
+                        StartCoroutine(ReturnToRoomRoutine());
+                        break;
+
                     case RequestRejected rejected:
                         SendTo(rejected.Actor, nameof(RPC_RejectRequest), rejected.Code);
                         Debug.LogWarning($"[{nameof(PunGameServer)}] P{rejected.Actor} 요청 거절 — 코드 {rejected.Code}");
@@ -202,6 +234,17 @@ namespace Chapchu.Network
 
             foreach (KeyValuePair<int, Hashtable> pair in playerProps)
                 PhotonNetwork.CurrentRoom.GetPlayer(pair.Key)?.SetCustomProperties(pair.Value);
+        }
+
+        // 결과 표시 시간 뒤 방을 다시 열고 전원을 방 씬으로 (08-room.md 4절). 다음 판은 방에서 다시 시작한다.
+        private IEnumerator ReturnToRoomRoutine()
+        {
+            yield return new WaitForSeconds(resultSeconds);
+            if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
+                yield break;
+
+            NetworkManager.Instance.UpdateRoomOptions(isVisible: true, isOpen: true);
+            PhotonNetwork.LoadLevel(ScenePaths.Room);
         }
 
         private void SendTo(int actorNumber, string rpcName, params object[] parameters)
@@ -269,6 +312,12 @@ namespace Chapchu.Network
 
         [PunRPC]
         private void RPC_OnPlayerLeftGame(int actorNumber, int discardCount) => GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
+
+        [PunRPC]
+        private void RPC_OnChapchuChanged(int actorNumber, bool isChapchu) => GameEvents.RaiseChapchuChanged(actorNumber, isChapchu);
+
+        [PunRPC]
+        private void RPC_OnGameEnded(int winner, byte reason, double returnAt) => GameEvents.RaiseGameEnded(winner, (GameEndReason)reason, returnAt);
 
         [PunRPC]
         private void RPC_RejectRequest(int code) => GameEvents.RaiseMyRequestRejected(code);

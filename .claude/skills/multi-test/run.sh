@@ -4,6 +4,7 @@
 #   run.sh rules [인원=4] [턴=8]      규칙 계층만 (네트워크 · 플레이 모드 없음)
 #   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
+#   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 사망 · 게임 종료 · 방 복귀
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -207,7 +208,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'
@@ -237,8 +238,9 @@ run_ui() {
     check_errors "$MAIN"
 }
 
-run_multi() {
-    local clients="${1:-2}" rounds="${2:-4}" i project out
+# 메인 + 클론 (clients - 1)개를 디버그 로비에서 방으로 모아 게임 화면까지. 실패면 1 을 돌려준다.
+enter_game() {
+    local clients="$1" i project out
     EDITORS=("$MAIN")
     for i in $(seq 0 $((clients - 2))); do
         EDITORS+=("$ROOT/MuffinProject_clone_$i")
@@ -249,21 +251,65 @@ run_multi() {
 
     log "▶ 입장 · 시작 (메인이 먼저 들어가 방장이 된다)"
     for project in "${EDITORS[@]}"; do
-        until_ok "$project" Join || return
+        until_ok "$project" Join || return 1
         sleep 2
     done
-    until_ok "$MAIN" StartGame "$clients" || return
+    until_ok "$MAIN" StartGame "$clients" || return 1
+    wait_scene GameScene || return 1
+    sleep 2
+}
 
-    # 모든 클라이언트가 게임 화면에 올 때까지
+# 모든 클라이언트가 그 씬에 올 때까지
+wait_scene() {
+    local scene="$1" project out
     for project in "${EDITORS[@]}"; do
         for _ in $(seq 1 $WAIT_TRIES); do
             out=$(call "$project" Ui scene)
-            [ "$out" = "OK GameScene" ] && break
+            [ "$out" = "OK $scene" ] && break
             sleep 2
         done
-        [ "$out" = "OK GameScene" ] || { fail "$(name_of "$project") 게임 화면에 오지 않음: $out"; return; }
+        [ "$out" = "OK $scene" ] || { fail "$(name_of "$project") $scene 에 오지 않음: $out"; return 1; }
     done
+}
+
+run_full() {
+    local clients="${1:-2}" hp="${2:-20}" project out ended=0 line first=""
+    enter_game "$clients" || return
+    until_ok "$MAIN" SetAllHp "$hp" || return
+
+    log "▶ 한 판 끝까지 — 체력 ${hp} 에서 시작, 차례인 클라이언트가 행동"
+    for _ in $(seq 1 120); do
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ActIfMyTurn)
+            case "$out" in
+                OK*)   log "  $(name_of "$project"): $out"; sleep 2; break ;;
+                FAIL*) fail "$(name_of "$project"): $out"; return ;;
+                *"게임 끝"*) ended=1 ;;
+            esac
+        done
+        [ $ended -eq 1 ] && break
+        sleep 1
+    done
+    [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
+
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        line=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+        log "  $(name_of "$project"): 「${line:-없음}」 · 사망 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 사망 · 버림')번"
+        [ -n "$line" ] || fail "$(name_of "$project") 게임 종료를 받지 못했다"
+        if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
+    done
+    compare_turns
+    wait_scene RoomScene && log "  결과 표시 뒤 전원 방으로 돌아옴"
     sleep 2
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+run_multi() {
+    local clients="${1:-2}" rounds="${2:-4}" project out
+    enter_game "$clients" || return
 
     log "▶ 남의 턴에 카드 내기 (거절돼야 한다)"
     for project in "${EDITORS[@]}"; do
@@ -297,7 +343,8 @@ run_multi() {
         [ $acted -eq 0 ] && sleep 1
     done
     PROBED=$probed
-    sleep 3
+    # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 5 + 후처리 1.28초)가 모든 화면에 닿을 때까지
+    sleep 10
 
     log "▶ 판정"
     compare_screens
@@ -307,7 +354,7 @@ run_multi() {
 }
 
 # 클라이언트마다 [GameDebugInput] 턴 줄의 "모두의 손패 장수 · 체력" 부분을 순서대로 모아 비교한다.
-compare_screens() {
+compare_turns() {
     local project first="" current rejects
     for project in "${EDITORS[@]}"; do
         current=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep ' 턴 P' | sed -E 's/.* · //')
@@ -320,7 +367,11 @@ compare_screens() {
             diff <(printf '%s\n' "$first") <(printf '%s\n' "$current") | sed 's/^/      /'
         fi
     done
-    local total=0 count
+}
+
+compare_screens() {
+    local project total=0 count
+    compare_turns
     for project in "${EDITORS[@]}"; do
         count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절 — 코드 1')
         total=$((total + count))
@@ -347,6 +398,7 @@ case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
     multi) shift; run_multi "$@" ;;
+    full)  shift; run_full "$@" ;;
     *)     sed -n '2,9p' "$0"; exit 2 ;;
 esac
 

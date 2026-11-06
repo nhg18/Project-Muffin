@@ -16,5 +16,8 @@
         public const int NotCounterCard = 8;  // 카운터 카드가 아니다
         public const int CannotReact = 9;     // 체인 맨 위 카드에 반응할 수 없는 카운터 (04 7절)
         public const int NotAlive = 10;       // 사망했거나 나간 사람의 요청 (06 9절)
+        public const int NotTenCards = 11;    // 찹츄 선언 — 손패가 정확히 10장이 아니다 (07 4.1)
+        public const int AlreadyChapchu = 12; // 찹츄 선언 — 이미 찹츄 상태
+        public const int GameOver = 13;       // 게임이 끝났다
     }
 }

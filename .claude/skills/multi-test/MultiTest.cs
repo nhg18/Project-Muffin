@@ -39,6 +39,8 @@ public static class MultiTest
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomView
     private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
+    private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
+    private const string PunServerField = "_server";                       // PunGameServer — 규칙 원본 (방장)
     private const string ServerDeckField = "deck";                         // PunGameServer — 게임에 쓰는 덱
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
     private const string ServerTurnOrderField = "_turnOrder";              // GameServer — 턴 순서
@@ -140,6 +142,9 @@ public static class MultiTest
             return "WAIT 턴 정보 없음";
 
         int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if ((bool)typeof(GameDebugInput).GetField(GameEndedField, Private).GetValue(input))
+            return "SKIP P" + me + " 게임 끝";
+
         if (turnActor != me)
             return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
 
@@ -217,6 +222,24 @@ public static class MultiTest
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
         server.RequestPlayCounter(instances[Math.Max(counter, 0)], new int[0]);
         return "OK P" + me + (counter >= 0 ? " 반응 시간에 카운터 (카운터 카드)" : " 반응 시간에 카운터 (행동 카드)");
+    }
+
+    /// <summary>방장의 규칙 원본에서 모두의 체력을 hp 로 — 한 판을 빨리 끝내 보는 full 시나리오용. 화면 값은 다음 HpChanged 부터 맞는다.</summary>
+    public static string SetAllHp(string hp)
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(rules);
+        foreach (PlayerState state in states.Values)
+            state.Hp = int.Parse(hp);
+
+        return "OK 모두 체력 " + hp + " — " + rules.DebugState();
     }
 
     public static string Ui(string step)
@@ -489,7 +512,7 @@ public static class MultiTest
             t.At(startsAt + 5);
             List<GameEvent> events = t.Tick().ToList();
             PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
-            Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 5, "마감 → 최종 사망 · 손패 5장 버림 더미로");
+            Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
             t.At(100);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
@@ -543,7 +566,95 @@ public static class MultiTest
             var t = new ChainTable();
             int before = t.DiscardCount;
             PlayerLeft left = t.Server.RemovePlayer(t.O2).OfType<PlayerLeft>().FirstOrDefault();
-            Check(left != null && left.DiscardCount == before + 5 && t.HandCount(t.O2) == 0, "나감 → 손패 5장 버림 더미로");
+            Check(left != null && left.DiscardCount == before + 6 && t.HandCount(t.O2) == 0, "나감 → 손패 6장 버림 더미로");
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
+    /// <summary>규칙 계층의 찹츄 · 처치 승리 · 무승부 · 게임 종료 (07-win-condition.md, 기능 8). ChainTable 을 같이 쓴다.</summary>
+    public static string Win()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        // 1. 찹츄 선언 조건 → 다음 자기 턴 시작에 승리
+        {
+            var t = new ChainTable();
+            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.NotTenCards, "손패 5장 선언 → 11");
+            t.SetHandSize(t.O1, 10);
+            Check(t.Server.DeclareChapchu(t.O1).OfType<ChapchuChanged>().Any(e => e.IsChapchu), "10장 · 남의 턴에 선언 → 찹츄");
+            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.AlreadyChapchu, "다시 선언 → 12");
+            t.Play(t.Turn, ChainTable.Hit, t.O2);
+            t.At(ChainTable.Reveal + 5);
+            t.Tick();
+            t.At(100);
+            List<GameEvent> events = t.Tick().ToList();
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(), "자기 턴이 오는 순간 찹츄 승리 (턴 시작 없음)");
+            Check(t.Code(t.Server.Draw(t.O1)) == RejectCode.GameOver && t.Tick().Count == 0, "끝난 뒤 요청 → 13 · Tick 은 아무 일 없음");
+        }
+
+        // 2. 10장이 아니게 되면 즉시 해제 — 승리 없음
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 10);
+            t.Server.DeclareChapchu(t.Turn);
+            IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
+            Check(played.OfType<ChapchuChanged>().Any(e => !e.IsChapchu), "카드를 내 9장 → 즉시 해제");
+            t.At(ChainTable.Reveal + 5);
+            t.Tick();
+            t.At(100);
+            t.Tick();
+            Check(!t.Server.IsGameOver && t.Server.CurrentTurnActor == t.O1, "해제된 사람은 이기지 않는다");
+        }
+
+        // 3. 처치 승리 — 마지막 1인, 사망 대기가 끝난 뒤
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 10);
+            t.SetHp(t.O2, 10);
+            t.Play(t.Turn, ChainTable.Wave, null);
+            t.At(ChainTable.Reveal + 5);
+            Check(!t.Tick().OfType<GameEnded>().Any(), "사망 대기 중엔 판정 안 함");
+            t.At(100);
+            List<GameEvent> events = t.Tick().ToList();
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<TurnStarted>().Any(), "남은 1인 처치 승리");
+        }
+
+        // 4. 무승부 — 전원 최종 사망 (나 포함 전원 피해)
+        {
+            var t = new ChainTable();
+            foreach (int actor in new[] { t.Turn, t.O1, t.O2 })
+                t.SetHp(actor, 10);
+            t.Play(t.Turn, ChainTable.Storm, null);
+            t.At(100);
+            t.Tick();
+            t.At(200);
+            GameEnded ended = t.Tick().OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == -1 && ended.Reason == GameEndReason.Draw, "전원 사망 → 무승부");
+        }
+
+        // 5. 나가서 1명 — 체인이 없으면 바로, 체인 중이면 처리 뒤
+        {
+            var t = new ChainTable();
+            t.Server.RemovePlayer(t.O1);
+            GameEnded ended = t.Server.RemovePlayer(t.O2).OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.Turn, "다른 사람이 모두 나감 → 바로 처치 승리");
+        }
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.Server.RemovePlayer(t.O1);
+            Check(!t.Server.RemovePlayer(t.O2).OfType<GameEnded>().Any(), "체인 중에 모두 나감 → 아직");
+            t.At(ChainTable.Reveal + 5);
+            Check(t.Tick().OfType<GameEnded>().Any(), "체인 처리 뒤 처치 승리");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -553,7 +664,7 @@ public static class MultiTest
     private sealed class ChainTable
     {
         public const double Reveal = 1.46, Resolve = 1.28;
-        public const int Hit = 101, Wave = 102, Negate = 201, SelfOnly = 202, TrapOnly = 203;
+        public const int Hit = 101, Wave = 102, Storm = 103, Negate = 201, SelfOnly = 202, TrapOnly = 203;
 
         public readonly GameServer Server;
         public readonly int Turn, O1, O2;
@@ -575,7 +686,7 @@ public static class MultiTest
             {
                 List<Card> hand = ((PlayerState)_players[actor]).Hand;
                 hand.Clear();
-                foreach (int kind in new[] { Hit, Wave, Negate, SelfOnly, TrapOnly })
+                foreach (int kind in new[] { Hit, Wave, Storm, Negate, SelfOnly, TrapOnly })
                     hand.Add(MakeCard(_nextInstance++, kind));
             }
 
@@ -590,6 +701,14 @@ public static class MultiTest
         public int Hp(int actor) => ((PlayerState)_players[actor]).Hp;
         public void SetHp(int actor, int hp) => ((PlayerState)_players[actor]).Hp = hp;
         public int HandCount(int actor) => ((PlayerState)_players[actor]).Hand.Count;
+
+        // 손패를 n 장으로 — 모자라면 Hit 을 더한다 (찹츄 시험)
+        public void SetHandSize(int actor, int n)
+        {
+            List<Card> hand = ((PlayerState)_players[actor]).Hand;
+            while (hand.Count > n) hand.RemoveAt(hand.Count - 1);
+            while (hand.Count < n) hand.Add(MakeCard(_nextInstance++, Hit));
+        }
 
         // 덱 · 버림 더미를 모두 비운다 (빈 덱 피해 시험)
         public void EmptyDeck()
@@ -616,6 +735,7 @@ public static class MultiTest
             {
                 case Hit:      return new Card(instanceId, kind, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, Reveal, Resolve);
                 case Wave:     return new Card(instanceId, kind, CardType.Action, TargetType.AllOthers, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, Reveal, Resolve);
+                case Storm:    return new Card(instanceId, kind, CardType.Action, TargetType.Everyone, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, Reveal, Resolve);
                 case Negate:   return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect() }, new[] { CardType.Action, CardType.Counter }, Reveal, Resolve);
                 case SelfOnly: return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect { selfOnly = true } }, new[] { CardType.Action }, Reveal, Resolve);
                 default:       return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect() }, new[] { CardType.Trap }, Reveal, Resolve);

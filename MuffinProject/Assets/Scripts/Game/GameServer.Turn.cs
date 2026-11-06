@@ -18,6 +18,9 @@ namespace Chapchu.Game
         /// </summary>
         public IReadOnlyList<GameEvent> Tick()
         {
+            if (_gameOver)
+                return TakeEvents();
+
             double now = _clock();
             if (IsDeathPending)
             {
@@ -25,6 +28,9 @@ namespace Chapchu.Game
                     return TakeEvents();
 
                 FinalizeDeaths();
+                CheckElimination();
+                if (_gameOver)
+                    return TakeEvents();
             }
 
             if (_chain.Count > 0)
@@ -57,8 +63,11 @@ namespace Chapchu.Game
             player.HasLeft = true;
             DiscardAll(actor);
             _events.Add(new PlayerLeft(actor, _discardPile.Count));
+            if (_gameOver)
+                return TakeEvents();
 
-            if (actor == CurrentTurnActor && !_mainActionUsed && !IsDeathPending)
+            CheckElimination(); // 체인 · 사망 대기가 없으면 바로 (07 3절). 있으면 그것이 끝난 뒤
+            if (!_gameOver && actor == CurrentTurnActor && !_mainActionUsed && !IsDeathPending)
                 AdvanceTurn();
 
             return TakeEvents();
@@ -75,9 +84,17 @@ namespace Chapchu.Game
         }
 
         // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다.
+        // 다음 사람이 찹츄 상태면 그 턴이 시작되는 순간 승리 (07 4.3 · 5절 — 가장 먼저 자기 턴이 돌아온 사람).
         private void AdvanceTurn()
         {
-            SetTurn(GetNextActor(CurrentTurnActor));
+            int next = GetNextActor(CurrentTurnActor);
+            if (_players[next].IsChapchu)
+            {
+                EndGame(next, GameEndReason.Chapchu);
+                return;
+            }
+
+            SetTurn(next);
         }
 
         private void SetTurn(int actor)

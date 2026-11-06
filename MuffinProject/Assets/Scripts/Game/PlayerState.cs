@@ -30,5 +30,8 @@ namespace Chapchu.Game
 
         // 빈 덱에서 뽑은 횟수 — 빈 덱 피해량 (05-deck.md 5절).
         public int EmptyDraws;
+
+        // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 10장이 아니게 되면 즉시 해제 (07-win-condition.md 7절).
+        public bool IsChapchu;
     }
 }

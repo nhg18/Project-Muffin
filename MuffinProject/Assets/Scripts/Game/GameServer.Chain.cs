@@ -20,6 +20,9 @@ namespace Chapchu.Game
         /// </summary>
         public IReadOnlyList<GameEvent> PlayCounter(int requester, int cardInstanceId, int[] requestedTargets)
         {
+            if (_gameOver)
+                return Reject(requester, RejectCode.GameOver);
+
             if (!IsInGame(requester))
                 return Reject(requester, RejectCode.NotAlive);
 
@@ -45,6 +48,7 @@ namespace Chapchu.Game
 
             hand.RemoveAt(index);
             AddToChain(card, requester, targets);
+            OnHandChanged(requester);
             return TakeEvents();
         }
 
@@ -84,6 +88,7 @@ namespace Chapchu.Game
             _nextTurnAt = _clock() + _chain[0].Card.ResolveSeconds;
             _chain.Clear();
             CheckDeathPending(_nextTurnAt); // HP 가 0 이 되는 연출(4 단계) 뒤부터 대응 5초 (06 8절)
+            CheckElimination();             // 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
         }
 
         /// <summary>entry 바로 아래 카드를 무효화한다 — 카운터는 낼 때의 맨 위 카드에 반응한다 (04 7절). 무효화 효과(Effects/)가 부른다.</summary>

@@ -98,6 +98,9 @@
 | 8 | `NotCounterCard` | 카운터 카드가 아니다 |
 | 9 | `CannotReact` | 체인 맨 위 카드에 반응할 수 없는 카운터다 (`04-card` 7절) |
 | 10 | `NotAlive` | 사망했거나 나간 플레이어의 요청 (`06-health` 9절) |
+| 11 | `NotTenCards` | 찹츄 선언 — 손패가 정확히 10장이 아니다 (`07` 4.1) |
+| 12 | `AlreadyChapchu` | 찹츄 선언 — 이미 찹츄 상태다 |
+| 13 | `GameOver` | 게임이 끝났다 |
 
 ---
 
