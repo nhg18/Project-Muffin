@@ -1,14 +1,16 @@
-// archify 가 만든 ui-flow.html 을 claude.ai 아티팩트용으로 변환한다.
-//   node docs/diagrams/build-artifact.mjs <출력 경로>
+// archify 가 만든 UI 흐름 HTML 을 claude.ai 아티팩트용으로 변환한다.
+//   node docs/diagrams/build-artifact.mjs <archify 출력 HTML> <출력 경로>
+// HTML 은 저장소에 두지 않는다 — archify 출력(Temp/, git 제외)을 변환해 아티팩트에 올리고, 문서는 URL 만 가리킨다.
 // 아티팩트는 <html>/<head>/<body> 없이 본문만 받으므로 head · body 안쪽만 추리고,
-// 한글 글꼴(Noto Sans KR)과 모바일 확대 규칙을 오버라이드로 덧붙인다. 원본 ui-flow.html 은 건드리지 않는다.
+// 한글 글꼴(Noto Sans KR)과 모바일 확대 규칙을 오버라이드로 덧붙인다. archify 출력 파일은 건드리지 않는다.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const src = join(here, 'ui-flow.html');
-const out = process.argv[2] || join(here, 'ui-flow.artifact.html');
+const src = process.argv[2];
+const out = process.argv[3];
+if (!src || !out) {
+  console.error('사용법: node docs/diagrams/build-artifact.mjs <archify 출력 HTML> <출력 경로>');
+  process.exit(1);
+}
 
 const html = readFileSync(src, 'utf8');
 const headStart = html.indexOf('<head>') + '<head>'.length;
