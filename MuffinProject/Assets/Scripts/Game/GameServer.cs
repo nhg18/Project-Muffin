@@ -57,6 +57,7 @@ namespace Chapchu.Game
         public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck)
         {
             _players.Clear();
+            _chain.Clear();
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();
 
@@ -74,9 +75,10 @@ namespace Chapchu.Game
         public string DebugState()
         {
             string players = string.Join(" │ ", _players.Select(p =>
-                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(_turnOrder.Contains(p.Key) ? "" : " 나감")}"));
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.HasLeft ? " 나감" : "")}"));
 
-            return $"덱 {_deck.Count} · 버림 {_discardPile.Count} ║ {players}";
+            string chain = _chain.Count == 0 ? "" : $" · 체인 [{string.Join(" ← ", _chain.Select(e => $"P{e.User}:{e.Card.CardId}"))}]";
+            return $"덱 {_deck.Count} · 버림 {_discardPile.Count}{chain} ║ {players}";
         }
 
         private IReadOnlyList<GameEvent> TakeEvents()

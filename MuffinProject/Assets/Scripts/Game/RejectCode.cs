@@ -11,5 +11,9 @@
         public const int NoCardToDraw = 3;  // 덱 · 버림 더미가 모두 비었다 (05 5절 피해량 미정 — 임시 거절)
         public const int NotActionCard = 4; // 행동 카드가 아니다
         public const int InvalidTarget = 5; // 대상이 카드 대상 타입에 맞지 않는다
+        public const int NotReactionTime = 6; // 반응 시간이 아니다 — 체인 없음 · 연출 중 · 마감 지남 (04 8절)
+        public const int MainActionUsed = 7;  // 이번 턴의 메인 행동을 이미 했다 (03 3절)
+        public const int NotCounterCard = 8;  // 카운터 카드가 아니다
+        public const int CannotReact = 9;     // 체인 맨 위 카드에 반응할 수 없는 카운터 (04 7절)
     }
 }

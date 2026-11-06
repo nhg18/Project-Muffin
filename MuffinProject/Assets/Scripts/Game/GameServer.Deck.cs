@@ -17,6 +17,9 @@ namespace Chapchu.Game
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
+            if (_mainActionUsed)
+                return Reject(requester, RejectCode.MainActionUsed);
+
             // TODO(미정): 덱 · 버림 더미가 모두 0장이면 피해 (05-deck.md 5절, 피해량 미정). 확정 전까지 상태 변경 없이 거절만 한다.
             if (_deck.Count == 0 && _discardPile.Count == 0)
                 return Reject(requester, RejectCode.NoCardToDraw);

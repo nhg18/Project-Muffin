@@ -9,26 +9,47 @@ namespace Chapchu.Game
         private const double TurnTimeLimit = 20;
 
         private double _turnDeadline;
+        private bool _mainActionUsed;     // 이번 턴에 카드를 냈다 — 체인 처리 · 후처리 연출이 끝날 때까지 (03-turn.md 3 · 4절)
+        private double _nextTurnAt = -1;  // 체인을 처리했고, 이 시각에 다음 턴 (04-card.md 8절). 음수면 없음
 
-        /// <summary>방장이 매 프레임 부른다. 마감이 지나면 아무것도 하지 않은 것으로 보고 넘긴다 (03-turn.md 4절 — 자동 제출 없음).</summary>
+        /// <summary>
+        /// 방장이 매 프레임 부른다. 반응 마감 → 체인 처리, 후처리 시간 → 다음 턴, 턴 마감 → 넘김 (03-turn.md 4절 — 자동 제출 없음).
+        /// 카드를 낸 뒤(Resolving)에는 턴 제한 시간이 멈춘다 (03-turn.md 4절).
+        /// </summary>
         public IReadOnlyList<GameEvent> Tick()
         {
-            if (CurrentTurnActor != -1 && _clock() >= _turnDeadline)
+            double now = _clock();
+            if (_chain.Count > 0)
+            {
+                if (now >= _reactionDeadline)
+                    ResolveChain();
+            }
+            else if (_nextTurnAt >= 0)
+            {
+                if (now >= _nextTurnAt)
+                    AdvanceTurn();
+            }
+            else if (CurrentTurnActor != -1 && now >= _turnDeadline)
+            {
                 AdvanceTurn();
+            }
 
             return TakeEvents();
         }
 
-        /// <summary>나간 사람을 턴 순서에서 뺀다. 턴 주인이었으면 다음 사람에게 넘긴다 (01-game-flow.md 6절 · 03-turn.md 7절).</summary>
+        /// <summary>
+        /// 나간 사람을 턴 순서 · 대상 후보에서 뺀다 (01-game-flow.md 6절 · 03-turn.md 7절). 턴 주인이었으면 다음 사람에게 넘긴다.
+        /// 이미 카드를 냈으면 체인을 끝까지 처리하고 그 뒤에 넘어간다 (09-network.md 11절 「처리 중 요청자가 사망」).
+        /// </summary>
         public IReadOnlyList<GameEvent> RemovePlayer(int actor)
         {
-            if (!_turnOrder.Contains(actor))
+            if (!_players.TryGetValue(actor, out PlayerState player) || player.HasLeft)
                 return TakeEvents();
 
-            if (actor == CurrentTurnActor)
-                AdvanceTurn(); // 빼기 전에 다음 사람을 구한다
+            player.HasLeft = true;
+            if (actor == CurrentTurnActor && !_mainActionUsed)
+                AdvanceTurn();
 
-            _turnOrder.Remove(actor);
             return TakeEvents();
         }
 
@@ -52,15 +73,27 @@ namespace Chapchu.Game
         {
             CurrentTurnActor = actor;
             _turnDeadline = _clock() + TurnTimeLimit;
+            _mainActionUsed = false;
+            _nextTurnAt = -1;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
         }
 
-        // TODO: 살아 있는 사람만 (기능 7).
+        // 턴 순서에서 다음으로 게임에 남은 사람. 지금 사람이 나갔어도 그 자리를 기준으로 찾는다.
+        // TODO: 사망한 사람도 건너뛴다 (기능 7) — IsInGame 에 더한다.
         private int GetNextActor(int currentActor)
         {
             int index = _turnOrder.IndexOf(currentActor);
-            return _turnOrder[(index + 1) % _turnOrder.Count];
+            for (int step = 1; step <= _turnOrder.Count; step++)
+            {
+                int actor = _turnOrder[(index + step) % _turnOrder.Count];
+                if (IsInGame(actor))
+                    return actor;
+            }
+
+            return currentActor;
         }
+
+        private bool IsInGame(int actor) => !_players[actor].HasLeft;
     }
 }

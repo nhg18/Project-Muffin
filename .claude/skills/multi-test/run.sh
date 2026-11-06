@@ -89,6 +89,13 @@ wait_compile() {
     log "✗ $(name_of "$project"): 컴파일이 끝나지 않는다"; exit 2
 }
 
+# 백그라운드 에디터는 새 코드를 스스로 가져오지 않는다 — MultiTest.cs 가 새 API 로 컴파일되도록 Refresh 하고 컴파일을 기다린다.
+# 씬은 건드리지 않는다 (저장 안 한 씬 검사는 Preflight).
+refresh_code() {
+    ucmd "$1" script.eval --code 'UnityEditor.AssetDatabase.Refresh(); return "OK";' --result-only >/dev/null
+    wait_compile "$1"
+}
+
 # 에디터가 떠 있지 않으면 연다 (클론). 메인이 없으면 종료 2.
 ensure_editor() {
     local project="$1" win
@@ -125,6 +132,7 @@ prepare() {
     local scene="$1" project out
     for project in "${EDITORS[@]}"; do
         ensure_editor "$project"
+        refresh_code "$project"
         out=$(call "$project" Preflight)
         case "$out" in
             OK*) log "  $(name_of "$project"): $out" ;;
@@ -192,9 +200,13 @@ run_rules() {
     local players="${1:-4}" rounds="${2:-8}" out
     EDITORS=("$MAIN")
     ensure_editor "$MAIN"
-    wait_compile "$MAIN"
+    refresh_code "$MAIN"
     log "▶ 규칙 계층 — ${players}인 ${rounds}턴"
     out=$(call "$MAIN" Rules "$players" "$rounds")
+    printf '%s\n' "$out" | sed 's/^/  /'
+    case "$out" in OK*) ;; *) FAILED=1 ;; esac
+    log "▶ 규칙 계층 — 체인 · 카운터 (3인, 메모리 카드)"
+    out=$(call "$MAIN" Chain)
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
 }
@@ -257,7 +269,7 @@ run_multi() {
     sleep 2
 
     log "▶ 턴 ${rounds}번 — 차례인 클라이언트가 행동"
-    local done_rounds=0 acted
+    local done_rounds=0 acted probed=0
     for _ in $(seq 1 $((rounds * 10))); do
         [ $done_rounds -ge "$rounds" ] && break
         acted=0
@@ -268,6 +280,13 @@ run_multi() {
                 FAIL*) fail "$(name_of "$project"): $out"; return ;;
             esac
         done
+        # 처음 카드가 나온 뒤 한 번 — 연출(1.46초) 뒤 반응 시간에 남의 턴 클라이언트가 카운터 요청 (04-card.md 7 · 8절)
+        if [ $acted -eq 1 ] && [ $probed -eq 0 ] && printf '%s' "$out" | grep -q '카드'; then
+            for project in "${EDITORS[@]}"; do
+                out=$(call "$project" CounterProbe)
+                case "$out" in OK*) log "  $(name_of "$project"): $out"; probed=1; break ;; esac
+            done
+        fi
         [ $acted -eq 0 ] && sleep 1
     done
     sleep 3
@@ -295,10 +314,22 @@ compare_screens() {
     done
     local total=0 count
     for project in "${EDITORS[@]}"; do
-        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절')
+        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절 — 코드 1')
         total=$((total + count))
     done
     [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
+    total=0
+    for project in "${EDITORS[@]}"; do
+        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절 — 코드 8')
+        total=$((total + count))
+    done
+    [ "$total" -ge 1 ] && log "  반응 시간 카운터 요청 판정 확인 (코드 8)" || fail "카운터 요청이 방장에서 판정되지 않았다 (코드 8 없음)"
+    total=0
+    for project in "${EDITORS[@]}"; do
+        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].* 카드 처리 — ')
+        total=$((total + count))
+    done
+    [ "$total" -ge 1 ] && log "  체인 처리 결과 수신 (카드 처리 줄 ${total}개)" || fail "체인 처리 결과(OnCardResolved)를 받지 못했다"
 }
 
 case "${1:-}" in

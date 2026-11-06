@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Chapchu.Cards;
+using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.Network.Events;
 using Photon.Pun;
@@ -10,7 +12,7 @@ namespace Chapchu.DebugTools
     /// <summary>
     /// 멀티 테스트용 키 입력과 결과 로그. UI 없이 키로 요청을 보내고, 이 클라이언트가 받은 결과를 콘솔에 찍는다. 판정은 하지 않는다.
     /// 턴이 시작될 때마다 "내 손패 · 모두의 손패 장수 · 체력" 한 줄을 찍는다 — 클라이언트마다 비교해 기능 1 · 2 를 확인한다.
-    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게.
+    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, C = 손패 첫 카운터를 체인 맨 위에.
     /// </summary>
     public class GameDebugInput : MonoBehaviour
     {
@@ -36,6 +38,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
             GameEvents.OnTurnStarted += HandleTurnStarted;
             GameEvents.OnCardPlayed += HandleCardPlayed;
+            GameEvents.OnReactionStarted += HandleReactionStarted;
+            GameEvents.OnCardResolved += HandleCardResolved;
+            GameEvents.OnCardNegated += HandleCardNegated;
             GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
 
@@ -46,6 +51,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
             GameEvents.OnTurnStarted -= HandleTurnStarted;
             GameEvents.OnCardPlayed -= HandleCardPlayed;
+            GameEvents.OnReactionStarted -= HandleReactionStarted;
+            GameEvents.OnCardResolved -= HandleCardResolved;
+            GameEvents.OnCardNegated -= HandleCardNegated;
             GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
 
@@ -59,6 +67,23 @@ namespace Chapchu.DebugTools
 
             if (Input.GetKeyDown(KeyCode.P))
                 PlayFirstCard();
+
+            if (Input.GetKeyDown(KeyCode.C))
+                PlayFirstCounter();
+        }
+
+        private void PlayFirstCounter()
+        {
+            DeckData deck = server.Deck;
+            int index = _myHand.FindIndex(cardId => deck != null && deck.GetCard(cardId)?.type == CardType.Counter);
+            if (index < 0)
+            {
+                Log("낼 카운터가 없다");
+                return;
+            }
+
+            int target = PhotonNetwork.PlayerListOthers.Length > 0 ? PhotonNetwork.PlayerListOthers[0].ActorNumber : Me;
+            server.RequestPlayCounter(_myHandInstances[index], new[] { target });
         }
 
         private void PlayFirstCard()
@@ -108,6 +133,15 @@ namespace Chapchu.DebugTools
 
             Log($"P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))}");
         }
+
+        private void HandleReactionStarted(double opensAt, double deadline)
+            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
+
+        private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
+            => Log($"P{actorNumber} 카드 처리 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))} · 버림 {discardCount}");
+
+        private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
+            => Log($"P{actorNumber} 카드 무효 — 카드 {cardId} (#{cardInstanceId}) · 버림 {discardCount}");
 
         private void HandleMyRequestRejected(int code) => Log($"내 요청 거절 — 코드 {code}");
 

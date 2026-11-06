@@ -18,12 +18,7 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public abstract class CardEffect
     {
-        /// <summary>방장의 규칙이 카드 처리 때 부른다. user = 카드를 쓴 사람, targets = 확정된 대상.</summary>
-        internal abstract void Apply(GameServer server, int user, int[] targets);
-
-        protected static int[] GetReceivers(EffectSubject subject, int user, int[] targets)
-        {
-            return subject == EffectSubject.Self ? new[] { user } : targets;
-        }
+        /// <summary>방장의 규칙이 체인을 처리할 때 부른다. entry = 체인에 오른 이 카드 (쓴 사람 · 확정된 대상).</summary>
+        internal abstract void Apply(GameServer server, ChainEntry entry);
     }
 }

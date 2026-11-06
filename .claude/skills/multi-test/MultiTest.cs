@@ -6,6 +6,7 @@ using System.Text;
 using Chapchu.Cards;
 using Chapchu.DebugTools;
 using Chapchu.Game;
+using Chapchu.Game.Effects;
 using Chapchu.Network;
 using Chapchu.UI.Lobby;
 using Chapchu.UI.Popups;
@@ -40,9 +41,14 @@ public static class MultiTest
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string ServerDeckField = "deck";                         // PunGameServer — 게임에 쓰는 덱
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
+    private const string ServerTurnOrderField = "_turnOrder";              // GameServer — 턴 순서
+    private const string ServerDiscardField = "_discardPile";              // GameServer — 버림 더미
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
 
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
+
+    // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
+    private const string ActedTurnKey = "MultiTest.ActedTurnDeadline";
 
     // ── 준비 · 뒷정리 ──
 
@@ -136,6 +142,13 @@ public static class MultiTest
         if (turnActor != me)
             return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
 
+        // 카드를 낸 턴은 체인 처리 · 후처리 동안 같은 턴이 이어진다 (03-turn.md 4절) — 턴 마감 시각으로 같은 턴인지 본다
+        double deadline = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDeadline, out object value) ? (double)value : -1;
+        string turnKey = deadline.ToString("R");
+        if (SessionState.GetString(ActedTurnKey, "") == turnKey)
+            return "SKIP P" + me + " 처리 중";
+        SessionState.SetString(ActedTurnKey, turnKey);
+
         var hand = (List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input);
         var instances = (List<int>)typeof(GameDebugInput).GetField(MyHandInstancesField, Private).GetValue(input);
         var deck = (DeckData)typeof(PunGameServer).GetField(ServerDeckField, Private).GetValue(server);
@@ -178,6 +191,29 @@ public static class MultiTest
     /// UI 한 단계. title = 닉네임 넣고 접속 / bad-code = 없는 방 코드로 참가 / warning = 경고 팝업 확인 + 토스트 /
     /// create = 방 만들기 / leave = 방 로그 읽고 나가기 / scene = 지금 씬 이름만.
     /// </summary>
+    /// <summary>
+    /// 남의 턴 클라이언트가 카운터 요청을 보낸다 — 카운터 RPC 가 방장에 닿아 판정되는지 본다.
+    /// 덱(Deck_Default)에 카운터가 없어 손패 첫 카드(행동)를 보내므로, 반응 시간 안이면 거절 코드 8 이 와야 한다.
+    /// </summary>
+    public static string CounterProbe()
+    {
+        GameDebugInput input = Object.FindFirstObjectByType<GameDebugInput>();
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (input == null || server == null || !TryGetTurnActor(out int turnActor))
+            return "WAIT 게임 화면 아님";
+
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if (turnActor == me)
+            return "SKIP P" + me + " 내 턴";
+
+        var instances = (List<int>)typeof(GameDebugInput).GetField(MyHandInstancesField, Private).GetValue(input);
+        if (instances.Count == 0)
+            return "SKIP P" + me + " 손패 없음";
+
+        server.RequestPlayCounter(instances[0], new int[0]);
+        return "OK P" + me + " 반응 시간에 카운터 요청 (행동 카드)";
+    }
+
     public static string Ui(string step)
     {
         string scene = SceneManager.GetActiveScene().name;
@@ -256,7 +292,8 @@ public static class MultiTest
             return "FAIL 덱 에셋 없음";
 
         int[] actors = Enumerable.Range(1, int.Parse(players)).ToArray();
-        var server = new GameServer(new System.Random(1), () => 0.0);
+        double now = 0;
+        var server = new GameServer(new System.Random(1), () => now);
         server.StartGame(actors, deck.CreateCards());
 
         var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(server);
@@ -279,10 +316,18 @@ public static class MultiTest
             int target = actors[(Array.IndexOf(actors, me) + 1) % actors.Length];
             int before = ((PlayerState)states[target]).Hp;
             IReadOnlyList<GameEvent> events = server.PlayCard(me, card.InstanceId, new[] { target });
+            bool waits = ((PlayerState)states[target]).Hp == before; // 체인 처리 전에는 아직 그대로
+
+            // 반응 마감 → 체인 처리(효과) → 후처리 시간 → 다음 턴 (04-card.md 8절)
+            now += card.RevealSeconds + 5;
+            var resolved = server.Tick();
             int after = ((PlayerState)states[target]).Hp;
+            now += card.ResolveSeconds;
+            bool nextTurn = server.Tick().Any(e => e is TurnStarted) && server.CurrentTurnActor != me;
             int expected = ExpectedDamage(deck, card.CardId);
 
-            bool ok = events.Any(e => e is CardPlayed) && before - after == Math.Min(expected, before);
+            bool ok = events.Any(e => e is CardPlayed) && waits && resolved.Any(e => e is CardResolved) && nextTurn
+                      && before - after == Math.Min(expected, before);
             failed |= !ok;
             sb.AppendLine((ok ? "" : "FAIL ") + "P" + me + " " + card + " → P" + target + " ♥" + before + "→" + after + " (기대 -" + expected + ")");
         }
@@ -295,6 +340,184 @@ public static class MultiTest
         sb.Append("끝 " + server.DebugState());
 
         return (failed ? "FAIL\n" : "OK\n") + sb;
+    }
+
+    /// <summary>
+    /// 규칙 계층의 체인 · 카운터 (04-card.md 7 ~ 9절, 기능 5). 카드는 메모리에서 만들고 손패를 정해 준다 — 에셋과 무관.
+    /// 연출 시간은 등장 1.46초 · 후처리 1.28초 (10-ui.md 5-1 기본값).
+    /// </summary>
+    public static string Chain()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        // 1. 아무도 반응하지 않음 — 반응 마감 전엔 그대로, 마감에 효과, 후처리 뒤 다음 턴. 처리 중 메인 행동은 거절
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + 4.9);
+            Check(t.Tick().Count == 0 && t.Hp(t.O1) == 100, "마감 전 — 효과 없음");
+            Check(t.Code(t.Server.Draw(t.Turn)) == RejectCode.MainActionUsed, "처리 중 뽑기 → 7");
+            Check(t.Code(t.Play(t.Turn, ChainTable.Hit, t.O2)) == RejectCode.MainActionUsed, "처리 중 행동 카드 → 7");
+            t.At(ChainTable.Reveal + 5);
+            IReadOnlyList<GameEvent> resolved = t.Tick();
+            Check(resolved.OfType<CardResolved>().Count() == 1 && t.Hp(t.O1) == 80 && !resolved.OfType<TurnStarted>().Any(), "마감 — 효과 적용 · 턴은 아직");
+            t.At(ChainTable.Reveal + 5 + ChainTable.Resolve);
+            Check(t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor != t.Turn, "후처리 뒤 다음 턴");
+        }
+
+        // 2. 연출 중 카운터는 거절, 열린 뒤 카운터 → 무효. 반응 시간은 카운터 기준으로 다시
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(0.5);
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "연출 중 카운터 → 6");
+            t.At(1.5);
+            IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
+            ReactionStarted reaction = counter.OfType<ReactionStarted>().FirstOrDefault();
+            Check(reaction != null && Math.Abs(reaction.OpensAt - (1.5 + ChainTable.Reveal)) < 1e-6 && Math.Abs(reaction.Deadline - (1.5 + ChainTable.Reveal + 5)) < 1e-6, "카운터 → 반응 시간 다시 (연출 뒤 5초)");
+            t.At(ChainTable.Reveal + 5);
+            Check(t.Tick().Count == 0, "처음 마감이 지나도 처리 안 함");
+            t.At(1.5 + ChainTable.Reveal + 5);
+            List<GameEvent> events = t.Tick().ToList();
+            int resolvedAt = events.FindIndex(e => e is CardResolved);
+            int negatedAt = events.FindIndex(e => e is CardNegated);
+            Check(resolvedAt >= 0 && negatedAt > resolvedAt && t.Hp(t.O1) == 100, "위에서부터 — 카운터 처리 → 행동 카드 무효 · 피해 없음");
+            Check(t.DiscardCount == 2, "무효된 카드도 버림 더미로");
+        }
+
+        // 3. 카운터의 카운터 — C 가 B 를 무효 → A 정상 (04 9.1)
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(1.5);
+            t.Counter(t.O1, ChainTable.Negate);
+            t.At(1.5 + ChainTable.Reveal + 0.1);
+            Check(!(t.Counter(t.O2, ChainTable.Negate)[0] is RequestRejected), "카운터에 카운터");
+            t.At(100);
+            t.Tick();
+            Check(t.Hp(t.O1) == 80, "C → B 무효 → A 적용 (♥80)");
+        }
+
+        // 4. 본인에게만 무효 (C05) — 맞은 두 사람 중 쓴 사람만 빠진다
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Wave, null);
+            t.At(1.5);
+            t.Counter(t.O1, ChainTable.SelfOnly);
+            t.At(100);
+            CardResolved wave = t.Tick().OfType<CardResolved>().LastOrDefault();
+            Check(t.Hp(t.O1) == 100 && t.Hp(t.O2) == 80 && wave != null && !wave.Targets.Contains(t.O1), "본인만 무효 — 쓴 사람 ♥100 · 다른 사람 ♥80");
+        }
+
+        // 5. 거절 코드 — 반응할 수 없는 카운터 · 카운터 아닌 카드 · 마감 뒤 · 체인 없음
+        {
+            var t = new ChainTable();
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "체인 없음 → 6");
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(2);
+            Check(t.Code(t.Counter(t.O1, ChainTable.TrapOnly)) == RejectCode.CannotReact, "함정에만 반응하는 카운터 → 9");
+            Check(t.Code(t.Counter(t.O1, ChainTable.Hit)) == RejectCode.NotCounterCard, "행동 카드로 카운터 → 8");
+            t.At(ChainTable.Reveal + 5);
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "마감 시각 → 6");
+        }
+
+        // 6. 처리 중 턴 제한 시간은 멈춘다 — 19초에 내도 20초에 넘어가지 않는다 (03-turn.md 4절)
+        {
+            var t = new ChainTable();
+            t.At(19);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(20.5);
+            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "20초가 지나도 턴 유지");
+            t.At(19 + ChainTable.Reveal + 5);
+            t.Tick();
+            Check(t.Hp(t.O1) == 80, "체인 처리");
+        }
+
+        // 7. 카드를 낸 사람이 나감 — 체인은 끝까지, 그 뒤 그 사람 다음 차례로
+        {
+            var t = new ChainTable();
+            int user = t.Turn;
+            t.Play(user, ChainTable.Hit, t.O1);
+            Check(!t.Server.RemovePlayer(user).OfType<TurnStarted>().Any(), "나가도 처리 중엔 턴 유지");
+            t.At(ChainTable.Reveal + 5);
+            t.Tick();
+            t.At(100);
+            t.Tick();
+            Check(t.Hp(t.O1) == 80 && t.Server.CurrentTurnActor == t.NextOf(user), "끝까지 처리 → 다음 차례 P" + t.Server.CurrentTurnActor);
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
+    // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
+    private sealed class ChainTable
+    {
+        public const double Reveal = 1.46, Resolve = 1.28;
+        public const int Hit = 101, Wave = 102, Negate = 201, SelfOnly = 202, TrapOnly = 203;
+
+        public readonly GameServer Server;
+        public readonly int Turn, O1, O2;
+        private readonly int[] _order;
+        private readonly System.Collections.IDictionary _players;
+        private double _now;
+        private int _nextInstance = 1000;
+
+        public ChainTable()
+        {
+            Server = new GameServer(new System.Random(1), () => _now);
+            int[] actors = { 1, 2, 3 };
+            var deck = Enumerable.Range(1, 30).Select(i => MakeCard(i, Hit)).ToList();
+            Server.StartGame(actors, deck);
+            _players = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(Server);
+            _order = ((List<int>)typeof(GameServer).GetField(ServerTurnOrderField, Private).GetValue(Server)).ToArray();
+
+            foreach (int actor in actors)
+            {
+                List<Card> hand = ((PlayerState)_players[actor]).Hand;
+                hand.Clear();
+                foreach (int kind in new[] { Hit, Wave, Negate, SelfOnly, TrapOnly })
+                    hand.Add(MakeCard(_nextInstance++, kind));
+            }
+
+            Turn = Server.CurrentTurnActor;
+            O1 = NextOf(Turn);
+            O2 = NextOf(O1);
+        }
+
+        public int NextOf(int actor) => _order[(Array.IndexOf(_order, actor) + 1) % _order.Length];
+        public void At(double seconds) => _now = seconds;
+        public IReadOnlyList<GameEvent> Tick() => Server.Tick();
+        public int Hp(int actor) => ((PlayerState)_players[actor]).Hp;
+        public int DiscardCount => ((List<Card>)typeof(GameServer).GetField(ServerDiscardField, Private).GetValue(Server)).Count;
+
+        public IReadOnlyList<GameEvent> Play(int actor, int kind, int? target) => Server.PlayCard(actor, Find(actor, kind), target.HasValue ? new[] { target.Value } : new int[0]);
+        public IReadOnlyList<GameEvent> Counter(int actor, int kind) => Server.PlayCounter(actor, Find(actor, kind), new int[0]);
+
+        public int Code(IReadOnlyList<GameEvent> events) => events.Count == 1 && events[0] is RequestRejected r ? r.Code : 0;
+
+        private int Find(int actor, int kind)
+        {
+            Card card = ((PlayerState)_players[actor]).Hand.Find(c => c.CardId == kind);
+            return card != null ? card.InstanceId : -1;
+        }
+
+        private static Card MakeCard(int instanceId, int kind)
+        {
+            switch (kind)
+            {
+                case Hit:      return new Card(instanceId, kind, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, Reveal, Resolve);
+                case Wave:     return new Card(instanceId, kind, CardType.Action, TargetType.AllOthers, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, Reveal, Resolve);
+                case Negate:   return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect() }, new[] { CardType.Action, CardType.Counter }, Reveal, Resolve);
+                case SelfOnly: return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect { selfOnly = true } }, new[] { CardType.Action }, Reveal, Resolve);
+                default:       return new Card(instanceId, kind, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect() }, new[] { CardType.Trap }, Reveal, Resolve);
+            }
+        }
     }
 
     // ── 내부 ──

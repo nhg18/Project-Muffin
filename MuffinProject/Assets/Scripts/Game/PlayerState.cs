@@ -12,5 +12,8 @@ namespace Chapchu.Game
 
         // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md).
         public int Hp;
+
+        // 방을 나갔다 — 턴 순서 · 대상 후보에서 빠진다 (01-game-flow.md 6절). 턴 순서 목록에는 남겨 다음 사람 찾기의 기준으로 쓴다.
+        public bool HasLeft;
     }
 }

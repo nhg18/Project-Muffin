@@ -64,6 +64,10 @@ MonoBehaviour:
   - RPC_OnHpChanged
   - RPC_OnMyCardDrawn
   - RPC_OnTurnStarted
+  - RPC_OnCardNegated
+  - RPC_OnCardResolved
+  - RPC_OnReactionStarted
+  - RPC_RequestPlayCounter
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
