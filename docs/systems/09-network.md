@@ -90,13 +90,14 @@
 | --- | --- | --- |
 | 1 | `NotYourTurn` | 내 턴이 아니다 |
 | 2 | `NotInHand` | 손패에 없는 카드 |
-| 3 | `NoCardToDraw` | 덱 · 버림 더미가 모두 비었다 (05 5절 미정 — 임시 거절) |
+| 3 | `NoCardToDraw` | (2026-11-06 부터 쓰지 않음 — 빈 덱 드로우는 피해로 처리, `05` 5절. 번호는 재사용하지 않는다) |
 | 4 | `NotActionCard` | 행동 카드가 아니다 |
 | 5 | `InvalidTarget` | 대상이 카드 대상 타입에 맞지 않는다 |
 | 6 | `NotReactionTime` | 반응 시간이 아니다 — 체인이 없다 · 연출 중이다 · 마감이 지났다 (`04-card` 8절) |
 | 7 | `MainActionUsed` | 이번 턴의 메인 행동을 이미 했다 (`03-turn` 3절) |
 | 8 | `NotCounterCard` | 카운터 카드가 아니다 |
 | 9 | `CannotReact` | 체인 맨 위 카드에 반응할 수 없는 카운터다 (`04-card` 7절) |
+| 10 | `NotAlive` | 사망했거나 나간 플레이어의 요청 (`06-health` 9절) |
 
 ---
 

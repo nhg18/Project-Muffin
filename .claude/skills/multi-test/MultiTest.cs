@@ -43,6 +43,7 @@ public static class MultiTest
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
     private const string ServerTurnOrderField = "_turnOrder";              // GameServer — 턴 순서
     private const string ServerDiscardField = "_discardPile";              // GameServer — 버림 더미
+    private const string ServerDeckListField = "_deck";                    // GameServer — 덱
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
 
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -459,6 +460,95 @@ public static class MultiTest
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
+    /// <summary>
+    /// 규칙 계층의 사망 · 빈 덱 피해 · 나감 (06-health.md 8 · 9절 · 05-deck.md 5절 · 01 6절, 기능 7). ChainTable 을 같이 쓴다.
+    /// </summary>
+    public static string Death()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        // 1. 카드 피해로 HP 0 → 피해 연출 뒤 5초 사망 대기(게임 멈춤) → 최종 사망 → 손패 버림 · 턴에서 빠짐
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + 5);
+            DeathPending pending = t.Tick().OfType<DeathPending>().FirstOrDefault();
+            double startsAt = ChainTable.Reveal + 5 + ChainTable.Resolve;
+            Check(pending != null && pending.Actor == t.O1 && Math.Abs(pending.StartsAt - startsAt) < 1e-6 && Math.Abs(pending.Deadline - (startsAt + 5)) < 1e-6,
+                "HP 0 → 사망 대기 (피해 연출 뒤부터 5초)");
+            t.At(startsAt + 1);
+            Check(!t.Tick().OfType<TurnStarted>().Any(), "사망 대기 중엔 다음 턴 없음");
+            int discardBefore = t.DiscardCount;
+            t.At(startsAt + 5);
+            List<GameEvent> events = t.Tick().ToList();
+            PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
+            Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 5, "마감 → 최종 사망 · 손패 5장 버림 더미로");
+            Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
+            t.At(100);
+            Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
+            t.Play(t.O2, ChainTable.Hit, t.Turn);
+            t.At(100 + ChainTable.Reveal + 0.5);
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotAlive, "죽은 사람의 카운터 → 10");
+        }
+
+        // 2. 두 사람이 함께 HP 0 — 같은 마감, 함께 최종 사망 (06 11절)
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 10);
+            t.SetHp(t.O2, 10);
+            t.Play(t.Turn, ChainTable.Wave, null);
+            t.At(ChainTable.Reveal + 5);
+            DeathPending[] pendings = t.Tick().OfType<DeathPending>().ToArray();
+            Check(pendings.Length == 2 && pendings[0].Deadline == pendings[1].Deadline, "동시 HP 0 → 둘 다 사망 대기 · 같은 마감");
+            t.At(100);
+            Check(t.Tick().OfType<PlayerDied>().Count() == 2, "함께 최종 사망");
+        }
+
+        // 3. 빈 덱 피해 1 · 2 · 3 … (사람마다), 드로우는 턴 종료
+        {
+            var t = new ChainTable();
+            t.EmptyDeck();
+            IReadOnlyList<GameEvent> first = t.Server.Draw(t.Turn);
+            EmptyDeckDamaged damage = first.OfType<EmptyDeckDamaged>().FirstOrDefault();
+            Check(damage != null && damage.Amount == 1 && t.Hp(t.Turn) == 99 && first.OfType<TurnStarted>().Any(), "빈 덱 첫 드로우 → 피해 1 · 턴 종료");
+            t.Server.Draw(t.O1);
+            t.Server.Draw(t.O2);
+            t.Server.Draw(t.Turn);
+            Check(t.Hp(t.Turn) == 97 && t.Hp(t.O1) == 99, "두 번째 → 피해 2 (사람마다 따로)");
+        }
+
+        // 4. 빈 덱 피해로 HP 0 → 바로 5초 사망 대기 → 사망 뒤 다음 턴
+        {
+            var t = new ChainTable();
+            t.EmptyDeck();
+            t.SetHp(t.Turn, 1);
+            t.At(3);
+            List<GameEvent> events = t.Server.Draw(t.Turn).ToList();
+            DeathPending pending = events.OfType<DeathPending>().FirstOrDefault();
+            Check(pending != null && Math.Abs(pending.StartsAt - 3) < 1e-6 && !events.OfType<TurnStarted>().Any(), "빈 덱 피해로 HP 0 → 바로 사망 대기 · 턴은 대기 뒤");
+            t.At(8);
+            events = t.Tick().ToList();
+            Check(events.OfType<PlayerDied>().Any() && events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1, "사망 → 다음 사람 턴");
+        }
+
+        // 5. 나감 — 손패가 버림 더미로 (01 6절)
+        {
+            var t = new ChainTable();
+            int before = t.DiscardCount;
+            PlayerLeft left = t.Server.RemovePlayer(t.O2).OfType<PlayerLeft>().FirstOrDefault();
+            Check(left != null && left.DiscardCount == before + 5 && t.HandCount(t.O2) == 0, "나감 → 손패 5장 버림 더미로");
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
     // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
     private sealed class ChainTable
     {
@@ -498,6 +588,15 @@ public static class MultiTest
         public void At(double seconds) => _now = seconds;
         public IReadOnlyList<GameEvent> Tick() => Server.Tick();
         public int Hp(int actor) => ((PlayerState)_players[actor]).Hp;
+        public void SetHp(int actor, int hp) => ((PlayerState)_players[actor]).Hp = hp;
+        public int HandCount(int actor) => ((PlayerState)_players[actor]).Hand.Count;
+
+        // 덱 · 버림 더미를 모두 비운다 (빈 덱 피해 시험)
+        public void EmptyDeck()
+        {
+            ((List<Card>)typeof(GameServer).GetField(ServerDeckListField, Private).GetValue(Server)).Clear();
+            ((List<Card>)typeof(GameServer).GetField(ServerDiscardField, Private).GetValue(Server)).Clear();
+        }
         public int DiscardCount => ((List<Card>)typeof(GameServer).GetField(ServerDiscardField, Private).GetValue(Server)).Count;
 
         public IReadOnlyList<GameEvent> Play(int actor, int kind, int? target) => Server.PlayCard(actor, Find(actor, kind), target.HasValue ? new[] { target.Value } : new int[0]);

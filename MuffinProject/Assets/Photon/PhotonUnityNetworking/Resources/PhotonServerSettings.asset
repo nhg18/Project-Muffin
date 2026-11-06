@@ -68,6 +68,10 @@ MonoBehaviour:
   - RPC_OnCardResolved
   - RPC_OnReactionStarted
   - RPC_RequestPlayCounter
+  - RPC_OnDeathPending
+  - RPC_OnEmptyDeckDamaged
+  - RPC_OnPlayerDied
+  - RPC_OnPlayerLeftGame
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
