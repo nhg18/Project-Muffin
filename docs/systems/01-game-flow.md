@@ -55,8 +55,8 @@
 
 > 방(Room)에서 나가면 `LobbyScene` 으로 돌아간다.
 
-> **UI 흐름 도식**: [`docs/diagrams/ui-flow.html`](../diagrams/ui-flow.html) (브라우저에서 열기) · 온라인: https://claude.ai/artifact/Dm6eTgxoUYTuNQHKt18Ggi (공유 설정 필요).
-> 원본은 [`ui-flow.workflow.json`](../diagrams/ui-flow.workflow.json) — 흐름이 바뀌면 원본을 고치고 `archify deliver` 로 다시 만든다.
+> **UI 흐름 도식**: 아티팩트 「UI 흐름」 https://claude.ai/artifact/Dm6eTgxoUYTuNQHKt18Ggi (공유 설정 필요). HTML 은 저장소에 두지 않는다.
+> 원본은 [`ui-flow.workflow.json`](../diagrams/ui-flow.workflow.json) — 흐름이 바뀌면 원본을 고치고 `archify deliver`(출력 `Temp/ui-flow.html`, git 제외) → [`build-artifact.mjs`](../diagrams/build-artifact.mjs) 로 변환해 같은 URL 에 다시 올린다.
 
 ### 전역 매니저 (부트스트랩 씬 없음)
 

@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-06 · HTML 은 URL 로만 — UI 흐름 도식 HTML 삭제 (`docs/diagram-url-only`)
+
+### 한 것
+- 사용자 결정: 저장소의 HTML 은 전부 지우고 아티팩트 URL 로만 가리킨다 (#92 의 시안 사본 결정을 도식까지 넓힘).
+- `docs/diagrams/ui-flow.html` 삭제. `01-game-flow` 는 아티팩트 「UI 흐름」 URL 만 가리킨다.
+- 원본 `ui-flow.workflow.json` 은 남기고 archify 출력을 `Temp/ui-flow.html`(git 제외)로, `build-artifact.mjs` 는 입력 · 출력 경로를 인자로 받게 바꿈.
+- 확인: `develop` 에 남은 `.html` 0개. #92 이전에 갈라진 원격 브랜치 6개에 옛 `docs/mockups/ingame.html` 이 있지만 어느 브랜치도 고치지 않아 머지해도 되살아나지 않는다.
+
+---
+
 ## 2026-11-06 · 인게임 화면 새 시안 → 10-ui 명세 · Unity 스프라이트 (`feature/ingame-ui-sprites`)
 
 ### 결정 (사용자)

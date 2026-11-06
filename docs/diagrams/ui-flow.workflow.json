@@ -3,7 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "찹츄 UI 흐름 — 타이틀 · 로비 · 방 · 인게임",
-    "output": "docs/diagrams/ui-flow.html",
+    "output": "Temp/ui-flow.html",
     "quality_profile": "showcase",
     "views": [
       {
