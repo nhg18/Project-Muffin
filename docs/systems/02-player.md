@@ -1,7 +1,8 @@
 # 02. 플레이어 · 좌석
 
-**최종 수정일**: 2026-10-30
+**최종 수정일**: 2026-11-06
 **분류**: Core
+**봇**: 이 문서의 「플레이어」 는 봇([`18-bot.md`](18-bot.md)) 을 포함한다. 봇은 `actorNumber` 대신 방장이 부여하는 식별자를 가지며, 나머지 속성 · 공개 범위는 같다.
 
 ---
 
@@ -35,7 +36,7 @@
 ### 규칙 (확정)
 
 1. 자신은 **항상 0번 자리**(화면 하단)에 배치한다. 모든 클라이언트에서 동일하게 동작한다.
-2. 나머지 플레이어는 `actorNumber` 오름차순으로 정렬해 배치한다.
+2. 나머지 플레이어는 `actorNumber` 오름차순으로 정렬해 배치한다. 봇은 **사람 뒤에 봇 번호 순** (제안, `18-bot` 8-3).
 
 | 인원 | 배치 (인덱스) |
 | --- | --- |
@@ -49,7 +50,7 @@
 * 같은 입력(내 actorNumber + 참가자 목록)이면 항상 같은 결과가 나와야 한다.
 * 좌석 계산은 **한 곳에서만** 수행하고, 손패 UI와 플레이어 정보 UI가 그 결과를 공유한다.
 
-> ⚠ 계산 함수는 `SeatManager.GetSeatAssignments` 하나지만, `SeatManager` 와 `HandSeatManager` 가 각자 `Start()` 에서 호출한다 (이중 호출).
+> 계산은 `OpponentSeatsPresenter`(GameScene 의 OpponentSeats) 한 곳 — `GetOpponentSeatIndices` + actorNumber 오름차순. 상대 손패 부채꼴 등은 이 결과를 받아 쓴다 (2026-11-03). 옛 `SeatManager` · `HandSeatManager` 이중 호출은 사라짐.
 
 ---
 
