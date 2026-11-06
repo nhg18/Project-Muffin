@@ -20,5 +20,22 @@ namespace Chapchu.Game
 
         /// <summary>게임에 남은 사람 (턴 순서대로).</summary>
         internal IEnumerable<int> ActorsInGame => _turnOrder.Where(IsInGame);
+
+        /// <summary>체인 맨 위 카드. 없으면 null.</summary>
+        internal ChainEntry ChainTop => _chain.Count > 0 ? _chain[_chain.Count - 1] : null;
+
+        /// <summary>반응 시간이 열리는 시각 — 카드가 체인에 오를 때마다 바뀐다 (그 반응 창을 알아보는 값).</summary>
+        internal double ReactionOpensAt => _reactionOpensAt;
+
+        internal bool IsReactionOpen(double now) => _chain.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
+
+        internal bool IsTrapWindowOpenAt(double now) => IsTrapWindowOpen && now >= _trapWindowOpensAt;
+
+        internal double TrapWindowOpensAt => _trapWindowOpensAt;
+
+        /// <summary>직전 체인에서 다른 사람에게 피해를 받아 「피해 받은 후」 함정을 낼 수 있다.</summary>
+        internal bool WasDamagedByOther(int actor) => _damagedBy.ContainsKey(actor);
+
+        internal double DeathDeadline => _deathDeadline;
     }
 }

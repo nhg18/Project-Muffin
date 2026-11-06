@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-11-06 · 봇 1 · 2단계 — 추가 · 제거 · 혼자 하기 · 뽑기 · 공격 · 찹츄 · 카운터 · 함정 (8B, `feature/bot` ← `feature/trap` + develop)
+
+### 결정 (PM)
+- `18-bot` 0절 제안 #3 ~ #14 **승인** — 문서의 「제안」 을 확정으로 바꿈.
+- 구현 중 정한 것: 봇 식별자 = **1000 + 번호**, 봇 공개 값 = 방 속성 「키#식별자」. 찹츄 상태인 봇은 함정을 설치하지 않는다(설치하면 9장이 되어 찹츄가 깨진다 — 7-1 #1 문구 수정).
+
+### 한 것
+- develop(#89 게임 화면 · #91 봇 기획 · #94 스프라이트) 을 합침 — 충돌 2 (development-plan 결정 표 · worklog). 합친 상태로 rules · full 2 통과. `GameServer.ChapchuHandCount` 를 public (#89 리뷰 요청).
+- 네트워크: `BotRoster`(번호 · 식별자 · 닉네임 「봇 N」 · 공개 값 읽기 `TryGetPublic`), `NetworkManager.AddBot` · `RemoveBot`(방장 · 시작 전, 정원 −1 · +1, 빈 가장 작은 번호) · `CreateSoloRoom`(봇 3 · 비공개 · 정원 1), `RoomEvents.OnBotsChanged`. 게임이 끝나 방을 다시 열 때 혼자 하기 방은 비공개 그대로.
+- `RoomPresenter.CanStartGame` 이 봇을 포함 (UI 파일 한 줄 — 시작 버튼 조건).
+- 규칙: `Game/Bots/BotDriver` — 방장 기기에서만, 사람과 같은 요청 메서드로. 1단계 7-1 우선순위 9줄 · 7-2 대상 정렬 · 7-5 찹츄 즉시 · 생각 2 ~ 4초 · 요청 3회. 2단계 7-4: 턴 시작에 함정 설치, 나를 노린 카드에 카운터(없으면 「카드 반응」 함정), 맞은 뒤 함정 시간에 반격, 사망 대기면 사망 관련 함정, 조건 맞는 상태 함정 — 창이 열리고 1 ~ 3초 뒤 한 번. 행동마다 `[BotDriver] P1001 7-1 #7 공격 → …` 한 줄.
+- 효과가 봇 묶음을 안다: `CardEffect.BotRole` (Damage → 공격). 회복 · 손패 변동 효과는 기능 9 에서 자기 묶음을 정한다.
+- `PunGameServer`: 참가자 = 사람 + 봇, 봇의 공개 값은 방 속성에, 봇 손패 · 함정 내용은 아무에게도 보내지 않는다(봇은 Player 가 없어 `SendTo` 가 건너뜀).
+- `multi-test`: rules 에 Bot 시나리오 (봇 4 · 5판 끝까지 · 찹츄 · 카운터 · 함정), **`solo`** 시나리오.
+- 확인: `rules` 통과 — 봇끼리 5판 모두 끝(가장 긴 판 59턴, 이유 376줄 · 카운터 38 · 함정 33). `solo 30` 통과 — 혼자 하기 → 봇 3 · 정원 1 · 비공개 → 봇 2 제거(정원 2) → 추가(번호 2 재사용) → 한 판 끝(봇이 카운터도 냄) → 방 복귀 뒤 봇 3 · 비공개 그대로, 콘솔 에러 0. `multi 2 4` 통과(회귀).
+- **확인 못 한 것**: 거절 3회 상한 — 봇이 요청 전에 걸러 거절을 일부러 만들 수 없어 시험하지 못했다. 봇이 든 방에 사람 2명 이상(클론)으로는 돌려 보지 않았다.
+
+### 다음 할 일 (게임 화면 · 방 화면 — UI)
+- [ ] **봇 좌석이 화면에 안 나온다** — `OpponentSeatsPresenter` 가 `PhotonNetwork.PlayerList` 만 본다. 상대 = 사람(번호순) + `BotRoster.Actors`, 닉네임 `BotRoster.NicknameOf` + 「(봇)」, 늦게 열린 화면의 값은 `BotRoster.TryGetPublic`
+- [ ] 방 화면: 빈 칸 「봇 추가」 · 봇 칸 「제거」(방장 · 시작 전) → `NetworkManager.AddBot` · `RemoveBot`, `RoomEvents.OnBotsChanged` 로 칸 · 로그 「봇 N 추가 · 제거」, 인원 표시에 봇 포함 (`BotRoster.MemberCount`)
+- [ ] 로비 「혼자 하기」 버튼 → `NetworkManager.CreateSoloRoom` (14-lobby-ui 5절)
+- [ ] `MyPanelPresenter.ChapchuHandCount` → `GameServer.ChapchuHandCount`
+
+---
+
 ## 2026-11-06 · 함정 설치 · 발동 · 함정 시간 (기능 6, `feature/trap` ← `feature/chapchu-win`)
 
 ### 결정 (PM)

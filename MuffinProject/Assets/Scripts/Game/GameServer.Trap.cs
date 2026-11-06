@@ -7,7 +7,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (04-card.md 2절) · 2026-11-06 PM 확정 (함정 시간 5초).
-        private const int TrapSlotCount = 3;
+        internal const int TrapSlotCount = 3;
         private const double TrapWindowTime = 5;
 
         // 「피해 받은 후」 조건 — 피해를 받은 사람 → 마지막으로 피해를 준 사람. 체인 처리 뒤 함정 시간이 끝나면 비운다.
