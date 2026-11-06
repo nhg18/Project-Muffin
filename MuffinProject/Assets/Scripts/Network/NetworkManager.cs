@@ -100,6 +100,15 @@ namespace Chapchu.Network
         /// <param name="isOpen">공개 비공개 여부</param>
         public void UpdateRoomOptions(bool isVisible, bool isOpen) => _room.UpdateRoomOptions(isVisible, isOpen);
 
+        /// <summary>「혼자 하기」 — 봇 3 이 든 방 생성 (18-bot.md 10절). 입장은 OnJoinedRoom 으로 알린다.</summary>
+        public void CreateSoloRoom() => _room.CreateSoloRoom();
+
+        /// <summary>봇 추가 — 방장 · 시작 전 · 빈 칸 (18-bot.md 5절). 못 하면 false. 결과는 RoomEvents.OnBotsChanged.</summary>
+        public bool AddBot() => _room.AddBot();
+
+        /// <summary>봇 제거 — 방장 · 시작 전. 봇 번호(1 ~ 3)를 받는다. 못 하면 false.</summary>
+        public bool RemoveBot(int botNumber) => _room.RemoveBot(botNumber);
+
         #endregion
 
         #region Connect Timeout
@@ -155,6 +164,8 @@ namespace Chapchu.Network
         public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);
     
         public override void OnRoomListUpdate(List<RoomInfo> roomList) => _room.OnRoomListUpdate(roomList);
+
+        public override void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged) => _room.OnRoomPropertiesUpdate(propertiesThatChanged);
 
         #endregion
     }

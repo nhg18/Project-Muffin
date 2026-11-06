@@ -6,6 +6,7 @@ using System.Text;
 using Chapchu.Cards;
 using Chapchu.DebugTools;
 using Chapchu.Game;
+using Chapchu.Game.Bots;
 using Chapchu.Game.Effects;
 using Chapchu.Network;
 using Chapchu.UI.Lobby;
@@ -263,6 +264,37 @@ public static class MultiTest
         server.RequestActivateTrap(traps[0], new int[0]);
         return "OK P" + me + " 함정 시간에 함정 발동";
     }
+
+    /// <summary>디버그 로비에서 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 비공개 방을 만든다. 방 화면 이동은 DebugScript 가 한다.</summary>
+    public static string Solo()
+    {
+        if (Object.FindFirstObjectByType<DebugScript>() == null)
+            return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer)
+            return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
+
+        NetworkManager.Instance.CreateSoloRoom();
+        return "OK 혼자 하기 요청";
+    }
+
+    /// <summary>방의 봇 목록 · 정원 · 공개 여부가 기대와 같을 때까지 WAIT. bots = "1,2,3" 처럼.</summary>
+    public static string ExpectBots(string bots, string maxPlayers, string visible)
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        string now = string.Join(",", BotRoster.Numbers);
+        string state = "봇 [" + now + "] · 정원 " + PhotonNetwork.CurrentRoom.MaxPlayers + " · 공개 " + PhotonNetwork.CurrentRoom.IsVisible + " · 열림 " + PhotonNetwork.CurrentRoom.IsOpen;
+        if (now != bots || PhotonNetwork.CurrentRoom.MaxPlayers.ToString() != maxPlayers || PhotonNetwork.CurrentRoom.IsVisible.ToString() != visible)
+            return "WAIT " + state;
+
+        return "OK " + state;
+    }
+
+    public static string RemoveBot(string number) => NetworkManager.Instance.RemoveBot(int.Parse(number)) ? "OK 봇 " + number + " 제거 요청" : "FAIL 봇 제거 안 됨";
+
+    public static string AddBot() => NetworkManager.Instance.AddBot() ? "OK 봇 추가 요청" : "FAIL 봇 추가 안 됨";
 
     /// <summary>방장의 규칙 원본에서 모두의 체력을 hp 로 — 한 판을 빨리 끝내 보는 full 시나리오용. 화면 값은 다음 HpChanged 부터 맞는다.</summary>
     public static string SetAllHp(string hp)
@@ -835,6 +867,101 @@ public static class MultiTest
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
+    /// <summary>
+    /// 규칙 계층의 봇 (18-bot.md 7절). ① 봇끼리 기본 덱으로 여러 판을 끝까지 ② 찹츄 즉시 선언 ③ 나를 노린 카드에 카운터 ④ 맞은 뒤 함정. (거절 3회 상한은 봇이 미리 걸러 거절을 일부러 만들 수 없어 시험하지 않는다)
+    /// 시계는 0.1초씩 직접 움직인다.
+    /// </summary>
+    public static string Bot()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        // ① 봇 4 — 기본 덱(카운터 · 함정 포함)으로 5판. 끝까지 가고, 매 판 이유 로그가 남는다
+        DeckData deck = FindDeck();
+        int finished = 0, lines = 0, counters = 0, traps = 0, longest = 0;
+        string sample = "";
+        for (int game = 0; game < 5; game++)
+        {
+            double now = 0;
+            var server = new GameServer(new System.Random(game), () => now);
+            int[] actors = { 1001, 1002, 1003, 1004 };
+            server.StartGame(actors, deck.CreateCards());
+            var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(server);
+            foreach (PlayerState state in states.Values)
+                state.Hp = 40;
+
+            var driver = new BotDriver(server, actors, new System.Random(game + 100), () => now);
+            int turns = 0;
+            while (!server.IsGameOver && now < 3000)
+            {
+                now += 0.1;
+                turns += server.Tick().OfType<TurnStarted>().Count();
+                turns += driver.Tick().OfType<TurnStarted>().Count();
+                foreach (string log in driver.TakeLogs())
+                {
+                    lines++;
+                    if (log.Contains("카운터 →")) counters++;
+                    if (log.Contains("함정") && log.Contains("#") && !log.Contains("설치")) traps++;
+                    if (sample.Length < 400) sample += "      " + log + "\n";
+                }
+            }
+
+            if (server.IsGameOver)
+                finished++;
+            longest = Math.Max(longest, turns);
+        }
+        Check(finished == 5, $"봇 4 · 5판 모두 끝까지 ({finished}/5, 가장 긴 판 {longest}턴)");
+        Check(lines > 0, $"행동 이유 로그 {lines}줄 · 카운터 {counters} · 함정 발동 {traps}");
+        sb.Append(sample);
+
+        // ② 찹츄 — 손패가 10장이 되면 남의 턴에도 즉시 선언
+        {
+            var t = new ChainTable();
+            var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => 0);
+            t.SetHandSize(t.O1, 10);
+            Check(driver.Tick().OfType<ChapchuChanged>().Any(e => e.Actor == t.O1 && e.IsChapchu), "손패 10장 → 즉시 찹츄 선언 (남의 턴)");
+        }
+
+        // ③ 카운터 — 나를 노린 카드에 1 ~ 3초 뒤. 남끼리의 카드에는 내지 않는다
+        {
+            double now = 0;
+            var t = new ChainTable(() => now);
+            var driver = new BotDriver(t.Server, new[] { t.O1, t.O2 }, new System.Random(1), () => now);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            var events = new List<GameEvent>();
+            for (now = 0; now < ChainTable.Reveal + 4.9; now += 0.1)
+                events.AddRange(driver.Tick());
+            CardPlayed counter = events.OfType<CardPlayed>().FirstOrDefault();
+            Check(counter != null && counter.Actor == t.O1, "나(O1)를 노린 카드 → O1 이 카운터");
+            Check(counter != null && events.OfType<CardPlayed>().Count() == 1, "남(O2)은 끼지 않는다 · 한 창에 한 번");
+        }
+
+        // ④ 함정 — 맞은 뒤 함정 시간에 발동
+        {
+            double now = 0;
+            var t = new ChainTable(() => now);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            ((PlayerState)t.States[t.O1]).Hand.RemoveAll(c => c.Type == CardType.Counter); // 카운터 없이 맞게
+            var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            var events = new List<GameEvent>();
+            for (now = 0; now < 30; now += 0.1)
+            {
+                events.AddRange(t.Tick());
+                events.AddRange(driver.Tick());
+            }
+            TrapActivated trap = events.OfType<TrapActivated>().FirstOrDefault();
+            Check(trap != null && trap.Actor == t.O1 && trap.Targets.SequenceEqual(new[] { t.Turn }) && t.Hp(t.Turn) == 90, "맞은 뒤 함정 시간에 반격 (♥90)");
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
     // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
     private sealed class ChainTable
     {
@@ -849,9 +976,16 @@ public static class MultiTest
         private double _now;
         private int _nextInstance = 1000;
 
-        public ChainTable()
+        public System.Collections.IDictionary States => _players;
+
+        public ChainTable() : this(null)
         {
-            Server = new GameServer(new System.Random(1), () => _now);
+        }
+
+        // clock 을 주면 그 시계를 쓴다 (봇 시험처럼 밖에서 시간을 돌릴 때). 그때 At() 은 쓰지 않는다
+        public ChainTable(Func<double> clock)
+        {
+            Server = new GameServer(new System.Random(1), clock ?? (() => _now));
             int[] actors = { 1, 2, 3 };
             var deck = Enumerable.Range(1, 30).Select(i => MakeCard(i, Hit)).ToList();
             Server.StartGame(actors, deck);
@@ -960,9 +1094,10 @@ public static class MultiTest
         return true;
     }
 
+    // 사람 + 봇 중 내 다음 (봇은 사람 뒤 — 02-player.md 3절). 사망한 사람은 거르지 않는다 — 거절되면 다음 턴에 다시
     private static int NextActor(int me)
     {
-        int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(a => a).ToArray();
+        int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(a => a).Concat(BotRoster.Actors).ToArray();
         return actors[(Array.IndexOf(actors, me) + 1) % actors.Length];
     }
 

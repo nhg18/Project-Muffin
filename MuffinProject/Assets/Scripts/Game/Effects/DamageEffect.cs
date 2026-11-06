@@ -9,6 +9,9 @@ namespace Chapchu.Game.Effects
         public EffectSubject subject;
         public int amount;
 
+        // 대상에게 주는 피해만 공격이다 — 나에게 주는 피해(A12)는 아니다
+        internal override Bots.BotRole BotRole => subject == EffectSubject.Target ? Bots.BotRole.Attack : Bots.BotRole.None;
+
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))

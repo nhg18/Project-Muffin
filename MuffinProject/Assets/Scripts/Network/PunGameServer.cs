@@ -4,6 +4,7 @@ using System.Linq;
 using Chapchu.Cards;
 using Chapchu.Core;
 using Chapchu.Game;
+using Chapchu.Game.Bots;
 using Chapchu.Network.Events;
 using Photon.Pun;
 using Photon.Realtime;
@@ -37,6 +38,7 @@ namespace Chapchu.Network
         [Min(0)] [SerializeField] private float resultSeconds = 5f;
 
         private GameServer _server; // 모든 클라가 만들지만 방장에서만 쓰인다
+        private BotDriver _bots;    // 봇의 판단 — 방장에서만 (18-bot.md 3절 #1). 봇이 없으면 null
 
         /// <summary>이번 게임의 덱 — 카드 ID 로 카드 정의를 찾는 사전으로도 쓴다 (DeckData.GetCard).</summary>
         public DeckData Deck => deck;
@@ -55,7 +57,9 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient)
                 return;
 
-            int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).ToArray();
+            // 봇도 플레이어다 — 사람 뒤에 봇 번호 순으로 넣고, 턴 순서는 규칙이 섞는다 (18-bot.md 3절 #6)
+            int[] bots = BotRoster.Actors;
+            int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).Concat(bots).ToArray();
             List<Card> cards = deck.CreateCards();
             Debug.Log($"[{nameof(PunGameServer)}] 게임 시작 — 참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {cards.Count}장");
 
@@ -64,14 +68,34 @@ namespace Chapchu.Network
             foreach (Player player in PhotonNetwork.PlayerList)
                 player.SetCustomProperties(reset);
 
+            var botReset = new Hashtable();
+            foreach (int bot in bots)
+            {
+                foreach (DictionaryEntry entry in reset)
+                    botReset[BotRoster.PropKey((string)entry.Key, bot)] = entry.Value;
+            }
+            if (botReset.Count > 0)
+                PhotonNetwork.CurrentRoom.SetCustomProperties(botReset);
+
+            if (bots.Length > 0)
+                _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time);
+
             Send(_server.StartGame(actors, cards));
         }
 
-        // 턴 마감 판정은 방장만 한다 (09-network.md 8절).
+        // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
         private void Update()
         {
-            if (PhotonNetwork.IsMasterClient)
-                Send(_server.Tick());
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+
+            Send(_server.Tick());
+            if (_bots == null)
+                return;
+
+            Send(_bots.Tick());
+            foreach (string reason in _bots.TakeLogs())
+                Debug.Log($"[{nameof(BotDriver)}] {reason}");
         }
 
         #region 요청 (각 클라 → 방장)
@@ -271,11 +295,24 @@ namespace Chapchu.Network
                 }
             }
 
+            // 봇은 접속자가 아니라 Player 속성이 없다 — 봇의 공개 값은 방 속성에 같은 키 + #식별자로 (18-bot.md 9절)
+            foreach (KeyValuePair<int, Hashtable> pair in playerProps)
+            {
+                if (!BotRoster.IsBot(pair.Key))
+                    continue;
+
+                foreach (DictionaryEntry entry in pair.Value)
+                    roomProps[BotRoster.PropKey((string)entry.Key, pair.Key)] = entry.Value;
+            }
+
             if (roomProps.Count > 0)
                 PhotonNetwork.CurrentRoom.SetCustomProperties(roomProps);
 
             foreach (KeyValuePair<int, Hashtable> pair in playerProps)
-                PhotonNetwork.CurrentRoom.GetPlayer(pair.Key)?.SetCustomProperties(pair.Value);
+            {
+                if (!BotRoster.IsBot(pair.Key))
+                    PhotonNetwork.CurrentRoom.GetPlayer(pair.Key)?.SetCustomProperties(pair.Value);
+            }
         }
 
         // 결과 표시 시간 뒤 방을 다시 열고 전원을 방 씬으로 (08-room.md 4절). 다음 판은 방에서 다시 시작한다.
@@ -285,7 +322,7 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
                 yield break;
 
-            NetworkManager.Instance.UpdateRoomOptions(isVisible: true, isOpen: true);
+            NetworkManager.Instance.UpdateRoomOptions(isVisible: !BotRoster.IsSoloRoom, isOpen: true); // 「혼자 하기」 방은 비공개 그대로 (18-bot.md 10절)
             PhotonNetwork.LoadLevel(ScenePaths.Room);
         }
 

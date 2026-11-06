@@ -108,8 +108,8 @@ namespace Chapchu.UI.RoomScreen
             SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
         }
 
-        // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음)
-        private static bool CanStartGame() => PhotonNetwork.CurrentRoom.PlayerCount >= NetworkManager.MinPlayers;
+        // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절)
+        private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers;
 
         private void Refresh()
         {

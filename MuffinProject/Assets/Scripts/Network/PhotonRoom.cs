@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -11,6 +12,8 @@ namespace Chapchu.Network
     /// <summary>방 만들기 · 입장 · 나가기 요청과 그 콜백 (08-room.md). NetworkManager 가 갖고 있고, 결과는 RoomEvents 로 알린다.</summary>
     public class PhotonRoom
     {
+        private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+
         public void JoinRoom(string roomName)
         {
             if (!PhotonConnection.ValidConnect) return;
@@ -37,11 +40,74 @@ namespace Chapchu.Network
         public void CreateRoom()
         {
             if (!PhotonConnection.ValidConnect) return;
-            
+
+            _creatingSolo = false;
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             string code = RandomCode.GenerateRandomCode();
-        
+
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 방을 만든다. 랜덤 매칭에서 빠지고(비공개) 코드 입장은 된다.
+        /// 봇 3 이면 정원이 1 이라 가득 찬다. 자동 시작하지 않는다.
+        /// </summary>
+        public void CreateSoloRoom()
+        {
+            if (!PhotonConnection.ValidConnect) return;
+
+            _creatingSolo = true;
+            int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers - bots.Length, false, true);
+            options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.Bots] = bots, [RoomProps.Solo] = true };
+            string code = RandomCode.GenerateRandomCode();
+
+            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 봇 추가 (18-bot.md 5절). 방장 · 게임 시작 전 · 봇 3 미만 · 빈 칸이 있을 때. 번호는 비어 있는 가장 작은 번호.
+        /// 봇 1 당 사람 정원을 1 줄여 봇 자리에 사람이 들어오지 못하게 한다 (3절 #8). 결과는 RoomEvents.OnBotsChanged.
+        /// </summary>
+        public bool AddBot()
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = BotRoster.Numbers;
+            if (numbers.Length >= BotRoster.MaxBots || BotRoster.MemberCount >= NetworkManager.MaxPlayers)
+                return false;
+
+            int number = 1;
+            while (numbers.Contains(number))
+                number++;
+
+            SetBots(numbers.Append(number).OrderBy(n => n).ToArray());
+            return true;
+        }
+
+        /// <summary>봇 제거 (18-bot.md 5절). 방장 · 게임 시작 전. 자리가 다시 열린다.</summary>
+        public bool RemoveBot(int number)
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = BotRoster.Numbers;
+            if (!numbers.Contains(number))
+                return false;
+
+            SetBots(numbers.Where(n => n != number).ToArray());
+            return true;
+        }
+
+        // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절)
+        private static bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.IsOpen;
+
+        private static void SetBots(int[] numbers)
+        {
+            Room room = PhotonNetwork.CurrentRoom;
+            room.MaxPlayers = NetworkManager.MaxPlayers - numbers.Length;
+            room.SetCustomProperties(BotRoster.BotsTable(numbers));
         }
     
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen)
@@ -85,7 +151,10 @@ namespace Chapchu.Network
             {
                 // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
                 case 32766:
-                    CreateRoom();
+                    if (_creatingSolo)
+                        CreateSoloRoom();
+                    else
+                        CreateRoom();
                     return;
             }
             RoomEvents.RaiseCreateRoomFailed(returnCode, message);
@@ -138,6 +207,12 @@ namespace Chapchu.Network
         public void OnPlayerLeft(Player player)
         {
             RoomEvents.RaisePlayerLeft(player);
+        }
+
+        public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changed)
+        {
+            if (changed.ContainsKey(RoomProps.Bots))
+                RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
         }
 
         public void OnRoomListUpdate(List<RoomInfo> roomList)

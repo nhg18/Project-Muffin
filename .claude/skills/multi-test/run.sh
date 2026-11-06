@@ -5,6 +5,7 @@
 #   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 · 방 복귀
+#   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -208,7 +209,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'
@@ -312,6 +313,53 @@ run_full() {
     done
 }
 
+# 사람 1 + 봇 3 (18-bot.md 10절): 혼자 하기 → 봇 제거 · 다시 추가 → 시작 → 체력을 낮춰 한 판 끝까지 → 방 복귀 (봇 그대로 · 비공개 그대로)
+run_solo() {
+    local hp="${1:-30}" out ended=0 line bots
+    EDITORS=("$MAIN")
+    log "▶ 준비 — 메인 혼자"
+    prepare "$LOBBY_SCENE"
+
+    log "▶ 혼자 하기 → 방 (봇 3 · 정원 1 · 비공개)"
+    until_ok "$MAIN" Solo || return
+    wait_scene RoomScene || return
+    until_ok "$MAIN" ExpectBots "1,2,3" 1 False || return
+    until_ok "$MAIN" RemoveBot 2 || return
+    until_ok "$MAIN" ExpectBots "1,3" 2 False || return
+    until_ok "$MAIN" AddBot || return
+    until_ok "$MAIN" ExpectBots "1,2,3" 1 False || return   # 비어 있는 가장 작은 번호(2)를 다시 쓴다
+    until_ok "$MAIN" StartGame 1 || return
+    wait_scene GameScene || return
+    sleep 2
+    until_ok "$MAIN" SetAllHp "$hp" || return
+
+    log "▶ 한 판 끝까지 — 봇은 방장 기기에서 스스로, 사람은 차례에 행동"
+    for _ in $(seq 1 240); do
+        out=$(call "$MAIN" ActIfMyTurn)
+        case "$out" in
+            OK*)   log "  $out" ;;
+            FAIL*) fail "$out"; return ;;
+            *"게임 끝"*) ended=1; break ;;
+        esac
+        out=$(call "$MAIN" TrapProbe)
+        case "$out" in OK*) log "  $out" ;; esac
+        sleep 1
+    done
+    [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
+
+    log "▶ 판정"
+    line=$(console_lines "$MAIN" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+    bots=$(console_lines "$MAIN" | grep -c '\[BotDriver\]')
+    log "  「${line:-없음}」 · 봇 행동 이유 ${bots}줄 · 사망 $(console_lines "$MAIN" | grep -c '\[GameDebugInput\].* 사망 · 버림')번"
+    console_lines "$MAIN" | grep '\[BotDriver\]' | head -8 | sed -E 's/^[^\t]*\t/      /'
+    [ -n "$line" ] || fail "게임 종료를 받지 못했다"
+    [ "$bots" -ge 3 ] || fail "봇 행동 이유 로그가 적다 (${bots}줄)"
+    if console_lines "$MAIN" | grep '\[BotDriver\]' | grep -q '7-1 #[0-9]'; then log "  봇이 7-1 표로 행동"; else fail "봇의 7-1 행동 줄이 없다"; fi
+    wait_scene RoomScene && log "  결과 표시 뒤 방으로 돌아옴"
+    until_ok "$MAIN" ExpectBots "1,2,3" 1 False && log "  봇 3 그대로 · 혼자 하기 방은 비공개 그대로"
+    check_errors "$MAIN"
+}
+
 run_multi() {
     local clients="${1:-2}" rounds="${2:-4}" project out
     enter_game "$clients" || return
@@ -404,6 +452,7 @@ case "${1:-}" in
     ui)    shift; run_ui ;;
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;
+    solo)  shift; run_solo "$@" ;;
     *)     sed -n '2,9p' "$0"; exit 2 ;;
 esac
 
