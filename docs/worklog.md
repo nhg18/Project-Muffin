@@ -78,7 +78,7 @@
 
 ### 다음 할 일
 - [ ] 사람 확인: 마우스로 호버 · 드래그 · 드롭 · 덱 탭. 기울기 · 자리 수치는 `HandView` · `HandPresenter` Inspector 와 `TableBuilder` 상수
-- [ ] `feature/game-screen-ui3d` 는 `archive/game-screen-ui3d` 태그로 남기고 지운다 (태그 푸시는 사람)
+- [x] `feature/game-screen-ui3d`(캔버스 기울이기) 는 태그 없이 로컬에서 지웠다 — 없던 것으로 (사용자 결정 2026-11-06)
 - [ ] 좌석 이름표 · 상대 손패 · 테이블 판 · `perspective-origin 22%` — 10-ui 2-1 미정 항목을 뽑은 뒤 3D 층으로
 - [ ] 버림 더미 그림(쌓임) · 체인 자리 — 카드 이펙트 2 · 3 · 4단계와 함께
 - [ ] 카드 이펙트 씬(`CardFxTestScene` · `CardFxLabScene`)도 이후 3D 손패 · 카드(`HandView` · `CardView` · `Assets/Prefab/Table`)로 바꾼다. 바꾸거나 그 씬을 더 쓰지 않게 되면, 옛 2D uGUI 카드 · 손패(`HandCardView` · `Assets/Prefab/UI/GameScreen/HandCard_*` · `GameScreenBuilder.EnsureHandCardPrefab` · `Rebuild Hand Card Prefabs` 메뉴)는 지운다 — 지금은 그 씬이 써서 남겨 둔 것 (카드 이펙트 쪽)
