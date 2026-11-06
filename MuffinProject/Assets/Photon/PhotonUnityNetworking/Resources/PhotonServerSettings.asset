@@ -94,6 +94,8 @@ MonoBehaviour:
   - RPC_OnTrapReturned
   - RPC_OnTurnSkipMarked
   - RPC_OnTurnSkipped
+  - RPC_OnMySync
+  - RPC_RequestMySync
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

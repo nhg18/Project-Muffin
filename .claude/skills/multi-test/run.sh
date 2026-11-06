@@ -399,6 +399,13 @@ run_multi() {
     # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 5 + 후처리 1.28초)가 모든 화면에 닿을 때까지
     sleep 10
 
+    log "▶ 내 카드 다시 받기 · 묵은 처리 번호 (09-network.md 5 · 10절)"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" SyncProbe || return
+        until_ok "$project" StaleProbe || return
+    done
+    sleep 3
+
     log "▶ 판정"
     compare_screens
     for project in "${EDITORS[@]}"; do
@@ -445,6 +452,14 @@ compare_screens() {
         total=$((total + count))
     done
     [ "$total" -ge 1 ] && log "  체인 처리 결과 수신 (카드 처리 줄 ${total}개)" || fail "체인 처리 결과(OnCardResolved)를 받지 못했다"
+    for project in "${EDITORS[@]}"; do
+        if console_lines "$project" | grep -q '\[GameDebugInput\].*내 카드 동기화 — 일치'; then
+            log "  $(name_of "$project"): 내 카드 동기화 일치"
+        else
+            fail "$(name_of "$project"): 내 카드 동기화가 일치하지 않거나 오지 않았다"
+            console_lines "$project" | grep '내 카드 동기화' | sed 's/^/      /'
+        fi
+    done
 }
 
 case "${1:-}" in
