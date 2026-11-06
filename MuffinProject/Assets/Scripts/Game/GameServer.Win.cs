@@ -48,10 +48,10 @@ namespace Chapchu.Game
             _events.Add(new ChapchuChanged(actor, value));
         }
 
-        // 처치 승리 · 무승부 (07 3절). 체인 · 사망 대기가 모두 끝난 뒤에만 판정한다.
+        // 처치 승리 · 무승부 (07 3절). 체인 · 함정 시간 · 사망 대기가 모두 끝난 뒤에만 판정한다.
         private void CheckElimination()
         {
-            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsDeathPending)
+            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsTrapWindowOpen || IsDeathPending)
                 return;
 
             int[] remaining = _turnOrder.Where(IsInGame).ToArray();

@@ -19,7 +19,19 @@ namespace Chapchu.Game
         TwoOthers,  // 나를 뺀 2명 고름
         AllOthers,  // 나를 뺀 전원 (자동)
         Self,       // 나 (자동)
-        Everyone    // 나를 포함한 전원 (자동)
+        Everyone,   // 나를 포함한 전원 (자동)
+        TriggerSource // 함정을 발동시킨 사람 — 피해를 준 · 반응한 카드를 낸 플레이어 (자동, 04-card.md 11절)
+    }
+
+    // 함정의 발동 조건 종류 (04-card.md 6절 「발동 시점」). 카드 에셋에는 순서 번호로 저장된다 — 끝에만 추가한다.
+    public enum TrapTrigger
+    {
+        None,             // 함정 아님
+        ReactToCard,      // 체인 맨 위 카드의 종류가 ReactsTo 에 있다 — 반응 시간에 (T03 · T05)
+        AfterDamaged,     // 직전 체인에서 다른 플레이어에게 피해를 받았다 — 함정 시간에 (T06 · T07)
+        HpAtMost,         // 본인 HP 가 TriggerValue 이하 — 언제든 (T02)
+        SelfDeathPending, // 본인이 사망 대기 — 사망 대기 동안 (T01 · T17)
+        ChapchuExists     // 나 아닌 찹츄 상태 플레이어가 있다 — 언제든 (T04)
     }
 
     /// <summary>
@@ -40,8 +52,12 @@ namespace Chapchu.Game
         /// <summary>카드에 적힌 순서대로 실행할 효과들. 비어 있으면 효과 없음.</summary>
         public IReadOnlyList<CardEffect> Effects { get; }
 
-        /// <summary>카운터만: 체인 맨 위 카드가 이 종류일 때 낼 수 있다 (04-card.md 7절). 비어 있으면 어디에도 못 낸다.</summary>
+        /// <summary>카운터 · 「카드 반응」 함정: 체인 맨 위 카드가 이 종류일 때 낼 수 있다 (04-card.md 6 · 7절). 비어 있으면 어디에도 못 낸다.</summary>
         public IReadOnlyList<CardType> ReactsTo { get; }
+
+        /// <summary>함정만: 발동 조건 종류와 그 값 (HpAtMost 의 HP 등, 04-card.md 6절).</summary>
+        public TrapTrigger Trigger { get; }
+        public int TriggerValue { get; }
 
         /// <summary>연출 1 ~ 3 단계 길이(초). 반응 시간이 이만큼 뒤에 열린다 (04-card.md 8절 · 10-ui.md 5-1).</summary>
         public double RevealSeconds { get; }
@@ -50,7 +66,8 @@ namespace Chapchu.Game
         public double ResolveSeconds { get; }
 
         public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects,
-            IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds)
+            IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds,
+            TrapTrigger trigger = TrapTrigger.None, int triggerValue = 0)
         {
             InstanceId = instanceId;
             CardId = cardId;
@@ -60,6 +77,8 @@ namespace Chapchu.Game
             ReactsTo = reactsTo ?? Array.Empty<CardType>();
             RevealSeconds = revealSeconds;
             ResolveSeconds = resolveSeconds;
+            Trigger = trigger;
+            TriggerValue = triggerValue;
         }
 
         // 같음 비교는 InstanceId 만 본다. 손패 · 덱에서 "그 한 장" 을 찾는 기준.

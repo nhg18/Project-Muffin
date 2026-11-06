@@ -14,10 +14,14 @@ namespace Chapchu.Game
 
         private bool IsDeathPending => _deathDeadline >= 0;
 
-        /// <summary>체력을 amount 만큼 줄인다. 카드 효과(Effects/)가 부른다.</summary>
-        internal void DealDamage(int actor, int amount)
+        /// <summary>체력을 amount 만큼 줄인다. 카드 효과(Effects/)가 부른다. source = 피해를 준 사람 (없으면 -1) — 「피해 받은 후」 함정의 조건.</summary>
+        internal void DealDamage(int actor, int amount, int source)
         {
+            if (amount <= 0)
+                return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
+
             SetHp(actor, _players[actor].Hp - amount);
+            RecordDamage(actor, source);
         }
 
         // 체력은 여기서만 바꾼다 — 원본 변경과 일어난 일이 항상 같이 나간다. 0 미만 · 최대치 초과 불가 (06-health.md 2절).
@@ -77,9 +81,11 @@ namespace Chapchu.Game
         // 사망 · 나감 — 손패(와 설치 함정)를 전부 버림 더미로 (06 9절 · 01 6절).
         private void DiscardAll(int actor)
         {
-            List<Card> hand = _players[actor].Hand;
-            _discardPile.AddRange(hand);
-            hand.Clear();
+            PlayerState player = _players[actor];
+            _discardPile.AddRange(player.Hand);
+            _discardPile.AddRange(player.Traps);
+            player.Hand.Clear();
+            player.Traps.Clear();
             OnHandChanged(actor);
         }
     }

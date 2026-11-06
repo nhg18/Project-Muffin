@@ -21,6 +21,9 @@ namespace Chapchu.Game
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 
+            if (IsPaused(_clock()))
+                return Reject(requester, RejectCode.Resolving);
+
             List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)
@@ -43,8 +46,8 @@ namespace Chapchu.Game
         }
 
         // 대상 타입에 맞게 대상을 정한다. 자동 타입은 서버가 정하고, 고르는 타입은 요청을 검사한다. 맞지 않으면 null.
-        // 대상 후보 = 게임에 남은 사람 (사망 상태는 기능 7).
-        private int[] ResolveTargets(int requester, TargetType type, int[] requested)
+        // 대상 후보 = 게임에 남은 사람. source = 발동시킨 사람(TriggerSource) — 없으면 -1.
+        private int[] ResolveTargets(int requester, TargetType type, int[] requested, int source = -1)
         {
             int[] inGame = _turnOrder.Where(IsInGame).ToArray();
             int[] others = inGame.Where(actor => actor != requester).ToArray();
@@ -57,6 +60,7 @@ namespace Chapchu.Game
                 case TargetType.Everyone:  return inGame;
                 case TargetType.OneOther:  return PickOthers(requested, 1, others);
                 case TargetType.TwoOthers: return PickOthers(requested, 2, others);
+                case TargetType.TriggerSource: return source >= 0 && others.Contains(source) ? new[] { source } : null;
                 default:                   return null;
             }
         }

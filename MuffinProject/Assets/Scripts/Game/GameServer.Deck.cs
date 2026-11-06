@@ -23,6 +23,9 @@ namespace Chapchu.Game
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 
+            if (IsPaused(_clock()))
+                return Reject(requester, RejectCode.Resolving);
+
             DrawOne(requester);
             CheckDeathPending(_clock()); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
@@ -69,7 +72,7 @@ namespace Chapchu.Game
                 PlayerState player = _players[actor];
                 player.EmptyDraws++;
                 _events.Add(new EmptyDeckDamaged(actor, player.EmptyDraws));
-                DealDamage(actor, player.EmptyDraws);
+                DealDamage(actor, player.EmptyDraws, -1);
                 return false;
             }
 
