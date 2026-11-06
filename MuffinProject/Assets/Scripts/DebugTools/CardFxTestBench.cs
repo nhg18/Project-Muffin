@@ -271,7 +271,7 @@ namespace Chapchu.DebugTools
                 image.raycastTarget = false;
             }
 
-            CanvasGroup group = card.gameObject.AddComponent<CanvasGroup>();
+            CanvasGroup group = card.GetComponent<CanvasGroup>(); // HandCardView 가 RequireComponent 로 갖고 있다
             group.blocksRaycasts = false;
             return rect;
         }

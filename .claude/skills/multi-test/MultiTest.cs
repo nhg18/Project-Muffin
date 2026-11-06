@@ -106,7 +106,7 @@ public static class MultiTest
         if (debug == null)
             return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
 
-        if (!PhotonNetwork.IsConnectedAndReady)
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer) // NameServer 단계에서 누르면 JoinOrCreateRoom 이 실패한다
             return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
 
         Call(debug, JoinButtonMethod);

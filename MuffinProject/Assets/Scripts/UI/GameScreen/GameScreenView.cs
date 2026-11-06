@@ -10,22 +10,29 @@ namespace Chapchu.UI.GameScreen
     {
         [SerializeField] private RoomCodeView roomCode;
         [SerializeField] private HistoryView history;
+        [Tooltip("좌석 인덱스 1 · 2 · 3 순서 (02-player.md 3절).")]
+        [SerializeField] private OpponentSeatView[] opponentSeats;
         [SerializeField] private MyPanelView myPanel;
         [SerializeField] private DeckView deck;
-        [Tooltip("내 손패가 들어갈 영역. 카드 배치는 이후 작업 (10-ui.md 4절).")]
+        [Tooltip("내 손패가 들어갈 영역 (10-ui.md 2-1 · 4절).")]
         [SerializeField] private RectTransform handArea;
+        [Tooltip("카드를 놓으면 사용 요청이 되는 영역 — 손패 영역 위 전체 (10-ui.md 2-1 「드롭 영역」). 그래픽은 없고 Rect 만 쓴다.")]
+        [SerializeField] private RectTransform dropZone;
         [SerializeField] private VictoryOverlayView victoryOverlay;
 
         public RoomCodeView RoomCode => roomCode;
         public HistoryView History => history;
+        public OpponentSeatView[] OpponentSeats => opponentSeats;
         public MyPanelView MyPanel => myPanel;
         public DeckView Deck => deck;
         public RectTransform HandArea => handArea;
+        public RectTransform DropZone => dropZone;
         public VictoryOverlayView VictoryOverlay => victoryOverlay;
 
         private void Awake()
         {
-            if (roomCode == null || history == null || myPanel == null || deck == null || handArea == null || victoryOverlay == null)
+            if (roomCode == null || history == null || opponentSeats == null || opponentSeats.Length != 3 || myPanel == null || deck == null || handArea == null
+                || dropZone == null || victoryOverlay == null)
                 Debug.LogError($"[{nameof(GameScreenView)}] 영역 뷰 참조 중 비어 있는 것이 있습니다.", this);
         }
     }

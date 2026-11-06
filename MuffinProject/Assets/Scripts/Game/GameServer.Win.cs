@@ -6,8 +6,8 @@ namespace Chapchu.Game
     // GameServer.Win.cs — 찹츄 선언 · 해제 · 승리 판정 · 게임 종료 (07-win-condition.md)
     public partial class GameServer
     {
-        // 확정 (07-win-condition.md 4.1).
-        private const int ChapchuHandCount = 10;
+        /// <summary>찹츄 선언 장수 — 정확히 10장 (07-win-condition.md 4.1 확정). 화면의 찹츄 버튼도 이 값을 쓴다.</summary>
+        public const int ChapchuHandCount = 10;
 
         private bool _gameOver;
         private bool _judgesElimination; // 혼자 시작한 게임(개발용)은 처치 승리를 판정하지 않는다 (07 3절 제안)
