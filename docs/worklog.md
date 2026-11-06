@@ -1,4 +1,4 @@
-# 작업 기록
+﻿# 작업 기록
 
 세션이 끝날 때 **한 것 · 결정 · 다음 할 일**을 남긴다. 최신 항목이 위. 이전 기록은 git 이력(`c67a110` 이전).
 
@@ -20,6 +20,113 @@
 - [ ] 노션 「봇 상대 (예정 · 미확정)」 머리 callout 을 「저장소 18-bot.md 가 기준」 으로 바꾸기 — 이 세션에서 시도했으나 권한 거부로 못 함. 「개발 기획서」 목차의 「18 (예약) 봇 상대 … 미정」 줄도 같이
 - [ ] 승인 뒤 `09-network` 3절 권한 표에 봇 공개 값 행 · `14-lobby-ui` 에 「혼자 하기」 버튼
 - [ ] 기능 8B 날짜 — 12/26 전으로 `development-plan` 에서 잡기
+
+---
+
+## 2026-11-06 · PR #89(인게임 화면) 리뷰 · develop 머지
+
+### 한 것
+- `feature/game-screen` 에 develop 을 합쳐 충돌 4곳을 풀고 #89 를 머지 (`f0d35df`).
+  - `HandPresenter` · `RejectToastPresenter`: `using` 줄만 겹침. `10-ui` 좌석 슬롯 「캐릭터」 줄: 보류 · 부채꼴 구현 + 2-2 제안 문구 둘 다. `worklog`: 양쪽 항목을 날짜순으로.
+  - `CardFxTestBench`: 손패 카드 프리팹에 `CanvasGroup` 이 생겨(`HandCardView` 의 `RequireComponent`) `AddComponent` → `GetComponent`.
+- `10-ui` 6절에 「선택 중 턴 종료」 **미정** 줄 추가.
+- **확인 못 함**: 열린 에디터가 다른 작업 브랜치라 머지 결과를 컴파일 · 실행하지 못했다. #89 자체는 작성자가 `multi 2` 통과.
+
+### PM 결정 필요
+1. **문서 확정** — #89 가 작성자 세션 결정으로 바꾼 것
+   - [ ] `10-ui` 4절 「드롭 성공」에서 **로컬 조건 검사를 뺐다** — 놓으면 바로 요청, 방장이 거절하면 토스트
+   - [ ] `10-ui` 6절 대상 선택 강조 = 좌석 **파란 외곽선** — 「확정 (2026-11-05, 임시)」를 확정 / 임시 중 하나로
+   - [ ] `10-ui` 2-1 드롭 영역 = 손패 영역 위쪽 화면 전체(아래 364 위)
+   - [ ] `10-ui` 2-1 손패 수치 — 내려간 상태 위 100 · 올리기 0.3초 · 호버 1.3배 · 위로 40 · 0.12초
+   - [ ] `10-ui` 2-1 내 패널 턴 태그 — 남의 턴 `상대 턴!` 파랑, 남은 초는 내 턴에만
+   - [ ] `04-card` 13절 드롭 영역 강조 **보류**
+   - [ ] `02-player` 3절 좌석 계산 = `OpponentSeatsPresenter` 한 곳
+   - [ ] `CODE_CONVENTION` 9절 연출 큐 규칙(큐 하나만 `GameEvents` 구독, 영역은 `Show*` · `*Routine`)
+   - [ ] 문서 정리: `10-ui` 좌석 슬롯 메모의 「대상 선택 탭은 **보류**」 지우기(6절에서 구현됨) · `CODE_CONVENTION` 9절 「큐를 타지 않는 것」에 퇴장(`RoomEvents.OnPlayerLeft`) 추가
+2. **기획**
+   - [ ] 대상 선택 중 턴이 넘어가면 — 취소 / 그대로 (`10-ui` 6절 **미정**)
+   - [ ] 자동 대상 · `TwoOthers` 카드 확인 방법 — `Deck_Default` 에 `OneOther` 카드(1 · 4)만 있어 두 경로를 실행으로 못 봤다. 덱에 넣을지 카드 데이터 쪽과 정한다
+3. **코드 (Game)**
+   - [ ] `GameServer` 에 찹츄 선언 장수 상수(10, `07-win-condition` 4.1) — 지금은 `MyPanelPresenter.ChapchuHandCount` 가 따로 들고 있다
+4. **기타**
+   - [ ] #79(CI) 머지 · 닫기
+
+### 코드 수정 요청 (#89 작성자)
+- [ ] `OpponentSeatsPresenter.Start` 가 `RoomProps.TurnActor` 스냅샷을 안 읽는다 — 씬이 늦게 열리면 다음 턴까지 상대 좌석 턴 외곽선이 꺼져 있다 (`MyPanelPresenter.Start` 처럼)
+- [ ] 위 3 이 정해지면 `MyPanelPresenter.ChapchuHandCount` → `GameServer` 상수
+- [ ] 위 2 첫째가 「취소」로 정해지면 `SelectTargetsRoutine` 에서 턴이 바뀔 때 취소
+- [ ] (참고) 드래그 · 대상 선택 중 카드가 들어오면 `HandView.Layout()` 이 들고 있던 카드를 자리로 돌린다 — 드래그 중이면 놓은 동작이 무시된다
+
+---
+
+## 2026-11-06 · 손패 드래그 → 드롭 영역 → 대상 선택 → 카드 사용 요청 (`feature/game-screen`)
+
+### 결정 (사용자)
+- 드롭 영역은 손패 영역 위쪽 화면 전체(y ≥ 364). 씬 오브젝트 `DropZone`(투명 `Image`, 레이캐스트 끔)의 Rect 포함으로 판정 — Inspector 에서 위치 · 크기를 바꿀 수 있다. `IDropHandler` 는 안 씀(포인터 바로 아래 맨 위 오브젝트에만 가서 덱 · 좌석 위에 놓으면 못 받는다).
+- 대상 선택 강조는 상대 좌석에 파란 외곽선(턴 외곽선과 같은 범위) — 임시. PC 만(마우스 드래그 · 우클릭 취소). 드래그 중 카드는 호버와 같은 1.3배.
+- 대상 선택 중 카드는 놓은 자리에 떠 있다가 끝나면 복귀 (옛 코드의 즉시 복귀는 거절처럼 보여서). 제한 시간 5초는 10-ui 6절 제안값 유지.
+- 드롭 영역 시각 강조(04-card 13절)는 보류 표기. 로컬 조건 검사는 하지 않는다 — 방장이 거절하면 토스트.
+
+### 한 것
+- `HandCardView`: `IBeginDrag/IDrag/IEndDragHandler` → `OnDragStarted · OnDragged · OnDragEnded` 이벤트, `CardId` 노출, `CanvasGroup` 로 `SetRaycastBlocking`.
+- `HandView`: 드래그(잡은 지점 유지 · 확대 · 세움 · 최상단, 드래그 중 포인터 이탈 무시) · `OnCardDropped(card, 화면 좌표)` · `ReturnCard` · `SetLocked`(호버 · 드래그 · 올리기 · 내리기 차단 + 카드 전부 레이캐스트 끔). `Enlarge` 를 호버 · 드래그가 공유.
+- `HandPresenter`: `server · dropZone · seats` 참조. 드롭 영역 밖 → 복귀. 안이면 자동 대상 타입은 빈 배열로 즉시 요청, `OneOther · TwoOthers` 는 잠그고 `seats.SelectTargetsRoutine` 을 `yield return` 으로 기다린 뒤 요청 · 취소.
+- `OpponentSeatView`: `IPointerClickHandler` + `OnClicked`, `SetTargetable`(파란 외곽선 + 탭 영역 레이캐스트). 탭 영역은 선택 중에만 켠다 — 좌석이 덱과 60 겹쳐 평소엔 덱 탭을 막기 때문.
+- `OpponentSeatsPresenter.SelectTargetsRoutine(count, done)`: 코루틴 프레임 루프로 5초 · 우클릭 · 고른 수를 본다. 고른 좌석은 강조를 꺼 중복 방지. 새 컴포넌트 · 싱글톤 없음.
+- 빌더: `BuildDropZone`, 좌석 `TargetOutline` · `TapArea`, 카드 프리팹에 `CanvasGroup`, `HandPresenter` 참조 Wire, `HandAreaBottom` 상수. GameCanvas 다시 조립 · 저장, 프리팹 3개 재생성(GUID 유지).
+- **발견 · 수정**: 놓은 자리에 떠 있는 카드가 좌석 위를 덮으면 레이캐스트가 카드에 먼저 맞아 좌석 탭이 안 됐다(혼자 테스트는 잡은 지점 차이로 통과). 잠금 중 카드 `CanvasGroup.blocksRaycasts = false` 로 해결 — 2클론에서 카드 너머로 좌석이 맞는 것 확인.
+- `MultiTest.Join` 이 `IsConnectedAndReady` 만 보고 NameServer 단계에서 눌러 `JoinOrCreateRoom failed` 가 났다 — `ConnectedToMasterServer` 로 고침 (11-03 다음 할 일).
+- 확인: `multi 2` 통과(콘솔 에러 0). 혼자 플레이(스크래치 `HandProbe.cs`, 이벤트 주입): 손패 영역 안 드롭 → 복귀, 위쪽 드롭 → 잠금 · 카드 떠 있음 · 좌석 2개 파란 외곽선 · 호버 무시, 좌석 레이캐스트가 `TapArea` 에 맞고 요청 `targets=[2]`, 시간 초과 → 취소 · 복귀. 2클론(스크래치 `drag2.sh`): 턴 주인 드래그 → 드롭 → 좌석 탭 → 승인 → 손패 5 → 4 · 상대 ♥100 → 80 · 턴 넘어감, 같은 사람이 남의 턴에 드롭 → 거절 코드 1 · 손패 4 그대로. 캡처 `hand_select.png`(스크래치).
+- 못 한 것: 자동 대상 타입(`None` 등) 즉시 요청 경로 — 덱(`Deck_Default`)에 `OneOther` 카드(1 · 4)뿐이라 실행으로 못 봤다. `TwoOthers` 도 같다. 실제 마우스 드래그 · 우클릭 취소는 사람 확인.
+
+### 다음 할 일
+- [ ] 사람 확인: 실제 마우스로 드래그 · 드롭 · 좌석 탭 · 우클릭 취소. 덱 위 · 좌석 위에 놓아도 영역 안으로 잡히는지
+- [ ] 떠 있는 카드가 좌석을 **가린다**(탭은 통과하지만 외곽선이 안 보일 수 있다) — 선택 중 카드를 1배로 줄이거나 버림 더미 자리로 옮기는 안 (제안)
+- [ ] 자동 대상 · `TwoOthers` 카드가 덱에 들어오면 즉시 요청 · 2명 선택 경로 확인
+- [ ] 모바일: 카드 탭 → 선택 + 확대, 대상 선택 취소 입력 (10-ui 4 · 6절 미정)
+- [ ] 드롭 영역 시각 강조(04-card 13절 보류) 모양 결정
+- [ ] 좌석 탭 영역이 선택 중 덱을 60 덮는다 — 선택 중엔 덱 탭이 막히는데 어차피 내 턴 메인 행동 중이라 문제 없음. 좌석 · 덱 겹침 자체는 11-03 항목
+
+---
+
+## 2026-11-06 · 사업 단계를 출시 · 서비스(무료) · 사업화 셋으로
+
+### 결정
+- 출시 `1.0`(2027-02-04) 은 **무료 · 광고 없음**. 유료 · 광고 · 가챠는 3단계 사업화(2027-06 이후)에서. #BM-1 = 가) 닫힘.
+- 로그인 · 계정 · 친구(기능 12)는 **출시 전 포함**. 로그인 문서는 11월 안에.
+- 2단계 서비스(무료)는 2027-06 상한, 그 안에서 D7 · MAU 를 보고 3단계 진입 판단.
+- 사업자 형태(개인 / 법인)는 정보 없음 → 2단계 할 일(조사 · 세무 상담 1회). 창업동아리(2027, 공고 미정)는 2단계 자금원 후보.
+
+### 한 것
+- 노션 「창업」 8절 로드맵 6단계 → 3단계, 11절 결정 1 · 4 닫음, 6.2 치장 판매 분류를 3단계로.
+- 노션 「11월 BM 플랜」 #BM-1 확정, 가챠 · 상점 · 가격표 주차를 2단계로 미룸.
+- `store-release.md` 결정 2 확정 · 0절 · 변경 이력. `development-plan.md` 머리말 · 기능 12.
+
+### 다음 할 일
+- [ ] 로그인 문서 작성 (방식 · 백엔드 · 계정 삭제 · Sign in with Apple 여부) — 기능 12 ⛔
+- [ ] 「창업」 9절 KPI 목표값은 2단계에서 채움
+
+---
+
+## 2026-11-05 · 내 손패 올리기 · 내리기 · 호버 (`feature/game-screen`)
+
+### 결정 (사용자 승인)
+- 기본은 내려간 상태 — 카드 위 100 만 보이게 236 아래. 카드 탭 → 0.3초 OutQuart 로 올림(HandMode ON). 올라온 상태에서 손패 카드 밖을 탭하면 내림 — 덱 탭도 "손패 외 영역"이라 내려가면서 드로우 요청도 그대로 나간다. 뽑기 연출은 내려간 손패로 날아간다.
+- 호버는 올라온 상태에서만: 1.3배 · 기울기 0° · 위로 40 · 최상단, 0.12초. 올라온 상태의 카드 탭은 아무것도 안 함 — 모바일 「선택 + 확대」는 드래그와 함께 다음 작업. 수치는 10-ui 2-1 「손패」 · 4절에 적음.
+- 뒤집어 뽑는 연출 검토: Screen Space Overlay 라 Y 회전은 원근 없이 납작해지는 뒤집기만 된다 (충분하다고 봄). 배치 트윈(루트 z 회전)과 충돌하지 않게 프리팹에 `Face` 단계를 미리 넣어 두고, 뒤집기는 `Face` 에만 Y 회전 + 90° 에서 앞 · 뒤 교체로 하기로. 뒷면 이미지(파랑 덱 뒷면 vs `Sprites/Cards/CardBack.jpg`)는 미정.
+
+### 한 것
+- `HandCardView`: `IPointerEnter/Exit/Click` → `OnHoverEntered · OnHoverExited · OnClicked` 이벤트만. 판정은 `HandView`.
+- `HandView`: `IsRaised` · `Raise()` · `Lower()`(루트 anchoredPosition 트윈, DOTween UI 모듈이 없어 `DOTween.To`), `Update` 에서 올라온 상태 + 마우스 다운 + 카드 밖이면 내림(`RectangleContainsScreenPoint`, 카메라 null). `Layout` 을 `Slot` · `PlaceCard(index, duration)` 으로 나눠 호버 복귀를 짧게. 호버 중 카드는 `SetAsLastSibling`, 복귀 때 원래 인덱스로.
+- 빌더: 카드 프리팹 구조 루트 → `Face` → 틀(raycastTarget 켬) · 그림 · 글자. `Chapchu/Game Screen/Rebuild Hand Card Prefabs` 메뉴 — 같은 경로에 다시 저장해 GUID 유지(씬 참조 그대로). 프리팹 3개 다시 만듦. 씬은 안 바뀜(새 필드는 코드 기본값).
+- 확인(혼자 플레이, 스크래치 `HandProbe.cs` 로 이벤트 주입 · 커밋 안 함): 시작 y −236 → 카드 클릭 → y 0 → 호버 → 1.3배 · 0° · (0, 40) · 형제 4 → 이탈 복귀 → 다른 카드 호버 시 앞 카드 복귀 → `Lower()` → 내려간 채 1장 추가 뽑기 6장 재배치. `GraphicRaycaster` 로 틀 이미지가 맞고 핸들러가 카드 루트인 것, 화면 구석은 카드 밖으로 판정되는 것 확인. 캡처 3장(내려감 · 올라감 · 호버). 콘솔 에러 0 (CLI 명령 이름 오타 에러 1건은 게임과 무관).
+- 실제 마우스는 코드로 못 흉내 낸다(구 Input Manager) — 사용자가 Unity 에서 직접 눌러 올리기 · 호버 · 손패 밖 탭 내리기가 되는 것을 확인했다.
+
+### 다음 할 일
+- [x] 사람 확인: 실제 마우스로 올리기 · 호버 · 빈 곳 탭 내리기 (2026-11-05 사용자 확인)
+- [ ] 손패 드래그 → 드롭 영역 → `RequestPlayCard` (10-ui 4 · 6 · 9절). 드롭 영역 수치 · 대상 선택 좌석 먼저. 모바일 「카드 탭 → 선택 + 확대」도 여기서
+- [ ] 뒤집어 뽑기 연출 — `Face` Y 회전, 뒷면 이미지 결정
+- [ ] 호버 중 새 카드가 오면 `Layout` 이 호버를 풀고 포인터가 그대로여도 다시 확대되지 않는다 — 거슬리면 `Layout` 에서 호버 카드를 건너뛰게
 
 ---
 
@@ -132,6 +239,72 @@
 - [ ] 11절 미정 12건 중 #1 강퇴 · #2 랜덤 매칭 시작 · #3 나가기 확인 · #9 칸 순서는 PM 결정 → 08-room 5절에 규칙 추가
 - [ ] 노션 UI/UX 「룸 씬」 페이지(2026-11-03, 다른 세션)는 16 기준의 얇은 판 — 이 문서로 다시 올릴지 결정
 - [ ] 확정 뒤 HTML 시안 → 배치 · 크기는 16-room-ui 를 이 문서 요소에 맞게 고침
+
+---
+
+## 2026-11-03 · 상대 손패 뒷면 부채꼴 (캐릭터 그림 보류)
+
+### 결정 (사용자 요청)
+- 시안 `.fan` 대로: 캐릭터 상자(141 × 188) 아래 가운데에서 38 위, 42 × 45 상자, 뒷면 45 × 31(9:13) 파랑 바탕 · 흰 테두리 · 검정 링. 캐릭터 그림은 계속 보류.
+- 배치는 내 손패와 같은 **스플라인 부채꼴**로 통일 — 양 끝 (±8, −4) · 가운데 (0, 0), 1/10 간격(한 칸 약 10°). 10-ui 4절 「상대 손패」에 수치를 적음.
+- 뒷면은 서로 구분되지 않으므로 `handCount` 만 맞춘다 — 늘면 덱 자리에서 날아오고(1초 OutQuart) 줄면 맨 뒤를 지운다. 상대의 뽑기도 큐 단계에서 `dealInterval`(0.15초)만 기다린다 — 첫 분배 때 한 장씩 날아온다.
+
+### 한 것
+- 새 파일 `OpponentHandView.cs`(SplineContainer · `SetCount`). `OpponentSeatView.SetHandCount` 가 숫자 상자와 부채꼴을 같이 맞춘다. `OpponentSeatsPresenter.DrawRoutine(actor, handCount)` 추가, `GameScreenPresenter` 의 CardDrawn 단계가 상대면 이것을 기다린다.
+- 빌더: `BuildOpponentHand`(캐릭터 상자 아래 앵커 · 스플라인 3점), `EnsureBackCardPrefab` → `Assets/Prefab/UI/GameScreen/HandCard_Back.prefab`(있으면 덮어쓰지 않음). GameCanvas 다시 조립 · 저장.
+- 확인(2클론): 시작 때 정면 좌석 `hand=5 backs=5`, 상대가 카드를 내면 `4 / 4`, 상대 쪽에서 본 내 좌석도 5장. 퇴장하면 좌석과 함께 숨김. 콘솔 에러 0. 캡처로 좌석 2 아래 파란 뒷면 5장 → 4장 부채꼴 확인.
+- 3클론(좌석 1 · 2) 확인은 못 함 — clone_1 이 준비되지 않았다.
+
+### 다음 할 일
+- [ ] 3클론으로 좌석 1 · 3 의 부채꼴 위치 확인
+- [ ] 제안: `OpponentHandView.Layout` 이 `HandView.Layout` 과 같다 — 세 번째 부채꼴이 생기면 배치 계산을 한곳으로. `dealInterval` 도 `HandPresenter` · `OpponentSeatsPresenter` 두 곳
+- [ ] 옛 `Assets/Prefab/OtherPlayerHand` · `CardBack`(없는 스크립트) 은 안 쓴다 — 지울지 결정
+- [ ] 캐릭터 그림 · 함정 슬롯 · 대상 선택 탭 (보류 중)
+
+---
+
+## 2026-11-03 · 상대 좌석 — 닉네임 · HP · 손패 수 · 턴 외곽선 (캐릭터 · 함정 · 부채꼴 보류)
+
+### 결정 (사용자 요청)
+- 좌석은 이름 줄 · HP 줄 · 턴 외곽선까지. 캐릭터 · 함정 슬롯 · 뒷면 부채꼴 · 대상 선택 탭은 보류, 자리만 비워 둔다. 찹츄 배지는 자리만 두고 꺼 둔다(선언 이벤트 없음, 기능 8).
+- 턴 외곽선은 이름 줄 + HP 줄(위 82)만 감싼다 — 캐릭터를 덮지 않는다 (사용자 요청). 10-ui 2-1 좌석 슬롯에 반영.
+- 좌석 인덱스 ↔ actorNumber 계산은 `OpponentSeatsPresenter` 한 곳 (02-player 3절). 퇴장은 `RoomEvents.OnPlayerLeft` 로 받아 좌석을 숨김 (02-player 6절) — 게임 이벤트가 아니라 큐 밖.
+- HP 20 이하 주황(10-ui 2-1 HP 줄 **제안**)은 예전 뷰(e49831f)대로 구현해 둠. 확정되면 제안 표기를 지운다.
+
+### 한 것
+- 새 파일 `OpponentSeatView.cs`(e49831f 의 것에서 캐릭터 · 함정 · 부채꼴 · 탭 제거) · `OpponentSeatsPresenter.cs`. `GameScreenPresenter` 가 HpChanged · CardDrawn · CardPlayed · TurnStarted 를 내 것이면 내 패널, 아니면 좌석으로 보낸다. `GameScreenView` 에 좌석 배열.
+- 빌더: `BuildOpponentSeats` 되살림(이름 줄 · HP 줄 · 턴 외곽선만), `WireArray` 복구. GameCanvas 다시 조립 · 저장.
+- 확인(2클론): 상대가 정면(2번, 주황) 좌석에 닉네임 · HP 100 · 손패 5, 1 · 3번 숨김. 공격 뒤 상대 쪽에서 본 내 좌석 HP 80 · 바 0.80, 카드 낸 쪽 손패 4. 초록 외곽선이 턴 주인 좌석에만. 클론을 멈추자(퇴장) 좌석이 사라짐. 콘솔 에러 0.
+- 좌석 영역(위 124 ~ 470)과 덱(중심 540, 높이 259 → 위 410)이 60 겹친다 — 11-03 "덱 위로" 조정 때 생긴 것. 지금은 좌석 아래쪽이 비어 있어 턴 외곽선만 덱 위를 지난다. 캐릭터 · 함정을 넣을 때 덱 위치나 좌석 높이를 다시 정해야 한다.
+
+### 다음 할 일
+- [ ] 좌석 영역과 덱 겹침 60 — 10-ui 2-1 「배치」 덱 중심 y 또는 좌석 높이 결정
+- [ ] 보류한 캐릭터 · 함정 슬롯 · 뒷면 부채꼴(`HandFanAnchor`) · 대상 선택 탭 — e49831f 의 `OpponentSeatView` · 빌더 코드 참고
+- [ ] 찹츄 선언 이벤트가 생기면 `OpponentSeatView.SetChapchu` 연결
+
+---
+
+## 2026-11-03 · 연출 큐(`GameScreenPresenter`) · 내 패널에 닉네임 · HP · 턴 · 남은 초 · 손패 수 반영
+
+### 결정
+- 영역 프레젠터가 각자 `GameEvents` 를 구독하던 것을 **중앙 프레젠터 하나가 구독 → 연출 큐 → 영역 프레젠터 호출**로 바꿈 (CODE_CONVENTION 9절, 사용자 결정). 순서는 받은 순서 그대로(GameServer 가 쌓은 순서 = PunGameServer 가 보낸 순서 = 같은 보낸이의 RPC 도착 순서)라 큐가 따로 정하지 않는다. 묶음은 하나만: 내가 뽑을 때 `OnMyCardDrawn`(내용) 다음 `OnCardDrawn`(장수) → 한 단계.
+- 큐를 타지 않는 것: 내 요청 거절 토스트 · 남은 초(매 프레임) · 늦게 열렸을 때의 CustomProperties 복구. CODE_CONVENTION 9절에 적음.
+- 뽑기 단계는 카드가 날아오는 1초를 다 기다리지 않고 `dealInterval`(0.15초) 만 기다린다 — 첫 5장에 5초가 걸리는 것을 피함. 연출을 끝까지 기다리는 단계는 아직 없다.
+- 남은 초는 **내 턴에만** (03-turn 7절대로, 사용자 결정). 남의 턴엔 턴 태그를 「상대 턴!」 파랑 바탕으로 — 10-ui 2-1 턴 줄에 반영. 닉네임이 비면 `P{actorNumber}` (사용자 결정).
+- 찹츄 버튼은 손패 10장이면 활성 모양까지만. 탭하면 경고 로그 — 선언 요청 API 는 기능 8.
+
+### 한 것
+- 새 파일 `UI/GameScreen/GameScreenPresenter.cs`(큐 · 6개 이벤트 구독) · `MyPanelPresenter.cs`(닉네임 · HP · 손패 수 · 찹츄 상태 · 턴 태그 · 남은 초 · Start 스냅샷). `DeckPresenter` · `HandPresenter` 는 구독을 떼고 `ShowDeckCount` · `DrawRoutine` · `ShowCardPlayed` 로. `RejectToastPresenter` 는 그대로(큐 밖).
+- 머지 후 컴파일 오류 — develop 에서 `GameEvents` 네임스페이스가 `Chapchu.Network.Events` 로 옮겨져 프레젠터 3개의 using 수정.
+- 빌더: `BuildMyPanel` 에 `MyPanelPresenter`, 캔버스 루트에 `GameScreenPresenter` 를 붙이고 영역 프레젠터 연결. `GameScene` 의 GameCanvas 를 지우고 다시 조립해 저장.
+- 확인: `multi-test multi 2` 통과(콘솔 에러 0). 별도로 2클론 플레이 중 `MyPanelView` 값을 리플렉션으로 읽고 캡처 — 닉네임 `|Player#1` / `|Player`(Photon NickName 그대로), HP 100 → 맞은 쪽 80(바 0.80), 턴 주인은 「나의 턴!」 주황 + 초 14 → 8, 상대는 「상대 턴!」 파랑 + 초 숨김, 턴이 바뀌면 서로 바뀜, 카드 사용 뒤 5/10장 → 4/10장.
+- 큐 동작 확인: GameScene 을 혼자 플레이로 띄워 뽑기 3장 → HP 50 → 턴 시작을 한 프레임에 주입하고 뽑기 간격을 2초로 늘림 — 손패가 0 · 2 · 4초에 1 → 2 → 3장, HP 는 세 장이 다 나온 뒤(6초)에야 50. 앞 연출이 끝날 때까지 뒤 단계를 안 꺼내는 것 확인 (스크래치 `QueueProbe.cs`, 커밋 안 함).
+- 참고: 캡처를 `Assets/Temp` 에 저장하면 클론 에디터가 임포트에 걸려 Photon 이 타임아웃된다 — 캡처는 메인에서만, 저장 뒤 바로 지울 것. `docs/mockups` 의 인게임 HTML 시안에는 「상대 턴!」 이 없다 — 시안을 손볼 때 같이.
+
+### 다음 할 일
+- [ ] 버림 더미 · 히스토리가 생기면 `GameScreenPresenter` 에 단계 추가 (상대 좌석은 11-03 에 들어감)
+- [ ] 큐가 N개 이상 밀리면 연출 건너뛰기 — 끝까지 기다리는 연출(피해 등)이 생길 때
+- [ ] `MultiTest.Join` 이 `IsConnectedAndReady` 만 보고 눌러 NameServer 단계에서 `JoinOrCreateRoom failed` 가 가끔 난다 — `NetworkClientState == ConnectedToMasterServer` 로 바꿀 것
 
 ---
 
@@ -319,7 +492,7 @@
 - 폰트 SDF 에셋 2개가 재조립 · 플레이 중 동적 글리프 추가로 바뀌었다 — 이번 변경과 무관.
 
 ### 다음 할 일
-- [ ] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고)
+- [x] 상대 좌석 · 덱 · 버림 더미 UI 를 다시 만들 때 `10-ui.md` 2-1 기준으로 빌더에 되살린다 (`e49831f` 참고) — 덱 11-02, 좌석 11-03. 버림 더미는 아직
 
 ---
 
@@ -343,7 +516,7 @@
 - `GameScene.unity` — `GameCanvas`(1920 × 1080 · Expand) + `SafeArea` + `EventSystem`(StandaloneInputModule). 캡처로 확인: 기본 상태, 상태 변경(턴 외곽선 · 찹츄 활성 · 배지 · 함정 2/3 · 저체력 · 대상 강조 · 버림 비움), 승리 오버레이.
 
 ### 다음 할 일
-- [ ] `GameScreenPresenter` — `GameEvents` 7개 구독 → 연출 큐 → 뷰. 좌석 인덱스 ↔ actorNumber 는 `02-player` 3절대로 한 곳에서. 초기값은 `PlayerProps` · `RoomProps`. 방 코드는 `PhotonNetwork.CurrentRoom.Name`
+- [x] `GameScreenPresenter` — `GameEvents` 구독 → 연출 큐 → 영역 프레젠터 (11-03). 좌석 인덱스 ↔ actorNumber 는 상대 좌석을 만들 때
 - [ ] 입력 연결: `DeckView.DrawClicked` → `RequestDraw`, 좌석 `Clicked` → 대상 선택, `OnMyRequestRejected` → `MessageToast`. 찹츄 버튼 · 승리 오버레이는 요청 API 가 생기면 (기능 8)
 - [ ] 내 손패(`HandArea`) · 상대 뒷면 부채꼴(`HandFanAnchor`) · 히스토리 항목 프리팹(`HistoryView.AddEntry`)
 - [ ] 글자 22 ~ 28 의 모바일 가독성 보정 (`15-screen` 최소 30) — `12-title-ui` 4-3 방식으로 결정

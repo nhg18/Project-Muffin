@@ -50,7 +50,7 @@
 * 같은 입력(내 actorNumber + 참가자 목록)이면 항상 같은 결과가 나와야 한다.
 * 좌석 계산은 **한 곳에서만** 수행하고, 손패 UI와 플레이어 정보 UI가 그 결과를 공유한다.
 
-> ⚠ 계산 함수는 `SeatManager.GetSeatAssignments` 하나지만, `SeatManager` 와 `HandSeatManager` 가 각자 `Start()` 에서 호출한다 (이중 호출).
+> 계산은 `OpponentSeatsPresenter`(GameScene 의 OpponentSeats) 한 곳 — `GetOpponentSeatIndices` + actorNumber 오름차순. 상대 손패 부채꼴 등은 이 결과를 받아 쓴다 (2026-11-03). 옛 `SeatManager` · `HandSeatManager` 이중 호출은 사라짐.
 
 ---
 
