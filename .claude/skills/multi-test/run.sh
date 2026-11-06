@@ -19,6 +19,7 @@ WAIT_TRIES=30   # 대기 단계 최대 시도 (2초 간격)
 
 FAILED=0
 EDITORS=()
+PROBED=0   # multi 의 카운터 요청: 0 안 함 · 1 행동 카드로(코드 8 기대) · 2 카운터 카드로(무효 기대)
 
 log()  { printf '%s\n' "$*"; }
 fail() { log "  ✗ $*"; FAILED=1; }
@@ -284,11 +285,15 @@ run_multi() {
         if [ $acted -eq 1 ] && [ $probed -eq 0 ] && printf '%s' "$out" | grep -q '카드'; then
             for project in "${EDITORS[@]}"; do
                 out=$(call "$project" CounterProbe)
-                case "$out" in OK*) log "  $(name_of "$project"): $out"; probed=1; break ;; esac
+                case "$out" in
+                    *"(카운터 카드)"*) log "  $(name_of "$project"): $out"; probed=2; break ;;
+                    OK*)              log "  $(name_of "$project"): $out"; probed=1; break ;;
+                esac
             done
         fi
         [ $acted -eq 0 ] && sleep 1
     done
+    PROBED=$probed
     sleep 3
 
     log "▶ 판정"
@@ -318,12 +323,15 @@ compare_screens() {
         total=$((total + count))
     done
     [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
+    # 카운터 카드를 냈으면 행동 카드가 무효, 아니면 거절 코드 8 (CounterProbe)
+    local pattern='내 요청 거절 — 코드 8' what='카운터 요청 거절 (코드 8)'
+    if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — '; what='카운터로 행동 카드 무효'; fi
     total=0
     for project in "${EDITORS[@]}"; do
-        count=$(console_lines "$project" | grep -c '\[GameDebugInput\].*내 요청 거절 — 코드 8')
+        count=$(console_lines "$project" | grep -c "\[GameDebugInput\].*$pattern")
         total=$((total + count))
     done
-    [ "$total" -ge 1 ] && log "  반응 시간 카운터 요청 판정 확인 (코드 8)" || fail "카운터 요청이 방장에서 판정되지 않았다 (코드 8 없음)"
+    [ "$total" -ge 1 ] && log "  $what 확인" || fail "$what 이 콘솔에 없다"
     total=0
     for project in "${EDITORS[@]}"; do
         count=$(console_lines "$project" | grep -c '\[GameDebugInput\].* 카드 처리 — ')

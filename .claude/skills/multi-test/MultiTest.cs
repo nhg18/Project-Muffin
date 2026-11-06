@@ -160,9 +160,11 @@ public static class MultiTest
             return "OK P" + me + " 뽑기";
         }
 
+        // 방장은 자기에게 보낸 RPC 를 그 자리에서 실행해 손패 목록이 바로 줄어든다 — 카드 번호는 요청 전에 읽는다
         int target = NextActor(me);
+        int cardId = hand[index];
         server.RequestPlayCard(instances[index], new[] { target });
-        return "OK P" + me + " 카드 " + hand[index] + " → P" + target;
+        return "OK P" + me + " 카드 " + cardId + " → P" + target;
     }
 
     /// <summary>남의 턴에 카드를 내 본다 (거절 확인용). 내 턴이면 SKIP.</summary>
@@ -192,8 +194,8 @@ public static class MultiTest
     /// create = 방 만들기 / leave = 방 로그 읽고 나가기 / scene = 지금 씬 이름만.
     /// </summary>
     /// <summary>
-    /// 남의 턴 클라이언트가 카운터 요청을 보낸다 — 카운터 RPC 가 방장에 닿아 판정되는지 본다.
-    /// 덱(Deck_Default)에 카운터가 없어 손패 첫 카드(행동)를 보내므로, 반응 시간 안이면 거절 코드 8 이 와야 한다.
+    /// 남의 턴 클라이언트가 반응 시간에 카운터 요청을 보낸다 — 카운터 RPC 가 방장에 닿아 판정되는지 본다.
+    /// 손패에 카운터가 있으면 그것을 낸다 → 행동 카드가 무효돼야 한다 (「카드 무효」 줄). 없으면 행동 카드를 보낸다 → 거절 코드 8.
     /// </summary>
     public static string CounterProbe()
     {
@@ -206,12 +208,14 @@ public static class MultiTest
         if (turnActor == me)
             return "SKIP P" + me + " 내 턴";
 
+        var hand = (List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input);
         var instances = (List<int>)typeof(GameDebugInput).GetField(MyHandInstancesField, Private).GetValue(input);
         if (instances.Count == 0)
             return "SKIP P" + me + " 손패 없음";
 
-        server.RequestPlayCounter(instances[0], new int[0]);
-        return "OK P" + me + " 반응 시간에 카운터 요청 (행동 카드)";
+        int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
+        server.RequestPlayCounter(instances[Math.Max(counter, 0)], new int[0]);
+        return "OK P" + me + (counter >= 0 ? " 반응 시간에 카운터 (카운터 카드)" : " 반응 시간에 카운터 (행동 카드)");
     }
 
     public static string Ui(string step)
