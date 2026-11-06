@@ -17,6 +17,7 @@
 | 이벤트 발생 함수 (다른 클래스가 발생시킬 때만) | `Raise` + 이벤트 이름에서 `On` 을 뺀 것 | `RaiseJoinedRoom()` |
 | RPC 메서드 | `RPC_` + 동사. 방장에게 보내는 요청은 `RPC_Request` + 동사 | `RPC_RequestPlayCard` · `RPC_ApplyDamage` |
 | 코루틴 | 동사 + `Routine` | `CountdownRoutine()` |
+| 카드 연출 이펙트 컴포넌트 (화면 연출) | 종류 + `Fx` — 카드 규칙 효과(`…Effect`)와 구분 | `FlashFx` · `SlashFlurryFx` |
 | 파일 | 클래스 이름과 같게, 영문. 작은 enum · struct 는 쓰는 클래스 파일에 둬도 된다 | `RoomPresenter.cs` |
 
 * `var` 는 오른쪽에서 타입이 바로 보일 때만 (`new X()` · `Load<X>()`). 메서드 반환값은 타입을 쓴다.
@@ -50,7 +51,8 @@
 
 * 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
 * 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
-* 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys`).
+* 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
+* 카드별 연출 프리팹은 `Resources/CardFx/{연출 컴포넌트 이름}.prefab` 에 두고 `CardFxLoader` 로 이름으로 불러온다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
 * 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
 ## 6. 네트워크

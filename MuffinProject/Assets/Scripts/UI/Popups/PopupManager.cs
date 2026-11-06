@@ -12,8 +12,6 @@ namespace Chapchu.UI.Popups
     /// </summary>
     public class PopupManager : SingletonPersistent<PopupManager>
     {
-        private const string ResourcePath = "Popups/";
-
         [SerializeField] private RectTransform modalLayer;
         [SerializeField] private RectTransform nonModalLayer;
         [SerializeField] private RectTransform toastLayer;
@@ -121,7 +119,7 @@ namespace Chapchu.UI.Popups
 
         private static T Load<T>() where T : Popup
         {
-            string path = ResourcePath + typeof(T).Name;
+            string path = ResourcePaths.Popups + typeof(T).Name;
             T prefab = Resources.Load<T>(path);
             // 규약이 어긋나면 Resources.Load 는 조용히 null 을 준다. 원인이 보이게 남긴다.
             if (prefab == null)
