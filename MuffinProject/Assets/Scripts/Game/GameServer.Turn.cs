@@ -71,6 +71,10 @@ namespace Chapchu.Game
                 if (now >= _nextTurnAt)
                     AdvanceTurn();
             }
+            else if (CurrentTurnActor != -1 && _turnPaused && !_mainActionUsed && !IsInGame(CurrentTurnActor))
+            {
+                AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
+            }
             else if (CurrentTurnActor != -1 && now >= _turnDeadline)
             {
                 AdvanceTurn();
@@ -170,12 +174,9 @@ namespace Chapchu.Game
                     _turnDeadline += now - _lastTickAt;
                     _turnPaused = true;
                 }
-                else if (_turnPaused && !IsInGame(CurrentTurnActor))
+                else if (_turnPaused && IsInGame(CurrentTurnActor))
                 {
-                    AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
-                }
-                else if (_turnPaused)
-                {
+                    // 턴 주인이 빠졌으면 멈춘 채로 둔다 — 넘김은 Tick 의 Advance 가 한다 (요청 처리 중 정산은 턴을 바꾸지 않는다)
                     // 끼어든 체인의 후처리 연출이 이번 프레임 안에서 끝났으면 그 시각까지는 멈춘 것으로
                     _turnDeadline += System.Math.Max(0, System.Math.Min(now, _resumeAt) - _lastTickAt);
                     _turnPaused = false;
