@@ -1,0 +1,56 @@
+# CD — main 에 머지되면 PC · Android 빌드를 만들어 Actions 실행 결과에 첨부한다 (30일 보관).
+# iOS 는 서명이 필요해 Unity Build Automation 이 main 을 보고 빌드한다 (docs/store-release.md 5-2).
+# Android 는 키스토어를 지정하지 않아 디버그 서명 — 테스트 설치용. 출시 빌드 설정은 기능 13 (store-release.md 7절).
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 빌드 ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [StandaloneWindows64, Android]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: ${{ matrix.platform != 'Android' }}
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - uses: actions/cache@v4
+        with:
+          path: MuffinProject/Library
+          key: Library-${{ matrix.platform }}-${{ hashFiles('MuffinProject/Assets/**', 'MuffinProject/Packages/**', 'MuffinProject/ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ matrix.platform }}-
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: MuffinProject
+          targetPlatform: ${{ matrix.platform }}
+          buildName: Chapchu
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chapchu-${{ matrix.platform }}
+          path: build/${{ matrix.platform }}
+          retention-days: 30

@@ -1,0 +1,26 @@
+# 라이선스 파일 만들기 (1회) — 내 PC 에 C:\ProgramData\Unity\Unity_lic.ulf 가 없을 때만 쓴다.
+# 1. Actions 탭 → Activation → Run workflow
+# 2. 결과물 .alf 를 내려받아 https://license.unity3d.com/manual 에 올리면 .ulf 를 준다
+# 3. .ulf 파일 내용 전체를 저장소 Secrets 의 UNITY_LICENSE 에 넣는다 (UNITY_EMAIL · UNITY_PASSWORD 도 같이)
+name: Activation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  request-file:
+    name: 활성화 파일(.alf) 요청
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: request
+        uses: game-ci/unity-request-activation-file@v2
+        with:
+          projectPath: MuffinProject
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.request.outputs.filePath }}
+          path: ${{ steps.request.outputs.filePath }}
+          retention-days: 1
