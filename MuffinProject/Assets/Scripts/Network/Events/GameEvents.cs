@@ -27,13 +27,25 @@ namespace Chapchu.Network.Events
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
         public static event Action<int, int, int> OnTrapSet;                 // actorNumber, handCount, trapCount — 함정 설치 (종류는 OnMyTrapSet)
         public static event Action<int, int, int, int[], int> OnTrapActivated; // actorNumber, cardInstanceId, cardId, targets, trapCount — 공개 · 체인에 올라감
-        public static event Action<double, double> OnTrapWindowStarted;      // opensAt, deadline — 「피해 받은 후」 함정 시간
+        public static event Action<double, double> OnTrapWindowStarted;      // opensAt, deadline — 「~한 후」 함정 시간
+        public static event Action<int, int, int, int, int> OnHandCardsMoved; // from, to, count, fromHandCount, toHandCount — 훔치기 · 교환 (어떤 카드인지는 OnMyCardsGained · Lost)
+        public static event Action<int, int[], int[], int, int> OnCardsDiscarded; // actorNumber, cardInstanceIds, cardIds, handCount, discardCount — 강제 버림 (공개)
+        public static event Action<int, int, int, int, int> OnTrapDestroyed;  // owner, cardInstanceId, cardId, trapCount, discardCount — 함정 파괴 (공개)
+        public static event Action<int, int, int> OnTrapReturned;            // owner, trapCount, handCount — 함정이 주인 손패로 (종류는 주인만)
+        public static event Action<int, int, int, int> OnTrapMoved;          // from, to, fromTrapCount, toTrapCount — 함정 빼앗기 (종류는 두 사람만)
+        public static event Action<int> OnTurnSkipMarked;                    // actorNumber — 다음 턴 스킵이 걸림
+        public static event Action<int> OnTurnSkipped;                       // actorNumber — 턴이 스킵됨
+        public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
+        public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
         public static event Action<int, GameEndReason, double> OnGameEnded;  // winner(무승부 -1), reason, returnAt(방으로 이동하는 서버 시각)
 
         // ── 나에게만 ──
         public static event Action<int, int> OnMyCardDrawn;                  // cardInstanceId, cardId
         public static event Action<int> OnMyRequestRejected;                 // RejectCode
-        public static event Action<int, int> OnMyTrapSet;                    // cardInstanceId, cardId — 내가 설치한 함정 (손패에서 슬롯으로)
+        public static event Action<int, int> OnMyTrapSet;                    // cardInstanceId, cardId — 내 함정 칸에 들어옴 (설치 · 빼앗아 옴)
+        public static event Action<int> OnMyTrapRemoved;                     // cardInstanceId — 내 함정 칸에서 빠짐 (손패로 반환 · 빼앗김)
+        public static event Action<int[], int[]> OnMyCardsGained;            // cardInstanceIds, cardIds — 내 손패로 들어옴 (훔침 · 교환 · 함정 반환)
+        public static event Action<int[]> OnMyCardsLost;                     // cardInstanceIds — 내 손패에서 나감 (훔쳐짐 · 교환)
 
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);
         public static void RaiseCardDrawn(int actorNumber, int handCount, int deckCount) => OnCardDrawn?.Invoke(actorNumber, handCount, deckCount);
@@ -54,6 +66,18 @@ namespace Chapchu.Network.Events
         public static void RaiseTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount) => OnTrapActivated?.Invoke(actorNumber, cardInstanceId, cardId, targets, trapCount);
         public static void RaiseTrapWindowStarted(double opensAt, double deadline) => OnTrapWindowStarted?.Invoke(opensAt, deadline);
         public static void RaiseMyTrapSet(int cardInstanceId, int cardId) => OnMyTrapSet?.Invoke(cardInstanceId, cardId);
+        public static void RaiseHandCardsMoved(int from, int to, int count, int fromHandCount, int toHandCount) => OnHandCardsMoved?.Invoke(from, to, count, fromHandCount, toHandCount);
+        public static void RaiseCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount) => OnCardsDiscarded?.Invoke(actorNumber, cardInstanceIds, cardIds, handCount, discardCount);
+        public static void RaiseTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount) => OnTrapDestroyed?.Invoke(owner, cardInstanceId, cardId, trapCount, discardCount);
+        public static void RaiseTrapReturned(int owner, int trapCount, int handCount) => OnTrapReturned?.Invoke(owner, trapCount, handCount);
+        public static void RaiseTrapMoved(int from, int to, int fromTrapCount, int toTrapCount) => OnTrapMoved?.Invoke(from, to, fromTrapCount, toTrapCount);
+        public static void RaiseTurnSkipMarked(int actorNumber) => OnTurnSkipMarked?.Invoke(actorNumber);
+        public static void RaiseTurnSkipped(int actorNumber) => OnTurnSkipped?.Invoke(actorNumber);
+        public static void RaiseCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount) => OnCardReturnedToHand?.Invoke(actorNumber, cardInstanceId, cardId, handCount);
+        public static void RaiseDeathAvoided(int actorNumber, int hp) => OnDeathAvoided?.Invoke(actorNumber, hp);
+        public static void RaiseMyTrapRemoved(int cardInstanceId) => OnMyTrapRemoved?.Invoke(cardInstanceId);
+        public static void RaiseMyCardsGained(int[] cardInstanceIds, int[] cardIds) => OnMyCardsGained?.Invoke(cardInstanceIds, cardIds);
+        public static void RaiseMyCardsLost(int[] cardInstanceIds) => OnMyCardsLost?.Invoke(cardInstanceIds);
         public static void RaiseMyCardDrawn(int cardInstanceId, int cardId) => OnMyCardDrawn?.Invoke(cardInstanceId, cardId);
         public static void RaiseMyRequestRejected(int code) => OnMyRequestRejected?.Invoke(code);
     }

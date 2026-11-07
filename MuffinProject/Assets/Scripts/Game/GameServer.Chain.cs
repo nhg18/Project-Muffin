@@ -40,7 +40,7 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotCounterCard);
 
             ChainEntry top = _chain[_chain.Count - 1];
-            if (!card.ReactsTo.Contains(top.Card.Type))
+            if (!CanReactTo(card, requester, top))
                 return Reject(requester, RejectCode.CannotReact);
 
             int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User);
@@ -54,9 +54,10 @@ namespace Chapchu.Game
         }
 
         // 손패(함정은 슬롯)에서 나온 카드를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 5초 반응 시간을 연다 (04 8절).
-        private void AddToChain(Card card, int user, int[] targets, bool fromTrapSlot = false)
+        private ChainEntry AddToChain(Card card, int user, int[] targets, bool fromTrapSlot = false)
         {
-            _chain.Add(new ChainEntry(card, user, targets));
+            var entry = new ChainEntry(card, user, targets);
+            _chain.Add(entry);
             if (fromTrapSlot)
                 _events.Add(new TrapActivated(user, card.InstanceId, card.CardId, targets, _players[user].Traps.Count));
             else
@@ -65,6 +66,34 @@ namespace Chapchu.Game
             _reactionOpensAt = _clock() + card.RevealSeconds;
             _reactionDeadline = _reactionOpensAt + ReactionTimeLimit;
             _events.Add(new ReactionStarted(_reactionOpensAt, _reactionDeadline));
+            return entry;
+        }
+
+        /// <summary>
+        /// card(카운터 · 「카드 반응」 함정)로 맨 위 카드 top 에 반응할 수 있는가 — 반응 대상 종류 + 반응 조건 (04-card.md 7절).
+        /// 「받는다」 = 그 카드의 효과가 나에게 들어간다 (본인 무효 · 나간 사람 제외).
+        /// </summary>
+        internal bool CanReactTo(Card card, int me, ChainEntry top)
+        {
+            if (!card.ReactsTo.Contains(top.Card.Type))
+                return false;
+
+            switch (card.Condition)
+            {
+                case ReactCondition.Any:            return true;
+                case ReactCondition.ByOther:        return top.User != me;
+                case ReactCondition.TargetsMe:      return top.User != me && top.Targets.Contains(me);
+                case ReactCondition.DamagesMe:      return AffectedBy(top, EffectTag.Damage).Contains(me);
+                case ReactCondition.WouldKillMe:
+                    int damage = top.Card.Effects.Sum(e => e.PredictDamage(this, top, me));
+                    return damage > 0 && damage >= _players[me].Hp;
+                case ReactCondition.HealsOther:     return AffectedBy(top, EffectTag.Heal).Any(a => a != me);
+                case ReactCondition.TakesMyHand:    return AffectedBy(top, EffectTag.TakeHand).Contains(me);
+                case ReactCondition.DestroysMyTrap: return top.User != me && AffectedBy(top, EffectTag.DestroyTrap).Contains(me);
+                case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
+                case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
+                default:                            return false;
+            }
         }
 
         // Tick 이 반응 마감 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
@@ -75,14 +104,13 @@ namespace Chapchu.Game
             for (int i = _chain.Count - 1; i >= 0; i--)
             {
                 ChainEntry entry = _chain[i];
-                _discardPile.Add(entry.Card);
-
                 if (entry.Negated)
                 {
-                    _events.Add(new CardNegated(entry.User, entry.Card.InstanceId, entry.Card.CardId, _discardPile.Count));
+                    ResolveNegated(entry);
                     continue;
                 }
 
+                _discardPile.Add(entry.Card);
                 int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                 _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
 
@@ -102,18 +130,40 @@ namespace Chapchu.Game
             CheckElimination();                    // 함정 시간 · 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
         }
 
+        // 무효된 카드 — 효과 없이 버림 더미로, 「손패로 반환」(C01)이면 시전자 손패로. 사건 기록: 내 함정 무효(T12) · 카드 반환(T13)
+        private void ResolveNegated(ChainEntry entry)
+        {
+            if (entry.ReturnToCaster && IsInGame(entry.User))
+            {
+                PlayerState caster = _players[entry.User];
+                caster.Hand.Add(entry.Card);
+                _events.Add(new CardReturnedToHand(entry.User, entry.Card.InstanceId, entry.Card.CardId, caster.Hand.Count));
+                OnHandChanged(entry.User);
+                RecordAfter(AfterKind.CardReturned, entry.User, entry.NegatedBy, 1);
+                return;
+            }
+
+            _discardPile.Add(entry.Card);
+            _events.Add(new CardNegated(entry.User, entry.Card.InstanceId, entry.Card.CardId, _discardPile.Count));
+            if (entry.Card.Type == CardType.Trap && entry.NegatedBy >= 0)
+                RecordAfter(AfterKind.MyTrapNegated, entry.User, entry.NegatedBy, 1);
+        }
+
         /// <summary>entry 바로 아래 카드를 무효화한다 — 카운터는 낼 때의 맨 위 카드에 반응한다 (04 7절). 무효화 효과(Effects/)가 부른다.</summary>
         internal void Negate(ChainEntry entry, bool selfOnly)
         {
-            int index = _chain.IndexOf(entry);
-            if (index <= 0)
+            ChainEntry countered = Below(entry);
+            if (countered == null)
                 return; // 맨 아래 카드는 반응한 카드가 없다
 
-            ChainEntry countered = _chain[index - 1];
             if (selfOnly)
+            {
                 countered.Excluded.Add(entry.User);
-            else
-                countered.Negated = true;
+                return;
+            }
+
+            countered.Negated = true;
+            countered.NegatedBy = entry.User;
         }
 
         /// <summary>효과를 받을 사람. 본인 무효화(Excluded)와 나간 사람을 뺀다 — 처리 전에 빠진 대상은 그 효과만 불발 (04 10절).</summary>

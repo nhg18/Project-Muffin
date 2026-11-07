@@ -136,7 +136,7 @@
 | --- | --- | --- |
 | `Damage` | amount | A09, A14, A22, T01 |
 | `Heal` | amount | A08, A13, T02 |
-| `Drain` | amount | A19 |
+| `Drain` | — (따로 두지 않는다 — `Damage(대상)` + `Heal(본인)` 조립) | A19 |
 | `Draw` | count | A06, A12, A13, A27, C08, T09, T15 |
 | `Discard` | count, random 여부 | A05, A21, A23, T04, T07 |
 | `Steal` | count | A04, A24, T08 |
@@ -158,6 +158,11 @@
 | `Peek` | count, pick | A25 |
 | `Reveal` | count | C14 |
 | `Choice` | 선택지 목록 | A15 |
+| `DamagePerTrap` | amount | A22 |
+| `HandDiffDamage` | amount | A26 |
+| `MoveChapChu` | — | A20 |
+| `ProtectTrap` | — | C12 |
+| `DrawAtTurnStart` | count | T15 |
 
 카드는 효과를 **조합**한다. 카드 59장에 대해 스크립트 59개를 만들지 않는다. (2026-10-10 구조 확정, 2026-11-01 조립식으로)
 
@@ -165,7 +170,84 @@
 * 효과 실행은 방장만 한다.
 * 받는 사람은 효과마다 정한다 — 예: A19 `Damage(대상, N)` + `Heal(본인, N)`, A13 `Heal(대상, N)` + `Draw(본인, N)`.
 * 수치 하나로 안 되는 효과(A15 선택, A22 · A26 공식, A25 확인 후 획득 등)도 전용 효과 종류로 만들고 계산 방식을 그 종류에 고정한다.
-* 발동 조건(카운터 · 함정)과 확장 대상(조건부 · 카드 대상 · "피해를 준 플레이어")은 효과가 아니다 — 별도로 설계한다 (`04-card.md` 11절 · 15절).
+* 발동 조건(카운터 · 함정)과 확장 대상(조건부 · 카드 대상 · "피해를 준 플레이어")은 효과가 아니다 — `04-card.md` 6절 「발동 시점」 · 7절 「반응 조건」 · 11절 대상 타입 (2026-11-06).
+
+### 5-1. 카드별 조립 (2026-11-06)
+
+카드 에셋은 이 표대로 만든다. N · M 은 미정(0절) — 에셋에 값을 넣으면 그대로 동작한다. 「반응」 = 반응 대상 종류 · 반응 조건 (`04` 7절), 「발동」 = 함정 발동 조건 (`04` 6절).
+
+| ID | 대상 타입 | 반응 · 발동 | 효과 (위에서부터) |
+| --- | --- | --- | --- |
+| A01 | `OneOther` | — | SkipTurn(대상) |
+| A02 | `ChapchuPlayers` | — | Damage(대상, N) |
+| A03 | `OneOther` | — | DestroyTrap(대상, 무작위 1) |
+| A04 | `OneOther` | — | Steal(대상 → 본인, 무작위 N) |
+| A05 | `OneOther` | — | Discard(대상, 무작위 N) |
+| A06 | `Self` | — | Draw(본인, N) |
+| A08 | `Self` | — | Heal(본인, N) |
+| A09 | `OneOther` | — | Damage(대상, N) |
+| A11 | `OneOther` | — | SwapHand(본인 ↔ 대상) |
+| A12 | `Self` | — | Damage(본인, N) + Draw(본인, N) |
+| A13 | `OneOther` | — | Heal(대상, N) + Draw(본인, N) |
+| A14 | `Everyone` | — | Damage(대상, N) |
+| A16 | `OneOther` | — | ReturnTrap(대상, 무작위 1) |
+| A17 | `OneOther` | — | StealTrap(대상 → 본인 빈 칸, 무작위 1) — 빈 칸이 없으면 불발 |
+| A18 | `TwoOthers` | — | SwapHand(대상 1 ↔ 대상 2) |
+| A19 | `OneOther` | — | Damage(대상, N) + Heal(본인, N) |
+| A20 | `TwoOthers` (고른 순서) | — | MoveChapChu(대상 1 → 대상 2) |
+| A21 | `Self` | — | Discard(본인, 무작위 N) + ClearChapChu(본인) |
+| A22 | `OneOther` | — | DamagePerTrap(대상, 함정 1장당 N) |
+| A23 | `MoreHandThanMe` | — | Discard(대상, 무작위 N) |
+| A26 | `OneOther` | — | HandDiffDamage(대상, (대상 장수 − 본인 장수) × N, 차이가 음수면 1 × N) |
+| C01 | `None` | 행동 · 아무 때나 | ReturnToHand |
+| C02 | `OneOther` | 행동 · 다른 사람의 카드 | Redirect(고른 사람) |
+| C03 | `None` | 행동 · 나에게 피해 | ConvertDamageToHeal |
+| C04 | `None` | 행동 · 다른 사람의 카드 | Redirect(시전자) |
+| C05 | `None` | 행동 · 아무 때나 | Negate(본인만) |
+| C06 | `None` | 함정 · 아무 때나 | Negate(전체) |
+| C07 | `None` | 카운터 · 다른 사람의 카드 | Negate(전체) |
+| C08 | `None` | 행동 · 함정 · 내 손패를 가져가거나 버림 | Negate(본인만) + Draw(본인, N) |
+| C09 | `None` | 행동 · 함정 · 다른 사람 회복 | ConvertHealToDamage |
+| C10 | `None` | 행동 · 함정 · 나에게 피해 | ReduceDamage(N) |
+| C11 | `None` | 행동 · 함정 · 그 피해로 사망 | SurviveAt(이 피해에서, HP N) |
+| C12 | `None` | 행동 · 내 함정 파괴 | ProtectTrap |
+| C13 | `None` | 행동 · 함정 · 내 턴 스킵 | Negate(본인만) |
+| C15 | `None` | 행동 · 함정 · 나에게 찹츄 부여 | Negate(본인만) |
+| T01 | `AllOthers` | 본인 사망 대기 | Damage(대상, N) |
+| T02 | `Self` | HP 이하 (20) | Heal(본인, N) |
+| T03 | `TriggerSource` | 카드 반응 · 카운터 · 다른 사람의 카드 | Damage(대상, N) |
+| T04 | `ChapchuOthers` | 찹츄 존재 | Discard(대상, 무작위 3) |
+| T05 | `TriggerSource` | 카드 반응 · 행동 · 나를 대상으로 | Negate(전체) + SkipTurn(대상) |
+| T06 | `TriggerSource` | 피해 받은 후 | Damage(대상, N) |
+| T07 | `TriggerSource` | 피해 받은 후 | Discard(대상, 무작위 N) |
+| T08 | `TriggerSource` | 훔쳐진 후 | Steal(대상 → 본인, 무작위 N) |
+| T09 | `Self` | 버려진 후 | Draw(본인, 버려진 장수) |
+| T10 | `TriggerSource` | 함정 파괴된 후 | Damage(대상, N) |
+| T12 | `TriggerSource` | 내 함정 무효된 후 | Discard(대상, 무작위 N) |
+| T13 | `TriggerSource` | 카드 반환된 후 | Damage(대상, N) |
+| T14 | `TriggerSource` | 여러 장 뽑은 후 (N) | Discard(대상, 무작위 M) |
+| T15 | `Self` | 턴 스킵된 후 | DrawAtTurnStart(본인, N) |
+| T16 | `TriggerSource` | 찹츄 부여된 후 | SetChapChu(대상) |
+| T17 | `Self` | 본인 사망 대기 | SurviveAt(지금, HP N, 손패 · 다른 설치 함정 모두 버림) |
+
+**보류 — 입력 방식 · 개념이 정해져야 만든다**
+
+| ID | 막는 것 |
+| --- | --- |
+| A07 · A10 | 턴 진행 방향 개념이 없다 (`03` 12절 #2) |
+| A15 | 대상이 「HP 감소 / 손패 버림」 중 고르는 입력 (봇의 선택 규칙은 `18` 11절에 있다) |
+| A24 | 줄 카드 1장을 고르는 입력 |
+| A25 | 덱 위 N장을 보고 1장 고르는 입력 |
+| A27 | 처리 중 「손패의 함정 1장을 즉시 설치」 하는 입력 |
+| C14 · T11 | 손패 · 함정을 **공개하는** 효과가 카드 목록에 없다 |
+
+**이 표를 정하며 고른 해석 (2026-11-06 — 다르면 고친다)**
+
+* SetChapChu · MoveChapChu — 받는 사람의 손패가 정확히 10장이 아니면 찹츄가 붙지 않는다 (07 7절 「10장이 아니면 즉시 해제」). 「부여된 후」(T16) 기록은 남는다.
+* A26 — 차이 = 대상 손패 − 본인 손패, 음수면 1. 0 이면 피해 0 (사건 없음).
+* C02 · C04 — 여러 명 대상 카드도 대상 전체를 새 1명으로 바꾼다.
+* C08 — 「손패 변경 효과 무효」 를 그 카드 전체를 나에게만 무효로 처리한다 (C05 와 같다) + 드로우.
+* T13 — 반환된 카드의 시전자가 아닌 누구든 발동할 수 있다. T14 — 카드 **효과**로 뽑은 장수만 센다 (메인 행동 드로우 1장은 세지 않는다).
 
 ---
 

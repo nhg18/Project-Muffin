@@ -962,6 +962,361 @@ public static class MultiTest
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
+    /// <summary>
+    /// 규칙 계층의 카드 효과 (11-card-list.md 5-1, 기능 9) — 효과 종류 · 새 대상 타입 · 카운터의 반응 조건 · 아래 카드 표시 · 「~한 후」 함정.
+    /// 카드는 메모리에서 만든다 (수치는 시험용). 시계는 0.1초씩.
+    /// </summary>
+    public static string Effects()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        CardType[] action = { CardType.Action }, actionTrap = { CardType.Action, CardType.Trap }, trapOnly = { CardType.Trap };
+        Func<int, Card> Act(TargetType t, params CardEffect[] e) => id => new Card(id, 900, CardType.Action, t, e, null, ChainTable.Reveal, ChainTable.Resolve);
+        Func<int, Card> Ctr(TargetType t, CardType[] reacts, ReactCondition c, params CardEffect[] e) => id => new Card(id, 901, CardType.Counter, t, e, reacts, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.None, 0, c);
+        Func<int, Card> Trp(TargetType t, TrapTrigger trig, int value, params CardEffect[] e) => id => new Card(id, 902, CardType.Trap, t, e, action, ChainTable.Reveal, ChainTable.Resolve, trig, value);
+        DamageEffect Dmg(int n, EffectSubject s = EffectSubject.Target) => new DamageEffect { subject = s, amount = n };
+
+        // ── 효과 ──
+        {
+            var t = new ChainTable();
+            t.SetHp(t.Turn, 50);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new HealEffect { subject = EffectSubject.Self, amount = 30 })));
+            Check(t.Hp(t.Turn) == 80, "Heal 50 → 80");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHp(t.Turn, 90);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new HealEffect { subject = EffectSubject.Self, amount = 30 })));
+            Check(t.Hp(t.Turn) == 100, "Heal 최대 100");
+        }
+        {
+            var t = new ChainTable();
+            int before = t.HandCount(t.Turn);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new DrawEffect { subject = EffectSubject.Self, count = 2 })));
+            Check(t.HandCount(t.Turn) == before + 2, "Draw 2장 (낸 카드 빼고 +2)");
+        }
+        {
+            var t = new ChainTable();
+            int before = t.HandCount(t.O1), discard = t.DiscardCount;
+            var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DiscardEffect { subject = EffectSubject.Target, count = 2 })), t.O1);
+            Check(t.HandCount(t.O1) == before - 2 && t.DiscardCount == discard + 3 && events.OfType<CardsDiscarded>().Any(), "Discard 대상 2장 → 버림 더미 (+낸 카드)");
+        }
+        {
+            var t = new ChainTable();
+            int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+            var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new StealEffect { count = 2 })), t.O1);
+            Check(t.HandCount(t.Turn) == mine + 2 && t.HandCount(t.O1) == theirs - 2 && events.OfType<HandCardsMoved>().Any(), "Steal 대상 → 나 2장");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 3);
+            t.SetHandSize(t.O1, 7);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SwapHandEffect())), t.O1);
+            Check(t.HandCount(t.Turn) == 7 && t.HandCount(t.O1) == 3, "SwapHand 나 ↔ 대상");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 2);
+            t.SetHandSize(t.O2, 8);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new SwapHandEffect { betweenTargets = true })), t.O1, t.O2);
+            Check(t.HandCount(t.O1) == 8 && t.HandCount(t.O2) == 2, "SwapHand 대상 1 ↔ 대상 2");
+        }
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DestroyTrapEffect { count = 1 })), t.O1);
+            Check(t.TrapCount(t.O1) == 0 && events.OfType<TrapDestroyed>().Any(), "DestroyTrap → 버림 더미");
+        }
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            int hand = t.HandCount(t.O1);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new ReturnTrapEffect { count = 1 })), t.O1);
+            Check(t.TrapCount(t.O1) == 0 && t.HandCount(t.O1) == hand + 1, "ReturnTrap → 주인 손패");
+        }
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new StealTrapEffect())), t.O1);
+            Check(t.TrapCount(t.O1) == 0 && t.TrapCount(t.Turn) == 1, "StealTrap → 내 빈 칸");
+        }
+        {
+            var t = new ChainTable();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SkipTurnEffect { subject = EffectSubject.Target })), t.O1);
+            var events = t.Run(t.Now + 5);
+            Check(events.OfType<TurnSkipped>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O2, "SkipTurn → 대상 턴을 건너뛰고 다음 사람");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 10);
+            t.Server.DeclareChapchu(t.O1);
+            t.SetHandSize(t.O2, 10);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new MoveChapChuEffect())), t.O1, t.O2);
+            Check(!t.State(t.O1).IsChapchu && t.State(t.O2).IsChapchu, "MoveChapChu 대상 1 → 대상 2");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 10);
+            t.Server.DeclareChapchu(t.O1);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.ChapchuPlayers, Dmg(20))));
+            Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, "대상 ChapchuPlayers — 찹츄인 사람만");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 10);
+            t.SetHandSize(t.O2, 2);
+            t.SetHandSize(t.Turn, 6);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.MoreHandThanMe, Dmg(20))));
+            Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, "대상 MoreHandThanMe — 나보다 손패 많은 사람만");
+        }
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DamagePerTrapEffect { amount = 7 })), t.O1);
+            Check(t.Hp(t.O1) == 86, "DamagePerTrap 함정 2 × 7");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 8);
+            t.SetHandSize(t.Turn, 5); // + 낼 카드 1장 → 낸 뒤 5
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new HandDiffDamageEffect { amount = 5 })), t.O1);
+            Check(t.Hp(t.O1) == 85, "HandDiffDamage (8 − 5) × 5");
+        }
+
+        // ── 카운터: 반응 조건 · 아래 카드 표시 ──
+        Func<int, Card> hit = Act(TargetType.OneOther, Dmg(20));
+        {
+            var t = new ChainTable();
+            Card c01 = t.Give(t.O1, Ctr(TargetType.None, action, ReactCondition.Any, new ReturnToHandEffect()));
+            t.GiveTrap(t.O2, ChainTable.TrapHit); // 반환 뒤 함정(T13)은 따로
+            Card card = t.Give(t.Turn, hit);
+            t.PlayCard(t.Turn, card, t.O1);
+            t.At(2);
+            t.Counter(t.O1, c01);
+            var events = t.Run(20);
+            Check(t.Hp(t.O1) == 100 && events.OfType<CardReturnedToHand>().Any(e => e.CardInstanceId == card.InstanceId) && t.Hand(t.Turn).Contains(card), "C01 손패로 반환 — 효과 없이 시전자 손패");
+        }
+        {
+            var t = new ChainTable();
+            Card c02 = t.Give(t.O1, Ctr(TargetType.OneOther, action, ReactCondition.ByOther, new RedirectEffect()));
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c02, t.O2);
+            t.Run(20);
+            Check(t.Hp(t.O1) == 100 && t.Hp(t.O2) == 80, "C02 대상 변경 → 고른 사람");
+        }
+        {
+            var t = new ChainTable();
+            Card c04 = t.Give(t.O1, Ctr(TargetType.None, action, ReactCondition.ByOther, new RedirectEffect { toCaster = true }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c04);
+            t.Run(20);
+            Check(t.Hp(t.O1) == 100 && t.Hp(t.Turn) == 80, "C04 대상 변경 → 시전자");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 50);
+            Func<int, Card> c03 = Ctr(TargetType.None, action, ReactCondition.DamagesMe, new ConvertDamageToHealEffect());
+            Card mine = t.Give(t.O1, c03), other = t.Give(t.O2, c03);
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact, "C03 조건 「나에게 피해」 — 안 맞는 사람 → 9");
+            t.Counter(t.O1, mine);
+            t.Run(20);
+            Check(t.Hp(t.O1) == 70, "C03 피해 → 회복 (50 → 70)");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHp(t.Turn, 50);
+            Card c09 = t.Give(t.O1, Ctr(TargetType.None, action, ReactCondition.HealsOther, new ConvertHealToDamageEffect()));
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new HealEffect { subject = EffectSubject.Self, amount = 20 })));
+            t.At(2);
+            t.Counter(t.O1, c09);
+            t.Run(20);
+            Check(t.Hp(t.Turn) == 30, "C09 남의 회복 → 피해 (50 → 30)");
+        }
+        {
+            var t = new ChainTable();
+            Card c10 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.DamagesMe, new ReduceDamageEffect { amount = 5 }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c10);
+            t.Run(20);
+            Check(t.Hp(t.O1) == 85, "C10 피해 감소 20 − 5");
+        }
+        {
+            var t = new ChainTable();
+            Func<int, Card> c11 = Ctr(TargetType.None, actionTrap, ReactCondition.WouldKillMe, new SurviveAtEffect { hp = 1 });
+            t.SetHp(t.O1, 20);
+            Card save = t.Give(t.O1, c11);
+            t.SetHp(t.O2, 50);
+            Card notYet = t.Give(t.O2, c11);
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.AllOthers, Dmg(20))));
+            t.At(2);
+            Check(t.Code(t.Counter(t.O2, notYet)) == RejectCode.CannotReact, "C11 조건 「그 피해로 사망」 — HP 50 → 9");
+            t.Counter(t.O1, save);
+            var events = t.Run(20);
+            Check(t.Hp(t.O1) == 1 && !events.OfType<DeathPending>().Any(), "C11 사망 방지 — HP 1 로 남고 사망 대기 없음");
+        }
+        {
+            var t = new ChainTable();
+            Card c13 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.SkipsMe, new NegateEffect { selfOnly = true }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SkipTurnEffect { subject = EffectSubject.Target })), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c13);
+            t.Run(20); // 처리 8.5 · 다음 턴 9.7 — O1 턴 20초 안
+            Check(!t.State(t.O1).SkipNextTurn && t.Server.CurrentTurnActor == t.O1, "C13 내 턴 스킵 무효");
+        }
+        {
+            var t = new ChainTable();
+            Card c08 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.TakesMyHand, new NegateEffect { selfOnly = true }, new DrawEffect { subject = EffectSubject.Self, count = 1 }));
+            int hand = t.HandCount(t.O1);
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new StealEffect { count = 2 })), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c08);
+            t.Run(20);
+            Check(t.HandCount(t.O1) == hand - 1 + 1, "C08 훔치기 무효 + 1장 드로우 (카운터 1장 빠지고 1장)");
+        }
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            Card c12 = t.Give(t.O1, Ctr(TargetType.None, action, ReactCondition.DestroysMyTrap, new ProtectTrapEffect()));
+            int hand = t.HandCount(t.O1);
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DestroyTrapEffect { count = 1 })), t.O1);
+            t.At(2);
+            t.Counter(t.O1, c12);
+            var events = t.Run(20);
+            Check(t.TrapCount(t.O1) == 0 && t.HandCount(t.O1) == hand && events.OfType<TrapReturned>().Any() && !events.OfType<TrapDestroyed>().Any(), "C12 파괴 대신 손패로");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O2, 10);
+            t.Server.DeclareChapchu(t.O2);
+            t.SetHandSize(t.O1, 10);
+            Card c15 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.GivesMeChapchu, new NegateEffect { selfOnly = true }));
+            t.SetHandSize(t.O1, 11); // 카운터를 내면 10장
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new MoveChapChuEffect())), t.O2, t.O1);
+            t.At(2);
+            Check(!(t.Counter(t.O1, c15)[0] is RequestRejected), "C15 조건 「나에게 찹츄 부여」 맞음");
+            t.Run(20);
+            Check(!t.State(t.O1).IsChapchu, "C15 나에게 오는 찹츄 무효");
+        }
+        {
+            var t = new ChainTable();
+            Func<int, Card> t05 = id => new Card(id, 905, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new NegateEffect(), new SkipTurnEffect { subject = EffectSubject.Target } }, action, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.ReactToCard, 0, ReactCondition.TargetsMe);
+            Card mine = t.SetTrapCard(t.O1, t05), other = t.SetTrapCard(t.O2, t05);
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            Check(t.Code(t.Fire(t.O2, other)) == RejectCode.CannotReact, "T05 조건 「나를 대상으로」 — 대상 아닌 사람 → 9");
+            t.Fire(t.O1, mine);
+            t.Run(10);
+            Check(t.Hp(t.O1) == 100 && t.State(t.Turn).SkipNextTurn, "T05 행동 카드 무효 + 시전자 턴 스킵");
+        }
+
+        // ── 「~한 후」 함정 ──
+        void After(string name, Action<ChainTable> setup, Func<ChainTable, Card> trap, Action<ChainTable> act, Func<ChainTable, bool> result)
+        {
+            var t = new ChainTable();
+            setup?.Invoke(t);
+            Card card = trap(t);
+            act(t);
+            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
+            if (window == null)
+            {
+                Check(false, name + " — 함정 시간이 열리지 않았다");
+                return;
+            }
+
+            t.At(window.OpensAt + 0.5);
+            bool fired = t.Fire(t.O1, card).OfType<TrapActivated>().Any();
+            t.Run(window.OpensAt + 20);
+            Check(fired && result(t), name);
+        }
+
+        After("T08 훔쳐진 후 → 되훔침", null,
+            t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterStolen, 0, new StealEffect { count = 1 })),
+            t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new StealEffect { count = 2 })), t.O1),
+            t => t.HandCount(t.O1) == 6 - 2 + 1);
+        After("T09 버려진 후 → 버려진 장수만큼 드로우", null,
+            t => t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.AfterDiscarded, 0, new DrawEffect { subject = EffectSubject.Self, useTriggerAmount = true })),
+            t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DiscardEffect { subject = EffectSubject.Target, count = 3 })), t.O1),
+            t => t.HandCount(t.O1) == 6);
+        After("T10 함정 파괴된 후 → 반격", t => t.GiveTrap(t.O1, ChainTable.TrapReact),
+            t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterTrapDestroyed, 0, Dmg(10))),
+            t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DestroyTrapEffect { count = 1 })), t.O1),
+            t => t.Hp(t.Turn) == 90 || t.TrapCount(t.O1) == 0); // 무작위로 반격 함정 자신이 파괴되면 열리지 않는다 — 열렸다면 반격
+        After("T13 카드 반환된 후 → 시전자 피해",
+            t => t.SetHp(t.O2, 100),
+            t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterCardReturned, 0, Dmg(10))),
+            t =>
+            {
+                Card c01 = t.Give(t.O2, Ctr(TargetType.None, action, ReactCondition.Any, new ReturnToHandEffect()));
+                t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O2);
+                t.At(2);
+                t.Counter(t.O2, c01);
+            },
+            t => t.Hp(t.Turn) == 90);
+        After("T14 여러 장 뽑은 후 → 버리게", null,
+            t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterDrewMany, 2, new DiscardEffect { subject = EffectSubject.Target, count = 1 })),
+            t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new DrawEffect { subject = EffectSubject.Self, count = 2 }))),
+            t => t.HandCount(t.Turn) == 6 + 2 - 1);
+        After("T16 찹츄 부여된 후 → 준 사람에게도", t => { t.SetHandSize(t.O1, 10); t.SetHandSize(t.Turn, 10); }, // 낼 카드 1장이 더해졌다 빠져 10
+            t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterChapchuGiven, 0, new SetChapChuEffect { subject = EffectSubject.Target })),
+            t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1),
+            t => t.State(t.O1).IsChapchu && t.State(t.Turn).IsChapchu);
+        {
+            // T12 — 내 함정이 카운터로 무효된 뒤
+            var t = new ChainTable();
+            Card react = t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.ReactToCard, 0, Dmg(10)));
+            Card t12 = t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterMyTrapNegated, 0, new DiscardEffect { subject = EffectSubject.Target, count = 1 }));
+            Card negate = t.Give(t.Turn, Ctr(TargetType.None, trapOnly, ReactCondition.Any, new NegateEffect()));
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            t.At(2);
+            t.Fire(t.O1, react);
+            t.At(4);
+            t.Counter(t.Turn, negate);
+            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
+            int hand = t.HandCount(t.Turn);
+            bool fired = window != null && t.FireAt(window.OpensAt + 0.5, t.O1, t12);
+            t.Run(80);
+            Check(fired && t.HandCount(t.Turn) == hand - 1, "T12 내 함정 무효된 후 → 무효시킨 사람 손패 버림");
+        }
+        {
+            // T15 — 턴 스킵된 뒤 → 다음 실제 턴에 추가 드로우
+            var t = new ChainTable();
+            Card t15 = t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.AfterTurnSkipped, 0, new DrawAtTurnStartEffect { subject = EffectSubject.Self, count = 2 }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SkipTurnEffect { subject = EffectSubject.Target })), t.O1);
+            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
+            bool fired = window != null && t.FireAt(window.OpensAt + 0.5, t.O1, t15);
+            int hand = t.HandCount(t.O1);
+            t.RunUntilTurn(t.O1, 200);
+            Check(fired && t.HandCount(t.O1) == hand + 2, "T15 턴 스킵된 후 → 다음 실제 턴 시작에 +2장");
+        }
+        {
+            // T17 — 사망 대기 중 HP N 으로 생존 (손패 · 다른 함정 버림)
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            Card t17 = t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.SelfDeathPending, 0, new SurviveAtEffect { hp = 10, now = true, discardHandAndTraps = true }));
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
+            DeathPending pending = t.RunUntil<DeathPending>(40);
+            bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, t17);
+            var events = t.Run(80);
+            Check(fired && t.Hp(t.O1) == 10 && t.HandCount(t.O1) == 0 && t.TrapCount(t.O1) == 0 && events.OfType<DeathAvoided>().Any() && !events.OfType<PlayerDied>().Any(),
+                "T17 사망 대기 → HP 10 생존 · 손패 · 함정 버림 · 사망 없음");
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
     // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
     private sealed class ChainTable
     {
@@ -1013,6 +1368,54 @@ public static class MultiTest
         public int HandCount(int actor) => ((PlayerState)_players[actor]).Hand.Count;
 
         public void GiveCard(int actor, int kind) => ((PlayerState)_players[actor]).Hand.Add(MakeCard(_nextInstance++, kind));
+
+        // 시험용 카드 (make = 인스턴스 ID → 카드)
+        public Card Give(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Hand.Add(c); return c; }
+        public Card SetTrapCard(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Traps.Add(c); return c; }
+        public PlayerState State(int actor) => (PlayerState)_players[actor];
+        public List<Card> Hand(int actor) => State(actor).Hand;
+        public int TrapCount(int actor) => State(actor).Traps.Count;
+
+        public IReadOnlyList<GameEvent> PlayCard(int actor, Card card, params int[] targets) => Server.PlayCard(actor, card.InstanceId, targets);
+        public IReadOnlyList<GameEvent> Counter(int actor, Card card, params int[] targets) => Server.PlayCounter(actor, card.InstanceId, targets);
+        public IReadOnlyList<GameEvent> Fire(int actor, Card trap, params int[] targets) => Server.ActivateTrap(actor, trap.InstanceId, targets);
+        public double Now => _now;
+        public bool FireAt(double at, int actor, Card trap) { _now = at; return Fire(actor, trap).OfType<TrapActivated>().Any(); }
+
+        // 내고 반응 없이 끝까지 (체인 처리까지)
+        public List<GameEvent> PlayAndResolve(int actor, Card card, params int[] targets)
+        {
+            var events = PlayCard(actor, card, targets).ToList();
+            events.AddRange(Run(_now + Reveal + 5.1));
+            return events;
+        }
+
+        // 지금부터 until 초까지 0.1초씩 Tick
+        public List<GameEvent> Run(double until)
+        {
+            var events = new List<GameEvent>();
+            for (; _now < until; _now += 0.1)
+                events.AddRange(Server.Tick());
+            return events;
+        }
+
+        public T RunUntil<T>(double until) where T : GameEvent
+        {
+            for (; _now < until; _now += 0.1)
+            {
+                T found = Server.Tick().OfType<T>().FirstOrDefault();
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
+
+        public void RunUntilTurn(int actor, double until)
+        {
+            for (; _now < until && Server.CurrentTurnActor != actor; _now += 0.1)
+                Server.Tick();
+            Server.Tick();
+        }
         public void GiveTrap(int actor, int kind) => ((PlayerState)_players[actor]).Traps.Add(MakeCard(_nextInstance++, kind));
 
         public IReadOnlyList<GameEvent> SetTrap(int actor, int kind) => Server.SetTrap(actor, Find(actor, kind));
@@ -1094,11 +1497,20 @@ public static class MultiTest
         return true;
     }
 
-    // 사람 + 봇 중 내 다음 (봇은 사람 뒤 — 02-player.md 3절). 사망한 사람은 거르지 않는다 — 거절되면 다음 턴에 다시
+    // 사람 + 봇 중 내 다음으로 살아 있는 사람 (봇은 사람 뒤 — 02-player.md 3절). 생존 상태는 방장이 쓴 공개 값으로 본다
     private static int NextActor(int me)
     {
         int[] actors = PhotonNetwork.PlayerList.Select(p => p.ActorNumber).OrderBy(a => a).Concat(BotRoster.Actors).ToArray();
-        return actors[(Array.IndexOf(actors, me) + 1) % actors.Length];
+        int index = Array.IndexOf(actors, me);
+        for (int step = 1; step < actors.Length; step++)
+        {
+            int actor = actors[(index + step) % actors.Length];
+            bool dead = BotRoster.TryGetPublic(actor, PlayerProps.LifeState, out object life) && life is byte b && b == (byte)LifeState.Dead;
+            if (!dead)
+                return actor;
+        }
+
+        return actors[(index + 1) % actors.Length];
     }
 
     // 규칙 계층만 돌릴 때 쓰는 덱. GameScene 의 PunGameServer 가 쓰는 덱과 같게 둔다.
