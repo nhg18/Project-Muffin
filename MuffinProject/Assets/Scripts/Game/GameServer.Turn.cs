@@ -46,6 +46,9 @@ namespace Chapchu.Game
                 if (now < _trapWindowDeadline)
                     return;
                 CloseTrapWindow();
+                CheckElimination(); // 함정 시간 중에 나가 1명만 남았을 수 있다 (07 3절)
+                if (_gameOver)
+                    return;
             }
 
             if (IsDeathPending)
