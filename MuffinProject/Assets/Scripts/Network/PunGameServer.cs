@@ -429,8 +429,15 @@ namespace Chapchu.Network
         }
 
         // 받는 쪽 — 같은 보낸이의 RPC 는 순서대로 오므로 번호는 늘기만 한다. 이하가 오면 이미 반영한 것 (동기화 응답 뒤의 묵은 알림 등)
-        private bool Accept(int seq)
+        // 결과는 방장이 보낸 것만 반영한다 (09-network.md 2절 #3) — 아니면 다른 클라가 번호를 올려 진짜 알림을 막을 수 있다
+        private bool Accept(int seq, PhotonMessageInfo info)
         {
+            if (info.Sender == null || !info.Sender.IsMasterClient)
+            {
+                Debug.LogWarning($"[{nameof(PunGameServer)}] 방장이 아닌 P{info.Sender?.ActorNumber} 가 보낸 결과 — 버린다");
+                return false;
+            }
+
             if (seq <= _receivedSeq)
             {
                 Debug.LogWarning($"[{nameof(PunGameServer)}] 이미 받은 처리 번호 {seq} (마지막 {_receivedSeq}) — 버린다");
@@ -457,240 +464,240 @@ namespace Chapchu.Network
         #region 결과 받기 (각 클라) → GameEvents
 
         [PunRPC]
-        private void RPC_OnHpChanged(int seq, int actorNumber, int hp)
+        private void RPC_OnHpChanged(int seq, int actorNumber, int hp, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseHpChanged(actorNumber, hp);
         }
 
         [PunRPC]
-        private void RPC_OnCardDrawn(int seq, int actorNumber, int handCount, int deckCount)
+        private void RPC_OnCardDrawn(int seq, int actorNumber, int handCount, int deckCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardDrawn(actorNumber, handCount, deckCount);
         }
 
         [PunRPC]
-        private void RPC_OnMyCardDrawn(int seq, int cardInstanceId, int cardId)
+        private void RPC_OnMyCardDrawn(int seq, int cardInstanceId, int cardId, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyCardDrawn(cardInstanceId, cardId);
         }
 
         [PunRPC]
-        private void RPC_OnDeckRefilled(int seq, int deckCount)
+        private void RPC_OnDeckRefilled(int seq, int deckCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseDeckRefilled(deckCount);
         }
 
         [PunRPC]
-        private void RPC_OnTurnStarted(int seq, int actorNumber, double deadline)
+        private void RPC_OnTurnStarted(int seq, int actorNumber, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTurnStarted(actorNumber, deadline);
         }
 
         [PunRPC]
-        private void RPC_OnCardPlayed(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
+        private void RPC_OnCardPlayed(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnReactionStarted(int seq, double opensAt, double deadline)
+        private void RPC_OnReactionStarted(int seq, double opensAt, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseReactionStarted(opensAt, deadline);
         }
 
         [PunRPC]
-        private void RPC_OnCardResolved(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
+        private void RPC_OnCardResolved(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardResolved(actorNumber, cardInstanceId, cardId, targets, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnCardNegated(int seq, int actorNumber, int cardInstanceId, int cardId, int discardCount)
+        private void RPC_OnCardNegated(int seq, int actorNumber, int cardInstanceId, int cardId, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardNegated(actorNumber, cardInstanceId, cardId, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnEmptyDeckDamaged(int seq, int actorNumber, int amount)
+        private void RPC_OnEmptyDeckDamaged(int seq, int actorNumber, int amount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseEmptyDeckDamaged(actorNumber, amount);
         }
 
         [PunRPC]
-        private void RPC_OnDeathPending(int seq, int actorNumber, double startsAt, double deadline)
+        private void RPC_OnDeathPending(int seq, int actorNumber, double startsAt, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseDeathPending(actorNumber, startsAt, deadline);
         }
 
         [PunRPC]
-        private void RPC_OnPlayerDied(int seq, int actorNumber, int discardCount)
+        private void RPC_OnPlayerDied(int seq, int actorNumber, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaisePlayerDied(actorNumber, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int discardCount)
+        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnTurnResumed(int seq, int actorNumber, double deadline)
+        private void RPC_OnTurnResumed(int seq, int actorNumber, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTurnResumed(actorNumber, deadline);
         }
 
         [PunRPC]
-        private void RPC_OnTrapSet(int seq, int actorNumber, int handCount, int trapCount)
+        private void RPC_OnTrapSet(int seq, int actorNumber, int handCount, int trapCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapSet(actorNumber, handCount, trapCount);
         }
 
         [PunRPC]
-        private void RPC_OnMyTrapSet(int seq, int cardInstanceId, int cardId)
+        private void RPC_OnMyTrapSet(int seq, int cardInstanceId, int cardId, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyTrapSet(cardInstanceId, cardId);
         }
 
         [PunRPC]
-        private void RPC_OnTrapActivated(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount)
+        private void RPC_OnTrapActivated(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, targets, trapCount);
         }
 
         [PunRPC]
-        private void RPC_OnTrapWindowStarted(int seq, double opensAt, double deadline)
+        private void RPC_OnTrapWindowStarted(int seq, double opensAt, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapWindowStarted(opensAt, deadline);
         }
 
         [PunRPC]
-        private void RPC_OnHandCardsMoved(int seq, int from, int to, int count, int fromHandCount, int toHandCount)
+        private void RPC_OnHandCardsMoved(int seq, int from, int to, int count, int fromHandCount, int toHandCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseHandCardsMoved(from, to, count, fromHandCount, toHandCount);
         }
 
         [PunRPC]
-        private void RPC_OnMyCardsGained(int seq, int[] cardInstanceIds, int[] cardIds)
+        private void RPC_OnMyCardsGained(int seq, int[] cardInstanceIds, int[] cardIds, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyCardsGained(cardInstanceIds, cardIds);
         }
 
         [PunRPC]
-        private void RPC_OnMyCardsLost(int seq, int[] cardInstanceIds)
+        private void RPC_OnMyCardsLost(int seq, int[] cardInstanceIds, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyCardsLost(cardInstanceIds);
         }
 
         [PunRPC]
-        private void RPC_OnCardsDiscarded(int seq, int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
+        private void RPC_OnCardsDiscarded(int seq, int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardsDiscarded(actorNumber, cardInstanceIds, cardIds, handCount, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnTrapDestroyed(int seq, int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
+        private void RPC_OnTrapDestroyed(int seq, int owner, int cardInstanceId, int cardId, int trapCount, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapDestroyed(owner, cardInstanceId, cardId, trapCount, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnTrapReturned(int seq, int owner, int trapCount, int handCount)
+        private void RPC_OnTrapReturned(int seq, int owner, int trapCount, int handCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapReturned(owner, trapCount, handCount);
         }
 
         [PunRPC]
-        private void RPC_OnMyTrapRemoved(int seq, int cardInstanceId)
+        private void RPC_OnMyTrapRemoved(int seq, int cardInstanceId, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyTrapRemoved(cardInstanceId);
         }
 
         [PunRPC]
-        private void RPC_OnTrapMoved(int seq, int from, int to, int fromTrapCount, int toTrapCount)
+        private void RPC_OnTrapMoved(int seq, int from, int to, int fromTrapCount, int toTrapCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTrapMoved(from, to, fromTrapCount, toTrapCount);
         }
 
         [PunRPC]
-        private void RPC_OnTurnSkipMarked(int seq, int actorNumber)
+        private void RPC_OnTurnSkipMarked(int seq, int actorNumber, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTurnSkipMarked(actorNumber);
         }
 
         [PunRPC]
-        private void RPC_OnTurnSkipped(int seq, int actorNumber)
+        private void RPC_OnTurnSkipped(int seq, int actorNumber, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseTurnSkipped(actorNumber);
         }
 
         [PunRPC]
-        private void RPC_OnCardReturnedToHand(int seq, int actorNumber, int cardInstanceId, int cardId, int handCount)
+        private void RPC_OnCardReturnedToHand(int seq, int actorNumber, int cardInstanceId, int cardId, int handCount, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseCardReturnedToHand(actorNumber, cardInstanceId, cardId, handCount);
         }
 
         [PunRPC]
-        private void RPC_OnDeathAvoided(int seq, int actorNumber, int hp)
+        private void RPC_OnDeathAvoided(int seq, int actorNumber, int hp, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseDeathAvoided(actorNumber, hp);
         }
 
         [PunRPC]
-        private void RPC_OnChapchuChanged(int seq, int actorNumber, bool isChapchu)
+        private void RPC_OnChapchuChanged(int seq, int actorNumber, bool isChapchu, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseChapchuChanged(actorNumber, isChapchu);
         }
 
         [PunRPC]
-        private void RPC_OnGameEnded(int seq, int winner, byte reason, double returnAt)
+        private void RPC_OnGameEnded(int seq, int winner, byte reason, double returnAt, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseGameEnded(winner, (GameEndReason)reason, returnAt);
         }
 
         [PunRPC]
-        private void RPC_OnMySync(int seq, int[] handIds, int[] handCardIds, int[] trapIds, int[] trapCardIds)
+        private void RPC_OnMySync(int seq, int[] handIds, int[] handCardIds, int[] trapIds, int[] trapCardIds, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMySync(handIds, handCardIds, trapIds, trapCardIds);
         }
 
         [PunRPC]
-        private void RPC_RejectRequest(int seq, int code)
+        private void RPC_RejectRequest(int seq, int code, PhotonMessageInfo info)
         {
-            if (Accept(seq))
+            if (Accept(seq, info))
                 GameEvents.RaiseMyRequestRejected(code);
         }
 

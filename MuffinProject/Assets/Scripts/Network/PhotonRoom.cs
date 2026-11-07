@@ -12,12 +12,23 @@ namespace Chapchu.Network
     /// <summary>방 만들기 · 입장 · 나가기 요청과 그 콜백 (08-room.md). NetworkManager 가 갖고 있고, 결과는 RoomEvents 로 알린다.</summary>
     public class PhotonRoom
     {
+        // 연결이 없어 요청을 보내지 못함 — 실패로 알려 화면이 대기 표시를 닫고 「그 밖의 실패」 안내를 띄우게 (08-room.md 7절)
+        private const short NotConnectedCode = ErrorCode.OperationNotAllowedInCurrentState;
+        private const string NotConnectedMessage = "서버에 연결되어 있지 않습니다.";
+
         private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+
+        // 방장이 써 놓고 서버 확인을 아직 못 받은 봇 목록. PUN 은 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾼다
+        private int[] _pendingBots;
 
         public void JoinRoom(string roomName)
         {
-            if (!PhotonConnection.ValidConnect) return;
-            
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseJoinRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
             if (string.IsNullOrEmpty(roomName))
             {
                 RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
@@ -28,7 +39,11 @@ namespace Chapchu.Network
     
         public void JoinRandomRoom()
         {
-            if (!PhotonConnection.ValidConnect) return;
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
             PhotonNetwork.JoinRandomRoom();
         }
     
@@ -39,7 +54,11 @@ namespace Chapchu.Network
     
         public void CreateRoom()
         {
-            if (!PhotonConnection.ValidConnect) return;
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
 
             _creatingSolo = false;
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
@@ -54,7 +73,11 @@ namespace Chapchu.Network
         /// </summary>
         public void CreateSoloRoom()
         {
-            if (!PhotonConnection.ValidConnect) return;
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
 
             _creatingSolo = true;
             int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
@@ -74,8 +97,8 @@ namespace Chapchu.Network
             if (!CanEditBots())
                 return false;
 
-            int[] numbers = BotRoster.Numbers;
-            if (numbers.Length >= BotRoster.MaxBots || BotRoster.MemberCount >= NetworkManager.MaxPlayers)
+            int[] numbers = CurrentBots;
+            if (numbers.Length >= BotRoster.MaxBots || PhotonNetwork.CurrentRoom.PlayerCount + numbers.Length >= NetworkManager.MaxPlayers)
                 return false;
 
             int number = 1;
@@ -92,7 +115,7 @@ namespace Chapchu.Network
             if (!CanEditBots())
                 return false;
 
-            int[] numbers = BotRoster.Numbers;
+            int[] numbers = CurrentBots;
             if (!numbers.Contains(number))
                 return false;
 
@@ -103,11 +126,15 @@ namespace Chapchu.Network
         // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절)
         private static bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.IsOpen;
 
-        private static void SetBots(int[] numbers)
+        // 서버 확인 전이면 방금 쓴 목록 — 「제거」 직후 「추가」 가 지운 봇을 되살리지 않게
+        private int[] CurrentBots => _pendingBots ?? BotRoster.Numbers;
+
+        private void SetBots(int[] numbers)
         {
             Room room = PhotonNetwork.CurrentRoom;
             room.MaxPlayers = NetworkManager.MaxPlayers - numbers.Length;
-            room.SetCustomProperties(BotRoster.BotsTable(numbers));
+            if (room.SetCustomProperties(BotRoster.BotsTable(numbers)))
+                _pendingBots = numbers;
         }
     
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen)
@@ -177,6 +204,7 @@ namespace Chapchu.Network
             // 지난 판의 내 상태(체력 · 손패 장수)를 지운다. PUN 은 방에 들어갈 때 내 CustomProperties 를 같이 보내서,
             // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
             PhotonNetwork.LocalPlayer.CustomProperties.Clear();
+            _pendingBots = null;
 
             RoomEvents.RaiseLeftRoom();
         }
@@ -201,6 +229,15 @@ namespace Chapchu.Network
 
         public void OnPlayerEntered(Player player)
         {
+            // 봇 추가와 사람 입장이 서버에서 엇갈리면 사람 + 봇이 정원을 넘는다 — 넘친 봇을 뺀다 (08-room.md 2절 · 18-bot.md 3절 #8)
+            if (CanEditBots())
+            {
+                int[] numbers = CurrentBots;
+                int seats = NetworkManager.MaxPlayers - PhotonNetwork.CurrentRoom.PlayerCount;
+                if (numbers.Length > seats)
+                    SetBots(numbers.Take(seats).ToArray());
+            }
+
             RoomEvents.RaisePlayerEntered(player);
         }
 
@@ -211,8 +248,13 @@ namespace Chapchu.Network
 
         public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changed)
         {
-            if (changed.ContainsKey(RoomProps.Bots))
-                RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
+            if (!changed.ContainsKey(RoomProps.Bots))
+                return;
+
+            // 마지막으로 쓴 목록까지 서버가 확인해 주면 다시 방 속성을 믿는다
+            if (_pendingBots != null && BotRoster.Numbers.SequenceEqual(_pendingBots))
+                _pendingBots = null;
+            RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
         }
 
         public void OnRoomListUpdate(List<RoomInfo> roomList)
