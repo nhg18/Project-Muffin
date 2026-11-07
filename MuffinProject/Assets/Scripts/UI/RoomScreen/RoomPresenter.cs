@@ -22,6 +22,9 @@ namespace Chapchu.UI.RoomScreen
         // 이미 방에 있는 채로 씬이 뜨는 경우(방장) 둘 다 여기로 모은다.
         private bool _initialized;
 
+        // 시작 요청은 한 번만 — 두 번 누르면 LoadLevel 이 두 번 큐에 들어가 게임 씬이 두 번 열린다.
+        private bool _startRequested;
+
         private void Awake()
         {
             _view = GetComponent<RoomView>();
@@ -90,7 +93,8 @@ namespace Chapchu.UI.RoomScreen
 
         private void HandleStartRequested()
         {
-            if (!PhotonNetwork.IsMasterClient || !CanStartGame()) return;
+            if (_startRequested || !PhotonNetwork.IsMasterClient || !CanStartGame()) return;
+            _startRequested = true;
 
             NetworkManager.Instance.UpdateRoomOptions(isVisible: false, isOpen: false);
             // 방 전원이 함께 넘어가야 하므로 LoadScene 이 아닌 LoadLevel (ScenePaths 설명 참고).

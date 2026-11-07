@@ -39,6 +39,10 @@ namespace Chapchu.Game
             if (card.Type != CardType.Counter)
                 return Reject(requester, RejectCode.NotCounterCard);
 
+            // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11)
+            if (_players[requester].Life == LifeState.DeathPending && card.Condition != ReactCondition.WouldKillMe)
+                return Reject(requester, RejectCode.CannotReact);
+
             ChainEntry top = _chain[_chain.Count - 1];
             if (!CanReactTo(card, requester, top))
                 return Reject(requester, RejectCode.CannotReact);
