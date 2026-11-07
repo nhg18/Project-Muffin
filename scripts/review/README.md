@@ -11,6 +11,8 @@
 | 푸시 전 | `bash scripts/review/prepush.sh` (Claude Code: `/prepush`) | `origin/develop` 이후 바뀐 코드 | 통과하면 함 |
 | 전체 | `bash scripts/review/prepush.sh --all [폴더]` | 이미 있는 코드 전체 (`Scripts/` 하위 폴더별) | 안 함 |
 
+**문서 작업은 리뷰하지 않는다** — push 하는 커밋들이 `docs/` · `*.md` 만 바꿨으면 pre-push 훅이 리뷰 없이 통과시킨다. 코드 · 에셋 · 설정 파일이 하나라도 섞이면 평소대로 리뷰한다.
+
 ## 흐름
 
 ```
