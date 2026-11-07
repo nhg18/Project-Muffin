@@ -11,6 +11,7 @@ AI 가 직접 돌린다. Test Runner · EditMode 테스트는 쓰지 않는다. 
 bash .claude/skills/multi-test/run.sh rules [인원=4] [턴=8]      # 규칙 계층만 — 네트워크 · 플레이 모드 없음, 몇 초
 bash .claude/skills/multi-test/run.sh ui                          # 한 클라이언트 UI 흐름 — 1분
 bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메인 + 클론 — 2~3분 (클론을 새로 열면 더)
+SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 턴이 끝난 뒤 에디터마다 게임 뷰 PNG 를 찍는다 — 화면 배치 눈 확인용 (MultiTest.Shot)
 ```
 
 종료 코드 `0` 통과 · `1` 실패 · `2` 준비 안 됨. 실패하면 출력의 `✗` 줄을 그대로 보고한다.

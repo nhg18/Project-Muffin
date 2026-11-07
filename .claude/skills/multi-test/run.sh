@@ -272,6 +272,17 @@ run_multi() {
     done
     sleep 3
 
+    # SHOT_DIR 이 있으면 끝 상태의 게임 뷰를 에디터마다 PNG 로 찍는다 (화면 배치 눈 확인용)
+    if [ -n "${SHOT_DIR:-}" ]; then
+        log "▶ 스크린샷 → $SHOT_DIR"
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" Shot "$SHOT_DIR/$(name_of "$project").png")
+            log "  $(name_of "$project"): $out"
+        done
+        sleep 3
+    fi
+
     log "▶ 판정"
     compare_screens
     for project in "${EDITORS[@]}"; do
