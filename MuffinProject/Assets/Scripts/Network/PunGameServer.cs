@@ -54,10 +54,15 @@ namespace Chapchu.Network
         }
 
         // 이 씬은 방에서 LoadLevel 로 넘어오므로 방장이 바로 시작한다 (01-game-flow.md 3절).
-        private void Start()
+        // 한 프레임 뒤에 — 방장 자신에게는 알림이 그 자리에서 재생되므로, 화면들의 Start(좌석 대응 · 스냅샷 복구)가 먼저 끝나야 시작 알림이 덮어쓴다.
+        private IEnumerator Start()
         {
             if (!PhotonNetwork.IsMasterClient)
-                return;
+                yield break;
+
+            yield return null;
+            if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
+                yield break;
 
             // 봇도 플레이어다 — 사람 뒤에 봇 번호 순으로 넣고, 턴 순서는 규칙이 섞는다 (18-bot.md 3절 #6)
             int[] bots = BotRoster.Actors;
