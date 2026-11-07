@@ -21,6 +21,12 @@ namespace Chapchu.Network
         // 방장이 써 놓고 서버 확인을 아직 못 받은 봇 목록. PUN 은 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾼다
         private int[] _pendingBots;
 
+        // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 방 속성은 아무 클라나 쓸 수 있어 이것과 다르면 되돌린다
+        private int[] _hostBots;
+
+        /// <summary>방장이 정한 봇 목록 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.Numbers 로.</summary>
+        internal int[] HostBots => _hostBots;
+
         public void JoinRoom(string roomName)
         {
             if (!PhotonConnection.ValidConnect)
@@ -126,15 +132,23 @@ namespace Chapchu.Network
         // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절)
         private static bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.IsOpen;
 
-        // 서버 확인 전이면 방금 쓴 목록 — 「제거」 직후 「추가」 가 지운 봇을 되살리지 않게
-        private int[] CurrentBots => _pendingBots ?? BotRoster.Numbers;
+        // 방장이 정한 원본 — 서버 확인 전이어도 방금 쓴 목록이라 「제거」 직후 「추가」 가 지운 봇을 되살리지 않는다
+        private int[] CurrentBots => _hostBots ?? BotRoster.Numbers;
 
         private void SetBots(int[] numbers)
         {
             Room room = PhotonNetwork.CurrentRoom;
             room.MaxPlayers = NetworkManager.MaxPlayers - numbers.Length;
             if (room.SetCustomProperties(BotRoster.BotsTable(numbers)))
-                _pendingBots = numbers;
+                _pendingBots = _hostBots = numbers;
+        }
+
+        // 방장이 되면 지금 방의 봇 목록(거른 사본)을 원본으로 이어받는다 (18-bot.md 9절 「방장 교체 (방 대기 중)」)
+        private void AdoptBots()
+        {
+            _hostBots = null;
+            if (PhotonNetwork.IsMasterClient)
+                _hostBots = BotRoster.Numbers;
         }
     
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen)
@@ -193,6 +207,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinedRoom()
         {
+            AdoptBots();
             RoomEvents.RaiseJoinedRoom();
         }
     
@@ -205,6 +220,7 @@ namespace Chapchu.Network
             // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
             PhotonNetwork.LocalPlayer.CustomProperties.Clear();
             _pendingBots = null;
+            _hostBots = null;
 
             RoomEvents.RaiseLeftRoom();
         }
@@ -251,9 +267,17 @@ namespace Chapchu.Network
             if (!changed.ContainsKey(RoomProps.Bots))
                 return;
 
-            // 마지막으로 쓴 목록까지 서버가 확인해 주면 다시 방 속성을 믿는다
-            if (_pendingBots != null && BotRoster.Numbers.SequenceEqual(_pendingBots))
+            // 마지막으로 쓴 목록까지 서버가 확인해 주면 대기를 푼다
+            int[] inRoom = BotRoster.RoomNumbers;
+            if (_pendingBots != null && inRoom.SequenceEqual(_pendingBots))
                 _pendingBots = null;
+
+            // 확인 대기가 없는데 원본과 다르면 방장이 쓴 값이 아니다 — 원본과 정원으로 다시 쓴다 (09-network.md 2절 #3 · 18-bot.md 3절 #7)
+            if (PhotonNetwork.IsMasterClient && _pendingBots == null && _hostBots != null && !inRoom.SequenceEqual(_hostBots))
+            {
+                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장이 쓰지 않은 봇 목록 [{string.Join(",", inRoom)}] — 원본 [{string.Join(",", _hostBots)}] 으로 되돌린다");
+                SetBots(_hostBots);
+            }
             RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
         }
 
@@ -264,11 +288,12 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 방장 전환시 호출되는 콜백 함수
-        /// 방장 이탈 시 처리(08-room.md 5절 #5)는 미정이라 통지만 한다.
+        /// 방장 이탈 시 처리(08-room.md 5절 #5)는 미정이라 통지만 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {
             Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
+            AdoptBots();
             RoomEvents.RaiseMasterClientSwitched(newMasterClient);
         }
     }

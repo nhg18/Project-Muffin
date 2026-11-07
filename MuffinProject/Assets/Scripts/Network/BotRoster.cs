@@ -16,8 +16,27 @@ namespace Chapchu.Network
         public const int MaxBots = 3;
         public const int ActorBase = 1000;
 
-        /// <summary>지금 방의 봇 번호 (오름차순). 방 밖이면 빈 배열.</summary>
+        /// <summary>
+        /// 지금 방의 봇 번호 (오름차순). 방 밖이면 빈 배열.
+        /// 원본은 방장 메모리다 (09-network.md 2절 #2 · 3절) — 방장은 자기가 정한 목록(서버 확인 전 포함)을, 다른 클라는 방 속성 사본을 읽는다.
+        /// </summary>
         public static int[] Numbers
+        {
+            get
+            {
+                Room room = PhotonNetwork.CurrentRoom;
+                if (room == null)
+                    return Array.Empty<int>();
+
+                int[] numbers = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBots : null) ?? RoomNumbers;
+
+                // 방 속성은 아무 클라나 쓸 수 있다 — 번호 1 ~ 3 · 중복 없이 · 사람 + 봇 ≤ 4 만 (18-bot.md 4절 · 08-room.md 2절). 넘치면 큰 번호를 뺀다
+                return numbers.Where(n => n >= 1 && n <= MaxBots).Distinct().OrderBy(n => n).Take(NetworkManager.MaxPlayers - room.PlayerCount).ToArray();
+            }
+        }
+
+        // 방 속성에 적힌 그대로 (오름차순) — 방장이 자기가 쓴 목록과 견줄 때 쓴다
+        internal static int[] RoomNumbers
         {
             get
             {
