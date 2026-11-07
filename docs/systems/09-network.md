@@ -38,7 +38,7 @@
 | 생존 상태 (Alive/DeathPending/Dead) | 마스터 | 전체 공개 | Player CustomProperties |
 | 찹츄 상태 | 마스터 | 전체 공개 | Player CustomProperties |
 | 현재 턴 주인 | 마스터 | 전체 공개 | Room CustomProperties |
-| 턴 진행 방향 | 마스터 | 전체 공개 | Room CustomProperties (**미정** — `03-turn` 참고) |
+| 턴 진행 방향 (정 / 역) | 마스터 | 전체 공개 | Room CustomProperties — 턴 주인과 같은 취급 (`03-turn` 6절 #4, 2026-11-07) |
 | 처리 체인 | 마스터 | 전체 공개 | 체인 변화 시 RPC 브로드캐스트 |
 | 반응 타이머 시작 · 마감 시각 | 마스터 | 전체 공개 | RPC(`PhotonNetwork.Time` 기준). 연출 시간을 더한 절대 시각 (`04-card` 8절) |
 | 좌석 배치 | **각 클라이언트 로컬 계산** | 로컬 | 전송 안 함 (`02-player` 참고) |
@@ -128,7 +128,7 @@
 
 ### 6.1 쓸 수 있는 것
 
-* 모두가 항상 봐도 되는 **작은 값**: HP(int), 손패 장수(int), 함정 개수(int), 생존 상태(byte), 찹츄 상태(bool), 턴 주인(int)
+* 모두가 항상 봐도 되는 **작은 값**: HP(int), 손패 장수(int), 함정 개수(int), 생존 상태(byte), 찹츄 상태(bool), 턴 주인(int), 턴 진행 방향(bool)
 * 늦게 들어온 클라이언트가 현재 상태를 복원해야 하는 값
 
 > CustomProperties 는 **지금 값**이고, 연출 순서는 **일어난 일**(RPC)이 정한다.
@@ -244,4 +244,4 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 
 1. 마스터 교체 시 게임 상태 복원 방식 — 방향은 이주로 확정, 방식은 보류 (9절)
 2. 재접속 허용 시간과 복원 범위 (손패·함정·HP·턴)
-3. 턴 진행 방향을 Room Property로 둘지 여부 (A07 카드가 요구)
+3. ~~턴 진행 방향을 Room Property로 둘지 여부 (A07 카드가 요구)~~ — 2026-11-07 확정: 둔다 (2절 · 6절)
