@@ -67,7 +67,8 @@ namespace Chapchu.DebugTools
             }
         
 
-            RoomOptions roomOptions = NetworkManager.Instance.CreateRoomOptions(4, true, true);
+            // 비공개 — 실제 로비의 랜덤 매칭이 이 방에 섞여 들어오지 않게. 이름으로 들어가는 JoinOrCreateRoom 은 비공개 방에도 들어간다.
+            RoomOptions roomOptions = NetworkManager.Instance.CreateRoomOptions(NetworkManager.MaxPlayers, false, true);
             PhotonNetwork.JoinOrCreateRoom(roomName, roomOptions, TypedLobby.Default);
         }
 

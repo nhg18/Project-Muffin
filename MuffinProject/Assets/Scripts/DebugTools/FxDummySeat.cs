@@ -1,4 +1,5 @@
-﻿using DG.Tweening;
+﻿using Chapchu.Game;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,8 +17,6 @@ namespace Chapchu.DebugTools
         [SerializeField] private Image hpFill;
         [SerializeField] private TMP_Text hpText;
 
-        [Tooltip("시작 체력 (06-health 기본값과 같게).")]
-        [SerializeField] private int maxHp = 100;
         [SerializeField] private Color hpColor = new Color32(0x3d, 0xdc, 0x84, 0xff);
         [SerializeField] private Color lowHpColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
 
@@ -36,10 +35,10 @@ namespace Chapchu.DebugTools
             ResetHp();
         }
 
-        /// <summary>체력을 처음 값으로 되돌린다.</summary>
+        /// <summary>체력을 처음 값(GameServer.MaxHp, 06-health 2절)으로 되돌린다.</summary>
         public void ResetHp()
         {
-            SetHp(maxHp, false);
+            SetHp(GameServer.MaxHp, false);
         }
 
         /// <summary>체력을 줄이고 자리를 흔든다 (시안 hit 의 setHP · pshake).</summary>
@@ -55,7 +54,7 @@ namespace Chapchu.DebugTools
             hpText.text = $"{_hp}";
             hpFill.color = _hp <= LowHp ? lowHpColor : hpColor;
             hpFill.DOKill();
-            float fill = (float)_hp / maxHp;
+            float fill = (float)_hp / GameServer.MaxHp;
             if (animate)
                 hpFill.DOFillAmount(fill, 0.45f).SetEase(Ease.OutCubic).SetLink(gameObject);
             else
