@@ -22,28 +22,29 @@
  ⑥ 새 세션들이 처음부터 재리뷰                … 최대 3라운드 (마지막은 검증만)
 
  결과
-   PASS        → (푸시 전 모드) 승인 표시 후 git push
-   UNRESOLVED  → 찬반이 끝까지 합의 못한 쟁점만 남음 → 사람이 판단
+   PASS        → (푸시 전 모드) 승인 표시 후 git push — 수정 커밋이 생겼으면 push 하지 않음 (multi-test 로 확인 → 직접 push)
+   UNRESOLVED  → 찬반이 끝까지 합의 못한 쟁점이 남음 (수정 뒤 재리뷰에서 다시 안 나와도) → 사람이 판단
    FIX_LIMIT   → 라운드 상한까지 고쳤는데 확정 문제가 남음 → 멈춤
 ```
 
 판정 규칙
 - 찬성파가 **반박하지 않은** 지적 = 확정 → 수정 대상
-- 반대파가 **유지하지 않은** 지적 = 철회
+- 반대파가 **철회(WITHDRAW)한** 지적만 철회 — 판정 줄을 빠뜨린 지적은 유지로 본다
 - 상한까지 공방이 이어진 지적 = 합의 안 됨 → 사람 몫
 - 반박·유지는 코드 위치나 문서 근거가 있어야 함 (추측은 근거로 인정 안 됨)
+- 출력 형식이 깨지면(지적 블록도 `NO_FINDINGS` 도 없음, 판정 줄이 하나도 없음) 통과로 넘기지 않고 멈춤
 
 리뷰 세션이 기준으로 삼는 문서
 - `CLAUDE.md`, `docs/systems/*.md` — 코드와 다르면 문서가 옳음. `미정`·`제안` 값은 지적하지 않음
 - `docs/CODE_CONVENTION.md`, skill `network-rpc`
-- `docs/DESIGN_INTENT.md` — 리뷰할 때 문제로 보지 말 것 (수치 밸런스, 의도된 난장판 효과, 테스트용 덱 등)
+- `docs/DESIGN_INTENT.md` — 리뷰할 때 문제로 보지 말 것 (수치 밸런스, 테스트용 덱 등)
 - `docs/worklog.md` — 「다음 할 일」·「확인 못 한 것」에 이미 적힌 문제는 지적하지 않음
 
 ## 기존 hook · skill 과의 관계
 
 - 수정 세션도 Claude Code 세션이라 `.claude/hooks/`가 그대로 돈다. `.cs` BOM 자동 추가, `async void`·문자열 RPC·C# 10+ 문법 차단(`check-cs.sh`), 클론·Library·`.meta` 수정 차단(`guard-paths.sh`).
 - hook은 Claude가 고친 파일에만 걸리므로, 사람이 고친 코드의 같은 문제는 리뷰가 잡는다.
-- 수정 커밋이 생기면 CLAUDE.md 「바꾼 것은 직접 실행해서 확인」에 따라 skill `multi-test`로 확인한다. `/prepush`는 Unity 에디터가 열려 있으면 이걸 이어서 돌린다.
+- 수정 커밋이 생기면 CLAUDE.md 「바꾼 것은 직접 실행해서 확인」에 따라 skill `multi-test`로 확인한 뒤 push 한다. 스크립트는 이때 push 하지 않고, `/prepush`는 Unity 에디터가 열려 있으면 확인까지 이어서 돌린다.
 
 ## 설치 (팀원마다 한 번)
 
@@ -96,17 +97,17 @@ bash scripts/review/prepush.sh --all MuffinProject/Assets/Scripts/Network   # �
 | `REVIEW_PATHS` | `MuffinProject/Assets/Scripts` | 리뷰할 경로 (쉼표 구분) |
 | `REVIEW_MAX_ROUNDS` | `3` | 리뷰 라운드 수 (마지막은 검증만) |
 | `REVIEW_DEBATE_ROUNDS` | `2` | 재반박 주고받는 상한 |
-| `REVIEW_PROTECTED` | ProjectSettings·Packages·Library·Temp·서드파티·클론·docs·.claude·CLAUDE.md·.meta | 수정 세션이 건드리면 중단할 경로 (정규식) |
-| `REVIEW_COMPILE_CMD` | 없음 | 수정 직후 실행할 확인 명령. 예: `bash .claude/skills/multi-test/run.sh rules` (Unity 에디터가 열려 있어야 함 — 아니면 실패로 보고 수정을 stash에 보관) |
+| `REVIEW_COMPILE_CMD` | 없음 | 수정 직후 실행할 확인 명령. 예: `bash .claude/skills/multi-test/run.sh rules` (Unity 에디터가 열려 있어야 함 — 아니면 실패로 보고 수정 세션의 변경을 stash에 보관) |
 | `REVIEW_CON_MODEL` / `REVIEW_PRO_MODEL` / `REVIEW_FIX_MODEL` | 기본 모델 | 역할별 모델. 찬반을 다른 모델로 두면 맹점이 덜 겹침 |
 
 ## 안전장치
 
 - 리뷰 세션은 **읽기 전용**(Read·Grep·Glob만). 리뷰하다가 코드를 고칠 수 없음
-- 수정 세션은 Bash 금지, 새 파일 생성 금지. 보호 경로를 건드리면 변경을 `git stash`에 보관하고 중단
-- `REVIEW_COMPILE_CMD`가 실패해도 변경을 stash에 보관하고 중단 — 깨진 코드는 커밋되지 않음
+- 수정 세션은 Bash 금지, 새 파일 생성 금지(만들면 중단). 커밋은 **리뷰 경로 안에서 바뀐 추적 파일만** — 같은 폴더를 Unity · 다른 작업도 쓰므로 `git add -A` · 전체 stash 를 하지 않는다. 경로 밖에서 바뀐 파일은 커밋하지 않고 경고만
+- `REVIEW_COMPILE_CMD`가 실패하면 수정 세션이 바꾼 파일만 stash에 보관하고 중단 — 깨진 코드는 커밋되지 않음
+- 수정 커밋은 아직 아무도 실행해 보지 않은 코드라 자동 push 하지 않음 (`--accept` 도 같음)
 - 승인은 **커밋 해시 단위**. 리뷰 후 한 줄이라도 커밋하면 다시 리뷰해야 push됨
-- 커밋 안 된 변경이 있으면 시작하지 않음 (저장 안 한 Unity 작업을 덮지 않게)
+- 리뷰 경로(`REVIEW_PATHS`)에 커밋 안 된 변경이 있으면 시작하지 않음 (수정 세션의 변경과 섞이지 않게). 경로 밖 변경(Unity 폰트 아틀라스 저장 등)은 그대로 두고 돈다
 
 ## 주의
 

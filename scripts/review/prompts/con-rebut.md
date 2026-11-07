@@ -27,4 +27,4 @@ VERDICT C-03 MAINTAIN
 ```
 
 판정 줄은 줄 맨 앞에 꾸밈 기호 없이 정확히 `VERDICT C-번호 WITHDRAW` 또는 `VERDICT C-번호 MAINTAIN`.
-판정 줄을 쓰지 않은 항목은 철회한 것으로 처리된다.
+판정 줄을 쓰지 않은 항목은 **유지**한 것으로 처리된다 — 철회하려면 반드시 `WITHDRAW` 판정 줄을 쓴다.

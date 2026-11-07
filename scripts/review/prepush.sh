@@ -4,14 +4,15 @@
 #
 #   반대파(공격) 세션 → 찬성파(방어) 세션 → 재반박 … → 살아남은 지적만 수정 세션
 #   → 수정 커밋 → 새 세션으로 재리뷰 → 통과하면 승인 표시 후 push
+#   (수정 커밋이 생겼으면 push 하지 않는다 — 실행해서 확인한 뒤 직접 push)
 #
 # 모든 단계는 `claude -p`로 띄운 "새 세션"이라 작성 세션의 대화 맥락이 섞이지 않는다.
 # 세션끼리는 파일(diff, 지적 목록, 토론 기록)로만 주고받는다.
 #
 # 사용:
-#   bash scripts/review/prepush.sh              # 변경분 리뷰 → 수정 → 통과 시 git push
+#   bash scripts/review/prepush.sh              # 변경분 리뷰 → 수정 → 통과 시 git push (수정 커밋이 없을 때만)
 #   bash scripts/review/prepush.sh --no-push    # 리뷰·수정·승인까지만
-#   bash scripts/review/prepush.sh --accept     # '합의 안 된 쟁점만 남음'을 사람이 확인 후 승인
+#   bash scripts/review/prepush.sh --accept     # '합의 안 된 쟁점 남음'을 사람이 확인 후 승인
 #   bash scripts/review/prepush.sh --all        # 이미 있는 코드 전체를 폴더별로 리뷰·수정 (push 안 함)
 #   bash scripts/review/prepush.sh --all MuffinProject/Assets/Scripts/Network   # 특정 폴더만
 #   그 밖의 인자는 git push에 그대로 넘어감 (예: origin feature/x)
@@ -24,7 +25,6 @@ REVIEW_PATHS="${REVIEW_PATHS:-MuffinProject/Assets/Scripts}"    # 리뷰할 경�
 MAX_ROUNDS="${REVIEW_MAX_ROUNDS:-3}"                            # 리뷰 라운드 수 (마지막 라운드는 검증만)
 DEBATE_ROUNDS="${REVIEW_DEBATE_ROUNDS:-2}"                      # 재반박 주고받는 상한
 DESIGN_INTENT="${DESIGN_INTENT:-docs/DESIGN_INTENT.md}"         # 리뷰용 설계 의도 문서
-PROTECTED_RE="${REVIEW_PROTECTED:-^(MuffinProject/(ProjectSettings|Packages|Library|Temp)/|MuffinProject/Assets/(Photon|GPM|ParrelSync|Plugins|TextMesh Pro)/|.*_clone_.*/|docs/|\.claude/|CLAUDE\.md$|.*\.meta$)}"
 COMPILE_CMD="${REVIEW_COMPILE_CMD:-}"                           # 수정 후 실행할 컴파일 체크 (선택)
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 CON_MODEL="${REVIEW_CON_MODEL:-}"                               # 반대파 모델 (비우면 기본값)
@@ -64,23 +64,35 @@ do_push() {
     log "push는 하지 않았습니다."
   fi
 }
+# 수정 세션이 고친 코드는 아직 아무도 실행해 보지 않았다 — 확인 전에는 push 하지 않는다
+push_unless_fixed() {
+  if (( $1 > 0 )); then
+    warn "수정 커밋 $1개는 아직 실행해서 확인하지 않았습니다. skill multi-test 로 확인한 뒤 git push 하세요 (승인은 이 커밋에 되어 있음)."
+  else
+    do_push
+  fi
+}
 
 # ----- --accept: 사람이 확인한 뒤 승인 ---------------------------------------
 if (( ACCEPT )); then
-  read -r last_sha last_status < "$STATE_DIR/last-status" 2>/dev/null || die "이전 리뷰 결과가 없습니다."
+  read -r last_sha last_status last_fixes < "$STATE_DIR/last-status" 2>/dev/null || die "이전 리뷰 결과가 없습니다."
   [[ "$last_sha" == "$(git rev-parse HEAD)" ]] || die "리뷰 이후 커밋이 바뀌었습니다. 다시 리뷰하세요."
-  [[ "$last_status" == "UNRESOLVED" ]] || die "--accept는 '합의 안 된 쟁점만 남음' 상태에서만 쓸 수 있습니다 (현재: $last_status)."
+  [[ "$last_status" == "UNRESOLVED" ]] || die "--accept는 '합의 안 된 쟁점 남음' 상태에서만 쓸 수 있습니다 (현재: $last_status)."
   warn "합의 안 된 쟁점을 사람이 확인하고 그대로 승인합니다."
-  approve; do_push; exit $?
+  approve; push_unless_fixed "${last_fixes:-0}"; exit $?
 fi
 
 # ----- 사전 점검 -------------------------------------------------------------
+IFS=',' read -r -a PATHS_ARR <<< "$REVIEW_PATHS"
+OUTSIDE=(.); for p in "${PATHS_ARR[@]}"; do OUTSIDE+=(":(exclude)$p"); done
+# 같은 폴더를 Unity(폰트 아틀라스 저장 등)와 다른 작업도 쓴다 — 리뷰 경로만 깨끗하면 된다
+scope_changes()   { git status --porcelain --untracked-files=all -- "${PATHS_ARR[@]}"; }
+outside_changes() { git status --porcelain --untracked-files=all -- "${OUTSIDE[@]}"; }
+
 command -v "$CLAUDE_BIN" >/dev/null 2>&1 || die "'$CLAUDE_BIN' 명령을 찾을 수 없습니다."
-[[ -z "$(git status --porcelain)" ]] || die "커밋 안 된 변경이 있습니다. 커밋하거나 stash한 뒤 실행하세요."
+[[ -z "$(scope_changes)" ]] || die "리뷰 경로($REVIEW_PATHS)에 커밋 안 된 변경이 있습니다. 커밋하거나 stash한 뒤 실행하세요."
 [[ -f "$DESIGN_INTENT" ]] || warn "$DESIGN_INTENT 가 없습니다. 의도된 동작이 버그로 보고될 수 있어요."
 export REVIEW_PIPELINE=1   # 프로젝트 hook이 이 값을 보고 재귀 실행을 피할 수 있게
-
-IFS=',' read -r -a PATHS_ARR <<< "$REVIEW_PATHS"
 
 if (( ALL )); then
   # 전체 리뷰: 빈 트리와 비교하면 기존 코드 전체가 '추가된 코드'로 나온다
@@ -153,6 +165,11 @@ verdicts() {
     | sed -E 's/^[[:space:]-]*VERDICT[[:space:]]+(C-[0-9]+)[[:space:]]+([A-Z]+).*/\1 \2/' \
     | awk -v w="$2" '$2==w {print $1}' | sort -u
 }
+# 판정 줄이 하나도 없으면 형식이 깨진 것 — 기본값(인정 · 유지)으로 넘기지 않고 멈춘다
+need_verdicts() {
+  sed -E 's/[*`>]//g' "$1" | grep -qE '^[[:space:]-]*VERDICT[[:space:]]+C-[0-9]+[[:space:]]+[A-Z]+' \
+    || die "$2 출력에서 판정 줄(VERDICT C-번호 …)을 찾지 못했습니다: $1"
+}
 
 # 지적 목록 파일에서 특정 ID 블록만 뽑는다
 extract_blocks() {
@@ -185,7 +202,8 @@ review_round() {
   run_claude "반대파 리뷰" "$dir/con-review.task.md" "$dir/con-review.md" read "$CON_MODEL"
   local all; all="$(finding_ids "$dir/con-review.md")"
   if [[ -z "$all" ]]; then
-    grep -q 'NO_FINDINGS' "$dir/con-review.md" || warn "반대파 출력에서 지적 형식을 찾지 못해 '문제 없음'으로 처리합니다: $dir/con-review.md"
+    # 형식이 깨진 출력을 '문제 없음'으로 넘기면 리뷰 없이 push 된다
+    grep -q 'NO_FINDINGS' "$dir/con-review.md" || die "반대파 출력에서 지적(### C-번호)도 NO_FINDINGS 도 찾지 못했습니다: $dir/con-review.md"
     log "라운드 $r: 지적 없음"
     STATUS="PASS"; return
   fi
@@ -195,6 +213,7 @@ review_round() {
   # 2) 찬성파: 1차 방어 (판정 안 한 항목은 '반박 없음' = 인정으로 본다)
   render "$PROMPTS/pro.md" "$dir/pro1.task.md" "${common[@]}" "FINDINGS=$dir/con-review.md" "IDS=$(oneline "$all")"
   run_claude "찬성파 방어 1차" "$dir/pro1.task.md" "$dir/pro1.md" read "$PRO_MODEL"
+  need_verdicts "$dir/pro1.md" "찬성파 1차"
   { printf '## 찬성파 1차\n\n'; cat "$dir/pro1.md"; printf '\n\n'; } >> "$transcript"
   local contested accepted
   contested="$(inter "$all" "$(verdicts "$dir/pro1.md" REBUT)")"
@@ -206,13 +225,15 @@ review_round() {
     [[ -z "$contested" ]] && break
     render "$PROMPTS/con-rebut.md" "$dir/con-r$d.task.md" "${common[@]}" "FINDINGS=$dir/con-review.md" "IDS=$(oneline "$contested")"
     run_claude "반대파 재반박 $d차" "$dir/con-r$d.task.md" "$dir/con-r$d.md" read "$CON_MODEL"
+    need_verdicts "$dir/con-r$d.md" "반대파 재반박 $d차"
     { printf '## 반대파 재반박 %s차\n\n' "$d"; cat "$dir/con-r$d.md"; printf '\n\n'; } >> "$transcript"
-    # 유지(MAINTAIN)라고 안 한 항목은 철회로 본다
-    maintained="$(inter "$contested" "$(verdicts "$dir/con-r$d.md" MAINTAIN)")"
+    # 철회(WITHDRAW)라고 쓴 항목만 철회 — 판정 줄을 빠뜨린 지적이 조용히 사라지지 않게
+    maintained="$(minus "$contested" "$(verdicts "$dir/con-r$d.md" WITHDRAW)")"
     if [[ -z "$maintained" ]]; then contested=""; break; fi
 
     render "$PROMPTS/pro.md" "$dir/pro$((d+1)).task.md" "${common[@]}" "FINDINGS=$dir/con-review.md" "IDS=$(oneline "$maintained")"
     run_claude "찬성파 방어 $((d+1))차" "$dir/pro$((d+1)).task.md" "$dir/pro$((d+1)).md" read "$PRO_MODEL"
+    need_verdicts "$dir/pro$((d+1)).md" "찬성파 $((d+1))차"
     { printf '## 찬성파 %s차\n\n' "$((d+1))"; cat "$dir/pro$((d+1)).md"; printf '\n\n'; } >> "$transcript"
     rebut_again="$(inter "$maintained" "$(verdicts "$dir/pro$((d+1)).md" REBUT)")"
     accepted="$(clean_list "$accepted" "$(minus "$maintained" "$rebut_again")")"
@@ -231,45 +252,55 @@ review_round() {
 }
 
 # ----- 수정 라운드 -----------------------------------------------------------
+# 리뷰 경로 안에서 바뀐 추적 파일만 커밋한다. 같은 폴더를 Unity · 다른 작업도 쓰므로
+# git add -A · 전체 stash 를 하지 않는다 (남의 변경을 커밋하거나 숨기게 된다).
 fix_round() {
   local r="$1" dir="$RUN/round$r"
+  local before; before="$(outside_changes)"
   render "$PROMPTS/fixer.md" "$dir/fix.task.md" "FIXLIST=$dir/fix-list.md" "INTENT=$DESIGN_INTENT"
   run_claude "수정 담당" "$dir/fix.task.md" "$dir/fix.md" edit "$FIX_MODEL"
 
-  local changed; changed="$(git status --porcelain | cut -c4- | tr -d '"')"
-  if [[ -z "$changed" ]]; then
-    warn "수정 세션이 아무것도 바꾸지 않았습니다 ($dir/fix.md)"
+  local outside; outside="$(comm -13 <(sort <<< "$before") <(outside_changes | sort))"
+  [[ -n "$outside" ]] && warn "리뷰 경로 밖에서 바뀐 파일은 커밋하지 않았습니다 (수정 세션 또는 Unity · 다른 작업):"$'\n'"$outside"
+  local added; added="$(git ls-files --others --exclude-standard -- "${PATHS_ARR[@]}")"
+  if [[ -n "$added" ]]; then
+    warn "수정 세션이 새 파일을 만들었습니다 (금지 — 확인 후 지우세요):"$'\n'"$added"
     return 1
   fi
-  if grep -Eq "$PROTECTED_RE" <<< "$changed"; then
-    git stash push -u -q -m "review-pipeline: 보호 파일 수정으로 보류됨"
-    die "수정 세션이 보호 파일을 건드려 변경을 stash에 보관했습니다 (git stash list 확인)."
+  local files=()
+  mapfile -d '' -t files < <(git diff -z --name-only -- "${PATHS_ARR[@]}" ':(exclude,glob)**/*.meta')
+  if (( ${#files[@]} == 0 )); then
+    warn "수정 세션이 리뷰 경로 안에서 아무것도 바꾸지 않았습니다 ($dir/fix.md)"
+    return 1
   fi
   if [[ -n "$COMPILE_CMD" ]]; then
     log "  · 컴파일 체크"
     if ! bash -c "$COMPILE_CMD" > "$dir/compile.log" 2>&1; then
-      git stash push -u -q -m "review-pipeline: 컴파일 실패로 보류됨"
-      die "수정 후 컴파일 실패. 변경은 stash에 보관했습니다 (로그: $dir/compile.log)."
+      git stash push -q -m "review-pipeline: 컴파일 실패로 보류됨" -- "${files[@]}"
+      die "수정 후 컴파일 실패. 수정 세션의 변경만 stash에 보관했습니다 (로그: $dir/compile.log)."
     fi
   fi
-  git add -A
-  git commit -q -m "fix(review): 찬반 리뷰 확정 지적 수정 — $TARGET_LABEL r$r $(oneline "$ACCEPTED")" || die "수정 커밋 실패"
-  log "  수정 커밋: $(git rev-parse --short HEAD)"
+  git commit -q -m "fix(review): 찬반 리뷰 확정 지적 수정 — $TARGET_LABEL r$r $(oneline "$ACCEPTED")" -- "${files[@]}" || die "수정 커밋 실패"
+  FIX_COMMITS=$((FIX_COMMITS + 1))
+  log "  수정 커밋: $(git rev-parse --short HEAD) (${#files[@]}개 파일)"
 }
 
 # ----- 대상 하나에 대해 리뷰 → 수정 → 재리뷰 ---------------------------------
-# 결과: FINAL(PASS|UNRESOLVED|FIX_LIMIT|FIX_FAILED), LAST_ROUND, RUN/report.md
+# 결과: FINAL(PASS|UNRESOLVED|FIX_LIMIT|FIX_FAILED), LAST_ROUND, FIX_COMMITS, RUN/report.md
 run_target() {
-  FINAL=""; LAST_ROUND=0
-  local r
+  FINAL=""; LAST_ROUND=0; FIX_COMMITS=0
+  local r had_unresolved=0
   for (( r=1; r<=MAX_ROUNDS; r++ )); do
     LAST_ROUND=$r
     review_round "$r"
+    [[ -n "$UNRESOLVED" ]] && had_unresolved=1
     if [[ "$STATUS" == "PASS" ]]; then FINAL="PASS"; break; fi
     if [[ -z "$ACCEPTED" ]];      then FINAL="UNRESOLVED"; break; fi
     if (( r == MAX_ROUNDS ));     then FINAL="FIX_LIMIT"; break; fi
     fix_round "$r" || { FINAL="FIX_FAILED"; break; }
   done
+  # 앞 라운드의 합의 안 된 쟁점은 수정 뒤 새 리뷰에서 다시 안 나와도 사람이 봐야 한다
+  if [[ "$FINAL" == "PASS" ]] && (( had_unresolved )); then FINAL="UNRESOLVED"; fi
 
   local i d
   {
@@ -322,14 +353,14 @@ log "기준: $BASE_BRANCH ($(git rev-parse --short "$BASE")) → HEAD ($(git rev
 TARGET_LABEL="changes"; TARGET_PATHS=("${PATHS_ARR[@]}"); RUN="$RUN_ROOT"
 run_target
 rm -rf "$STATE_DIR/latest" && cp -r "$RUN" "$STATE_DIR/latest"
-echo "$(git rev-parse HEAD) $FINAL" > "$STATE_DIR/last-status"
+echo "$(git rev-parse HEAD) $FINAL $FIX_COMMITS" > "$STATE_DIR/last-status"
 
 case "$FINAL" in
   PASS)
-    log "✅ 통과"; approve; do_push ;;
+    log "✅ 통과"; approve; push_unless_fixed "$FIX_COMMITS" ;;
   UNRESOLVED)
     warn "⚠️  찬반이 끝까지 합의하지 못한 쟁점이 남았습니다."
-    warn "   확인: $STATE_DIR/latest/round$LAST_ROUND/unresolved.md"
+    warn "   확인: $STATE_DIR/latest/report.md 의 「합의 안 됨」 파일"
     warn "   문제없다고 판단되면: bash scripts/review/prepush.sh --accept"
     exit 1 ;;
   FIX_LIMIT)
@@ -337,6 +368,6 @@ case "$FINAL" in
     warn "   확인: $STATE_DIR/latest/round$LAST_ROUND/fix-list.md"
     exit 1 ;;
   FIX_FAILED)
-    warn "❌ 수정 세션이 변경을 만들지 못했습니다. $STATE_DIR/latest/round$LAST_ROUND/fix.md 확인"
+    warn "❌ 수정 세션 결과를 커밋하지 못했습니다 (위 경고 · $STATE_DIR/latest/round$LAST_ROUND/fix.md 확인)"
     exit 1 ;;
 esac
