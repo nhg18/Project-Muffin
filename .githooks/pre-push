@@ -6,6 +6,15 @@ ROOT="$(git rev-parse --show-toplevel)"
 APPROVED="$(cat "$ROOT/.review/approved" 2>/dev/null || true)"
 INPUT="$(cat)"   # git이 넘겨주는 "<local ref> <local sha> <remote ref> <remote sha>" 목록
 
+# 문서만 바꿨는지 — base..sha 사이에 바뀐 파일이 전부 docs/ 아래거나 .md 면 참
+docs_only() {
+  local files
+  files="$(git diff --name-only "$1" "$2" 2>/dev/null)" || return 1
+  [ -n "$files" ] || return 1
+  printf '%s\n' "$files" | grep -qvE '^docs/|\.md$' && return 1
+  return 0
+}
+
 if [ "${SKIP_REVIEW:-0}" = "1" ]; then
   echo "[review] SKIP_REVIEW=1 — 리뷰 게이트를 건너뜁니다." >&2
 else
@@ -13,6 +22,12 @@ else
     [ -z "$lref" ] && continue
     case "$lref" in refs/tags/*) continue ;; esac          # 태그는 검사 안 함
     case "$lsha" in *[!0]*) ;; *) continue ;; esac          # 브랜치 삭제는 통과
+    base="$rsha"                                             # 새 브랜치면 develop 에서 갈라진 곳부터
+    case "$rsha" in *[!0]*) ;; *) base="$(git merge-base "$lsha" origin/develop 2>/dev/null)" ;; esac
+    if [ -n "$base" ] && docs_only "$base" "$lsha"; then
+      echo "[review] 문서(docs/ · *.md)만 바뀐 push — 리뷰 없이 통과합니다." >&2
+      continue
+    fi
     if [ "$lsha" != "$APPROVED" ]; then
       echo "" >&2
       echo "[review] 이 커밋($(git rev-parse --short "$lsha"))은 찬반 리뷰를 통과하지 않았습니다." >&2
