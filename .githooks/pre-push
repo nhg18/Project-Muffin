@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# review-gate: 찬반 리뷰를 통과한 커밋만 push 허용
+# install.sh가 .git/hooks/pre-push로 복사한다. 기존 pre-push(예: Git LFS)는 pre-push.local로 옮겨 이어서 실행한다.
+
+ROOT="$(git rev-parse --show-toplevel)"
+APPROVED="$(cat "$ROOT/.review/approved" 2>/dev/null || true)"
+INPUT="$(cat)"   # git이 넘겨주는 "<local ref> <local sha> <remote ref> <remote sha>" 목록
+
+if [ "${SKIP_REVIEW:-0}" = "1" ]; then
+  echo "[review] SKIP_REVIEW=1 — 리뷰 게이트를 건너뜁니다." >&2
+else
+  while read -r lref lsha rref rsha; do
+    [ -z "$lref" ] && continue
+    case "$lref" in refs/tags/*) continue ;; esac          # 태그는 검사 안 함
+    case "$lsha" in *[!0]*) ;; *) continue ;; esac          # 브랜치 삭제는 통과
+    if [ "$lsha" != "$APPROVED" ]; then
+      echo "" >&2
+      echo "[review] 이 커밋($(git rev-parse --short "$lsha"))은 찬반 리뷰를 통과하지 않았습니다." >&2
+      echo "[review] 먼저 실행: bash scripts/review/prepush.sh" >&2
+      echo "" >&2
+      exit 1
+    fi
+  done <<EOF
+$INPUT
+EOF
+fi
+
+# 원래 있던 pre-push(예: Git LFS) 이어서 실행
+LOCAL_HOOK="$(git rev-parse --git-path hooks/pre-push.local)"
+if [ -x "$LOCAL_HOOK" ]; then
+  printf '%s\n' "$INPUT" | "$LOCAL_HOOK" "$@" || exit $?
+fi
+exit 0
