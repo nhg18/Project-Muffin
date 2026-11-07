@@ -169,7 +169,7 @@ review_round() {
   mkdir -p "$dir"
   ACCEPTED=""; UNRESOLVED=""; STATUS="ISSUES"
 
-  git diff "$BASE" HEAD -- "${TARGET_PATHS[@]}" > "$dir/diff.patch"
+  git diff "$BASE" HEAD -- "${TARGET_PATHS[@]}" ':(exclude,glob)**/*.meta' > "$dir/diff.patch"
   if [[ ! -s "$dir/diff.patch" ]]; then
     log "라운드 $r: 리뷰할 코드 없음"
     STATUS="PASS"; return

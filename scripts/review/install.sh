@@ -17,7 +17,7 @@ fi
 cp .githooks/pre-push "$HOOK"
 chmod +x "$HOOK" scripts/review/prepush.sh
 
-if ! grep -qxF '.review/' .gitignore 2>/dev/null; then
+if ! tr -d '\r' < .gitignore 2>/dev/null | grep -qE '^\.review/?$'; then
   printf '\n# 찬반 리뷰 파이프라인 결과\n.review/\n' >> .gitignore
   echo "[review] .gitignore에 .review/ 추가"
 fi
