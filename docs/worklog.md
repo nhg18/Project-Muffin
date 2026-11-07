@@ -24,6 +24,7 @@
 - 새 뷰 · 프레젠터: `PlayerLook`(목걸이 색 · 이름) · `BoneGaugeView` · `HandCountBadgeView` · `ChapchuButtonView` · `TurnStripView/Presenter` · `FeedView` · `LogSheetView` · `HistoryEntry` · `HistoryPresenter` · `TargetAskView` · `GameMenuView/Presenter`. `HistoryView` 삭제. `MyPanelView` · `OpponentSeatView` · `OpponentHandView`(36 × 54 회전 부채꼴) · `OpponentSeatsPresenter`(안내 바 · 취소 버튼 · 턴 스냅샷) · `GameScreenPresenter`(턴 띠 · 기록 단계) 다시 씀.
 - 3D 층(`TableBuilder`): 방석 Quad(960, 620) · 덱 (810, 620) + `덱 n` 아래 · 내는 자리 (960, 620) · 버림 (1110, 620) · 손패 중심 1016. 3D 글자 `sortingOrder 1` — 원근 거리 정렬로 덱 글자가 방석 뒤로 가던 것.
 - `multi-test`: `MultiTest.Shot` + `SHOT_DIR` — 턴이 끝난 뒤 게임 뷰 PNG. 화면 배치를 눈으로 확인하는 데 썼다.
+- (2026-11-08) **카드가 방석에 가려짐** 수정: 방석을 3D Quad(z +0.01)로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 면 뒤로 들어가 가려졌다. 방석을 **배경 캔버스(2D) 의 `RawImage`** 로 옮기고 3D 방석 · `TableCushion.mat` · 3D 글자 sortingOrder 를 지웠다. 내는 자리 · 덱 자리에 40° 카드를 놓고 스크린샷으로 확인, `multi 2` 통과.
 
 ### 확인
 - `multi 2` 통과 3회 (턴 줄 · HP 순서 일치, 남의 턴 거절, 콘솔 에러 0). 스크린샷으로 내 턴 / 남의 턴 / 알림 칩(−20 수치) / 뼈 게이지 / 찹츄 점 / 발밑 타원 / 덱 라벨 확인.

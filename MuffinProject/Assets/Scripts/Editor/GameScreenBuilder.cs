@@ -27,6 +27,9 @@ namespace Chapchu.EditorTools
         private const string CanvasName = "GameCanvas";
         private const string BackgroundCanvasName = "BackgroundCanvas";
         private const float BackgroundPlaneDistance = 50f; // 테이블 면(카메라 거리 약 14.85)보다 멀리
+        private const string CushionTexturePath = "Assets/Sprites/UI/Hud/table_cushion.png";
+        private static readonly Vector2 CushionCenter = new Vector2(960f, 620f); // 시안 TABLE 가운데 — 3D 층의 카드 내는 자리와 같은 점
+        private static readonly Vector2 CushionSize = new Vector2(1120f, 560f);
         private const string RegularFontPath = "Assets/Fonts/GlaMuri/Galmuri11.ttf";
         private const string BoldFontPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold.ttf";
         private const string RegularFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11 SDF.asset";
@@ -95,7 +98,6 @@ namespace Chapchu.EditorTools
             Transform table = TableBuilder.BuildTable();
             if (camera == null || table == null)
                 return;
-            TableBuilder.BuildCushion(table);
             DeckView deck = TableBuilder.BuildDeck(table);
             DeckData gameDeck = FindGameDeck();
 
@@ -209,6 +211,15 @@ namespace Chapchu.EditorTools
             Image wall = NewImage("Wall", parent, White, Hud("bg_wall"));
             wall.type = Image.Type.Tiled;
             Stretch(wall.rectTransform);
+
+            // 테이블 방석 — 3D 층이 아니라 배경(2D) 에 둔다. 3D Quad 로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 방석 면 뒤로 들어가 가려진다
+            var cushion = new GameObject("Cushion", typeof(RawImage)).GetComponent<RawImage>();
+            cushion.transform.SetParent(parent, false);
+            cushion.texture = AssetDatabase.LoadAssetAtPath<Texture2D>(CushionTexturePath);
+            cushion.raycastTarget = false;
+            if (cushion.texture == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 방석 그림이 없다: {CushionTexturePath}");
+            CenterAt(cushion.rectTransform, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
         }
 
         #endregion

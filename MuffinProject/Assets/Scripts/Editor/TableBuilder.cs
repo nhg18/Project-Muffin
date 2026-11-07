@@ -30,10 +30,7 @@ namespace Chapchu.EditorTools
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
         private const string CardShaderName = "Unlit/Transparent Cutout"; // 알파 컷아웃 + ZWrite — 겹친 카드가 깊이로 정렬된다. 뒷면 컬링
-        private const string CushionShaderName = "Unlit/Transparent";      // 방석 — 부드러운 가장자리 알파
-        private const int TextSortingOrder = 1; // 3D 글자는 방석(반투명, 순서 0)보다 뒤에 그린다 — 원근 거리 정렬에 맡기면 가장자리의 덱 글자가 방석 뒤로 간다. 카드 틀은 불투명(깊이) 이라 영향 없음
         private const string BackTexturePath = "Assets/Sprites/Cards/CardBack.jpg";
-        private const string CushionTexturePath = "Assets/Sprites/UI/Hud/table_cushion.png";
         private const float CardThickness = 0.02f; // 더미 장당 두께
         private const float LayerGap = 0.005f;     // 그림 · 글자를 틀 앞에 띄우는 간격 — 같은 면이면 z 싸움
 
@@ -46,8 +43,6 @@ namespace Chapchu.EditorTools
         private const float NameFontPx = 18f, NameFontMinPx = 12f, DescriptionFontPx = 15f, DescriptionFontMinPx = 10f;
 
         // 테이블 방석 — 시안 TABLE (200, 170) 560 × 280 × 2 = 중심 (960, 620) 1120 × 560. 카드 뒤(z +0.01)에 눕힌 그림 한 장.
-        private static readonly Vector2 CushionSize = new Vector2(11.2f, 5.6f);
-        private static readonly Vector3 CushionPosition = CanvasToWorld(960f, 620f) + new Vector3(0f, 0f, 0.01f);
 
         // 덱 179 × 259 · 중심 (810, 620) (10-ui.md 2-1 「덱」, HUD v2 — 시안 DECK (405, 310) × 2). 뒷면 5장을 겹쳐 두께를 낸다.
         private static readonly Vector2 DeckCardSize = new Vector2(1.79f, 2.59f);
@@ -99,13 +94,6 @@ namespace Chapchu.EditorTools
             }
 
             return new GameObject(TableName).transform;
-        }
-
-        /// <summary>테이블 방석 — 카드 뒤에 눕힌 그림 Quad. 포인터는 받지 않는다 (콜라이더 없음).</summary>
-        public static void BuildCushion(Transform table)
-        {
-            Material cushion = EnsureMaterial("TableCushion", CushionTexturePath, CushionShaderName);
-            Quad("Cushion", table, cushion, CushionSize, CushionPosition, Quaternion.identity);
         }
 
         public static DeckView BuildDeck(Transform table)
@@ -226,7 +214,7 @@ namespace Chapchu.EditorTools
             return saved.GetComponent<CardView>();
         }
 
-        private static Material EnsureMaterial(string name, string texturePath, string shaderName = CardShaderName)
+        private static Material EnsureMaterial(string name, string texturePath)
         {
             string path = $"{MaterialFolder}/{name}.mat";
             var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -238,9 +226,9 @@ namespace Chapchu.EditorTools
             if (!AssetDatabase.IsValidFolder(MaterialFolder))
                 AssetDatabase.CreateFolder("Assets/Materials", "Cards");
 
-            Shader shader = Shader.Find(shaderName);
+            Shader shader = Shader.Find(CardShaderName);
             if (shader == null)
-                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {shaderName}");
+                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {CardShaderName}");
 
             var material = new Material(shader);
             if (texturePath != null)
@@ -314,7 +302,6 @@ namespace Chapchu.EditorTools
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
-            renderer.sortingOrder = TextSortingOrder;
             return tmp;
         }
 
