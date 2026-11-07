@@ -9,6 +9,7 @@
 - 반대파 지적 목록: `{{FINDINGS}}`
 - 지금까지의 공방: `{{TRANSCRIPT}}` — 앞선 반박·재반박이 있으면 반드시 읽고, 같은 말을 반복하지 않는다.
 - 리뷰용 설계 의도: `{{INTENT}}`
+- 앞 라운드 기록: `{{PRIOR}}` — 앞 라운드에서 고친 지적 · 철회된 지적. 앞 라운드에서 이미 철회된 지적을 되풀이한 것이면 그것도 반박 근거가 된다.
 - 프로젝트 규칙: `CLAUDE.md`, 게임 규칙 기준: `docs/systems/*.md`, 코드 규칙: `docs/CODE_CONVENTION.md`, 네트워크: `.claude/skills/network-rpc/SKILL.md`
 - 이미 알려진 문제: `docs/worklog.md` 최근 항목의 「다음 할 일」·「확인 못 한 것」
 - 필요한 코드는 Read/Grep/Glob으로 직접 열어 확인한다.
