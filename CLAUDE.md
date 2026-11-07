@@ -175,3 +175,12 @@
 3. 마스터가 판정해야 하는 로직인가, 로컬 연출인가?
 4. 기존에 같은 일을 하는 클래스가 있는가? (`Scripts/` 전체 검색)
 5. 이 변경이 깨뜨리는 기존 기능은 무엇인가?
+
+## 16. 코드 리뷰 (찬반 리뷰 파이프라인)
+
+> 상세는 [`scripts/review/README.md`](scripts/review/README.md).
+
+* push 전에는 `/prepush`(= `bash scripts/review/prepush.sh`)를 거친다. 리뷰는 별도 세션들이 하고, 이 세션은 실행·결과 전달만 한다.
+* 리뷰 지적을 작성 세션이 스스로 기각하거나 축소하지 않는다. 동의하지 않으면 사용자에게 넘긴다.
+* `--accept`, `SKIP_REVIEW=1`, `git push --no-verify`는 사람만 쓴다.
+* 리뷰에서 문제로 보지 말아야 할 의도(수치 밸런스 등)는 [`docs/DESIGN_INTENT.md`](docs/DESIGN_INTENT.md)에 적는다.

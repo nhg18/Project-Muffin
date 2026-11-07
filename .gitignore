@@ -78,3 +78,6 @@ crashlytics-build.properties
 
 # ParrelSync 클론 (로컬 멀티플레이 테스트용 복제본 — 커밋 금지)
 *_clone_*/
+
+# 찬반 리뷰 파이프라인 결과 (scripts/review)
+.review/
