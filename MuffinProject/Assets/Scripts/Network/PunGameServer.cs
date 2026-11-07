@@ -162,6 +162,7 @@ namespace Chapchu.Network
             // 지금까지 보낸 알림 뒤에 간다 — 받는 쪽은 이 번호 전의 묵은 알림을 버린다
             _server.GetPrivateCards(info.Sender.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
             SendTo(info.Sender.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
+            PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable { [RoomProps.EventSeq] = _sentSeq }); // 새 방장이 이 번호부터 잇게 (09-network.md 5절)
         }
 
         [PunRPC]
