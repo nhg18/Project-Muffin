@@ -39,6 +39,8 @@ namespace Chapchu.Game
                 if (now < _reactionDeadline)
                     return;
                 ResolveChain();
+                if (_gameOver)
+                    return; // 체인 중에 나가 1명만 남았다 — 처리 뒤 바로 끝, 턴을 넘기지 않는다 (07 3 · 6절)
             }
 
             if (IsTrapWindowOpen)
