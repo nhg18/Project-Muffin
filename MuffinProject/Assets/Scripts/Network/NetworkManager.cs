@@ -25,6 +25,9 @@ namespace Chapchu.Network
         public static bool IsConnected => PhotonNetwork.IsConnected;
         /// <summary>서버 접속이 완료되어 요청을 보낼 수 있는 상태인지</summary>
         public static bool IsReady => PhotonNetwork.IsConnectedAndReady;
+
+        /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
+        internal int[] HostBots => _room.HostBots;
         
         protected override void Awake()
         {

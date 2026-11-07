@@ -18,6 +18,9 @@ namespace Chapchu.Game
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
+            if (!IsInGame(requester) || _players[requester].Life != LifeState.Alive)
+                return Reject(requester, RejectCode.NotAlive);
+
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 
@@ -34,8 +37,8 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotActionCard);
 
             int[] targets = ResolveTargets(requester, card.Target, requestedTargets);
-            if (targets == null)
-                return Reject(requester, RejectCode.InvalidTarget);
+            if (targets == null || (targets.Length == 0 && card.Target != TargetType.None))
+                return Reject(requester, RejectCode.InvalidTarget); // 대상이 필요한 카드인데 0명(찹츄 · 손패 조건) — 거절, 카드는 손패에 (04 5절 5 · 10절)
 
             // 적용 — 검증이 모두 끝난 뒤에만 상태를 바꾼다. 행동 카드 사용은 메인 행동 (03-turn.md 3절)
             _mainActionUsed = true;

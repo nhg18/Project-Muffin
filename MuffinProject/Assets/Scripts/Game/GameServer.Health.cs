@@ -50,7 +50,6 @@ namespace Chapchu.Game
         }
 
         // 사망 대기 마감에 Tick 이 부른다. 대응 뒤에도 HP 0 인 사람을 함께 최종 사망 (06 9 · 11절).
-        // TODO: HP 가 1 이상으로 돌아온 사람(T17 · C11)의 생존 복귀 알림은 그 효과를 만들 때.
         private void FinalizeDeaths()
         {
             _deathDeadline = -1;
@@ -69,6 +68,7 @@ namespace Chapchu.Game
                 if (player.Hp > 0)
                 {
                     player.Life = LifeState.Alive;
+                    _events.Add(new DeathAvoided(actor, player.Hp));
                     continue;
                 }
 

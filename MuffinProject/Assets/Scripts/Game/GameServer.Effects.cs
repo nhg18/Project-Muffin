@@ -31,6 +31,11 @@ namespace Chapchu.Game
                 hp = Math.Max(1, keep);
 
             SetHp(actor, hp);
+            if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
+            {
+                _players[actor].Life = LifeState.Alive; // 사망 방지(C11)로 HP 1 이상 — 바로 생존 (06 3 · 8절)
+                _events.Add(new DeathAvoided(actor, _players[actor].Hp));
+            }
             RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
         }
 
@@ -65,6 +70,9 @@ namespace Chapchu.Game
         internal void SurviveNow(int actor, int hp, bool discardHandAndTraps)
         {
             PlayerState player = _players[actor];
+            if (!IsInGame(actor))
+                return; // 처리 중에 나갔다 — 불발 (06 10절)
+
             if (discardHandAndTraps)
             {
                 DiscardCards(actor, player.Hand.ToList(), -1);

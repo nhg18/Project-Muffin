@@ -27,8 +27,13 @@ namespace Chapchu.UI.GameScreen
             entry.SetParent(content, false);
             entry.SetAsFirstSibling();
 
+            // Destroy 는 프레임 끝에 실행되므로 먼저 부모에서 떼어 childCount 를 줄인다.
             while (content.childCount > maxEntries)
-                Destroy(content.GetChild(content.childCount - 1).gameObject);
+            {
+                Transform oldest = content.GetChild(content.childCount - 1);
+                oldest.SetParent(null, false);
+                Destroy(oldest.gameObject);
+            }
         }
 
         public void Clear()

@@ -116,6 +116,9 @@ namespace Chapchu.DebugTools
         private void Start()
         {
             Time.timeScale = speed;
+            // 마우스로 누른 버튼이 선택돼 남으면 Space 가 Submit 으로도 들어간다 — 시험장 버튼은 선택되지 않게
+            replayButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            resetButton.navigation = new Navigation { mode = Navigation.Mode.None };
             for (int i = 0; i < entries.Count; i++)
                 _handCards.Add(CreateHandCard(i));
             captionText.text = entries.Count > 0 ? "카드를 누르면 연출이 나옵니다." : "entries 에 카드를 추가하세요.";
@@ -298,6 +301,7 @@ namespace Chapchu.DebugTools
             hit.color = Color.clear;
             Button button = card.gameObject.AddComponent<Button>();
             button.targetGraphic = hit;
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.onClick.AddListener(() => Play(index));
             return card;
         }
