@@ -112,3 +112,4 @@ namespace Chapchu.UI.GameScreen
         public void OnEndDrag(PointerEventData eventData) => OnDragEnded?.Invoke(this, eventData.position);
     }
 }
+
