@@ -18,5 +18,6 @@ develop  ← 통합. PR 로만 들어온다. 머지는 PM 만
 * 같은 씬 · 프리팹을 두 사람이 동시에 고치지 않는다.
 * 커밋 메시지: `type(scope): 한국어 요약` — `feat` · `fix` · `refactor` · `chore` · `docs`. 기능 단위로 커밋한다.
 * `.meta` 는 에셋과 같이 커밋 · 이동한다. 손으로 만들거나 지우지 않는다. 새 `.cs` · 에셋은 Unity 가 `.meta` 를 만든 뒤 함께 커밋한다.
+* push 전에는 별도 세션들의 찬반 리뷰를 거친다 → `/prepush` (`scripts/review/README.md`). 리뷰 지적을 작성 세션이 스스로 기각하지 않는다. 리뷰가 고친 커밋은 skill `multi-test` 로 확인한 뒤 push 한다.
 * 커밋하지 않는 것: `*_clone_*/` · `Library/` · `Temp/` · 빌드 산출물.
 * revert · reset · 강제 푸시는 실행 전에 허락을 받는다.
