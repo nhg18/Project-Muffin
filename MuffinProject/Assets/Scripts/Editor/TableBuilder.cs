@@ -14,8 +14,8 @@ using Object = UnityEngine.Object;
 namespace Chapchu.EditorTools
 {
     /// <summary>
-    /// 인게임 3D 층(카드 · 덱 · 손패 · 카드 내는 자리 · 버림 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
-    /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 · 테이블 판은 아직 2D (다음 단계).
+    /// 인게임 3D 층(테이블 방석 · 카드 · 덱 · 손패 · 카드 내는 자리 · 버림 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
+    /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 이름표는 2D 층(HUD v2).
     /// 카드 · 덱 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)과 카드 프리팹 3개는 없으면 만들고, 있으면 덮어쓰지 않는다.
     /// </summary>
     public static class TableBuilder
@@ -30,7 +30,10 @@ namespace Chapchu.EditorTools
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
         private const string CardShaderName = "Unlit/Transparent Cutout"; // 알파 컷아웃 + ZWrite — 겹친 카드가 깊이로 정렬된다. 뒷면 컬링
+        private const string CushionShaderName = "Unlit/Transparent";      // 방석 — 부드러운 가장자리 알파
+        private const int TextSortingOrder = 1; // 3D 글자는 방석(반투명, 순서 0)보다 뒤에 그린다 — 원근 거리 정렬에 맡기면 가장자리의 덱 글자가 방석 뒤로 간다. 카드 틀은 불투명(깊이) 이라 영향 없음
         private const string BackTexturePath = "Assets/Sprites/Cards/CardBack.jpg";
+        private const string CushionTexturePath = "Assets/Sprites/UI/Hud/table_cushion.png";
         private const float CardThickness = 0.02f; // 더미 장당 두께
         private const float LayerGap = 0.005f;     // 그림 · 글자를 틀 앞에 띄우는 간격 — 같은 면이면 z 싸움
 
@@ -42,25 +45,28 @@ namespace Chapchu.EditorTools
         private static readonly Rect DescriptionBox = Rect.MinMaxRect(0.11f, 0.074f, 0.89f, 0.336f);
         private const float NameFontPx = 18f, NameFontMinPx = 12f, DescriptionFontPx = 15f, DescriptionFontMinPx = 10f;
 
-        // 덱 179 × 259 · 중심 (972, 540) (10-ui.md 2-1 「덱」). 뒷면 5장을 겹쳐 두께를 낸다.
-        private static readonly Vector2 DeckCardSize = new Vector2(1.79f, 2.59f);
-        private static readonly Vector3 DeckPosition = CanvasToWorld(972f, 540f);
-        private const int DeckStackCount = 5;
-        private const float DeckCountFontPx = 20f;
-        private static readonly Vector2 DeckCountSize = new Vector2(1.6f, 0.3f);
-        private static readonly Vector2 DeckCountOffset = new Vector2(0f, 1.5f); // 덱 위쪽 바깥 — 뒷면 그림(흰 얼굴) 위에 흰 글자가 묻혀서 (제안 2026-11-06)
+        // 테이블 방석 — 시안 TABLE (200, 170) 560 × 280 × 2 = 중심 (960, 620) 1120 × 560. 카드 뒤(z +0.01)에 눕힌 그림 한 장.
+        private static readonly Vector2 CushionSize = new Vector2(11.2f, 5.6f);
+        private static readonly Vector3 CushionPosition = CanvasToWorld(960f, 620f) + new Vector3(0f, 0f, 0.01f);
 
-        // 손패 — 영역 아래 가운데(아래 28) 기준 원호, 양 끝 (±520, −34) (10-ui.md 2-1 「부채꼴」).
-        private static readonly Vector3 HandPosition = CanvasToWorld(960f, 1080f - 28f);
-        private const float HandFanHalfWidth = 5.2f;
+        // 덱 179 × 259 · 중심 (810, 620) (10-ui.md 2-1 「덱」, HUD v2 — 시안 DECK (405, 310) × 2). 뒷면 5장을 겹쳐 두께를 낸다.
+        private static readonly Vector2 DeckCardSize = new Vector2(1.79f, 2.59f);
+        private static readonly Vector3 DeckPosition = CanvasToWorld(810f, 620f);
+        private const int DeckStackCount = 5;
+        private const float DeckCountFontPx = 30f; // 시안 .lab 15 × 2
+        private static readonly Vector2 DeckCountSize = new Vector2(1.6f, 0.3f);
+        private static readonly Vector2 DeckCountOffset = new Vector2(0f, -1.5f); // 덱 아래쪽 바깥 — 시안 「덱 n」 라벨 자리 (HUD v2)
+
+        // 손패 — 내 패널(좌 32 + 472 + 24)과 찹츄 버튼(우 32 + 392 + 28) 사이 가운데 x 1016, 아래 28 기준 원호, 양 끝 (±452, −34) (10-ui.md 2-1 「부채꼴」 HUD v2).
+        private static readonly Vector3 HandPosition = CanvasToWorld(1016f, 1080f - 28f);
+        private const float HandFanHalfWidth = 4.52f;
         private const float HandFanDrop = 0.34f;
 
-        // 카드 내는 자리 · 버림 자리 — 테이블 수치가 미정이라 제안값 (2026-11-06): 덱(972) 양옆 276 — 왼쪽에 내고 오른쪽에 버린다 (10-ui.md 2절 배치도의 「덱 · 드롭 영역 · 버림」 순서).
-        // 덱과 같은 자리에 놓으면 덱 더미에 가려진다.
-        private static readonly Vector3 PlaySpotPosition = CanvasToWorld(696f, 540f);
-        private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1248f, 540f);
+        // 카드 내는 자리 · 버림 자리 — 시안 DROP (480, 310) · DISC (555, 310) × 2: 방석 가운데에 내고 오른쪽에 버린다 (HUD v2).
+        private static readonly Vector3 PlaySpotPosition = CanvasToWorld(960f, 620f);
+        private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1110f, 620f);
 
-        private static readonly Color Ink = new Color32(0x11, 0x11, 0x11, 0xFF);
+        private static readonly Color Ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
 
         /// <summary>캔버스 좌표(왼쪽 위 원점 · px) → 테이블 면 월드 좌표.</summary>
         public static Vector3 CanvasToWorld(float x, float y) => new Vector3((x - 960f) * UnitsPerPixel, (540f - y) * UnitsPerPixel, 0f);
@@ -95,6 +101,13 @@ namespace Chapchu.EditorTools
             return new GameObject(TableName).transform;
         }
 
+        /// <summary>테이블 방석 — 카드 뒤에 눕힌 그림 Quad. 포인터는 받지 않는다 (콜라이더 없음).</summary>
+        public static void BuildCushion(Transform table)
+        {
+            Material cushion = EnsureMaterial("TableCushion", CushionTexturePath, CushionShaderName);
+            Quad("Cushion", table, cushion, CushionSize, CushionPosition, Quaternion.identity);
+        }
+
         public static DeckView BuildDeck(Transform table)
         {
             var root = new GameObject("Deck", typeof(BoxCollider));
@@ -109,9 +122,8 @@ namespace Chapchu.EditorTools
             collider.size = new Vector3(DeckCardSize.x, DeckCardSize.y, DeckStackCount * CardThickness);
             collider.center = new Vector3(0f, 0f, -(DeckStackCount - 1) * CardThickness / 2f);
 
-            TMP_Text count = NewText3D("CountText", root.transform, "DRAW -", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center,
+            TMP_Text count = NewText3D("CountText", root.transform, "덱 -", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center,
                 DeckCountSize, new Vector3(DeckCountOffset.x, DeckCountOffset.y, -DeckStackCount * CardThickness - LayerGap));
-            count.characterSpacing = 10f;
 
             var view = root.AddComponent<DeckView>();
             GameScreenBuilder.Wire(view, ("countText", count));
@@ -214,7 +226,7 @@ namespace Chapchu.EditorTools
             return saved.GetComponent<CardView>();
         }
 
-        private static Material EnsureMaterial(string name, string texturePath)
+        private static Material EnsureMaterial(string name, string texturePath, string shaderName = CardShaderName)
         {
             string path = $"{MaterialFolder}/{name}.mat";
             var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -226,9 +238,9 @@ namespace Chapchu.EditorTools
             if (!AssetDatabase.IsValidFolder(MaterialFolder))
                 AssetDatabase.CreateFolder("Assets/Materials", "Cards");
 
-            Shader shader = Shader.Find(CardShaderName);
+            Shader shader = Shader.Find(shaderName);
             if (shader == null)
-                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {CardShaderName}");
+                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {shaderName}");
 
             var material = new Material(shader);
             if (texturePath != null)
@@ -302,6 +314,7 @@ namespace Chapchu.EditorTools
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            renderer.sortingOrder = TextSortingOrder;
             return tmp;
         }
 

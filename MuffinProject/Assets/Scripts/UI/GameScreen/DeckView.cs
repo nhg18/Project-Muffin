@@ -12,7 +12,7 @@ namespace Chapchu.UI.GameScreen
     [RequireComponent(typeof(BoxCollider))]
     public class DeckView : MonoBehaviour, IPointerClickHandler
     {
-        private const string CountFormat = "DRAW {0}";
+        private const string CountFormat = "덱 {0}";
 
         [SerializeField] private TMP_Text countText;
 

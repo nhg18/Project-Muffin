@@ -11,8 +11,8 @@ namespace Chapchu.UI.GameScreen
     /// 인게임 화면의 연출 큐 (CODE_CONVENTION 9절 · 09-network.md 6.1). 방장이 보낸 일어난 일(GameEvents)을 받은 순서대로 줄 세우고,
     /// 하나씩 영역 프레젠터에 넘겨 연출이 끝난 뒤 다음을 꺼낸다. 화면 값은 재생하는 순간 이벤트에 담긴 값으로 바뀐다. 판정은 하지 않는다.
     /// 받는 순서 = 일어난 순서다 (GameServer 가 쌓은 순서대로 PunGameServer 가 보내고, 같은 보낸이의 RPC 는 순서가 지켜진다).
-    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(MyPanelPresenter 가 매 프레임 계산) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start).
-    /// 버림 더미 · 히스토리는 아직 없어 그쪽 일은 흘려보낸다 — 생기면 여기에 단계를 더한다.
+    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(TurnStripPresenter 가 매 프레임 계산) · 퇴장(RoomEvents) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start).
+    /// 버림 더미는 아직 없어 그쪽 일은 흘려보낸다 — 생기면 여기에 단계를 더한다.
     /// </summary>
     public class GameScreenPresenter : MonoBehaviour
     {
@@ -20,6 +20,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HandPresenter hand;
         [SerializeField] private MyPanelPresenter myPanel;
         [SerializeField] private OpponentSeatsPresenter seats;
+        [SerializeField] private TurnStripPresenter turnStrip;
+        [SerializeField] private HistoryPresenter history;
 
         // 단계 하나 = 영역에 값을 넣고, 기다릴 연출이 있으면 그 코루틴을 돌려준다 (없으면 null).
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
@@ -32,7 +34,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || hand == null || myPanel == null || seats == null)
+            if (deck == null || hand == null || myPanel == null || seats == null || turnStrip == null || history == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -75,6 +77,7 @@ namespace Chapchu.UI.GameScreen
                     myPanel.ShowHp(hp);
                 else
                     seats.ShowHp(actorNumber, hp);
+                history.ShowHpChanged(actorNumber, hp);
                 return null;
             });
         }
@@ -104,6 +107,7 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 deck.ShowDeckCount(deckCount);
+                history.ShowCardDrawn(actorNumber);
                 if (!isMe)
                     return seats.DrawRoutine(actorNumber, handCount);
 
@@ -127,19 +131,22 @@ namespace Chapchu.UI.GameScreen
 
             Enqueue(() =>
             {
-                myPanel.ShowTurn(isMyTurn, deadline);
+                myPanel.ShowTurn(isMyTurn);
                 seats.ShowTurn(actorNumber);
+                turnStrip.ShowTurn(actorNumber, deadline);
+                history.ShowTurnStarted(actorNumber);
                 return null;
             });
         }
 
-        // 히스토리 항목은 이후 작업. 내 카드는 1단계 연출(테이블 위로 → 버림)이 끝날 때까지 큐가 기다린다.
+        // 내 카드는 1단계 연출(테이블 위로 → 버림)이 끝날 때까지 큐가 기다린다.
         private void HandleCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
         {
             bool isMe = IsMe(actorNumber);
 
             Enqueue(() =>
             {
+                history.ShowCardPlayed(actorNumber, cardId, targets);
                 if (!isMe)
                 {
                     seats.ShowHandCount(actorNumber, handCount);

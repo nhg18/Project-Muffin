@@ -134,10 +134,10 @@ namespace Chapchu.UI.GameScreen
             switch (data.targetType)
             {
                 case TargetType.OneOther:
-                    StartCoroutine(PlayWithTargetsRoutine(card, 1));
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1));
                     break;
                 case TargetType.TwoOthers:
-                    StartCoroutine(PlayWithTargetsRoutine(card, 2));
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 2));
                     break;
                 default:
                     RequestPlay(card, Array.Empty<int>());
@@ -146,13 +146,13 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        // 대상 선택 동안 손패를 잠그고 카드는 놓은 자리에 둔다. 고르면 요청, 취소 · 시간 초과면 요청하지 않는다. 끝나면 풀고 카드를 돌린다 (10-ui.md 6절).
-        private IEnumerator PlayWithTargetsRoutine(CardView card, int targetCount)
+        // 대상 선택 동안 손패를 잠그고 카드는 놓은 자리에 둔다. 안내 바에 카드 이름을 보여 준다. 고르면 요청, 취소 · 시간 초과면 요청하지 않는다. 끝나면 풀고 카드를 돌린다 (10-ui.md 6절).
+        private IEnumerator PlayWithTargetsRoutine(CardView card, string cardName, int targetCount)
         {
             _view.SetLocked(true);
 
             int[] targets = null;
-            yield return seats.SelectTargetsRoutine(targetCount, picked => targets = picked);
+            yield return seats.SelectTargetsRoutine(cardName, targetCount, picked => targets = picked);
 
             if (targets != null)
                 RequestPlay(card, targets);
