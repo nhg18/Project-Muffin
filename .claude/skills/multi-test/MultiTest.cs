@@ -265,6 +265,33 @@ public static class MultiTest
         return "OK P" + me + " 함정 시간에 함정 발동";
     }
 
+    /// <summary>내 카드 다시 받기 (09-network.md 10절) — 방장이 보낸 지금 내 카드가 알림으로 따라온 기록과 같은지 GameDebugInput 이 로그로 남긴다.</summary>
+    public static string SyncProbe()
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+
+        server.RequestMySync();
+        return "OK P" + PhotonNetwork.LocalPlayer.ActorNumber + " 내 카드 다시 받기 요청";
+    }
+
+    /// <summary>처리 번호 (09-network.md 5절) — 이미 받은 번호로 알림을 흉내 내면 버려져야 한다. 버려지면 OK.</summary>
+    public static string StaleProbe()
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+
+        int last = (int)typeof(PunGameServer).GetField("_receivedSeq", Private).GetValue(server);
+        int raised = 0;
+        Action<int, int> count = (a, h) => raised++;
+        Chapchu.Network.Events.GameEvents.OnHpChanged += count;
+        typeof(PunGameServer).GetMethod("RPC_OnHpChanged", Private).Invoke(server, new object[] { last, PhotonNetwork.LocalPlayer.ActorNumber, 1 });
+        Chapchu.Network.Events.GameEvents.OnHpChanged -= count;
+        return raised == 0 ? "OK 묵은 번호 " + last + " 버림" : "FAIL 묵은 번호 " + last + " 가 반영됐다";
+    }
+
     /// <summary>디버그 로비에서 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 비공개 방을 만든다. 방 화면 이동은 DebugScript 가 한다.</summary>
     public static string Solo()
     {

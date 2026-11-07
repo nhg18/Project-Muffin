@@ -27,9 +27,10 @@ log()  { printf '%s\n' "$*"; }
 fail() { log "  ✗ $*"; FAILED=1; }
 
 # unity command <이름> ... — 에디터 하나에 명령. stdin 을 막아야 CLI 가 멈추지 않는다.
+# 한 번의 CLI 호출은 2분을 넘기지 않는다 — 에디터가 리로드 중이면 CLI 가 돌아오지 않을 수 있어, 멈추면 WAIT 로 보고 다시 시도하게 한다
 ucmd() {
     local project="$1"; shift
-    unity command "$@" --project-path "$project" --caller plugin --skill multi-test </dev/null 2>&1
+    timeout 120 unity command "$@" --project-path "$project" --caller plugin --skill multi-test </dev/null 2>&1         || { [ $? -eq 124 ] && printf '%s' '{"errors":[{"message":"CLI 응답 없음 (120초)"}],"success":false}'; }
 }
 
 # MultiTest.<entry>(args...) 를 실행하고 반환 문자열을 찍는다. CLI · 컴파일 오류면 "WAIT ..." / "FAIL ...".
@@ -279,7 +280,7 @@ run_full() {
     until_ok "$MAIN" SetAllHp "$hp" || return
 
     log "▶ 한 판 끝까지 — 체력 ${hp} 에서 시작, 차례인 클라이언트가 행동"
-    for _ in $(seq 1 120); do
+    for _ in $(seq 1 $((clients * 100))); do  # 4인은 판이 길다 — 인원에 비례
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ActIfMyTurn)
             case "$out" in
@@ -399,6 +400,13 @@ run_multi() {
     # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 5 + 후처리 1.28초)가 모든 화면에 닿을 때까지
     sleep 10
 
+    log "▶ 내 카드 다시 받기 · 묵은 처리 번호 (09-network.md 5 · 10절)"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" SyncProbe || return
+        until_ok "$project" StaleProbe || return
+    done
+    sleep 3
+
     log "▶ 판정"
     compare_screens
     for project in "${EDITORS[@]}"; do
@@ -445,6 +453,14 @@ compare_screens() {
         total=$((total + count))
     done
     [ "$total" -ge 1 ] && log "  체인 처리 결과 수신 (카드 처리 줄 ${total}개)" || fail "체인 처리 결과(OnCardResolved)를 받지 못했다"
+    for project in "${EDITORS[@]}"; do
+        if console_lines "$project" | grep -q '\[GameDebugInput\].*내 카드 동기화 — 일치'; then
+            log "  $(name_of "$project"): 내 카드 동기화 일치"
+        else
+            fail "$(name_of "$project"): 내 카드 동기화가 일치하지 않거나 오지 않았다"
+            console_lines "$project" | grep '내 카드 동기화' | sed 's/^/      /'
+        fi
+    done
 }
 
 case "${1:-}" in

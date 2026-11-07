@@ -76,6 +76,21 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
+        /// <summary>actor 의 비공개 카드 — 손패 · 설치 함정 (09-network.md 10절 동기화). 그 사람에게만 보낸다.</summary>
+        public void GetPrivateCards(int actor, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds)
+        {
+            if (!_players.TryGetValue(actor, out PlayerState player))
+            {
+                handIds = handCardIds = trapIds = trapCardIds = Array.Empty<int>();
+                return;
+            }
+
+            handIds = player.Hand.Select(c => c.InstanceId).ToArray();
+            handCardIds = player.Hand.Select(c => c.CardId).ToArray();
+            trapIds = player.Traps.Select(c => c.InstanceId).ToArray();
+            trapCardIds = player.Traps.Select(c => c.CardId).ToArray();
+        }
+
         /// <summary>디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패[카드 ID]. 판정에 쓰지 않는다.</summary>
         public string DebugState()
         {

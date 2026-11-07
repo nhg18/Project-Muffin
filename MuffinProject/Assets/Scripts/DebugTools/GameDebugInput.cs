@@ -65,6 +65,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
+            GameEvents.OnMySync += HandleMySync;
             GameEvents.OnGameEnded += HandleGameEnded;
             GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
@@ -97,6 +98,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
+            GameEvents.OnMySync -= HandleMySync;
             GameEvents.OnGameEnded -= HandleGameEnded;
             GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
@@ -316,6 +318,20 @@ namespace Chapchu.DebugTools
         private void HandleTurnSkipped(int actorNumber) => Log($"P{actorNumber} 턴 스킵");
 
         private void HandleDeathAvoided(int actorNumber, int hp) => Log($"P{actorNumber} 생존 — ♥{hp}");
+
+        // 방장이 보낸 지금 내 카드와, 알림으로 따라온 내 기록을 비교한 뒤 방장 값으로 맞춘다
+        private void HandleMySync(int[] handIds, int[] handCardIds, int[] trapIds, int[] trapCardIds)
+        {
+            bool same = handIds.OrderBy(i => i).SequenceEqual(_myHandInstances.OrderBy(i => i)) && trapIds.OrderBy(i => i).SequenceEqual(_myTraps.OrderBy(i => i));
+            Log($"내 카드 동기화 — {(same ? "일치" : "불일치")} · 손패 {handIds.Length} · 함정 {trapIds.Length}");
+
+            _myHandInstances.Clear();
+            _myHandInstances.AddRange(handIds);
+            _myHand.Clear();
+            _myHand.AddRange(handCardIds);
+            _myTraps.Clear();
+            _myTraps.AddRange(trapIds);
+        }
 
         private void RemoveFromMyHand(int[] cardInstanceIds)
         {

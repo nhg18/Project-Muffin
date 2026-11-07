@@ -39,6 +39,8 @@ namespace Chapchu.Network
 
         private GameServer _server; // 모든 클라가 만들지만 방장에서만 쓰인다
         private BotDriver _bots;    // 봇의 판단 — 방장에서만 (18-bot.md 3절 #1). 봇이 없으면 null
+        private int _sentSeq;       // 방장 — 마지막으로 보낸 처리 번호 (09-network.md 5절)
+        private int _receivedSeq;   // 각 클라 — 마지막으로 받은 처리 번호
 
         /// <summary>이번 게임의 덱 — 카드 ID 로 카드 정의를 찾는 사전으로도 쓴다 (DeckData.GetCard).</summary>
         public DeckData Deck => deck;
@@ -112,6 +114,12 @@ namespace Chapchu.Network
         /// <summary>설치한 함정 발동 — 조건 · 시점은 방장이 본다 (04-card.md 6절 「발동 시점」). 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestActivateTrap), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
+        /// <summary>
+        /// 내 손패 · 설치 함정 내용을 다시 받는다 (09-network.md 10절) — 화면이 늦게 열렸거나 다시 그릴 때. 답은 GameEvents.OnMySync.
+        /// 공개 값(체력 · 장수 · 턴)은 CustomProperties 스냅샷으로 읽는다.
+        /// </summary>
+        public void RequestMySync() => photonView.RPC(nameof(RPC_RequestMySync), RpcTarget.MasterClient);
+
         /// <summary>찹츄 선언 — 손패가 정확히 10장일 때 언제든 (07-win-condition.md 4.1).</summary>
         public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
 
@@ -147,6 +155,16 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
+        private void RPC_RequestMySync(PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+
+            // 지금까지 보낸 알림 뒤에 간다 — 받는 쪽은 이 번호 전의 묵은 알림을 버린다
+            _server.GetPrivateCards(info.Sender.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
+            SendTo(info.Sender.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
+        }
+
+        [PunRPC]
         private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
         {
             if (!PhotonNetwork.IsMasterClient) return;
@@ -158,6 +176,16 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
+        }
+
+        // 새 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)
+        public override void OnMasterClientSwitched(Player newMasterClient)
+        {
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+
+            int fromRoom = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.EventSeq, out object value) && value is int seq ? seq : 0;
+            _sentSeq = System.Math.Max(System.Math.Max(_sentSeq, _receivedSeq), fromRoom);
         }
 
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
@@ -186,60 +214,60 @@ namespace Chapchu.Network
                 switch (gameEvent)
                 {
                     case HpChanged hp:
-                        photonView.RPC(nameof(RPC_OnHpChanged), RpcTarget.All, hp.Actor, hp.Hp);
+                        Broadcast(nameof(RPC_OnHpChanged), hp.Actor, hp.Hp);
                         PlayerPropsOf(playerProps, hp.Actor)[PlayerProps.Hp] = hp.Hp;
                         break;
 
                     case CardDrawn drawn:
                         SendTo(drawn.Actor, nameof(RPC_OnMyCardDrawn), drawn.CardInstanceId, drawn.CardId); // 카드 내용은 주인만 (09 3절)
-                        photonView.RPC(nameof(RPC_OnCardDrawn), RpcTarget.All, drawn.Actor, drawn.HandCount, drawn.DeckCount);
+                        Broadcast(nameof(RPC_OnCardDrawn), drawn.Actor, drawn.HandCount, drawn.DeckCount);
                         PlayerPropsOf(playerProps, drawn.Actor)[PlayerProps.HandCount] = drawn.HandCount;
                         roomProps[RoomProps.DeckCount] = drawn.DeckCount;
                         break;
 
                     case DeckRefilled refilled:
-                        photonView.RPC(nameof(RPC_OnDeckRefilled), RpcTarget.All, refilled.DeckCount);
+                        Broadcast(nameof(RPC_OnDeckRefilled), refilled.DeckCount);
                         roomProps[RoomProps.DeckCount] = refilled.DeckCount;
                         roomProps[RoomProps.DiscardCount] = 0;
                         break;
 
                     case TurnStarted turn:
-                        photonView.RPC(nameof(RPC_OnTurnStarted), RpcTarget.All, turn.Actor, turn.Deadline);
+                        Broadcast(nameof(RPC_OnTurnStarted), turn.Actor, turn.Deadline);
                         roomProps[RoomProps.TurnActor] = turn.Actor;
                         roomProps[RoomProps.TurnDeadline] = turn.Deadline;
                         Debug.Log($"[{nameof(PunGameServer)}] 턴 시작 P{turn.Actor} — {_server.DebugState()}");
                         break;
 
                     case CardPlayed played:
-                        photonView.RPC(nameof(RPC_OnCardPlayed), RpcTarget.All, played.Actor, played.CardInstanceId, played.CardId, played.Targets, played.HandCount, played.DiscardCount);
+                        Broadcast(nameof(RPC_OnCardPlayed), played.Actor, played.CardInstanceId, played.CardId, played.Targets, played.HandCount, played.DiscardCount);
                         PlayerPropsOf(playerProps, played.Actor)[PlayerProps.HandCount] = played.HandCount;
                         break;
 
                     case ReactionStarted reaction:
-                        photonView.RPC(nameof(RPC_OnReactionStarted), RpcTarget.All, reaction.OpensAt, reaction.Deadline);
+                        Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt, reaction.Deadline);
                         break;
 
                     case CardResolved resolved:
-                        photonView.RPC(nameof(RPC_OnCardResolved), RpcTarget.All, resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
+                        Broadcast(nameof(RPC_OnCardResolved), resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = resolved.DiscardCount;
                         break;
 
                     case CardNegated negated:
-                        photonView.RPC(nameof(RPC_OnCardNegated), RpcTarget.All, negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
+                        Broadcast(nameof(RPC_OnCardNegated), negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = negated.DiscardCount;
                         break;
 
                     case EmptyDeckDamaged empty:
-                        photonView.RPC(nameof(RPC_OnEmptyDeckDamaged), RpcTarget.All, empty.Actor, empty.Amount);
+                        Broadcast(nameof(RPC_OnEmptyDeckDamaged), empty.Actor, empty.Amount);
                         break;
 
                     case DeathPending pending:
-                        photonView.RPC(nameof(RPC_OnDeathPending), RpcTarget.All, pending.Actor, pending.StartsAt, pending.Deadline);
+                        Broadcast(nameof(RPC_OnDeathPending), pending.Actor, pending.StartsAt, pending.Deadline);
                         PlayerPropsOf(playerProps, pending.Actor)[PlayerProps.LifeState] = (byte)LifeState.DeathPending;
                         break;
 
                     case PlayerDied died:
-                        photonView.RPC(nameof(RPC_OnPlayerDied), RpcTarget.All, died.Actor, died.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerDied), died.Actor, died.DiscardCount);
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.LifeState] = (byte)LifeState.Dead;
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.HandCount] = 0;
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.TrapCount] = 0;
@@ -247,47 +275,47 @@ namespace Chapchu.Network
                         break;
 
                     case PlayerLeft left:
-                        photonView.RPC(nameof(RPC_OnPlayerLeftGame), RpcTarget.All, left.Actor, left.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
                         break;
 
                     case TurnResumed resumed:
-                        photonView.RPC(nameof(RPC_OnTurnResumed), RpcTarget.All, resumed.Actor, resumed.Deadline);
+                        Broadcast(nameof(RPC_OnTurnResumed), resumed.Actor, resumed.Deadline);
                         roomProps[RoomProps.TurnDeadline] = resumed.Deadline;
                         break;
 
                     case TrapSet set:
                         SendTo(set.Actor, nameof(RPC_OnMyTrapSet), set.CardInstanceId, set.CardId); // 종류는 소유자만 (09 3절)
-                        photonView.RPC(nameof(RPC_OnTrapSet), RpcTarget.All, set.Actor, set.HandCount, set.TrapCount);
+                        Broadcast(nameof(RPC_OnTrapSet), set.Actor, set.HandCount, set.TrapCount);
                         PlayerPropsOf(playerProps, set.Actor)[PlayerProps.HandCount] = set.HandCount;
                         PlayerPropsOf(playerProps, set.Actor)[PlayerProps.TrapCount] = set.TrapCount;
                         break;
 
                     case TrapActivated trap:
-                        photonView.RPC(nameof(RPC_OnTrapActivated), RpcTarget.All, trap.Actor, trap.CardInstanceId, trap.CardId, trap.Targets, trap.TrapCount);
+                        Broadcast(nameof(RPC_OnTrapActivated), trap.Actor, trap.CardInstanceId, trap.CardId, trap.Targets, trap.TrapCount);
                         PlayerPropsOf(playerProps, trap.Actor)[PlayerProps.TrapCount] = trap.TrapCount;
                         break;
 
                     case TrapWindowStarted window:
-                        photonView.RPC(nameof(RPC_OnTrapWindowStarted), RpcTarget.All, window.OpensAt, window.Deadline);
+                        Broadcast(nameof(RPC_OnTrapWindowStarted), window.OpensAt, window.Deadline);
                         break;
 
                     case HandCardsMoved moved:
                         SendTo(moved.From, nameof(RPC_OnMyCardsLost), moved.CardInstanceIds);                    // 카드 내용은 두 사람만 (09 3절)
                         SendTo(moved.To, nameof(RPC_OnMyCardsGained), moved.CardInstanceIds, moved.CardIds);
-                        photonView.RPC(nameof(RPC_OnHandCardsMoved), RpcTarget.All, moved.From, moved.To, moved.CardIds.Length, moved.FromHandCount, moved.ToHandCount);
+                        Broadcast(nameof(RPC_OnHandCardsMoved), moved.From, moved.To, moved.CardIds.Length, moved.FromHandCount, moved.ToHandCount);
                         PlayerPropsOf(playerProps, moved.From)[PlayerProps.HandCount] = moved.FromHandCount;
                         PlayerPropsOf(playerProps, moved.To)[PlayerProps.HandCount] = moved.ToHandCount;
                         break;
 
                     case CardsDiscarded discarded:
-                        photonView.RPC(nameof(RPC_OnCardsDiscarded), RpcTarget.All, discarded.Actor, discarded.CardInstanceIds, discarded.CardIds, discarded.HandCount, discarded.DiscardCount);
+                        Broadcast(nameof(RPC_OnCardsDiscarded), discarded.Actor, discarded.CardInstanceIds, discarded.CardIds, discarded.HandCount, discarded.DiscardCount);
                         PlayerPropsOf(playerProps, discarded.Actor)[PlayerProps.HandCount] = discarded.HandCount;
                         roomProps[RoomProps.DiscardCount] = discarded.DiscardCount;
                         break;
 
                     case TrapDestroyed destroyed:
-                        photonView.RPC(nameof(RPC_OnTrapDestroyed), RpcTarget.All, destroyed.Owner, destroyed.CardInstanceId, destroyed.CardId, destroyed.TrapCount, destroyed.DiscardCount);
+                        Broadcast(nameof(RPC_OnTrapDestroyed), destroyed.Owner, destroyed.CardInstanceId, destroyed.CardId, destroyed.TrapCount, destroyed.DiscardCount);
                         PlayerPropsOf(playerProps, destroyed.Owner)[PlayerProps.TrapCount] = destroyed.TrapCount;
                         roomProps[RoomProps.DiscardCount] = destroyed.DiscardCount;
                         break;
@@ -295,7 +323,7 @@ namespace Chapchu.Network
                     case TrapReturned returned:
                         SendTo(returned.Owner, nameof(RPC_OnMyTrapRemoved), returned.CardInstanceId);
                         SendTo(returned.Owner, nameof(RPC_OnMyCardsGained), new[] { returned.CardInstanceId }, new[] { returned.CardId });
-                        photonView.RPC(nameof(RPC_OnTrapReturned), RpcTarget.All, returned.Owner, returned.TrapCount, returned.HandCount);
+                        Broadcast(nameof(RPC_OnTrapReturned), returned.Owner, returned.TrapCount, returned.HandCount);
                         PlayerPropsOf(playerProps, returned.Owner)[PlayerProps.TrapCount] = returned.TrapCount;
                         PlayerPropsOf(playerProps, returned.Owner)[PlayerProps.HandCount] = returned.HandCount;
                         break;
@@ -303,37 +331,37 @@ namespace Chapchu.Network
                     case TrapMoved trapMoved:
                         SendTo(trapMoved.From, nameof(RPC_OnMyTrapRemoved), trapMoved.CardInstanceId);
                         SendTo(trapMoved.To, nameof(RPC_OnMyTrapSet), trapMoved.CardInstanceId, trapMoved.CardId);
-                        photonView.RPC(nameof(RPC_OnTrapMoved), RpcTarget.All, trapMoved.From, trapMoved.To, trapMoved.FromTrapCount, trapMoved.ToTrapCount);
+                        Broadcast(nameof(RPC_OnTrapMoved), trapMoved.From, trapMoved.To, trapMoved.FromTrapCount, trapMoved.ToTrapCount);
                         PlayerPropsOf(playerProps, trapMoved.From)[PlayerProps.TrapCount] = trapMoved.FromTrapCount;
                         PlayerPropsOf(playerProps, trapMoved.To)[PlayerProps.TrapCount] = trapMoved.ToTrapCount;
                         break;
 
                     case TurnSkipMarked marked:
-                        photonView.RPC(nameof(RPC_OnTurnSkipMarked), RpcTarget.All, marked.Actor);
+                        Broadcast(nameof(RPC_OnTurnSkipMarked), marked.Actor);
                         break;
 
                     case TurnSkipped skipped:
-                        photonView.RPC(nameof(RPC_OnTurnSkipped), RpcTarget.All, skipped.Actor);
+                        Broadcast(nameof(RPC_OnTurnSkipped), skipped.Actor);
                         break;
 
                     case CardReturnedToHand back:
-                        photonView.RPC(nameof(RPC_OnCardReturnedToHand), RpcTarget.All, back.Actor, back.CardInstanceId, back.CardId, back.HandCount);
+                        Broadcast(nameof(RPC_OnCardReturnedToHand), back.Actor, back.CardInstanceId, back.CardId, back.HandCount);
                         PlayerPropsOf(playerProps, back.Actor)[PlayerProps.HandCount] = back.HandCount;
                         break;
 
                     case DeathAvoided avoided:
-                        photonView.RPC(nameof(RPC_OnDeathAvoided), RpcTarget.All, avoided.Actor, avoided.Hp);
+                        Broadcast(nameof(RPC_OnDeathAvoided), avoided.Actor, avoided.Hp);
                         PlayerPropsOf(playerProps, avoided.Actor)[PlayerProps.LifeState] = (byte)LifeState.Alive;
                         break;
 
                     case ChapchuChanged chapchu:
-                        photonView.RPC(nameof(RPC_OnChapchuChanged), RpcTarget.All, chapchu.Actor, chapchu.IsChapchu);
+                        Broadcast(nameof(RPC_OnChapchuChanged), chapchu.Actor, chapchu.IsChapchu);
                         PlayerPropsOf(playerProps, chapchu.Actor)[PlayerProps.ChapChu] = chapchu.IsChapchu;
                         break;
 
                     case GameEnded ended:
                         double returnAt = PhotonNetwork.Time + resultSeconds;
-                        photonView.RPC(nameof(RPC_OnGameEnded), RpcTarget.All, ended.Winner, (byte)ended.Reason, returnAt);
+                        Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, returnAt);
                         Debug.Log($"[{nameof(PunGameServer)}] 게임 종료 — {ended.Reason} · 승자 P{ended.Winner} — {_server.DebugState()}");
                         StartCoroutine(ReturnToRoomRoutine());
                         break;
@@ -359,8 +387,8 @@ namespace Chapchu.Network
                     roomProps[BotRoster.PropKey((string)entry.Key, pair.Key)] = entry.Value;
             }
 
-            if (roomProps.Count > 0)
-                PhotonNetwork.CurrentRoom.SetCustomProperties(roomProps);
+            roomProps[RoomProps.EventSeq] = _sentSeq; // 지금 값 스냅샷이 어느 알림까지 반영했는지
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomProps);
 
             foreach (KeyValuePair<int, Hashtable> pair in playerProps)
             {
@@ -380,13 +408,37 @@ namespace Chapchu.Network
             PhotonNetwork.LoadLevel(ScenePaths.Room);
         }
 
+        // 처리 번호 (09-network.md 5절) — 방장이 보내는 알림 1건마다 1씩 는다. 받는 쪽은 이미 받은 번호 이하를 버린다 (중복 적용 방지).
+        private void Broadcast(string rpcName, params object[] parameters) => photonView.RPC(rpcName, RpcTarget.All, WithSeq(parameters));
+
         private void SendTo(int actorNumber, string rpcName, params object[] parameters)
         {
             Player player = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
             if (player == null)
-                return; // 이미 나간 사람
+                return; // 이미 나간 사람 · 봇 (봇은 접속자가 아니다 — 비공개 내용은 아무에게도 가지 않는다)
 
-            photonView.RPC(rpcName, player, parameters);
+            photonView.RPC(rpcName, player, WithSeq(parameters));
+        }
+
+        private object[] WithSeq(object[] parameters)
+        {
+            var withSeq = new object[parameters.Length + 1];
+            withSeq[0] = ++_sentSeq;
+            parameters.CopyTo(withSeq, 1);
+            return withSeq;
+        }
+
+        // 받는 쪽 — 같은 보낸이의 RPC 는 순서대로 오므로 번호는 늘기만 한다. 이하가 오면 이미 반영한 것 (동기화 응답 뒤의 묵은 알림 등)
+        private bool Accept(int seq)
+        {
+            if (seq <= _receivedSeq)
+            {
+                Debug.LogWarning($"[{nameof(PunGameServer)}] 이미 받은 처리 번호 {seq} (마지막 {_receivedSeq}) — 버린다");
+                return false;
+            }
+
+            _receivedSeq = seq;
+            return true;
         }
 
         private static Hashtable PlayerPropsOf(Dictionary<int, Hashtable> playerProps, int actorNumber)
@@ -405,110 +457,242 @@ namespace Chapchu.Network
         #region 결과 받기 (각 클라) → GameEvents
 
         [PunRPC]
-        private void RPC_OnHpChanged(int actorNumber, int hp) => GameEvents.RaiseHpChanged(actorNumber, hp);
+        private void RPC_OnHpChanged(int seq, int actorNumber, int hp)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseHpChanged(actorNumber, hp);
+        }
 
         [PunRPC]
-        private void RPC_OnCardDrawn(int actorNumber, int handCount, int deckCount) => GameEvents.RaiseCardDrawn(actorNumber, handCount, deckCount);
+        private void RPC_OnCardDrawn(int seq, int actorNumber, int handCount, int deckCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardDrawn(actorNumber, handCount, deckCount);
+        }
 
         [PunRPC]
-        private void RPC_OnMyCardDrawn(int cardInstanceId, int cardId) => GameEvents.RaiseMyCardDrawn(cardInstanceId, cardId);
+        private void RPC_OnMyCardDrawn(int seq, int cardInstanceId, int cardId)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyCardDrawn(cardInstanceId, cardId);
+        }
 
         [PunRPC]
-        private void RPC_OnDeckRefilled(int deckCount) => GameEvents.RaiseDeckRefilled(deckCount);
+        private void RPC_OnDeckRefilled(int seq, int deckCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseDeckRefilled(deckCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTurnStarted(int actorNumber, double deadline) => GameEvents.RaiseTurnStarted(actorNumber, deadline);
+        private void RPC_OnTurnStarted(int seq, int actorNumber, double deadline)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTurnStarted(actorNumber, deadline);
+        }
 
         [PunRPC]
-        private void RPC_OnCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
-            => GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
+        private void RPC_OnCardPlayed(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnReactionStarted(double opensAt, double deadline) => GameEvents.RaiseReactionStarted(opensAt, deadline);
+        private void RPC_OnReactionStarted(int seq, double opensAt, double deadline)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseReactionStarted(opensAt, deadline);
+        }
 
         [PunRPC]
-        private void RPC_OnCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
-            => GameEvents.RaiseCardResolved(actorNumber, cardInstanceId, cardId, targets, discardCount);
+        private void RPC_OnCardResolved(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardResolved(actorNumber, cardInstanceId, cardId, targets, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
-            => GameEvents.RaiseCardNegated(actorNumber, cardInstanceId, cardId, discardCount);
+        private void RPC_OnCardNegated(int seq, int actorNumber, int cardInstanceId, int cardId, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardNegated(actorNumber, cardInstanceId, cardId, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnEmptyDeckDamaged(int actorNumber, int amount) => GameEvents.RaiseEmptyDeckDamaged(actorNumber, amount);
+        private void RPC_OnEmptyDeckDamaged(int seq, int actorNumber, int amount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseEmptyDeckDamaged(actorNumber, amount);
+        }
 
         [PunRPC]
-        private void RPC_OnDeathPending(int actorNumber, double startsAt, double deadline) => GameEvents.RaiseDeathPending(actorNumber, startsAt, deadline);
+        private void RPC_OnDeathPending(int seq, int actorNumber, double startsAt, double deadline)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseDeathPending(actorNumber, startsAt, deadline);
+        }
 
         [PunRPC]
-        private void RPC_OnPlayerDied(int actorNumber, int discardCount) => GameEvents.RaisePlayerDied(actorNumber, discardCount);
+        private void RPC_OnPlayerDied(int seq, int actorNumber, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaisePlayerDied(actorNumber, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnPlayerLeftGame(int actorNumber, int discardCount) => GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
+        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTurnResumed(int actorNumber, double deadline) => GameEvents.RaiseTurnResumed(actorNumber, deadline);
+        private void RPC_OnTurnResumed(int seq, int actorNumber, double deadline)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTurnResumed(actorNumber, deadline);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapSet(int actorNumber, int handCount, int trapCount) => GameEvents.RaiseTrapSet(actorNumber, handCount, trapCount);
+        private void RPC_OnTrapSet(int seq, int actorNumber, int handCount, int trapCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapSet(actorNumber, handCount, trapCount);
+        }
 
         [PunRPC]
-        private void RPC_OnMyTrapSet(int cardInstanceId, int cardId) => GameEvents.RaiseMyTrapSet(cardInstanceId, cardId);
+        private void RPC_OnMyTrapSet(int seq, int cardInstanceId, int cardId)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyTrapSet(cardInstanceId, cardId);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount)
-            => GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, targets, trapCount);
+        private void RPC_OnTrapActivated(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, targets, trapCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapWindowStarted(double opensAt, double deadline) => GameEvents.RaiseTrapWindowStarted(opensAt, deadline);
+        private void RPC_OnTrapWindowStarted(int seq, double opensAt, double deadline)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapWindowStarted(opensAt, deadline);
+        }
 
         [PunRPC]
-        private void RPC_OnHandCardsMoved(int from, int to, int count, int fromHandCount, int toHandCount) => GameEvents.RaiseHandCardsMoved(from, to, count, fromHandCount, toHandCount);
+        private void RPC_OnHandCardsMoved(int seq, int from, int to, int count, int fromHandCount, int toHandCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseHandCardsMoved(from, to, count, fromHandCount, toHandCount);
+        }
 
         [PunRPC]
-        private void RPC_OnMyCardsGained(int[] cardInstanceIds, int[] cardIds) => GameEvents.RaiseMyCardsGained(cardInstanceIds, cardIds);
+        private void RPC_OnMyCardsGained(int seq, int[] cardInstanceIds, int[] cardIds)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyCardsGained(cardInstanceIds, cardIds);
+        }
 
         [PunRPC]
-        private void RPC_OnMyCardsLost(int[] cardInstanceIds) => GameEvents.RaiseMyCardsLost(cardInstanceIds);
+        private void RPC_OnMyCardsLost(int seq, int[] cardInstanceIds)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyCardsLost(cardInstanceIds);
+        }
 
         [PunRPC]
-        private void RPC_OnCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
-            => GameEvents.RaiseCardsDiscarded(actorNumber, cardInstanceIds, cardIds, handCount, discardCount);
+        private void RPC_OnCardsDiscarded(int seq, int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardsDiscarded(actorNumber, cardInstanceIds, cardIds, handCount, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
-            => GameEvents.RaiseTrapDestroyed(owner, cardInstanceId, cardId, trapCount, discardCount);
+        private void RPC_OnTrapDestroyed(int seq, int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapDestroyed(owner, cardInstanceId, cardId, trapCount, discardCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapReturned(int owner, int trapCount, int handCount) => GameEvents.RaiseTrapReturned(owner, trapCount, handCount);
+        private void RPC_OnTrapReturned(int seq, int owner, int trapCount, int handCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapReturned(owner, trapCount, handCount);
+        }
 
         [PunRPC]
-        private void RPC_OnMyTrapRemoved(int cardInstanceId) => GameEvents.RaiseMyTrapRemoved(cardInstanceId);
+        private void RPC_OnMyTrapRemoved(int seq, int cardInstanceId)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyTrapRemoved(cardInstanceId);
+        }
 
         [PunRPC]
-        private void RPC_OnTrapMoved(int from, int to, int fromTrapCount, int toTrapCount) => GameEvents.RaiseTrapMoved(from, to, fromTrapCount, toTrapCount);
+        private void RPC_OnTrapMoved(int seq, int from, int to, int fromTrapCount, int toTrapCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTrapMoved(from, to, fromTrapCount, toTrapCount);
+        }
 
         [PunRPC]
-        private void RPC_OnTurnSkipMarked(int actorNumber) => GameEvents.RaiseTurnSkipMarked(actorNumber);
+        private void RPC_OnTurnSkipMarked(int seq, int actorNumber)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTurnSkipMarked(actorNumber);
+        }
 
         [PunRPC]
-        private void RPC_OnTurnSkipped(int actorNumber) => GameEvents.RaiseTurnSkipped(actorNumber);
+        private void RPC_OnTurnSkipped(int seq, int actorNumber)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseTurnSkipped(actorNumber);
+        }
 
         [PunRPC]
-        private void RPC_OnCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)
-            => GameEvents.RaiseCardReturnedToHand(actorNumber, cardInstanceId, cardId, handCount);
+        private void RPC_OnCardReturnedToHand(int seq, int actorNumber, int cardInstanceId, int cardId, int handCount)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseCardReturnedToHand(actorNumber, cardInstanceId, cardId, handCount);
+        }
 
         [PunRPC]
-        private void RPC_OnDeathAvoided(int actorNumber, int hp) => GameEvents.RaiseDeathAvoided(actorNumber, hp);
+        private void RPC_OnDeathAvoided(int seq, int actorNumber, int hp)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseDeathAvoided(actorNumber, hp);
+        }
 
         [PunRPC]
-        private void RPC_OnChapchuChanged(int actorNumber, bool isChapchu) => GameEvents.RaiseChapchuChanged(actorNumber, isChapchu);
+        private void RPC_OnChapchuChanged(int seq, int actorNumber, bool isChapchu)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseChapchuChanged(actorNumber, isChapchu);
+        }
 
         [PunRPC]
-        private void RPC_OnGameEnded(int winner, byte reason, double returnAt) => GameEvents.RaiseGameEnded(winner, (GameEndReason)reason, returnAt);
+        private void RPC_OnGameEnded(int seq, int winner, byte reason, double returnAt)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseGameEnded(winner, (GameEndReason)reason, returnAt);
+        }
 
         [PunRPC]
-        private void RPC_RejectRequest(int code) => GameEvents.RaiseMyRequestRejected(code);
+        private void RPC_OnMySync(int seq, int[] handIds, int[] handCardIds, int[] trapIds, int[] trapCardIds)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMySync(handIds, handCardIds, trapIds, trapCardIds);
+        }
+
+        [PunRPC]
+        private void RPC_RejectRequest(int seq, int code)
+        {
+            if (Accept(seq))
+                GameEvents.RaiseMyRequestRejected(code);
+        }
 
         #endregion
     }
