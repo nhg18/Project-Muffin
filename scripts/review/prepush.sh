@@ -117,6 +117,8 @@ else
   BASE="$(git merge-base "$BASE_BRANCH" HEAD)" || die "merge-base 계산 실패"
   SCOPE="이번 diff가 새로 만들거나 건드린 문제만 보고한다. diff와 무관한 기존 코드의 문제는 보고하지 않는다."
 fi
+# 2라운드부터: 앞 라운드 수정 커밋만 본다 (두 모드 공통)
+VERIFY_SCOPE="이번 diff 는 앞 라운드 수정 세션이 고친 내용이다. 두 가지만 보고한다 — (1) 앞 라운드 기록의 '고친 지적'이 이 수정으로 실제로 해결되지 않았다 (2) 이 수정이 새로 만든 문제. 수정과 무관한 기존 코드의 문제, 앞 라운드에서 철회된 지적은 보고하지 않는다."
 
 RUN_ROOT="$STATE_DIR/runs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$RUN_ROOT"
@@ -180,13 +182,13 @@ extract_blocks() {
 }
 
 # ----- 리뷰 라운드: 반대파 → 찬성파 → 재반박 --------------------------------
-# 입력: RUN, TARGET_PATHS / 결과: STATUS(PASS|ISSUES), ACCEPTED, UNRESOLVED
+# 입력: RUN, TARGET_PATHS, ROUND_BASE, ROUND_SCOPE / 결과: STATUS(PASS|ISSUES), ACCEPTED, UNRESOLVED
 review_round() {
   local r="$1" dir="$RUN/round$r"
   mkdir -p "$dir"
   ACCEPTED=""; UNRESOLVED=""; STATUS="ISSUES"
 
-  git diff "$BASE" HEAD -- "${TARGET_PATHS[@]}" ':(exclude,glob)**/*.meta' > "$dir/diff.patch"
+  git diff "$ROUND_BASE" HEAD -- "${TARGET_PATHS[@]}" ':(exclude,glob)**/*.meta' > "$dir/diff.patch"
   if [[ ! -s "$dir/diff.patch" ]]; then
     log "라운드 $r: 리뷰할 코드 없음"
     STATUS="PASS"; return
@@ -195,7 +197,16 @@ review_round() {
 
   local transcript="$dir/debate.md"
   printf '# 라운드 %s 토론 기록\n\n' "$r" > "$transcript"
-  local common=("DIFF=$dir/diff.patch" "INTENT=$DESIGN_INTENT" "TRANSCRIPT=$transcript" "SCOPE=$SCOPE")
+  # 앞 라운드 기록 — 고친 지적 · 철회된 지적. 새 세션이 같은 공방을 되풀이하지 않게
+  if (( r == 1 )); then
+    printf '(첫 라운드 — 앞 기록 없음)\n' > "$dir/prior.md"
+  else
+    { printf '# 앞 라운드 기록\n\n## 앞 라운드에서 확정되어 고친 지적 (이번 diff 가 그 수정이다)\n\n'
+      cat "$RUN/round$((r-1))/fix-list.md"
+      printf '\n## 앞 라운드에서 철회된 지적 — 새 근거 없이 다시 보고하지 않는다\n\n'
+      cat "$RUN/withdrawn.md" 2>/dev/null || printf '(없음)\n'; } > "$dir/prior.md"
+  fi
+  local common=("DIFF=$dir/diff.patch" "INTENT=$DESIGN_INTENT" "TRANSCRIPT=$transcript" "SCOPE=$ROUND_SCOPE" "PRIOR=$dir/prior.md")
 
   # 1) 반대파: 문제 찾기
   render "$PROMPTS/con-review.md" "$dir/con-review.task.md" "${common[@]}"
@@ -247,7 +258,12 @@ review_round() {
     { printf '# 합의 안 된 쟁점 (사람 판단 필요)\n\n찬반 공방 전체는 같은 폴더의 debate.md에 있습니다.\n\n'
       extract_blocks "$dir/con-review.md" "$UNRESOLVED"; } > "$dir/unresolved.md"
   fi
-  log "  결과 → 수정 대상 $(count "$ACCEPTED")건, 합의 안 됨 $(count "$UNRESOLVED")건"
+  local withdrawn; withdrawn="$(minus "$(minus "$all" "$ACCEPTED")" "$UNRESOLVED")"
+  if [[ -n "$withdrawn" ]]; then
+    { printf '#### 라운드 %s 에서 철회 (공방: %s)\n\n' "$r" "$transcript"
+      extract_blocks "$dir/con-review.md" "$withdrawn"; } >> "$RUN/withdrawn.md"
+  fi
+  log "  결과 → 수정 대상 $(count "$ACCEPTED")건, 합의 안 됨 $(count "$UNRESOLVED")건, 철회 $(count "$withdrawn")건"
   [[ -z "$ACCEPTED" && -z "$UNRESOLVED" ]] && STATUS="PASS"
 }
 
@@ -289,7 +305,8 @@ fix_round() {
 # 결과: FINAL(PASS|UNRESOLVED|FIX_LIMIT|FIX_FAILED), LAST_ROUND, FIX_COMMITS, RUN/report.md
 run_target() {
   FINAL=""; LAST_ROUND=0; FIX_COMMITS=0
-  local r had_unresolved=0
+  ROUND_BASE="$BASE"; ROUND_SCOPE="$SCOPE"
+  local r had_unresolved=0 pre_fix
   for (( r=1; r<=MAX_ROUNDS; r++ )); do
     LAST_ROUND=$r
     review_round "$r"
@@ -297,7 +314,10 @@ run_target() {
     if [[ "$STATUS" == "PASS" ]]; then FINAL="PASS"; break; fi
     if [[ -z "$ACCEPTED" ]];      then FINAL="UNRESOLVED"; break; fi
     if (( r == MAX_ROUNDS ));     then FINAL="FIX_LIMIT"; break; fi
+    pre_fix="$(git rev-parse HEAD)"
     fix_round "$r" || { FINAL="FIX_FAILED"; break; }
+    # 재리뷰는 방금 고친 diff 만 본다 — 전체를 처음부터 다시 보면 새 세션이 라운드마다 새 지적을 찾아 끝나지 않는다
+    ROUND_BASE="$pre_fix"; ROUND_SCOPE="$VERIFY_SCOPE"
   done
   # 앞 라운드의 합의 안 된 쟁점은 수정 뒤 새 리뷰에서 다시 안 나와도 사람이 봐야 한다
   if [[ "$FINAL" == "PASS" ]] && (( had_unresolved )); then FINAL="UNRESOLVED"; fi

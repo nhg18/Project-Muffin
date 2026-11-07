@@ -34,8 +34,11 @@ namespace Chapchu.Cards
                 _byId = new Dictionary<int, CardData>();
                 foreach (Entry entry in entries)
                 {
-                    if (entry.card != null)
-                        _byId[entry.card.id] = entry.card;
+                    if (entry.card == null)
+                        continue;
+
+                    CheckId(_byId, entry.card);
+                    _byId[entry.card.id] = entry.card;
                 }
             }
 
@@ -49,6 +52,7 @@ namespace Chapchu.Cards
         public List<Card> CreateCards()
         {
             var cards = new List<Card>();
+            var byId = new Dictionary<int, CardData>();
             int nextInstanceId = 1;
 
             foreach (Entry entry in entries)
@@ -57,6 +61,8 @@ namespace Chapchu.Cards
                     continue;
 
                 CardData data = entry.card;
+                CheckId(byId, data);
+                byId[data.id] = data;
                 CardEffect[] effects = GetEffects(data);
                 CardType[] reactsTo = data.reactsTo.ToArray();
 
@@ -65,6 +71,15 @@ namespace Chapchu.Cards
             }
 
             return cards;
+        }
+
+        // 종류 ID 가 0(새로 만든 에셋의 기본값)이거나 다른 카드와 겹치면 알린다 — 규칙(Card)과 화면(GetCard)이 서로 다른 카드를 보게 된다 (09-network.md 7절).
+        private void CheckId(Dictionary<int, CardData> byId, CardData data)
+        {
+            if (data.id == 0)
+                Debug.LogError($"[{nameof(DeckData)}] {data.name} 의 id 가 0 이다 — 다른 카드와 겹치지 않는 값을 넣기", data);
+            else if (byId.TryGetValue(data.id, out CardData other) && other != data)
+                Debug.LogError($"[{nameof(DeckData)}] {other.name} 와 {data.name} 의 id({data.id})가 겹친다 — {name} 에서", data);
         }
 
         // 비어 있는 효과는 빼고 알린다 — 효과 클래스 이름 · 네임스페이스가 바뀌면 에셋에서 그 칸이 비어 버린다.

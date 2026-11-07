@@ -276,20 +276,32 @@ public static class MultiTest
         return "OK P" + PhotonNetwork.LocalPlayer.ActorNumber + " 내 카드 다시 받기 요청";
     }
 
-    /// <summary>처리 번호 (09-network.md 5절) — 이미 받은 번호로 알림을 흉내 내면 버려져야 한다. 버려지면 OK.</summary>
+    /// <summary>처리 번호 (09-network.md 5절) — 이미 받은 번호로 알림을 흉내 내면 버려져야 한다.
+    /// 방장이 아닌 사람이 보낸 결과(network-rpc)도 새 번호라도 버려져야 한다. 둘 다 버려지면 OK.</summary>
     public static string StaleProbe()
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
         if (server == null)
             return "WAIT 게임 화면 아님";
 
+        Photon.Realtime.Player notMaster = PhotonNetwork.PlayerList.FirstOrDefault(p => !p.IsMasterClient);
+        if (notMaster == null)
+            return "WAIT 방장 말고 다른 사람 없음";
+
         int last = (int)typeof(PunGameServer).GetField("_receivedSeq", Private).GetValue(server);
         int raised = 0;
         Action<int, int> count = (a, h) => raised++;
+        MethodInfo onHp = typeof(PunGameServer).GetMethod("RPC_OnHpChanged", Private);
         Chapchu.Network.Events.GameEvents.OnHpChanged += count;
-        typeof(PunGameServer).GetMethod("RPC_OnHpChanged", Private).Invoke(server, new object[] { last, PhotonNetwork.LocalPlayer.ActorNumber, 1 });
+        onHp.Invoke(server, new object[] { last, PhotonNetwork.LocalPlayer.ActorNumber, 1, new PhotonMessageInfo(PhotonNetwork.MasterClient, PhotonNetwork.ServerTimestamp, null) });
+        int staleRaised = raised;
+        onHp.Invoke(server, new object[] { last + 1, PhotonNetwork.LocalPlayer.ActorNumber, 1, new PhotonMessageInfo(notMaster, PhotonNetwork.ServerTimestamp, null) });
         Chapchu.Network.Events.GameEvents.OnHpChanged -= count;
-        return raised == 0 ? "OK 묵은 번호 " + last + " 버림" : "FAIL 묵은 번호 " + last + " 가 반영됐다";
+        if (staleRaised > 0)
+            return "FAIL 묵은 번호 " + last + " 가 반영됐다";
+        if (raised > 0)
+            return "FAIL 방장 아닌 P" + notMaster.ActorNumber + " 의 결과가 반영됐다";
+        return "OK 묵은 번호 " + last + " 버림 · 방장 아닌 P" + notMaster.ActorNumber + " 의 결과 버림";
     }
 
     /// <summary>디버그 로비에서 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 비공개 방을 만든다. 방 화면 이동은 DebugScript 가 한다.</summary>

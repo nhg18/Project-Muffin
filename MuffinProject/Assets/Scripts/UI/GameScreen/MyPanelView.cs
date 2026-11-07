@@ -72,7 +72,8 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (nicknameText == null || hpText == null || hpFill == null || turnTag == null || turnTagText == null || timer == null || secondsText == null || handCountText == null || chapchuButton == null)
+            if (nicknameText == null || hpText == null || hpFill == null || turnTag == null || turnTagText == null || timer == null || secondsText == null || handCountText == null || chapchuButton == null
+                || chapchuFill == null || chapchuLabel == null || chapchuTag == null || chapchuTagText == null || chapchuRing == null || chapchuShadow == null || chapchuBadge == null)
                 Debug.LogError($"[{nameof(MyPanelView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 

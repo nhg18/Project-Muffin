@@ -7,6 +7,7 @@
 - 원래 지적 목록: `{{FINDINGS}}`
 - 지금까지의 공방: `{{TRANSCRIPT}}` — 반드시 끝까지 읽는다.
 - 리뷰용 설계 의도: `{{INTENT}}`
+- 앞 라운드 기록: `{{PRIOR}}` — 앞 라운드에서 이미 철회된 지적이면 새 근거 없이 유지하지 않는다.
 - 프로젝트 규칙: `CLAUDE.md`, 게임 규칙 기준: `docs/systems/*.md`, 코드 규칙: `docs/CODE_CONVENTION.md`, 네트워크: `.claude/skills/network-rpc/SKILL.md`
 
 ## 이번에 판정할 항목

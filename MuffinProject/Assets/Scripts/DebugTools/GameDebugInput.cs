@@ -50,6 +50,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnEmptyDeckDamaged += HandleEmptyDeckDamaged;
             GameEvents.OnDeathPending += HandleDeathPending;
             GameEvents.OnPlayerDied += HandlePlayerDied;
+            GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
+            GameEvents.OnTrapReturned += HandleTrapReturned;
             GameEvents.OnChapchuChanged += HandleChapchuChanged;
             GameEvents.OnMyTrapSet += HandleMyTrapSet;
             GameEvents.OnTrapSet += HandleTrapSet;
@@ -83,6 +85,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnEmptyDeckDamaged -= HandleEmptyDeckDamaged;
             GameEvents.OnDeathPending -= HandleDeathPending;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
+            GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
+            GameEvents.OnTrapReturned -= HandleTrapReturned;
             GameEvents.OnChapchuChanged -= HandleChapchuChanged;
             GameEvents.OnMyTrapSet -= HandleMyTrapSet;
             GameEvents.OnTrapSet -= HandleTrapSet;
@@ -236,7 +240,32 @@ namespace Chapchu.DebugTools
         private void HandlePlayerDied(int actorNumber, int discardCount)
         {
             _handCounts[actorNumber] = 0;
+            if (actorNumber == Me)
+                ClearMyCards();
             Log($"P{actorNumber} 사망 · 버림 {discardCount}");
+        }
+
+        private void HandlePlayerLeftGame(int actorNumber, int discardCount)
+        {
+            _handCounts[actorNumber] = 0;
+            if (actorNumber == Me)
+                ClearMyCards();
+            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount}");
+        }
+
+        // 방장이 내 손패 · 함정을 0 으로 만들었다
+        private void ClearMyCards()
+        {
+            _myHandInstances.Clear();
+            _myHand.Clear();
+            _myTraps.Clear();
+            _hitBy = -1;
+        }
+
+        private void HandleTrapReturned(int owner, int trapCount, int handCount)
+        {
+            _handCounts[owner] = handCount;
+            Log($"P{owner} 함정 손패로 반환 — 함정 {trapCount}장");
         }
 
         private void HandleMyTrapSet(int cardInstanceId, int cardId)

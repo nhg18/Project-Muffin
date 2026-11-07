@@ -39,6 +39,8 @@ namespace Chapchu.Game
                 if (now < _reactionDeadline)
                     return;
                 ResolveChain();
+                if (_gameOver)
+                    return; // 체인 중에 나가 1명만 남았다 — 처리 뒤 바로 끝, 턴을 넘기지 않는다 (07 3 · 6절)
             }
 
             if (IsTrapWindowOpen)
@@ -46,6 +48,9 @@ namespace Chapchu.Game
                 if (now < _trapWindowDeadline)
                     return;
                 CloseTrapWindow();
+                CheckElimination(); // 함정 시간 중에 나가 1명만 남았을 수 있다 (07 3절)
+                if (_gameOver)
+                    return;
             }
 
             if (IsDeathPending)
@@ -65,6 +70,10 @@ namespace Chapchu.Game
             {
                 if (now >= _nextTurnAt)
                     AdvanceTurn();
+            }
+            else if (CurrentTurnActor != -1 && _turnPaused && !_mainActionUsed && !IsInGame(CurrentTurnActor))
+            {
+                AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
             }
             else if (CurrentTurnActor != -1 && now >= _turnDeadline)
             {
@@ -149,6 +158,7 @@ namespace Chapchu.Game
             _players[actor].TurnStartDraws = 0;
             for (int i = 0; i < extra; i++)
                 DrawOne(actor);
+            CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
         // 체인 · 함정 시간 · 사망 대기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
@@ -164,8 +174,9 @@ namespace Chapchu.Game
                     _turnDeadline += now - _lastTickAt;
                     _turnPaused = true;
                 }
-                else if (_turnPaused)
+                else if (_turnPaused && IsInGame(CurrentTurnActor))
                 {
+                    // 턴 주인이 빠졌으면 멈춘 채로 둔다 — 넘김은 Tick 의 Advance 가 한다 (요청 처리 중 정산은 턴을 바꾸지 않는다)
                     // 끼어든 체인의 후처리 연출이 이번 프레임 안에서 끝났으면 그 시각까지는 멈춘 것으로
                     _turnDeadline += System.Math.Max(0, System.Math.Min(now, _resumeAt) - _lastTickAt);
                     _turnPaused = false;
