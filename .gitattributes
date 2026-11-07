@@ -37,3 +37,8 @@
 *.otf binary
 *.dll binary
 *.pdf binary
+
+# === 셸 스크립트 / git hook ==============================================
+# Git Bash에서 실행되므로 CRLF로 바꾸면 깨진다. 위의 eol=crlf보다 뒤에 있어야 덮어쓴다.
+*.sh         text eol=lf
+.githooks/*  text eol=lf

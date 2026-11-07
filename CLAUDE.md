@@ -37,3 +37,4 @@ Unity 6 · Built-in 렌더 파이프라인 · C# 9 · Photon PUN2 · PC / Androi
 ## Git
 
 `main` ← `develop` ← 작업 브랜치. `develop` 머지는 PM 만 → skill `git-workflow`.
+push 전에는 별도 세션들의 찬반 리뷰를 거친다 → `/prepush` (`scripts/review/README.md`). 리뷰 지적을 작성 세션이 스스로 기각하지 않는다.

@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-11-07 · 찬반 리뷰 파이프라인 (`feature/review-pipeline` ← develop)
+
+### 결정 (PM)
+- push 전 코드 리뷰는 작성 세션이 아니라 **별도 세션들**이 한다 — 같은 맥락에서 리뷰하면 자기 코드라 맞다고 하기 때문.
+- 방식: 반대파(공격) · 찬성파(방어)가 서로 반박하고, 끝까지 살아남은 지적만 수정 세션이 고친 뒤 새 세션으로 재리뷰. 공방은 최대 2번, 라운드는 최대 3번.
+
+### 한 것
+- `scripts/review/prepush.sh` — 푸시 전 모드(develop 이후 변경분, 통과하면 push) · `--all` 모드(기존 코드를 `Scripts/` 하위 폴더별로 전체 리뷰, push 안 함, main · develop 에서는 실행 거부). 역할별 프롬프트 `scripts/review/prompts/`.
+- `.githooks/pre-push` + `scripts/review/install.sh` — 리뷰 통과한 커밋만 push. 각자 설치해야 적용, 기존 LFS hook 유지.
+- skill `prepush` — 실행 · 결과 전달만, 수정 커밋이 생기면 `multi-test` 로 확인. `.claude/settings.json` 에 우회 차단(`--accept` · `SKIP_REVIEW` · `--no-verify`) 추가 — 기존 hook 설정은 그대로.
+- `docs/DESIGN_INTENT.md` — 리뷰에서 문제로 보지 않을 것(수치 밸런스 · 미정 값 · worklog 의 알려진 일 · 테스트용 덱).
+- 확인: `claude` 를 가짜 응답 스크립트로 바꿔 흐름만 시험 — 찬반 공방 · 수정 커밋 · 재리뷰 · 합의 안 됨 · push 차단 / 승인 · `--all` 폴더 분할 · `.meta` 제외.
+- **확인 못 한 것**: 실제 `claude` 세션으로 리뷰 품질은 아직 안 돌려 봤다. Windows Git Bash 에서도 아직 안 돌려 봤다.
+
+### 다음 할 일
+- [ ] `bash scripts/review/install.sh` (각자 1회)
+- [ ] `--all MuffinProject/Assets/Scripts/Network` 처럼 작은 폴더로 먼저 돌려 지적 품질 확인 → 오탐이면 `DESIGN_INTENT.md` 보강
+
+---
+
 ## 2026-11-06 · 봇 1 · 2단계 — 추가 · 제거 · 혼자 하기 · 뽑기 · 공격 · 찹츄 · 카운터 · 함정 (8B, `feature/bot` ← `feature/trap` + develop)
 
 ### 결정 (PM)
