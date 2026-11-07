@@ -20,6 +20,9 @@ namespace Chapchu.Game
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
+            if (!IsInGame(requester) || _players[requester].Life != LifeState.Alive)
+                return Reject(requester, RejectCode.NotAlive);
+
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 

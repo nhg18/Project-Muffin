@@ -149,6 +149,7 @@ namespace Chapchu.Game
             _players[actor].TurnStartDraws = 0;
             for (int i = 0; i < extra; i++)
                 DrawOne(actor);
+            CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
         // 체인 · 함정 시간 · 사망 대기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
@@ -163,6 +164,10 @@ namespace Chapchu.Game
                 {
                     _turnDeadline += now - _lastTickAt;
                     _turnPaused = true;
+                }
+                else if (_turnPaused && !IsInGame(CurrentTurnActor))
+                {
+                    AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
                 }
                 else if (_turnPaused)
                 {

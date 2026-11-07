@@ -24,6 +24,9 @@ namespace Chapchu.Game
             if (requester != CurrentTurnActor)
                 return Reject(requester, RejectCode.NotYourTurn);
 
+            if (!IsInGame(requester) || _players[requester].Life != LifeState.Alive)
+                return Reject(requester, RejectCode.NotAlive); // 사망 대기 중에도 설치는 못 한다 (06 3절)
+
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 
