@@ -428,6 +428,8 @@ namespace Chapchu.EditorTools
             Image dot = Dot(frame.Head, 20f, 3f, PlayerLook.MeColor);
             RectTransform nick = NewRect("Nick", frame.Head);
             HorizontalLayout(nick, new RectOffset(), 2f, TextAnchor.LowerLeft, true, true);
+            // 머리 띠 레이아웃은 높이를 맡기지 않으므로 글 높이에 맞춘다 — 안 그러면 기본 높이 100 의 아래쪽(LowerLeft)에 글이 붙어 띠 아래로 내려간다.
+            nick.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             TMP_Text nickname = NewText("NicknameText", nick, "두부", 38f, Ink, true);
             nickname.overflowMode = TextOverflowModes.Ellipsis;
             NewText("MeText", nick, "(나)", 28f, Ink, false);
@@ -1091,13 +1093,16 @@ namespace Chapchu.EditorTools
         }
 
         // 목걸이 색 점 — 잉크 고리(ring) 안에 색 원. 구조: Dot(잉크) → Fill(색). 돌려주는 Image 는 Fill.
+        // 높이를 맡기지 않는 가로 레이아웃(머리 띠 · 턴 칩) 안에서도 원이 되게 Rect 크기도 지름으로 둔다 — 안 그러면 새 Rect 기본 높이 100 으로 늘어난 알약이 된다.
         private static Image Dot(Transform parent, float size, float ring, Color color)
         {
+            float diameter = size + ring * 2f;
             RectTransform root = NewRect("Dot", parent);
+            root.sizeDelta = new Vector2(diameter, diameter);
             LayoutElement layout = root.gameObject.AddComponent<LayoutElement>();
-            layout.preferredWidth = size + ring * 2f;
-            layout.preferredHeight = size + ring * 2f;
-            Image ink = RoundImage("Ink", root, Ink, (size + ring * 2f) / 2f);
+            layout.preferredWidth = diameter;
+            layout.preferredHeight = diameter;
+            Image ink = RoundImage("Ink", root, Ink, diameter / 2f);
             Stretch(ink.rectTransform);
             Image fill = RoundImage("Fill", root, color, size / 2f);
             Stretch(fill.rectTransform, ring, ring, ring, ring);
