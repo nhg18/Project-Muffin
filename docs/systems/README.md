@@ -15,7 +15,7 @@
 | [08-room.md](08-room.md) | 방 · 로비 규칙 | MVP |
 | [09-network.md](09-network.md) | 네트워크 권한 · 동기화 | Core |
 | [10-ui.md](10-ui.md) | 인게임 UI | Core |
-| [11-card-list.md](11-card-list.md) | 카드 목록 (행동 27 · 카운터 15 · 함정 17) | Core |
+| [11-card-list.md](11-card-list.md) | 카드 목록 — 노션 카드 DB 확정 16장 (행동 16 · 카운터 0 · 함정 0), 옛 A/C/T 59장은 부록 | Core |
 | [12-title-ui.md](12-title-ui.md) | 타이틀 화면 | MVP |
 | [13-friend.md](13-friend.md) | 친구 (요청 · 차단 · 초대 · 친구 코드 6자리 · 최대 50명) | MVP (기능 12, `1.0` 포함 — 2026-11-07 분류 변경) |
 | [14-lobby-ui.md](14-lobby-ui.md) | 로비 화면 | MVP |
