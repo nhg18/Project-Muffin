@@ -13,7 +13,7 @@ namespace Chapchu.UI.GameScreen
     /// 내 손패 — 3D 층에서 카드를 스플라인 부채꼴로 놓는다 (10-ui.md 2-1 「3D 층」 · 4절 「손패」). 순서는 드로우 순 — 정렬하지 않는다 (05-deck.md 6절).
     /// 카드는 이 오브젝트의 자식이고, 위치 · 회전은 스플라인의 로컬 좌표(유닛, 캔버스 100px = 1)를 그대로 쓴다. 오른쪽 카드가 카메라 쪽(−z)이라 깊이로 위에 그려진다.
     /// 올리기 · 내리기(HandMode)는 이 오브젝트 전체를 위아래로 움직인다 — 카드 배치와 독립이다. 호버 확대 · 드래그는 올라온 상태에서만.
-    /// 기울기: 자리에 놓인 카드는 restTilt, 덱에서 나올 때는 뒷면 · drawTilt 로 누워 있다가 자리로 가며 뒤집히며 세워진다. 호버는 0°, 드래그는 끌어올린 높이에 비례해 눕는다.
+    /// 기울기: 자리에 놓인 카드는 restTilt, 덱에서 나올 때는 뒷면 · drawTilt 로 누워 있다가 자리로 가며 뒤집히며 세워진다. 호버 · 드래그는 0° 로 똑바로 선다 (드래그 기울기는 2026-11-08 사용자 결정으로 없앰).
     /// 드래그를 놓으면 어디에 놓았는지(화면 좌표)만 알린다 — 드롭 영역 · 카드 사용 판정은 프레젠터가 한다. 이 뷰는 서버를 모른다.
     /// 잠금(SetLocked)은 대상 선택 중 손패 입력 전부를 막는다 (10-ui.md 6절).
     /// </summary>
@@ -55,10 +55,6 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float restTilt = 4f;
         [Tooltip("덱에서 나올 때 누워 있는 각도 — 테이블에 놓인 카드 = 테이블 기울기 40°. 뒷면으로 시작해 자리로 가며 뒤집힌다.")]
         [SerializeField] private float drawTilt = 40f;
-        [Tooltip("드래그로 끌어올렸을 때 최대로 눕는 각도.")]
-        [SerializeField] private float dragTilt = 40f;
-        [Tooltip("손패 기준점에서 이만큼(유닛) 위로 끌어올리면 dragTilt 에 닿는다.")]
-        [SerializeField] private float dragTiltDistance = 4f;
 
         private readonly List<CardView> _cards = new List<CardView>();
         private SplineContainer _spline;
@@ -306,16 +302,15 @@ namespace Chapchu.UI.GameScreen
             Enlarge(card, card.transform.localPosition);
         }
 
-        // 끌어올린 높이에 비례해 눕는다 — 테이블에 내려놓는 느낌. 손패 기준점(y 0)에서 dragTiltDistance 위면 dragTilt.
+        // 잡은 지점을 유지한 채 똑바로 선 채로 따라온다 (기울기 없음).
         private void HandleDragged(CardView card, Vector2 screenPosition)
         {
             if (_dragging != card) return;
 
             Vector2 local = ToLocal(screenPosition) + _dragOffset;
-            float tilt = dragTilt * Mathf.Clamp01(local.y / dragTiltDistance);
             card.transform.DOKill(); // 확대 트윈이 끝나기 전에 움직이면 이동 트윈과 싸운다
             card.transform.localScale = Vector3.one * hoverScale;
-            card.transform.localRotation = Quaternion.Euler(tilt, 0f, 0f);
+            card.transform.localRotation = Quaternion.identity;
             card.transform.localPosition = new Vector3(local.x, local.y, hoverZ);
         }
 
