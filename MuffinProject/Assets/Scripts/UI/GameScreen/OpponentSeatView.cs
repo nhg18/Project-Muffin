@@ -36,6 +36,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image character;
         [Tooltip("턴일 때 발밑 노란 타원.")]
         [SerializeField] private GameObject turnSpot;
+        [Tooltip("턴일 때 캐릭터 머리 옆 스톱워치 (시안 .swatch). 값은 TurnTimerPresenter 가 넣는다.")]
+        [SerializeField] private GameObject turnTimer;
         [Tooltip("대상 선택 중 발밑 빨간 고리 + 이름표 둘레 빨간 테.")]
         [SerializeField] private GameObject pickRing;
         [SerializeField] private GameObject pickOutline;
@@ -55,7 +57,7 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             if (band == null || dot == null || nicknameText == null || crown == null || bone == null || hpText == null || handBadge == null || character == null
-                || turnSpot == null || pickRing == null || pickOutline == null || shout == null || hand == null || tapArea == null)
+                || turnSpot == null || turnTimer == null || pickRing == null || pickOutline == null || shout == null || hand == null || tapArea == null)
                 Debug.LogError($"[{nameof(OpponentSeatView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -92,6 +94,7 @@ namespace Chapchu.UI.GameScreen
         {
             _isTurn = isTurn;
             turnSpot.SetActive(isTurn);
+            turnTimer.SetActive(isTurn);
             RefreshBand();
         }
 

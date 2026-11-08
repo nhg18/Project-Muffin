@@ -20,6 +20,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text statusText;
         [Tooltip("내 캐릭터 발밑 타원 — 내 턴에만 켠다 (시안 .spot).")]
         [SerializeField] private GameObject turnSpot;
+        [Tooltip("내 캐릭터 머리 옆 스톱워치 — 내 턴에만 켠다 (시안 .swatch). 값은 TurnTimerPresenter 가 넣는다.")]
+        [SerializeField] private GameObject turnTimer;
         [SerializeField] private Color normalBandColor = new Color32(0xcf, 0xee, 0xdd, 0xFF);
         [SerializeField] private Color turnBandColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
         [SerializeField] private Color chapchuBandColor = new Color32(0xff, 0x4f, 0x8b, 0xFF);
@@ -38,7 +40,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (band == null || dot == null || nicknameText == null || crown == null || statusText == null || turnSpot == null || bone == null || hpText == null || handBadge == null)
+            if (band == null || dot == null || nicknameText == null || crown == null || statusText == null || turnSpot == null || turnTimer == null || bone == null || hpText == null || handBadge == null)
                 Debug.LogError($"[{nameof(MyPanelView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -61,6 +63,7 @@ namespace Chapchu.UI.GameScreen
             _isMyTurn = isMyTurn;
             statusText.text = isMyTurn ? string.Empty : WaitingStatus;
             turnSpot.SetActive(isMyTurn);
+            turnTimer.SetActive(isMyTurn);
             RefreshBand();
         }
 

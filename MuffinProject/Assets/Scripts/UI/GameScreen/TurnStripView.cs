@@ -14,7 +14,8 @@ namespace Chapchu.UI.GameScreen
     }
 
     /// <summary>
-    /// 화면 위 턴 순서 띠 (10-ui.md 2-1 HUD v2 「턴 순서 띠」) — 방향 화살표 · 플레이어 칩(목걸이 색 점 + 이름, 발자국으로 구분) · 지금 차례 칩 · 20초 타이머.
+    /// 화면 위 턴 순서 띠 (10-ui.md 2-1 HUD v2 「턴 순서 띠」) — 방향 화살표 · 플레이어 칩(목걸이 색 점 + 이름, 발자국으로 구분) · 지금 차례 칩.
+    /// 남은 초는 여기 없다 — 지금 턴인 캐릭터 옆 스톱워치(TurnTimerView, 2026-11-08).
     /// 칩은 템플릿을 복제해 만든다 (구조: 루트 → Chapchu · Border · Fill · Dot/Fill · Name). 값을 받아 그리기만 하고, 누가 몇 번째인지는 프레젠터가 정한다.
     /// 턴 방향은 한 방향뿐이다 (03-turn.md 에 방향 개념이 없어 「반대로」는 두지 않는다).
     /// </summary>
@@ -37,26 +38,12 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Color nowMeColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
         [SerializeField] private Color nowHaltColor = new Color32(0xff, 0x9f, 0x1a, 0xFF);
 
-        [Header("타이머")]
-        [Tooltip("남은 초 칩 전체 — 턴이 없을 때 숨긴다.")]
-        [SerializeField] private GameObject timerRoot;
-        [SerializeField] private Image timerChip;
-        [SerializeField] private TMP_Text timerText;
-        [SerializeField] private GameObject pauseIcon;
-        [Tooltip("남은 초가 이 값 이하면 빨강 (시안: 5).")]
-        [SerializeField] private int urgentSeconds = 5;
-        [SerializeField] private Color timerColor = Color.white;
-        [SerializeField] private Color timerInk = new Color32(0x2a, 0x24, 0x20, 0xFF);
-        [SerializeField] private Color urgentColor = new Color32(0xec, 0x3b, 0x46, 0xFF);
-        [SerializeField] private Color urgentInk = Color.white;
-        [SerializeField] private Color pausedInk = new Color32(0x8a, 0x81, 0x7a, 0xFF);
-
         private readonly List<Chip> _chips = new List<Chip>();
         private readonly List<GameObject> _separators = new List<GameObject>();
 
         private void Awake()
         {
-            if (rail == null || chipTemplate == null || separatorTemplate == null || nowChip == null || nowText == null || timerRoot == null || timerChip == null || timerText == null || pauseIcon == null)
+            if (rail == null || chipTemplate == null || separatorTemplate == null || nowChip == null || nowText == null)
                 Debug.LogError($"[{nameof(TurnStripView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -108,19 +95,6 @@ namespace Chapchu.UI.GameScreen
             nowChip.color = state == TurnNowState.Me ? nowMeColor : state == TurnNowState.Halt ? nowHaltColor : nowOtherColor;
             nowText.text = state == TurnNowState.Me ? MyTurnText : string.Format(OtherTurnFormat, playerName);
         }
-
-        /// <summary>남은 초. 5초 이하 빨강, 멈춤이면 회색 + ‖. 프레젠터가 마감 시각에서 계산해 넘긴다.</summary>
-        public void SetTimer(int seconds, bool paused)
-        {
-            timerText.text = seconds.ToString();
-            pauseIcon.SetActive(paused);
-
-            bool urgent = !paused && seconds <= urgentSeconds;
-            timerChip.color = urgent ? urgentColor : timerColor;
-            timerText.color = paused ? pausedInk : urgent ? urgentInk : timerInk;
-        }
-
-        public void SetTimerVisible(bool visible) => timerRoot.SetActive(visible);
 
         // 칩 하나의 부품 — 템플릿 구조(루트 → Chapchu · Border · Fill · Dot/Fill · Name)에서 이름으로 찾는다.
         private class Chip

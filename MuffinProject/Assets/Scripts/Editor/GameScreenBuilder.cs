@@ -147,10 +147,14 @@ namespace Chapchu.EditorTools
             Wire(history, ("feed", feed), ("log", log), ("deck", gameDeck));
 
             // 연출 큐 — GameEvents 를 받아 영역 프레젠터에 순서대로 넘긴다 (CODE_CONVENTION 9절)
+            // 턴 타이머 — 스톱워치 전부(내 것 + 좌석 3)에 값을 넣는다
+            var turnTimer = screen.gameObject.AddComponent<TurnTimerPresenter>();
+            WireArray(turnTimer, "timers", canvasRect.GetComponentsInChildren<TurnTimerView>(true));
+
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
-                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("history", history));
+                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -247,7 +251,7 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 턴 순서 띠 — 위 가운데 (시안 .strip2): 레일(화살표 · 칩 · 발자국) + 「나의 턴」 칩 + 남은 초 칩 (2026-11-07: 남은 초는 여기 하나만)
+        // 턴 순서 띠 — 위 가운데 (시안 .strip2): 레일(화살표 · 칩 · 발자국) + 「나의 턴」 칩. 남은 초는 캐릭터 옆 스톱워치(BuildStopwatch, 2026-11-08)
         private static TurnStripView BuildTurnStrip(RectTransform parent)
         {
             RectTransform root = NewRect("TurnStrip", parent);
@@ -280,23 +284,10 @@ namespace Chapchu.EditorTools
             HorizontalLayout(now, new RectOffset(24, 24, 0, 0), 0f, TextAnchor.MiddleCenter, true, true);
             TMP_Text nowText = NewText("Text", now, "나의 턴", 32f, Ink, true);
 
-            // 남은 초 칩
-            RectTransform timer = NewRect("Timer", root);
-            timer.gameObject.AddComponent<LayoutElement>().preferredHeight = 72f;
-            timer.GetComponent<LayoutElement>().minWidth = 72f;
-            Image timerFill = RoundBox(timer, Ink, 5f, 36f, White);
-            HorizontalLayout(timer, new RectOffset(10, 10, 0, 0), 2f, TextAnchor.MiddleCenter, true, true);
-            Image pause = Icon("PauseIcon", timer, Hud("icon_pause"), 18f, Hex(0x8a817a));
-            LayoutElement pauseSize = pause.gameObject.AddComponent<LayoutElement>();
-            pauseSize.preferredWidth = 16f;
-            pauseSize.preferredHeight = 18f;
-            pause.gameObject.SetActive(false);
-            TMP_Text timerText = NewText("Text", timer, "20", 38f, Ink, true);
-
             var view = root.gameObject.AddComponent<TurnStripView>();
             Wire(view,
                 ("rail", rail), ("chipTemplate", chipTemplate), ("separatorTemplate", separatorTemplate),
-                ("nowChip", nowFill), ("nowText", nowText), ("timerRoot", timer.gameObject), ("timerChip", timerFill), ("timerText", timerText), ("pauseIcon", pause.gameObject));
+                ("nowChip", nowFill), ("nowText", nowText));
             root.gameObject.AddComponent<TurnStripPresenter>();
             return view;
         }
@@ -421,6 +412,12 @@ namespace Chapchu.EditorTools
             BottomLeft(character.rectTransform, EdgeX + 40f, EdgeBottom + 178f + 20f, 160f, 280f);
             character.preserveAspect = true;
 
+            // 스톱워치 — 내 캐릭터 오른쪽 (시안: left = 캐릭터 왼쪽 + 폭 × 0.98 + 6 + 23, top = 머리 + 키 × 0.3). 캐릭터처럼 아래 기준
+            TurnTimerView timer = BuildStopwatch("TurnTimer", parent);
+            Anchor((RectTransform)timer.transform, Vector2.zero, new Vector2(0.5f, 0.5f),
+                new Vector2(EdgeX + 40f + 160f * 0.98f + StopwatchGap + StopwatchSize / 2f, EdgeBottom + 178f + 20f + 280f * (1f - StopwatchHeadRatio)), new Vector2(StopwatchSize, StopwatchSize));
+            timer.gameObject.SetActive(false);
+
             Frame frame = BuildFrame("MyPanel", parent, 6f, 28f, Band, 68f, 5f);
             BottomLeft(frame.Root, EdgeX, EdgeBottom, 472f, 178f);
 
@@ -453,7 +450,7 @@ namespace Chapchu.EditorTools
             var view = frame.Root.gameObject.AddComponent<MyPanelView>();
             Wire(view,
                 ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("crown", crown.gameObject), ("statusText", status),
-                ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject));
+                ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject));
             frame.Root.gameObject.AddComponent<MyPanelPresenter>();
 
             // 발밑 타원은 내 턴에만 (MyPanelView.SetMyTurn 이 켜고 끈다). 기본 숨김
@@ -669,6 +666,14 @@ namespace Chapchu.EditorTools
             RectTransform shout = BuildShout(root, g);
             shout.gameObject.SetActive(false);
 
+            // 스톱워치 — 캐릭터 옆 머리 높이(키 × 0.3). 위 좌석(2)만 왼쪽, 나머지는 오른쪽 (시안 .swatch: 좌석 가장자리에서 6 띄움)
+            float watchX = g.SayLeft
+                ? g.Cx - g.Width / 2f + g.Width * 0.04f - StopwatchGap - StopwatchSize / 2f
+                : g.Cx - g.Width / 2f + g.Width * 0.98f + StopwatchGap + StopwatchSize / 2f;
+            TurnTimerView timer = BuildStopwatch("TurnTimer", root);
+            CenterAt((RectTransform)timer.transform, watchX, g.Top + g.Height * StopwatchHeadRatio, StopwatchSize, StopwatchSize);
+            timer.gameObject.SetActive(false);
+
             // 탭 영역 — 캐릭터 + 이름표를 덮는 투명 이미지. 레이캐스트는 대상 선택 중에만 켠다 (덱과 겹치므로 평소엔 덱 탭을 막지 않게).
             Image tapArea = NewImage("TapArea", root, Color.clear);
             float left = Mathf.Min(g.Cx - g.Width / 2f, g.PlateX) - 16f;
@@ -680,8 +685,50 @@ namespace Chapchu.EditorTools
             var view = root.gameObject.AddComponent<OpponentSeatView>();
             Wire(view,
                 ("band", plate.BandImage), ("dot", dot), ("nicknameText", nickname), ("crown", crown.gameObject), ("bone", bone), ("hpText", hp), ("handBadge", badge),
-                ("character", character), ("turnSpot", spot.gameObject), ("pickRing", ring.gameObject), ("pickOutline", pickOutline.gameObject),
+                ("character", character), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject), ("pickRing", ring.gameObject), ("pickOutline", pickOutline.gameObject),
                 ("shout", shout.gameObject), ("hand", hand), ("tapArea", tapArea));
+            return view;
+        }
+
+        // 스톱워치 (시안 .swatch × 2): 92 원 · 잉크 테 6 · 그 안 진행 링(r 28~40, 바탕 #efe8de 위에 턴 색이 위에서 시계 방향) · 안쪽 흰 원(테 안쪽에서 12 · 테 4) · 남은 초 30 B.
+        // 2시 방향 네모 버튼 26 × 20(테 5 · 반지름 6 · 42° 기울임)은 원 뒤에. 위치 · 켜고 끄기는 부르는 쪽이.
+        private const float StopwatchSize = 92f;
+        private const float StopwatchGap = 12f;          // 캐릭터 가장자리에서 띄우는 간격 (시안 6 × 2)
+        private const float StopwatchHeadRatio = 0.3f;   // 캐릭터 머리 위에서 키의 이 비율 높이에 가운데를 맞춘다
+        private static readonly Color RingTrack = Hex(0xefe8de);
+
+        private static TurnTimerView BuildStopwatch(string name, Transform parent)
+        {
+            RectTransform root = NewRect(name, parent);
+            root.sizeDelta = new Vector2(StopwatchSize, StopwatchSize);
+
+            RectTransform button = NewRect("Button", root);
+            CenterAt(button, 87f, 10f, 26f, 20f); // 시안 right −7 · top −3 (안쪽 상자 기준, × 2) → 가운데 (87, 10)
+            button.localRotation = Quaternion.Euler(0f, 0f, -42f);
+            RoundBox(button, Ink, 5f, 6f, White);
+
+            RoundBox(root, Ink, 6f, StopwatchSize / 2f, White);
+
+            Sprite ringSprite = Hud("timer_ring");
+            Image track = NewImage("Track", root, RingTrack, ringSprite);
+            Stretch(track.rectTransform, 6f, 6f, 6f, 6f);
+            Image ring = NewImage("Ring", root, Turn, ringSprite);
+            Stretch(ring.rectTransform, 6f, 6f, 6f, 6f);
+            ring.type = Image.Type.Filled;
+            ring.fillMethod = Image.FillMethod.Radial360;
+            ring.fillOrigin = (int)Image.Origin360.Top;
+            ring.fillClockwise = true;
+            ring.fillAmount = 1f;
+
+            RectTransform face = NewRect("Face", root);
+            Stretch(face, 18f, 18f, 18f, 18f); // 시안 inset 6 은 테 안쪽 기준 → 테 6 + 12
+            RoundBox(face, Ink, 4f, StopwatchSize / 2f - 18f, White);
+
+            TMP_Text seconds = NewText("Text", root, "20", 30f, Ink, true);
+            Stretch(seconds.rectTransform);
+
+            var view = root.gameObject.AddComponent<TurnTimerView>();
+            Wire(view, ("ring", ring), ("secondsText", seconds));
             return view;
         }
 

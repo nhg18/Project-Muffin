@@ -21,6 +21,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private MyPanelPresenter myPanel;
         [SerializeField] private OpponentSeatsPresenter seats;
         [SerializeField] private TurnStripPresenter turnStrip;
+        [SerializeField] private TurnTimerPresenter turnTimer;
         [SerializeField] private HistoryPresenter history;
 
         // 단계 하나 = 영역에 값을 넣고, 기다릴 연출이 있으면 그 코루틴을 돌려준다 (없으면 null).
@@ -34,7 +35,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || hand == null || myPanel == null || seats == null || turnStrip == null || history == null)
+            if (deck == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -133,7 +134,8 @@ namespace Chapchu.UI.GameScreen
             {
                 myPanel.ShowTurn(isMyTurn);
                 seats.ShowTurn(actorNumber);
-                turnStrip.ShowTurn(actorNumber, deadline);
+                turnStrip.ShowTurn(actorNumber);
+                turnTimer.ShowTurn(deadline);
                 history.ShowTurnStarted(actorNumber);
                 return null;
             });
