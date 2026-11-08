@@ -17,6 +17,7 @@ namespace Chapchu.EditorTools
     /// 인게임 3D 층(테이블 방석 · 카드 · 덱 · 손패 · 카드 내는 자리 · 버림 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
     /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 이름표는 2D 층(HUD v2).
     /// 카드 · 덱 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)과 카드 프리팹 3개는 없으면 만들고, 있으면 덮어쓰지 않는다.
+    /// 내 카드(손패 · 내는 카드)는 HandCards 레이어 — 메인 카메라 자식인 손패 카메라가 깊이만 지우고 그 위에 그린다. 기울인 카드(4° · 40°)의 윗부분이 덱 뒤로 들어가 가려지지 않게 (10-ui.md 2-1 「3D 층 구현」 손패 층).
     /// </summary>
     public static class TableBuilder
     {
@@ -27,6 +28,8 @@ namespace Chapchu.EditorTools
         public static readonly float CameraDistance = 5.4f / Mathf.Tan(CameraFieldOfView * 0.5f * Mathf.Deg2Rad);
 
         private const string TableName = "Table";
+        private const string HandCameraName = "HandCamera";
+        public const string HandLayerName = "HandCards"; // 내 카드 전용 레이어 — TagManager 에 없으면 빈 사용자 칸(8~)에 만든다
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
         private const string CardShaderName = "Unlit/Transparent Cutout"; // 알파 컷아웃 + ZWrite — 겹친 카드가 깊이로 정렬된다. 뒷면 컬링
@@ -81,7 +84,64 @@ namespace Chapchu.EditorTools
             camera.transform.SetPositionAndRotation(new Vector3(0f, 0f, -CameraDistance), Quaternion.identity);
             if (camera.GetComponent<PhysicsRaycaster>() == null)
                 camera.gameObject.AddComponent<PhysicsRaycaster>();
+            SetupHandCamera(camera);
             return camera;
+        }
+
+        /// <summary>
+        /// 손패 카메라 — 메인 카메라의 자식(같은 자리 · 같은 FOV)으로 HandCards 레이어만, 깊이를 지우고 뒤에 그린다. 메인 카메라는 그 레이어를 빼서 카드가 두 번 그려지지 않게 한다.
+        /// 포인터는 메인 카메라의 PhysicsRaycaster 가 컬링 마스크 밖 레이어를 맞추지 않으므로 손패 카메라에도 하나 붙인다 — 카메라 depth 가 높아 덱보다 카드가 먼저 맞는다.
+        /// 이미 있으면 값만 맞춘다. 사람이 손패 · 덱 자리를 바꿔도 겹침이 가려지지 않는다.
+        /// </summary>
+        public static Camera SetupHandCamera(Camera main)
+        {
+            int layer = EnsureLayer(HandLayerName);
+            main.cullingMask &= ~(1 << layer);
+
+            Transform existing = main.transform.Find(HandCameraName);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(HandCameraName, typeof(Camera), typeof(PhysicsRaycaster));
+            go.transform.SetParent(main.transform, false);
+            go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+            var camera = go.GetComponent<Camera>();
+            camera.CopyFrom(main);
+            camera.clearFlags = CameraClearFlags.Depth;
+            camera.cullingMask = 1 << layer;
+            camera.depth = main.depth + 1;
+            if (go.GetComponent<PhysicsRaycaster>() == null)
+                go.AddComponent<PhysicsRaycaster>();
+            return camera;
+        }
+
+        /// <summary>이름의 레이어 번호. TagManager 에 없으면 빈 사용자 칸(8 이상)에 만든다. 빈 칸이 없으면 LogError 와 Default(0).</summary>
+        public static int EnsureLayer(string name)
+        {
+            int layer = LayerMask.NameToLayer(name);
+            if (layer >= 0)
+                return layer;
+
+            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedProperty layers = tagManager.FindProperty("layers");
+            for (int i = 8; i < layers.arraySize; i++)
+            {
+                SerializedProperty slot = layers.GetArrayElementAtIndex(i);
+                if (!string.IsNullOrEmpty(slot.stringValue)) continue;
+
+                slot.stringValue = name;
+                tagManager.ApplyModifiedPropertiesWithoutUndo();
+                return i;
+            }
+
+            Debug.LogError($"[{nameof(TableBuilder)}] 빈 레이어 칸이 없어 {name} 레이어를 만들지 못했다 — 내 카드가 덱 뒤로 가려진다.");
+            return 0;
+        }
+
+        /// <summary>오브젝트와 자식 전부를 HandCards 레이어로 — 손패 카메라가 그리게. 카드 프리팹을 만들 때와 기존 프리팹을 고칠 때 쓴다.</summary>
+        public static void SetHandLayer(GameObject root)
+        {
+            int layer = EnsureLayer(HandLayerName);
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = layer;
         }
 
         /// <summary>3D 층 루트. 이미 있으면 덮어쓰지 않고 null.</summary>
@@ -160,7 +220,7 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(TableBuilder)}] 3D 카드 프리팹 3개 다시 만듦.");
         }
 
-        // 카드 프리팹 — 루트(BoxCollider · CardView, 기준점 아래 가운데) → Front(틀 · 그림 · 이름 · 설명) · Back(뒷면, Y 180°).
+        // 카드 프리팹 — 루트(BoxCollider · CardView, 기준점 아래 가운데) → Front(틀 · 그림 · 이름 · 설명) · Back(뒷면, Y 180°). 전부 HandCards 레이어.
         // 틀 · 뒷면 Quad 는 같은 면에 서로 반대를 보고 있고 머티리얼이 뒷면을 컬링하므로 보는 쪽만 그려진다. 그림 · 글자는 틀보다 조금 앞에.
         private static CardView EnsureCardPrefab(string name, string framePath, bool overwrite = false)
         {
@@ -208,6 +268,7 @@ namespace Chapchu.EditorTools
 
             var view = root.AddComponent<CardView>();
             GameScreenBuilder.Wire(view, ("nameText", nameText), ("descriptionText", description), ("artRenderer", artRenderer));
+            SetHandLayer(root);
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);

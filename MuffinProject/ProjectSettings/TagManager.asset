@@ -2,7 +2,7 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
+  serializedVersion: 3
   tags:
   - Card
   - DrawCards
@@ -17,7 +17,7 @@ TagManager:
   - UI
   - 
   - 
-  - 
+  - HandCards
   - 
   - 
   - 
@@ -54,3 +54,5 @@ TagManager:
   - name: Cards
     uniqueID: 572020911
     locked: 0
+  m_RenderingLayers:
+  - Default

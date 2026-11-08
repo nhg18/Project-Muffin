@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5931607346944453954}
   - component: {fileID: 3014260968994625050}
   - component: {fileID: 6151090414695179632}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Art
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -101,7 +101,7 @@ GameObject:
   - component: {fileID: 6048950308956793129}
   - component: {fileID: 6174355631869415287}
   - component: {fileID: 2931872351310101696}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Frame
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -191,7 +191,7 @@ GameObject:
   - component: {fileID: 4297903597126767420}
   - component: {fileID: 2541231106595287431}
   - component: {fileID: 3079282687537872274}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Card_Trap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -260,7 +260,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3161056854931731570}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Front
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -297,7 +297,7 @@ GameObject:
   - component: {fileID: 7765409057458272382}
   - component: {fileID: 1160687843917707242}
   - component: {fileID: 1074871688940706544}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Description
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -476,7 +476,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6849927112332389793}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Back
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -510,7 +510,7 @@ GameObject:
   - component: {fileID: 3207233666749603331}
   - component: {fileID: 6919451774659700472}
   - component: {fileID: 5955002314839449564}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Name
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -691,7 +691,7 @@ GameObject:
   - component: {fileID: 2624325252501689952}
   - component: {fileID: 4236486117426688070}
   - component: {fileID: 8272255157767797843}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Back
   m_TagString: Untagged
   m_Icon: {fileID: 0}

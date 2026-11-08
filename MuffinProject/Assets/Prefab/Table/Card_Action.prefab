@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 36476053786813022}
   - component: {fileID: 6838385197218664479}
   - component: {fileID: 664713906577595693}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Card_Action
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -82,7 +82,7 @@ GameObject:
   - component: {fileID: 1425288120287695932}
   - component: {fileID: 1100893770773947680}
   - component: {fileID: 1161200003741481867}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Art
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -172,7 +172,7 @@ GameObject:
   - component: {fileID: 614237860690513416}
   - component: {fileID: 7406165116077641495}
   - component: {fileID: 4809053732288912178}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Back
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -262,7 +262,7 @@ GameObject:
   - component: {fileID: 6874378297872728793}
   - component: {fileID: 4718233256521525810}
   - component: {fileID: 7818024617884019115}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Description
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -443,7 +443,7 @@ GameObject:
   - component: {fileID: 461716142428803818}
   - component: {fileID: 8990401239569154593}
   - component: {fileID: 1490598101760779374}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Frame
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -531,7 +531,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1036558871396750489}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Front
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -566,7 +566,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6333563450653215744}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Back
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -600,7 +600,7 @@ GameObject:
   - component: {fileID: 7243944382433950513}
   - component: {fileID: 1763200148029478855}
   - component: {fileID: 153318417929871823}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Name
   m_TagString: Untagged
   m_Icon: {fileID: 0}
