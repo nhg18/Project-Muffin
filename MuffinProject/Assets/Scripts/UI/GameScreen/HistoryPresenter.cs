@@ -13,6 +13,7 @@ namespace Chapchu.UI.GameScreen
     /// 값은 GameScreenPresenter 가 연출 큐 순서로 넘긴다 — 화면의 다른 영역과 같은 순간에 기록된다. 판정은 하지 않는다 (1절 #1).
     /// HP 변화는 바로 앞 카드 사용의 대상이면 그 줄의 수치(−20)로 붙이고, 아니면 따로 한 줄. 카드 이름은 덱 에셋에서 찾는다.
     /// 기록은 이 화면이 열린 뒤의 것만 — 늦게 열렸을 때 지난 기록은 복구하지 않는다 (스냅샷에 없다).
+    /// 첫 턴이 시작되기 전의 뽑기는 초기 손패 배분(01-game-flow.md 5 · 05-deck.md 5장)이라 기록하지 않는다 (10-ui.md 「기록 서랍」, 2026-11-08).
     /// </summary>
     public class HistoryPresenter : MonoBehaviour
     {
@@ -32,6 +33,7 @@ namespace Chapchu.UI.GameScreen
 
         private readonly List<HistoryEntry> _entries = new List<HistoryEntry>();
         private readonly Dictionary<int, int> _lastHp = new Dictionary<int, int>(); // actorNumber → 마지막으로 본 HP (변화량 계산용)
+        private bool _turnStarted; // 첫 턴이 시작됐는가 — 그 전의 뽑기는 초기 배분
 
         private void Awake()
         {
@@ -60,18 +62,27 @@ namespace Chapchu.UI.GameScreen
             foreach (Photon.Realtime.Player player in PhotonNetwork.PlayerList)
                 if (player.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
                     _lastHp[player.ActorNumber] = hpValue;
+
+            // 씬이 늦게 열려 첫 턴 이벤트를 놓쳤을 때 — 턴 주인이 이미 있으면 게임이 진행 중이라 그 뒤 뽑기는 기록한다
+            _turnStarted = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomProps.TurnActor);
         }
 
         /// <summary>턴이 바뀌었다 — 머리글 (칩에는 안 뜬다).</summary>
         public void ShowTurnStarted(int actorNumber)
         {
+            _turnStarted = true;
             bool isMe = PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == actorNumber;
             _entries.Add(HistoryEntry.HeaderOf(isMe ? MyTurnHeader : string.Format(TurnHeaderFormat, PlayerLook.NameOf(actorNumber))));
             RefreshLogIfOpen();
         }
 
+        /// <summary>뽑기 — 첫 턴 전(초기 손패 배분)이면 기록하지 않는다.</summary>
         public void ShowCardDrawn(int actorNumber)
-            => Add(new HistoryEntry { Actor = actorNumber, Text = DrawText, Icon = HistoryIcon.Card });
+        {
+            if (!_turnStarted) return;
+
+            Add(new HistoryEntry { Actor = actorNumber, Text = DrawText, Icon = HistoryIcon.Card });
+        }
 
         /// <summary>카드 사용 — 「카드 이름 → 대상」. 대상이 없으면 카드 이름만.</summary>
         public void ShowCardPlayed(int actorNumber, int cardId, int[] targets)
