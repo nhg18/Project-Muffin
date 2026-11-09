@@ -51,6 +51,18 @@ namespace Chapchu.UI.RoomScreen
             if (playerCountText == null)
                 Debug.LogError($"[{nameof(RoomView)}] {nameof(playerCountText)} 참조가 비어 있습니다.", this);
 
+            if (playerSlots == null || playerSlots.Length == 0)
+                Debug.LogError($"[{nameof(RoomView)}] {nameof(playerSlots)} 참조가 비어 있습니다.", this);
+            else
+            {
+                for (int i = 0; i < playerSlots.Length; i++)
+                {
+                    PlayerSlot slot = playerSlots[i];
+                    if (slot == null || slot.box == null || slot.nameText == null || slot.hostText == null)
+                        Debug.LogError($"[{nameof(RoomView)}] {nameof(playerSlots)}[{i}] 참조 중 비어 있는 것이 있습니다.", this);
+                }
+            }
+
             if (logText == null)
                 Debug.LogError($"[{nameof(RoomView)}] {nameof(logText)} 참조가 비어 있습니다.", this);
 

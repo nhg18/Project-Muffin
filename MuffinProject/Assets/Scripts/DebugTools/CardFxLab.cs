@@ -291,6 +291,10 @@ namespace Chapchu.DebugTools
                     captionText.text = $"{fx.GroupOf(step)} · {step.name}  ({KindName(step)} · {step.StartMs:0}ms 부터 {step.DurationMs:0}ms)";
                     yield return fx.PlayStepRoutine(step, context, showScenery);
                 }
+                else
+                {
+                    break; // 프리팹을 고쳐 고른 이펙트가 없어졌다 — yield 없이 돌지 않게 멈춘다
+                }
             } while (loop);
 
             Clear();

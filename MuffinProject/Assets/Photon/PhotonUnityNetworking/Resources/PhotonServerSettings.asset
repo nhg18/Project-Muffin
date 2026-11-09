@@ -64,6 +64,38 @@ MonoBehaviour:
   - RPC_OnHpChanged
   - RPC_OnMyCardDrawn
   - RPC_OnTurnStarted
+  - RPC_OnCardNegated
+  - RPC_OnCardResolved
+  - RPC_OnReactionStarted
+  - RPC_RequestPlayCounter
+  - RPC_OnDeathPending
+  - RPC_OnEmptyDeckDamaged
+  - RPC_OnPlayerDied
+  - RPC_OnPlayerLeftGame
+  - RPC_OnChapchuChanged
+  - RPC_OnGameEnded
+  - RPC_RequestDeclareChapchu
+  - RPC_OnMyTrapSet
+  - RPC_OnTrapActivated
+  - RPC_OnTrapSet
+  - RPC_OnTrapWindowStarted
+  - RPC_OnTurnResumed
+  - RPC_RequestActivateTrap
+  - RPC_RequestSetTrap
+  - RPC_OnCardReturnedToHand
+  - RPC_OnCardsDiscarded
+  - RPC_OnDeathAvoided
+  - RPC_OnHandCardsMoved
+  - RPC_OnMyCardsGained
+  - RPC_OnMyCardsLost
+  - RPC_OnMyTrapRemoved
+  - RPC_OnTrapDestroyed
+  - RPC_OnTrapMoved
+  - RPC_OnTrapReturned
+  - RPC_OnTurnSkipMarked
+  - RPC_OnTurnSkipped
+  - RPC_OnMySync
+  - RPC_RequestMySync
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -57,6 +57,12 @@ namespace Chapchu.Game
         public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck)
         {
             _players.Clear();
+            _chain.Clear();
+            _deathDeadline = -1;
+            _gameOver = false;
+            _trapWindowDeadline = -1;
+            _afterRecords.Clear();
+            _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();
 
@@ -70,13 +76,29 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
+        /// <summary>actor 의 비공개 카드 — 손패 · 설치 함정 (09-network.md 10절 동기화). 그 사람에게만 보낸다.</summary>
+        public void GetPrivateCards(int actor, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds)
+        {
+            if (!_players.TryGetValue(actor, out PlayerState player))
+            {
+                handIds = handCardIds = trapIds = trapCardIds = Array.Empty<int>();
+                return;
+            }
+
+            handIds = player.Hand.Select(c => c.InstanceId).ToArray();
+            handCardIds = player.Hand.Select(c => c.CardId).ToArray();
+            trapIds = player.Traps.Select(c => c.InstanceId).ToArray();
+            trapCardIds = player.Traps.Select(c => c.CardId).ToArray();
+        }
+
         /// <summary>디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패[카드 ID]. 판정에 쓰지 않는다.</summary>
         public string DebugState()
         {
             string players = string.Join(" │ ", _players.Select(p =>
-                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(_turnOrder.Contains(p.Key) ? "" : " 나감")}"));
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.Traps.Count > 0 ? $" 함정{p.Value.Traps.Count}" : "")}{(p.Value.IsChapchu ? " 찹츄" : "")}{(p.Value.HasLeft ? " 나감" : p.Value.Life == LifeState.Dead ? " 사망" : p.Value.Life == LifeState.DeathPending ? " 사망대기" : "")}"));
 
-            return $"덱 {_deck.Count} · 버림 {_discardPile.Count} ║ {players}";
+            string chain = _chain.Count == 0 ? "" : $" · 체인 [{string.Join(" ← ", _chain.Select(e => $"P{e.User}:{e.Card.CardId}"))}]";
+            return $"덱 {_deck.Count} · 버림 {_discardPile.Count}{chain} ║ {players}";
         }
 
         private IReadOnlyList<GameEvent> TakeEvents()

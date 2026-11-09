@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Chapchu.Game.Effects
 {
@@ -18,12 +19,19 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public abstract class CardEffect
     {
-        /// <summary>방장의 규칙이 카드 처리 때 부른다. user = 카드를 쓴 사람, targets = 확정된 대상.</summary>
-        internal abstract void Apply(GameServer server, int user, int[] targets);
+        /// <summary>방장의 규칙이 체인을 처리할 때 부른다. entry = 체인에 오른 이 카드 (쓴 사람 · 확정된 대상).</summary>
+        internal abstract void Apply(GameServer server, ChainEntry entry);
 
-        protected static int[] GetReceivers(EffectSubject subject, int user, int[] targets)
-        {
-            return subject == EffectSubject.Self ? new[] { user } : targets;
-        }
+        /// <summary>봇이 이 효과를 어떤 묶음으로 보는가 (18-bot.md 7-3). 새 효과는 자기 쓰임을 여기서 정한다.</summary>
+        internal virtual Bots.BotRole BotRole => Bots.BotRole.None;
+
+        /// <summary>이 효과가 하는 일 (반응 조건 판정용, 04-card.md 7절).</summary>
+        internal virtual EffectTag Tag => EffectTag.None;
+
+        /// <summary>이 효과가 Tag 의 일을 하는 사람 — 처리 전에 미리 본다 (예: 피해를 받을 사람).</summary>
+        internal virtual IEnumerable<int> Affected(GameServer server, ChainEntry entry) => Array.Empty<int>();
+
+        /// <summary>actor 가 이 효과로 받을 피해 (감소 · 전환 전) — 「그 피해로 사망」(C11) 판정용.</summary>
+        internal virtual int PredictDamage(GameServer server, ChainEntry entry, int actor) => 0;
     }
 }

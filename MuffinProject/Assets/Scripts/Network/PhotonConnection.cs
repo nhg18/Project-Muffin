@@ -25,7 +25,7 @@ namespace Chapchu.Network
                 if (!PhotonNetwork.IsConnectedAndReady)
                 {
                     Debug.LogWarning($"[{nameof(PhotonConnection)}] 서버에 연결되지 않아 요청을 보낼 수 없다");
-                    // 팝업 매니저 호출
+                    // 실패 통지는 부른 쪽이 요청 종류에 맞는 이벤트로 한다 (PhotonRoom)
                     return false;
                 }
 
