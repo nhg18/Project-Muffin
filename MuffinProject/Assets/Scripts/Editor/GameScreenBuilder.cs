@@ -100,6 +100,7 @@ namespace Chapchu.EditorTools
                 return;
             DeckView deck = TableBuilder.BuildDeck(table);
             DeckData gameDeck = FindGameDeck();
+            DiscardPileView discardPile = TableBuilder.BuildDiscardPile(table, gameDeck);
 
             GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
             BuildBackgroundCanvas(camera);
@@ -133,7 +134,7 @@ namespace Chapchu.EditorTools
             LogSheetView log = BuildLogSheet(sheets);
             BuildMenuSheet(sheets, menu);
 
-            HandPresenter hand = TableBuilder.BuildHand(table, deck, dropZone, seats, gameDeck);
+            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, dropZone, seats, gameDeck);
 
             EnsureEventSystem();
 
@@ -153,7 +154,7 @@ namespace Chapchu.EditorTools
 
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
-                ("deck", deck.GetComponent<DeckPresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
+                ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
                 ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
@@ -1484,7 +1485,7 @@ namespace Chapchu.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void WireArray(Component target, string field, Object[] values)
+        internal static void WireArray(Component target, string field, Object[] values)
         {
             var serialized = new SerializedObject(target);
             SerializedProperty property = serialized.FindProperty(field);

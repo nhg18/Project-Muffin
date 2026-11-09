@@ -237,20 +237,20 @@ namespace Chapchu.DebugTools
         private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
             => Log($"P{actorNumber} 사망 대기 — {startsAt - PhotonNetwork.Time:0.0}초 뒤부터 {deadline - PhotonNetwork.Time:0.0}초 뒤까지");
 
-        private void HandlePlayerDied(int actorNumber, int discardCount)
+        private void HandlePlayerDied(int actorNumber, int[] cardIds, int discardCount)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 사망 · 버림 {discardCount}");
+            Log($"P{actorNumber} 사망 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
-        private void HandlePlayerLeftGame(int actorNumber, int discardCount)
+        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount}");
+            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
         // 방장이 내 손패 · 함정을 0 으로 만들었다

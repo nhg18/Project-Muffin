@@ -168,28 +168,35 @@
         }
     }
 
-    /// <summary>최종 사망 (06-health.md 9절). 손패(와 함정)가 버림 더미로 갔다 — 손패 0. 턴 순서 · 대상 후보에서 빠진다.</summary>
+    /// <summary>
+    /// 최종 사망 (06-health.md 9절). 손패(와 함정)가 버림 더미로 갔다 — 손패 0. 턴 순서 · 대상 후보에서 빠진다.
+    /// CardIds 는 버림 더미에 들어간 순서(손패 → 함정)의 카드 종류 — 버림 더미는 공개다 (05-deck.md 7절 · 09-network.md 3절). 없으면 빈 배열.
+    /// </summary>
     public sealed class PlayerDied : GameEvent
     {
         public int Actor { get; }
+        public int[] CardIds { get; }
         public int DiscardCount { get; }
 
-        public PlayerDied(int actor, int discardCount)
+        public PlayerDied(int actor, int[] cardIds, int discardCount)
         {
             Actor = actor;
+            CardIds = cardIds;
             DiscardCount = discardCount;
         }
     }
 
-    /// <summary>게임 중 방을 나갔다 (01-game-flow.md 6절) — 최종 사망과 같은 처리. 손패(와 함정)가 버림 더미로 갔다.</summary>
+    /// <summary>게임 중 방을 나갔다 (01-game-flow.md 6절) — 최종 사망과 같은 처리. 손패(와 함정)가 버림 더미로 갔다. CardIds 는 PlayerDied 와 같다.</summary>
     public sealed class PlayerLeft : GameEvent
     {
         public int Actor { get; }
+        public int[] CardIds { get; }
         public int DiscardCount { get; }
 
-        public PlayerLeft(int actor, int discardCount)
+        public PlayerLeft(int actor, int[] cardIds, int discardCount)
         {
             Actor = actor;
+            CardIds = cardIds;
             DiscardCount = discardCount;
         }
     }

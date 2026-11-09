@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-11-09 · 버림 더미 (게임 씬 3D 층)
+
+### 결정 (사용자, 2026-11-09)
+1. 모양 · 크기는 **시안대로** — 「통합 화면 UI v2」 게시본 `1794200346-e3f6` 의 DISC: 흰 카드 2장(7° · 3°) 위에 맨 위 카드 −3°, 카드 0.6배, `버림 n`. (2-1 의 기준 게시본 `1794057427-acd8` 보다 새 게시본에서 읽었다 — 버림 더미 행에 버전을 적어 둠)
+2. 내 카드는 **처리 결과가 올 때까지 내는 자리에 두고**, 그때 버림 더미로 보낸다 — 「0.9초 머문 뒤 버림」 을 대체
+3. 방 속성에 맨 위 카드 ID `discardTop` 을 둔다 (늦게 열린 화면 복구용)
+4. 사망 · 나감 일에 버려진 카드 ID **배열**을 싣는다 — 우선 해 보기로
+
+### 한 것
+- 문서: `10-ui` 2-1 「버림 더미」 행 추가 · 「카드 내기 1단계」 행 · 5-1 끝 메모, `09-network` 3절(버림 더미 장수 · 맨 위 카드 행) · 6.1 · 6.3 (`DiscardCount` · `DiscardTop`).
+- 방장: `PlayerDied` · `PlayerLeft` 에 `CardIds`(손패 → 함정 순) — `DiscardAll` 이 돌려준다. `RPC_OnPlayerDied` · `RPC_OnPlayerLeftGame` · `GameEvents` 시그니처 변경(받는 곳은 `GameDebugInput` 뿐이었다). `RoomProps.DiscardTop` — 버림이 생기는 일마다 쓰고, 덱을 다시 채우면 키를 지운다. 게임 시작 때 `DiscardCount` 0 · `DiscardTop` 지움(지난 판 값이 남던 것).
+- 새 `DiscardPileView`(받침 흰 카드 · 맨 위 카드 · `버림 n`, 기본 층 · 누를 수 없음) · `DiscardPilePresenter`(`Show(맨 위 카드 ID, 장수)` · `Show(카드 ID 배열, 장수)` · `Clear()` · `Start` 스냅샷).
+- 연출 큐: `OnCardResolved` · `OnCardNegated` · `OnCardReturnedToHand` · `OnCardsDiscarded` · `OnTrapDestroyed` · `OnPlayerDied` · `OnPlayerLeftGame` 단계 추가, `OnDeckRefilled` 에서 더미 비움.
+- `HandPresenter`: `PlayCardRoutine` 은 내는 자리까지만(`_onTable` 에 보관, `playHold` · `discardScale` 삭제) → `DiscardPlayedRoutine` · `DiscardFromHandRoutine`(강제 버림) · `DiscardHandRoutine`(내 사망) · `ReturnPlayedCard`(C01). `HandView.PutBack` · `TakeAll`.
+- 빌더: `TableBuilder.BuildDiscardPile` (`CardBlank.png` · `CardBlank.mat` 은 없으면 만든다), `BuildHand` 가 `discardSpot` 을 더미의 `TopAnchor` 로. 열린 `GameScene`(깨끗한 상태)에는 CLI 스크립트로 더미만 더하고 `DiscardSpot` 을 지워 저장 — 전체 다시 조립은 하지 않았다.
+- 같은 작업에서 드러난 것: 강제 버림(`OnCardsDiscarded`) · 손패로 반환(`OnCardReturnedToHand`) 때 내 손패 뷰 · 장수가 갱신되지 않던 것을 같이 이었다.
+- `multi-test`: `rules` 의 사망 · 나감 검사에 카드 배열 길이 확인 2줄.
+
+### 확인
+- `rules` 통과. `multi 2` 통과(콘솔 에러 0) — 스크린샷 두 장에서 더미가 같다: 맨 위 「물어뜯기」 · 받침 2장 · `버림 5`, 내는 자리에 남은 카드 없음(카운터로 무효된 카드 포함). `full 2` 통과 — 두 화면에 `사망 · 버림 9 [2 2 2 4]`.
+- **확인 못 한 것**: 카드가 더미로 날아가 맨 위 카드로 바뀌는 순간의 모습(끝 상태만 찍었다) · 내 손패 강제 버림 · 내 사망 때 손패가 날아가는 것 · 「손패로 반환」 · 덱 다시 채울 때 비워짐 · 늦게 열린 화면의 스냅샷 복구 · 내 카드 2장이 체인에 겹칠 때. 사람 확인 또는 시나리오 추가가 필요하다.
+
+### 다음 할 일
+- [ ] 위 「확인 못 한 것」 을 실행으로 확인
+- [ ] 상대가 낸 카드를 내는 자리에 보이기 — 지금은 남의 카드가 처리되면 더미의 맨 위만 바뀐다
+- [ ] 설치한 함정 카드가 내 손패 뷰에 남는다 (`OnTrapSet` 을 화면이 받지 않음, 스크린샷에서 확인) — 함정 UI (`10-ui` 11절 #3) 와 함께
+- [ ] 4 · 5 단계 · 무효화 도장이 들어오면 `PlayedCardToDiscardRoutine` 에서 더미로 보내기 전에 넣는다
+
+### 커밋하지 않은 것
+- 갈무리 SDF 폰트 에셋 2개(에디터가 바꾼 동적 아틀라스) · `EditorPipelineConfig.json`(Unity CLI 가 줄바꿈만 바꿈) — 이 작업과 무관.
+
+---
+
 ## 2026-11-09 · PR #122(인게임 3D 카드 · HUD v2) develop 충돌 해결 · 머지
 
 ### 결정 (PM, 2026-11-09)

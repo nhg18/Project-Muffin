@@ -30,7 +30,8 @@
 | --- | --- | --- | --- |
 | 덱 (남은 카드 목록·순서) | 마스터 | **화면에는 그리지 않는다** — 데이터는 전체에 전송됨 (방장 교체 이주를 위해 노출을 감수, 9절) | Room CustomProperties — 마스터만 쓴다 (2026-11-07) |
 | 덱 잔여 장수 | 마스터 | 전체 공개 | Room CustomProperties |
-| 버림 더미 (내용 · 순서) | 마스터 | 전체 공개 | 카드가 버려질 때 이벤트로 전파 + 순서 전체를 Room CustomProperties 에 (이주용, 9절 · 2026-11-07) |
+| 버림 더미 (내용 · 순서) | 마스터 | 전체 공개 | 카드가 버려질 때 이벤트로 전파 (사망 · 나감도 버려진 카드 ID 배열을 싣는다, 2026-11-09) + 순서 전체를 Room CustomProperties 에 (이주용, 9절 · 2026-11-07) |
+| 버림 더미 장수 · 맨 위 카드 | 마스터 | 전체 공개 | Room CustomProperties — 늦게 열린 화면의 복구용 (2026-11-09) |
 | 손패 **내용** | 마스터 | **소유자만** | 소유자 지정 RPC |
 | 손패 **장수** | 마스터 | 전체 공개 | Player CustomProperties |
 | 함정 슬롯 **내용** | 마스터 | **소유자만** | 소유자 지정 RPC |
@@ -130,7 +131,7 @@
 
 ### 6.1 쓸 수 있는 것
 
-* 모두가 항상 봐도 되는 **작은 값**: HP(int), 손패 장수(int), 함정 개수(int), 생존 상태(byte), 찹츄 상태(bool), 턴 주인(int), 턴 진행 방향(bool)
+* 모두가 항상 봐도 되는 **작은 값**: HP(int), 손패 장수(int), 함정 개수(int), 생존 상태(byte), 찹츄 상태(bool), 턴 주인(int), 턴 진행 방향(bool), 덱 · 버림 더미 장수(int), 버림 더미 맨 위 카드 종류 ID(int — 더미가 비면 키를 지운다, 2026-11-09)
 * 늦게 들어온 클라이언트가 현재 상태를 복원해야 하는 값
 * **예외 — 이주용 큰 값 2개**: 덱 순서 · 버림 더미 순서(카드 인스턴스 ID 배열). 방장이 바뀌어도 게임을 이어 가기 위해 둔다 (9절, 2026-11-07). 카드가 덱에서 나가거나 버림 더미에 들어갈 때 마스터만 갱신한다. 클라이언트는 이 값을 **화면에 쓰지 않는다** — 덱 잔여 장수 · 버림 더미 표시는 지금처럼 장수 값 · 버림 이벤트로
 
@@ -161,6 +162,8 @@ public static class RoomProps
 {
     public const string TurnActor    = "turnActor";
     public const string DeckCount    = "deckCount";
+    public const string DiscardCount = "discardCount";
+    public const string DiscardTop   = "discardTop"; // 맨 위 카드 종류 ID. 더미가 비면 키 없음 (2026-11-09)
     public const string TurnDirection = "turnDir";
     public const string DeckOrder    = "deck";     // 이주용 (6.1 예외, 2026-11-07)
     public const string DiscardOrder = "discard";  // 이주용

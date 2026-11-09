@@ -624,6 +624,7 @@ public static class MultiTest
             List<GameEvent> events = t.Tick().ToList();
             PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
             Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
+            Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
             t.At(100);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
@@ -900,7 +901,7 @@ public static class MultiTest
             t.GiveTrap(t.O2, ChainTable.TrapReact);
             int before = t.DiscardCount;
             PlayerLeft left = t.Server.RemovePlayer(t.O2).OfType<PlayerLeft>().FirstOrDefault();
-            Check(left != null && left.DiscardCount == before + 6 + 2, "나감 → 손패 6 + 함정 2 버림 더미로");
+            Check(left != null && left.DiscardCount == before + 6 + 2 && left.CardIds.Length == 8, "나감 → 손패 6 + 함정 2 버림 더미로 (카드 종류 8장이 실린다)");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();

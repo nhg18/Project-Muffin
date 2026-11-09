@@ -73,20 +73,22 @@ namespace Chapchu.Game
                 }
 
                 player.Life = LifeState.Dead;
-                DiscardAll(actor);
-                _events.Add(new PlayerDied(actor, _discardPile.Count));
+                int[] discarded = DiscardAll(actor);
+                _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
             }
         }
 
-        // 사망 · 나감 — 손패(와 설치 함정)를 전부 버림 더미로 (06 9절 · 01 6절).
-        private void DiscardAll(int actor)
+        // 사망 · 나감 — 손패(와 설치 함정)를 전부 버림 더미로 (06 9절 · 01 6절). 버림 더미에 들어간 순서의 카드 종류를 돌려준다 — 버림 더미는 공개 (05 7절).
+        private int[] DiscardAll(int actor)
         {
             PlayerState player = _players[actor];
+            int[] cardIds = player.Hand.Concat(player.Traps).Select(c => c.CardId).ToArray();
             _discardPile.AddRange(player.Hand);
             _discardPile.AddRange(player.Traps);
             player.Hand.Clear();
             player.Traps.Clear();
             OnHandChanged(actor);
+            return cardIds;
         }
     }
 }

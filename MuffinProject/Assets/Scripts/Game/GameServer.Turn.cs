@@ -91,8 +91,8 @@ namespace Chapchu.Game
                 return TakeEvents();
 
             player.HasLeft = true;
-            DiscardAll(actor);
-            _events.Add(new PlayerLeft(actor, _discardPile.Count));
+            int[] discarded = DiscardAll(actor);
+            _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count));
             if (_gameOver)
                 return TakeEvents();
 

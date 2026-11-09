@@ -14,7 +14,7 @@ using Object = UnityEngine.Object;
 namespace Chapchu.EditorTools
 {
     /// <summary>
-    /// 인게임 3D 층(테이블 방석 · 카드 · 덱 · 손패 · 카드 내는 자리 · 버림 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
+    /// 인게임 3D 층(카드 · 덱 · 버림 더미 · 손패 · 카드 내는 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
     /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 이름표는 2D 층(HUD v2).
     /// 카드 · 덱 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)과 카드 프리팹 3개는 없으면 만들고, 있으면 덮어쓰지 않는다.
     /// 내 카드(손패 · 내는 카드)는 HandCards 레이어 — 메인 카메라 자식인 손패 카메라가 깊이만 지우고 그 위에 그린다. 기울인 카드(4° · 40°)의 윗부분이 덱 뒤로 들어가 가려지지 않게 (10-ui.md 2-1 「3D 층 구현」 손패 층).
@@ -63,6 +63,15 @@ namespace Chapchu.EditorTools
         // 카드 내는 자리 · 버림 자리 — 시안 DROP (480, 310) · DISC (555, 310) × 2: 방석 가운데에 내고 오른쪽에 버린다 (HUD v2).
         private static readonly Vector3 PlaySpotPosition = CanvasToWorld(960f, 620f);
         private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1110f, 620f);
+
+        // 버림 더미 (10-ui.md 2-1 「버림 더미」, 시안 DISC) — 카드 0.6배. 받침 흰 카드 2장(아래부터: 캔버스 px 오프셋 · 반시계 각도) 위에 맨 위 카드 −3°.
+        private const float DiscardCardScale = 0.6f;
+        private const float DiscardTopAngle = -3f;
+        private static readonly (Vector2 offsetPx, float angle)[] DiscardUnderCards = { (new Vector2(-20f, -8f), 7f), (new Vector2(-10f, -4f), 3f) };
+        // 받침 흰 카드 그림 — 없으면 만든다. 카드 0.6배(136 × 202)의 2배 크기, 흰 바탕 · 잉크 테 4 · 반지름 14 (캔버스 px).
+        private const string BlankTexturePath = "Assets/Sprites/Cards/CardBlank.png";
+        private const int BlankTexturePixelsPerPx = 2;
+        private const float BlankBorderPx = 4f, BlankRadiusPx = 14f;
 
         private static readonly Color Ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
 
@@ -181,7 +190,49 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        public static HandPresenter BuildHand(Transform table, DeckView deck, RectTransform dropZone, OpponentSeatsPresenter seats, DeckData gameDeck)
+        /// <summary>
+        /// 버림 더미 — 받침 흰 카드 + 맨 위 카드 자리 + `버림 n` (10-ui.md 2-1 「버림 더미」). 덱과 같은 기본 층이라 내 카드(손패 층)가 항상 위에 그려진다.
+        /// 맨 위 카드 자리는 가운데를 축으로 돌린 `Top` 아래, 카드 기준점(아래 가운데)만큼 내린 `TopAnchor` — 날아오는 카드가 이 자세 · 배율로 닿는다.
+        /// </summary>
+        public static DiscardPileView BuildDiscardPile(Transform table, DeckData gameDeck)
+        {
+            var root = new GameObject("DiscardPile");
+            root.transform.SetParent(table, false);
+            root.transform.localPosition = DiscardSpotPosition;
+
+            Vector2 cardSize = CardSize * DiscardCardScale;
+            Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(cardSize));
+            var underCards = new Object[DiscardUnderCards.Length];
+            for (int i = 0; i < DiscardUnderCards.Length; i++)
+            {
+                (Vector2 offsetPx, float angle) = DiscardUnderCards[i];
+                var position = new Vector3(offsetPx.x * UnitsPerPixel, -offsetPx.y * UnitsPerPixel, -i * CardThickness);
+                underCards[i] = Quad($"Under{i}", root.transform, blank, cardSize, position, Quaternion.Euler(0f, 0f, angle)).gameObject;
+            }
+
+            float topZ = -DiscardUnderCards.Length * CardThickness;
+            Transform top = Child("Top", root.transform, new Vector3(0f, 0f, topZ), Quaternion.Euler(0f, 0f, DiscardTopAngle));
+            Transform topAnchor = Child("TopAnchor", top, new Vector3(0f, -cardSize.y / 2f, 0f), Quaternion.identity);
+            topAnchor.localScale = Vector3.one * DiscardCardScale;
+
+            // 덱 라벨과 같은 줄 · 같은 모양 (시안 `.lab`)
+            TMP_Text count = NewText3D("CountText", root.transform, "버림 0", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center,
+                DeckCountSize, new Vector3(DeckCountOffset.x, DeckCountOffset.y, topZ - CardThickness - LayerGap));
+
+            var view = root.AddComponent<DiscardPileView>();
+            GameScreenBuilder.Wire(view,
+                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
+                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("topAnchor", topAnchor), ("countText", count));
+            GameScreenBuilder.WireArray(view, "underCards", underCards);
+
+            var presenter = root.AddComponent<DiscardPilePresenter>();
+            GameScreenBuilder.Wire(presenter, ("deck", gameDeck));
+            return view;
+        }
+
+        public static HandPresenter BuildHand(Transform table, DeckView deck, DiscardPileView discardPile, RectTransform dropZone, OpponentSeatsPresenter seats, DeckData gameDeck)
         {
             var root = new GameObject("Hand");
             root.transform.SetParent(table, false);
@@ -201,12 +252,12 @@ namespace Chapchu.EditorTools
                 ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)));
 
             Transform playSpot = Spot("PlaySpot", table, PlaySpotPosition);
-            Transform discardSpot = Spot("DiscardSpot", table, DiscardSpotPosition);
 
+            // 버려지는 내 카드는 버림 더미의 맨 위 카드 자리로 날아가 닿는다
             var presenter = root.AddComponent<HandPresenter>();
             GameScreenBuilder.Wire(presenter,
                 ("deck", gameDeck), ("drawOrigin", deck.transform), ("server", FindServer(nameof(HandPresenter))), ("dropZone", dropZone), ("seats", seats),
-                ("playSpot", playSpot), ("discardSpot", discardSpot));
+                ("playSpot", playSpot), ("discardSpot", discardPile.TopAnchor));
             return presenter;
         }
 
@@ -302,6 +353,46 @@ namespace Chapchu.EditorTools
 
             AssetDatabase.CreateAsset(material, path);
             return material;
+        }
+
+        // 받침 흰 카드 그림 — 둥근 모서리 흰 바탕에 잉크 테. 있으면 덮어쓰지 않는다. 컷아웃 셰이더라 바깥은 알파 0, 안은 1.
+        private static string EnsureBlankTexture(Vector2 cardSize)
+        {
+            if (File.Exists(BlankTexturePath))
+                return BlankTexturePath;
+
+            float scale = BlankTexturePixelsPerPx / UnitsPerPixel; // 유닛 → 텍스처 px
+            int width = Mathf.RoundToInt(cardSize.x * scale), height = Mathf.RoundToInt(cardSize.y * scale);
+            float radius = BlankRadiusPx * BlankTexturePixelsPerPx, border = BlankBorderPx * BlankTexturePixelsPerPx;
+            var half = new Vector2(width / 2f, height / 2f);
+
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // 둥근 사각형까지의 거리 (안쪽이 음수)
+                    var d = new Vector2(Mathf.Abs(x + 0.5f - half.x), Mathf.Abs(y + 0.5f - half.y)) - half + Vector2.one * radius;
+                    float distance = Vector2.Max(d, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(d.x, d.y), 0f) - radius;
+
+                    Color color = Color.Lerp(Color.white, Ink, Mathf.Clamp01(distance + border + 0.5f));
+                    color.a = distance <= 0f ? 1f : 0f;
+                    pixels[y * width + x] = color;
+                }
+            }
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels(pixels);
+            File.WriteAllBytes(BlankTexturePath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(BlankTexturePath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(BlankTexturePath);
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.SaveAndReimport();
+            return BlankTexturePath;
         }
 
         #region 만들기 도우미

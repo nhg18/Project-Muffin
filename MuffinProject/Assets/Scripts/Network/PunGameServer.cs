@@ -75,14 +75,14 @@ namespace Chapchu.Network
             foreach (Player player in PhotonNetwork.PlayerList)
                 player.SetCustomProperties(reset);
 
-            var botReset = new Hashtable();
+            // 버림 더미는 빈 채로 시작한다 — 값이 null 이면 Photon 이 키를 지운다
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null };
             foreach (int bot in bots)
             {
                 foreach (DictionaryEntry entry in reset)
-                    botReset[BotRoster.PropKey((string)entry.Key, bot)] = entry.Value;
+                    roomReset[BotRoster.PropKey((string)entry.Key, bot)] = entry.Value;
             }
-            if (botReset.Count > 0)
-                PhotonNetwork.CurrentRoom.SetCustomProperties(botReset);
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomReset);
 
             if (bots.Length > 0)
                 _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time);
@@ -235,6 +235,7 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnDeckRefilled), refilled.DeckCount);
                         roomProps[RoomProps.DeckCount] = refilled.DeckCount;
                         roomProps[RoomProps.DiscardCount] = 0;
+                        roomProps[RoomProps.DiscardTop] = null; // 값이 null 이면 Photon 이 키를 지운다
                         break;
 
                     case TurnStarted turn:
@@ -256,11 +257,13 @@ namespace Chapchu.Network
                     case CardResolved resolved:
                         Broadcast(nameof(RPC_OnCardResolved), resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = resolved.DiscardCount;
+                        roomProps[RoomProps.DiscardTop] = resolved.CardId;
                         break;
 
                     case CardNegated negated:
                         Broadcast(nameof(RPC_OnCardNegated), negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = negated.DiscardCount;
+                        roomProps[RoomProps.DiscardTop] = negated.CardId;
                         break;
 
                     case EmptyDeckDamaged empty:
@@ -273,16 +276,18 @@ namespace Chapchu.Network
                         break;
 
                     case PlayerDied died:
-                        Broadcast(nameof(RPC_OnPlayerDied), died.Actor, died.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerDied), died.Actor, died.CardIds, died.DiscardCount);
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.LifeState] = (byte)LifeState.Dead;
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.HandCount] = 0;
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.TrapCount] = 0;
                         roomProps[RoomProps.DiscardCount] = died.DiscardCount;
+                        SetDiscardTop(roomProps, died.CardIds);
                         break;
 
                     case PlayerLeft left:
-                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.CardIds, left.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
+                        SetDiscardTop(roomProps, left.CardIds);
                         break;
 
                     case TurnResumed resumed:
@@ -318,12 +323,14 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnCardsDiscarded), discarded.Actor, discarded.CardInstanceIds, discarded.CardIds, discarded.HandCount, discarded.DiscardCount);
                         PlayerPropsOf(playerProps, discarded.Actor)[PlayerProps.HandCount] = discarded.HandCount;
                         roomProps[RoomProps.DiscardCount] = discarded.DiscardCount;
+                        SetDiscardTop(roomProps, discarded.CardIds);
                         break;
 
                     case TrapDestroyed destroyed:
                         Broadcast(nameof(RPC_OnTrapDestroyed), destroyed.Owner, destroyed.CardInstanceId, destroyed.CardId, destroyed.TrapCount, destroyed.DiscardCount);
                         PlayerPropsOf(playerProps, destroyed.Owner)[PlayerProps.TrapCount] = destroyed.TrapCount;
                         roomProps[RoomProps.DiscardCount] = destroyed.DiscardCount;
+                        roomProps[RoomProps.DiscardTop] = destroyed.CardId;
                         break;
 
                     case TrapReturned returned:
@@ -401,6 +408,13 @@ namespace Chapchu.Network
                 if (!BotRoster.IsBot(pair.Key))
                     PhotonNetwork.CurrentRoom.GetPlayer(pair.Key)?.SetCustomProperties(pair.Value);
             }
+        }
+
+        // 버림 더미에 마지막으로 들어간 카드가 맨 위다. 들어간 카드가 없으면 맨 위는 그대로.
+        private static void SetDiscardTop(Hashtable roomProps, int[] discardedCardIds)
+        {
+            if (discardedCardIds.Length > 0)
+                roomProps[RoomProps.DiscardTop] = discardedCardIds[discardedCardIds.Length - 1];
         }
 
         // 결과 표시 시간 뒤 방을 다시 열고 전원을 방 씬으로 (08-room.md 4절). 다음 판은 방에서 다시 시작한다.
@@ -547,17 +561,17 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnPlayerDied(int seq, int actorNumber, int discardCount, PhotonMessageInfo info)
+        private void RPC_OnPlayerDied(int seq, int actorNumber, int[] cardIds, int discardCount, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaisePlayerDied(actorNumber, discardCount);
+                GameEvents.RaisePlayerDied(actorNumber, cardIds, discardCount);
         }
 
         [PunRPC]
-        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int discardCount, PhotonMessageInfo info)
+        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int[] cardIds, int discardCount, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaisePlayerLeftGame(actorNumber, discardCount);
+                GameEvents.RaisePlayerLeftGame(actorNumber, cardIds, discardCount);
         }
 
         [PunRPC]

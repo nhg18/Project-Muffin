@@ -9,6 +9,7 @@
         public const string TurnDeadline = "turnDeadline"; // 턴 마감 서버 시각(PhotonNetwork.Time, 초)
         public const string DeckCount = "deckCount";
         public const string DiscardCount = "discardCount"; // 버림 더미 장수 (05-deck.md 7절)
+        public const string DiscardTop = "discardTop";     // 버림 더미 맨 위 카드 종류 ID (int). 더미가 비면 키를 지운다 (09-network.md 6절)
         public const string EventSeq = "eventSeq";         // 이 스냅샷이 반영한 마지막 처리 번호 (int, 09-network.md 5절)
         public const string Bots = "bots";                 // 봇 번호 배열 (int[], 18-bot.md 9절). 봇의 공개 값은 BotRoster.PropKey
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)

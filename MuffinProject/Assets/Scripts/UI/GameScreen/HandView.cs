@@ -118,17 +118,17 @@ namespace Chapchu.UI.GameScreen
             // 덱 위에 뒷면으로 누운 자세 — 먼저 Y 180° 로 뒤집고 X 로 눕혀야 위쪽이 멀어진다(순서가 바뀌면 카메라 쪽으로 기운다). PlaceCard 가 뒤집으며 세운다.
             card.transform.localRotation = Quaternion.Euler(drawTilt, 0f, 0f) * Quaternion.Euler(0f, 180f, 0f);
             card.Setup(instanceId, data);
-            card.SetRaycastBlocking(!IsLocked);
-            card.OnHoverEntered += HandleHoverEntered;
-            card.OnHoverExited += HandleHoverExited;
-            card.OnClicked += HandleClicked;
-            card.OnDragStarted += HandleDragStarted;
-            card.OnDragged += HandleDragged;
-            card.OnDragEnded += HandleDragEnded;
-
-            _cards.Add(card);
+            Attach(card);
             Layout();
             return card;
+        }
+
+        /// <summary>TakeCard 로 떼어 갔던 카드를 손패 오른쪽 끝에 다시 붙이고 자리로 보낸다 — 체인에서 손패로 돌아온 카드 (04-card.md 7절 「손패로 반환」, 05-deck.md 6절).</summary>
+        public void PutBack(CardView card)
+        {
+            card.transform.SetParent(transform, true);
+            Attach(card);
+            Layout();
         }
 
         /// <summary>해당 장을 손패에서 떼어 돌려준다 — 받는 쪽이 연출하고 지운다. 나머지는 다시 놓는다. 없으면 null.</summary>
@@ -139,20 +139,20 @@ namespace Chapchu.UI.GameScreen
 
             CardView card = _cards[index];
             _cards.RemoveAt(index);
-            if (_hovered == card)
-                _hovered = null;
-            if (_dragging == card)
-                _dragging = null;
-            card.OnHoverEntered -= HandleHoverEntered;
-            card.OnHoverExited -= HandleHoverExited;
-            card.OnClicked -= HandleClicked;
-            card.OnDragStarted -= HandleDragStarted;
-            card.OnDragged -= HandleDragged;
-            card.OnDragEnded -= HandleDragEnded;
-            card.transform.DOKill();
+            Detach(card);
 
             Layout();
             return card;
+        }
+
+        /// <summary>손패 전부를 떼어 돌려준다 — 받는 쪽이 연출하고 지운다 (최종 사망, 05-deck.md 6절).</summary>
+        public List<CardView> TakeAll()
+        {
+            var taken = new List<CardView>(_cards);
+            _cards.Clear();
+            foreach (CardView card in taken)
+                Detach(card);
+            return taken;
         }
 
         /// <summary>손패 전체를 위로 올린다 (HandMode ON). 잠겨 있으면 무시.</summary>
@@ -237,6 +237,35 @@ namespace Chapchu.UI.GameScreen
             float3 tangent = spline.EvaluateTangent(t);
             position = new Vector3(point.x, point.y, index * CardZStep);
             angle = math.degrees(math.atan2(tangent.y, tangent.x));
+        }
+
+        // 카드를 손패 끝에 넣고 포인터 이벤트를 받는다. 자리로 보내기는 Layout.
+        private void Attach(CardView card)
+        {
+            card.SetRaycastBlocking(!IsLocked);
+            card.OnHoverEntered += HandleHoverEntered;
+            card.OnHoverExited += HandleHoverExited;
+            card.OnClicked += HandleClicked;
+            card.OnDragStarted += HandleDragStarted;
+            card.OnDragged += HandleDragged;
+            card.OnDragEnded += HandleDragEnded;
+            _cards.Add(card);
+        }
+
+        // 손패에서 뺀 카드의 호버 · 드래그 상태와 이벤트 · 트윈을 끊는다. 목록에서 빼기는 부르는 쪽이.
+        private void Detach(CardView card)
+        {
+            if (_hovered == card)
+                _hovered = null;
+            if (_dragging == card)
+                _dragging = null;
+            card.OnHoverEntered -= HandleHoverEntered;
+            card.OnHoverExited -= HandleHoverExited;
+            card.OnClicked -= HandleClicked;
+            card.OnDragStarted -= HandleDragStarted;
+            card.OnDragged -= HandleDragged;
+            card.OnDragEnded -= HandleDragEnded;
+            card.transform.DOKill();
         }
 
         private void MoveRootTo(float y)
