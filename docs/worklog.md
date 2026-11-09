@@ -21,6 +21,7 @@
 - 빌더: `TableBuilder.BuildDiscardPile` (`CardBlank.png` · `CardBlank.mat` 은 없으면 만든다), `BuildHand` 가 `discardSpot` 을 더미의 `TopAnchor` 로. 열린 `GameScene`(깨끗한 상태)에는 CLI 스크립트로 더미만 더하고 `DiscardSpot` 을 지워 저장 — 전체 다시 조립은 하지 않았다.
 - 같은 작업에서 드러난 것: 강제 버림(`OnCardsDiscarded`) · 손패로 반환(`OnCardReturnedToHand`) 때 내 손패 뷰 · 장수가 갱신되지 않던 것을 같이 이었다.
 - `multi-test`: `rules` 의 사망 · 나감 검사에 카드 배열 길이 확인 2줄.
+- 푸시 전 리뷰 지적(`666370d`): 다음 판 화면의 `Start`(스냅샷 복구)가 방장의 시작 초기화보다 먼저 읽어 지난 판 버림 더미가 보일 수 있다 → `ReturnToRoomRoutine` 이 방으로 돌아가기 전에 `DiscardCount` 0 · `DiscardTop` 지움. `full 2` 통과(콘솔 에러 0) — 두 번째 판에서 더미가 빈 채로 시작하는지는 눈으로 못 봤다.
 
 ### 확인
 - `rules` 통과. `multi 2` 통과(콘솔 에러 0) — 스크린샷 두 장에서 더미가 같다: 맨 위 「물어뜯기」 · 받침 2장 · `버림 5`, 내는 자리에 남은 카드 없음(카운터로 무효된 카드 포함). `full 2` 통과 — 두 화면에 `사망 · 버림 9 [2 2 2 4]`.
