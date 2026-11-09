@@ -424,6 +424,9 @@ namespace Chapchu.Network
             if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
                 yield break;
 
+            // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
+            PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null });
+
             NetworkManager.Instance.UpdateRoomOptions(isVisible: !BotRoster.IsSoloRoom, isOpen: true); // 「혼자 하기」 방은 비공개 그대로 (18-bot.md 10절)
             PhotonNetwork.LoadLevel(ScenePaths.Room);
         }
