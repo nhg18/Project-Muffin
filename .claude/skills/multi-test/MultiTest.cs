@@ -1569,4 +1569,13 @@ public static class MultiTest
         return deck.GetCard(cardId).effects.OfType<Chapchu.Game.Effects.DamageEffect>()
             .Where(e => e.subject == Chapchu.Game.Effects.EffectSubject.Target).Sum(e => e.amount);
     }
+
+    /// <summary>플레이 중인 게임 뷰를 PNG 로 찍는다 (끝 프레임에 쓰임 — 호출 뒤 파일이 생기길 기다린다). 화면 배치를 눈으로 볼 때.</summary>
+    public static string Shot(string path)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        ScreenCapture.CaptureScreenshot(path);
+        return "OK " + Screen.width + "x" + Screen.height + " → " + path;
+    }
 }

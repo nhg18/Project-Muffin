@@ -4,6 +4,113 @@
 
 ---
 
+## 2026-11-09 · PR #122(인게임 3D 카드 · HUD v2) develop 충돌 해결 · 머지
+
+### 결정 (PM, 2026-11-09)
+1. 기록은 **알림 칩 2개 + 기록 서랍으로 1.0 에 넣는다** — 2026-11-07 「기록 서랍 Future」 를 대체 (`10-ui` 11절 #11). 기록 항목 · 비공개 정보 범위는 다시 열림 (#12)
+2. 턴 띠 방향 아이콘은 `03-turn` 6절 #4 진행 방향을 따라 **반전되면 뒤집는다** — 2026-11-07 「반전 없음」 을 대체
+
+### 한 것
+- `10-ui`: 화면 배치 · 기준 시안은 PR(「통합 화면 UI v2」, 구현됨), 11-08 PM 확정(사망 대기 표시 없음 · 카드 등급 연출 · 3 단계 확대 홀드 · 5-1 5 단계)과 체인 · 무효화 · 결과 화면 · 대상 선택 제한 시간 없음은 develop 쪽으로 합침. 글꼴은 지금 갈무리, 전환은 `21-font` 5절 순서.
+- PR 의 11절 #11 · #12 는 #19 · #20 으로 옮김.
+- `HistoryView.cs` 는 PR 대로 삭제(FeedView · LogSheetView 가 대신, develop 의 childCount 수정은 해당 없음). `MyPanelView` 는 PR 판.
+
+### 다음 할 일
+- [ ] 대상 선택 5초 제한 시간 · 안내 바 남은 초 지우기 — `OpponentSeatsPresenter.targetSelectTimeout` (`10-ui` 6절 「제한 시간 없다」 위반), 선택 중 턴 종료 = 취소 · 손패 복귀
+- [ ] 턴 띠 방향 아이콘 반전 표시
+- [ ] 4절 「손패 입력」 (클릭 선택 · 더블클릭 · 터치 · 끌기 좌우 기울기) 과 3D 손패 구현(드래그 → 드롭 영역) 이 다르다 — 3D 손패에 맞출지 PM 확인
+
+---
+
+## 2026-11-08 · 내 손패가 덱에 가려짐 수정 — 손패 레이어 + 손패 카메라
+
+### 원인
+- 내 카드는 X 축으로 기울어 있고(자리 4° · 뽑기 · 드래그 · 내기 40°, 위쪽이 멀어지는 쪽) 덱은 z 0 에 똑바로 서 있다. 올린 손패 왼쪽 카드 윗부분(y 겹침 약 34px) · 덱 위를 지나는 드래그 카드 · 내는 자리(960, 620) 카드의 윗부분이 덱 더미(z 0 ~ −0.08) 뒤로 들어가 깊이 판정으로 가려졌다. 방석(2026-11-08 앞 항목)과 같은 종류.
+
+### 한 것
+- `TableBuilder.SetupHandCamera` · `EnsureLayer` · `SetHandLayer`: `HandCards` 레이어(TagManager 사용자 칸 8)를 만들고, 메인 카메라 자식 `HandCamera`(같은 자리 · `CopyFrom`, `clearFlags Depth`, 그 레이어만, depth +1, `PhysicsRaycaster`)가 내 카드를 깊이 무시하고 덱 위에 그린다. 메인 카메라 컬링 마스크에서 그 레이어를 뺐다. 카드 프리팹 3개는 전부 그 레이어. `SetupCamera` 가 부르므로 `Build UI` 로 다시 조립해도 같다.
+- 열린 `GameScene` 에 CLI 스크립트로 적용해 저장 (씬이 깨끗한 상태였음). 씬 diff 에 레이아웃 그룹 · TMP 재계산 값(앵커 · 글자색 해시)도 같이 들어갔다 — 전 세션에 적어 둔 "씬을 열면 더러워지는" 노이즈.
+- `10-ui` 2-1 「3D 층 구현」에 「손패 층」 행 · 프리팹 레이어.
+
+### 확인
+- 편집 모드 RT 렌더: 덱과 겹치는 자리에 카드 3장(손패 왼쪽 4° · 드래그 40° · 내는 자리 40°) — 전: 드래그 카드 윗부분을 덱 뒷면이 덮음, 후: 셋 다 덱 위에 온전히.
+- 포인터: 같은 자리에서 메인 `PhysicsRaycaster` 는 덱만, 손패 카메라 것은 카드만 맞춤 (depth −1 / 0 → EventSystem 이 카드를 먼저). 편집 모드에서 새 콜라이더는 `Physics.SyncTransforms()` 뒤에 맞는다.
+- `multi 2` 통과 (턴 줄 · HP 순서 일치 · 남의 턴 거절 1 · 콘솔 에러 0). 클론 에디터는 씬을 다시 가져와 새 레이어 · 카메라로 돌았다.
+- 확인 못 한 것: 실제 마우스 호버 · 드래그 (사람 확인).
+
+### 같은 세션 · 플레이어 색 점이 알약으로 늘어남 수정
+- 원인: 머리 띠 · 턴 칩의 가로 레이아웃이 높이를 맡기지 않는데(`childControlHeight false`) `Dot` 루트가 새 Rect 기본 높이 100 그대로라 26 × 100 알약이 됐다. 내 패널(점 20) · 좌석 이름판 3개(점 18) · 턴 띠 칩(점 16) 전부.
+- `GameScreenBuilder.Dot` 이 루트 `sizeDelta` 를 지름으로 둔다. 열린 씬의 Dot 5개를 CLI 로 같은 값으로 맞춰 저장 (레이아웃 강제 재계산 뒤 rect 22 · 26 · 24 ×3 확인).
+- 시안 `.pn2 i` 는 8px 원(× 2 = 16, 링 1.5 × 2 = 3)이라 턴 칩도 원이 맞다 — `10-ui` 배치 표 턴 띠 줄의 「목걸이 색 띠」를 「점 16(링 3)」으로 고쳤다 (문서가 구현의 알약 모양을 띠로 적었던 것).
+
+### 같은 세션 · 내 패널 닉네임이 띠 아래로 내려감 수정
+- 원인: 머리 띠 레이아웃이 높이를 맡기지 않아 닉네임 묶음 `Nick`(닉네임 + `(나)`, 안쪽 정렬 LowerLeft)이 기본 높이 100 그대로였고, 글이 그 아래쪽에 붙어 68 띠 밖으로 내려갔다. 점 알약과 같은 원인.
+- `GameScreenBuilder` 의 `Nick` 에 `ContentSizeFitter`(세로 Preferred). 열린 씬에도 같은 컴포넌트를 붙여 저장.
+
+### 같은 세션 · 기록에서 초기 손패 배분 뽑기 제외
+- `HistoryPresenter`: 첫 `ShowTurnStarted` 전의 `ShowCardDrawn` 은 버린다 (`_turnStarted`). 씬이 늦게 열렸을 때는 `RoomProps.TurnActor` 가 있으면 진행 중으로 본다. `10-ui` 기록 서랍 줄에 규칙 추가.
+
+### 같은 세션 · 턴 타이머를 턴 띠에서 캐릭터 옆 스톱워치로 (사용자 결정 2026-11-08 — 2026-11-07 결정 1 「턴 띠 하나에만」 대체)
+- 시안 「통합 화면 UI v2」 인게임 템플릿의 `.swatch`(46 원 · 테 3 · conic 진행 링 · 2시 방향 버튼, 캐릭터 가장자리에서 6 띄움 · 머리 + 키 × 0.3, 위 좌석만 왼쪽) 를 × 2 로 구현.
+- 새 `TurnTimerView`(링 fillAmount · 남은 초 · 5초 이하 빨강 · 멈춤 ‖) · `TurnTimerPresenter`(마감 시각에서 매 프레임, 스톱워치 4개에 같이 넣음, 스냅샷). 켜고 끄기는 `MyPanelView.SetMyTurn` · `OpponentSeatView.SetTurn` 이 발밑 타원과 같이.
+- `TurnStripView/Presenter` 에서 타이머 칩 · 시간 계산 삭제, `GameScreenPresenter` 가 `turnTimer.ShowTurn(deadline)` 을 큐에서 부른다. 링 스프라이트 `Sprites/UI/Hud/timer_ring.png`(184, r 56~80) 새로 만듦.
+- 빌더 `BuildStopwatch` · 좌석 · 내 캐릭터 자리 배치. `GameScene` 은 빌더로 다시 조립해 저장 (GameCanvas · Table · BackgroundCanvas 지우고 Build UI).
+- 문서: `10-ui` 2-1 배치 표(턴 띠 · 턴 타이머 행) · 3절 턴 타이머 행 · `03-turn` 9절 제한 시간 행.
+- 확인: `multi 2` 통과(콘솔 에러 0). 스크린샷 — 턴 띠에 타이머 칩 없음, 턴 주인 캐릭터 옆에만 스톱워치(위 좌석은 왼쪽 · 내 캐릭터는 오른쪽), 남은 초 · 링 비율 두 화면 일치. 멈춤(‖) · 5초 이하 빨강은 실행으로 못 봤다.
+
+### 같은 세션 · 드래그 기울기 없앰 (사용자 결정 2026-11-08)
+- `HandView.HandleDragged` 가 카드를 0° 로 세운 채 따라오게 — `dragTilt` · `dragTiltDistance` 필드 삭제. `10-ui` 2-1 「드래그 기울기」 행 · 4절 드래그 행 갱신. 씬의 옛 직렬화 값은 다음 저장 때 사라진다.
+
+### 커밋하지 않은 것
+- 갈무리 · LiberationSans SDF 폰트 에셋 — 에디터가 다시 바꾼 동적 아틀라스. 이 작업과 무관.
+
+---
+
+## 2026-11-07 · 인게임 HUD 를 「통합 화면 UI v2」 로 — 턴 띠 · 알림 칩 + 기록 서랍 · 좌석 이름판 · 내 패널 · 찹츄 버튼 · 메뉴 · 방석
+
+### 결정 (PM, 2026-11-07)
+1. 타이머는 상단 턴 띠 하나에만, **모든 턴** 표시 — 「내 턴에만 남은 초」 삭제 (`03-turn` 9절 · `10-ui` 3절)
+2. BGM · SFX 설정은 **다음 작업** (메뉴 서랍에 자리만 없음)
+3. 「게임 나가기」 = `LeaveRoom` → **로비**. 튕김 뒤 재접속은 나중에 따로 — 이 흐름과 섞지 않는다
+4. HISTORY 는 필요 — 시안처럼 전체 기록은 숨기고 **최신 2개 알림 칩**만, 칩을 누르면 기록 서랍
+5. 턴 방향 반전 없음 (화살표 한 방향)
+6. 캐릭터 그림 없음 → 자리만 (털2 50% 판), 스프라이트가 오면 끼운다
+7. 3D 오브젝트는 HUD 와 같이 옮긴다 — **이전에 3D 였던 것은 계속 3D** (카드 · 덱 · 손패 · 내는 자리 · 버림)
+8. 승리 오버레이 **미구현**
+9. 글꼴은 갈무리 유지 (Jua · 고운돋움 안 씀)
+10. 토스트 모양 그대로 (`MessageToast`)
+
+### 한 것
+- `10-ui` 2-1 기준 시안을 「통합 화면 UI v2」 게시본 `1794057427-acd8` 로 바꾸고, 색 · 배치 · 좌석 · 상대 손패 · 대상 선택 · 입력 표를 구현값으로 갱신. 옛 시안 표(프로토타입 · 2-2 자리 수치)는 지우거나 「대체」 표시. 11절 #4 · #9 · #10 해결, #11 · #12 추가.
+- 빌더 `GameScreenBuilder` 를 HUD v2 로 다시 씀 (`Chapchu/Game Screen/Build UI`): 방 코드 태그 · 턴 띠(방향 · 플레이어 칩 · 현재 · 타이머) · 설정 버튼 · 알림 칩 · 내 캐릭터 자리 + 발밑 타원 · 내 패널(뼈 게이지 · 손패 배지) · 찹츄 버튼(점 10 · 태그 · 흔들림) · 드롭 영역 · 가림판 · 상대 좌석 3(캐릭터 자리 · 이름판 · 배지 · 뒷면 부채꼴 · 대상 링 · 외곽선 · 말풍선 · 탭 영역) · 대상 선택 안내 바(취소 버튼) · 기록 서랍 · 메뉴 서랍 · 나가기 확인 팝업 · 배경(그라데이션 + 타일). 둥근 모서리는 `ui_round64` 하나, 아이콘은 `Assets/Sprites/UI/Hud/`.
+- 새 뷰 · 프레젠터: `PlayerLook`(목걸이 색 · 이름) · `BoneGaugeView` · `HandCountBadgeView` · `ChapchuButtonView` · `TurnStripView/Presenter` · `FeedView` · `LogSheetView` · `HistoryEntry` · `HistoryPresenter` · `TargetAskView` · `GameMenuView/Presenter`. `HistoryView` 삭제. `MyPanelView` · `OpponentSeatView` · `OpponentHandView`(36 × 54 회전 부채꼴) · `OpponentSeatsPresenter`(안내 바 · 취소 버튼 · 턴 스냅샷) · `GameScreenPresenter`(턴 띠 · 기록 단계) 다시 씀.
+- 3D 층(`TableBuilder`): 방석 Quad(960, 620) · 덱 (810, 620) + `덱 n` 아래 · 내는 자리 (960, 620) · 버림 (1110, 620) · 손패 중심 1016. 3D 글자 `sortingOrder 1` — 원근 거리 정렬로 덱 글자가 방석 뒤로 가던 것.
+- `multi-test`: `MultiTest.Shot` + `SHOT_DIR` — 턴이 끝난 뒤 게임 뷰 PNG. 화면 배치를 눈으로 확인하는 데 썼다.
+- (2026-11-08) **카드가 방석에 가려짐** 수정: 방석을 3D Quad(z +0.01)로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 면 뒤로 들어가 가려졌다. 방석을 **배경 캔버스(2D) 의 `RawImage`** 로 옮기고 3D 방석 · `TableCushion.mat` · 3D 글자 sortingOrder 를 지웠다. 내는 자리 · 덱 자리에 40° 카드를 놓고 스크린샷으로 확인, `multi 2` 통과.
+
+### 확인
+- `multi 2` 통과 3회 (턴 줄 · HP 순서 일치, 남의 턴 거절, 콘솔 에러 0). 스크린샷으로 내 턴 / 남의 턴 / 알림 칩(−20 수치) / 뼈 게이지 / 찹츄 점 / 발밑 타원 / 덱 라벨 확인.
+- **확인 못 한 것**: 대상 선택 화면(안내 바 · 빨간 링 · 취소 버튼) · 기록 서랍 · 메뉴 → 나가기 → 로비 · 찹츄 버튼 활성(10장) · 3 · 4인 좌석 · 4:3 / 20:9 가장자리. 2클라이언트 자동 시나리오에 없다 — 손으로 보거나 시나리오를 더해야 한다.
+- 알려진 것: 이름이 길면(`Player#1 차례`) 턴 띠가 알림 칩 아래로 들어간다 (11절 #11). 대상 선택 중 가림판이 3D 카드도 가린다 (#12).
+
+### 막혔던 것 — 에셋 DB 가 스크립트 30개를 컴파일에서 뺌
+- 22:05 `git pull` 로 들어온 `ResourcePaths.cs` · `UI/Fx/*` · `DebugTools/*` · `TableBuilder.cs` 등 30개가 가져오기(import)는 됐는데 `Assembly-CSharp` 컴파일 목록(`Library/Bee/artifacts/*.dag/*.rsp`)에 없었다 → `CS0246 CardView` · `CS0103 ResourcePaths`. 에디터가 열린 채 pull 하면 생기는 듯.
+- 해결: 파일(+`.meta`)을 밖으로 옮기고 리프레시 → 다시 넣고 리프레시. 찾는 법: `.rsp` 의 `.cs` 목록과 `find Assets -name "*.cs"` 를 `comm` 으로 비교.
+- 플레이 모드 · 프로브가 씬을 dirty 로 만들어 `Preflight` 가 막힌 적 있음 — 저장 전 사본과 diff 로 레이아웃 재계산 값만 바뀐 것을 확인하고 저장했다.
+
+### 커밋하지 않은 것
+- `Galmuri11 SDF` · `Galmuri11-Bold SDF` · `LiberationSans SDF - Fallback` 에셋 — 동적 아틀라스 갱신(에디터가 바꿈). `CardView.cs` 끝 줄바꿈 1줄.
+
+### 다음 할 일
+- [ ] **BGM · SFX 설정** — 메뉴 서랍에 슬라이더 (결정 2). 어디에 저장할지(PlayerPrefs) 정한다
+- [ ] 대상 선택 · 기록 서랍 · 메뉴 → 로비 를 실행으로 확인 (시나리오 추가 또는 손 확인) · 3 · 4인 좌석 · 4:3 / 20:9
+- [ ] 찹츄 선언(기능 8): `ChapchuButtonView.Declared` · 왕관 · 찹츄 띠 · 말풍선 연결, 승리 오버레이
+- [ ] 11절 #11(긴 이름과 턴 띠 겹침) · #12(가림판이 손패를 가림) 결정
+- [ ] 튕김 뒤 재접속 — `GameMenuPresenter` 의 나가기와 분리해 설계
+- [ ] 캐릭터 스프라이트가 오면 `MyCharacter` · 좌석 `Character` 에 끼우기
+
+---
+
 ## 2026-11-08 · 함정 자동 발동 확정 · 카드 DB 문구 통일 (`docs/card-rules-1108`)
 
 ### 결정 (PM)
@@ -550,6 +657,34 @@
 - [ ] 위 3 이 정해지면 `MyPanelPresenter.ChapchuHandCount` → `GameServer` 상수
 - [ ] 위 2 첫째가 「취소」로 정해지면 `SelectTargetsRoutine` 에서 턴이 바뀔 때 취소
 - [ ] (참고) 드래그 · 대상 선택 중 카드가 들어오면 `HandView.Layout()` 이 들고 있던 카드를 자리로 돌린다 — 드래그 중이면 놓은 동작이 무시된다
+
+---
+
+## 2026-11-06 · 카드 · 덱을 3D 층으로 — 월드 Quad 카드 · 원근 카메라 · 뒤집기 · 드래그 기울기 · 카드 내기 1단계 (`feature/game-screen-real3d`)
+
+### 결정 (사용자)
+- 캔버스 기울이기(`feature/game-screen-ui3d`, 커밋 `d857dd6`) 대신 진짜 3D 로 간다. 시작 단위는 카드 · 덱 · 손패만 — 좌석 · 테이블은 아직 2D. 10-ui 2-1 의 층 표(3D / 2D) 그대로. 렌더 파이프라인은 Built-in 유지.
+- 제안값 그대로: 100px = 1 유닛, 카메라 거리 14.85 · FOV 40°, 카드 내는 자리 · 버림 자리는 덱 양옆 276, 뒷면 `CardBack.jpg`.
+- 카드 내는 자리를 처음 제안한 화면 중앙(960)은 덱과 같은 자리라 덱에 가려졌다 → 덱 왼쪽(696)으로. `DRAW n` 은 흰 글자가 뒷면 그림의 흰 얼굴에 묻혀 더미 위쪽 바깥에 잉크로.
+- 브랜치는 `feature/game-screen` 이 develop 에 전부 머지돼 있어 develop(`76068f0`, 2.5D 시안 전환 포함)에서 땄다.
+
+### 한 것
+- `CardView`(새, 3D): 루트 BoxCollider + 포인터 이벤트 → `Front`(틀 · 그림 · 이름 · 설명 TMP 3D) · `Back` Quad. 그림은 스프라이트 텍스처를 프로퍼티 블록으로 입히고 비율을 지킨다. 편집 모드에서도 쓰게 콜라이더 · 그림 칸은 늦게 잡는다. uGUI `HandCardView` · `HandCard_*` 프리팹은 `CardFxTestBench` 가 아직 써서 남겼다.
+- `HandView` 를 월드 좌표로 다시 씀: 스플라인 부채꼴 · 올리기 · 내리기 · 호버(카메라 쪽 0.5) 그대로, 자리 기울기 4°, 뽑기는 뒷면 · 40° 로 생성해 1초 동안 뒤집히며 선다, 드래그는 높이에 비례해 0 → 40°. 포인터 좌표는 카메라 광선을 손패 평면에 맞춰 푼다. `TakeCard` 가 카드를 떼어 돌려준다. 재배치(`Layout`)는 떠 있는 카드를 건너뛴다 — PR #89 리뷰의 "드래그 중 카드가 들어오면 자리로 튄다" 를 고침.
+- `DeckView` 3D: 뒷면 5장 더미 + `DRAW n` + 콜라이더 클릭. `HandPresenter.PlayCardRoutine`: 손패 → 카드 내는 자리(0.46초 · 40°) → 0.9초 → 버림 자리(0.38초 · 0.8배) → 삭제. `GameScreenPresenter` 큐가 기다린다. `OpponentHandView` 는 3D 덱 자리를 화면 좌표로 바꿔 쓴다. `GameScreenView.handArea` 삭제.
+- `TableBuilder`(새, Editor): 카메라 · `PhysicsRaycaster` · `Table` 루트 · 덱 · 손패 · 자리 2개 · 머티리얼(`Assets/Materials/Cards/`, Unlit 컷아웃) · 프리팹(`Assets/Prefab/Table/`). `GameScreenBuilder.Build` 가 부른다. HUD 캔버스는 Overlay 로 되돌리고 배경은 카메라 캔버스(거리 50)로 분리. `GameScene` 다시 조립 · 저장.
+- 문서: `10-ui` 2-1 「3D 층 구현」 절 · 덱 · 손패 표 · 5절 · 5-1 메모, `15-screen` 3D 층 비율 한 줄.
+- 확인: 편집 모드 캡처(앞면 · 그림 · 글자 · 뒷면 · 덱 · 원근). 플레이 모드 혼자(이벤트 · 포인터 주입): 뽑기 중간 자세(Y 300° 부근, 카드가 모서리로 보이며 뒤집힘) · 올리기 · `PhysicsRaycaster` 가 덱 · 카드를 맞춤 · 호버 확대 · 드래그 350px 에 38.9° · 드롭 → 대상 선택 잠금 · 카드 내기 1단계가 덱 왼쪽에 눕고 버림으로 사라짐. `multi 2` 통과(콘솔 에러 0) — 실제 뽑기 · 카드 사용 흐름.
+- 못 한 것: 실제 마우스 조작. 4:3 화면에서 손패 좌우 잘림 여부. 혼자 플레이 중 PUN 이 스크립트 컴파일을 감지하면 플레이를 끊는다 — 확인 스크립트는 편집 모드에서 한 번 돌려 컴파일해 두고 쓴다.
+
+### 다음 할 일
+- [ ] 사람 확인: 마우스로 호버 · 드래그 · 드롭 · 덱 탭. 기울기 · 자리 수치는 `HandView` · `HandPresenter` Inspector 와 `TableBuilder` 상수
+- [x] `feature/game-screen-ui3d`(캔버스 기울이기) 는 태그 없이 로컬에서 지웠다 — 없던 것으로 (사용자 결정 2026-11-06)
+- [ ] 좌석 이름표 · 상대 손패 · 테이블 판 · `perspective-origin 22%` — 10-ui 2-1 미정 항목을 뽑은 뒤 3D 층으로
+- [ ] 버림 더미 그림(쌓임) · 체인 자리 — 카드 이펙트 2 · 3 · 4단계와 함께
+- [ ] 카드 이펙트 씬(`CardFxTestScene` · `CardFxLabScene`)도 이후 3D 손패 · 카드(`HandView` · `CardView` · `Assets/Prefab/Table`)로 바꾼다. 바꾸거나 그 씬을 더 쓰지 않게 되면, 옛 2D uGUI 카드 · 손패(`HandCardView` · `Assets/Prefab/UI/GameScreen/HandCard_*` · `GameScreenBuilder.EnsureHandCardPrefab` · `Rebuild Hand Card Prefabs` 메뉴)는 지운다 — 지금은 그 씬이 써서 남겨 둔 것 (카드 이펙트 쪽)
+- [ ] 상대 손패 2D 뒷면을 `CardBack.jpg` 로 맞출지
+- [ ] 에디터에서 `GameScene` 을 열면 레이아웃 그룹 · TMP 가 씬을 더럽힌다(앵커 · 글자색 해시) — 저장해 두면 그 뒤로는 조용하다
 
 ---
 
