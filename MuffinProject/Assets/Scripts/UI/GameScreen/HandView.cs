@@ -391,11 +391,15 @@ namespace Chapchu.UI.GameScreen
         private bool IsPointerOverAnyCard(Vector2 screenPosition)
         {
             // 회전 · 확대 · 기울어진 카드도 콜라이더로 맞춘다.
-            if (!Physics.Raycast(_camera.ScreenPointToRay(screenPosition), out RaycastHit hit))
-                return false;
-
-            CardView card = hit.collider.GetComponentInParent<CardView>();
-            return card != null && _cards.Contains(card);
+            // 가장 가까운 것만 보면 카메라 쪽에 있는 테이블 콜라이더(내 함정 칸 등)가 카드를 가린다 — 맞은 것 전부에서 손패 카드를 찾는다 (손패 카메라가 카드를 먼저 맞추는 EventSystem 과 같은 기준).
+            RaycastHit[] hits = Physics.RaycastAll(_camera.ScreenPointToRay(screenPosition));
+            foreach (RaycastHit hit in hits)
+            {
+                CardView card = hit.collider.GetComponentInParent<CardView>();
+                if (card != null && _cards.Contains(card))
+                    return true;
+            }
+            return false;
         }
 
         private CardView PrefabOf(CardType type)
