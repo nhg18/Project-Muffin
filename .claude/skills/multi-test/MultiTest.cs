@@ -9,6 +9,7 @@ using Chapchu.Game;
 using Chapchu.Game.Bots;
 using Chapchu.Game.Effects;
 using Chapchu.Network;
+using Chapchu.UI.GameScreen;
 using Chapchu.UI.Lobby;
 using Chapchu.UI.Popups;
 using Chapchu.UI.RoomScreen;
@@ -38,7 +39,11 @@ public static class MultiTest
     private const string SubmitClickedMethod = "HandleSubmitClicked";      // InputPopup
     private const string OkClickedMethod = "HandleOkClicked";              // WarningPopup
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomView
-    private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
+    private const string ChapchuClickedMethod = "HandleChapchuClicked";    // MyPanelPresenter — 찹츄 버튼 탭
+    private const string ChapchuStateMethod = "GetChapchuState";           // MyPanelPresenter — 찹츄 버튼 상태
+    private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
+    private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
+    private const string MyHandField = "_myHand";                        // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
     private const string MyTrapsField = "_myTraps";                        // GameDebugInput — 설치한 함정 인스턴스 ID
@@ -207,6 +212,88 @@ public static class MultiTest
 
         server.RequestPlayCard(instances[0], new[] { turnActor });
         return "OK P" + me + " 남의 턴에 카드 사용 요청";
+    }
+
+    // ── 찹츄 버튼 (07-win-condition.md 4.1 · 10-ui.md 「찹츄 버튼 상태」) ──
+
+    /// <summary>
+    /// 내 턴이면: 찹츄 버튼이 활성(내 턴 · 10장)이면 버튼을 누르고, 아니면 비활성 버튼을 한 번 눌러 본 뒤(요청이 가면 안 된다) 뽑는다.
+    /// 선언한 뒤 같은 턴에는 아무것도 하지 않는다 — 뽑으면 11장이 돼 해제된다. 턴은 20초 뒤 넘어간다.
+    /// </summary>
+    public static string ChapchuStep()
+    {
+        GameDebugInput input = Object.FindFirstObjectByType<GameDebugInput>();
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        MyPanelPresenter panel = Object.FindFirstObjectByType<MyPanelPresenter>();
+        if (input == null || server == null || panel == null)
+            return "WAIT 게임 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (!TryGetTurnActor(out int turnActor))
+            return "WAIT 턴 정보 없음";
+
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if ((bool)typeof(GameDebugInput).GetField(GameEndedField, Private).GetValue(input))
+            return "SKIP P" + me + " 게임 끝";
+
+        if (turnActor != me)
+            return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
+
+        int handCount = ((List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input)).Count;
+        string state = ChapchuStateOf(panel);
+        if (state == "Declared")
+            return "SKIP P" + me + " 선언함 — 턴이 넘어가길 기다림";
+
+        if (state == "Ready")
+        {
+            Call(panel, ChapchuClickedMethod);
+            return "OK P" + me + " 찹츄 버튼 누름 (손패 " + handCount + ")";
+        }
+
+        if (handCount == GameServer.ChapchuHandCount)
+            return "WAIT P" + me + " 손패 10장 · 내 턴인데 버튼이 아직 " + state + " (연출 큐 대기)";
+
+        double deadline = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDeadline, out object value) ? (double)value : -1;
+        string turnKey = deadline.ToString("R");
+        if (SessionState.GetString(ActedTurnKey, "") == turnKey)
+            return "SKIP P" + me + " 처리 중";
+        SessionState.SetString(ActedTurnKey, turnKey);
+
+        Call(panel, ChapchuClickedMethod); // 비활성 — 안내 토스트만, 선언 요청은 가지 않아야 한다 (거절 코드 11 이 오면 요청이 간 것)
+        server.RequestDraw();
+        return "OK P" + me + " 비활성 버튼 누름(손패 " + handCount + ") · 뽑기";
+    }
+
+    /// <summary>actor 의 찹츄 상태가 이 화면에 보일 때까지 WAIT — 내 것이면 버튼 「찹츄 완료」, 남의 것이면 그 좌석의 찹츄 표시.</summary>
+    public static string ChapchuExpect(string actor)
+    {
+        MyPanelPresenter panel = Object.FindFirstObjectByType<MyPanelPresenter>();
+        OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+        if (panel == null || seats == null)
+            return "WAIT 게임 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        int target = int.Parse(actor);
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if (target == me)
+        {
+            string state = ChapchuStateOf(panel);
+            return state == "Declared" ? "OK P" + me + " 내 버튼 「찹츄 완료」" : "WAIT P" + me + " 내 버튼 " + state;
+        }
+
+        var seatOf = (Dictionary<int, OpponentSeatView>)typeof(OpponentSeatsPresenter).GetField(SeatOfField, Private).GetValue(seats);
+        if (!seatOf.TryGetValue(target, out OpponentSeatView seat))
+            return "FAIL P" + target + " 의 좌석이 없다";
+
+        bool shown = (bool)typeof(OpponentSeatView).GetField(SeatChapchuField, Private).GetValue(seat);
+        return shown ? "OK P" + me + " 화면: P" + target + " 좌석 찹츄 표시" : "WAIT P" + me + " 화면: P" + target + " 좌석 찹츄 표시 없음";
+    }
+
+    private static string ChapchuStateOf(MyPanelPresenter panel)
+    {
+        MethodInfo info = typeof(MyPanelPresenter).GetMethod(ChapchuStateMethod, Private);
+        if (info == null)
+            throw new MissingMethodException(nameof(MyPanelPresenter), ChapchuStateMethod + " — 이름이 바뀌었으면 MultiTest.cs 의 표를 고친다");
+
+        return info.Invoke(panel, null).ToString();
     }
 
     // ── 한 클라이언트 UI 흐름: 타이틀 → 로비 → 방 → 나가기 ──

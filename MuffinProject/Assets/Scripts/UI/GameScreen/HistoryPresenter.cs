@@ -22,6 +22,7 @@ namespace Chapchu.UI.GameScreen
         private const string DrawText = "카드 1장 뽑기";
         private const string PlayFormat = "{0} → {1}";
         private const string HpText = "HP";
+        private const string ChapchuText = "찹츄!";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -120,6 +121,9 @@ namespace Chapchu.UI.GameScreen
 
             Add(new HistoryEntry { Actor = actorNumber, Text = HpText, Value = value, Icon = HistoryIcon.Card });
         }
+
+        /// <summary>찹츄 선언 — 왕관 아이콘 한 줄. 해제는 적지 않는다.</summary>
+        public void ShowChapchuDeclared(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = ChapchuText, Icon = HistoryIcon.Crown });
 
         private void Add(HistoryEntry entry)
         {

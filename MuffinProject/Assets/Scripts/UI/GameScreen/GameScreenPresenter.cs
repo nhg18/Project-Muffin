@@ -55,6 +55,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
             GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
+            GameEvents.OnChapchuChanged += HandleChapchuChanged;
         }
 
         private void OnDisable()
@@ -72,6 +73,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
             GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
+            GameEvents.OnChapchuChanged -= HandleChapchuChanged;
 
             if (_playing != null)
             {
@@ -242,6 +244,24 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 discardPile.Show(cardIds, discardCount);
+                return null;
+            });
+        }
+
+        // 찹츄 선언 · 해제 — 내 패널(버튼 「찹츄 완료」) 또는 그 사람 좌석, 턴 띠 칩, 기록. 선언 연출(전원 화면 1.5초, 10-ui.md 7절)은 아직 없다.
+        private void HandleChapchuChanged(int actorNumber, bool isChapchu)
+        {
+            bool isMe = IsMe(actorNumber);
+
+            Enqueue(() =>
+            {
+                if (isMe)
+                    myPanel.ShowChapchu(isChapchu);
+                else
+                    seats.ShowChapchu(actorNumber, isChapchu);
+                turnStrip.ShowChapchu(actorNumber, isChapchu);
+                if (isChapchu)
+                    history.ShowChapchuDeclared(actorNumber);
                 return null;
             });
         }

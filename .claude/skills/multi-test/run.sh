@@ -6,6 +6,7 @@
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 · 방 복귀
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
+#   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 표시 → 찹츄 승리 → 방 복귀
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -474,13 +475,66 @@ compare_screens() {
     done
 }
 
+# 찹츄 버튼 (기능 8 A): 모두 뽑기만 해서 손패 10장을 만들고, 내 턴에 활성이 된 버튼을 눌러 선언 → 두 화면의 표시 → 다음 자기 턴에 찹츄 승리 → 방 복귀.
+# 선언 대기(5초)가 아직 없어 선언한 턴은 20초 뒤에 넘어간다.
+run_chapchu() {
+    local clients="${1:-2}" project other out ended=0 declared="" actor line first=""
+    enter_game "$clients" || return
+
+    log "▶ 뽑기만 — 손패 10장 · 내 턴이면 찹츄 버튼"
+    for _ in $(seq 1 $((clients * 150))); do
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ChapchuStep)
+            case "$out" in
+                OK*"찹츄 버튼 누름"*)
+                    log "  $(name_of "$project"): $out"
+                    actor=$(printf '%s' "$out" | sed -E 's/^OK P([0-9]+).*/\1/')
+                    for other in "${EDITORS[@]}"; do
+                        until_ok "$other" ChapchuExpect "$actor" || return
+                    done
+                    if [ -z "$declared" ] && [ -n "${SHOT_DIR:-}" ]; then
+                        mkdir -p "$SHOT_DIR"
+                        for other in "${EDITORS[@]}"; do
+                            log "  $(name_of "$other"): $(call "$other" Shot "$SHOT_DIR/chapchu_$(name_of "$other").png")"
+                        done
+                        sleep 2
+                    fi
+                    declared="$declared $actor"
+                    break ;;
+                OK*)   log "  $(name_of "$project"): $out"; sleep 2; break ;;
+                FAIL*) fail "$(name_of "$project"): $out"; return ;;
+                *"게임 끝"*) ended=1 ;;
+            esac
+        done
+        [ $ended -eq 1 ] && break
+        sleep 1
+    done
+    [ -n "$declared" ] || { fail "찹츄 버튼이 활성이 되지 않았다"; return; }
+    [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
+
+    log "▶ 판정 — 선언한 사람:$declared"
+    for project in "${EDITORS[@]}"; do
+        line=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+        log "  $(name_of "$project"): 「${line:-없음}」 · 찹츄 선언 줄 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 찹츄 선언')개 · 선언 거절(코드 11 · 12) $(console_lines "$project" | grep -cE '내 요청 거절 — 코드 (11|12)')번"
+        printf '%s' "$line" | grep -q 'Chapchu' || fail "$(name_of "$project") 찹츄 승리로 끝나지 않았다"
+        console_lines "$project" | grep -qE '내 요청 거절 — 코드 (11|12)' && fail "$(name_of "$project") 비활성 버튼이 선언 요청을 보냈다"
+        if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
+    done
+    wait_scene RoomScene && log "  결과 표시 뒤 전원 방으로 돌아옴"
+    sleep 2
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;
     solo)  shift; run_solo "$@" ;;
-    *)     sed -n '2,9p' "$0"; exit 2 ;;
+    chapchu) shift; run_chapchu "$@" ;;
+    *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 
 if [ $FAILED -eq 0 ]; then

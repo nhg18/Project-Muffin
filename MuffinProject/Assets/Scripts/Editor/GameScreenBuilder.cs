@@ -116,7 +116,7 @@ namespace Chapchu.EditorTools
             FeedView feed = BuildFeed(safeArea);
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
             ChapchuButtonView chapchu = BuildChapchuButton(safeArea);
-            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu));
+            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu), ("server", TableBuilder.FindServer(nameof(MyPanelPresenter))));
             RectTransform dropZone = BuildDropZone(safeArea);
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
@@ -510,7 +510,7 @@ namespace Chapchu.EditorTools
             over.gameObject.SetActive(false);
 
             RectTransform readyTag = BuildChapchuTag(content, "ReadyTag", "지금 외치기!", false);
-            RectTransform doneTag = BuildChapchuTag(content, "DoneTag", "내 턴까지 10장 지키기", true);
+            RectTransform doneTag = BuildChapchuTag(content, "DoneTag", "찹츄 완료", true);
             readyTag.gameObject.SetActive(false);
             doneTag.gameObject.SetActive(false);
 

@@ -102,6 +102,9 @@ namespace Chapchu.UI.GameScreen
 
                 if (player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                     seat.SetHandCount(handCountValue);
+
+                if (player.CustomProperties.TryGetValue(PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue)
+                    seat.SetChapchu(chapchuValue);
             }
 
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
@@ -143,6 +146,13 @@ namespace Chapchu.UI.GameScreen
 
             seat.SetHandCount(handCount);
             yield return new WaitForSeconds(dealInterval);
+        }
+
+        /// <summary>상대의 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 띠 · 말풍선. 해제되면 바로 사라진다 (10-ui.md 7절).</summary>
+        public void ShowChapchu(int actorNumber, bool isChapchu)
+        {
+            if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                seat.SetChapchu(isChapchu);
         }
 
         /// <summary>턴 주인의 좌석에만 노란 머리 띠 · 발밑 타원. 내 턴이면 모두 끈다.</summary>

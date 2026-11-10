@@ -508,7 +508,7 @@ namespace Chapchu.EditorTools
             return tmp;
         }
 
-        private static PunGameServer FindServer(string owner)
+        internal static PunGameServer FindServer(string owner)
         {
             var server = Object.FindFirstObjectByType<PunGameServer>();
             if (server == null)

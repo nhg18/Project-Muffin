@@ -13,6 +13,7 @@ bash .claude/skills/multi-test/run.sh ui                          # 한 클라�
 bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메인 + 클론 — 2~3분 (클론을 새로 열면 더)
 bash .claude/skills/multi-test/run.sh full [클라이언트=2] [HP=20]   # 한 판 끝까지 — 체력을 낮춰 시작 → 사망 · 게임 종료 · 방 복귀
 bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
+bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 두 화면 표시 → 찹츄 승리 → 방 복귀 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 턴이 끝난 뒤 에디터마다 게임 뷰 PNG 를 찍는다 — 화면 배치 눈 확인용 (MultiTest.Shot)
 ```
 
@@ -27,6 +28,7 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 턴이 �
 | 타이틀 · 로비 · 방 · 팝업 UI | `ui` |
 | 기능 하나를 마칠 때 (`development-plan.md` "끝났다는 기준" 은 4클론) | `multi 4` + 그 기능의 기준을 콘솔로 확인 |
 | 사망 · 승리 · 게임 종료 · 방 이동 | `full 2` (기능을 마칠 때 `full 4`) |
+| 찹츄 버튼 · 찹츄 표시 (내 패널 · 좌석 · 턴 띠) | `chapchu 2` |
 | 봇 (`Game/Bots` · `BotRoster` · 방의 봇 추가 · 제거) | `rules` (Bot 시나리오) → `solo` |
 
 평소엔 2클라이언트, 기능을 마칠 때만 4클라이언트 (에디터 4개는 무겁다).

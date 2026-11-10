@@ -16,7 +16,7 @@ namespace Chapchu.UI.GameScreen
 
     /// <summary>
     /// 우하단 찹츄 버튼 = 외치는 말풍선 (10-ui.md 2-1 HUD v2 「찹츄 버튼」). 비활성: 회색 「찹츄!」 + 점 10개(손패 수). 10장: 분홍 · 흰 글자 잉크 외곽선 · 「지금 외치기!」 · 흔들림.
-    /// 선언 뒤: 분홍 · 「내 턴까지 10장 지키기」. 값을 받아 표시하고 탭을 이벤트로만 알린다.
+    /// 선언 뒤: 분홍 · 「찹츄 완료」. 값을 받아 표시하고 탭을 이벤트로만 알린다.
     /// </summary>
     public class ChapchuButtonView : MonoBehaviour
     {
@@ -55,7 +55,7 @@ namespace Chapchu.UI.GameScreen
 
         private Tween _wobble;
 
-        /// <summary>찹츄 버튼을 눌렀다. 누를 수 있는지는 서버가 거절로 알려준다.</summary>
+        /// <summary>찹츄 버튼을 눌렀다 — 비활성 모양일 때도 알린다 (안내 토스트, 10-ui.md 「찹츄 버튼 상태」). 요청할지 안내할지는 프레젠터가 정한다.</summary>
         public event Action ChapchuClicked;
 
         private void Awake()
@@ -89,7 +89,7 @@ namespace Chapchu.UI.GameScreen
             label.outlineColor = readyShadow;
             shadow.color = shout ? readyShadow : unavailableShadow;
             shadow.gameObject.SetActive(state != ChapchuButtonState.Declared);
-            button.interactable = state == ChapchuButtonState.Ready;
+            button.interactable = state != ChapchuButtonState.Declared; // 비활성 모양도 탭은 받는다 — 안내 토스트
 
             pipsRow.SetActive(!shout);
             readyTag.SetActive(state == ChapchuButtonState.Ready);
