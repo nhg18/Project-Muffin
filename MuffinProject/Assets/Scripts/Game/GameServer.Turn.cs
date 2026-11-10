@@ -6,7 +6,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (03-turn.md 2절).
-        private const double TurnTimeLimit = 20;
+        private const double TurnTimeLimit = 30;
 
         private double _turnDeadline;
         private bool _mainActionUsed;     // 이번 턴에 메인 행동을 했다 — 체인 처리 · 후처리 연출이 끝날 때까지 (03-turn.md 3 · 4절)

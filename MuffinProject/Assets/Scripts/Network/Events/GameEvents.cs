@@ -46,6 +46,7 @@ namespace Chapchu.Network.Events
         public static event Action<int> OnMyTrapRemoved;                     // cardInstanceId — 내 함정 칸에서 빠짐 (손패로 반환 · 빼앗김)
         public static event Action<int[], int[]> OnMyCardsGained;            // cardInstanceIds, cardIds — 내 손패로 들어옴 (훔침 · 교환 · 함정 반환)
         public static event Action<int[]> OnMyCardsLost;                     // cardInstanceIds — 내 손패에서 나감 (훔쳐짐 · 교환)
+        public static event Action<int[]> OnMyCountersUsable;                // cardInstanceIds — 지금 열리는 반응 시간에 낼 수 있는 내 카운터 (OnReactionStarted 바로 뒤, 없으면 안 온다)
         public static event Action<int[], int[], int[], int[]> OnMySync;     // 손패 인스턴스 ID · 카드 ID, 함정 인스턴스 ID · 카드 ID — RequestMySync 의 답 (지금 내 비공개 카드 전부)
 
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);
@@ -79,6 +80,7 @@ namespace Chapchu.Network.Events
         public static void RaiseMyTrapRemoved(int cardInstanceId) => OnMyTrapRemoved?.Invoke(cardInstanceId);
         public static void RaiseMyCardsGained(int[] cardInstanceIds, int[] cardIds) => OnMyCardsGained?.Invoke(cardInstanceIds, cardIds);
         public static void RaiseMyCardsLost(int[] cardInstanceIds) => OnMyCardsLost?.Invoke(cardInstanceIds);
+        public static void RaiseMyCountersUsable(int[] cardInstanceIds) => OnMyCountersUsable?.Invoke(cardInstanceIds);
         public static void RaiseMySync(int[] handIds, int[] handCardIds, int[] trapIds, int[] trapCardIds) => OnMySync?.Invoke(handIds, handCardIds, trapIds, trapCardIds);
         public static void RaiseMyCardDrawn(int cardInstanceId, int cardId) => OnMyCardDrawn?.Invoke(cardInstanceId, cardId);
         public static void RaiseMyRequestRejected(int code) => OnMyRequestRejected?.Invoke(code);

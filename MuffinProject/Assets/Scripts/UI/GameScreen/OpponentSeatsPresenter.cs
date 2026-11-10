@@ -26,6 +26,8 @@ namespace Chapchu.UI.GameScreen
 
         [Tooltip("좌석 인덱스 1 · 2 · 3 순서 (02-player.md 3절). 빈 좌석은 숨긴다.")]
         [SerializeField] private OpponentSeatView[] seats = new OpponentSeatView[SeatCount];
+        [Tooltip("좌석마다의 함정 칸 3개 (3D 층) — seats 와 같은 순서. 빈 좌석의 칸은 숨긴다.")]
+        [SerializeField] private TrapSlotsView[] trapSlots = new TrapSlotsView[SeatCount];
         [Tooltip("대상 선택 안내 바 — 「카드 · 누구에게 쓸까요?」 + 남은 초 + 취소.")]
         [SerializeField] private TargetAskView targetAsk;
         [Tooltip("상대가 뽑은 뒷면을 꺼낸 뒤 다음 일로 넘어가기까지 초. 내 손패(HandPresenter.dealInterval)와 같게 — 첫 분배 때 한 장씩 날아온다.")]
@@ -34,6 +36,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float targetSelectTimeout = 5f;
 
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
+        private readonly Dictionary<int, TrapSlotsView> _trapsOf = new Dictionary<int, TrapSlotsView>(); // actorNumber → 함정 칸
         private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
         private bool _selecting;
         private bool _selectCancelled;
@@ -45,6 +48,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (seats == null || seats.Length != SeatCount || seats.Any(seat => seat == null))
                 Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(seats)} 는 {SeatCount}개가 모두 연결돼야 합니다.", this);
+            if (trapSlots == null || trapSlots.Length != SeatCount || trapSlots.Any(slots => slots == null))
+                Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(trapSlots)} 는 {SeatCount}개가 모두 연결돼야 합니다.", this);
             if (targetAsk == null)
                 Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(targetAsk)} 참조가 비어 있습니다.", this);
         }
@@ -70,6 +75,8 @@ namespace Chapchu.UI.GameScreen
             targetAsk.Hide();
             foreach (OpponentSeatView seat in seats)
                 seat.gameObject.SetActive(false);
+            foreach (TrapSlotsView slots in trapSlots)
+                slots.gameObject.SetActive(false);
 
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때 — 좌석 없음
 
@@ -88,6 +95,10 @@ namespace Chapchu.UI.GameScreen
                 int seatIndex = seatIndices[i];
                 OpponentSeatView seat = seats[seatIndex - 1];
                 _seatOf[opponents[i]] = seat;
+                TrapSlotsView traps = trapSlots[seatIndex - 1];
+                _trapsOf[opponents[i]] = traps;
+                traps.gameObject.SetActive(true);
+                traps.SetCount(0);
 
                 seat.gameObject.SetActive(true);
                 seat.SetNickname(PlayerLook.NameOf(player));
@@ -105,6 +116,9 @@ namespace Chapchu.UI.GameScreen
 
                 if (player.CustomProperties.TryGetValue(PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue)
                     seat.SetChapchu(chapchuValue);
+
+                if (player.CustomProperties.TryGetValue(PlayerProps.TrapCount, out object trapCount) && trapCount is int trapCountValue)
+                    traps.SetCount(trapCountValue);
             }
 
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
@@ -137,6 +151,28 @@ namespace Chapchu.UI.GameScreen
             if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
                 seat.SetHandCount(handCount);
         }
+
+        /// <summary>상대 좌석의 손 자리(화면 좌표) — 그 사람이 낸 카드가 출발하고, 손패로 돌아가는 카드가 닿는다. 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetHandScreenPoint(int actorNumber, out Vector2 screenPoint)
+        {
+            screenPoint = default;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            screenPoint = seat.HandScreenPoint;
+            return true;
+        }
+
+        /// <summary>상대의 함정 칸 수 (OnTrapSet 등의 trapCount) — 설치된 만큼 뒷면. 종류는 보이지 않는다.</summary>
+        public void ShowTrapCount(int actorNumber, int trapCount)
+        {
+            if (_trapsOf.TryGetValue(actorNumber, out TrapSlotsView traps))
+                traps.SetCount(trapCount);
+        }
+
+        /// <summary>상대의 마지막으로 채워진 함정 칸 — 발동한 함정 카드가 나오는 자리. 좌석이 없으면 null.</summary>
+        public Transform GetTrapSlot(int actorNumber)
+            => _trapsOf.TryGetValue(actorNumber, out TrapSlotsView traps) ? traps.SlotAnchor(traps.Count - 1) : null;
 
         /// <summary>상대가 뽑았다 (OnCardDrawn) — 뒷면이 덱에서 날아온다. 연출 큐가 기다릴 코루틴.</summary>
         public IEnumerator DrawRoutine(int actorNumber, int handCount)
@@ -234,6 +270,11 @@ namespace Chapchu.UI.GameScreen
 
             _seatOf.Remove(player.ActorNumber);
             seat.gameObject.SetActive(false);
+            if (_trapsOf.TryGetValue(player.ActorNumber, out TrapSlotsView traps))
+            {
+                _trapsOf.Remove(player.ActorNumber);
+                traps.gameObject.SetActive(false);
+            }
             Debug.Log($"[{nameof(OpponentSeatsPresenter)}] P{player.ActorNumber} 퇴장 — 좌석을 숨김 (02-player.md 6절)", this);
         }
     }

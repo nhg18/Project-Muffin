@@ -72,6 +72,16 @@ namespace Chapchu.EditorTools
         private static readonly Vector3 PlaySpotPosition = CanvasToWorld(960f, 620f);
         private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1110f, 620f);
 
+        // 3 단계 확대 · 홀드 자리 — 프로토타입 v2 `TIME.big 1.85` · `BIGY 262` × 2: 카드 가운데가 캔버스 (960, 524), 1.85배 (10-ui.md 2-1 「카드 연출 자리」).
+        // 내 손패(호버 z −0.5)보다 카메라 쪽(z −1.5)에 두고, 가까워진 만큼 위치 · 배율을 줄여 화면에서는 그 자리 · 그 크기로 보이게 한다.
+        private const float ShowCenterYPx = 524f;
+        private const float ShowScale = 1.85f;
+        private const float ShowZ = -1.5f;
+        // 3 단계 동안 3D 층을 덮는 어두운 판 — 손패(호버 포함)보다 앞, 크게 둔 카드보다 뒤. 손패 층이라 테이블 · 덱 위에도 그려진다.
+        private const float DimZ = -0.8f;
+        private static readonly Vector2 DimSize = new Vector2(80f, 40f);
+        private const string DimShaderName = "Sprites/Default"; // 색 · 알파만 있는 반투명 Unlit
+
         // 버림 더미 (10-ui.md 2-1 「버림 더미」, 시안 DISC) — 카드 0.6배. 받침 흰 카드 2장(아래부터: 캔버스 px 오프셋 · 반시계 각도) 위에 맨 위 카드 −3°.
         private const float DiscardCardScale = 0.6f;
         private const float DiscardTopAngle = -3f;
@@ -82,6 +92,28 @@ namespace Chapchu.EditorTools
         private const float BlankBorderPx = 4f, BlankRadiusPx = 14f;
 
         private static readonly Color Ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
+
+        // 함정 칸 (10-ui.md 2-1 「함정 칸」) — 프로토타입 v2 `MYTRAP` · `GEO.trap` · `.slot` × 2, 테이블 면 위 좌표. 칸 가운데 (캔버스 px) · 칸 사이 간격 · 폭 · 눕힌 방향(Z 각도).
+        // 칸은 카드 비율로 그린다 (폭에 맞춤) — 시안의 칸(52 × 72 · 40 × 56)보다 높이가 조금 길다.
+        private static readonly (Vector2 first, Vector2 step, float widthPx, float angle) MyTrapSlots = (new Vector2(900f, 840f), new Vector2(60f, 0f), 52f, 0f);
+        private static readonly (Vector2 first, Vector2 step, float widthPx, float angle)[] SeatTrapSlots =
+        {
+            (new Vector2(472f, 564f), new Vector2(0f, 52f), 40f, -90f),  // 좌석 1 (왼쪽) — 옆으로 눕힘
+            (new Vector2(914f, 424f), new Vector2(48f, 0f), 40f, 0f),    // 좌석 2 (정면)
+            (new Vector2(1448f, 564f), new Vector2(0f, 52f), 40f, 90f),  // 좌석 3 (오른쪽) — 옆으로 눕힘
+        };
+        private const int TrapSlotCount = 3;
+        private const float TableAxisYPx = 620f; // 테이블 면이 도는 축 (시안 y 310)
+        private const float TrapSlotZ = -0.01f;   // 방석보다 조금 앞
+        private const string TrapSlotTexturePath = "Assets/Sprites/Cards/TrapSlotEmpty.png"; // 빈 칸 — 흰 45% · 잉크 30% 테 (시안의 점선은 실선으로)
+        private static readonly Color TrapSlotFill = new Color(1f, 1f, 1f, 0.45f);
+        private static readonly Color TrapSlotEdge = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
+
+        // 낼 수 있는 카운터의 초록 링 (10-ui.md 2-1 「손패 입력 값」) — 카드보다 사방 12px 큰 초록 판을 카드 뒤에 깐다. 흐린 빛 · 나머지 카드 어둡게는 아직 없다.
+        private const string CounterGlowTexturePath = "Assets/Sprites/Cards/CardGlowCounter.png";
+        private const float GlowRingPx = 12f;
+        private static readonly Color CounterGlowFill = new Color32(0x5E, 0xF0, 0x9C, 0xFF);
+        private static readonly Color CounterGlowEdge = new Color32(0x2F, 0xBF, 0x6A, 0xFF);
 
         /// <summary>캔버스 좌표(왼쪽 위 원점 · px) → 테이블 면 월드 좌표.</summary>
         public static Vector3 CanvasToWorld(float x, float y) => new Vector3((x - 960f) * UnitsPerPixel, (540f - y) * UnitsPerPixel, 0f);
@@ -302,14 +334,219 @@ namespace Chapchu.EditorTools
                 ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
                 ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)));
 
-            Transform playSpot = Spot("PlaySpot", table, PlaySpotPosition);
-
             // 버려지는 내 카드는 버림 더미의 맨 위 카드 자리로 날아가 닿는다
             var presenter = root.AddComponent<HandPresenter>();
             GameScreenBuilder.Wire(presenter,
                 ("deck", gameDeck), ("drawOrigin", deck.transform), ("server", FindServer(nameof(HandPresenter))), ("dropZone", dropZone), ("seats", seats),
-                ("playSpot", playSpot), ("discardSpot", discardPile.TopAnchor));
+                ("discardSpot", discardPile.TopAnchor));
             return presenter;
+        }
+
+        /// <summary>
+        /// 체인 카드 — 내는 자리(1 단계) · 크게 두는 자리(3 단계 · 홀드) · 어둡게 덮는 판 (10-ui.md 2-1 「카드 연출 자리」 · 5-1).
+        /// 열린 씬에 이것만 더할 때도 쓴다 — 이미 있으면 덮어쓰지 않고 null.
+        /// </summary>
+        public static ChainCardsPresenter BuildChainCards(Transform table, DiscardPileView discardPile, OpponentSeatsPresenter seats, CardOwnerTagView ownerTag, DeckData gameDeck)
+        {
+            const string name = "ChainCards";
+            if (table.Find(name) != null)
+            {
+                Debug.LogError($"[{nameof(TableBuilder)}] {TableName} 에 {name} 가 이미 있다. 덮어쓰지 않는다.");
+                return null;
+            }
+
+            Transform root = Child(name, table, Vector3.zero, Quaternion.identity);
+            Transform playSpot = Spot("PlaySpot", root, PlaySpotPosition);
+
+            // 카드 기준점이 아래 가운데라, 자리 = 카드 가운데에서 (카드 높이 × 배율 ÷ 2) 아래. 카메라에 가까워진 비율 k 만큼 위치 · 배율을 줄인다.
+            float k = (CameraDistance + ShowZ) / CameraDistance;
+            Vector3 bottom = CanvasToWorld(960f, ShowCenterYPx + CardSize.y / UnitsPerPixel * ShowScale / 2f) * k;
+            Transform showSpot = Spot("ShowSpot", root, new Vector3(bottom.x, bottom.y, ShowZ));
+            showSpot.localScale = Vector3.one * (ShowScale * k);
+
+            MeshRenderer dimmer = Quad("Dimmer", root, EnsureDimMaterial(), DimSize, new Vector3(0f, 0f, DimZ), Quaternion.identity);
+            SetHandLayer(dimmer.gameObject);
+            dimmer.gameObject.SetActive(false);
+
+            var presenter = root.gameObject.AddComponent<ChainCardsPresenter>();
+            GameScreenBuilder.Wire(presenter,
+                ("deck", gameDeck),
+                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
+                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer),
+                ("playSpot", playSpot), ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
+            return presenter;
+        }
+
+        /// <summary>
+        /// 함정 칸 — 내 칸 3 + 좌석마다 3, 테이블 면에 누움 (10-ui.md 2-1 「함정 칸」). 좌석의 칸은 OpponentSeatsPresenter 에 잇고, 내 칸의 프레젠터를 돌려준다.
+        /// 열린 씬에 이것만 더할 때도 쓴다 — 이미 있으면 덮어쓰지 않고 null.
+        /// </summary>
+        public static MyTrapsPresenter BuildTrapSlots(Transform table, OpponentSeatsPresenter seats, Transform previewSpot, DeckData gameDeck)
+        {
+            const string name = "TrapSlots";
+            if (table.Find(name) != null)
+            {
+                Debug.LogError($"[{nameof(TableBuilder)}] {TableName} 에 {name} 가 이미 있다. 덮어쓰지 않는다.");
+                return null;
+            }
+
+            Transform root = Child(name, table, Vector3.zero, Quaternion.identity);
+
+            var seatSlots = new Object[SeatTrapSlots.Length];
+            for (int i = 0; i < SeatTrapSlots.Length; i++)
+                seatSlots[i] = BuildTrapSlotRow($"Seat{i + 1}", root, SeatTrapSlots[i], false);
+            GameScreenBuilder.WireArray(seats, "trapSlots", seatSlots);
+
+            TrapSlotsView mine = BuildTrapSlotRow("Mine", root, MyTrapSlots, true);
+            var presenter = mine.gameObject.AddComponent<MyTrapsPresenter>();
+            GameScreenBuilder.Wire(presenter,
+                ("deck", gameDeck), ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)), ("previewSpot", previewSpot));
+            return presenter;
+        }
+
+        // 칸 3개 한 줄. 칸 루트 = 카드 기준점(아래 가운데) · 카드 배율 — 카드가 이 자리 · 회전 · 배율로 들어가고 나온다. tappable 이면 콜라이더 (내 칸).
+        private static TrapSlotsView BuildTrapSlotRow(string name, Transform parent, (Vector2 first, Vector2 step, float widthPx, float angle) row, bool tappable)
+        {
+            Transform rowRoot = Child(name, parent, Vector3.zero, Quaternion.identity);
+            float scale = row.widthPx * UnitsPerPixel / CardSize.x;
+            Quaternion rotation = TableRotation * Quaternion.Euler(0f, 0f, row.angle);
+
+            Material emptyMaterial = EnsureAlphaMaterial("TrapSlotEmpty", EnsureRoundTexture(TrapSlotTexturePath, CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge));
+            Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(CardSize));
+            Material back = EnsureMaterial("CardBack", BackTexturePath);
+
+            var slots = new Object[TrapSlotCount];
+            for (int i = 0; i < TrapSlotCount; i++)
+            {
+                Vector2 center = row.first + row.step * i;
+                Vector3 centerWorld = CanvasToWorld(center.x, TableAxisYPx) + TableRotation * new Vector3(0f, (TableAxisYPx - center.y) * UnitsPerPixel, TrapSlotZ);
+                Vector3 bottom = centerWorld - rotation * new Vector3(0f, CardSize.y * scale / 2f, 0f);
+
+                Transform slot = Child($"Slot{i}", rowRoot, bottom, rotation);
+                slot.localScale = Vector3.one * scale;
+                var middle = new Vector3(0f, CardSize.y / 2f, 0f);
+
+                GameObject empty = Quad("Empty", slot, emptyMaterial, CardSize, middle, Quaternion.identity).gameObject;
+
+                Transform filled = Child("Filled", slot, middle + new Vector3(0f, 0f, -LayerGap / scale), Quaternion.identity);
+                Quad("Base", filled, blank, CardSize, Vector3.zero, Quaternion.identity);
+                Quad("Back", filled, back, CardSize - Vector2.one * (8f * UnitsPerPixel / scale), new Vector3(0f, 0f, -LayerGap / scale), Quaternion.identity);
+                filled.gameObject.SetActive(false);
+
+                if (tappable)
+                {
+                    var collider = slot.gameObject.AddComponent<BoxCollider>();
+                    collider.size = new Vector3(CardSize.x, CardSize.y, CardThickness);
+                    collider.center = middle;
+                }
+
+                var view = slot.gameObject.AddComponent<TrapSlotView>();
+                GameScreenBuilder.Wire(view, ("empty", empty), ("filled", filled.gameObject));
+                slots[i] = view;
+            }
+
+            var rowView = rowRoot.gameObject.AddComponent<TrapSlotsView>();
+            GameScreenBuilder.WireArray(rowView, "slots", slots);
+            return rowView;
+        }
+
+        /// <summary>카운터 카드 프리팹에 「낼 수 있다」 초록 링을 붙인다 (없을 때만) — 카드 뒤에 사방 12px 큰 초록 판, 꺼 둔다. 이미 있는 프리팹을 고칠 때도 쓴다.</summary>
+        public static void AddCounterGlow(GameObject cardRoot)
+        {
+            if (cardRoot.transform.Find("Glow") != null)
+                return;
+
+            Vector2 size = CardSize + Vector2.one * (GlowRingPx * 2f * UnitsPerPixel);
+            Material material = EnsureMaterial("CardGlowCounter", EnsureRoundTexture(CounterGlowTexturePath, size, 1f, 4f, BlankRadiusPx + GlowRingPx, CounterGlowFill, CounterGlowEdge));
+            MeshRenderer glow = Quad("Glow", cardRoot.transform, material, size, new Vector3(0f, CardSize.y / 2f, LayerGap), Quaternion.identity);
+            SetHandLayer(glow.gameObject);
+            glow.gameObject.SetActive(false);
+            GameScreenBuilder.Wire(cardRoot.GetComponent<CardView>(), ("glow", glow.gameObject));
+        }
+
+        /// <summary>이미 만든 카운터 카드 프리팹에 초록 링을 붙여 저장한다 (GUID 유지).</summary>
+        [MenuItem("Chapchu/Game Screen/Add Counter Glow To Card Prefab")]
+        public static void AddCounterGlowToPrefab()
+        {
+            string path = $"{PrefabFolder}/Card_Counter.prefab";
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            AddCounterGlow(root);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        // 반투명 판 머티리얼 (알파 블렌드) — 빈 함정 칸. 있으면 덮어쓰지 않는다.
+        private static Material EnsureAlphaMaterial(string name, string texturePath)
+        {
+            string path = $"{MaterialFolder}/{name}.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null)
+                return existing;
+
+            var material = new Material(Shader.Find(DimShaderName)) { mainTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath) };
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        // 둥근 사각형 그림 — 안쪽 fill, 테두리 edge. 있으면 덮어쓰지 않는다. solidAlpha 가 1 이면 안쪽 알파를 1 로(컷아웃 셰이더용), 0 이면 색의 알파 그대로(알파 블렌드용). 크기 · 테 · 반지름은 유닛 · 캔버스 px.
+        private static string EnsureRoundTexture(string path, Vector2 size, float solidAlpha, float borderPx, float radiusPx, Color fill, Color edge)
+        {
+            if (File.Exists(path))
+                return path;
+
+            float scale = BlankTexturePixelsPerPx / UnitsPerPixel;
+            int width = Mathf.RoundToInt(size.x * scale), height = Mathf.RoundToInt(size.y * scale);
+            float radius = radiusPx * BlankTexturePixelsPerPx, border = borderPx * BlankTexturePixelsPerPx;
+            var half = new Vector2(width / 2f, height / 2f);
+
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var d = new Vector2(Mathf.Abs(x + 0.5f - half.x), Mathf.Abs(y + 0.5f - half.y)) - half + Vector2.one * radius;
+                    float distance = Vector2.Max(d, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(d.x, d.y), 0f) - radius;
+
+                    Color color = Color.Lerp(fill, edge, Mathf.Clamp01(distance + border + 0.5f));
+                    if (distance > 0f)
+                        color.a = 0f;
+                    else if (solidAlpha > 0f)
+                        color.a = solidAlpha;
+                    pixels[y * width + x] = color;
+                }
+            }
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels(pixels);
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.SaveAndReimport();
+            return path;
+        }
+
+        // 어두운 판 머티리얼 — 잉크 색 · 알파 0 에서 시작 (ChainCardsPresenter 가 알파를 올린다). 있으면 덮어쓰지 않는다.
+        private static Material EnsureDimMaterial()
+        {
+            string path = $"{MaterialFolder}/TableDim.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null)
+                return existing;
+
+            Shader shader = Shader.Find(DimShaderName);
+            if (shader == null)
+                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {DimShaderName}");
+
+            var material = new Material(shader) { color = new Color(Ink.r, Ink.g, Ink.b, 0f) };
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         /// <summary>카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지 — 씬 · HandView 참조가 그대로). 사람이 프리팹을 손봤다면 지워진다.</summary>
@@ -371,6 +608,8 @@ namespace Chapchu.EditorTools
             var view = root.AddComponent<CardView>();
             GameScreenBuilder.Wire(view, ("nameText", nameText), ("descriptionText", description), ("artRenderer", artRenderer));
             SetHandLayer(root);
+            if (name == "Card_Counter")
+                AddCounterGlow(root);
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);

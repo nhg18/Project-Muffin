@@ -101,6 +101,22 @@
         }
     }
 
+    /// <summary>
+    /// 지금 열리는 반응 시간에 Actor 가 낼 수 있는 손패의 카운터들 (04-card.md 7절의 반응 조건을 방장이 판정한 결과). ReactionStarted 바로 뒤에, 낼 수 있는 것이 있는 사람마다 온다.
+    /// 손패 내용이라 본인에게만 보낸다 (09-network.md 3절). 다음 ReactionStarted 가 오면 앞의 목록은 버린다.
+    /// </summary>
+    public sealed class CountersUsable : GameEvent
+    {
+        public int Actor { get; }
+        public int[] CardInstanceIds { get; }
+
+        public CountersUsable(int actor, int[] cardInstanceIds)
+        {
+            Actor = actor;
+            CardInstanceIds = cardInstanceIds;
+        }
+    }
+
     /// <summary>체인의 카드 하나를 처리했다 — 효과 적용 (04-card.md 9절, 연출 4 단계). 카드는 버림 더미로 갔고, 효과는 뒤따르는 일(HpChanged 등)로 온다. Targets 는 본인 무효화를 뺀 대상.</summary>
     public sealed class CardResolved : GameEvent
     {

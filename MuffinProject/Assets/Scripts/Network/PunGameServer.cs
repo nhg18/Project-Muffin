@@ -254,6 +254,10 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt, reaction.Deadline);
                         break;
 
+                    case CountersUsable usable:
+                        SendTo(usable.Actor, nameof(RPC_OnMyCountersUsable), usable.CardInstanceIds); // 손패 내용 — 본인만 (09 3절)
+                        break;
+
                     case CardResolved resolved:
                         Broadcast(nameof(RPC_OnCardResolved), resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
                         roomProps[RoomProps.DiscardCount] = resolved.DiscardCount;
@@ -533,6 +537,13 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseReactionStarted(opensAt, deadline);
+        }
+
+        [PunRPC]
+        private void RPC_OnMyCountersUsable(int seq, int[] cardInstanceIds, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseMyCountersUsable(cardInstanceIds);
         }
 
         [PunRPC]

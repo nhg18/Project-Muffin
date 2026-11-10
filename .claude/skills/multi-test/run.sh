@@ -275,8 +275,28 @@ wait_scene() {
     done
 }
 
+# 모든 화면의 함정 칸 · 손패 장수가 방장 값과 같은가 (MultiTest.TableUiExpect). 연출 중엔 잠깐 다를 수 있어 6번까지 다시 본다. SHOT_DIR 이 있으면 <이름>_<에디터>.png 도 찍는다.
+check_table_ui() {
+    local shot="$1" other out try
+    for other in "${EDITORS[@]}"; do
+        for try in 1 2 3 4 5 6; do
+            out=$(call "$other" TableUiExpect)
+            case "$out" in OK*) break ;; esac
+            sleep 2
+        done
+        case "$out" in
+            OK*) log "  $(name_of "$other"): $out" ;;
+            *)   fail "$(name_of "$other"): $out"; return 1 ;;
+        esac
+        if [ -n "${SHOT_DIR:-}" ]; then
+            mkdir -p "$SHOT_DIR"
+            log "  $(name_of "$other"): $(call "$other" Shot "$SHOT_DIR/${shot}_$(name_of "$other").png")"
+        fi
+    done
+}
+
 run_full() {
-    local clients="${1:-2}" hp="${2:-20}" project out ended=0 line first=""
+    local clients="${1:-2}" hp="${2:-20}" project out ended=0 line first="" trap_seen=""
     enter_game "$clients" || return
     until_ok "$MAIN" SetAllHp "$hp" || return
 
@@ -285,7 +305,22 @@ run_full() {
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ActIfMyTurn)
             case "$out" in
-                OK*)   log "  $(name_of "$project"): $out"; sleep 2; break ;;
+                OK*)   log "  $(name_of "$project"): $out"; sleep 2
+                       # 화면 경로로 함정을 처음 설치했으면 — 모든 화면의 함정 칸 수가 방장 값과 같은지 한 번 본다 (연출 중이면 잠깐 다를 수 있어 몇 번 다시 본다)
+                       if [ -z "$trap_seen" ] && [[ "$out" == *"함정 설치(화면)"* ]]; then
+                           trap_seen=1
+                           sleep 16   # 같이 낸 카드의 체인(연출 + 반응 10초 + 후처리)이 끝나 큰 카드가 내려간 뒤에 본다
+                           check_table_ui "trap" || return
+                           # 내 함정 칸을 누르면 그 카드가 크게 보이는가 (10-ui.md 4-1)
+                           out=$(call "$project" TrapPreview)
+                           case "$out" in
+                               OK*)   log "  $(name_of "$project"): $out"
+                                      if [ -n "${SHOT_DIR:-}" ]; then sleep 1; log "  $(call "$project" Shot "$SHOT_DIR/trap_preview_$(name_of "$project").png")"; fi ;;
+                               FAIL*) fail "$(name_of "$project"): $out"; return ;;
+                               *)     log "  $(name_of "$project"): $out" ;;
+                           esac
+                       fi
+                       break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return ;;
                 *"게임 끝"*) ended=1 ;;
             esac
@@ -373,6 +408,14 @@ run_multi() {
     done
     sleep 2
 
+    # SHOT_DIR 이 있으면 처음 나오는 카드의 3 단계(확대) · 반응 시간도 에디터마다 찍는다 (MultiTest.ArmCardShots)
+    if [ -n "${SHOT_DIR:-}" ]; then
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            log "  $(name_of "$project"): $(call "$project" ArmCardShots "$SHOT_DIR/$(name_of "$project")")"
+        done
+    fi
+
     log "▶ 턴 ${rounds}번 — 차례인 클라이언트가 행동"
     local done_rounds=0 acted probed=0
     for _ in $(seq 1 $((rounds * 10))); do
@@ -398,8 +441,13 @@ run_multi() {
         [ $acted -eq 0 ] && sleep 1
     done
     PROBED=$probed
-    # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 5 + 후처리 1.28초)가 모든 화면에 닿을 때까지
-    sleep 10
+    # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 10 + 후처리 1.28초)가 모든 화면에 닿을 때까지
+    sleep 15
+
+    log "▶ 화면의 함정 칸 · 손패 장수가 방장 값과 같은가"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" TableUiExpect || return
+    done
 
     log "▶ 내 카드 다시 받기 · 묵은 처리 번호 (09-network.md 5 · 10절)"
     for project in "${EDITORS[@]}"; do
@@ -476,7 +524,7 @@ compare_screens() {
 }
 
 # 찹츄 버튼 (기능 8 A): 모두 뽑기만 해서 손패 10장을 만들고, 내 턴에 활성이 된 버튼을 눌러 선언 → 두 화면의 표시 → 다음 자기 턴에 찹츄 승리 → 방 복귀.
-# 선언 대기(5초)가 아직 없어 선언한 턴은 20초 뒤에 넘어간다.
+# 선언 대기(5초)가 아직 없어 선언한 턴은 30초 뒤에 넘어간다.
 run_chapchu() {
     local clients="${1:-2}" project other out ended=0 declared="" actor line first=""
     enter_game "$clients" || return

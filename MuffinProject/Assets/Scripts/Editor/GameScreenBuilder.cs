@@ -59,6 +59,8 @@ namespace Chapchu.EditorTools
         private static readonly Color Fur3 = Hex(0xbea983);
         private static readonly Color HpBg = Hex(0xffe6e3);
         private static readonly Color Line = Hex(0xe7ded2);
+        // 3 단계에서 크게 둔 카드의 아래 가장자리 y (캔버스, 위에서) — 가운데 524 + 336 × 1.85 ÷ 2 (TableBuilder 의 ShowSpot 과 같은 값)
+        private const float ShownCardBottom = 835f;
         private static readonly Color Dim = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.42f);
         private static readonly Color ChapchuOffLabel = Hex(0xc4bab0);
         private static readonly Color ChapchuOffShadow = Hex(0xddd3c8);
@@ -126,6 +128,8 @@ namespace Chapchu.EditorTools
             OpponentSeatsPresenter seats = BuildOpponentSeats(center, deck);
             TargetAskView targetAsk = BuildTargetAsk(center, dimmer);
             Wire(seats, ("targetAsk", targetAsk));
+            CardOwnerTagView ownerTag = BuildCardOwnerTag(center);
+            ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
 
             // 서랍 · 팝업 — 가장 위
             RectTransform sheets = NewRect("Sheets", canvasRect);
@@ -135,6 +139,8 @@ namespace Chapchu.EditorTools
             BuildMenuSheet(sheets, menu);
 
             HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, dropZone, seats, gameDeck);
+            ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck);
+            MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
             EnsureEventSystem();
 
@@ -155,7 +161,8 @@ namespace Chapchu.EditorTools
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
-                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history));
+                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history),
+                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -789,6 +796,71 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        // 3 단계(확대) 동안 크게 보인 카드 아래의 주인 태그 (시안 .owner) — 카드 아래 가장자리에서 20 아래. 종류 색 작은 카드 + 「낸 사람 → 대상」
+        public static CardOwnerTagView BuildCardOwnerTag(RectTransform center)
+        {
+            RectTransform root = NewRect("CardOwnerTag", center);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(ShownCardBottom + 20f)), Vector2.zero);
+
+            RectTransform body = NewRect("Body", root);
+            Anchor(body, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(300f, 54f));
+            RoundBox(body, Ink, 5f, 16f, White);
+            HorizontalLayout(body, new RectOffset(20, 20, 6, 6), 10f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(body.gameObject);
+
+            RectTransform miniCard = BuildMiniCard(body, Act);
+            TMP_Text owner = NewText("OwnerText", body, "낸 사람 → 대상", 30f, Ink, true);
+
+            var view = root.gameObject.AddComponent<CardOwnerTagView>();
+            Wire(view, ("body", body.gameObject), ("ownerText", owner));
+            WireArray(view, "kindImages", new Object[] { miniCard.Find("Border").GetComponent<Image>(), miniCard.Find("Band").GetComponent<Image>() });
+            body.gameObject.SetActive(false);
+            return view;
+        }
+
+        // 반응 타이머 (시안 .rt2 × 2) — 크게 둔 카드의 아래 가장자리에서 40 위에 윗변: 알약(높이 60 · 테두리 5 · 반지름 20)에 시계 + 「반응」 + 막대 192 × 24 + 남은 초.
+        // 마감 뒤에는 시계 · 막대 · 초 대신 멈춤 아이콘 + 「처리하는 중」 (뷰가 바꾼다). 열리기 전 막대의 빗금 무늬는 아직 없다 — 빈 막대.
+        public static ReactionTimerPresenter BuildReactionTimer(RectTransform center)
+        {
+            RectTransform root = NewRect("ReactionTimer", center);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(ShownCardBottom - 40f)), Vector2.zero);
+
+            RectTransform body = NewRect("Body", root);
+            Anchor(body, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(400f, 60f));
+            RoundBox(body, Ink, 5f, 20f, White);
+            HorizontalLayout(body, new RectOffset(16, 22, 0, 0), 12f, TextAnchor.MiddleLeft, true, true);
+            body.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize; // 높이는 60 고정
+
+            Image clock = Icon("ClockIcon", body, Hud("icon_clock"), 34f, Ink);
+            Image pause = Icon("PauseIcon", body, Hud("icon_pause"), 34f, Ink);
+            foreach (Image icon in new[] { clock, pause })
+            {
+                LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
+                iconSize.preferredWidth = 34f;
+                iconSize.preferredHeight = 34f;
+            }
+
+            TMP_Text label = NewText("LabelText", body, "반응", 30f, Ink, true);
+
+            RectTransform bar = NewRect("Bar", body);
+            LayoutElement barSize = bar.gameObject.AddComponent<LayoutElement>();
+            barSize.preferredWidth = 192f;
+            barSize.preferredHeight = 24f;
+            Image track = RoundBox(bar, Ink, 4f, 12f, Hex(0xf1ece5));
+            Image barFill = RoundImage("Value", track.transform, Turn, 8f);
+            Stretch(barFill.rectTransform); // 오른쪽 앵커를 뷰가 남은 비율로 옮긴다
+
+            TMP_Text seconds = NewText("SecondsText", body, "10", 40f, Ink, true);
+            TMP_Text unit = NewText("UnitText", body, "초", 24f, Ink, true);
+
+            var view = root.gameObject.AddComponent<ReactionTimerView>();
+            Wire(view,
+                ("body", body.gameObject), ("border", body.Find("Border").GetComponent<Image>()), ("clockIcon", clock.gameObject), ("pauseIcon", pause.gameObject),
+                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject));
+            body.gameObject.SetActive(false);
+            return root.gameObject.AddComponent<ReactionTimerPresenter>();
+        }
+
         #endregion
 
         #region 서랍 · 팝업
@@ -1370,7 +1442,7 @@ namespace Chapchu.EditorTools
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             tmp.raycastTarget = false;
 
-            TMP_FontAsset font = bold ? _boldFont : _regularFont;
+            TMP_FontAsset font = bold ? BoldFont : RegularFont;
             if (font != null)
                 tmp.font = font;
             else if (bold)

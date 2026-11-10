@@ -24,6 +24,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text descriptionText;
         [Tooltip("그림 Quad. 프리팹에서의 크기가 그림 칸이고, 그림 비율에 맞춰 그 안에서 줄인다. 그림이 없는 카드는 끈다.")]
         [SerializeField] private MeshRenderer artRenderer;
+        [Tooltip("낼 수 있을 때 켜는 테두리 빛 — 카운터 카드의 초록 링 (10-ui.md 2-1 「손패 입력 값」). 없는 프리팹은 비워 둔다.")]
+        [SerializeField] private GameObject glow;
 
         private BoxCollider _collider;
         private Vector3 _artBox;
@@ -61,6 +63,13 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>false 면 포인터 이벤트를 받지 않고 아래 오브젝트(좌석 등)로 넘긴다. 보이는 것은 그대로.</summary>
         public void SetRaycastBlocking(bool blocking) => Collider.enabled = blocking;
+
+        /// <summary>낼 수 있다는 테두리 빛을 켜고 끈다. 빛이 없는 종류면 아무 일 없다.</summary>
+        public void SetGlow(bool on)
+        {
+            if (glow != null)
+                glow.SetActive(on);
+        }
 
         public void Setup(int instanceId, CardData data)
         {

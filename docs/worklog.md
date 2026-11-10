@@ -4,6 +4,100 @@
 
 ---
 
+## 2026-11-11 · 카운터 · 함정을 화면에서 낼 수 있게 — 초록 빛 · 함정 칸 (`feature/game-screen`)
+
+### 왜
+화면에서 카운터를 남의 턴에 낼 수 없고(「내 턴이 아니다」), 함정은 설치가 안 됐다. 규칙(방장)은 멀쩡했고 **화면이 카드 종류를 보지 않고 전부 행동 카드 요청(`RequestPlayCard`)으로 보내던 것**이 원인.
+
+### 결정 (사용자, 2026-11-11)
+1. 함정 칸 자리 · 크기 = **프로토타입 v2 값**(× 2).
+2. 초록 빛 = **방장이 반응 시간마다 「낼 수 있는 내 카운터 목록」을 본인에게만 보낸다** — 클라이언트는 조건을 계산하지 않는다.
+3. 함정은 **설치 · 표시만**. 자동 발동 규칙 · 발동 입력 UI 는 만들지 않는다 (방장의 옛 `ActivateTrap` 은 그대로).
+4. 내 함정 칸의 카드를 눌러 **크게 보기**를 넣는다.
+
+### 한 것
+- 방장: `GameServer.AddCountersUsable` — 체인에 카드가 오를 때마다 플레이어별로 낼 수 있는 카운터(카운터 요청과 같은 `CanReactTo` · 사망 대기 조건)를 `CountersUsable` 이벤트로. `PunGameServer` 가 `RPC_OnMyCountersUsable` 로 **본인에게만** → `GameEvents.OnMyCountersUsable`. `PhotonServerSettings` RpcList 에 새 RPC 저장.
+- `HandPresenter`: 놓은 카드가 카운터면 `RequestPlayCounter`, 함정이면 `RequestSetTrap`, 나머지는 `RequestPlayCard`. 반응 시간(여는 시각 ~ 마감) 안에서만 받은 목록의 카드에 초록 링(`CardView.SetGlow` — `Card_Counter` 프리팹의 `Glow`). 함정 설치 연출(`SetTrapRoutine` 0.3초), 손패 이동 반영(`GainCards` · `LoseCards`).
+- 함정 칸(새 `TrapSlotView` · `TrapSlotsView` · `MyTrapsPresenter`, 씬 `Table/TrapSlots`): 내 칸 3 + 좌석마다 3. 빈 칸 / 뒷면 카드. 내 칸을 누르면 그 함정 카드가 가운데에 크게, 다음 탭에 닫힘. `OpponentSeatsPresenter` 가 상대 칸 수(trapCount)를 보인다.
+- `GameScreenPresenter`: `OnMyCountersUsable` · `OnTrapSet` · `OnMyTrapSet` · `OnMyTrapRemoved` · `OnTrapReturned` · `OnTrapMoved` · `OnHandCardsMoved` · `OnMyCardsGained` · `OnMyCardsLost` 연결. 발동된 함정은 그 칸에서 체인 자리로 올라간다.
+- 빌더: `TableBuilder.BuildTrapSlots` · `AddCounterGlow`. 열린 씬 · 프리팹에는 일회용 스크립트로 적용(`GameScene` · `Card_Counter.prefab`, 새 에셋 `CardGlowCounter` · `TrapSlotEmpty` 머티리얼 · 텍스처).
+- 문서: `09-network` 3절 표(낼 수 있는 내 카운터 — 소유자 지정 RPC), `10-ui` 2-1 「함정 칸」(새) · 「손패 입력 값」 · 3절 · 5절 · 11절 #3.
+- `multi-test`: 카운터 · 함정 설치를 **화면 경로**(`HandPresenter.HandleCardDropped`)로 — `DropFromHand`, `TableUiExpect`(함정 칸 수 · 손패 장수 = 방장 값), `TrapPreview`(크게 보기), `run.sh` 의 `check_table_ui`.
+
+### 확인
+- `rules` 통과.
+- `multi 2` 통과(콘솔 에러 0): 남의 턴 클라이언트가 반응 시간에 **화면 경로로 카운터를 냄 · 초록 빛 켜짐**, 「카운터로 행동 카드 무효 확인」, 두 화면 함정 칸 수 · 손패 장수 = 방장 값.
+- `full 2 45` 두 번 통과(콘솔 에러 0): **화면 경로로 함정 설치** → 두 화면 칸 수 일치 → 내 칸 눌러 크게 보기 → 함정 발동 · 게임 종료 · 방 복귀.
+- 스크린샷: 초록 링(낼 수 있는 카운터에만), 내 칸 · 상대 칸의 뒷면 카드, 크게 본 함정 카드.
+
+### 확인 못 한 것
+- 3 ~ 4인(좌석 1 · 3 의 옆으로 누운 칸), 다른 화면 비.
+- 함정 반환 · 이동(`OnTrapReturned` · `OnTrapMoved`) · 손패 이동(훔치기)의 화면 반영을 눈으로 — `TableUiExpect` 가 장수만 본다.
+- 실제 마우스 끌기 · 터치 탭 (시험은 처리 함수를 직접 부른다). 설치 이동 연출 · 크게 보기 닫기 탭.
+- 다시 접속한 화면.
+
+### 문서와 다르게 · 임시로 둔 것
+- 초록 **링만** — 시안의 흐린 빛, 나머지 카드 채도 0.45 · 밝기 0.86 은 아직 없다 (`10-ui` 에 적음).
+- 빈 함정 칸은 점선 대신 실선, 칸 높이가 시안보다 조금 길다(카드 비율).
+- 함정 설치 이동 0.3초 — 문서에 수치가 없다.
+- 손패 이동(`OnMyCardsGained/Lost` · `OnHandCardsMoved`)은 연출 없이 바로 반영.
+- 늦게 열린 화면은 내 함정 **개수만** 복구 — 크게 보기 불가.
+
+### 알아 둘 것
+- 반응 조건이 「아무 때나」인 카운터는 **내가 낸 카드에도** 초록 빛이 켜진다 — 방장 판정(`CanReactTo`)이 그렇다. 의도가 아니면 규칙(`04-card` 7절)에서 정해야 한다.
+- 3 단계 큰 카드가 떠 있는 동안 함정 칸 · 덱 · 버림 더미가 가려진다 (2026-11-10 항목의 미결과 같다).
+
+### 다음 할 일
+- (사용자 답 대기) 상대 좌석(HUD)이 큰 카드의 이름 띠를 가리는 문제 — 카드를 HUD 위에 그릴지 / 3 단계 동안 좌석을 숨길지.
+- 함정 자동 발동 규칙(`04-card` 6절) 구현 · 발동 UI (`10-ui` 11절 #3).
+- 초록 빛의 나머지(흐린 빛 · 다른 카드 낮춤), 노란 링(낼 수 있는 행동 카드).
+- 미커밋: 2026-11-10 항목 + 이 항목.
+
+---
+
+## 2026-11-10 · 낸 카드 보여주기 + 반응 타이머 · 반응 10초 · 턴 30초 (`feature/game-screen`)
+
+### 결정 (사용자, 2026-11-10)
+1. 3 단계 확대 크기 · 자리 = **프로토타입 v2 값** (카드 가운데 (960, 524) · 1.85배). `10-ui` 2-1 의 「(960, 540) · 높이 885」 를 고쳤다.
+2. 시간 = 프로토타입 v2 기준: **반응 5 → 10초, 턴 20 → 30초.** 선언 대기 · 함정 시간 · 사망 대기 · 대상 선택 5초는 그대로.
+3. 체인 배치: 수치가 정해질 때까지 **맨 위 카드만 크게, 아래 카드는 그 뒤에 겹쳐 둔다.**
+4. 3 단계의 어둡게: **3D 층만**, HUD 는 그대로.
+
+### 한 것
+- `ChainCardsPresenter`(새, `Table/ChainCards`): 체인의 카드를 모든 화면에 보인다. 1 단계(0.46초) 내는 자리에 눕힘 — 내 카드는 손패에서 넘겨받고, **남의 카드는 그 좌석의 손 자리에서 앞면으로 만들어** 낸다 → 3 단계(1.0초) 가운데로 세워 크게 + 3D 층 어둡게 + 주인 태그 → 그 크기로 둠 → 처리 결과(적용 · 무효)면 버림 더미로, 「손패로 반환」 이면 내 손패 / 그 좌석으로. 카운터가 끼어들면 같은 자리 앞에 겹친다.
+- `ReactionTimerView` · `ReactionTimerPresenter`(새): 크게 둔 카드 아래 가장자리의 알약 — `반응` + 막대 + 남은 초(방장이 보낸 시각과 `PhotonNetwork.Time` 으로 매 프레임), 2초 이하 빨강, 열리기 전 회색 `곧`, 마감 뒤 `처리하는 중`. 3 단계 동안은 숨고, 체인의 마지막 카드가 처리되면 사라진다.
+- `CardOwnerTagView`(새): 3 단계 동안 카드 아래 「낸 사람 → 대상」 (이름은 플레이어 색, 나는 「나」).
+- `GameScreenPresenter`: `OnCardPlayed` 단계가 1 + 3 단계(1.46초 = 방장이 반응 시간을 여는 시각)를 기다린다. `OnReactionStarted` · `OnTrapActivated` 를 큐에 넣고, 체인에 남은 카드 수를 세어 0 이면 타이머를 숨긴다.
+- `HandPresenter`: 테이블에 낸 카드 관리(`_onTable` · `PlayCardRoutine` · `DiscardPlayedRoutine` · `ReturnPlayedCard`)를 `ChainCardsPresenter` 로 옮기고 `TakeCard` · `PutBack` 만 남겼다. `OpponentSeatsPresenter.TryGetHandScreenPoint` 추가.
+- 시간: `GameServer` `ReactionTimeLimit` 10 · `TurnTimeLimit` 30, `TurnTimerPresenter.turnSeconds` 30(씬 값 포함). 문서 14개(`00` · `01` · `02` · `03` · `04` · `06` · `07` · `08` · `09` · `10` · `11` · `18` · `19` · `development-plan`)의 반응 5초 · 턴 20초 표기를 고쳤다 (취소선으로 남긴 옛 기록은 그대로).
+- `10-ui` 2-1 「카드 연출 자리」: 3 단계 크기 · 자리, 어둡게 범위, 주인 태그 · 반응 타이머 수치, 「체인의 카드 배치 — 지금 구현」 줄.
+- 빌더: `TableBuilder.BuildChainCards`(내는 자리 · 크게 두는 자리 · 어두운 판 + `Materials/Cards/TableDim.mat`), `GameScreenBuilder.BuildReactionTimer` · `BuildCardOwnerTag`. `GameScene` 에는 일회용 CLI 스크립트로 덧붙여 열어 적용 · 저장했다 (에디터에 열려 있던 `DebugLobbyScene` 은 그대로).
+- `multi-test`: 규칙 시험의 5 · 20초를 상수(`ReactionSeconds` · `TurnSeconds`)로, `run.sh` 대기 시간, `MultiTest.ArmCardShots`(SHOT_DIR 이 있으면 처음 나온 카드의 3 단계 · 반응 시간 스크린샷).
+
+### 확인
+- `rules` 통과.
+- `multi 2` 두 번 통과(콘솔 에러 0) · `full 2` 통과(두 화면 「Elimination · 승자 P2」 · 방 복귀 · 콘솔 에러 0).
+- 스크린샷: 3 단계 — 낸 사람 · 상대 화면 모두 가운데 큰 카드 + 테이블 · 손패 어둡게 + 태그 「Player → 나」. 반응 시간 — 카드 아래 가장자리에 「반응 ▬ 9초」, 다른 화면에도 같은 모양. 카운터가 끼어들면 카운터 카드가 앞에 크게 + 타이머 다시 시작. 처리 뒤 — 카드가 사라지고 버림 더미 맨 위 · 장수가 바뀜.
+
+### 확인 못 한 것
+- 남의 카드가 좌석 손 자리에서 날아오는 움직임 · 버림 더미로 가는 움직임(정지 화면만 봤다) · 「손패로 반환」 · 타이머의 빨강(2초 이하) · `곧` · `처리하는 중` 상태 · 두 화면의 남은 초가 같은 순간에 같은지(같은 시각의 스크린샷이 아니다) · 3 ~ 4인 · 21:9 등 다른 화면 비 · 모바일.
+
+### 알게 된 것 — 확인 필요
+- **상대 좌석(HUD)이 큰 카드 위에 그려진다.** 2인전의 정면 좌석(캐릭터 자리 · 뒷면 부채꼴 · 이름표)이 카드 이름 띠를 가린다 — HUD 는 Overlay 캔버스라 3D 카드보다 항상 위. 결정 4 「HUD 는 그대로」 의 결과인데, 카드를 HUD 위에 그릴지(구조 변경) · 3 단계 동안 좌석을 숨길지 정해야 한다.
+- 반응 시간 10초 동안 큰 카드가 덱 · 버림 더미 · 방석 가운데를 가린다 (홀드 확정의 결과).
+- 함정 칸에서 발동한 함정은 카드가 보이지 않고 타이머만 뜬다 (함정 카드 등장은 이번 범위 밖).
+- 기존 공백: 함정 설치(`OnTrapSet`) · 손패 이동이 내 손패 뷰에 반영되지 않아, `multi` 끝 화면에서 손패 장수 배지(1)와 보이는 카드(3장)가 달랐다 — 이번 변경과 무관해 보이나 확인하지 않았다.
+
+### 다음 할 일
+- [ ] 위 「상대 좌석이 큰 카드를 가림」 결정
+- [ ] 카운터 입력: 반응 시간에 손패의 낼 수 있는 카운터에 초록 빛 + 내기 (`10-ui` 5절) — 지금 화면에는 카운터 요청 경로가 없다
+- [ ] 2 · 4 · 5 단계 · 무효 도장 · 겨눔 줄 · 낸 사람 캐릭터 턴 빛 · 열리기 전 막대 빗금
+- [ ] 함정 설치 · 발동 카드의 화면 (함정 칸)
+- [ ] 체인 배치 수치(붙이기 · 비키기) — `10-ui` 11절 #14
+- [ ] 늦게 열린 화면의 체인 · 반응 시간 복구 (방 속성에 없다, `09-network` 6.1)
+
+---
+
 ## 2026-11-10 · 찹츄 버튼 → 선언 요청 연결 (기능 8 의 화면 쪽, `feature/game-screen`)
 
 ### 결정 (사용자, 2026-11-10)

@@ -131,6 +131,13 @@ namespace Chapchu.UI.GameScreen
             Layout();
         }
 
+        /// <summary>이 인스턴스 ID 의 카드에만 「낼 수 있다」 빛을 켠다 (반응 시간의 카운터 — 10-ui.md 5절). null 이면 전부 끈다.</summary>
+        public void SetGlow(ICollection<int> instanceIds)
+        {
+            foreach (CardView card in _cards)
+                card.SetGlow(instanceIds != null && instanceIds.Contains(card.InstanceId));
+        }
+
         /// <summary>해당 장을 손패에서 떼어 돌려준다 — 받는 쪽이 연출하고 지운다. 나머지는 다시 놓는다. 없으면 null.</summary>
         public CardView TakeCard(int instanceId)
         {
@@ -265,6 +272,7 @@ namespace Chapchu.UI.GameScreen
             card.OnDragStarted -= HandleDragStarted;
             card.OnDragged -= HandleDragged;
             card.OnDragEnded -= HandleDragEnded;
+            card.SetGlow(false);
             card.transform.DOKill();
         }
 

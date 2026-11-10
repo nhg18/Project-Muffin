@@ -8,7 +8,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (04-card.md 2절).
-        private const double ReactionTimeLimit = 5;
+        private const double ReactionTimeLimit = 10;
 
         private readonly List<ChainEntry> _chain = new List<ChainEntry>(); // [0] = 맨 아래(메인 행동 카드), 끝 = 맨 위
         private double _reactionOpensAt;  // 이 전은 연출 중 — 카운터를 받지 않는다 (04 8절)
@@ -57,7 +57,7 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
-        // 손패(함정은 슬롯)에서 나온 카드를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 5초 반응 시간을 연다 (04 8절).
+        // 손패(함정은 슬롯)에서 나온 카드를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 10초 반응 시간을 연다 (04 8절).
         private ChainEntry AddToChain(Card card, int user, int[] targets, bool fromTrapSlot = false)
         {
             var entry = new ChainEntry(card, user, targets);
@@ -70,7 +70,28 @@ namespace Chapchu.Game
             _reactionOpensAt = _clock() + card.RevealSeconds;
             _reactionDeadline = _reactionOpensAt + ReactionTimeLimit;
             _events.Add(new ReactionStarted(_reactionOpensAt, _reactionDeadline));
+            AddCountersUsable(entry);
             return entry;
+        }
+
+        // 반응 시간이 정해질 때마다, 지금 맨 위 카드에 낼 수 있는 카운터를 손패에 가진 사람에게 그 목록을 알린다 — 화면의 초록 빛용 (10-ui.md 5절, 09-network.md 3절: 본인에게만).
+        // PlayCounter 의 검사와 같은 조건이다 (대상 확정은 뺀다 — 낼 때 판정). 낼 수 있는 것이 없는 사람에겐 보내지 않는다.
+        private void AddCountersUsable(ChainEntry top)
+        {
+            foreach (KeyValuePair<int, PlayerState> pair in _players)
+            {
+                int actor = pair.Key;
+                if (!IsInGame(actor))
+                    continue;
+
+                bool deathPending = pair.Value.Life == LifeState.DeathPending; // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절)
+                int[] usable = pair.Value.Hand
+                    .Where(c => c.Type == CardType.Counter && (!deathPending || c.Condition == ReactCondition.WouldKillMe) && CanReactTo(c, actor, top))
+                    .Select(c => c.InstanceId)
+                    .ToArray();
+                if (usable.Length > 0)
+                    _events.Add(new CountersUsable(actor, usable));
+            }
         }
 
         /// <summary>
