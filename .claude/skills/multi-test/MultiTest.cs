@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -32,7 +32,11 @@ public static class MultiTest
     // ── 부르는 함수 (코드에서 이름이 바뀌면 여기를 고친다) ──
     private const string JoinButtonMethod = "ClickJoinButton";             // DebugScript
     private const string StartRequestedMethod = "HandleStartRequested";    // RoomPresenter
-    private const string ConnectClickedMethod = "HandleConnectClicked";    // TitleView
+    private const string TappedMethod = "HandleTapped";                    // TitlePresenter — 「화면을 눌러 시작」
+    private const string AllAgreeMethod = "HandleAllClicked";              // TermsAgreeView — 「모두 동의하기」
+    private const string AgreeConfirmMethod = "HandleConfirmClicked";      // TermsAgreeView — 「동의하고 계속」
+    private const string GuestClickedMethod = "HandleGuestClicked";        // LoginSheetView — 「게스트로 시작」
+    private const string StartClickedMethod = "HandleStartClicked";        // LoginSheetView — 닉네임 「시작」
     private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyPresenter
     private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyPresenter
     private const string SubmitClickedMethod = "HandleSubmitClicked";      // InputPopup
@@ -360,13 +364,41 @@ public static class MultiTest
         {
             case "title":
             {
-                TitleView view = Object.FindFirstObjectByType<TitleView>();
-                if (view == null)
-                    return "WAIT 타이틀 아님 (" + scene + ")";
+                // 저장된 로그인이면 누르지 않아도 로비로 간다. 처음이면 터치 → 약관 동의 → 게스트 → 닉네임 → 시작 (20-title-ui-full)
+                TitlePresenter presenter = Object.FindFirstObjectByType<TitlePresenter>();
+                if (presenter == null)
+                    return scene == "LobbyScene" ? "OK 자동 로그인 → 로비" : "WAIT 타이틀 아님 (" + scene + ")";
 
-                view.SetNickname("테스터");
-                Call(view, ConnectClickedMethod);
-                return "OK 접속 요청";
+                LoginSheetView sheet = Object.FindFirstObjectByType<LoginSheetView>();
+                TitleBottomView bottom = Object.FindFirstObjectByType<TitleBottomView>();
+                if (!sheet.IsOpen)
+                {
+                    if (!bottom.IsWaitingForTap)
+                        return "WAIT 자동 로그인 · 접속 중";
+
+                    Call(presenter, TappedMethod);
+                    return "WAIT 화면 터치";
+                }
+
+                switch (sheet.Step)
+                {
+                    case LoginSheetStep.Agree:
+                        TermsAgreeView terms = Object.FindFirstObjectByType<TermsAgreeView>();
+                        Call(terms, AllAgreeMethod);
+                        Call(terms, AgreeConfirmMethod);
+                        return "WAIT 약관 동의";
+                    case LoginSheetStep.Login:
+                        Call(sheet, GuestClickedMethod);
+                        return "WAIT 게스트로 시작";
+                    case LoginSheetStep.Nickname:
+                        Object.FindFirstObjectByType<NicknameFieldView>().SetText("테스터");
+                        Call(sheet, StartClickedMethod);
+                        return "OK 닉네임 「테스터」 로 시작";
+                    case LoginSheetStep.Fail:
+                        return "FAIL 로그인 창 실패 — 콘솔을 본다";
+                    default:
+                        return "WAIT 로그인 창 " + sheet.Step;
+                }
             }
             case "bad-code":
             {

@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-11-10 · 타이틀 화면을 「통합 화면 UI v2」 로 (`feature/title-screen`)
+
+### 결정 (PM, 2026-11-10)
+1. 타이틀은 「통합 화면 UI v2」 https://claude.ai/artifact/GnsoVsKiaDzipb2paoSx2B 게시본 `1794204029-915a` 의 디자인 · 기능 그대로 — 「화면을 눌러 시작」 · 약관 동의 팝업 · 로그인 창(게스트 · Google · Apple) · 저장된 로그인은 자동 · 닉네임 창(추천 이름 · 주사위 · 「뒤로」) · 실패(「다시 시도」 · 「다른 방법으로」) · 업데이트 · 점검 · 종료 팝업. **20 · 23 · 12 문서의 「로그인 화면 없음 · 터치 대기 없음 · 타이틀에 로그인 버튼 없음」(2026-11-07 확정)과 다르다** — 문서 갱신은 PM 확인 대기
+2. 로그인은 **게스트만 UGS 실제**. Google · Apple 은 버튼만 있고 누르면 로그인 실패(`ExternalLoginFailed`) — SDK · 콘솔 설정 뒤 연결
+3. 서버 금칙어 재검사(Cloud Code)는 배포가 필요해 이번엔 없다 — 닉네임은 클라이언트가 Cloud Save 에 직접 쓴다 (23 8-3 과 다름, 임시)
+
+### 한 것
+- 패키지: Authentication 3.8.1 · Cloud Save 3.4.2 · Remote Config 4.2.5. 글꼴 Jua(OFL, `Fonts/Jua/`) — 본문 `Jua SDF`(동적 · 여백 10) · 로고 `Jua Logo SDF`(「찹츄!」 3글자 정적 · 외곽선 · 그림자) · 버전 표기용 외곽선 머티리얼.
+- `Account/AccountService`(게스트 로그인 · 세션 · 닉네임 Cloud Save · 오류 코드 이름) · `ServerConfig`(minVersion · maintenance · 금칙어 목록) · `CloudKeys`.
+- `UI/Title`: `TitlePresenter`(흐름 전부 — 시안 JS 의 상태를 그대로, 흉내 내던 단계를 실제 호출로) · `TitleBottomView`(터치 대기 · 자동 로그인 알약 · 실패 상자) · `LoginSheetView`(동의 · 고르기 · 로딩 · 닉네임 · 실패) · `TermsAgreeView` · `TitlePopupView` · `TitleLogoView`(뛰기 · 흔들기) · `Spinner` · `NicknameFieldView`(에러 칩 · 포커스 테두리) · `PressableButton`(v2 눌림 · 꺼진 모양). `TitleView` · `ErrorLabel` 삭제. `NicknameValidator` 에 금칙어(23 8-2 의 2 · 3 · 5 · 6단계) · 추천 이름, 「포함되어 있습니다.」 → 「있어요.」 (12 10-3 위반 수정).
+- `UI/UIJuice`(시안 fxPop · fxShake). 아이콘 9장 `Sprites/UI/Common/`(시안 SVG 그대로 128px 흰색). 약관 본문 `Texts/*.txt`(시안 자리 표시 문구).
+- 빌더 `Chapchu/Title Screen/Build UI`(`TitleScreenBuilder`) — `TitleScene` 의 옛 `TitleCanvas` 를 지우고 조립 · 저장. 판 · 버튼 · 그림자는 `ui_round64` 하나에 색만, 링은 `timer_ring` (CODE_CONVENTION 10절).
+- `NetworkManager`: 타이틀에서 시작하면 앱 시작 때 접속하지 않는다(동의 전 접속 금지, 23 3절 #9) · `SetUserId`(Photon 식별자 = UGS 플레이어 ID, 23 3절 #10) · `Disconnect`.
+- `multi-test` 의 `ui` 타이틀 단계를 새 흐름으로.
+- (PM 지적 뒤) 부제 리본: 기울어진 띠의 계단 현상 → 가장자리가 투명한 `Common/ui_soft_rect`(16px) 로 그림 · 띠 높이 100 → 72(레이아웃 최소 높이 누락) · 본문 글자 굵기 `FaceDilate 0.05`(TMP 가 시안보다 가늘게 보임). 키 아트 압축: PC 없음 · Android / iOS ASTC 4×4 최고 품질.
+- 메뉴 `Chapchu/Title Screen/처음 실행으로 되돌리기` — 약관 동의 기록 · 저장된 로그인(UGS 세션)을 지운다. 저장된 로그인이 있으면 자동 로그인으로 타이틀을 건너뛰어서, 타이틀 흐름을 다시 볼 때 쓴다.
+
+### 확인
+- 시안 상태 14개를 크롬 1920 × 1080 으로, Unity 를 Game 뷰 1920 × 1080 으로 찍어 나란히 비교 — 배치 · 크기 · 색 일치. 로고 외곽선 · 버전 외곽선 값은 이 비교로 맞췄다. 키 아트는 「타이틀화면 v3.3」 원본 PNG(4:3, `Sprites/UI/Title/title_key_art.png`) — 처음엔 16:9 `bg_title` 을 써서 구도가 달랐다 (PM 지적). `bg_title` 은 로비 · 룸이 쓰고 있어 그대로 둠.
+- 실제 흐름: 첫 실행(동의 기록 없음 · 접속 없음) → 터치 → 빈 동의(빠진 칸 표시) → 모두 동의 → Google(실패 창) → 다른 방법으로 → 게스트 → 「a」(2자 미만 에러) → 「테스터」 시작 → UGS 게스트 계정 생성 → Remote Config → Photon 접속 → 닉네임 Cloud Save → 0.3초 페이드로 로비. 다시 실행 → 누르지 않고 자동 로그인(같은 플레이어 ID · 저장된 닉네임) → 로비. 콘솔 에러 0.
+- `multi-test ui` 통과 (자동 로그인 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기 → 로비, 콘솔 에러 0).
+- **확인 못 함**: `multi 2` — 클론 에디터(`MuffinProject_clone_0`)가 준비되지 않아 시작 못 함 (클론 `Packages` 가 메인과 연결돼 있지 않아 UGS 패키지가 없었다 → 목록을 메인 것으로 맞춤, 에디터를 다시 열어야 함). 키 아트 모바일 압축은 실기기 빌드로 못 봤다. 연결 실패 · 로그인 실패 · 저장 실패 · 업데이트 · 점검 팝업은 화면만 띄워 봤다(실제 실패를 만들지 않았다). Android 뒤로가기는 실기기에서 안 눌러 봤다. Remote Config 에 키가 아직 없어 최소 버전 · 점검 · 금칙어는 기본값(통과)으로만 돌았다.
+
+### 커밋하지 않은 것
+- 갈무리 · LiberationSans SDF — 에디터가 바꾼 동적 아틀라스.
+
+### 다음 할 일
+- [ ] **20 · 23 · 12 문서를 시안에 맞출지 PM 확인** — 로그인 창 · 터치 대기 · 자동 로그인 · 닉네임 창 · 실패 문구(시안 해요체)
+- [ ] Remote Config 에 `minVersion` · `maintenance` · `maintenanceMessage` · `bannedWords` · `allowedWords` 키 만들기 (대시보드)
+- [ ] Cloud Code 닉네임 저장(금칙어 재검사) — 만들면 `AccountService.SaveNicknameAsync` 를 그쪽으로
+- [ ] Google Play Games · Sign in with Apple SDK 연결, 「스토어로」 주소(패키지 ID 확정 뒤)
+- [ ] 실제 약관 본문으로 `Texts/terms_of_service.txt` · `privacy_policy.txt` 교체 (출시 전)
+
+---
+
 ## 2026-11-09 · PR #122(인게임 3D 카드 · HUD v2) develop 충돌 해결 · 머지
 
 ### 결정 (PM, 2026-11-09)

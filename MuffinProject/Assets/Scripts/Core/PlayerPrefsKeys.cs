@@ -8,5 +8,8 @@ namespace Chapchu.Core
     public static class PlayerPrefsKeys
     {
         public const string PlayerName = "PlayerName";
+
+        /// <summary>약관 · 개인정보 동의 기록 (1 = 동의). 계정 삭제 때 지운다 (23-login 7-5 · 6-4)</summary>
+        public const string TermsAgreed = "TermsAgreed";
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Chapchu.Core;
 using Chapchu.Network.Events;
 
@@ -39,8 +40,13 @@ namespace Chapchu.Network
     
         private void Start()
         {
-            // 어느 씬에서 실행하더라도 여기서 접속이 시작된다. (GameBootstrap 이 생성)
             _connection.Initialize();
+
+            // 타이틀은 약관 동의 · 로그인 뒤에 접속한다 — 동의 전에는 어디에도 접속하지 않는다 (23-login 3절 #9).
+            // 그 밖의 씬(디버그 로비 등)에서 실행하면 여기서 바로 접속한다. (GameBootstrap 이 생성)
+            if (SceneManager.GetActiveScene().name == ScenePaths.Title)
+                return;
+
             Connect();
         }
     
@@ -66,6 +72,20 @@ namespace Chapchu.Network
         /// </summary>
         /// <param name="nickname">닉네임</param>
         public void SetNickname(string nickname) => _connection.SetNickname(nickname);
+
+        /// <summary>
+        /// 플레이어 식별자 — UGS 플레이어 ID (23-login 3절 #10). 접속 전에 넣는다.
+        /// </summary>
+        public void SetUserId(string userId) => PhotonNetwork.AuthValues = new AuthenticationValues(userId);
+
+        /// <summary>
+        /// 접속을 끊는다 — 타이틀에서 로그인한 계정을 버릴 때. 결과는 ConnectionEvents.OnDisconnected(DisconnectByClientLogic).
+        /// </summary>
+        public void Disconnect()
+        {
+            StopConnectTimeout();
+            PhotonNetwork.Disconnect();
+        }
     
         /// <summary>
         /// 룸 참가 함수
