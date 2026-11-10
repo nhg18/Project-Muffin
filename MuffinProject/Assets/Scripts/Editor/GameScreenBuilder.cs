@@ -225,6 +225,9 @@ namespace Chapchu.EditorTools
             if (cushion.texture == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] 방석 그림이 없다: {CushionTexturePath}");
             CenterAt(cushion.rectTransform, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
+            // 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
+            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
+            cushion.rectTransform.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
         }
 
         #endregion

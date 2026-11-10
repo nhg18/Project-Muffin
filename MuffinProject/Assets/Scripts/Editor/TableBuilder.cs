@@ -47,13 +47,21 @@ namespace Chapchu.EditorTools
 
         // 테이블 방석 — 시안 TABLE (200, 170) 560 × 280 × 2 = 중심 (960, 620) 1120 × 560. 카드 뒤(z +0.01)에 눕힌 그림 한 장.
 
-        // 덱 179 × 259 · 중심 (810, 620) (10-ui.md 2-1 「덱」, HUD v2 — 시안 DECK (405, 310) × 2). 뒷면 5장을 겹쳐 두께를 낸다.
-        private static readonly Vector2 DeckCardSize = new Vector2(1.79f, 2.59f);
+        // 테이블 면 기울기 — 프로토타입 v2 `.plane` rotateX(40deg): 방석 · 덱 · 버림 더미가 윗변이 멀어지게 눕는다 (10-ui.md 2-1 「테이블 면」, 2026-11-10).
+        // 더미마다 자기 가운데 줄을 축으로 돌린다 — 시안의 회전축(y 310)이 덱 · 버림 · 방석 가운데와 같은 줄이라 결과가 같다.
+        public const float TableTilt = 40f;
+        private static readonly Quaternion TableRotation = Quaternion.Euler(TableTilt, 0f, 0f);
+
+        // 덱 132 × 196 · 중심 (810, 620) (10-ui.md 2-1 「덱」, 프로토타입 v2 `.deck` 66 × 98 · DECK (405, 310) × 2).
+        // 맨 위 = 흰 받침(잉크 테) 위에 뒷면 그림. 그 밑에 받침 카드를 판 위에서 앞쪽(화면 아래)으로 밀어 깔아 겹친 두께를 낸다 — 시안 box-shadow 의 흰 · 잉크 띠.
+        private static readonly Vector2 DeckCardSize = new Vector2(1.32f, 1.96f);
         private static readonly Vector3 DeckPosition = CanvasToWorld(810f, 620f);
-        private const int DeckStackCount = 5;
+        private const float DeckBackInsetPx = 8f;                         // 뒷면 그림을 흰 받침 안쪽으로 — 잉크 테가 보이게 (시안 외곽선 2.5 × 2)
+        private static readonly float[] DeckUnderOffsetsPx = { 6f, 16f }; // 받침 카드, 위부터 — 판 위에서 앞쪽으로 민 거리
         private const float DeckCountFontPx = 30f; // 시안 .lab 15 × 2
         private static readonly Vector2 DeckCountSize = new Vector2(1.6f, 0.3f);
-        private static readonly Vector2 DeckCountOffset = new Vector2(0f, -1.5f); // 덱 아래쪽 바깥 — 시안 「덱 n」 라벨 자리 (HUD v2)
+        // 「덱 n」 · 「버림 n」 윗변 = 판 위에서 더미 가운데보다 116px 앞 (시안 .lab top DECK.y + 58). 글자는 눕히지 않고 선다.
+        private const float PileLabelTopPx = 116f;
 
         // 손패 — 내 패널(좌 32 + 472 + 24)과 찹츄 버튼(우 32 + 392 + 28) 사이 가운데 x 1016, 아래 28 기준 원호, 양 끝 (±452, −34) (10-ui.md 2-1 「부채꼴」 HUD v2).
         private static readonly Vector3 HandPosition = CanvasToWorld(1016f, 1080f - 28f);
@@ -167,27 +175,67 @@ namespace Chapchu.EditorTools
 
         public static DeckView BuildDeck(Transform table)
         {
-            var root = new GameObject("Deck", typeof(BoxCollider));
+            var root = new GameObject("Deck");
             root.transform.SetParent(table, false);
             root.transform.localPosition = DeckPosition;
 
-            Material back = EnsureMaterial("CardBack", BackTexturePath);
-            for (int i = 0; i < DeckStackCount; i++)
-                Quad($"Back{i}", root.transform, back, DeckCardSize, new Vector3(0f, 0f, -i * CardThickness), Quaternion.identity);
-
-            var collider = root.GetComponent<BoxCollider>();
-            collider.size = new Vector3(DeckCardSize.x, DeckCardSize.y, DeckStackCount * CardThickness);
-            collider.center = new Vector3(0f, 0f, -(DeckStackCount - 1) * CardThickness / 2f);
-
-            TMP_Text count = NewText3D("CountText", root.transform, "덱 -", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center,
-                DeckCountSize, new Vector3(DeckCountOffset.x, DeckCountOffset.y, -DeckStackCount * CardThickness - LayerGap));
-
             var view = root.AddComponent<DeckView>();
-            GameScreenBuilder.Wire(view, ("countText", count));
+            BuildDeckParts(view);
 
             var presenter = root.AddComponent<DeckPresenter>();
             GameScreenBuilder.Wire(presenter, ("server", FindServer(nameof(DeckPresenter))));
             return view;
+        }
+
+        /// <summary>
+        /// 덱 뷰 아래를 지우고 다시 만든다 — 판에 눕힌 `Stack`(받침 카드 · 맨 위 카드 · 탭 콜라이더) + 선 채로 둔 `덱 n`. 뷰의 참조를 다시 잇는다.
+        /// 루트(뷰 · 프레젠터)는 그대로라 다른 곳의 참조(손패의 뽑기 자리 등)는 끊기지 않는다 — 열린 씬의 덱만 고칠 때도 쓴다.
+        /// </summary>
+        public static void BuildDeckParts(DeckView view)
+        {
+            Transform root = view.transform;
+            for (int i = root.childCount - 1; i >= 0; i--)
+                Object.DestroyImmediate(root.GetChild(i).gameObject);
+
+            var stackGo = new GameObject("Stack", typeof(BoxCollider));
+            Transform stack = stackGo.transform;
+            stack.SetParent(root, false);
+            stack.localRotation = TableRotation;
+
+            // 받침 카드: 아래(테이블 쪽)부터 깔아 맨 위 카드가 카메라 쪽에 오게 한다. 뷰에는 위부터 넘긴다.
+            Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(DeckCardSize));
+            int underCount = DeckUnderOffsetsPx.Length;
+            var underCards = new Object[underCount];
+            for (int i = underCount - 1; i >= 0; i--)
+            {
+                float z = (underCount - 1 - i) * -CardThickness;
+                underCards[i] = Quad($"Under{i}", stack, blank, DeckCardSize, new Vector3(0f, -DeckUnderOffsetsPx[i] * UnitsPerPixel, z), Quaternion.identity).gameObject;
+            }
+
+            // 맨 위 카드 = 흰 받침 + 뒷면 그림. 0장이면 뷰가 숨긴다 — 콜라이더는 Stack 에 있어 탭 영역은 남는다.
+            float topZ = -underCount * CardThickness;
+            Transform top = Child("Top", stack, new Vector3(0f, 0f, topZ), Quaternion.identity);
+            Quad("Base", top, blank, DeckCardSize, Vector3.zero, Quaternion.identity);
+            Vector2 backSize = DeckCardSize - Vector2.one * (DeckBackInsetPx * 2f * UnitsPerPixel);
+            Quad("Back", top, EnsureMaterial("CardBack", BackTexturePath), backSize, new Vector3(0f, 0f, -LayerGap), Quaternion.identity);
+
+            // 탭 영역 = 맨 위 카드 + 앞으로 밀린 받침 카드까지
+            float reach = DeckUnderOffsetsPx[underCount - 1] * UnitsPerPixel;
+            var collider = stackGo.GetComponent<BoxCollider>();
+            collider.size = new Vector3(DeckCardSize.x, DeckCardSize.y + reach, (underCount + 1) * CardThickness);
+            collider.center = new Vector3(0f, -reach / 2f, topZ / 2f);
+
+            TMP_Text count = NewText3D("CountText", root, "덱 -", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center, DeckCountSize, PileLabelPosition());
+
+            GameScreenBuilder.Wire(view, ("countText", count), ("topCard", top.gameObject));
+            GameScreenBuilder.WireArray(view, "underCards", underCards);
+        }
+
+        // 「덱 n」 · 「버림 n」 자리 — 판 위 라벨 윗변 점을 판과 같이 돌린 곳에서 글자 높이 반만큼 아래. 글자는 서 있으므로 시안처럼 판 위 점에 붙어 보인다.
+        private static Vector3 PileLabelPosition()
+        {
+            Vector3 top = TableRotation * new Vector3(0f, -PileLabelTopPx * UnitsPerPixel, 0f);
+            return top + new Vector3(0f, -DeckCountSize.y / 2f, -LayerGap);
         }
 
         /// <summary>
@@ -200,6 +248,9 @@ namespace Chapchu.EditorTools
             root.transform.SetParent(table, false);
             root.transform.localPosition = DiscardSpotPosition;
 
+            // 카드는 판에 눕힌 `Pile` 아래 — 날아오는 카드도 TopAnchor 의 누운 자세로 닿는다. 「버림 n」 은 서 있게 루트에.
+            Transform pile = Child("Pile", root.transform, Vector3.zero, TableRotation);
+
             Vector2 cardSize = CardSize * DiscardCardScale;
             Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(cardSize));
             var underCards = new Object[DiscardUnderCards.Length];
@@ -207,17 +258,17 @@ namespace Chapchu.EditorTools
             {
                 (Vector2 offsetPx, float angle) = DiscardUnderCards[i];
                 var position = new Vector3(offsetPx.x * UnitsPerPixel, -offsetPx.y * UnitsPerPixel, -i * CardThickness);
-                underCards[i] = Quad($"Under{i}", root.transform, blank, cardSize, position, Quaternion.Euler(0f, 0f, angle)).gameObject;
+                underCards[i] = Quad($"Under{i}", pile, blank, cardSize, position, Quaternion.Euler(0f, 0f, angle)).gameObject;
             }
 
             float topZ = -DiscardUnderCards.Length * CardThickness;
-            Transform top = Child("Top", root.transform, new Vector3(0f, 0f, topZ), Quaternion.Euler(0f, 0f, DiscardTopAngle));
+            Transform top = Child("Top", pile, new Vector3(0f, 0f, topZ), Quaternion.Euler(0f, 0f, DiscardTopAngle));
             Transform topAnchor = Child("TopAnchor", top, new Vector3(0f, -cardSize.y / 2f, 0f), Quaternion.identity);
             topAnchor.localScale = Vector3.one * DiscardCardScale;
 
             // 덱 라벨과 같은 줄 · 같은 모양 (시안 `.lab`)
             TMP_Text count = NewText3D("CountText", root.transform, "버림 0", DeckCountFontPx, Ink, true, TextAlignmentOptions.Center,
-                DeckCountSize, new Vector3(DeckCountOffset.x, DeckCountOffset.y, topZ - CardThickness - LayerGap));
+                DeckCountSize, PileLabelPosition());
 
             var view = root.AddComponent<DiscardPileView>();
             GameScreenBuilder.Wire(view,
