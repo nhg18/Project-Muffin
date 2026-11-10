@@ -106,7 +106,8 @@ namespace Chapchu.Account
         {
             foreach (FieldInfo field in holder.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
-                if (field.IsLiteral && field.FieldType == typeof(int) && (int)field.GetRawConstantValue() == code)
+                // AuthenticationErrorCodes 는 const 가 아니라 static readonly 다. MinValue 는 범위 표시라 이름이 아니다 (ClientInvalidUserState 와 같은 값)
+                if (field.FieldType == typeof(int) && field.Name != nameof(AuthenticationErrorCodes.MinValue) && (int)field.GetValue(null) == code)
                     return field.Name;
             }
 

@@ -394,7 +394,8 @@ namespace Chapchu.UI.Title
             }
 
             _typedNickname = nickname;
-            if (AccountService.IsSignedIn && !_forgetSession)
+            // 접속까지 끝났을 때만 바로 저장 — 로그인만 된 상태면 닉네임 읽기 → 설정 값 → 접속을 다시 탄다 (23 3절 #6 · 6-1)
+            if (_connected && !_forgetSession)
             {
                 Run(SaveRoutine());
                 return;
