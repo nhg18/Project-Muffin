@@ -50,9 +50,38 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (slotButton == null || cushion == null || character == null || characterBody == null || namePlate == null || nameText == null
-                || hostTag == null || meTag == null || botTag == null || addBotButton == null || removeBotButton == null)
-                Debug.LogError($"[{nameof(RoomSlotView)}] 참조가 비어 있습니다.", this);
+            if (slotButton == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(slotButton)} 참조가 비어 있습니다.", this);
+
+            if (cushion == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(cushion)} 참조가 비어 있습니다.", this);
+
+            if (character == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(character)} 참조가 비어 있습니다.", this);
+
+            if (characterBody == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(characterBody)} 참조가 비어 있습니다.", this);
+
+            if (namePlate == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(namePlate)} 참조가 비어 있습니다.", this);
+
+            if (nameText == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(nameText)} 참조가 비어 있습니다.", this);
+
+            if (hostTag == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(hostTag)} 참조가 비어 있습니다.", this);
+
+            if (meTag == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(meTag)} 참조가 비어 있습니다.", this);
+
+            if (botTag == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(botTag)} 참조가 비어 있습니다.", this);
+
+            if (addBotButton == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(addBotButton)} 참조가 비어 있습니다.", this);
+
+            if (removeBotButton == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(removeBotButton)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()

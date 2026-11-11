@@ -28,8 +28,26 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (content == null || nameText == null || hostTag == null || guestTag == null || meTag == null || closeButton == null || okButton == null)
-                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] 참조가 비어 있습니다.", this);
+            if (content == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(content)} 참조가 비어 있습니다.", this);
+
+            if (nameText == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(nameText)} 참조가 비어 있습니다.", this);
+
+            if (hostTag == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(hostTag)} 참조가 비어 있습니다.", this);
+
+            if (guestTag == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(guestTag)} 참조가 비어 있습니다.", this);
+
+            if (meTag == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(meTag)} 참조가 비어 있습니다.", this);
+
+            if (closeButton == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(closeButton)} 참조가 비어 있습니다.", this);
+
+            if (okButton == null)
+                Debug.LogError($"[{nameof(RoomPlayerInfoView)}] {nameof(okButton)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()

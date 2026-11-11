@@ -48,9 +48,32 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (collapsedButton == null || lastLineText == null || collapsedCountText == null || expandedPanel == null || headerButton == null
-                || expandedCountText == null || scroll == null || linePrefab == null || outsideButton == null)
-                Debug.LogError($"[{nameof(RoomLogView)}] 참조가 비어 있습니다.", this);
+            if (collapsedButton == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(collapsedButton)} 참조가 비어 있습니다.", this);
+
+            if (lastLineText == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(lastLineText)} 참조가 비어 있습니다.", this);
+
+            if (collapsedCountText == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(collapsedCountText)} 참조가 비어 있습니다.", this);
+
+            if (expandedPanel == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(expandedPanel)} 참조가 비어 있습니다.", this);
+
+            if (headerButton == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(headerButton)} 참조가 비어 있습니다.", this);
+
+            if (expandedCountText == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(expandedCountText)} 참조가 비어 있습니다.", this);
+
+            if (scroll == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(scroll)} 참조가 비어 있습니다.", this);
+
+            if (linePrefab == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(linePrefab)} 참조가 비어 있습니다.", this);
+
+            if (outsideButton == null)
+                Debug.LogError($"[{nameof(RoomLogView)}] {nameof(outsideButton)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()

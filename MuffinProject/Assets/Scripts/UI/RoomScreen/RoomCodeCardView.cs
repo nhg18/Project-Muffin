@@ -46,9 +46,35 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (codeButton == null || codeText == null || hiddenDots == null || revealedFill == null || copyIcon == null || peekButton == null
-                || peekPressedFill == null || publicTag == null || privateTag == null || copiedBubble == null)
-                Debug.LogError($"[{nameof(RoomCodeCardView)}] 참조가 비어 있습니다.", this);
+            if (codeButton == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(codeButton)} 참조가 비어 있습니다.", this);
+
+            if (codeText == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(codeText)} 참조가 비어 있습니다.", this);
+
+            if (hiddenDots == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(hiddenDots)} 참조가 비어 있습니다.", this);
+
+            if (revealedFill == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(revealedFill)} 참조가 비어 있습니다.", this);
+
+            if (copyIcon == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(copyIcon)} 참조가 비어 있습니다.", this);
+
+            if (peekButton == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(peekButton)} 참조가 비어 있습니다.", this);
+
+            if (peekPressedFill == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(peekPressedFill)} 참조가 비어 있습니다.", this);
+
+            if (publicTag == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(publicTag)} 참조가 비어 있습니다.", this);
+
+            if (privateTag == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(privateTag)} 참조가 비어 있습니다.", this);
+
+            if (copiedBubble == null)
+                Debug.LogError($"[{nameof(RoomCodeCardView)}] {nameof(copiedBubble)} 참조가 비어 있습니다.", this);
 
             _peekButtonButton = peekButton.GetComponent<Button>();
         }

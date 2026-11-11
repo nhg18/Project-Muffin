@@ -87,9 +87,46 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (leaveButton == null || codeCard == null || playerCountText == null || slots == null || slots.Length != NetworkManager.MaxPlayers
-                || log == null || visibility == null || start == null || leaveConfirm == null || playerInfo == null || inputLock == null)
-                Debug.LogError($"[{nameof(RoomPresenter)}] 참조가 비어 있습니다.", this);
+            if (leaveButton == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(leaveButton)} 참조가 비어 있습니다.", this);
+
+            if (codeCard == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(codeCard)} 참조가 비어 있습니다.", this);
+
+            if (playerCountText == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(playerCountText)} 참조가 비어 있습니다.", this);
+
+            if (slots == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(slots)} 참조가 비어 있습니다.", this);
+            else
+            {
+                if (slots.Length != NetworkManager.MaxPlayers)
+                    Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(slots)} 는 {NetworkManager.MaxPlayers}칸이어야 합니다 (지금 {slots.Length}칸).", this);
+
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] == null)
+                        Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(slots)}[{i}] 참조가 비어 있습니다.", this);
+                }
+            }
+
+            if (log == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(log)} 참조가 비어 있습니다.", this);
+
+            if (visibility == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(visibility)} 참조가 비어 있습니다.", this);
+
+            if (start == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(start)} 참조가 비어 있습니다.", this);
+
+            if (leaveConfirm == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(leaveConfirm)} 참조가 비어 있습니다.", this);
+
+            if (playerInfo == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(playerInfo)} 참조가 비어 있습니다.", this);
+
+            if (inputLock == null)
+                Debug.LogError($"[{nameof(RoomPresenter)}] {nameof(inputLock)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()
@@ -218,9 +255,20 @@ namespace Chapchu.UI.RoomScreen
             else
                 start.ShowGuest();
 
-            // 정보 판을 보던 사람이 나갔으면 판을 닫는다 (7-5)
-            if (playerInfo.IsOpen && !_seats.Any(seat => seat.ActorNumber == playerInfo.ActorNumber))
-                playerInfo.Hide();
+            // 열린 채 방장이 바뀌면 위임 안내도 지금 방장 기준으로 맞춘다 (7-8)
+            if (leaveConfirm.IsOpen)
+                leaveConfirm.Show(isHost);
+
+            // 정보 판을 보던 사람이 나갔으면 판을 닫는다 (7-5). 남아 있으면 방장 여부를 다시 맞춘다 (3절 #5)
+            if (playerInfo.IsOpen)
+            {
+                int shown = _seats.FindIndex(seat => seat.ActorNumber == playerInfo.ActorNumber);
+                if (shown < 0)
+                    playerInfo.Hide();
+                else
+                    playerInfo.Show(_seats[shown].ActorNumber, _seats[shown].Nickname, _seats[shown].ActorNumber == room.MasterClientId,
+                        _seats[shown].ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber);
+            }
         }
 
         // 공개 여부 · 열림은 방 속성이라 바뀐 것을 알려 주는 이벤트가 없다 — 지난 값과 견줘 찾는다

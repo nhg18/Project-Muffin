@@ -25,8 +25,17 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (publicTag == null || privateTag == null || toggle == null || toggleGroup == null)
-                Debug.LogError($"[{nameof(RoomVisibilityView)}] 참조가 비어 있습니다.", this);
+            if (publicTag == null)
+                Debug.LogError($"[{nameof(RoomVisibilityView)}] {nameof(publicTag)} 참조가 비어 있습니다.", this);
+
+            if (privateTag == null)
+                Debug.LogError($"[{nameof(RoomVisibilityView)}] {nameof(privateTag)} 참조가 비어 있습니다.", this);
+
+            if (toggle == null)
+                Debug.LogError($"[{nameof(RoomVisibilityView)}] {nameof(toggle)} 참조가 비어 있습니다.", this);
+
+            if (toggleGroup == null)
+                Debug.LogError($"[{nameof(RoomVisibilityView)}] {nameof(toggleGroup)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable() => toggle.OnChanged += HandleToggleChanged;

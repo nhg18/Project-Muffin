@@ -39,8 +39,28 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (startButton == null || disabledReason == null || waitPanel == null || waitPaws == null || startingPanel == null)
-                Debug.LogError($"[{nameof(RoomStartView)}] 참조가 비어 있습니다.", this);
+            if (startButton == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(startButton)} 참조가 비어 있습니다.", this);
+
+            if (disabledReason == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(disabledReason)} 참조가 비어 있습니다.", this);
+
+            if (waitPanel == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(waitPanel)} 참조가 비어 있습니다.", this);
+
+            if (waitPaws == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(waitPaws)} 참조가 비어 있습니다.", this);
+            else
+            {
+                for (int i = 0; i < waitPaws.Length; i++)
+                {
+                    if (waitPaws[i] == null)
+                        Debug.LogError($"[{nameof(RoomStartView)}] {nameof(waitPaws)}[{i}] 참조가 비어 있습니다.", this);
+                }
+            }
+
+            if (startingPanel == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(startingPanel)} 참조가 비어 있습니다.", this);
 
             _pawBaseY = new float[waitPaws.Length];
             for (int i = 0; i < waitPaws.Length; i++)

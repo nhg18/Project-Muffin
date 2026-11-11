@@ -25,8 +25,17 @@ namespace Chapchu.UI.RoomScreen
 
         private void Awake()
         {
-            if (content == null || hostNote == null || leaveButton == null || cancelButton == null)
-                Debug.LogError($"[{nameof(RoomLeaveConfirmView)}] 참조가 비어 있습니다.", this);
+            if (content == null)
+                Debug.LogError($"[{nameof(RoomLeaveConfirmView)}] {nameof(content)} 참조가 비어 있습니다.", this);
+
+            if (hostNote == null)
+                Debug.LogError($"[{nameof(RoomLeaveConfirmView)}] {nameof(hostNote)} 참조가 비어 있습니다.", this);
+
+            if (leaveButton == null)
+                Debug.LogError($"[{nameof(RoomLeaveConfirmView)}] {nameof(leaveButton)} 참조가 비어 있습니다.", this);
+
+            if (cancelButton == null)
+                Debug.LogError($"[{nameof(RoomLeaveConfirmView)}] {nameof(cancelButton)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()
