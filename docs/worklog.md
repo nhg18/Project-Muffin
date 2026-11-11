@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-11-11 · 로비 화면을 「통합 화면 UI v2」 허브로 (커밋 전 — 브랜치 미정)
+
+### 결정 (PM, 2026-11-11)
+1. 범위는 **허브 전체** — 홈 + 친구 · 프로필 · 설정 · 퀘스트 창 + 꾸미기 · 상점(뽑기 · 아이템 · 충전). 「통합 화면 UI v2」 https://claude.ai/artifact/GnsoVsKiaDzipb2paoSx2B 게시본 `1794316285-7080`.
+2. 서버가 없는 값(지갑 · 아이템 · 친구 · 퀘스트 · 뽑기)은 시안의 가짜 값을 **기기 메모리에만** 둔다 — 씬을 다시 열면 처음 값으로 돌아간다.
+
+### 한 것
+- 빌더 `Chapchu/Lobby Screen/Build UI`(`Editor/LobbyScreenBuilder`) — `LobbyScene` 의 옛 `LobbyCanvas` 를 지우고 새로 조립 · 저장. 판 · 버튼 · 그림자는 `ui_round64` 에 색만(CODE_CONVENTION 10절), 아이콘은 시안 SVG 를 `Sprites/UI/Common` · `Sprites/UI/Lobby` 로.
+- `UI/Lobby`: `LobbyPresenter`(흐름 전부) + 화면 영역마다 컴포넌트 하나 — `LobbyTopBarView` · `LobbyHomeView` · `LobbyHeroView` · `LobbySectionView` · `LobbyItemPaneView` · `LobbyGachaPaneView` · `LobbyFriendsPopupView` · `LobbyProfilePopupView` · `LobbySettingsPopupView` · `LobbyQuestPopupView` · `LobbyRatesPopupView` · `LobbyModalView`(입력 · 경고 · 요청 중) · `LobbyInviteBannerView` · `LobbyGachaResultView` · `LobbyFxView`(토스트 · 터짐 · 재화 얻음) + 줄 · 칸 · 탭 · 스위치. 가짜 값은 `LobbyHubData`, 색 · 공통 값은 `LobbyStyle`. 옛 `LobbyView` 삭제.
+- 실제로 동작하는 것: 랜덤 매칭 · 방 만들기 · 혼자 하기 · 코드로 참가(Photon), 닉네임 변경(UGS 저장), 설정 스위치 3개 저장(`PlayerPrefsKeys.SfxOn` · `BgmOn` · `InviteNoticeOn` — 소리 연결은 아직 없음).
+- 초대 · 친구 요청이 「오는 것」 은 `LobbyPresenter` 의 우클릭 메뉴(확인용)로만 일어난다.
+- `multi-test/MultiTest.cs`: 로비 단계가 새 `LobbyModalView` 를 쓰게 이름 표를 고침.
+- 경고 창 본문은 띄어쓰기에서만 줄을 바꾼다(시안 `word-break: keep-all`) — TMP 가 한글을 낱말 중간에서 꺾어 `<nobr>` 로 묶었다.
+
+### 확인
+- `multi-test ui` 통과 · 콘솔 에러 0 (타이틀 → 로비 → 없는 방 코드 → 경고 → 방 만들기 → 나가기 → 로비).
+- 게임 뷰 1920 × 1080 으로 42장(상태 약 40개)을 찍어 눈으로 봄 — 홈 · 꾸미기 · 상점 3탭 · 친구 3탭 + 줄 메뉴 · 프로필 · 설정 · 차단 목록 · 퀘스트(받기 전 · 후) · 확률 창 · 방 코드 / 닉네임 / 계정 삭제 입력 · 경고 4종 · 충전 · 구매 · 뽑기 1회 / 10회(닫힘 · 열림) · 초대 배너 · 토스트 · 요청 중.
+- **확인 못 함**: 시안과 픽셀 단위 비교(눈 비교만) · 16:9 가 아닌 화면비와 노치 · 실제 터치 / 마우스 조작(함수를 직접 불러서 봄) · 모바일 키보드 · 친구 검색 결과 줄 · `multi 2`.
+
+### 시안 · 문서와 다르게 한 것 (PM 확인)
+- 방 참가 실패 문구는 문서 문구(합쇼체 「방을 찾을 수 없습니다.」)를 썼다 — 시안은 해요체.
+- 넣지 않은 것: 로그아웃 버튼 · Google / Apple 연동 버튼(23), 「입장!」 터짐 · 속도선, 게임이 끝난 뒤 보상 · 퀘스트 진행, 시안의 가짜 대기 시간. 계정 삭제는 입력까지만 받고 「나중에 다시」 경고로 끝난다(API 없음). 개인정보처리방침 · 문의는 로그만(주소 미정).
+- 글꼴 Jua 에 「」 가 없어 화면 문구는 `'…'` 로 썼다. 점선 테두리는 실선, ⋯ 는 점 3개로 그렸다.
+- 로비 토스트는 `PopupManager` 토스트가 아니라 화면 자체 토스트(`LobbyFxView`)다.
+
+### 커밋하지 않은 것
+- **이번 작업 전부** — `feature/title-screen` 작업 폴더에 파일로만 있다. 로비가 타이틀 브랜치의 커밋(`AccountService` · `PressableButton` 등)에 기대고 있어, 지금 HEAD 에서 `feature/lobby-screen` 을 가르는 안을 PM 에게 제안해 둠 (답 대기).
+- 갈무리 · Jua · LiberationSans SDF — 에디터가 바꾼 동적 아틀라스.
+
+### 다음 할 일
+- [ ] 브랜치 결정 → 커밋 → `/prepush` → PR
+- [ ] `RoomScreen/RoomView.cs` 주석이 지워진 `LobbyView` 를 가리킨다 — 룸을 고칠 때 정리
+- [ ] 제안: TMP 설정 「Use Modern Line Breaking(한글)」 을 켜면 모든 화면에서 낱말 단위로 줄이 바뀐다 (지금은 로비 경고 창만 처리)
+- [ ] 제안: `TitleScreenBuilder` · `LobbyScreenBuilder` 의 같은 조립 함수를 한 곳으로
+
+---
+
 ## 2026-11-11 · 타이틀 — 로고 굵기 · 게스트는 자동 로그인 없음 (`feature/title-screen`)
 
 ### 결정 (PM, 2026-11-11)
