@@ -276,6 +276,7 @@ namespace Chapchu.UI.Lobby
             RoomEvents.OnCreateRoomFailed -= HandleCreateRoomFailed;
             RoomEvents.OnJoinRoomFailed -= HandleJoinRoomFailed;
             RoomEvents.OnJoinRandomFailed -= HandleJoinRandomFailed;
+            _isMoving = false; // 꺼지면 잠금을 푸는 코루틴도 멈춘다
         }
 
         private void Start()
@@ -334,7 +335,7 @@ namespace Chapchu.UI.Lobby
             if (from == Screen.Home || screen == Screen.Home)
             {
                 _isMoving = true;
-                Invoke(nameof(EndMove), MoveLockSeconds);
+                StartCoroutine(EndMoveRoutine());
             }
 
             home.SetVisible(screen == Screen.Home);
@@ -350,7 +351,12 @@ namespace Chapchu.UI.Lobby
                 section.FlashContent();
         }
 
-        private void EndMove() => _isMoving = false;
+        // 판 이동 연출(SetUpdate(true))과 같은 시계로 잠금을 푼다
+        private IEnumerator EndMoveRoutine()
+        {
+            yield return new WaitForSecondsRealtime(MoveLockSeconds);
+            _isMoving = false;
+        }
 
         private void HandleDecoRequested() => Go(Screen.Box);
 
@@ -1056,6 +1062,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleJoinedRoom()
         {
+            if (_roomTimeout == null) // 10초가 지나 이미 실패로 알린 요청의 늦은 입장 — 방으로 가지 않고 나간다
+            {
+                NetworkManager.Instance.LeaveRoom();
+                return;
+            }
+
             SceneManager.LoadScene(ScenePaths.Room);
         }
 
