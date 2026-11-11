@@ -61,8 +61,19 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float dimAlpha = 0.42f;
         [SerializeField] private float dimFadeDuration = 0.2f;
 
+        [Header("손패를 올렸을 때 (10-ui.md 2-1 「카드 연출 자리」 — 프로토타입 v2 HANDUP_LAY)")]
+        [Tooltip("크게 둔 카드가 줄어드는 비율 — 1.85 배 → 1.15 배.")]
+        [SerializeField] private float handUpShrink = 1.15f / 1.85f;
+        [Tooltip("카드 가운데가 올라가는 높이 (테이블 면 기준 유닛) — 시안 40 × 2 = 캔버스 80.")]
+        [SerializeField] private float handUpRaise = 0.8f;
+        [Tooltip("비키고 돌아오는 초 — 시안 0.2.")]
+        [SerializeField] private float handUpDuration = 0.2f;
+
         // 체인에 올라가 처리 결과를 기다리는 카드 (인스턴스 ID → 카드). 함정 칸에서 나온 카드는 아직 그리지 않아 여기 없다.
         private readonly Dictionary<int, CardView> _cards = new Dictionary<int, CardView>();
+        private readonly Dictionary<int, float> _lifts = new Dictionary<int, float>(); // 겹쳐 둔 카드마다 카메라 쪽으로 띄운 거리
+        private readonly List<int> _order = new List<int>();                            // 체인에 오른 순서 — 맨 뒤가 맨 위 카드
+        private bool _handRaised;
         private Camera _camera;
         private Tween _dimTween;
 
@@ -79,6 +90,27 @@ namespace Chapchu.UI.GameScreen
 
             SetDimAlpha(0f);
             dimmer.gameObject.SetActive(false);
+        }
+
+        /// <summary>체인 맨 위 카드(반응을 기다리는 카드)의 이름. 체인이 비었으면 null.</summary>
+        public string TopCardName => _order.Count > 0 && _cards.TryGetValue(_order[_order.Count - 1], out CardView top) ? deck.GetCard(top.CardId)?.cardName : null;
+
+        /// <summary>
+        /// 내 손패가 올라왔다 · 내려갔다 — 올라와 있는 동안 체인의 카드를 작게 · 위로 비켜 손패와 겹치지 않게 한다. 판정과 상관없는 연출.
+        /// 3 단계(크게 보여 주는 중)에도 바로 따른다.
+        /// </summary>
+        public void SetHandRaised(bool raised)
+        {
+            if (_handRaised == raised) return;
+
+            _handRaised = raised;
+            foreach (KeyValuePair<int, CardView> pair in _cards)
+            {
+                if (pair.Value == null) continue;
+
+                GetSpot(pair.Value, _lifts[pair.Key], out Vector3 position, out Vector3 scale);
+                MoveTo(pair.Value, position, showSpot.rotation, scale, handUpDuration, Ease.OutQuart);
+            }
         }
 
         /// <summary>
@@ -101,11 +133,14 @@ namespace Chapchu.UI.GameScreen
 
             float lift = stackZ * _cards.Count;
             _cards[cardInstanceId] = card;
+            _lifts[cardInstanceId] = lift;
+            _order.Add(cardInstanceId);
 
             // 3 단계 — 손에서 바로 가운데로 크게. 모두가 카드를 읽는 구간
             ownerTag.Show(data != null ? data.type : CardType.Action, OwnerText(actorNumber, targets));
             FadeDim(true);
-            MoveTo(card, showSpot.position + showSpot.forward * lift, showSpot.rotation, showSpot.lossyScale, zoomMoveDuration, Ease.OutQuart);
+            GetSpot(card, lift, out Vector3 spotPosition, out Vector3 spotScale);
+            MoveTo(card, spotPosition, showSpot.rotation, spotScale, zoomMoveDuration, Ease.OutQuart);
             yield return new WaitForSeconds(zoomDuration);
 
             // 줄이지 않고 그대로 둔다 — 어둠과 주인 태그만 걷는다
@@ -132,7 +167,25 @@ namespace Chapchu.UI.GameScreen
                 return null;
 
             _cards.Remove(cardInstanceId);
+            _lifts.Remove(cardInstanceId);
+            _order.Remove(cardInstanceId);
             return card;
+        }
+
+        // 체인의 카드가 놓일 자리 · 배율 — 평소는 가운데 큰 자리(showSpot), 손패가 올라와 있으면 작게 · 위로.
+        // 카드 기준점이 아래 가운데라, 줄어든 카드의 가운데를 handUpRaise 만큼 올린 뒤 그 아래 끝을 구한다. 올리는 높이는 카메라에 가까운 만큼 줄인다 (화면에서 캔버스 80).
+        private void GetSpot(CardView card, float lift, out Vector3 position, out Vector3 scale)
+        {
+            position = showSpot.position + showSpot.forward * lift;
+            scale = showSpot.lossyScale;
+            if (!_handRaised) return;
+
+            float cameraZ = _camera.transform.position.z;
+            float near = (showSpot.position.z - cameraZ) / -cameraZ;
+            float halfHeight = card.Height * scale.y / 2f;
+            Vector3 center = position + showSpot.up * halfHeight + Vector3.up * (handUpRaise * near);
+            scale *= handUpShrink;
+            position = center - showSpot.up * (halfHeight * handUpShrink);
         }
 
         /// <summary>남의 카드가 그 사람 손패로 돌아갔다 (「손패로 반환」) — 좌석의 손 자리로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>

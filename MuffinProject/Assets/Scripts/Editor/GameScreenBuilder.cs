@@ -925,6 +925,7 @@ namespace Chapchu.EditorTools
             }
 
             TMP_Text label = NewText("LabelText", body, "반응", 30f, Ink, true);
+            TMP_Text cardName = AddReactionCardName(body);
 
             RectTransform bar = NewRect("Bar", body);
             LayoutElement barSize = bar.gameObject.AddComponent<LayoutElement>();
@@ -940,9 +941,18 @@ namespace Chapchu.EditorTools
             var view = root.gameObject.AddComponent<ReactionTimerView>();
             Wire(view,
                 ("body", body.gameObject), ("border", body.Find("Border").GetComponent<Image>()), ("clockIcon", clock.gameObject), ("pauseIcon", pause.gameObject),
-                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject));
+                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject), ("cardNameText", cardName));
             body.gameObject.SetActive(false);
             return root.gameObject.AddComponent<ReactionTimerPresenter>();
+        }
+
+        // 반응 타이머의 카드 이름 (시계 뒤 · 「반응」 앞) — 손패를 올렸을 때만 보인다 (ReactionTimerView.SetDocked). 시안 .rt2.dock .cn
+        public static TMP_Text AddReactionCardName(RectTransform timerBody)
+        {
+            TMP_Text cardName = NewText("CardNameText", timerBody, "카드 이름", 30f, Ink, true);
+            cardName.transform.SetSiblingIndex(timerBody.Find("ClockIcon").GetSiblingIndex() + 1); // 시계 바로 뒤 — 맨 앞에 두면 알약 바탕(RoundBox 의 자식)에 가린다
+            cardName.gameObject.SetActive(false);
+            return cardName;
         }
 
         #endregion

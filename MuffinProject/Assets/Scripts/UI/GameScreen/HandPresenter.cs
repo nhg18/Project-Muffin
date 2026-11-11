@@ -86,6 +86,9 @@ namespace Chapchu.UI.GameScreen
 
         private HandView _view;
 
+        /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
+        public event System.Action<bool> OnRaisedChanged;
+
         private void Awake()
         {
             _view = GetComponent<HandView>();
@@ -344,6 +347,7 @@ namespace Chapchu.UI.GameScreen
         {
             foreach (CanvasGroup group in coveredHud)
                 group.blocksRaycasts = !raised;
+            OnRaisedChanged?.Invoke(raised);
         }
 
         // 놓은 자리가 사용 기준선 위이거나 상대 위면 사용, 아니면 손패로 (10-ui.md 4절 「끌다가 놓기」).

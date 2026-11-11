@@ -50,6 +50,7 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
+            hand.OnRaisedChanged += HandleHandRaised;
             GameEvents.OnHpChanged += HandleHpChanged;
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
@@ -79,6 +80,7 @@ namespace Chapchu.UI.GameScreen
 
         private void OnDisable()
         {
+            hand.OnRaisedChanged -= HandleHandRaised;
             GameEvents.OnHpChanged -= HandleHpChanged;
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
@@ -114,6 +116,13 @@ namespace Chapchu.UI.GameScreen
             _steps.Clear();
             _hasPendingMyCard = false;
             _chainCount = 0;
+        }
+
+        // 내 손패 올림 · 내림은 내 포인터의 일이라 연출 큐를 거치지 않고 바로 — 가운데 카드 · 반응 타이머가 비킨다.
+        private void HandleHandRaised(bool raised)
+        {
+            chainCards.SetHandRaised(raised);
+            reactionTimer.SetHandRaised(raised);
         }
 
         private void HandleHpChanged(int actorNumber, int hp)
@@ -363,6 +372,7 @@ namespace Chapchu.UI.GameScreen
         {
             Enqueue(() =>
             {
+                reactionTimer.SetCardName(chainCards.TopCardName);
                 reactionTimer.Show(opensAt, deadline);
                 hand.ShowReaction(opensAt, deadline);
                 return null;

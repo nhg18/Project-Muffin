@@ -27,6 +27,16 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text secondsText;
         [SerializeField] private GameObject unitText;
 
+        [Header("손패를 올렸을 때 (10-ui.md 2-1 「카드 연출 자리」)")]
+        [Tooltip("무엇에 반응하는지 — 체인 맨 위 카드 이름. 손패를 올렸을 때만 보인다 (카드가 작아져 이름이 안 읽히므로).")]
+        [SerializeField] private TMP_Text cardNameText;
+        [Tooltip("손패를 올렸을 때 알약 윗변의 자리 (위 끝에서 캔버스 px) — 시안: 가운데가 손패 카드 높이 + 98 위 (1080 − 336 − 98 = 646). 줄어든 카드의 아래 끝(637)에 살짝 걸친다.")]
+        [SerializeField] private float dockedTop = 616f;
+
+        private float _normalY;
+        private bool _docked;
+        private string _cardName;
+
         [Header("색 (시안 .rt2 · .low · .soon)")]
         [SerializeField] private Color ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
         [SerializeField] private Color fillColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
@@ -37,13 +47,39 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null)
+            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null || cardNameText == null)
             {
                 Debug.LogError($"[{nameof(ReactionTimerView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
             }
 
+            _normalY = ((RectTransform)transform).anchoredPosition.y;
+            cardNameText.gameObject.SetActive(false);
             Hide();
+        }
+
+        /// <summary>손패가 올라왔으면 올라온 손패 바로 위로 내려가 카드 이름을 함께 보인다. 내려가면 크게 둔 카드 아래 가장자리로 돌아간다.</summary>
+        public void SetDocked(bool docked)
+        {
+            _docked = docked;
+            var rect = (RectTransform)transform;
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, docked ? -dockedTop : _normalY);
+            RefreshCardName();
+        }
+
+        /// <summary>반응을 기다리는 카드의 이름 — 손패를 올렸을 때 보인다. null 이면 숨긴다.</summary>
+        public void SetCardName(string cardName)
+        {
+            _cardName = cardName;
+            RefreshCardName();
+        }
+
+        private void RefreshCardName()
+        {
+            bool show = _docked && !string.IsNullOrEmpty(_cardName);
+            cardNameText.gameObject.SetActive(show);
+            if (show)
+                cardNameText.text = _cardName;
         }
 
         /// <summary>반응 시간이 아직 열리지 않았다 (카드 연출 중) — 회색 「반응 · 곧」.</summary>
