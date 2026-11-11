@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-11-11 · 글꼴 Jua 한 종 · 문서 PR 머지 순서 (`docs/font-jua`)
+
+### 결정 (PM, 2026-11-11)
+1. 본문 · 설명 · 작은 글자도 **Jua** — 「지금 만든 폰트로」. 통합 v2 시안 · 팝업 시안 · `feature/title-screen` 의 TitleScene 이 이미 Jua 한 종이다. 고운돋움(11-07 확정) · Noto Sans KR Medium(`docs/card-render`, 머지 안 됨)은 버린다. 고정폭 IBM Plex Mono 는 그대로.
+2. 열린 문서 PR 은 이 순서로 머지한다 — **#127 카드 연출 4 단계 → #126 팝업 → `docs/planning` 동명이인 → `docs/font-jua` 글꼴**. 뒤 브랜치가 앞 브랜치를 합쳐 두어(충돌 정리 끝) 순서대로면 충돌이 없다.
+
+### 한 것
+- `21-font` 2절 #2 · #4 · 3-1 · 3-3 · 4절 · 5절 · 6절 · 7절 #1 · #4 — Jua 한 종. Jua 행은 `feature/title-screen` 의 에셋(`Fonts/Jua/`, `Jua SDF` · `Jua Logo SDF`) 기준.
+- `22-popup-ui` 5절 「둥근 글꼴 · 본문 글꼴」 → Jua, 시안 줄 · 8절. `10-ui` 2-1 · 시안에만 있는 것 표, `12-title-ui` 9-2 폰트 줄 · 굵기 배분.
+- `docs/popup-ui-v2` ← `docs/card-fx-4stage`, `docs/planning` ← `docs/popup-ui-v2` 합침 (worklog · 16 · 22 수정일 충돌 정리).
+
+### 다음 할 일
+- [ ] `docs/card-render` 브랜치(Noto Sans KR 안)는 이 결정으로 쓸모가 없다 — 지울지 PM 확인
+- [ ] `feature/title-screen` 은 docs/worklog.md 를 고쳐서, 위 문서 PR 들 뒤에 머지하면 worklog 충돌이 난다 — 그 브랜치 PR 때 정리
+- [ ] `GameScreenBuilder` 주석 「시안 글꼴(Jua · 고운돋움)」 · 아티팩트 「찹츄 3D 카드 연출」 글꼴 비교는 옛 결정 그대로
+
+---
+
 ## 2026-11-11 · 팝업 UI 「카드 한 장」 — 시안 다시 그림 · 22 문서 맞춤
 
 ### 결정 (PM, 2026-11-11)
@@ -14,7 +32,7 @@
 - `22-popup-ui`: 시안 기준 게시본 ID · 룩 설명 · 1절 #8 · #9 · #10 · 2-1 · 5절 수치 전부 · 6절 #7.
 
 ### 다음 할 일
-- [ ] 글꼴이 어긋난다 — `21-font` 는 본문 고운돋움, 통합 시안(2026-11-09)은 Jua 하나, 머지 안 된 `docs/card-render` 는 Noto Sans KR. PM 확인
+- [x] 글꼴이 어긋난다 — 2026-11-11 PM: Jua 한 종으로 (`docs/font-jua` 항목)
 - [ ] `22` 8절의 다른 문서 맞춤(`10-ui` 8절 · `17` 4-3 등)은 아직
 - [ ] Unity 팝업 프리팹을 5절에 맞추기 (`22` 6절)
 
