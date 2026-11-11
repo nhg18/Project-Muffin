@@ -86,3 +86,26 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 * 클라이언트는 받은 일을 연출 큐에 넣고 하나씩 재생한다. 화면 값은 재생하면서 이벤트에 담긴 값으로 바꾼다.
   * 큐는 화면마다 하나(`GameScreenPresenter`). 큐만 `GameEvents` 를 구독하고, 영역 프레젠터는 큐가 부르는 함수(`Show*` 즉시 · `*Routine` 연출)만 둔다. 받은 순서가 곧 일어난 순서라 큐는 순서를 바꾸지 않는다.
   * 큐를 타지 않는 것: 내 요청의 거절(바로 토스트) · 매 프레임 계산하는 값(남은 초) · 늦게 열렸을 때 CustomProperties 로 복구하는 초기값(각 프레젠터 `Start`).
+
+## 10. 화면 그리기 (HTML 시안 → uGUI)
+
+시안을 찍어서 이미지로 만들지 않는다. 사람이 그린 그림만 이미지로 쓰고, 나머지는 Unity 에서 그린다.
+
+| 시안 | Unity |
+| --- | --- |
+| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. `Sprites/UI/<화면>/` |
+| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다 |
+| 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다 |
+| 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
+| 그라데이션 | `Common` 의 흰 → 투명 띠 스프라이트 + 색 |
+| 글자 | TMP. 글자를 이미지에 넣지 않는다 |
+
+그리는 횟수(batches)를 늘리지 않게:
+
+* 머티리얼은 기본 UI 머티리얼 하나. 요소마다 다른 머티리얼 · 셰이더를 쓰지 않는다. 연출용은 연출 Canvas 안에서만 쓴다.
+* 스프라이트는 화면마다 아틀라스 하나, `Common` 은 공용 아틀라스 하나.
+* 겹치는 요소는 같은 아틀라스끼리, TMP 끼리 형제 순서를 묶는다. 이미지 · 글자 · 이미지가 번갈아 겹치면 그때마다 배치가 끊긴다.
+* 잘라내기는 `RectMask2D`. `Mask` 는 사각형이 아닌 모양으로 잘라야 할 때만 쓴다.
+* 자주 바뀌는 영역(타이머 · 손패 · 카드 연출)은 Canvas 를 따로 둔다.
+* 누를 수 없는 Graphic 은 `raycastTarget` 을 끈다.
+* 화면을 붙이면 Frame Debugger 로 batches 를 재서 worklog 에 남긴다.
