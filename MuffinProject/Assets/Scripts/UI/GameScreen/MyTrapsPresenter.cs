@@ -29,6 +29,7 @@ namespace Chapchu.UI.GameScreen
         private TrapSlotsView _view;
         private CardView _preview;
         private bool _suppressClick; // 크게 보기를 닫은 그 탭이 칸 위였을 때 다시 열리지 않게
+        private int _previewOpenedFrame = -1; // 크게 보기를 연 프레임 — 그 프레임에는 닫지 않는다
 
         private void Awake()
         {
@@ -52,7 +53,8 @@ namespace Chapchu.UI.GameScreen
         // 크게 보기는 다음 탭(어디든)에 닫는다. 터치는 마우스로 흉내 내므로 마우스 버튼만 본다.
         private void Update()
         {
-            if (_preview != null && Input.GetMouseButtonDown(0))
+            // 연 프레임은 건너뛴다 — 누름 · 뗌이 한 프레임에 들어온 탭은 클릭(EventSystem)이 먼저 열고, 같은 프레임의 이 판정이 바로 닫아 버린다
+            if (_preview != null && Input.GetMouseButtonDown(0) && Time.frameCount != _previewOpenedFrame)
             {
                 HidePreview();
                 _suppressClick = true;
@@ -114,6 +116,7 @@ namespace Chapchu.UI.GameScreen
 
             HidePreview();
             _preview = Instantiate(trapCardPrefab, transform);
+            _previewOpenedFrame = Time.frameCount;
             _preview.Setup(_instanceIds[index], data);
             _preview.SetRaycastBlocking(false);
             _preview.transform.SetPositionAndRotation(previewSpot.position + previewSpot.forward * previewZ, previewSpot.rotation);

@@ -429,7 +429,18 @@ namespace Chapchu.Network
                 yield break;
 
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
-            PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null });
+            // 찹츄 · 함정 장수도 같은 이유로 여기서 지운다 — 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다. 봇은 방 속성 키 (18-bot.md 9절)
+            var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0 };
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null };
+            foreach (int bot in BotRoster.Actors)
+            {
+                foreach (DictionaryEntry entry in playerReset)
+                    roomReset[BotRoster.PropKey((string)entry.Key, bot)] = entry.Value;
+            }
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomReset);
+
+            foreach (Player player in PhotonNetwork.PlayerList)
+                player.SetCustomProperties(playerReset);
 
             NetworkManager.Instance.UpdateRoomOptions(isVisible: !BotRoster.IsSoloRoom, isOpen: true); // 「혼자 하기」 방은 비공개 그대로 (18-bot.md 10절)
             PhotonNetwork.LoadLevel(ScenePaths.Room);
