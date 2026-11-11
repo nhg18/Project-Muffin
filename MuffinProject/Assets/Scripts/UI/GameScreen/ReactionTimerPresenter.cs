@@ -58,6 +58,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>내 손패가 올라왔다 · 내려갔다 — 올라와 있으면 손패 바로 위로 옮기고 카드 이름을 붙인다.</summary>
         public void SetHandRaised(bool raised) => _view.SetDocked(raised);
 
+        /// <summary>체인 카드의 아래 끝 (캔버스 y, 화면 가운데가 0) — 평소 자리가 따라간다.</summary>
+        public void SetCardsBottom(float canvasY) => _view.SetCardsBottom(canvasY);
+
         /// <summary>반응을 기다리는 카드(체인 맨 위)의 이름.</summary>
         public void SetCardName(string cardName) => _view.SetCardName(cardName);
 

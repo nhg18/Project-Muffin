@@ -33,6 +33,9 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("손패를 올렸을 때 알약 윗변의 자리 (위 끝에서 캔버스 px) — 시안: 가운데가 손패 카드 높이 + 98 위 (1080 − 336 − 98 = 646). 줄어든 카드의 아래 끝(637)에 살짝 걸친다.")]
         [SerializeField] private float dockedTop = 616f;
 
+        [Tooltip("평소 알약 윗변이 체인 카드의 아래 끝에서 올라와 걸치는 높이 (캔버스 px).")]
+        [SerializeField] private float hang = 40f;
+
         private float _normalY;
         private bool _docked;
         private string _cardName;
@@ -65,6 +68,15 @@ namespace Chapchu.UI.GameScreen
             var rect = (RectTransform)transform;
             rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, docked ? -dockedTop : _normalY);
             RefreshCardName();
+        }
+
+        /// <summary>체인 카드의 아래 끝이 바뀌었다 (캔버스 y, 화면 가운데가 0 · 위가 +) — 평소 자리가 그 가장자리를 따라간다. 체인이 길어 카드가 줄었을 때.</summary>
+        public void SetCardsBottom(float canvasY)
+        {
+            var rect = (RectTransform)transform;
+            _normalY = canvasY + hang - ((RectTransform)rect.parent).rect.height / 2f;
+            if (!_docked)
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, _normalY);
         }
 
         /// <summary>반응을 기다리는 카드의 이름 — 손패를 올렸을 때 보인다. null 이면 숨긴다.</summary>

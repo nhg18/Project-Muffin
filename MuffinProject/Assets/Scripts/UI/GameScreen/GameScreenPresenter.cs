@@ -51,6 +51,7 @@ namespace Chapchu.UI.GameScreen
         private void OnEnable()
         {
             hand.OnRaisedChanged += HandleHandRaised;
+            chainCards.OnBottomChanged += reactionTimer.SetCardsBottom;
             GameEvents.OnHpChanged += HandleHpChanged;
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
@@ -81,6 +82,7 @@ namespace Chapchu.UI.GameScreen
         private void OnDisable()
         {
             hand.OnRaisedChanged -= HandleHandRaised;
+            chainCards.OnBottomChanged -= reactionTimer.SetCardsBottom;
             GameEvents.OnHpChanged -= HandleHpChanged;
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
