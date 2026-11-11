@@ -2544,7 +2544,6 @@ MonoBehaviour:
   modal: {fileID: 1735345650}
   fx: {fileID: 926425690}
   playIcon: {fileID: 21300000, guid: 268dba7f0f78598499f235e6a8dfd89a, type: 3}
-  moveLockSeconds: 0.26
   legendBurstSize: 300
   rareBurstSize: 192
   revealBurstDrop: 80

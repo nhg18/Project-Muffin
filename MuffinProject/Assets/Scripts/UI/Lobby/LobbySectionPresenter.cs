@@ -46,6 +46,9 @@ namespace Chapchu.UI.Lobby
         private const string ChargeOkText = "충전";
         private const string ToQuestsText = "퀘스트 보기";
 
+        // 판이 다 미끄러진 다음 프레임까지 버튼을 잠가 둔다 — 판 이동 시간(LobbySectionView)에 더하는 여유
+        private const float MoveLockMarginSeconds = 0.01f;
+
         [SerializeField] private LobbyPresenter lobby;
         [SerializeField] private LobbyPopupPresenter popups;
 
@@ -64,9 +67,6 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Sprite playIcon;
 
         [Header("연출")]
-        [Tooltip("홈 ↔ 섹션을 오갈 때 버튼이 다시 눌리지 않는 시간 (초). 판이 미끄러지는 시간보다 조금 길게")]
-        [SerializeField] private float moveLockSeconds = 0.26f;
-
         [Tooltip("뽑기에서 개판 등급이 열릴 때 터짐 그림의 크기 (캔버스 px)")]
         [SerializeField] private float legendBurstSize = 300f;
 
@@ -181,10 +181,10 @@ namespace Chapchu.UI.Lobby
                 section.FlashContent();
         }
 
-        // 판 이동 연출(SetUpdate(true))과 같은 시계로 잠금을 푼다
+        // 판 이동 연출(SetUpdate(true))과 같은 시계 · 같은 길이로 잠금을 푼다
         private IEnumerator EndMoveRoutine()
         {
-            yield return new WaitForSecondsRealtime(moveLockSeconds);
+            yield return new WaitForSecondsRealtime(section.SlideSeconds + MoveLockMarginSeconds);
             IsMoving = false;
         }
 

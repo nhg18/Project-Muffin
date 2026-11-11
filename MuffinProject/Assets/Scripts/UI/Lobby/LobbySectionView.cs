@@ -55,6 +55,9 @@ namespace Chapchu.UI.Lobby
         private Vector2 _paneOrigin;
         private bool _isOpen;
 
+        /// <summary>판이 미끄러져 들어오고 나가는 시간 (초) — 이 동안은 화면 이동 버튼을 잠근다.</summary>
+        public float SlideSeconds => slideSeconds;
+
         public event Action OnBackRequested;
         public event Action<LobbyShopTab> OnShopTabRequested;
         public event Action OnInfoButtonClicked;
