@@ -39,8 +39,11 @@ public static class MultiTest
     private const string StartClickedMethod = "HandleStartClicked";        // LoginSheetView — 닉네임 「시작」
     private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyPresenter
     private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyPresenter
-    private const string SubmitClickedMethod = "HandleSubmitClicked";      // InputPopup
-    private const string OkClickedMethod = "HandleOkClicked";              // WarningPopup
+    private const string SubmitClickedMethod = "HandleSubmitClicked";      // LobbyModalView — 입력 창 「참가」
+    private const string WarnOkClickedMethod = "HandleWarnOkClicked";      // LobbyModalView — 경고 창 「확인」
+    private const string ModalFieldField = "field";                        // LobbyModalView — 입력칸
+    private const string WarnTitleField = "warnTitle";                     // LobbyModalView — 경고 창 제목 · 본문
+    private const string WarnMessageField = "warnMessage";
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomView
     private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
@@ -407,22 +410,22 @@ public static class MultiTest
                     return "WAIT 로비 아님 (" + scene + ")";
 
                 Call(presenter, JoinRoomRequestedMethod);
-                InputPopup popup = Object.FindFirstObjectByType<InputPopup>();
-                if (popup == null)
-                    return "FAIL 입력 팝업이 안 열림";
+                LobbyModalView modal = Object.FindFirstObjectByType<LobbyModalView>();
+                if (modal == null || !modal.IsInputOpen)
+                    return "FAIL 방 코드 입력 창이 안 열림";
 
-                ((TMP_InputField)typeof(InputPopup).GetField("inputField", Private).GetValue(popup)).text = "ZZZZ";
-                Call(popup, SubmitClickedMethod);
+                ((TMP_InputField)typeof(LobbyModalView).GetField(ModalFieldField, Private).GetValue(modal)).text = "ZZZZ";
+                Call(modal, SubmitClickedMethod);
                 return "OK 없는 방 코드 ZZZZ 제출";
             }
             case "warning":
             {
-                WarningPopup popup = Object.FindFirstObjectByType<WarningPopup>();
-                if (popup == null)
-                    return "WAIT 경고 팝업 없음";
+                LobbyModalView modal = Object.FindFirstObjectByType<LobbyModalView>();
+                if (modal == null || !modal.IsWarnOpen)
+                    return "WAIT 경고 창 없음";
 
-                string text = ReadText(popup, "mainText") + " / " + ReadText(popup, "subText");
-                Call(popup, OkClickedMethod);
+                string text = ReadText(modal, WarnTitleField) + " / " + ReadText(modal, WarnMessageField);
+                Call(modal, WarnOkClickedMethod);
                 PopupManager.Instance.ShowToast("토스트 확인");
                 return "OK 경고 \"" + text + "\" 확인 · 토스트 띄움";
             }
@@ -1555,7 +1558,8 @@ public static class MultiTest
 
     private static string ReadText(object target, string field)
     {
-        return ((TMP_Text)target.GetType().GetField(field, Private).GetValue(target)).text;
+        string text = ((TMP_Text)target.GetType().GetField(field, Private).GetValue(target)).text;
+        return System.Text.RegularExpressions.Regex.Replace(text, "</?nobr>", ""); // 줄 바꿈 막는 태그는 빼고 읽는다
     }
 
     private static bool TryGetTurnActor(out int actor)
