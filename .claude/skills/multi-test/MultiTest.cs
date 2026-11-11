@@ -364,7 +364,7 @@ public static class MultiTest
         {
             case "title":
             {
-                // 저장된 로그인이면 누르지 않아도 로비로 간다. 처음이면 터치 → 약관 동의 → 게스트 → 닉네임 → 시작 (20-title-ui-full)
+                // 계정(Google · Apple) 로그인이 저장돼 있으면 누르지 않아도 로비로 간다. 게스트는 매번 터치 → (처음만 약관 동의) → 게스트 → 닉네임 → 시작
                 TitlePresenter presenter = Object.FindFirstObjectByType<TitlePresenter>();
                 if (presenter == null)
                     return scene == "LobbyScene" ? "OK 자동 로그인 → 로비" : "WAIT 타이틀 아님 (" + scene + ")";

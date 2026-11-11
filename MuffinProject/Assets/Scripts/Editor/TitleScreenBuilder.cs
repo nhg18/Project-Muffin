@@ -78,6 +78,7 @@ namespace Chapchu.EditorTools
             PlayerPrefs.DeleteKey(prefix + "player_id");
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.TermsAgreed);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.PlayerName);
+            PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.AccountLogin);
             PlayerPrefs.Save();
             Debug.Log($"[{nameof(TitleScreenBuilder)}] 처음 실행으로 되돌림 — 약관 동의 · 저장된 로그인 · 닉네임 기록을 지웠다.");
         }

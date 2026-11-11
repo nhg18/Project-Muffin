@@ -15,7 +15,9 @@ namespace Chapchu.UI.Title
 {
     /// <summary>
     /// 타이틀 흐름 — 약관 동의 → 로그인 고르기 → (게스트) 닉네임 → 로그인 → 설정 값 → 접속 → 닉네임 저장 → 로비.
-    /// 저장된 로그인이 있으면 누르지 않아도 자동 로그인 → 로비. 뷰와 계정(UGS) · 네트워크 · 씬 전환을 잇는 유일한 파일이다.
+    /// 자동 로그인(누르지 않아도 로비)은 계정(Google · Apple)으로 로그인해 둔 기기만. 게스트는 매번 「화면을 눌러 시작」 부터 —
+    /// 계정(저장된 로그인)과 닉네임은 기기에 남아, 닉네임 창에 지난 닉네임이 미리 들어 있다 (PM 2026-11-11, 시안과 다른 점).
+    /// 뷰와 계정(UGS) · 네트워크 · 씬 전환을 잇는 유일한 파일이다.
     /// 기준: 「통합 화면 UI v2」 타이틀 (게시본 1794204029-915a) · docs/systems/20-title-ui-full.md · 23-login.md 6절
     /// </summary>
     public class TitlePresenter : MonoBehaviour
@@ -60,7 +62,7 @@ namespace Chapchu.UI.Title
 
         private bool _agreed;           // 약관 동의 — 이번 실행에 했거나 기기에 기록이 있다
         private bool _autoSignIn;       // 저장된 로그인으로 들어가는 중
-        private bool _forgetSession;    // 다음 로그인은 저장된 로그인을 버리고 새 게스트 계정으로
+        private bool _forgetSession;    // 다음 로그인은 저장된 로그인을 버리고 새 계정으로
         private LoginMethod _method;
         private string _savedNickname;  // 서버에 저장된 닉네임 — 없으면 null
         private string _typedNickname;  // 이번에 입력해 「시작」 한 닉네임 — 없으면 null
@@ -145,9 +147,10 @@ namespace Chapchu.UI.Title
             sheet.Hide();
             popup.Hide();
 
-            // 동의 기록이 없으면 어디에도 접속하지 않고 「화면을 눌러 시작」 (23 3절 #9)
+            // 동의 기록이 없으면 어디에도 접속하지 않고 「화면을 눌러 시작」 (23 3절 #9).
+            // 게스트로 쓰던 기기도 「화면을 눌러 시작」 부터 — 자동 로그인은 계정 로그인만
             _agreed = PlayerPrefs.GetInt(PlayerPrefsKeys.TermsAgreed, 0) == 1;
-            if (!_agreed)
+            if (!_agreed || PlayerPrefs.GetInt(PlayerPrefsKeys.AccountLogin, 0) != 1)
             {
                 bottom.ShowTap();
                 return;
@@ -168,7 +171,7 @@ namespace Chapchu.UI.Title
 
         #region 흐름
 
-        // 저장된 로그인이 있으면 누르지 않아도 자동 로그인 (시안 enter)
+        // 계정(Google · Apple)으로 로그인해 둔 기기 — 누르지 않아도 자동 로그인 (시안 enter)
         private IEnumerator EnterRoutine()
         {
             Task initialize = AccountService.InitializeAsync();
@@ -268,15 +271,16 @@ namespace Chapchu.UI.Title
 
         private void AfterConnected()
         {
-            if (_savedNickname != null)
+            // 닉네임 창에서 정한 이름이 서버 것과 다르면 저장 — 새 계정이거나, 게스트가 지난 닉네임을 고쳤다
+            if (_typedNickname != null && _typedNickname != _savedNickname)
             {
-                GoToLobby();
+                Run(SaveRoutine());
                 return;
             }
 
-            if (_typedNickname != null)
+            if (_savedNickname != null)
             {
-                Run(SaveRoutine());
+                GoToLobby();
                 return;
             }
 
@@ -309,7 +313,13 @@ namespace Chapchu.UI.Title
 
             _leaving = true;
             StopFlow();
-            NetworkManager.Instance.SetNickname(_savedNickname);
+            NetworkManager.Instance.SetNickname(_savedNickname); // 기기에도 남는다 — 게스트의 다음 닉네임 창에 미리 채울 값
+
+            // 다음 실행에 자동 로그인할지 — 계정(Google · Apple)으로 들어왔을 때만. 자동 로그인으로 들어왔으면 그대로 둔다
+            if (!_autoSignIn)
+                PlayerPrefs.SetInt(PlayerPrefsKeys.AccountLogin, _method == LoginMethod.Guest ? 0 : 1);
+
+            PlayerPrefs.Save();
             StartCoroutine(LeaveForLobbyRoutine());
         }
 
@@ -363,13 +373,15 @@ namespace Chapchu.UI.Title
             sheet.ShowLogin(IsApplePlatform);
         }
 
-        // 게스트 — 서버에 아무것도 하지 않고 닉네임부터. 계정은 「시작」 을 눌러야 만든다 (시안 login)
+        // 게스트 — 서버에 아무것도 하지 않고 닉네임부터. 로그인은 「시작」 을 눌러야 한다 (시안 login).
+        // 이 기기에서 쓰던 닉네임이 있으면 미리 채운다 — 없으면 추천 이름
         private void HandleGuestRequested()
         {
             _autoSignIn = false;
             _method = LoginMethod.Guest;
             _typedNickname = null;
-            sheet.ShowNickname(NicknameValidator.Suggest());
+            string lastNickname = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName, string.Empty);
+            sheet.ShowNickname(string.IsNullOrEmpty(lastNickname) ? NicknameValidator.Suggest() : lastNickname);
         }
 
         private void HandleGoogleRequested() => FailExternalLogin(LoginMethod.Google);
@@ -394,10 +406,10 @@ namespace Chapchu.UI.Title
             }
 
             _typedNickname = nickname;
-            // 접속까지 끝났을 때만 바로 저장 — 로그인만 된 상태면 닉네임 읽기 → 설정 값 → 접속을 다시 탄다 (23 3절 #6 · 6-1)
+            // 접속까지 끝났을 때만 바로 저장(서버 것과 같으면 바로 로비) — 로그인만 된 상태면 닉네임 읽기 → 설정 값 → 접속을 다시 탄다 (23 3절 #6 · 6-1)
             if (_connected && !_forgetSession)
             {
-                Run(SaveRoutine());
+                AfterConnected();
                 return;
             }
 
@@ -437,10 +449,13 @@ namespace Chapchu.UI.Title
             Run(SignInRoutine());
         }
 
-        // 다른 방법으로 = 로그인 창 — 자동 로그인이 계속 실패해도 빠져나갈 길. 다음 로그인은 새 계정 (시안 other)
+        // 다른 방법으로 = 로그인 창 — 자동 로그인(계정)이 계속 실패해도 빠져나갈 길이라, 그때만 저장된 로그인을 버린다 (시안 other).
+        // 게스트의 저장된 로그인은 그 기기의 기록이라 버리지 않는다 (만료된 것은 UGS 가 스스로 지운다)
         private void HandleOtherMethodRequested()
         {
-            _forgetSession = true;
+            if (_autoSignIn)
+                _forgetSession = true;
+
             _autoSignIn = false;
             bottom.Hide();
             sheet.ShowLogin(IsApplePlatform);
