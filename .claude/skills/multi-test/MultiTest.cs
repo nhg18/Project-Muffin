@@ -44,7 +44,8 @@ public static class MultiTest
     private const string ModalFieldField = "field";                        // LobbyModalView — 입력칸
     private const string WarnTitleField = "warnTitle";                     // LobbyModalView — 경고 창 제목 · 본문
     private const string WarnMessageField = "warnMessage";
-    private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomView
+    private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomPresenter — 「나가기」 (혼자면 확인 없이 나간다)
+    private const string RoomLastLogField = "lastLineText";                // RoomLogView — 접힌 로그의 최근 한 줄
     private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
@@ -440,12 +441,12 @@ public static class MultiTest
             }
             case "leave":
             {
-                RoomView view = Object.FindFirstObjectByType<RoomView>();
-                if (view == null)
+                RoomPresenter room = Object.FindFirstObjectByType<RoomPresenter>();
+                if (room == null)
                     return "WAIT 방 아님 (" + scene + ")";
 
-                string log = ReadText(view, "logText");
-                Call(view, LeaveClickedMethod);
+                string log = ReadText(Object.FindFirstObjectByType<RoomLogView>(), RoomLastLogField);
+                Call(room, LeaveClickedMethod);
                 return "OK 방 로그 \"" + log + "\" → 나가기";
             }
             default:
