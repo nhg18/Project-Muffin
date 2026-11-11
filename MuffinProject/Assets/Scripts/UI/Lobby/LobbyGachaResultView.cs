@@ -14,13 +14,9 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyGachaResultView : MonoBehaviour
     {
-        private const float OpenAllStepSeconds = 0.11f;
         private const string TitleFormat = "{0} · {1}회";
         private const string AgainFormat = "{0}회 더";
         private const string RefundFormat = "+{0}";
-
-        private static readonly Vector2 CardSize = new Vector2(196f, 272f);
-        private static readonly Vector2 SingleCardSize = new Vector2(240f, 332f);
 
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
@@ -39,6 +35,16 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Sprite ghostIcon;
         [SerializeField] private Sprite cardIcon;
         [SerializeField] private Sprite sparkIcon;
+
+        [Header("연출")]
+        [Tooltip("「모두 열기」 에서 카드가 한 장씩 열리는 간격 (초)")]
+        [SerializeField] private float openAllStepSeconds = 0.11f;
+
+        [Tooltip("카드 크기 — 여러 장일 때 (캔버스 px)")]
+        [SerializeField] private Vector2 cardSize = new Vector2(196f, 272f);
+
+        [Tooltip("카드 크기 — 한 장일 때 (캔버스 px)")]
+        [SerializeField] private Vector2 singleCardSize = new Vector2(240f, 332f);
 
         private int _count;
         private Coroutine _openAll;
@@ -91,7 +97,7 @@ namespace Chapchu.UI.Lobby
             _count = results.Count;
             content.SetActive(true);
             titleText.text = string.Format(TitleFormat, LobbyHubData.GachaName, _count);
-            grid.cellSize = _count == 1 ? SingleCardSize : CardSize;
+            grid.cellSize = _count == 1 ? singleCardSize : cardSize;
             grid.constraintCount = _count == 1 ? 1 : 5;
 
             int totalRefund = 0;
@@ -190,7 +196,7 @@ namespace Chapchu.UI.Lobby
                     best = cards[i];
             }
 
-            var wait = new WaitForSecondsRealtime(OpenAllStepSeconds);
+            var wait = new WaitForSecondsRealtime(openAllStepSeconds);
             for (int i = 0; i < _count; i++)
             {
                 if (cards[i].IsOpen)

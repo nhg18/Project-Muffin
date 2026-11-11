@@ -13,23 +13,25 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(Button))]
     public class LobbyGachaCardView : MonoBehaviour
     {
-        private const float FlipSeconds = 0.45f;
         private const string DuplicateFormat = "중복 +{0}";
 
         [SerializeField] private RectTransform inner;
         [SerializeField] private GameObject back;
         [SerializeField] private Image backGradeRing;
         [SerializeField] private GameObject front;
-        [SerializeField] private Image frontBorder;
-        [SerializeField] private Image frontFill;
+        [SerializeField] private RoundBox frontBox;
         [SerializeField] private Image characterImage;
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text captionText;
-        [SerializeField] private Image tagBorder;
+        [SerializeField] private RoundBox tagBox;
         [SerializeField] private TMP_Text tagText;
         [SerializeField] private GameObject duplicateRow;
         [SerializeField] private TMP_Text duplicateText;
         [SerializeField] private GameObject newText;
+
+        [Header("연출")]
+        [Tooltip("카드가 뒤집히는 시간 (초)")]
+        [SerializeField] private float flipSeconds = 0.45f;
 
         private Button _button;
 
@@ -42,8 +44,8 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             _button = GetComponent<Button>();
-            if (inner == null || back == null || backGradeRing == null || front == null || frontBorder == null || frontFill == null || characterImage == null
-                || iconImage == null || captionText == null || tagBorder == null || tagText == null || duplicateRow == null || duplicateText == null || newText == null)
+            if (inner == null || back == null || backGradeRing == null || front == null || frontBox == null || characterImage == null
+                || iconImage == null || captionText == null || tagBox == null || tagText == null || duplicateRow == null || duplicateText == null || newText == null)
                 Debug.LogError($"[{nameof(LobbyGachaCardView)}] 참조가 비어 있습니다.", this);
         }
 
@@ -70,15 +72,15 @@ namespace Chapchu.UI.Lobby
             back.SetActive(true);
             front.SetActive(false);
             backGradeRing.color = grade;
-            frontBorder.color = grade;
-            frontFill.color = item.Grade == HubGrade.Legend ? LobbyStyle.LegendCardFill : Color.white;
+            frontBox.BorderColor = grade;
+            frontBox.FillColor = item.Grade == HubGrade.Legend ? LobbyStyle.LegendCardFill : Color.white;
             characterImage.gameObject.SetActive(isCharacter);
             characterImage.color = item.IsDefault ? Color.white : LobbyStyle.Silhouette;
             iconImage.gameObject.SetActive(!isCharacter);
             iconImage.sprite = slotIcon;
             captionText.gameObject.SetActive(!isCharacter);
             captionText.text = LobbyHubData.SlotName(item.Slot);
-            tagBorder.color = grade;
+            tagBox.BorderColor = grade;
             tagText.color = grade;
             tagText.text = LobbyHubData.GradeName(item.Grade);
             duplicateRow.SetActive(result.IsDuplicate);
@@ -95,9 +97,9 @@ namespace Chapchu.UI.Lobby
             IsOpen = true;
             inner.DOKill();
             DOTween.Sequence().SetTarget(inner).SetUpdate(true)
-                .Append(inner.DOLocalRotate(new Vector3(0f, 90f, 0f), FlipSeconds * 0.45f).SetEase(Ease.InQuad))
+                .Append(inner.DOLocalRotate(new Vector3(0f, 90f, 0f), flipSeconds * 0.45f).SetEase(Ease.InQuad))
                 .AppendCallback(ShowFront)
-                .Append(inner.DOLocalRotate(Vector3.zero, FlipSeconds * 0.55f).SetEase(Ease.OutBack));
+                .Append(inner.DOLocalRotate(Vector3.zero, flipSeconds * 0.55f).SetEase(Ease.OutBack));
         }
 
         private void ShowFront()

@@ -12,8 +12,6 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(Button))]
     public class LobbyItemCellView : MonoBehaviour
     {
-        private const float LockedAlpha = 0.3f;
-        private const float OwnedShopAlpha = 0.35f;
         private const string OnlyGachaText = "뽑기 전용";
         private const string PackPriceText = "₩ 미정";
 
@@ -30,7 +28,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject ownedStrip;
         [SerializeField] private GameObject shopInfo;
         [SerializeField] private TMP_Text nameText;
-        [SerializeField] private Image priceBorder;
+        [SerializeField] private RoundBox priceBox;
         [SerializeField] private Image priceIcon;
         [SerializeField] private TMP_Text priceText;
         [SerializeField] private GameObject bonusTag;
@@ -39,10 +37,21 @@ namespace Chapchu.UI.Lobby
         [Tooltip("상점 칸에서 그림 자리 아래를 비우는 높이 (이름 + 값, 캔버스 px)")]
         [SerializeField] private float shopInfoHeight = 108f;
 
-        [Tooltip("아이콘 크기 — 꾸미기 · 상점 · 충전 (캔버스 px)")]
+        [Tooltip("아이콘 크기 — 꾸미기 칸 (캔버스 px)")]
         [SerializeField] private float boxIconSize = 80f;
+
+        [Tooltip("아이콘 크기 — 상점 아이템 칸 (캔버스 px)")]
         [SerializeField] private float shopIconSize = 72f;
+
+        [Tooltip("아이콘 크기 — 충전 상품 칸 (캔버스 px)")]
         [SerializeField] private float packIconSize = 92f;
+
+        [Header("연출")]
+        [Tooltip("꾸미기에서 잠긴 아이템 그림의 불투명도 (0 ~ 1)")]
+        [SerializeField] private float lockedAlpha = 0.3f;
+
+        [Tooltip("상점에서 이미 가진 아이템 그림의 불투명도 (0 ~ 1)")]
+        [SerializeField] private float ownedShopAlpha = 0.35f;
 
         private Button _button;
 
@@ -58,7 +67,7 @@ namespace Chapchu.UI.Lobby
                 || iconImage == null || captionText == null || lockIcon == null || equippedStrip == null || ownedStrip == null)
                 Debug.LogError($"[{nameof(LobbyItemCellView)}] 그림 참조가 비어 있습니다.", this);
 
-            if (shopInfo == null || nameText == null || priceBorder == null || priceIcon == null || priceText == null
+            if (shopInfo == null || nameText == null || priceBox == null || priceIcon == null || priceText == null
                 || bonusTag == null || bonusText == null)
                 Debug.LogError($"[{nameof(LobbyItemCellView)}] 상점 칸 참조가 비어 있습니다.", this);
         }
@@ -72,7 +81,7 @@ namespace Chapchu.UI.Lobby
         {
             Begin(item.Id, LobbyStyle.GradeColor(item.Grade), isSelected, false);
             ShowPicture(item.Slot == HubSlot.Character, item.Slot == HubSlot.Card && item.IsDefault, slotIcon, caption, boxIconSize, !item.IsOwned);
-            pictureGroup.alpha = !item.IsOwned && item.Slot != HubSlot.Character ? LockedAlpha : 1f;
+            pictureGroup.alpha = !item.IsOwned && item.Slot != HubSlot.Character ? lockedAlpha : 1f;
             lockIcon.SetActive(!item.IsOwned);
             equippedStrip.SetActive(isEquipped);
         }
@@ -82,7 +91,7 @@ namespace Chapchu.UI.Lobby
         {
             Begin(item.Id, LobbyStyle.GradeColor(item.Grade), isSelected, true);
             ShowPicture(item.Slot == HubSlot.Character, false, slotIcon, null, shopIconSize, true);
-            pictureGroup.alpha = item.IsOwned ? OwnedShopAlpha : 1f;
+            pictureGroup.alpha = item.IsOwned ? ownedShopAlpha : 1f;
             ownedStrip.SetActive(item.IsOwned);
             nameText.text = item.Slot == HubSlot.Character ? item.Name : LobbyHubData.SlotName(item.Slot);
             SetPrice(currencyIcon, currencyIcon != null ? price : OnlyGachaText);
@@ -135,7 +144,7 @@ namespace Chapchu.UI.Lobby
             priceIcon.sprite = currencyIcon;
             priceText.text = text;
             priceText.color = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
-            priceBorder.color = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
+            priceBox.BorderColor = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
         }
 
         private void HandleClicked() => OnClicked?.Invoke(this);

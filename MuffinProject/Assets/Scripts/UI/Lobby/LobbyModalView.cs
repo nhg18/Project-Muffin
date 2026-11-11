@@ -40,19 +40,23 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private TMP_Text inputMessage;
         [SerializeField] private TMP_InputField field;
         [SerializeField] private TMP_Text fieldPlaceholder;
-        [SerializeField] private Image fieldBorder;
+        [SerializeField] private RoundBox fieldBox;
         [SerializeField] private TMP_Text countText;
         [SerializeField] private TMP_Text errorText;
         [SerializeField] private Button submitButton;
-        [SerializeField] private Image submitFill;
+        [SerializeField] private RoundBox submitBox;
         [SerializeField] private TMP_Text submitLabel;
         [SerializeField] private Sprite keyIcon;
         [SerializeField] private Sprite userIcon;
         [SerializeField] private Sprite crossIcon;
 
-        [Tooltip("방 코드 입력 글자 크기 · 글자 사이 (em × 100) — 닉네임 · 삭제 입력은 보통 크기")]
+        [Tooltip("방 코드 입력칸의 글자 크기")]
         [SerializeField] private float codeFontSize = 52f;
+
+        [Tooltip("방 코드 입력칸의 글자 사이 (em × 100)")]
         [SerializeField] private float codeSpacing = 30f;
+
+        [Tooltip("닉네임 · 삭제 입력칸의 글자 크기")]
         [SerializeField] private float textFontSize = 34f;
 
         [Tooltip("닉네임 입력에서 글자 수 표시가 차지하는 오른쪽 자리 (캔버스 px)")]
@@ -89,8 +93,8 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             if (dimmer == null || inputContent == null || inputBand == null || inputIcon == null || inputTitle == null || inputCloseButton == null
-                || inputMessage == null || field == null || fieldPlaceholder == null || fieldBorder == null || countText == null || errorText == null
-                || submitButton == null || submitFill == null || submitLabel == null || keyIcon == null || userIcon == null || crossIcon == null)
+                || inputMessage == null || field == null || fieldPlaceholder == null || fieldBox == null || countText == null || errorText == null
+                || submitButton == null || submitBox == null || submitLabel == null || keyIcon == null || userIcon == null || crossIcon == null)
                 Debug.LogError($"[{nameof(LobbyModalView)}] 입력 창 참조가 비어 있습니다.", this);
 
             if (warnContent == null || warnTitle == null || warnMessage == null || warnCancelButton == null || warnCancelLabel == null
@@ -134,7 +138,7 @@ namespace Chapchu.UI.Lobby
             inputMessage.text = DeleteMessage;
             fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : NicknamePlaceholder;
             submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : NicknameSubmit;
-            submitFill.color = isDelete ? LobbyStyle.WarnFill : LobbyStyle.Turn;
+            submitBox.FillColor = isDelete ? LobbyStyle.WarnFill : LobbyStyle.Turn;
 
             // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다
             field.characterLimit = isCode ? RandomCode.Length : kind == LobbyInputKind.Nickname ? NicknameValidator.MaxLength : 0;
@@ -159,7 +163,7 @@ namespace Chapchu.UI.Lobby
         public void SetInputError(string message)
         {
             errorText.text = message;
-            fieldBorder.color = string.IsNullOrEmpty(message) ? LobbyStyle.Ink : LobbyStyle.Hp;
+            fieldBox.BorderColor = string.IsNullOrEmpty(message) ? LobbyStyle.Ink : LobbyStyle.Hp;
         }
 
         public void HideInput()

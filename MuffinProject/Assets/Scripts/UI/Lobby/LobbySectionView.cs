@@ -16,9 +16,6 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbySectionView : MonoBehaviour
     {
-        private const float FadeSeconds = 0.2f;
-        private const float SlideSeconds = 0.25f;
-
         [SerializeField] private CanvasGroup head;
         [SerializeField] private RectTransform pane;
         [SerializeField] private CanvasGroup paneContent;
@@ -34,7 +31,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject infoItem;
         [SerializeField] private TMP_Text infoName;
         [SerializeField] private GameObject gradeTag;
-        [SerializeField] private Image gradeTagBorder;
+        [SerializeField] private RoundBox gradeTagBox;
         [SerializeField] private TMP_Text gradeTagText;
         [SerializeField] private Image infoLeadIcon;
         [SerializeField] private TMP_Text infoSubText;
@@ -45,11 +42,21 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Image infoButtonIcon;
         [SerializeField] private TMP_Text infoButtonLabel;
 
-        [Tooltip("판이 화면 밖에 있을 때 오른쪽으로 밀려나 있는 거리 (캔버스 px)")]
+        [Tooltip("씬에 저장된 닫힌 자리에서 열린 자리까지 왼쪽으로 들어오는 거리 (캔버스 px)")]
         [SerializeField] private float paneHiddenOffset = 1300f;
+
+        [Header("연출")]
+        [Tooltip("판이 미끄러져 들어오고 나가는 시간 (초)")]
+        [SerializeField] private float slideSeconds = 0.25f;
+
+        [Tooltip("머리줄 · 정보 줄 · 판 내용이 나타나고 사라지는 시간 (초)")]
+        [SerializeField] private float fadeSeconds = 0.2f;
 
         private Vector2 _paneOrigin;
         private bool _isOpen;
+
+        /// <summary>판이 미끄러져 들어오고 나가는 시간 (초) — 이 동안은 화면 이동 버튼을 잠근다.</summary>
+        public float SlideSeconds => slideSeconds;
 
         public event Action OnBackRequested;
         public event Action<LobbyShopTab> OnShopTabRequested;
@@ -61,16 +68,13 @@ namespace Chapchu.UI.Lobby
                 || shopTabRow == null || shopTabs == null || shopTabs.Length != 3)
                 Debug.LogError($"[{nameof(LobbySectionView)}] 머리줄 · 판 참조가 비어 있습니다.", this);
 
-            if (infoItem == null || infoName == null || gradeTag == null || gradeTagBorder == null || gradeTagText == null || infoLeadIcon == null
+            if (infoItem == null || infoName == null || gradeTag == null || gradeTagBox == null || gradeTagText == null || infoLeadIcon == null
                 || infoSubText == null || infoPriceIcon == null || infoPriceText == null || infoHint == null
                 || infoButton == null || infoButtonIcon == null || infoButtonLabel == null)
                 Debug.LogError($"[{nameof(LobbySectionView)}] 정보 줄 참조가 비어 있습니다.", this);
 
-            _paneOrigin = pane.anchoredPosition;
-            pane.anchoredPosition = _paneOrigin + new Vector2(paneHiddenOffset, 0f);
-            SetGroup(head, false);
-            SetGroup(info, false);
-            paneContent.blocksRaycasts = false;
+            // 씬에는 닫힌 모습으로 저장돼 있다 — 판은 화면 오른쪽 밖(열린 자리 + paneHiddenOffset), 머리줄 · 정보 줄은 투명
+            _paneOrigin = pane.anchoredPosition - new Vector2(paneHiddenOffset, 0f);
         }
 
         private void OnEnable()
@@ -105,7 +109,7 @@ namespace Chapchu.UI.Lobby
             Fade(info, open);
             paneContent.blocksRaycasts = open;
             pane.DOKill();
-            pane.DOAnchorPos(open ? _paneOrigin : _paneOrigin + new Vector2(paneHiddenOffset, 0f), SlideSeconds).SetEase(Ease.OutCubic).SetUpdate(true);
+            pane.DOAnchorPos(open ? _paneOrigin : _paneOrigin + new Vector2(paneHiddenOffset, 0f), slideSeconds).SetEase(Ease.OutCubic).SetUpdate(true);
         }
 
         /// <summary>섹션 ↔ 섹션 — 판 안 내용 · 정보 줄만 0.2초에 다시 나타난다 (틀 · 머리줄은 제자리).</summary>
@@ -113,10 +117,10 @@ namespace Chapchu.UI.Lobby
         {
             paneContent.DOKill();
             paneContent.alpha = 0f;
-            paneContent.DOFade(1f, FadeSeconds).SetUpdate(true);
+            paneContent.DOFade(1f, fadeSeconds).SetUpdate(true);
             info.DOKill();
             info.alpha = 0f;
-            info.DOFade(1f, FadeSeconds).SetUpdate(true);
+            info.DOFade(1f, fadeSeconds).SetUpdate(true);
         }
 
         /// <summary>머리줄 — 꾸미기는 이름만, 상점은 이름 + 탭(뽑기 · 아이템 · 충전).</summary>
@@ -138,7 +142,7 @@ namespace Chapchu.UI.Lobby
             if (grade.HasValue)
             {
                 Color color = LobbyStyle.GradeColor(grade.Value);
-                gradeTagBorder.color = color;
+                gradeTagBox.BorderColor = color;
                 gradeTagText.color = color;
                 gradeTagText.text = LobbyHubData.GradeName(grade.Value);
             }
@@ -169,17 +173,11 @@ namespace Chapchu.UI.Lobby
             infoButtonIcon.sprite = icon;
         }
 
-        private static void Fade(CanvasGroup group, bool visible)
+        private void Fade(CanvasGroup group, bool visible)
         {
             group.blocksRaycasts = visible;
             group.DOKill();
-            group.DOFade(visible ? 1f : 0f, FadeSeconds).SetUpdate(true);
-        }
-
-        private static void SetGroup(CanvasGroup group, bool visible)
-        {
-            group.alpha = visible ? 1f : 0f;
-            group.blocksRaycasts = visible;
+            group.DOFade(visible ? 1f : 0f, fadeSeconds).SetUpdate(true);
         }
 
         private void HandleBackClicked() => OnBackRequested?.Invoke();

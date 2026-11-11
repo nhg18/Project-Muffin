@@ -37,8 +37,8 @@ public static class MultiTest
     private const string AgreeConfirmMethod = "HandleConfirmClicked";      // TermsAgreeView — 「동의하고 계속」
     private const string GuestClickedMethod = "HandleGuestClicked";        // LoginSheetView — 「게스트로 시작」
     private const string StartClickedMethod = "HandleStartClicked";        // LoginSheetView — 닉네임 「시작」
-    private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyPresenter
-    private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyPresenter
+    private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyRoomRequester
+    private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyRoomRequester
     private const string SubmitClickedMethod = "HandleSubmitClicked";      // LobbyModalView — 입력 창 「참가」
     private const string WarnOkClickedMethod = "HandleWarnOkClicked";      // LobbyModalView — 경고 창 「확인」
     private const string ModalFieldField = "field";                        // LobbyModalView — 입력칸
@@ -406,7 +406,7 @@ public static class MultiTest
             }
             case "bad-code":
             {
-                LobbyPresenter presenter = Object.FindFirstObjectByType<LobbyPresenter>();
+                LobbyRoomRequester presenter = Object.FindFirstObjectByType<LobbyRoomRequester>();
                 if (presenter == null || !PhotonNetwork.IsConnectedAndReady)
                     return "WAIT 로비 아님 (" + scene + ")";
 
@@ -432,7 +432,7 @@ public static class MultiTest
             }
             case "create":
             {
-                LobbyPresenter presenter = Object.FindFirstObjectByType<LobbyPresenter>();
+                LobbyRoomRequester presenter = Object.FindFirstObjectByType<LobbyRoomRequester>();
                 if (presenter == null)
                     return "WAIT 로비 아님 (" + scene + ")";
 

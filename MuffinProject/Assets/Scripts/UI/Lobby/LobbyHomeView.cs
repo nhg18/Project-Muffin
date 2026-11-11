@@ -13,8 +13,6 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(CanvasGroup))]
     public class LobbyHomeView : MonoBehaviour
     {
-        private const float FadeSeconds = 0.2f;
-
         [SerializeField] private Button profileButton;
         [SerializeField] private TMP_Text nicknameText;
         [SerializeField] private LayoutElement nicknameSize;
@@ -31,6 +29,10 @@ namespace Chapchu.UI.Lobby
 
         [Tooltip("닉네임 글자 폭 한도 (캔버스 px) — 넘으면 말줄임")]
         [SerializeField] private float nicknameMaxWidth = 560f;
+
+        [Header("연출")]
+        [Tooltip("홈 묶음이 나타나고 사라지는 시간 (초)")]
+        [SerializeField] private float fadeSeconds = 0.2f;
 
         private CanvasGroup _group;
 
@@ -99,7 +101,7 @@ namespace Chapchu.UI.Lobby
         {
             _group.blocksRaycasts = visible;
             _group.DOKill();
-            _group.DOFade(visible ? 1f : 0f, FadeSeconds).SetUpdate(true);
+            _group.DOFade(visible ? 1f : 0f, fadeSeconds).SetUpdate(true);
         }
 
         private void HandleProfileClicked() => OnProfileRequested?.Invoke();

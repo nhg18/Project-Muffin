@@ -10,7 +10,6 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyQuestRowView : MonoBehaviour
     {
-        private const float DoneAlpha = 0.6f;
         private const string ProgressFormat = "{0} / {1}";
         private const string InProgressText = "진행 중";
         private const string ClaimedText = "받음";
@@ -26,6 +25,10 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject state;
         [SerializeField] private GameObject stateCheck;
         [SerializeField] private TMP_Text stateText;
+
+        [Header("연출")]
+        [Tooltip("보상을 받은 줄의 불투명도 (0 ~ 1)")]
+        [SerializeField] private float doneAlpha = 0.6f;
 
         /// <summary>이 줄의 퀘스트 — 「일일 퀘스트 다 끝내기」 줄이면 null</summary>
         public HubQuest Quest { get; private set; }
@@ -64,7 +67,7 @@ namespace Chapchu.UI.Lobby
             barFillImage.color = isClaimed ? LobbyStyle.Off : LobbyStyle.Ok;
             rewardIcon.sprite = currencyIcon;
             rewardText.text = LobbyStyle.Number(amount);
-            group.alpha = isClaimed ? DoneAlpha : 1f;
+            group.alpha = isClaimed ? doneAlpha : 1f;
             claimButton.gameObject.SetActive(isReady);
             state.SetActive(!isReady);
             stateCheck.SetActive(isClaimed);

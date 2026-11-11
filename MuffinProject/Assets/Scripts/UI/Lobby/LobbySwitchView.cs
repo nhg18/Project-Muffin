@@ -9,14 +9,18 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(Button))]
     public class LobbySwitchView : MonoBehaviour
     {
-        private const float KnobSeconds = 0.15f;
-
         [SerializeField] private Image fill;
         [SerializeField] private RectTransform knob;
 
-        [Tooltip("손잡이 왼쪽 끝 위치 — 꺼짐 · 켜짐 (캔버스 px)")]
+        [Tooltip("꺼졌을 때 손잡이 왼쪽 끝 위치 (캔버스 px)")]
         [SerializeField] private float offX = 4f;
+
+        [Tooltip("켜졌을 때 손잡이 왼쪽 끝 위치 (캔버스 px)")]
         [SerializeField] private float onX = 42f;
+
+        [Header("연출")]
+        [Tooltip("손잡이가 움직이는 시간 (초)")]
+        [SerializeField] private float knobSeconds = 0.15f;
 
         private Button _button;
 
@@ -53,7 +57,7 @@ namespace Chapchu.UI.Lobby
             IsOn = !IsOn;
             fill.color = IsOn ? LobbyStyle.Ok : LobbyStyle.Track;
             knob.DOKill();
-            knob.DOAnchorPosX(IsOn ? onX : offX, KnobSeconds).SetEase(Ease.OutBack).SetUpdate(true);
+            knob.DOAnchorPosX(IsOn ? onX : offX, knobSeconds).SetEase(Ease.OutBack).SetUpdate(true);
             OnChanged?.Invoke(this);
         }
     }

@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-11-11 · 로비 씬 · 코드를 사람이 열어 고칠 수 있게 정리 + 타이틀 16:9 일러스트 (`feature/lobby-cleanup`)
+
+### 계기 (PM, 2026-11-11)
+- 로비 씬의 섹션 판이 화면 안에 저장돼 있고 시작할 때 코드가 밖으로 옮긴다 — 「굳이 밖에 빼두면 되는데」. 씬과 코드가 사람이 열어 볼 것을 생각하지 않고 만들어졌다.
+- 스프라이트 최적화가 안 돼 있다 — 배경은 그림 한 장으로 저장하지, 그라데이션 이미지를 저장하지 않는다.
+- 타이틀 일러스트가 16:9 가 아니다 — 이미 있는 16:9 그림으로 바꾼다 (새로 만들지 않는다).
+
+### 한 것
+- **씬에 시작 상태 그대로 저장**: 섹션 판은 화면 오른쪽 밖 `(1252, 56)`, 머리줄 · 정보 줄은 투명. `LobbySectionView.Awake` 는 더 이상 옮기거나 숨기지 않는다.
+- **상자 하나 = 오브젝트 하나**: `UI/RoundBox`(테두리 + 채움을 한 Graphic 이 그린다)를 만들어 `Border` + `Fill` 151쌍을 합침. 씬 오브젝트 1,688 → 1,333 · Graphic 1,075 → 885.
+- **프리팹** (`Prefab/UI/Lobby/`): `LobbyItemCell`(10) · `LobbyGachaCard`(10) · `LobbyQuestRow`(4) · `LobbyToast`(3) · `LobbyGainText`(4) · `LobbyPersonRow`(씬의 숨긴 템플릿 2개를 지우고 에셋으로). 씬 파일 157,064 → 74,391줄.
+- **배경 한 장**: `Sprites/UI/Background/bg_lobby.png`(1920 × 1080) — `Hud/bg_gradient` + `Hud/bg_wall` 두 장을 겹친 것과 같은 그림(값 차이 1 이내). 인게임은 아직 두 장을 겹친다.
+- **아틀라스**: `Common/atlas_common` · `Lobby/atlas_lobby`(폴더 하나 = 아틀라스 하나, 회전 · 타이트 패킹 끔, PC 압축 없음 · 모바일 ASTC 4×4). 타이틀 · 로비 · 게임이 같이 쓰는 아이콘 6개(`icon_x` · `icon_gear` · `icon_clock` · `icon_list` · `icon_card` · `timer_ring`)를 `Hud` → `Common` 으로 옮김(GUID 그대로 — 씬 참조는 안 바뀜). 가져오기 설정을 압축 없음 · 밉맵 없음 · 사각형 메시로 통일.
+- **빌더 삭제**: `Editor/LobbyScreenBuilder`(2,276줄)를 지움 — 로비는 씬과 프리팹이 원본이다. `GameScreenBuilder` · `TitleScreenBuilder` 는 옮긴 아이콘 경로만 고침.
+- **코드 분리** (CODE_CONVENTION 4절): `LobbyPresenter` 1,179줄 → `LobbyPresenter` 128(지갑 · 배지 · 뒤로가기 · 초대) · `LobbySectionPresenter` 555(홈 ↔ 꾸미기 · 상점 · 뽑기) · `LobbyPopupPresenter` 344(친구 · 프로필 · 설정 · 퀘스트 창) · `LobbyRoomRequester` 247(방 요청 · 10초 시간 초과) · `LobbyAccountPresenter` 133(닉네임 변경 · 계정 삭제). 다섯 다 `LobbyCanvas` 에 붙어 있다. 동작은 바꾸지 않음 — 함수를 옮기기만 했다.
+- **연출값을 Inspector 로** (5절): 로비 뷰에 상수로 있던 시간 · 투명도 · 크기 · 색 23개를 `[SerializeField]` + `[Tooltip]` 으로. 툴팁 하나에 필드 여러 개가 묶여 있던 곳(5곳)을 필드마다 하나로.
+- **타이틀**: `TitleScene` 의 Art 를 `Sprites/UI/Background/bg_title.png`(16:9, 12-title-ui 9-1 이 가리키는 그림)로 바꾸고 4:3 `title_key_art` 를 지움.
+- `CODE_CONVENTION.md` 10절: `RoundBox` · 배경 한 장 · 같이 쓰는 아이콘은 `Common` + 「씬과 프리팹은 사람이 열어서 고친다」 3줄(시작 상태 저장 · 되풀이는 프리팹 · 씬을 통째로 조립하는 빌더를 새로 만들지 않는다) — **PM 확인**.
+- `multi-test/MultiTest.cs`: 방 요청 함수를 `LobbyRoomRequester` 에서 찾게 이름 표를 고침.
+
+### batches (로비 홈, 게임 뷰 1920 × 1080, `UnityStats`)
+| | batches | setPass | 텍스처 | 켜진 Graphic |
+| --- | --- | --- | --- | --- |
+| 정리 전 (#133) | 24 | 8 | 22 | 115 |
+| 상자 합침 · 프리팹 · 배경 한 장 | 23 | 8 | 21 | 91 |
+| 아틀라스 | 10 | 8 | 6 | 91 |
+
+### 확인
+- 정리 전 42장(홈 · 꾸미기 · 상점 3탭 · 창 전부 · 입력 · 경고 · 뽑기 …)을 기준으로 단계마다 다시 찍어 픽셀 비교:
+  - 상자 합침 · 프리팹 · 배경 뒤 — 30장 완전히 같음. 다른 12장은 뽑기 결과 · 초대한 사람 · 남은 시간 · 로딩 회전처럼 찍을 때마다 바뀌는 내용뿐(나란히 놓고 눈으로 확인).
+  - 아틀라스 뒤 — 같은 30장이 아이콘 가장자리 몇 픽셀만 다름(아이콘 압축이 없어짐). 눈으로 본 차이 없음.
+  - 코드 분리 · 연출값 뒤 — 아틀라스 뒤와 30장 완전히 같음, 나머지는 위와 같은 12장.
+- `multi-test ui` 통과 · 콘솔 에러 0 (분리 직후 · 마지막에 한 번씩).
+- 방 요청 10초 무응답: 5초 뒤 로딩 그대로, 13초 뒤 로딩 닫힘 + 「랜덤 매칭 실패 / 잠시 후 다시 시도해 주세요.」. 늦은 응답: 처리 중 다시 누른 요청은 그 자리에서 실패 · 표시는 켜진 채 · 늦은 입장은 나가고 로비에 남음. 콘솔 에러 0.
+- 타이틀: 16:9 그림이 1920 × 1080 을 잘림 없이 채움, 콘솔 에러 0.
+- **확인 못 함**: 모바일 빌드에서 아틀라스(ASTC) 화질 · 실제 기기 batches · `GameScene` 실행(옮긴 아이콘은 GUID 참조라 그대로일 것 — 돌려 보지 않음) · `GameScreenBuilder` 다시 돌리기 · 16:9 가 아닌 화면비.
+
+### 고치지 않고 둔 것
+- 창의 `Content` 를 켜고 끄는 구조 — 뿌리 오브젝트를 끄면 `Awake` 순서가 바뀌어 위험, 흔한 방식이라 그대로.
+- 알림 말풍선(꼬리 순서) · 스위치(채움 안에 손잡이)의 상자는 `Border` + `Fill` 그대로 — `Border` 27개가 남아 있다.
+- 버튼 · 탭은 프리팹으로 묶지 않음(크기 · 아이콘 · 색이 제각각이라 변형이 더 많아진다).
+- `TitleScene` · `GameScene` 은 아직 빌더가 조립한 씬이고 같은 문제(테두리 + 채움 두 오브젝트 · 프리팹 없음 · 아틀라스 없음)가 있다. 인게임 배경도 두 장을 겹친다.
+- 16:9 `bg_title` 은 가운데에 캐릭터가 있어 로고와 겹친다 — 구도를 바꾸려면 그림이 필요.
+
+### 커밋하지 않은 것
+- 갈무리 · Jua · LiberationSans SDF · `Lit2DSceneTemplate.scenetemplate` · `EditorPipelineConfig.json` · `ProjectSettings.asset`(Run In Background) — 에디터가 바꾼 것.
+
+### 다음 할 일
+- [ ] PM: `CODE_CONVENTION` 10절에 더한 규칙 확인
+- [ ] 같은 정리를 `TitleScene` 에 (RoundBox · 프리팹 · `TitleScreenBuilder` 삭제) — 게임 씬은 시안 재정렬 때 같이
+- [ ] `Hud` · `Seat` · `Popup` · `GameScreen` 폴더의 아틀라스 — 게임 씬을 고칠 때
+- [ ] 모바일 빌드에서 아틀라스 화질 · batches 확인
+- [ ] 찬반 리뷰 설계 권고(고치지 않음): 「큰 프레임은 0.1초까지만 세는 대기」 가 `LobbyRoomRequester` · `LobbyAccountPresenter` · `TitlePresenter` 세 곳에 있다 — 한 곳으로 / `RoundBox` 를 메뉴로 붙이면 스프라이트가 비어 있다 — 기본으로 `ui_round64` 가 들어가게
+
+### 찬반 리뷰 (`/prepush`, 품질 검사 포함 — 3번 돌림, 모두 통과)
+- 고친 것: `RoundBox` 스프라이트가 비면 조용히 안 그리던 것 → `Awake` 에러 로그(리뷰 수정 `9238812`) · 쓰이지 않게 된 `LobbySectionView.SetGroup` 삭제 · 화면 이동 잠금 시간을 판이 미끄러지는 시간(`LobbySectionView.SlideSeconds`)에서 얻게.
+- 철회된 권고: 판의 열린 자리가 「씬의 닫힌 자리 − `paneHiddenOffset`」 으로만 정해진다 — 판을 화면 안으로 끌어다 저장하면 열린 자리가 어긋난다 / 「지갑 갱신 + '+N'」 한 쌍이 프레젠터 둘에 네 번.
+- 수정 뒤마다 `multi-test ui` 통과 · 화면 13장 다시 비교(남은 시간 표시 1장만 다름).
+
+---
+
 ## 2026-11-11 · 룸 대기 화면을 「통합 화면 UI v2」 로 (`feature/room-screen`)
 
 기준: `16-room-ui-full.md` 가 가리키는 「통합 화면 UI v2」 https://claude.ai/artifact/GnsoVsKiaDzipb2paoSx2B 게시본 `1794316285-7080` 의 룸 화면. 로비 씬을 고치는 작업과 겹치지 않게 별도 워크트리에서 했다 — `LobbyScene` 은 건드리지 않음.
@@ -119,7 +180,7 @@
 - [ ] 타이틀 문서(12 · 20 · 23)도 지은 화면에 맞추기 — 로그인 방식 선택이 타이틀에 생겼다
 - [x] `RoomScreen/RoomView.cs` 주석이 지워진 `LobbyView` 를 가리킨다 — 룸을 다시 지으며 `RoomView` 삭제 (`feature/room-screen`)
 - [ ] 제안: TMP 설정 「Use Modern Line Breaking(한글)」 을 켜면 모든 화면에서 낱말 단위로 줄이 바뀐다 (지금은 로비 경고 창만 처리)
-- [ ] 제안: `TitleScreenBuilder` · `LobbyScreenBuilder` 의 같은 조립 함수를 한 곳으로
+- [x] ~~제안: `TitleScreenBuilder` · `LobbyScreenBuilder` 의 같은 조립 함수를 한 곳으로~~ — `LobbyScreenBuilder` 를 지움 (위 `feature/lobby-cleanup` 항목)
 
 ---
 
