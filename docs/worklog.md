@@ -16,7 +16,7 @@
 - `docs/popup-ui-v2` ← `docs/card-fx-4stage`, `docs/planning` ← `docs/popup-ui-v2` 합침 (worklog · 16 · 22 수정일 충돌 정리).
 
 ### 다음 할 일
-- [ ] `docs/card-render` 브랜치(Noto Sans KR 안)는 이 결정으로 쓸모가 없다 — 지울지 PM 확인
+- [x] `docs/card-render` 브랜치(Noto Sans KR 안)는 이 결정으로 쓸모가 없어 `archive/card-render-noto` 태그로 남기고 지움
 - [ ] `feature/title-screen` 은 docs/worklog.md 를 고쳐서, 위 문서 PR 들 뒤에 머지하면 worklog 충돌이 난다 — 그 브랜치 PR 때 정리
 - [ ] `GameScreenBuilder` 주석 「시안 글꼴(Jua · 고운돋움)」 · 아티팩트 「찹츄 3D 카드 연출」 글꼴 비교는 옛 결정 그대로
 
