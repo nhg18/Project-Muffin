@@ -109,6 +109,16 @@ namespace Chapchu.UI.GameScreen
             tapArea.raycastTarget = targetable;
         }
 
+        /// <summary>끄는 카드가 이 좌석 위에 있다 — 놓으면 이 상대가 대상이라는 표시 (10-ui.md 4절). 대상 선택과 같은 고리 · 테를 쓰고 탭은 받지 않는다.</summary>
+        public void SetAimed(bool aimed)
+        {
+            pickRing.SetActive(aimed);
+            pickOutline.SetActive(aimed);
+        }
+
+        /// <summary>이 화면 좌표가 좌석(캐릭터 · 이름표를 덮는 탭 영역) 위인가.</summary>
+        public bool ContainsScreenPoint(Vector2 screenPoint) => RectTransformUtility.RectangleContainsScreenPoint(tapArea.rectTransform, screenPoint, null);
+
         public void OnPointerClick(PointerEventData eventData)
         {
             if (eventData.button != PointerEventData.InputButton.Left) return;

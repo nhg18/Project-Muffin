@@ -40,6 +40,7 @@ namespace Chapchu.UI.GameScreen
         private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
         private bool _selecting;
         private bool _selectCancelled;
+        private int _aimedActor; // 끄는 카드가 겨눈 상대 (없으면 0)
 
         /// <summary>대상 선택 중인가 — 그동안 손패는 잠긴다 (HandPresenter).</summary>
         public bool IsSelectingTargets => _selecting;
@@ -198,6 +199,27 @@ namespace Chapchu.UI.GameScreen
                 pair.Value.SetTurn(pair.Key == turnActorNumber);
         }
 
+        /// <summary>이 화면 좌표에 앉은 상대의 actorNumber — 끄는 카드를 상대 위에 놓았는지 볼 때 (10-ui.md 4절). 없으면 0.</summary>
+        public int ActorAt(Vector2 screenPoint)
+        {
+            foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
+            {
+                if (pair.Value.ContainsScreenPoint(screenPoint))
+                    return pair.Key;
+            }
+            return 0;
+        }
+
+        /// <summary>끄는 카드가 겨눈 상대의 좌석만 강조한다. 0 이면 모두 끈다. 대상 선택 중에는 건드리지 않는다 — 같은 고리 · 테를 쓴다.</summary>
+        public void ShowAim(int actorNumber)
+        {
+            if (_selecting || actorNumber == _aimedActor) return;
+
+            _aimedActor = actorNumber;
+            foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
+                pair.Value.SetAimed(pair.Key == actorNumber);
+        }
+
         /// <summary>
         /// 상대 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 안내 바에 카드 이름 · 남은 초를 띄우고, 앉은 상대 전부에 빨간 고리 · 테 + 탭. 고른 좌석은 강조를 꺼서 같은 사람을 두 번 못 고른다.
         /// 다 고르면 actorNumber 배열, 취소 · 제한 시간이면 null 을 done 으로 돌려준다. 호출한 코루틴은 yield return 으로 끝까지 기다린다.
@@ -212,6 +234,7 @@ namespace Chapchu.UI.GameScreen
             }
 
             _selecting = true;
+            _aimedActor = 0;
             _selectCancelled = false;
             _picked.Clear();
             foreach (OpponentSeatView seat in _seatOf.Values)

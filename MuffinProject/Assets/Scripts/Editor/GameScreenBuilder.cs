@@ -62,6 +62,10 @@ namespace Chapchu.EditorTools
         // 3 단계에서 크게 둔 카드의 아래 가장자리 y (캔버스, 위에서) — 가운데 524 + 336 × 1.85 ÷ 2 (TableBuilder 의 ShowSpot 과 같은 값)
         private const float ShownCardBottom = 835f;
         private static readonly Color Dim = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.42f);
+        // 사용 기준선 (시안 #playline × 2) — 잉크 32% · 두께 6, 화면 아래 끝에서 카드 높이 336 + 48, 좌우 (가장자리 16 + 40) × 2
+        private static readonly Color PlayLineColor = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.32f);
+        private static readonly Color PlayLineLabelFill = new Color(1f, 1f, 1f, 0.85f);
+        private const float PlayLineBottom = 384f, PlayLineThickness = 6f, PlayLineInset = 112f;
         private static readonly Color ChapchuOffLabel = Hex(0xc4bab0);
         private static readonly Color ChapchuOffShadow = Hex(0xddd3c8);
         private static readonly Color ChapchuOverInk = Hex(0xc81e2b);
@@ -119,7 +123,6 @@ namespace Chapchu.EditorTools
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
             ChapchuButtonView chapchu = BuildChapchuButton(safeArea);
             Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu), ("server", TableBuilder.FindServer(nameof(MyPanelPresenter))));
-            RectTransform dropZone = BuildDropZone(safeArea);
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
             RectTransform center = NewRect("Center", canvasRect);
@@ -131,6 +134,10 @@ namespace Chapchu.EditorTools
             CardOwnerTagView ownerTag = BuildCardOwnerTag(center);
             ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
 
+            // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
+            PlayLineView playLine = BuildPlayLine(canvasRect);
+            TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera);
+
             // 서랍 · 팝업 — 가장 위
             RectTransform sheets = NewRect("Sheets", canvasRect);
             Stretch(sheets);
@@ -138,7 +145,9 @@ namespace Chapchu.EditorTools
             LogSheetView log = BuildLogSheet(sheets);
             BuildMenuSheet(sheets, menu);
 
-            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, dropZone, seats, gameDeck);
+            // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
+            var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
+            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, coveredHud);
             ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck);
             MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
@@ -146,7 +155,7 @@ namespace Chapchu.EditorTools
 
             Wire(screen,
                 ("roomCode", roomCode), ("turnStrip", turnStrip), ("feed", feed), ("log", log), ("myPanel", myPanel), ("chapchuButton", chapchu),
-                ("deck", deck), ("dropZone", dropZone), ("targetAsk", targetAsk), ("menu", menu));
+                ("deck", deck), ("targetAsk", targetAsk), ("menu", menu));
             WireArray(screen, "opponentSeats", seats.GetComponentsInChildren<OpponentSeatView>(true));
             screen.gameObject.AddComponent<RejectToastPresenter>();
 
@@ -556,13 +565,51 @@ namespace Chapchu.EditorTools
             return root;
         }
 
-        // 드롭 영역 — 손패 영역 위쪽 화면 전체 (10-ui.md 2-1 「드롭 영역」, 사용자 결정 2026-11-05). 투명 이미지는 디버그 때 색을 켜 보라고 둔다.
-        // 레이캐스트는 끈다 — 판정은 HandPresenter 가 Rect 포함으로 하므로 덱 · 좌석 탭을 가리지 않는다. 위치 · 크기는 씬에서 바꾼다.
-        private static RectTransform BuildDropZone(RectTransform parent)
+        // 사용 기준선 (시안 #playline × 2) — 화면 아래 끝에서 카드 높이 + 48 위, 좌우 112 안쪽. 끄는 동안만 보인다 (PlayLineView). 시안의 점선은 실선으로.
+        // 글자 「이 선 위에서 놓으면 사용」 은 줄 위 가운데 — 흰 85% 알약 · 26.
+        public static PlayLineView BuildPlayLine(RectTransform canvasRect)
         {
-            Image image = NewImage("DropZone", parent, Color.clear);
-            Stretch(image.rectTransform, 0f, 0f, 0f, HandAreaBottom + HandCardSize.y);
-            return image.rectTransform;
+            RectTransform root = NewRect("PlayLine", canvasRect);
+            Stretch(root);
+            root.gameObject.AddComponent<SafeArea>();
+
+            Image line = NewImage("Line", root, PlayLineColor);
+            line.rectTransform.anchorMin = new Vector2(0f, 0f);
+            line.rectTransform.anchorMax = new Vector2(1f, 0f);
+            line.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            line.rectTransform.offsetMin = new Vector2(PlayLineInset, PlayLineBottom - PlayLineThickness / 2f);
+            line.rectTransform.offsetMax = new Vector2(-PlayLineInset, PlayLineBottom + PlayLineThickness / 2f);
+
+            RectTransform label = NewRect("Label", root);
+            Anchor(label, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, PlayLineBottom + 12f), new Vector2(360f, 36f));
+            RoundBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill);
+            HorizontalLayout(label, new RectOffset(18, 18, 2, 2), 0f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(label.gameObject);
+            NewText("Text", label, "이 선 위에서 놓으면 사용", 26f, Ink2, false);
+
+            var view = root.gameObject.AddComponent<PlayLineView>();
+            Wire(view, ("line", line), ("label", label.gameObject));
+            line.gameObject.SetActive(false);
+            label.gameObject.SetActive(false);
+            return view;
+        }
+
+        // HUD 위 카드 층 — TopCards 레이어만 그리는 카메라의 그림을 화면 전체에 얹는다 (TopCardLayerView). 올린 손패 · 끄는 카드 · 대상 고르는 카드가 HUD 를 덮는다.
+        public static TopCardLayerView BuildTopCardLayer(RectTransform canvasRect, Camera mainCamera)
+        {
+            var go = new GameObject("TopCards", typeof(RectTransform), typeof(RawImage));
+            go.layer = LayerMask.NameToLayer("UI");
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(canvasRect, false);
+            Stretch(rect);
+
+            var image = go.GetComponent<RawImage>();
+            image.raycastTarget = false;
+            image.enabled = false;
+
+            var view = go.AddComponent<TopCardLayerView>();
+            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)));
+            return view;
         }
 
         #endregion

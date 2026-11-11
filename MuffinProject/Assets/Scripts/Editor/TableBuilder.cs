@@ -3,12 +3,10 @@ using Chapchu.Cards;
 using Chapchu.Network;
 using Chapchu.UI.GameScreen;
 using TMPro;
-using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
-using UnityEngine.Splines;
 using Object = UnityEngine.Object;
 
 namespace Chapchu.EditorTools
@@ -18,6 +16,7 @@ namespace Chapchu.EditorTools
     /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 이름표는 2D 층(HUD v2).
     /// 카드 · 덱 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)과 카드 프리팹 3개는 없으면 만들고, 있으면 덮어쓰지 않는다.
     /// 내 카드(손패 · 내는 카드)는 HandCards 레이어 — 메인 카메라 자식인 손패 카메라가 깊이만 지우고 그 위에 그린다. 기울인 카드(4° · 40°)의 윗부분이 덱 뒤로 들어가 가려지지 않게 (10-ui.md 2-1 「3D 층 구현」 손패 층).
+    /// HUD 를 덮어야 하는 카드(올린 손패 · 끄는 카드 · 대상 고르는 카드)는 TopCards 레이어 — 앞 층 카메라가 렌더 텍스처에 그리고 HUD 의 RawImage 가 얹는다 (TopCardLayerView).
     /// </summary>
     public static class TableBuilder
     {
@@ -29,6 +28,7 @@ namespace Chapchu.EditorTools
 
         private const string TableName = "Table";
         private const string HandCameraName = "HandCamera";
+        private const string TopCameraName = "TopCardCamera";
         public const string HandLayerName = "HandCards"; // 내 카드 전용 레이어 — TagManager 에 없으면 빈 사용자 칸(8~)에 만든다
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
@@ -63,10 +63,8 @@ namespace Chapchu.EditorTools
         // 「덱 n」 · 「버림 n」 윗변 = 판 위에서 더미 가운데보다 116px 앞 (시안 .lab top DECK.y + 58). 글자는 눕히지 않고 선다.
         private const float PileLabelTopPx = 116f;
 
-        // 손패 — 내 패널(좌 32 + 472 + 24)과 찹츄 버튼(우 32 + 392 + 28) 사이 가운데 x 1016, 아래 28 기준 원호, 양 끝 (±452, −34) (10-ui.md 2-1 「부채꼴」 HUD v2).
-        private static readonly Vector3 HandPosition = CanvasToWorld(1016f, 1080f - 28f);
-        private const float HandFanHalfWidth = 4.52f;
-        private const float HandFanDrop = 0.34f;
+        // 손패 루트 — 카드 자리는 HandView 가 화면 아래 끝을 기준으로 계산하므로(10-ui.md 2-1 「부채꼴」) 루트는 손패 평면(z 0)만 정한다. 화면 아래 끝 가운데에 둔다.
+        private static readonly Vector3 HandPosition = CanvasToWorld(960f, 1080f);
 
         // 버림 자리 — 시안 DISC (555, 310) × 2: 방석 오른쪽 (HUD v2). 내는 자리(960, 620)는 1 단계와 함께 없앴다 (2026-11-11).
         private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1110f, 620f);
@@ -108,7 +106,7 @@ namespace Chapchu.EditorTools
         private static readonly Color TrapSlotFill = new Color(1f, 1f, 1f, 0.45f);
         private static readonly Color TrapSlotEdge = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
 
-        // 낼 수 있는 카운터의 초록 링 (10-ui.md 2-1 「손패 입력 값」) — 카드보다 사방 12px 큰 초록 판을 카드 뒤에 깐다. 흐린 빛 · 나머지 카드 어둡게는 아직 없다.
+        // 낼 수 있는 카운터의 초록 링 (10-ui.md 2-1 「손패 입력 값」) — 카드보다 사방 12px 큰 초록 판을 카드 뒤에 깐다. 흐린 빛은 아직 없다.
         private const string CounterGlowTexturePath = "Assets/Sprites/Cards/CardGlowCounter.png";
         private const float GlowRingPx = 12f;
         private static readonly Color CounterGlowFill = new Color32(0x5E, 0xF0, 0x9C, 0xFF);
@@ -133,6 +131,33 @@ namespace Chapchu.EditorTools
             if (camera.GetComponent<PhysicsRaycaster>() == null)
                 camera.gameObject.AddComponent<PhysicsRaycaster>();
             SetupHandCamera(camera);
+            SetupTopCamera(camera);
+            return camera;
+        }
+
+        /// <summary>
+        /// 앞 층 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopCards 레이어만 투명 바탕에 그린다. 그림은 TopCardLayerView 가 렌더 텍스처로 받아 HUD 위에 얹는다.
+        /// 평소에는 꺼 두고 뷰가 켠다. PhysicsRaycaster 는 앞 층 카드가 뒤에 있는 것(내 함정 칸 · 덱)의 탭을 가리게 하려고 붙인다. 이미 있으면 값만 맞춘다.
+        /// </summary>
+        public static Camera SetupTopCamera(Camera main)
+        {
+            int layer = EnsureLayer(TopCardLayerView.TopLayerName);
+            main.cullingMask &= ~(1 << layer);
+
+            Transform existing = main.transform.Find(TopCameraName);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(TopCameraName, typeof(Camera), typeof(PhysicsRaycaster));
+            go.transform.SetParent(main.transform, false);
+            go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+
+            var camera = go.GetComponent<Camera>();
+            camera.CopyFrom(main);
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.clear;
+            camera.cullingMask = 1 << layer;
+            camera.depth = main.depth + 2;
+            camera.enabled = false;
+            if (go.GetComponent<PhysicsRaycaster>() == null)
+                go.AddComponent<PhysicsRaycaster>();
             return camera;
         }
 
@@ -314,30 +339,27 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        public static HandPresenter BuildHand(Transform table, DeckView deck, DiscardPileView discardPile, RectTransform dropZone, OpponentSeatsPresenter seats, DeckData gameDeck)
+        public static HandPresenter BuildHand(Transform table, DeckView deck, DiscardPileView discardPile, OpponentSeatsPresenter seats, DeckData gameDeck,
+            PlayLineView playLine, TopCardLayerView topLayer, Object[] coveredHud)
         {
             var root = new GameObject("Hand");
             root.transform.SetParent(table, false);
             root.transform.localPosition = HandPosition;
 
-            SplineContainer container = root.AddComponent<SplineContainer>();
-            Spline spline = container.Spline;
-            spline.Clear();
-            spline.Add(new BezierKnot(new float3(-HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
-            spline.Add(new BezierKnot(float3.zero), TangentMode.AutoSmooth);
-            spline.Add(new BezierKnot(new float3(HandFanHalfWidth, -HandFanDrop, 0f)), TangentMode.AutoSmooth);
-
             var view = root.AddComponent<HandView>();
             GameScreenBuilder.Wire(view,
                 ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
                 ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)));
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("topLayer", topLayer));
+            root.AddComponent<HandInput>();
 
             // 버려지는 내 카드는 버림 더미의 맨 위 카드 자리로 날아가 닿는다
             var presenter = root.AddComponent<HandPresenter>();
             GameScreenBuilder.Wire(presenter,
-                ("deck", gameDeck), ("drawOrigin", deck.transform), ("server", FindServer(nameof(HandPresenter))), ("dropZone", dropZone), ("seats", seats),
-                ("discardSpot", discardPile.TopAnchor));
+                ("deck", gameDeck), ("drawOrigin", deck.transform), ("server", FindServer(nameof(HandPresenter))), ("seats", seats),
+                ("discardSpot", discardPile.TopAnchor), ("playLine", playLine), ("topLayer", topLayer));
+            GameScreenBuilder.WireArray(presenter, "coveredHud", coveredHud);
             return presenter;
         }
 
@@ -448,6 +470,52 @@ namespace Chapchu.EditorTools
             var rowView = rowRoot.gameObject.AddComponent<TrapSlotsView>();
             GameScreenBuilder.WireArray(rowView, "slots", slots);
             return rowView;
+        }
+
+        // 고른 카드 · 놓으면 사용되는 카드의 노란 링 (10-ui.md 2-1 「손패 입력 값」, 시안 .card.sel · .armed 4 × 2) — 카드보다 사방 8px 큰 노란 판을 카드 뒤에. 흐린 빛은 아직 없다.
+        private const string SelectRingTexturePath = "Assets/Sprites/Cards/CardRingSelect.png";
+        private const float SelectRingPx = 8f;
+        private static readonly Color SelectRingColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        // 지금 낼 수 없는 카드를 덮는 어두운 판 (시안 .card.dim brightness .5 — 채도 낮춤은 없다). 카드 모양 그대로, 글자보다 앞.
+        private const string ShadeTexturePath = "Assets/Sprites/Cards/CardShade.png";
+        private static readonly Color ShadeColor = new Color(0f, 0f, 0f, 0.5f);
+
+        /// <summary>카드 프리팹에 노란 링(고름 · 놓으면 사용)과 어두운 판(낼 수 없음)을 붙인다 (없을 때만) — 꺼 둔다. 이미 있는 프리팹을 고칠 때도 쓴다.</summary>
+        public static void AddSelectRingAndShade(GameObject cardRoot)
+        {
+            var view = cardRoot.GetComponent<CardView>();
+            if (cardRoot.transform.Find("SelectRing") == null)
+            {
+                Vector2 size = CardSize + Vector2.one * (SelectRingPx * 2f * UnitsPerPixel);
+                Material material = EnsureMaterial("CardRingSelect", EnsureRoundTexture(SelectRingTexturePath, size, 1f, 0f, BlankRadiusPx + SelectRingPx, SelectRingColor, SelectRingColor));
+                MeshRenderer ring = Quad("SelectRing", cardRoot.transform, material, size, new Vector3(0f, CardSize.y / 2f, LayerGap * 2f), Quaternion.identity);
+                ring.gameObject.SetActive(false);
+                GameScreenBuilder.Wire(view, ("selectRing", ring.gameObject));
+            }
+
+            if (cardRoot.transform.Find("Shade") == null)
+            {
+                Material material = EnsureAlphaMaterial("CardShade", EnsureRoundTexture(ShadeTexturePath, CardSize, 0f, 0f, BlankRadiusPx, ShadeColor, ShadeColor));
+                MeshRenderer shade = Quad("Shade", cardRoot.transform, material, CardSize, new Vector3(0f, CardSize.y / 2f, -LayerGap * 3f), Quaternion.identity); // 글자(−2)보다 앞, 옆 카드(장당 0.02)보다 뒤
+                shade.gameObject.SetActive(false);
+                GameScreenBuilder.Wire(view, ("shade", shade.gameObject));
+            }
+
+            SetHandLayer(cardRoot);
+        }
+
+        /// <summary>이미 만든 카드 프리팹 3개에 노란 링 · 어두운 판을 붙여 저장한다 (GUID 유지).</summary>
+        [MenuItem("Chapchu/Game Screen/Add Select Ring And Shade To Card Prefabs")]
+        public static void AddSelectRingAndShadeToPrefabs()
+        {
+            foreach (string name in new[] { "Card_Action", "Card_Counter", "Card_Trap" })
+            {
+                string path = $"{PrefabFolder}/{name}.prefab";
+                GameObject root = PrefabUtility.LoadPrefabContents(path);
+                AddSelectRingAndShade(root);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>카운터 카드 프리팹에 「낼 수 있다」 초록 링을 붙인다 (없을 때만) — 카드 뒤에 사방 12px 큰 초록 판, 꺼 둔다. 이미 있는 프리팹을 고칠 때도 쓴다.</summary>
@@ -608,6 +676,7 @@ namespace Chapchu.EditorTools
             SetHandLayer(root);
             if (name == "Card_Counter")
                 AddCounterGlow(root);
+            AddSelectRingAndShade(root);
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);

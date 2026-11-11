@@ -15,7 +15,8 @@ namespace Chapchu.UI.GameScreen
     /// 넣고 빼기는 GameScreenPresenter 가 연출 큐 순서로 부른다 — 내가 뽑은 카드를 덱 자리에서 꺼내 붙이고, 방장이 승인한 내 카드 사용만 뺀다.
     /// 카드 종류로 요청이 갈린다 (04-card.md 5 ~ 7절): 행동 = 카드 사용, 카운터 = 카운터 사용(턴과 관계없이 반응 시간에), 함정 = 설치(대상 없음).
     /// 반응 시간 동안은 방장이 알려 준 「낼 수 있는 카운터」 에 초록 빛을 켠다 (10-ui.md 5절) — 무엇을 낼 수 있는지는 방장이 판정하고 여기는 켜기만 한다.
-    /// 드롭: 드롭 영역 안이면 대상 타입에 따라 바로 요청하거나(자동 대상 — 방장이 정한다) 상대 좌석에서 대상을 고르게 한 뒤 요청한다.
+    /// 사용 요청은 세 길로 온다 (10-ui.md 4절 「사용 요청」): 끌어서 사용 기준선 위에 놓기 · 끌어서 상대 위에 놓기(그 상대가 대상) · 더블클릭.
+    /// 대상 타입에 따라 바로 요청하거나(자동 대상 — 방장이 정한다) 상대 좌석에서 대상을 고르게 한 뒤 요청한다. 고르는 동안 그 카드는 테이블 가운데에, 가림판 위에 밝게 둔다 (10-ui.md 6절).
     /// 요청 뒤에도 카드는 손패에 남는다 — 승인(OnCardPlayed)이 오면 빠지고, 거절이면 그대로다 (04-card.md 10절). 거절 문구는 RejectToastPresenter.
     /// 승인된 카드는 손패에서 떼어 체인 카드 연출(ChainCardsPresenter)에 넘긴다 — 테이블에 내고 크게 보여 주고 버리는 것은 그쪽. 「손패로 반환」이면 돌려받아 다시 붙인다.
     /// 강제 버림 · 최종 사망으로 버려지는 손패는 여기서 버림 더미로 보낸다.
@@ -33,10 +34,24 @@ namespace Chapchu.UI.GameScreen
 
         [Header("카드 사용")]
         [SerializeField] private PunGameServer server;
-        [Tooltip("이 Rect 안에 카드를 놓으면 사용 요청 (10-ui.md 2-1 「드롭 영역」). 씬에서 위치 · 크기를 바꾼다.")]
-        [SerializeField] private RectTransform dropZone;
-        [Tooltip("대상을 고르는 카드(OneOther · TwoOthers)일 때 좌석 탭을 받는 곳.")]
+        [Tooltip("대상을 고르는 카드(OneOther · TwoOthers)일 때 좌석 탭을 받는 곳. 끄는 카드가 어느 상대 위에 있는지도 묻는다.")]
         [SerializeField] private OpponentSeatsPresenter seats;
+        [Tooltip("끄는 동안 보이는 사용 기준선.")]
+        [SerializeField] private PlayLineView playLine;
+        [Tooltip("손패가 올라와 덮는 HUD (내 패널 · 찹츄 버튼) — 덮인 동안 눌리지 않게 한다.")]
+        [SerializeField] private CanvasGroup[] coveredHud = new CanvasGroup[0];
+
+        [Header("대상 고르는 중의 카드 (10-ui.md 6절)")]
+        [Tooltip("대상을 고르는 동안 카드를 HUD 가림판 위에 그리는 층.")]
+        [SerializeField] private TopCardLayerView topLayer;
+        [Tooltip("카드 가운데가 놓이는 자리 (손패 루트의 부모 기준 유닛) — 테이블 가운데, 캔버스 (960, 620).")]
+        [SerializeField] private Vector3 targetCardCenter = new Vector3(0f, -0.8f, 0f);
+        [Tooltip("그 자리에서의 배율 — 시안 0.74.")]
+        [SerializeField] private float targetCardScale = 0.74f;
+        [Tooltip("그 자리에서의 기울기 (반시계 도) — 시안 −4° (시계 방향이 +).")]
+        [SerializeField] private float targetCardAngle = 4f;
+        [Tooltip("손패에서 그 자리로 가는 초 — 시안 0.38.")]
+        [SerializeField] private float targetCardDuration = 0.38f;
 
         [Header("버리기 연출")]
         [Tooltip("버려지는 카드가 날아가 닿는 자리 — 버림 더미의 맨 위 카드 자리 (DiscardPileView.TopAnchor). 위치 · 회전 · 배율 그대로 닿는다.")]
@@ -58,18 +73,26 @@ namespace Chapchu.UI.GameScreen
         {
             _view = GetComponent<HandView>();
 
-            if (deck == null || drawOrigin == null || server == null || dropZone == null || seats == null || discardSpot == null)
-                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(dropZone)} · {nameof(seats)} · {nameof(discardSpot)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || topLayer == null)
+                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(topLayer)} 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable()
         {
             _view.OnCardDropped += HandleCardDropped;
+            _view.OnCardDragged += HandleCardDragged;
+            _view.OnCardUseRequested += HandleCardUseRequested;
+            _view.OnRaisedChanged += HandleRaisedChanged;
+            _view.OnDraggingChanged += HandleDraggingChanged;
         }
 
         private void OnDisable()
         {
             _view.OnCardDropped -= HandleCardDropped;
+            _view.OnCardDragged -= HandleCardDragged;
+            _view.OnCardUseRequested -= HandleCardUseRequested;
+            _view.OnRaisedChanged -= HandleRaisedChanged;
+            _view.OnDraggingChanged -= HandleDraggingChanged;
         }
 
         private void Update()
@@ -79,7 +102,7 @@ namespace Chapchu.UI.GameScreen
             if (glow == _glowing) return;
 
             _glowing = glow;
-            _view.SetGlow(glow ? _usableCounters : null);
+            _view.ShowReaction(glow ? _usableCounters : null);
         }
 
         /// <summary>반응 시간이 정해졌다 (OnReactionStarted) — 앞 반응 시간의 「낼 수 있는 카운터」 는 버린다. 새 목록은 ShowUsableCounters 로 따로 온다.</summary>
@@ -96,7 +119,7 @@ namespace Chapchu.UI.GameScreen
             _usableCounters.Clear();
             _usableCounters.UnionWith(cardInstanceIds);
             _glowing = false; // 다음 Update 에서 새 목록으로 다시 켠다
-            _view.SetGlow(null);
+            _view.ShowReaction(null);
         }
 
         /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다.</summary>
@@ -104,7 +127,7 @@ namespace Chapchu.UI.GameScreen
         {
             _usableCounters.Clear();
             _glowing = false;
-            _view.SetGlow(null);
+            _view.ShowReaction(null);
         }
 
         /// <summary>내가 설치한 함정 — 손패에서 떼어 함정 칸(slot 의 위치 · 회전 · 배율)으로 보내 지운다. 연출 큐가 기다릴 코루틴. 손패에 없으면(빼앗아 온 함정) 바로 끝난다.</summary>
@@ -218,14 +241,58 @@ namespace Chapchu.UI.GameScreen
                 Destroy(card.gameObject);
         }
 
-        // 드롭 영역 밖이면 손패로. 안이면 대상 타입으로 나눈다 — 자동 타입은 빈 대상으로 바로 요청(방장이 정한다, 04-card.md 11절), 고르는 타입은 좌석 탭.
+        // 끄는 동안 — 놓으면 사용되는 자리(기준선 위 · 상대 위)면 카드 링 · 기준선 색 · 그 좌석 강조로 알린다 (10-ui.md 4절).
+        private void HandleCardDragged(CardView card, Vector2 screenPosition)
+        {
+            int seatActor = SeatUnder(card, screenPosition);
+            bool armed = seatActor != 0 || _view.IsAbovePlayLine(screenPosition);
+            _view.SetArmed(armed);
+            playLine.SetArmed(armed);
+            seats.ShowAim(seatActor);
+        }
+
+        private void HandleDraggingChanged(bool dragging)
+        {
+            playLine.SetVisible(dragging);
+            if (!dragging)
+                seats.ShowAim(0);
+        }
+
+        // 올라온 손패가 덮는 HUD 는 그동안 눌리지 않는다 — 카드를 고르려다 찹츄 버튼이 눌리지 않게 (프로토타입 v2 #game.handup).
+        private void HandleRaisedChanged(bool raised)
+        {
+            foreach (CanvasGroup group in coveredHud)
+                group.blocksRaycasts = !raised;
+        }
+
+        // 놓은 자리가 사용 기준선 위이거나 상대 위면 사용, 아니면 손패로 (10-ui.md 4절 「끌다가 놓기」).
         private void HandleCardDropped(CardView card, Vector2 screenPosition)
         {
-            if (!RectTransformUtility.RectangleContainsScreenPoint(dropZone, screenPosition, null))
+            int seatActor = SeatUnder(card, screenPosition);
+            if (seatActor == 0 && !_view.IsAbovePlayLine(screenPosition))
             {
                 _view.ReturnCard(card);
                 return;
             }
+
+            Use(card, seatActor);
+        }
+
+        // 더블클릭 · 고른 카드 다시 탭 — 놓은 상대가 없다.
+        private void HandleCardUseRequested(CardView card) => Use(card, 0);
+
+        // 끄는 카드 아래의 상대 (actorNumber, 없으면 0). 함정은 대상이 없어 상대 위에 놓는 것이 뜻이 없다.
+        private int SeatUnder(CardView card, Vector2 screenPosition)
+        {
+            CardData data = deck.GetCard(card.CardId);
+            return data != null && data.type != CardType.Trap ? seats.ActorAt(screenPosition) : 0;
+        }
+
+        // 사용 요청 (04-card.md 5 ~ 7 · 11절). 자동 타입은 빈 대상으로 바로 요청(방장이 정한다), 고르는 타입은 놓은 상대가 있으면 그 상대로 · 없으면 좌석 탭으로.
+        // 로컬 조건은 보지 않는다 — 방장이 거절하면 토스트 (10-ui.md 4절).
+        private void Use(CardView card, int seatActor)
+        {
+            _view.Lower();
 
             CardData data = deck.GetCard(card.CardId);
             if (data == null)
@@ -246,6 +313,10 @@ namespace Chapchu.UI.GameScreen
 
             switch (data.targetType)
             {
+                case TargetType.OneOther when seatActor != 0:
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
                 case TargetType.OneOther:
                     StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1));
                     break;
@@ -259,21 +330,47 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        // 대상 선택 동안 손패를 잠그고 카드는 놓은 자리에 둔다. 안내 바에 카드 이름을 보여 준다. 고르면 요청, 취소 · 시간 초과면 요청하지 않는다. 끝나면 풀고 카드를 돌린다 (10-ui.md 6절).
+        // 대상 선택 동안 손패를 잠그고, 카드는 손패에서 빼 테이블 가운데에 가림판 위로 밝게 둔다. 안내 바에 카드 이름을 보여 준다.
+        // 고르면 요청, 취소 · 시간 초과면 요청하지 않는다. 끝나면 풀고 카드를 손패 자리로 돌린다 (10-ui.md 6절).
         private IEnumerator PlayWithTargetsRoutine(CardView card, string cardName, int targetCount)
         {
             _view.SetLocked(true);
+            _view.Hold(card);
+            topLayer.Set(card, true);
+            ShowAtTargetSpot(card);
 
             int[] targets = null;
             yield return seats.SelectTargetsRoutine(cardName, targetCount, picked => targets = picked);
+
+            if (card == null) // 고르는 사이 손패에서 빠져 지워졌다 (강제 버림 · 사망)
+            {
+                _view.SetLocked(false);
+                yield break;
+            }
 
             if (targets != null)
                 RequestPlay(card, targets);
             else
                 Debug.Log($"[{nameof(HandPresenter)}] 대상 선택 취소 — 카드 {card.InstanceId} 손패로", this);
 
+            topLayer.Set(card, false);
             _view.SetLocked(false);
             _view.ReturnCard(card);
+        }
+
+        // 카드를 테이블 가운데로 — 똑바로 세워 조금 작게 · 살짝 기울여 (프로토타입 v2 startTarget).
+        private void ShowAtTargetSpot(CardView card)
+        {
+            Quaternion rotation = Quaternion.Euler(0f, 0f, targetCardAngle);
+            Transform parent = transform.parent;
+            Vector3 center = parent != null ? parent.TransformPoint(targetCardCenter) : targetCardCenter;
+            Vector3 position = center - rotation * new Vector3(0f, card.Height * targetCardScale / 2f, 0f); // 카드 기준점은 아래 가운데
+
+            Transform t = card.transform;
+            t.DOKill();
+            t.DOMove(position, targetCardDuration).SetEase(Ease.OutQuart).SetLink(card.gameObject);
+            t.DORotateQuaternion(rotation, targetCardDuration).SetEase(Ease.OutQuart).SetLink(card.gameObject);
+            t.DOScale(targetCardScale, targetCardDuration).SetEase(Ease.OutQuart).SetLink(card.gameObject);
         }
 
         private void RequestPlay(CardView card, int[] targets)

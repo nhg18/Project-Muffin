@@ -43,8 +43,7 @@ public static class MultiTest
     private const string ChapchuStateMethod = "GetChapchuState";           // MyPanelPresenter — 찹츄 버튼 상태
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
-    private const string CardDroppedMethod = "HandleCardDropped";          // HandPresenter — 손패 카드를 놓았다 (카드, 화면 좌표)
-    private const string DropZoneField = "dropZone";                       // HandPresenter — 드롭 영역
+    private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
     private const string HandCardsField = "_cards";                        // HandView — 손패의 카드들
     private const string CardGlowField = "glow";                           // CardView — 「낼 수 있다」 빛
     private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
@@ -185,8 +184,8 @@ public static class MultiTest
         string setLog = "";
         if (trapIndex >= 0 && traps.Count < 3)
         {
-            // 화면 경로 — 손패의 함정 카드를 드롭 영역에 놓는다 (HandPresenter 가 설치 요청으로 바꾼다)
-            if (DropFromHand(instances[trapIndex]))
+            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (더블클릭과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
+            if (UseFromHand(instances[trapIndex]))
                 setLog = " · 함정 설치(화면)";
             else
             {
@@ -340,7 +339,7 @@ public static class MultiTest
 
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
 
-        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드를 드롭 영역에 놓는다. 초록 빛(방장이 알려 준 「낼 수 있는 카운터」)도 같이 본다
+        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 초록 빛(방장이 알려 준 「낼 수 있는 카운터」)도 같이 본다
         if (counter >= 0)
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
@@ -349,7 +348,7 @@ public static class MultiTest
             {
                 var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
                 string glowLog = glow == null ? "빛 없음" : glow.activeSelf ? "초록 빛 켜짐" : "초록 빛 꺼짐";
-                DropFromHand(instances[counter]);
+                UseFromHand(instances[counter]);
                 return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + glowLog;
             }
         }
@@ -367,16 +366,14 @@ public static class MultiTest
         return cards.FirstOrDefault(card => card.InstanceId == instanceId);
     }
 
-    // 화면 경로 — 손패의 카드를 드롭 영역 가운데에 놓은 것처럼 HandPresenter 에 넘긴다. 카드가 손패 뷰에 없으면 false.
-    private static bool DropFromHand(int instanceId)
+    // 화면 경로 — 손패의 카드를 더블클릭한 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
+    private static bool UseFromHand(int instanceId)
     {
         HandPresenter presenter = Object.FindFirstObjectByType<HandPresenter>();
         CardView card = FindHandCard(instanceId);
         if (presenter == null || card == null) return false;
 
-        var dropZone = (RectTransform)typeof(HandPresenter).GetField(DropZoneField, Private).GetValue(presenter);
-        Vector2 screen = RectTransformUtility.WorldToScreenPoint(null, dropZone.TransformPoint(dropZone.rect.center));
-        typeof(HandPresenter).GetMethod(CardDroppedMethod, Private).Invoke(presenter, new object[] { card, screen });
+        typeof(HandPresenter).GetMethod(CardUseRequestedMethod, Private).Invoke(presenter, new object[] { card });
         return true;
     }
 
