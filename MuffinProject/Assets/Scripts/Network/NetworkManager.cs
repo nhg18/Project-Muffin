@@ -26,6 +26,8 @@ namespace Chapchu.Network
         public static bool IsConnected => PhotonNetwork.IsConnected;
         /// <summary>서버 접속이 완료되어 요청을 보낼 수 있는 상태인지</summary>
         public static bool IsReady => PhotonNetwork.IsConnectedAndReady;
+        /// <summary>방 입장 응답을 받았는지 — 입장 알림(RoomEvents.OnJoinedRoom) · 씬 동기화의 방 씬 로드보다 먼저 참이 되고, 방을 떠나면 거짓</summary>
+        public static bool HasEnteredRoom => PhotonNetwork.CurrentRoom != null;
 
         /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _room.HostBots;

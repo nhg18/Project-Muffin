@@ -1073,16 +1073,18 @@ namespace Chapchu.UI.Lobby
                 return;
             }
 
+            StopCoroutine(_roomTimeout); // 입장했다 — 방 씬이 열리기 전에 시간 초과가 끼어들지 않게 멈춘다
             SceneManager.LoadScene(ScenePaths.Room);
         }
 
-        private void HandleCreateRoomFailed(short code, string message) => ShowRoomError(CreateFailedTitle, code, message);
+        // 랜덤 매칭이 방을 못 찾으면 바로 새 방을 만든다 — 그 생성이 실패한 경우도 여기로 온다
+        private void HandleCreateRoomFailed(short code, string message)
+            => ShowRoomError(_request == RoomRequest.Random ? RandomMatchFailedTitle : CreateFailedTitle, code, message);
 
         private void HandleJoinRoomFailed(short code, string message) => ShowRoomError(JoinFailedTitle, code, message);
 
-        // 랜덤 매칭이 방을 못 찾아 새로 만들다 실패한 경우도 여기로 온다
-        private void HandleJoinRandomFailed(short code, string message)
-            => ShowRoomError(_request == RoomRequest.Random ? RandomMatchFailedTitle : JoinFailedTitle, code, message);
+        // 랜덤 매칭을 보내지도 못했을 때(미연결)만 온다
+        private void HandleJoinRandomFailed(short code, string message) => ShowRoomError(RandomMatchFailedTitle, code, message);
 
         private void ShowRoomError(string title, short code, string message)
         {
@@ -1107,6 +1109,10 @@ namespace Chapchu.UI.Lobby
                 waited += Mathf.Min(Time.unscaledDeltaTime, MaxCountedFrameSeconds);
                 yield return null;
             }
+
+            // 입장 응답은 이미 왔고 방 씬이 열리는 중이다 (씬 동기화 입장은 HandleJoinedRoom 을 거치지 않는다) — 포기로 찍지 않고 기다린다
+            while (NetworkManager.HasEnteredRoom)
+                yield return null;
 
             _roomTimeout = null;
             // 이미 있는 방의 늦은 입장은 씬 동기화가 먼저 방 씬을 열어 HandleJoinedRoom 이 불리지 않는다 — 방 화면이 보고 나간다

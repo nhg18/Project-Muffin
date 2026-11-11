@@ -85,6 +85,7 @@ namespace Chapchu.UI.Lobby
             burst.gameObject.SetActive(false);
             foreach (TMP_Text gain in gains)
             {
+                gain.rectTransform.DOKill(); // 「+N」 연출(Sequence)의 타깃
                 gain.DOKill();
                 gain.gameObject.SetActive(false);
             }
