@@ -1001,7 +1001,8 @@ namespace Chapchu.EditorTools
             AssetDatabase.SaveAssets();
         }
 
-        // 로고 전용 — 「찹츄!」 세 글자만 굽는다. 굵은 외곽선(글자 260 에 11) · 아래 그림자가 들어가게 여백을 크게
+        // 로고 전용 — 「찹츄!」 세 글자만 굽는다. 굵은 외곽선(글자 260 에 바깥 11) · 아래 그림자가 들어가게 여백을 크게.
+        // 이미 있는 에셋은 다시 만들지 않는다 — 아래 머티리얼 값을 바꾸면 에셋의 머티리얼도 같은 값으로 고칠 것
         private static TMP_FontAsset EnsureLogoFontAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(LogoFontAssetPath);
@@ -1018,13 +1019,16 @@ namespace Chapchu.EditorTools
             Material material = asset.material;
             material.EnableKeyword(ShaderUtilities.Keyword_Outline);
             material.SetColor(ShaderUtilities.ID_OutlineColor, Ink);
-            // 값은 시안 1920 × 1080 화면과 겹쳐 보며 맞췄다 — 외곽선 바깥 11 · 그림자 아래 14
-            material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.13f);
-            material.SetFloat(ShaderUtilities.ID_FaceDilate, 0.065f);
+            // 시안은 외곽선을 글자 바깥에만 그린다(-webkit-text-stroke 22 + paint-order: stroke fill → 바깥 11, 글자 면은 그대로).
+            // TMP 외곽선은 글자 가장자리 양쪽으로 반씩 퍼져 면을 먹으므로, 외곽선 반 두께만큼 면을 부풀려(FaceDilate) 안쪽 끝을 원래 가장자리에 맞춘다.
+            // 그림자(text-shadow 0 14)는 외곽선이 아니라 글자 면만 따라간다 → 부풀리기 전 모양(UnderlayDilate 음수)을 아래로 14 — 외곽선 밑으로 3 만 보인다.
+            // 값은 시안 1920 × 1080 화면과 글자 면 · 잉크 넓이를 재어 맞췄다 (면 99% · 잉크 97%)
+            material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.095f);
+            material.SetFloat(ShaderUtilities.ID_FaceDilate, 0.1f);
             material.EnableKeyword(ShaderUtilities.Keyword_Underlay);
             material.SetColor(ShaderUtilities.ID_UnderlayColor, Ink);
-            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.4f);
-            material.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.065f);
+            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.322f);
+            material.SetFloat(ShaderUtilities.ID_UnderlayDilate, -0.14f);
             ShaderUtilities.UpdateShaderRatios(material);
             EditorUtility.SetDirty(material);
             EditorUtility.SetDirty(asset);
