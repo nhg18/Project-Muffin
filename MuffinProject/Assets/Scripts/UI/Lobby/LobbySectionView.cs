@@ -177,12 +177,6 @@ namespace Chapchu.UI.Lobby
             group.DOFade(visible ? 1f : 0f, fadeSeconds).SetUpdate(true);
         }
 
-        private static void SetGroup(CanvasGroup group, bool visible)
-        {
-            group.alpha = visible ? 1f : 0f;
-            group.blocksRaycasts = visible;
-        }
-
         private void HandleBackClicked() => OnBackRequested?.Invoke();
 
         private void HandleInfoButtonClicked() => OnInfoButtonClicked?.Invoke();
