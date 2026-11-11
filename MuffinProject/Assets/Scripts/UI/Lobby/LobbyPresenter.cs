@@ -1037,7 +1037,10 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _request = request;
-            SceneFlow.IsRoomRequestAbandoned = false;
+            // 서버가 새 요청을 받을 수 있다 = 포기한 옛 요청은 끝났다. 받을 수 없으면(옛 요청이 아직 처리 중) 표시를 그대로 둔다 —
+            // 새 요청은 그 자리에서 실패하고, 옛 요청의 늦은 입장은 계속 막는다
+            if (NetworkManager.IsReady)
+                SceneFlow.IsRoomRequestAbandoned = false;
             // 요청이 부르는 자리에서 바로 실패할 수 있어, 요청보다 먼저 센다
             _roomTimeout = StartCoroutine(RoomTimeoutRoutine());
             switch (request)
@@ -1065,6 +1068,7 @@ namespace Chapchu.UI.Lobby
         {
             if (_roomTimeout == null) // 10초가 지나 이미 실패로 알린 요청의 늦은 입장 — 방으로 가지 않고 나간다
             {
+                SceneFlow.IsRoomRequestAbandoned = false; // 포기한 요청이 끝났다
                 NetworkManager.Instance.LeaveRoom();
                 return;
             }
@@ -1082,8 +1086,11 @@ namespace Chapchu.UI.Lobby
 
         private void ShowRoomError(string title, short code, string message)
         {
-            if (_roomTimeout == null) // 10초가 지나 이미 실패로 알린 요청의 늦은 응답
+            if (_roomTimeout == null) // 10초가 지나 이미 실패로 알린 요청의 늦은 응답 — 포기한 요청이 끝났다
+            {
+                SceneFlow.IsRoomRequestAbandoned = false;
                 return;
+            }
 
             StopCoroutine(_roomTimeout);
             _roomTimeout = null;
