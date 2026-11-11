@@ -255,9 +255,14 @@ namespace Chapchu.UI.RoomScreen
             else
                 start.ShowGuest();
 
-            // 열린 채 방장이 바뀌면 위임 안내도 지금 방장 기준으로 맞춘다 (7-8)
+            // 열린 채 방장이 바뀌면 위임 안내도 지금 방장 기준으로 맞춘다. 다른 사람(봇 제외)이 없어졌으면 판을 닫는다 (7-8)
             if (leaveConfirm.IsOpen)
-                leaveConfirm.Show(isHost);
+            {
+                if (room.PlayerCount > 1)
+                    leaveConfirm.Show(isHost);
+                else
+                    leaveConfirm.Hide();
+            }
 
             // 정보 판을 보던 사람이 나갔으면 판을 닫는다 (7-5). 남아 있으면 방장 여부를 다시 맞춘다 (3절 #5)
             if (playerInfo.IsOpen)
