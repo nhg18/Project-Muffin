@@ -65,6 +65,8 @@ namespace Chapchu.EditorTools
         // 사용 기준선 (시안 #playline × 2) — 잉크 32% · 두께 6, 화면 아래 끝에서 카드 높이 336 + 48, 좌우 (가장자리 16 + 40) × 2
         private static readonly Color PlayLineColor = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.32f);
         private static readonly Color PlayLineLabelFill = new Color(1f, 1f, 1f, 0.85f);
+        private static readonly Color HandRevealHintFill = new Color(1f, 1f, 1f, 0.9f);
+        private const float HandRevealBarWidth = 440f;
         private const float PlayLineBottom = 384f, PlayLineThickness = 6f, PlayLineInset = 112f;
         private static readonly Color ChapchuOffLabel = Hex(0xc4bab0);
         private static readonly Color ChapchuOffShadow = Hex(0xddd3c8);
@@ -137,6 +139,7 @@ namespace Chapchu.EditorTools
             // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
             PlayLineView playLine = BuildPlayLine(canvasRect);
             TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera);
+            HandRevealView handReveal = BuildHandReveal(canvasRect);
 
             // 서랍 · 팝업 — 가장 위
             RectTransform sheets = NewRect("Sheets", canvasRect);
@@ -147,7 +150,7 @@ namespace Chapchu.EditorTools
 
             // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
             var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
-            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, coveredHud);
+            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, handReveal, coveredHud);
             ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck);
             MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
@@ -609,6 +612,40 @@ namespace Chapchu.EditorTools
 
             var view = go.AddComponent<TopCardLayerView>();
             Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)));
+            return view;
+        }
+
+        // 새 카드 보여 주기의 HUD (시안 .rvbar · .rvhint × 2) — 크게 띄운 카드 아래에 남은 시간 막대 440 × 20 과 안내 글. 카드는 앞 층(3D)이 그린다.
+        // 세로 자리는 HandRevealView 가 카드 묶음 아래 끝에 맞춘다 — 캔버스 가운데 기준. 눌리지 않는다.
+        public static HandRevealView BuildHandReveal(RectTransform canvasRect)
+        {
+            RectTransform root = NewRect("HandReveal", canvasRect);
+            Stretch(root);
+
+            RectTransform content = NewRect("Content", root);
+            Anchor(content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(HandRevealBarWidth, 80f));
+
+            RectTransform bar = NewRect("Bar", content);
+            Anchor(bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(HandRevealBarWidth, 20f));
+            RoundBox(bar, Ink, 4f, 10f, White);
+            Image drain = NewImage("Drain", bar, Turn);
+            RectTransform fill = drain.rectTransform;
+            fill.pivot = new Vector2(0f, 0.5f);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = new Vector2(4f, 4f);
+            fill.offsetMax = new Vector2(-4f, -4f);
+
+            RectTransform hint = NewRect("Hint", content);
+            Anchor(hint, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(360f, 40f));
+            RoundBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill);
+            HorizontalLayout(hint, new RectOffset(20, 20, 4, 4), 0f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(hint.gameObject);
+            NewText("Text", hint, "화면을 누르면 바로 손패로", 28f, Ink2, false);
+
+            var view = root.gameObject.AddComponent<HandRevealView>();
+            Wire(view, ("content", content), ("fill", fill));
+            content.gameObject.SetActive(false);
             return view;
         }
 

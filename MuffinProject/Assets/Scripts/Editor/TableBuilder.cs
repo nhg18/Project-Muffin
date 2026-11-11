@@ -340,7 +340,7 @@ namespace Chapchu.EditorTools
         }
 
         public static HandPresenter BuildHand(Transform table, DeckView deck, DiscardPileView discardPile, OpponentSeatsPresenter seats, DeckData gameDeck,
-            PlayLineView playLine, TopCardLayerView topLayer, Object[] coveredHud)
+            PlayLineView playLine, TopCardLayerView topLayer, HandRevealView handReveal, Object[] coveredHud)
         {
             var root = new GameObject("Hand");
             root.transform.SetParent(table, false);
@@ -358,7 +358,7 @@ namespace Chapchu.EditorTools
             var presenter = root.AddComponent<HandPresenter>();
             GameScreenBuilder.Wire(presenter,
                 ("deck", gameDeck), ("drawOrigin", deck.transform), ("server", FindServer(nameof(HandPresenter))), ("seats", seats),
-                ("discardSpot", discardPile.TopAnchor), ("playLine", playLine), ("topLayer", topLayer));
+                ("discardSpot", discardPile.TopAnchor), ("playLine", playLine), ("topLayer", topLayer), ("revealView", handReveal));
             GameScreenBuilder.WireArray(presenter, "coveredHud", coveredHud);
             return presenter;
         }

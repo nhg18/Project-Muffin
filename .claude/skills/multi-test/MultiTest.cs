@@ -834,17 +834,30 @@ public static class MultiTest
             Check(t.Tick().OfType<PlayerDied>().Count() == 2, "함께 최종 사망");
         }
 
-        // 3. 빈 덱 피해 1 · 2 · 3 … (사람마다), 드로우는 턴 종료
+        // 3. 턴 뽑기는 2장, 손패가 찹츄 장수 − 1 이면 1장 (05 4절)
+        {
+            var t = new ChainTable();
+            int before = t.HandCount(t.Turn);
+            IReadOnlyList<GameEvent> drawn = t.Server.Draw(t.Turn);
+            Check(drawn.OfType<CardDrawn>().Count() == GameServer.TurnDrawCount && t.HandCount(t.Turn) == before + 2 && drawn.OfType<TurnStarted>().Any(), "턴 뽑기 → 2장 · 턴 종료");
+
+            var nine = new ChainTable();
+            while (nine.HandCount(nine.Turn) < GameServer.ChapchuHandCount - 1)
+                nine.GiveCard(nine.Turn, ChainTable.Hit);
+            Check(nine.Server.Draw(nine.Turn).OfType<CardDrawn>().Count() == 1 && nine.HandCount(nine.Turn) == GameServer.ChapchuHandCount, "손패 9장에서 턴 뽑기 → 1장 · 딱 10장");
+        }
+
+        // 3-1. 빈 덱 피해 1 · 2 · 3 … (사람마다, 못 뽑은 장마다), 드로우는 턴 종료
         {
             var t = new ChainTable();
             t.EmptyDeck();
             IReadOnlyList<GameEvent> first = t.Server.Draw(t.Turn);
-            EmptyDeckDamaged damage = first.OfType<EmptyDeckDamaged>().FirstOrDefault();
-            Check(damage != null && damage.Amount == 1 && t.Hp(t.Turn) == 99 && first.OfType<TurnStarted>().Any(), "빈 덱 첫 드로우 → 피해 1 · 턴 종료");
+            int[] amounts = first.OfType<EmptyDeckDamaged>().Select(e => e.Amount).ToArray();
+            Check(amounts.SequenceEqual(new[] { 1, 2 }) && t.Hp(t.Turn) == 97 && first.OfType<TurnStarted>().Any(), "빈 덱 첫 드로우(2장) → 피해 1 + 2 · 턴 종료");
             t.Server.Draw(t.O1);
             t.Server.Draw(t.O2);
             t.Server.Draw(t.Turn);
-            Check(t.Hp(t.Turn) == 97 && t.Hp(t.O1) == 99, "두 번째 → 피해 2 (사람마다 따로)");
+            Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 97, "두 번째 → 피해 3 + 4 (사람마다 따로)");
         }
 
         // 4. 빈 덱 피해로 HP 0 → 바로 5초 사망 대기 → 사망 뒤 다음 턴

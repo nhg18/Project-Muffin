@@ -7,11 +7,13 @@ namespace Chapchu.Game
     {
         // 확정 (05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 임시 덱 에셋이 대신한다.
         private const int InitialHandCount = 5;
+        // 턴 뽑기(메인 행동) 장수 — 손패가 찹츄 장수 − 1 이면 1장만 뽑아 딱 맞게 한다 (05-deck.md 4절, 2026-11-11). 카드 효과 뽑기는 효과의 장수 그대로.
+        public const int TurnDrawCount = 2;
 
         private readonly List<Card> _deck = new List<Card>();
         private readonly List<Card> _discardPile = new List<Card>();
 
-        /// <summary>드로우 요청 — 메인 행동이라 끝나면 턴이 넘어간다 (03-turn.md 3절).</summary>
+        /// <summary>드로우 요청 — TurnDrawCount 장(손패가 찹츄 장수 − 1 이면 1장). 메인 행동이라 끝나면 턴이 넘어간다 (03-turn.md 3절).</summary>
         public IReadOnlyList<GameEvent> Draw(int requester)
         {
             if (_gameOver)
@@ -29,7 +31,9 @@ namespace Chapchu.Game
             if (IsPaused(_clock()))
                 return Reject(requester, RejectCode.Resolving);
 
-            DrawOne(requester);
+            int count = _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount;
+            for (int i = 0; i < count && _players[requester].Hp > 0; i++)
+                DrawOne(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
             CheckDeathPending(_clock()); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
             // 드로우는 끝나면 턴 종료. 빈 덱 피해로 사망 대기가 생기면 그것이 끝난 뒤 (03-turn.md 4절)

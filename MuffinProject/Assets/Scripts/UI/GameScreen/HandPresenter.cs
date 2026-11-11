@@ -53,6 +53,18 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("손패에서 그 자리로 가는 초 — 시안 0.38.")]
         [SerializeField] private float targetCardDuration = 0.38f;
 
+        [Header("새 카드 보여 주기 (10-ui.md 2-1 「새 카드 보여 주기」)")]
+        [Tooltip("보여 주는 카드 아래의 남은 시간 막대 · 안내 글 (HUD).")]
+        [SerializeField] private HandRevealView revealView;
+        [Tooltip("보여 주는 초 — 기본 + 장마다 더하는 초, 상한까지.")]
+        [SerializeField] private float showHoldBase = 2.6f;
+        [SerializeField] private float showHoldPerCard = 0.7f;
+        [SerializeField] private float showHoldMax = 8f;
+        [Tooltip("앞 카드가 온 뒤 이 초 안에 온 카드는 같은 묶음으로 함께 보여 준다. 그 뒤에 오면 앞 묶음을 먼저 손패로 내린다.")]
+        [SerializeField] private float showJoinWindow = 0.6f;
+        [Tooltip("새 카드가 온 직후 이 초 동안은 눌러도 닫지 않는다 — 뽑으려고 누른 클릭에 닫히지 않게.")]
+        [SerializeField] private float showClickGuard = 0.3f;
+
         [Header("버리기 연출")]
         [Tooltip("버려지는 카드가 날아가 닿는 자리 — 버림 더미의 맨 위 카드 자리 (DiscardPileView.TopAnchor). 위치 · 회전 · 배율 그대로 닿는다.")]
         [SerializeField] private Transform discardSpot;
@@ -67,14 +79,19 @@ namespace Chapchu.UI.GameScreen
         private double _reactionDeadline;
         private bool _glowing;
 
+        // 새로 들어와 크게 보여 주는 중인 카드 묶음 — 손패(HandView)에는 이미 들어 있고 자리만 따로다. 판정과 상관없는 연출.
+        private readonly List<CardView> _showing = new List<CardView>();
+        private float _showLastAddAt;
+        private Coroutine _showRoutine;
+
         private HandView _view;
 
         private void Awake()
         {
             _view = GetComponent<HandView>();
 
-            if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || topLayer == null)
-                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(topLayer)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || topLayer == null || revealView == null)
+                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(topLayer)} · {nameof(revealView)} 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable()
@@ -93,10 +110,15 @@ namespace Chapchu.UI.GameScreen
             _view.OnCardUseRequested -= HandleCardUseRequested;
             _view.OnRaisedChanged -= HandleRaisedChanged;
             _view.OnDraggingChanged -= HandleDraggingChanged;
+            FinishShow();
         }
 
         private void Update()
         {
+            // 보여 주는 중에 화면을 누르면 바로 손패로
+            if (_showing.Count > 0 && Input.GetMouseButtonDown(0) && Time.time - _showLastAddAt > showClickGuard)
+                FinishShow();
+
             double now = PhotonNetwork.Time;
             bool glow = _usableCounters.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
             if (glow == _glowing) return;
@@ -108,6 +130,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>반응 시간이 정해졌다 (OnReactionStarted) — 앞 반응 시간의 「낼 수 있는 카운터」 는 버린다. 새 목록은 ShowUsableCounters 로 따로 온다.</summary>
         public void ShowReaction(double opensAt, double deadline)
         {
+            FinishShow(); // 카운터를 낼 손패 · 체인 카드를 가리지 않게
             EndReaction();
             _reactionOpensAt = opensAt;
             _reactionDeadline = deadline;
@@ -148,7 +171,7 @@ namespace Chapchu.UI.GameScreen
             Destroy(card.gameObject);
         }
 
-        /// <summary>내 손패로 카드가 들어왔다 (훔침 · 교환 · 함정 반환, OnMyCardsGained) — 손패 오른쪽 끝에 붙인다. 날아오는 연출은 아직 없다.</summary>
+        /// <summary>내 손패로 카드가 들어왔다 (훔침 · 교환 · 함정 반환, OnMyCardsGained) — 화면 아래에서 올라와 크게 보여 준 뒤 손패 오른쪽 끝에 붙는다.</summary>
         public void GainCards(int[] cardInstanceIds, int[] cardIds)
         {
             for (int i = 0; i < cardInstanceIds.Length; i++)
@@ -157,7 +180,7 @@ namespace Chapchu.UI.GameScreen
                 if (data == null)
                     Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardIds[i]}", this);
                 else
-                    _view.AddCard(cardInstanceIds[i], data, transform.position);
+                    AddAndShow(cardInstanceIds[i], data, transform.position);
             }
         }
 
@@ -172,7 +195,7 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        /// <summary>내가 뽑은 카드를 덱 자리에서 꺼내 손패 끝에 붙인다. 연출 큐가 기다릴 코루틴.</summary>
+        /// <summary>내가 뽑은 카드를 덱 자리에서 꺼내 크게 보여 준 뒤 손패 끝에 붙인다. 연출 큐는 꺼내는 간격만 기다린다 — 보여 주는 동안 다음 일은 이어진다.</summary>
         public IEnumerator DrawRoutine(int cardInstanceId, int cardId)
         {
             CardData data = deck.GetCard(cardId);
@@ -182,8 +205,66 @@ namespace Chapchu.UI.GameScreen
                 yield break;
             }
 
-            _view.AddCard(cardInstanceId, data, drawOrigin.position);
+            AddAndShow(cardInstanceId, data, drawOrigin.position);
             yield return new WaitForSeconds(dealInterval);
+        }
+
+        // 손패에 새 카드를 넣되, 자리로 바로 보내지 않고 화면 가운데 위쪽에 크게 보여 준다 — 몇 장이든 같은 길 (10-ui.md 2-1 「새 카드 보여 주기」).
+        // 잇달아 온 카드는 한 묶음으로 모아 함께 보여 주고(장수에 맞춰 크기를 다시 잡는다), 시간이 지나거나 화면을 누르면 손패로 내린다.
+        // 반응 시간이 걸려 있으면(체인이 있다) 가운데를 가리지 않게 보여 주지 않고 바로 손패로.
+        private void AddAndShow(int cardInstanceId, CardData data, Vector3 spawnWorldPosition)
+        {
+            if (PhotonNetwork.Time < _reactionDeadline)
+            {
+                _view.AddCard(cardInstanceId, data, spawnWorldPosition);
+                return;
+            }
+
+            _showing.RemoveAll(c => !_view.IsShown(c)); // 보여 주는 사이 손패에서 빠진 카드 (강제 버림 · 훔쳐짐)
+            if (_showing.Count > 0 && Time.time - _showLastAddAt > showJoinWindow)
+                FinishShow();
+
+            CardView card = _view.AddCard(cardInstanceId, data, spawnWorldPosition, true);
+            topLayer.Set(card, true);
+            _showing.Add(card);
+            _showLastAddAt = Time.time;
+
+            float bottom = _view.LayoutShown(_showing, _showing.Count - 1);
+            float enter = _view.ShowEnterSeconds(1);
+            float hold = Mathf.Min(showHoldMax, showHoldBase + showHoldPerCard * (_showing.Count - 1));
+            revealView.Show(_view.WorldToCanvasY(bottom), enter, hold);
+
+            if (_showRoutine != null)
+                StopCoroutine(_showRoutine);
+            _showRoutine = StartCoroutine(ShowRoutine(enter + hold));
+        }
+
+        private IEnumerator ShowRoutine(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            _showRoutine = null;
+            FinishShow();
+        }
+
+        // 보여 주던 카드를 손패 자리로 내린다. 보여 주는 것이 없으면 아무 일도 없다.
+        private void FinishShow()
+        {
+            if (_showRoutine != null)
+            {
+                StopCoroutine(_showRoutine);
+                _showRoutine = null;
+            }
+
+            if (_showing.Count == 0) return;
+
+            foreach (CardView card in _showing)
+            {
+                if (_view.IsShown(card))
+                    _view.ReturnCard(card);
+            }
+
+            _showing.Clear();
+            revealView.Hide();
         }
 
         /// <summary>방장이 승인한 내 카드 사용 — 손패에서 떼어 넘긴다. 체인 카드 연출(ChainCardsPresenter)이 이어받는다. 손패에 없으면 경고하고 null.</summary>
