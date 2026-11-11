@@ -277,6 +277,15 @@ namespace Chapchu.UI.Title
             // 닉네임 창에서 정한 이름이 서버 것과 다르면 저장 — 새 계정이거나, 게스트가 지난 닉네임을 고쳤다
             if (_typedNickname != null && _typedNickname != _savedNickname)
             {
+                // 「시작」 때 목록이 없어 건너뛴 금칙어 검사 — 설정 값을 받은 지금 저장 전에 한 번 더 (23 6-1 · 8-3)
+                if (ServerConfig.HasValues
+                    && NicknameValidator.ContainsBannedWord(_typedNickname, ServerConfig.BannedWords, ServerConfig.AllowedWords))
+                {
+                    StopFlow();
+                    sheet.ReturnToNickname(NicknameValidator.GetErrorMessage(NicknameValidationResult.BannedWord));
+                    return;
+                }
+
                 Run(SaveRoutine());
                 return;
             }
