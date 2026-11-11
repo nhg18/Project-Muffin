@@ -65,6 +65,7 @@ namespace Chapchu.UI.Title
         private bool _forgetSession;    // 다음 로그인은 저장된 로그인을 버리고 새 계정으로
         private LoginMethod _method;
         private string _savedNickname;  // 서버에 저장된 닉네임 — 없으면 null
+        private bool _nicknameLoaded;   // 이번 로그인에서 닉네임 읽기까지 성공했다 — 읽기 실패와 「서버에 없음」 을 가른다
         private string _typedNickname;  // 이번에 입력해 「시작」 한 닉네임 — 없으면 null
         private FailKind _failKind;
         private Coroutine _flow;
@@ -199,6 +200,7 @@ namespace Chapchu.UI.Title
                 _forgetSession = false;
             }
 
+            _nicknameLoaded = false;
             Task signIn = AccountService.SignInAsync();
             yield return Wait(signIn, AccountService.SignInTimeoutSeconds);
             if (!Succeeded(signIn))
@@ -216,6 +218,7 @@ namespace Chapchu.UI.Title
             }
 
             _savedNickname = string.IsNullOrEmpty(load.Result) ? null : load.Result;
+            _nicknameLoaded = true;
             Debug.Log($"[{nameof(TitlePresenter)}] 로그인 — {AccountService.PlayerId} · 닉네임 {(_savedNickname ?? "없음")}");
 
             yield return ConfigRoutine();
@@ -420,11 +423,12 @@ namespace Chapchu.UI.Title
             Run(SignInRoutine());
         }
 
-        // 닉네임 ← 뒤로 — 로그인 고르기로. 닉네임 없이 로그인한 계정은 쓸 수 없어 버린다 (시안 nickBack)
+        // 닉네임 ← 뒤로 — 로그인 고르기로. 닉네임 없이 로그인한 계정은 쓸 수 없어 버린다 (시안 nickBack).
+        // 닉네임을 읽지 못한 계정은 버리지 않는다 — 닉네임 · 기록이 있는 기존 게스트 계정일 수 있다
         private void HandleBackRequested()
         {
             _typedNickname = null;
-            if (AccountService.IsSignedIn && _savedNickname == null)
+            if (AccountService.IsSignedIn && _nicknameLoaded && _savedNickname == null)
                 AbandonAccount();
 
             sheet.ShowLogin(IsApplePlatform);

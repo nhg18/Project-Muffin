@@ -40,6 +40,8 @@ namespace Chapchu.Account
         /// <summary>UGS 플레이어 ID — 네트워크 서버의 플레이어 식별자로도 쓴다 (23 3절 #10). 로그인 전에는 null.</summary>
         public static string PlayerId => IsSignedIn ? AuthenticationService.Instance.PlayerId : null;
 
+        private static Task _signIn; // 돌고 있는 로그인 요청
+
         public static async Task InitializeAsync()
         {
             if (UnityServices.State == ServicesInitializationState.Uninitialized)
@@ -50,8 +52,14 @@ namespace Chapchu.Account
         public static async Task SignInAsync()
         {
             await InitializeAsync();
-            if (!AuthenticationService.Instance.IsSignedIn)
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            if (AuthenticationService.Instance.IsSignedIn)
+                return;
+
+            // 시간이 넘은 로그인 요청이 아직 돌고 있으면 새로 부르지 않고 이어서 기다린다 — 겹쳐 부르면 UGS 가 상태 오류로 바로 실패시킨다
+            if (_signIn == null || _signIn.IsCompleted)
+                _signIn = AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+            await _signIn;
         }
 
         /// <summary>
@@ -63,6 +71,7 @@ namespace Chapchu.Account
             if (!IsInitialized)
                 return;
 
+            _signIn = null; // 돌고 있던 요청은 버린 계정의 것 — 다음 로그인은 새로 부른다
             AuthenticationService.Instance.SignOut(true);
         }
 
