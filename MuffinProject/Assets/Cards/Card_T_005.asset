@@ -23,7 +23,8 @@ MonoBehaviour:
   reactsTo: 
   trapTrigger: 2
   triggerValue: 0
-  revealSeconds: 1.46
+  reactCondition: 0
+  revealSeconds: 1
   resolveSeconds: 1.28
   effects:
   - rid: 5046878355598344260

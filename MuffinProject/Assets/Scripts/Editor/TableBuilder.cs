@@ -68,8 +68,7 @@ namespace Chapchu.EditorTools
         private const float HandFanHalfWidth = 4.52f;
         private const float HandFanDrop = 0.34f;
 
-        // 카드 내는 자리 · 버림 자리 — 시안 DROP (480, 310) · DISC (555, 310) × 2: 방석 가운데에 내고 오른쪽에 버린다 (HUD v2).
-        private static readonly Vector3 PlaySpotPosition = CanvasToWorld(960f, 620f);
+        // 버림 자리 — 시안 DISC (555, 310) × 2: 방석 오른쪽 (HUD v2). 내는 자리(960, 620)는 1 단계와 함께 없앴다 (2026-11-11).
         private static readonly Vector3 DiscardSpotPosition = CanvasToWorld(1110f, 620f);
 
         // 3 단계 확대 · 홀드 자리 — 프로토타입 v2 `TIME.big 1.85` · `BIGY 262` × 2: 카드 가운데가 캔버스 (960, 524), 1.85배 (10-ui.md 2-1 「카드 연출 자리」).
@@ -356,7 +355,6 @@ namespace Chapchu.EditorTools
             }
 
             Transform root = Child(name, table, Vector3.zero, Quaternion.identity);
-            Transform playSpot = Spot("PlaySpot", root, PlaySpotPosition);
 
             // 카드 기준점이 아래 가운데라, 자리 = 카드 가운데에서 (카드 높이 × 배율 ÷ 2) 아래. 카메라에 가까워진 비율 k 만큼 위치 · 배율을 줄인다.
             float k = (CameraDistance + ShowZ) / CameraDistance;
@@ -375,7 +373,7 @@ namespace Chapchu.EditorTools
                 ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
                 ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
                 ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer),
-                ("playSpot", playSpot), ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
+                ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
             return presenter;
         }
 

@@ -34,8 +34,8 @@ namespace Chapchu.Cards
         public ReactCondition reactCondition;
 
         [Header("연출 시간 (10-ui.md 5-1) — 방장이 반응 · 턴 시각 계산에 쓴다. 연출 길이를 바꾸면 같이 바꾼다")]
-        [Tooltip("1 ~ 3 단계(내는 중 · 테이블 · 카드 이펙트) 초. 반응 시간 5초가 이 뒤에 열린다.")]
-        [Min(0)] public float revealSeconds = 1.46f;
+        [Tooltip("2 ~ 3 단계(카드 이펙트 · 가운데 확대) 초 — 1 단계는 없다 (2026-11-11). 반응 시간이 이 뒤에 열린다.")]
+        [Min(0)] public float revealSeconds = 1f;
 
         [Tooltip("4 단계 + 버림 더미로 이동 초. 체인 맨 아래 카드면 체인을 처리하고 이만큼 뒤에 다음 턴.")]
         [Min(0)] public float resolveSeconds = 1.28f;

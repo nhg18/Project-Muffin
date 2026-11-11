@@ -5212,37 +5212,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 248848023}
   m_CullTransparentMesh: 1
---- !u!1 &254970478
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 254970479}
-  m_Layer: 0
-  m_Name: PlaySpot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &254970479
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 254970478}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.79999995, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1924409855}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &262387901
 GameObject:
   m_ObjectHideFlags: 0
@@ -41861,7 +41830,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 254970479}
   - {fileID: 1971640734}
   - {fileID: 2115546733}
   m_Father: {fileID: 788797431}
@@ -41885,12 +41853,9 @@ MonoBehaviour:
   seats: {fileID: 1490500834}
   ownerTag: {fileID: 1215734193}
   dimmer: {fileID: 2115546734}
-  playSpot: {fileID: 254970479}
   showSpot: {fileID: 1971640734}
   discardSpot: {fileID: 955737490}
-  playTilt: 40
-  playDuration: 0.46
-  zoomMoveDuration: 0.2
+  zoomMoveDuration: 0.46
   zoomDuration: 1
   discardDuration: 0.38
   seatCardScale: 0.16

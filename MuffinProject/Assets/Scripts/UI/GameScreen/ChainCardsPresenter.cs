@@ -10,8 +10,8 @@ using UnityEngine;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 체인에 올라간 카드를 모든 화면에 보여 준다 (10-ui.md 5절 「현재 처리 카드」 · 5-1 단계 1 · 3 · 2-1 「카드 연출 자리」, 프로토타입 v2 FXV.show → settle).
-    /// 1 단계: 내 카드는 손패에서 넘겨받고, 남의 카드는 그 좌석의 손 자리에서 앞면으로 만들어 내는 자리에 눕힌다.
+    /// 체인에 올라간 카드를 모든 화면에 보여 준다 (10-ui.md 5절 「현재 처리 카드」 · 5-1 단계 3 · 2-1 「카드 연출 자리」, 프로토타입 v2 FXV.show → settle).
+    /// 내 카드는 손패에서 넘겨받고, 남의 카드는 그 좌석의 손 자리(발동한 함정은 그 칸)에서 앞면으로 만들어 바로 가운데 큰 자리로 보낸다 — 테이블에 눕히는 1 단계는 없다 (사용자 결정 2026-11-11).
     /// 3 단계: 가운데로 세워 크게 — 3D 층(테이블 · 손패)만 어둡게 하고 카드 아래에 주인 태그. 끝나도 줄이지 않고 그 크기로 둔다 (반응 시간 · 체인 처리 동안).
     /// 처리 결과가 오면 버림 더미로 보내 지운다 — 「손패로 반환」 이면 주인에게 돌려준다. 2 · 4 · 5 단계 · 무효 도장은 아직 없다.
     /// 카운터가 끼어들면 새 카드가 같은 자리 앞에 겹친다 — 체인 배치(붙이기 · 비키기)는 수치가 정해진 뒤 (10-ui.md 11절 #14).
@@ -41,20 +41,14 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private MeshRenderer dimmer;
 
         [Header("자리")]
-        [Tooltip("1 단계 — 카드가 눕혀져 놓이는 테이블 자리.")]
-        [SerializeField] private Transform playSpot;
         [Tooltip("3 단계 · 홀드 — 크게 둔 카드의 자리. 카드 기준점(아래 가운데)의 위치 · 회전 · 배율.")]
         [SerializeField] private Transform showSpot;
         [Tooltip("버림 더미의 맨 위 카드 자리 (DiscardPileView.TopAnchor). 위치 · 회전 · 배율 그대로 닿는다.")]
         [SerializeField] private Transform discardSpot;
 
-        [Header("연출 (10-ui.md 5-1 — 1 단계 0.46 + 3 단계 1.0 = 카드 데이터의 등장 시간 1.46초)")]
-        [Tooltip("1 단계에서 카드가 눕는 각도(X 축) — 테이블 기울기 40°.")]
-        [SerializeField] private float playTilt = 40f;
-        [Tooltip("1 단계 — 손 → 테이블 자리 초.")]
-        [SerializeField] private float playDuration = 0.46f;
-        [Tooltip("3 단계 — 테이블 자리에서 가운데로 커지는 초 (시안 0.2).")]
-        [SerializeField] private float zoomMoveDuration = 0.2f;
+        [Header("연출 (10-ui.md 5-1 — 3 단계 1.0 = 카드 데이터의 등장 시간 1.0초. 1 단계는 없다)")]
+        [Tooltip("3 단계 — 손(좌석 · 함정 칸)에서 가운데로 커지며 가는 초. 옛 1 단계의 이동 시간과 같다.")]
+        [SerializeField] private float zoomMoveDuration = 0.46f;
         [Tooltip("3 단계 전체 초 — 커지는 시간 포함. 이 동안 어둡게 + 주인 태그.")]
         [SerializeField] private float zoomDuration = 1f;
         [Tooltip("버림 더미로 가는 초.")]
@@ -77,7 +71,7 @@ namespace Chapchu.UI.GameScreen
             _camera = Camera.main;
 
             if (deck == null || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || seats == null || ownerTag == null || dimmer == null
-                || playSpot == null || showSpot == null || discardSpot == null || _camera == null)
+                || showSpot == null || discardSpot == null || _camera == null)
             {
                 Debug.LogError($"[{nameof(ChainCardsPresenter)}] 참조 중 비어 있는 것이 있습니다 (메인 카메라 포함).", this);
                 return;
@@ -88,7 +82,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 카드가 체인에 올라갔다 (OnCardPlayed) — 1 단계(내는 자리로) → 3 단계(가운데에서 크게) 뒤 그 자리에 둔다. 연출 큐가 기다릴 코루틴.
+        /// 카드가 체인에 올라갔다 (OnCardPlayed) — 3 단계(가운데에서 크게) 뒤 그 자리에 둔다. 연출 큐가 기다릴 코루틴.
         /// fromHand = 내 손패에서 떼어 온 카드. null 이면 새로 만든다 — fromSlot(발동한 함정이 있던 칸)이 있으면 그 자리에서, 없으면(남의 카드) 낸 사람 좌석의 손 자리에서.
         /// </summary>
         public IEnumerator PlayRoutine(int actorNumber, int cardInstanceId, int cardId, int[] targets, CardView fromHand, Transform fromSlot = null)
@@ -108,11 +102,7 @@ namespace Chapchu.UI.GameScreen
             float lift = stackZ * _cards.Count;
             _cards[cardInstanceId] = card;
 
-            // 1 단계 — 테이블 자리에 눕힌다
-            MoveTo(card, playSpot.position + playSpot.forward * lift, playSpot.rotation * Quaternion.Euler(playTilt, 0f, 0f), Vector3.one, playDuration, Ease.OutQuart);
-            yield return new WaitForSeconds(playDuration);
-
-            // 3 단계 — 가운데에서 크게. 모두가 카드를 읽는 구간
+            // 3 단계 — 손에서 바로 가운데로 크게. 모두가 카드를 읽는 구간
             ownerTag.Show(data != null ? data.type : CardType.Action, OwnerText(actorNumber, targets));
             FadeDim(true);
             MoveTo(card, showSpot.position + showSpot.forward * lift, showSpot.rotation, showSpot.lossyScale, zoomMoveDuration, Ease.OutQuart);
@@ -180,14 +170,15 @@ namespace Chapchu.UI.GameScreen
             return card;
         }
 
-        // 좌석의 손 자리(HUD 화면 좌표)를 테이블 면(z 0)의 월드 좌표로. 좌석이 없으면(나 · 나간 사람) 내는 자리.
+        // 좌석의 손 자리(HUD 화면 좌표)를 테이블 면(z 0)의 월드 좌표로. 좌석이 없으면(나 · 나간 사람) 테이블 가운데.
         private Vector3 SeatHandPoint(int actorNumber)
         {
+            Vector3 tableCenter = new Vector3(transform.position.x, transform.position.y, 0f);
             if (!seats.TryGetHandScreenPoint(actorNumber, out Vector2 screenPoint))
-                return playSpot.position;
+                return tableCenter;
 
             Ray ray = _camera.ScreenPointToRay(screenPoint);
-            return Mathf.Approximately(ray.direction.z, 0f) ? playSpot.position : ray.GetPoint(-ray.origin.z / ray.direction.z);
+            return Mathf.Approximately(ray.direction.z, 0f) ? tableCenter : ray.GetPoint(-ray.origin.z / ray.direction.z);
         }
 
         private static void MoveTo(CardView card, Vector3 position, Quaternion rotation, Vector3 scale, float duration, Ease ease)
