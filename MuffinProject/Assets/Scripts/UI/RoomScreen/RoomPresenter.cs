@@ -68,6 +68,14 @@ namespace Chapchu.UI.RoomScreen
             if (_initialized) return;
             _initialized = true;
 
+            // 로비가 10초 시간 초과로 포기한 요청의 늦은 입장 — 씬 동기화로 끌려왔으므로 바로 나가 로비로 돌아간다 (14-lobby-ui 6절)
+            if (SceneFlow.IsRoomRequestAbandoned)
+            {
+                SceneFlow.IsRoomRequestAbandoned = false;
+                NetworkManager.Instance.LeaveRoom();
+                return;
+            }
+
             _view.SetRoomCode(PhotonNetwork.CurrentRoom.Name);
             _view.AddLog(GetEnteredLog(NetworkManager.Nickname));
             Refresh();
