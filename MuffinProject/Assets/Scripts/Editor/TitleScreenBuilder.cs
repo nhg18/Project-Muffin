@@ -26,7 +26,7 @@ namespace Chapchu.EditorTools
         private const string OutlineMaterialPath = "Assets/Fonts/Jua/Jua SDF - Outline.mat";
         private const string ArtPath = "Assets/Sprites/UI/Background/bg_title.png"; // 16:9 키 아트 (12-title-ui 9-1)
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
-        private const string RingSpritePath = "Assets/Sprites/UI/Hud/timer_ring.png";
+        private const string RingSpritePath = "Assets/Sprites/UI/Common/timer_ring.png";
         private const string TermsOfServicePath = "Assets/Texts/terms_of_service.txt";
         private const string PrivacyPolicyPath = "Assets/Texts/privacy_policy.txt";
         private const string LogoCharacters = "찹츄!";
@@ -392,7 +392,7 @@ namespace Chapchu.EditorTools
                 ("loadingText", loadingText), ("failTitle", fail.Title), ("failDescription", fail.Description), ("failCode", fail.Code),
                 ("retryButton", fail.Retry), ("otherButton", fail.Other),
                 ("nicknameField", field), ("diceButton", dice), ("backButton", back), ("startButton", start),
-                ("keyIcon", Load<Sprite>(CommonIcon("icon_key"))), ("listIcon", Load<Sprite>(HudIcon("icon_list"))),
+                ("keyIcon", Load<Sprite>(CommonIcon("icon_key"))), ("listIcon", Load<Sprite>(CommonIcon("icon_list"))),
                 ("userIcon", Load<Sprite>(CommonIcon("icon_user"))), ("alertIcon", Load<Sprite>(CommonIcon("icon_alert"))));
 
             agree.gameObject.SetActive(false);
@@ -713,7 +713,7 @@ namespace Chapchu.EditorTools
         // 닫기 X — 지름 60 · 테 5 · 아래 두께 4, 창 오른쪽 위 모서리 밖 (오른쪽 −20 · 위 −24)
         private static ButtonParts BuildCloseButton(RectTransform frame)
         {
-            ButtonParts close = BuildButton("CloseButton", frame, 60f, 60f, White, 30f, 5f, 4f, null, 0f, Load<Sprite>(HudIcon("icon_x")), 20f);
+            ButtonParts close = BuildButton("CloseButton", frame, 60f, 60f, White, 30f, 5f, 4f, null, 0f, Load<Sprite>(CommonIcon("icon_x")), 20f);
             close.Button.GetComponent<LayoutElement>().ignoreLayout = true;
             Anchor((RectTransform)close.Button.transform, Vector2.one, Vector2.one, new Vector2(20f, 24f), new Vector2(60f, 60f));
             return close;
@@ -757,7 +757,7 @@ namespace Chapchu.EditorTools
             Wire(view,
                 ("content", content.gameObject), ("frame", frame.Root), ("band", frame.BandImage), ("bandIcon", icon), ("bandTitle", title), ("body", body),
                 ("storeButton", store.Button), ("okButton", ok.Button), ("quitRow", row.gameObject), ("cancelButton", cancel.Button), ("quitButton", quit.Button),
-                ("alertIcon", Load<Sprite>(CommonIcon("icon_alert"))), ("clockIcon", Load<Sprite>(HudIcon("icon_clock"))), ("doorIcon", Load<Sprite>(CommonIcon("icon_door"))));
+                ("alertIcon", Load<Sprite>(CommonIcon("icon_alert"))), ("clockIcon", Load<Sprite>(CommonIcon("icon_clock"))), ("doorIcon", Load<Sprite>(CommonIcon("icon_door"))));
             content.gameObject.SetActive(false);
             return view;
         }
@@ -1086,8 +1086,6 @@ namespace Chapchu.EditorTools
         #region 만들기 도우미
 
         private static string CommonIcon(string name) => $"Assets/Sprites/UI/Common/{name}.png";
-
-        private static string HudIcon(string name) => $"Assets/Sprites/UI/Hud/{name}.png";
 
         private static T Load<T>(string path) where T : Object
         {
