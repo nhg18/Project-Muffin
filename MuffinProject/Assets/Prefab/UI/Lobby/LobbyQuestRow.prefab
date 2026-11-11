@@ -1496,6 +1496,7 @@ MonoBehaviour:
   state: {fileID: 8417213653217400433}
   stateCheck: {fileID: 4775221589237891285}
   stateText: {fileID: 5591838117464672138}
+  doneAlpha: 0.6
 --- !u!1 &7353964449477300818
 GameObject:
   m_ObjectHideFlags: 0

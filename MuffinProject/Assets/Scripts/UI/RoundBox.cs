@@ -21,6 +21,7 @@ namespace Chapchu.UI
         [Tooltip("테두리 두께 (캔버스 px). 0 이면 테두리 없음")]
         [SerializeField] private float borderWidth = 6f;
 
+        [Tooltip("테두리 색. 안쪽 채움 색은 위의 Color")]
         [SerializeField] private Color borderColor = new Color32(0x2A, 0x24, 0x20, 0xFF);
 
         public override Texture mainTexture => sprite != null ? sprite.texture : s_WhiteTexture;

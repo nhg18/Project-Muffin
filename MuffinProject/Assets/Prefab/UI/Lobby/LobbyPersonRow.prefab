@@ -2802,3 +2802,4 @@ MonoBehaviour:
   secondaryLabel: {fileID: 4850178830367372728}
   menuButton: {fileID: 6367113851387785851}
   flatText: {fileID: 5801981966368966657}
+  flashSeconds: 1.2

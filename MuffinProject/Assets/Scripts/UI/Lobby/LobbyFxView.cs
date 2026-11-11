@@ -13,17 +13,6 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyFxView : MonoBehaviour
     {
-        private const float ToastSeconds = 3f;
-        private const float ToastPopSeconds = 0.25f;
-        private const float BurstSeconds = 0.7f;
-        private const float GainSeconds = 1.1f;
-
-        // 터짐 그림(fx_burst)은 기준 크기의 1.25배 판에 그려져 있다 · 글자 = 크기 × 0.3
-        private const float BurstSpriteScale = 1.25f;
-        private const float BurstFontScale = 0.3f;
-
-        private static readonly Color BadToastFill = new Color32(0xFF, 0xF1, 0xEF, 0xFF);
-
         [Header("알림")]
         [SerializeField] private RectTransform[] toasts;
         [SerializeField] private TMP_Text[] toastTexts;
@@ -42,6 +31,28 @@ namespace Chapchu.UI.Lobby
 
         [Tooltip("「+N」 이 뜨는 자리 — 재화 칸 위 끝에서 아래로 (캔버스 px)")]
         [SerializeField] private float gainDrop = 92f;
+
+        [Header("연출")]
+        [Tooltip("알림 말풍선이 떠 있는 시간 (초)")]
+        [SerializeField] private float toastSeconds = 3f;
+
+        [Tooltip("알림 말풍선이 튀어나오는 시간 (초)")]
+        [SerializeField] private float toastPopSeconds = 0.25f;
+
+        [Tooltip("나쁜 소식 알림의 바탕색")]
+        [SerializeField] private Color badToastFill = new Color32(0xFF, 0xF1, 0xEF, 0xFF);
+
+        [Tooltip("터짐 그림이 커졌다 사라지기까지 (초)")]
+        [SerializeField] private float burstSeconds = 0.7f;
+
+        [Tooltip("터짐 그림(fx_burst)이 기준 크기의 몇 배 판에 그려져 있는지")]
+        [SerializeField] private float burstSpriteScale = 1.25f;
+
+        [Tooltip("터짐 글자 크기 = 터짐 크기 × 이 값")]
+        [SerializeField] private float burstFontScale = 0.3f;
+
+        [Tooltip("「+N」 이 떠올랐다 사라지기까지 (초)")]
+        [SerializeField] private float gainSeconds = 1.1f;
 
         private Coroutine[] _toastLives;
         private UnityAction[] _toastClicks; // 말풍선마다 「누르면 닫힘」 — 붙인 것을 그대로 떼려고 들고 있는다
@@ -97,14 +108,14 @@ namespace Chapchu.UI.Lobby
             int index = FreeToast();
             HideToast(index);
 
-            Color fill = bad ? BadToastFill : Color.white;
+            Color fill = bad ? badToastFill : Color.white;
             toastTexts[index].text = message;
             toastFills[index].color = fill;
             toastTails[index].color = fill;
             toasts[index].SetAsFirstSibling();
             toasts[index].gameObject.SetActive(true);
             toasts[index].localScale = Vector3.zero;
-            toasts[index].DOScale(1f, ToastPopSeconds).SetEase(Ease.OutBack).SetUpdate(true);
+            toasts[index].DOScale(1f, toastPopSeconds).SetEase(Ease.OutBack).SetUpdate(true);
             _toastLives[index] = StartCoroutine(ToastRoutine(index));
         }
 
@@ -114,22 +125,22 @@ namespace Chapchu.UI.Lobby
             burst.DOKill();
             burst.gameObject.SetActive(true);
             burst.position = worldPosition;
-            burst.sizeDelta = Vector2.one * size * BurstSpriteScale;
+            burst.sizeDelta = Vector2.one * size * burstSpriteScale;
             burstImage.color = fill;
             burstText.text = text;
-            burstText.fontSize = size * BurstFontScale;
+            burstText.fontSize = size * burstFontScale;
             burstGroup.alpha = 1f;
             burst.localScale = Vector3.one * 0.2f;
             burst.localEulerAngles = new Vector3(0f, 0f, 14f);
 
             DOTween.Sequence().SetTarget(burst).SetUpdate(true)
-                .Append(burst.DOScale(1.14f, BurstSeconds * 0.3f).SetEase(Ease.OutCubic))
-                .Join(burst.DOLocalRotate(new Vector3(0f, 0f, -4f), BurstSeconds * 0.3f).SetEase(Ease.OutCubic))
-                .Append(burst.DOScale(1f, BurstSeconds * 0.2f))
-                .Join(burst.DOLocalRotate(Vector3.zero, BurstSeconds * 0.2f))
-                .Append(burst.DOScale(1.03f, BurstSeconds * 0.3f))
-                .Append(burst.DOScale(1.06f, BurstSeconds * 0.2f))
-                .Join(burstGroup.DOFade(0f, BurstSeconds * 0.2f))
+                .Append(burst.DOScale(1.14f, burstSeconds * 0.3f).SetEase(Ease.OutCubic))
+                .Join(burst.DOLocalRotate(new Vector3(0f, 0f, -4f), burstSeconds * 0.3f).SetEase(Ease.OutCubic))
+                .Append(burst.DOScale(1f, burstSeconds * 0.2f))
+                .Join(burst.DOLocalRotate(Vector3.zero, burstSeconds * 0.2f))
+                .Append(burst.DOScale(1.03f, burstSeconds * 0.3f))
+                .Append(burst.DOScale(1.06f, burstSeconds * 0.2f))
+                .Join(burstGroup.DOFade(0f, burstSeconds * 0.2f))
                 .OnComplete(() => burst.gameObject.SetActive(false));
         }
 
@@ -164,13 +175,13 @@ namespace Chapchu.UI.Lobby
             rect.localScale = Vector3.one * 0.6f;
 
             DOTween.Sequence().SetTarget(rect).SetUpdate(true)
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -16f), GainSeconds * 0.25f).SetEase(Ease.OutQuad))
-                .Join(rect.DOScale(1.1f, GainSeconds * 0.25f))
-                .Join(gain.DOFade(1f, GainSeconds * 0.25f))
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -36f), GainSeconds * 0.45f))
-                .Join(rect.DOScale(1f, GainSeconds * 0.45f))
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -56f), GainSeconds * 0.3f))
-                .Join(gain.DOFade(0f, GainSeconds * 0.3f))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -16f), gainSeconds * 0.25f).SetEase(Ease.OutQuad))
+                .Join(rect.DOScale(1.1f, gainSeconds * 0.25f))
+                .Join(gain.DOFade(1f, gainSeconds * 0.25f))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -36f), gainSeconds * 0.45f))
+                .Join(rect.DOScale(1f, gainSeconds * 0.45f))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -56f), gainSeconds * 0.3f))
+                .Join(gain.DOFade(0f, gainSeconds * 0.3f))
                 .OnComplete(() => gain.gameObject.SetActive(false));
 
             UIJuice.Pop(coin, 0.9f);
@@ -207,7 +218,7 @@ namespace Chapchu.UI.Lobby
 
         private IEnumerator ToastRoutine(int index)
         {
-            yield return new WaitForSecondsRealtime(ToastSeconds);
+            yield return new WaitForSecondsRealtime(toastSeconds);
             _toastLives[index] = null;
             HideToast(index);
         }

@@ -213,6 +213,8 @@ MonoBehaviour:
   boxIconSize: 80
   shopIconSize: 72
   packIconSize: 92
+  lockedAlpha: 0.3
+  ownedShopAlpha: 0.35
 --- !u!1 &805043783887798488
 GameObject:
   m_ObjectHideFlags: 0

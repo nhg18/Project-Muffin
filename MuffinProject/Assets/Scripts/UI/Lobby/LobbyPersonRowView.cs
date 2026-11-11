@@ -11,7 +11,6 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyPersonRowView : MonoBehaviour
     {
-        private const float FlashSeconds = 1.2f;
         private const string AcceptText = "수락";
         private const string DeclineText = "거절";
         private const string CancelText = "취소";
@@ -32,6 +31,10 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private TMP_Text secondaryLabel;
         [SerializeField] private Button menuButton;
         [SerializeField] private TMP_Text flatText;
+
+        [Header("연출")]
+        [Tooltip("방금 바뀐 줄의 노랑이 원래 색으로 돌아오는 시간 (초)")]
+        [SerializeField] private float flashSeconds = 1.2f;
 
         /// <summary>이 줄의 사람 — 검색 결과 줄이면 null</summary>
         public HubPerson Person { get; private set; }
@@ -115,7 +118,7 @@ namespace Chapchu.UI.Lobby
         {
             background.DOKill();
             background.color = LobbyStyle.Turn;
-            background.DOColor(LobbyStyle.Soft, FlashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
+            background.DOColor(LobbyStyle.Soft, flashSeconds).SetEase(Ease.OutQuad).SetUpdate(true);
         }
 
         private void Begin(HubPerson person, HubSearchResult result, string nickname)

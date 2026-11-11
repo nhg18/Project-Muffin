@@ -12,21 +12,30 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyHeroView : MonoBehaviour
     {
-        private const float EnterSeconds = 0.3f;
-        private const float ReplaySeconds = 1.5f;
-
-        private static readonly Color DeathTint = new Color(0.55f, 0.55f, 0.55f, 1f);
-
         [SerializeField] private Button button;
         [SerializeField] private Image character;
         [SerializeField] private RectTransform cardPreview;
         [SerializeField] private CanvasGroup cardPreviewGroup;
         [SerializeField] private Image cardPreviewImage;
 
-        [Tooltip("카드 미리보기가 날아오는 시작 위치 (캔버스 px) · 기울기")]
+        [Tooltip("카드 미리보기가 날아오기 시작하는 자리 — 제자리에서 떨어진 거리 (캔버스 px)")]
         [SerializeField] private Vector2 cardFlyOffset = new Vector2(120f, -60f);
+
+        [Tooltip("카드 미리보기가 날아오기 시작할 때의 기울기 (도)")]
         [SerializeField] private float cardFlyAngle = -20f;
+
+        [Tooltip("카드 미리보기가 제자리에 놓였을 때의 기울기 (도)")]
         [SerializeField] private float cardRestAngle = 6f;
+
+        [Header("연출")]
+        [Tooltip("입장 연출 — 캐릭터가 나타나는 시간 (초)")]
+        [SerializeField] private float enterSeconds = 0.3f;
+
+        [Tooltip("사망 · 카드 연출의 전체 길이 (초)")]
+        [SerializeField] private float replaySeconds = 1.5f;
+
+        [Tooltip("사망 연출에서 캐릭터가 물드는 잿빛")]
+        [SerializeField] private Color deathTint = new Color(0.55f, 0.55f, 0.55f, 1f);
 
         private Vector2 _cardOrigin;
         private bool _isSilhouette;
@@ -68,7 +77,7 @@ namespace Chapchu.UI.Lobby
             StopReplay();
             Color target = BaseColor;
             character.color = new Color(target.r, target.g, target.b, 0f);
-            _replay = DOTween.Sequence().SetUpdate(true).Append(character.DOColor(target, EnterSeconds));
+            _replay = DOTween.Sequence().SetUpdate(true).Append(character.DOColor(target, enterSeconds));
         }
 
         /// <summary>사망 연출 자리 — 잠깐 잿빛이 됐다 돌아온다.</summary>
@@ -79,9 +88,9 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _replay = DOTween.Sequence().SetUpdate(true)
-                .Append(character.DOColor(DeathTint, ReplaySeconds * 0.33f))
-                .AppendInterval(ReplaySeconds * 0.47f)
-                .Append(character.DOColor(Color.white, ReplaySeconds * 0.2f));
+                .Append(character.DOColor(deathTint, replaySeconds * 0.33f))
+                .AppendInterval(replaySeconds * 0.47f)
+                .Append(character.DOColor(Color.white, replaySeconds * 0.2f));
         }
 
         /// <summary>카드 뒷면 미리보기 — 오른쪽 아래에서 날아와 잠깐 보이고 사라진다. owned 가 아니면 뒷면 그림이 없어 옅게 보인다.</summary>
@@ -93,11 +102,11 @@ namespace Chapchu.UI.Lobby
             cardPreview.localEulerAngles = new Vector3(0f, 0f, cardFlyAngle);
             cardPreviewGroup.alpha = 0f;
             _replay = DOTween.Sequence().SetUpdate(true)
-                .Append(cardPreview.DOAnchorPos(_cardOrigin, ReplaySeconds * 0.35f).SetEase(Ease.OutQuad))
-                .Join(cardPreview.DOLocalRotate(new Vector3(0f, 0f, cardRestAngle), ReplaySeconds * 0.35f).SetEase(Ease.OutQuad))
-                .Join(cardPreviewGroup.DOFade(1f, ReplaySeconds * 0.35f))
-                .AppendInterval(ReplaySeconds * 0.5f)
-                .Append(cardPreviewGroup.DOFade(0f, ReplaySeconds * 0.15f));
+                .Append(cardPreview.DOAnchorPos(_cardOrigin, replaySeconds * 0.35f).SetEase(Ease.OutQuad))
+                .Join(cardPreview.DOLocalRotate(new Vector3(0f, 0f, cardRestAngle), replaySeconds * 0.35f).SetEase(Ease.OutQuad))
+                .Join(cardPreviewGroup.DOFade(1f, replaySeconds * 0.35f))
+                .AppendInterval(replaySeconds * 0.5f)
+                .Append(cardPreviewGroup.DOFade(0f, replaySeconds * 0.15f));
         }
 
         private Color BaseColor => _isSilhouette ? LobbyStyle.Silhouette : Color.white;

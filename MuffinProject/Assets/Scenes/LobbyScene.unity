@@ -2337,6 +2337,10 @@ GameObject:
   - component: {fileID: 66327318}
   - component: {fileID: 66327317}
   - component: {fileID: 66327316}
+  - component: {fileID: 66327324}
+  - component: {fileID: 66327323}
+  - component: {fileID: 66327322}
+  - component: {fileID: 66327321}
   m_Layer: 5
   m_Name: LobbyCanvas
   m_TagString: Untagged
@@ -2358,21 +2362,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbyPresenter
   home: {fileID: 1098286666}
   topBar: {fileID: 1798434885}
-  hero: {fileID: 1453145704}
-  section: {fileID: 1093623761}
-  itemPane: {fileID: 332005380}
-  gachaPane: {fileID: 1190513226}
-  popupDimmer: {fileID: 25296985}
-  friends: {fileID: 165678906}
-  profile: {fileID: 1790009823}
-  settings: {fileID: 67601860}
-  quests: {fileID: 473698436}
-  rates: {fileID: 286426514}
-  modal: {fileID: 1735345650}
   invite: {fileID: 1860805747}
-  gachaResult: {fileID: 1499617077}
   fx: {fileID: 926425690}
-  playIcon: {fileID: 21300000, guid: 268dba7f0f78598499f235e6a8dfd89a, type: 3}
+  gachaResult: {fileID: 1499617077}
+  modal: {fileID: 1735345650}
+  popups: {fileID: 66327323}
+  sections: {fileID: 66327324}
 --- !u!114 &66327317
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2467,6 +2462,92 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &66327321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66327315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18da2832dc770e439961b0798e54ce0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbyAccountPresenter
+  lobby: {fileID: 66327316}
+  home: {fileID: 1098286666}
+  profile: {fileID: 1790009823}
+  settings: {fileID: 67601860}
+  modal: {fileID: 1735345650}
+  fx: {fileID: 926425690}
+--- !u!114 &66327322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66327315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3c31b8c7a6691e4498ee8f8c313be8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbyRoomRequester
+  home: {fileID: 1098286666}
+  modal: {fileID: 1735345650}
+  invite: {fileID: 1860805747}
+  sections: {fileID: 66327324}
+--- !u!114 &66327323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66327315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcc76a5f1e62cfb478ef77dacb2adde1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbyPopupPresenter
+  lobby: {fileID: 66327316}
+  home: {fileID: 1098286666}
+  topBar: {fileID: 1798434885}
+  popupDimmer: {fileID: 25296985}
+  friends: {fileID: 165678906}
+  profile: {fileID: 1790009823}
+  settings: {fileID: 67601860}
+  quests: {fileID: 473698436}
+  rates: {fileID: 286426514}
+  modal: {fileID: 1735345650}
+  invite: {fileID: 1860805747}
+  fx: {fileID: 926425690}
+--- !u!114 &66327324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66327315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9bdb565c5804614aacbbfa10ca33078, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbySectionPresenter
+  lobby: {fileID: 66327316}
+  popups: {fileID: 66327323}
+  home: {fileID: 1098286666}
+  topBar: {fileID: 1798434885}
+  hero: {fileID: 1453145704}
+  section: {fileID: 1093623761}
+  itemPane: {fileID: 332005380}
+  gachaPane: {fileID: 1190513226}
+  gachaResult: {fileID: 1499617077}
+  modal: {fileID: 1735345650}
+  fx: {fileID: 926425690}
+  playIcon: {fileID: 21300000, guid: 268dba7f0f78598499f235e6a8dfd89a, type: 3}
+  moveLockSeconds: 0.26
+  legendBurstSize: 300
+  rareBurstSize: 192
+  revealBurstDrop: 80
 --- !u!1 &67577882
 GameObject:
   m_ObjectHideFlags: 0
@@ -12383,6 +12464,7 @@ MonoBehaviour:
   knob: {fileID: 1918337086}
   offX: 4
   onX: 42
+  knobSeconds: 0.15
 --- !u!1 &369266479
 GameObject:
   m_ObjectHideFlags: 0
@@ -17680,6 +17762,7 @@ MonoBehaviour:
   state: {fileID: 107093324}
   stateCheck: {fileID: 1368832069}
   stateText: {fileID: 26212757}
+  doneAlpha: 0.6
 --- !u!114 &526277043
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31556,6 +31639,13 @@ MonoBehaviour:
   - {fileID: 244400679}
   - {fileID: 192990973}
   gainDrop: 92
+  toastSeconds: 3
+  toastPopSeconds: 0.25
+  badToastFill: {r: 1, g: 0.94509804, b: 0.9372549, a: 1}
+  burstSeconds: 0.7
+  burstSpriteScale: 1.25
+  burstFontScale: 0.3
+  gainSeconds: 1.1
 --- !u!224 &926425691
 RectTransform:
   m_ObjectHideFlags: 0
@@ -32963,6 +33053,7 @@ MonoBehaviour:
   knob: {fileID: 1298990926}
   offX: 4
   onX: 42
+  knobSeconds: 0.15
 --- !u!1 &980498999
 GameObject:
   m_ObjectHideFlags: 0
@@ -35316,6 +35407,7 @@ MonoBehaviour:
   knob: {fileID: 543322400}
   offX: 4
   onX: 42
+  knobSeconds: 0.15
 --- !u!1 &1029171219
 GameObject:
   m_ObjectHideFlags: 0
@@ -36744,6 +36836,8 @@ MonoBehaviour:
   infoButtonIcon: {fileID: 1140033390}
   infoButtonLabel: {fileID: 678076397}
   paneHiddenOffset: 1300
+  slideSeconds: 0.25
+  fadeSeconds: 0.2
 --- !u!1 &1098286663
 GameObject:
   m_ObjectHideFlags: 0
@@ -36825,6 +36919,7 @@ MonoBehaviour:
   codeButton: {fileID: 1013104158}
   randomButton: {fileID: 236934331}
   nicknameMaxWidth: 560
+  fadeSeconds: 0.2
 --- !u!1 &1099822481
 GameObject:
   m_ObjectHideFlags: 0
@@ -51647,6 +51742,9 @@ MonoBehaviour:
   cardFlyOffset: {x: 120, y: -60}
   cardFlyAngle: -20
   cardRestAngle: 6
+  enterSeconds: 0.3
+  replaySeconds: 1.5
+  deathTint: {r: 0.55, g: 0.55, b: 0.55, a: 1}
 --- !u!1 &1454295536
 GameObject:
   m_ObjectHideFlags: 0
@@ -52605,6 +52703,9 @@ MonoBehaviour:
   ghostIcon: {fileID: 21300000, guid: 955c67615e5021440ad31ee6c6aa8a99, type: 3}
   cardIcon: {fileID: 21300000, guid: f6df8c8bccd84007a7aeb280d4541d4a, type: 3}
   sparkIcon: {fileID: 21300000, guid: e78c70f834bdfdd4b83425d1ed9fcc75, type: 3}
+  openAllStepSeconds: 0.11
+  cardSize: {x: 196, y: 272}
+  singleCardSize: {x: 240, y: 332}
 --- !u!224 &1499617078
 RectTransform:
   m_ObjectHideFlags: 0

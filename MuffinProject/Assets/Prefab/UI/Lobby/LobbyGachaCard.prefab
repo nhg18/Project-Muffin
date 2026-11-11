@@ -827,6 +827,7 @@ MonoBehaviour:
   duplicateRow: {fileID: 5402741285996712385}
   duplicateText: {fileID: 1186317698757274009}
   newText: {fileID: 2936764281845762846}
+  flipSeconds: 0.45
 --- !u!1 &4082166345410103486
 GameObject:
   m_ObjectHideFlags: 0

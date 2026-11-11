@@ -13,7 +13,6 @@ namespace Chapchu.UI.Lobby
     [RequireComponent(typeof(Button))]
     public class LobbyGachaCardView : MonoBehaviour
     {
-        private const float FlipSeconds = 0.45f;
         private const string DuplicateFormat = "중복 +{0}";
 
         [SerializeField] private RectTransform inner;
@@ -29,6 +28,10 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject duplicateRow;
         [SerializeField] private TMP_Text duplicateText;
         [SerializeField] private GameObject newText;
+
+        [Header("연출")]
+        [Tooltip("카드가 뒤집히는 시간 (초)")]
+        [SerializeField] private float flipSeconds = 0.45f;
 
         private Button _button;
 
@@ -94,9 +97,9 @@ namespace Chapchu.UI.Lobby
             IsOpen = true;
             inner.DOKill();
             DOTween.Sequence().SetTarget(inner).SetUpdate(true)
-                .Append(inner.DOLocalRotate(new Vector3(0f, 90f, 0f), FlipSeconds * 0.45f).SetEase(Ease.InQuad))
+                .Append(inner.DOLocalRotate(new Vector3(0f, 90f, 0f), flipSeconds * 0.45f).SetEase(Ease.InQuad))
                 .AppendCallback(ShowFront)
-                .Append(inner.DOLocalRotate(Vector3.zero, FlipSeconds * 0.55f).SetEase(Ease.OutBack));
+                .Append(inner.DOLocalRotate(Vector3.zero, flipSeconds * 0.55f).SetEase(Ease.OutBack));
         }
 
         private void ShowFront()

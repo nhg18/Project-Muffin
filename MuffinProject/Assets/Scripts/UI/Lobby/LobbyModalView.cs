@@ -50,9 +50,13 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Sprite userIcon;
         [SerializeField] private Sprite crossIcon;
 
-        [Tooltip("방 코드 입력 글자 크기 · 글자 사이 (em × 100) — 닉네임 · 삭제 입력은 보통 크기")]
+        [Tooltip("방 코드 입력칸의 글자 크기")]
         [SerializeField] private float codeFontSize = 52f;
+
+        [Tooltip("방 코드 입력칸의 글자 사이 (em × 100)")]
         [SerializeField] private float codeSpacing = 30f;
+
+        [Tooltip("닉네임 · 삭제 입력칸의 글자 크기")]
         [SerializeField] private float textFontSize = 34f;
 
         [Tooltip("닉네임 입력에서 글자 수 표시가 차지하는 오른쪽 자리 (캔버스 px)")]

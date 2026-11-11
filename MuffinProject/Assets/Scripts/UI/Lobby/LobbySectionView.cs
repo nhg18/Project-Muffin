@@ -16,9 +16,6 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbySectionView : MonoBehaviour
     {
-        private const float FadeSeconds = 0.2f;
-        private const float SlideSeconds = 0.25f;
-
         [SerializeField] private CanvasGroup head;
         [SerializeField] private RectTransform pane;
         [SerializeField] private CanvasGroup paneContent;
@@ -47,6 +44,13 @@ namespace Chapchu.UI.Lobby
 
         [Tooltip("씬에 저장된 닫힌 자리에서 열린 자리까지 왼쪽으로 들어오는 거리 (캔버스 px)")]
         [SerializeField] private float paneHiddenOffset = 1300f;
+
+        [Header("연출")]
+        [Tooltip("판이 미끄러져 들어오고 나가는 시간 (초)")]
+        [SerializeField] private float slideSeconds = 0.25f;
+
+        [Tooltip("머리줄 · 정보 줄 · 판 내용이 나타나고 사라지는 시간 (초)")]
+        [SerializeField] private float fadeSeconds = 0.2f;
 
         private Vector2 _paneOrigin;
         private bool _isOpen;
@@ -102,7 +106,7 @@ namespace Chapchu.UI.Lobby
             Fade(info, open);
             paneContent.blocksRaycasts = open;
             pane.DOKill();
-            pane.DOAnchorPos(open ? _paneOrigin : _paneOrigin + new Vector2(paneHiddenOffset, 0f), SlideSeconds).SetEase(Ease.OutCubic).SetUpdate(true);
+            pane.DOAnchorPos(open ? _paneOrigin : _paneOrigin + new Vector2(paneHiddenOffset, 0f), slideSeconds).SetEase(Ease.OutCubic).SetUpdate(true);
         }
 
         /// <summary>섹션 ↔ 섹션 — 판 안 내용 · 정보 줄만 0.2초에 다시 나타난다 (틀 · 머리줄은 제자리).</summary>
@@ -110,10 +114,10 @@ namespace Chapchu.UI.Lobby
         {
             paneContent.DOKill();
             paneContent.alpha = 0f;
-            paneContent.DOFade(1f, FadeSeconds).SetUpdate(true);
+            paneContent.DOFade(1f, fadeSeconds).SetUpdate(true);
             info.DOKill();
             info.alpha = 0f;
-            info.DOFade(1f, FadeSeconds).SetUpdate(true);
+            info.DOFade(1f, fadeSeconds).SetUpdate(true);
         }
 
         /// <summary>머리줄 — 꾸미기는 이름만, 상점은 이름 + 탭(뽑기 · 아이템 · 충전).</summary>
@@ -166,11 +170,11 @@ namespace Chapchu.UI.Lobby
             infoButtonIcon.sprite = icon;
         }
 
-        private static void Fade(CanvasGroup group, bool visible)
+        private void Fade(CanvasGroup group, bool visible)
         {
             group.blocksRaycasts = visible;
             group.DOKill();
-            group.DOFade(visible ? 1f : 0f, FadeSeconds).SetUpdate(true);
+            group.DOFade(visible ? 1f : 0f, fadeSeconds).SetUpdate(true);
         }
 
         private static void SetGroup(CanvasGroup group, bool visible)
