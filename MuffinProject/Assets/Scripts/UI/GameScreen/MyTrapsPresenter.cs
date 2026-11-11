@@ -109,12 +109,20 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleSlotClicked(int index)
         {
-            if (_suppressClick || index < 0 || index >= _cardIds.Count) return;
+            if (_suppressClick) return;
+
+            // 크게 보기가 열린 채로 온 클릭은 닫는 탭이다 — 누름 · 뗌이 한 프레임에 들어와 Update 의 닫기 판정보다 클릭이 먼저 온 경우. 닫기만 하고 다시 열지 않는다
+            if (_preview != null)
+            {
+                HidePreview();
+                return;
+            }
+
+            if (index < 0 || index >= _cardIds.Count) return;
 
             CardData data = deck.GetCard(_cardIds[index]);
             if (data == null) return;
 
-            HidePreview();
             _preview = Instantiate(trapCardPrefab, transform);
             _previewOpenedFrame = Time.frameCount;
             _preview.Setup(_instanceIds[index], data);
