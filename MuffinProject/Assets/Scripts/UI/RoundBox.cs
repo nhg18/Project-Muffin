@@ -46,6 +46,13 @@ namespace Chapchu.UI
             }
         }
 
+        protected override void Awake()
+        {
+            base.Awake();
+            if (sprite == null)
+                Debug.LogError($"[{nameof(RoundBox)}] {nameof(sprite)} 참조가 비어 있습니다.", this);
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
