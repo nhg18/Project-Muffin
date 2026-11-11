@@ -23,7 +23,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Image background;
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private GameObject statusRow;
-        [SerializeField] private Image statusDot;
+        [SerializeField] private RoundBox statusDot;
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private TMP_Text codeText;
         [SerializeField] private Button primaryButton;
@@ -72,7 +72,7 @@ namespace Chapchu.UI.Lobby
         {
             Begin(person, null, person.Nickname);
             statusRow.SetActive(true);
-            statusDot.color = LobbyStyle.StatusColor(person.Status);
+            statusDot.FillColor = LobbyStyle.StatusColor(person.Status);
             statusText.text = LobbyHubData.StatusName(person.Status);
             menuButton.gameObject.SetActive(true);
         }

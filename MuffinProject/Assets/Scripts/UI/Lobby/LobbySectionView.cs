@@ -34,7 +34,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject infoItem;
         [SerializeField] private TMP_Text infoName;
         [SerializeField] private GameObject gradeTag;
-        [SerializeField] private Image gradeTagBorder;
+        [SerializeField] private RoundBox gradeTagBox;
         [SerializeField] private TMP_Text gradeTagText;
         [SerializeField] private Image infoLeadIcon;
         [SerializeField] private TMP_Text infoSubText;
@@ -45,7 +45,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Image infoButtonIcon;
         [SerializeField] private TMP_Text infoButtonLabel;
 
-        [Tooltip("판이 화면 밖에 있을 때 오른쪽으로 밀려나 있는 거리 (캔버스 px)")]
+        [Tooltip("씬에 저장된 닫힌 자리에서 열린 자리까지 왼쪽으로 들어오는 거리 (캔버스 px)")]
         [SerializeField] private float paneHiddenOffset = 1300f;
 
         private Vector2 _paneOrigin;
@@ -61,16 +61,13 @@ namespace Chapchu.UI.Lobby
                 || shopTabRow == null || shopTabs == null || shopTabs.Length != 3)
                 Debug.LogError($"[{nameof(LobbySectionView)}] 머리줄 · 판 참조가 비어 있습니다.", this);
 
-            if (infoItem == null || infoName == null || gradeTag == null || gradeTagBorder == null || gradeTagText == null || infoLeadIcon == null
+            if (infoItem == null || infoName == null || gradeTag == null || gradeTagBox == null || gradeTagText == null || infoLeadIcon == null
                 || infoSubText == null || infoPriceIcon == null || infoPriceText == null || infoHint == null
                 || infoButton == null || infoButtonIcon == null || infoButtonLabel == null)
                 Debug.LogError($"[{nameof(LobbySectionView)}] 정보 줄 참조가 비어 있습니다.", this);
 
-            _paneOrigin = pane.anchoredPosition;
-            pane.anchoredPosition = _paneOrigin + new Vector2(paneHiddenOffset, 0f);
-            SetGroup(head, false);
-            SetGroup(info, false);
-            paneContent.blocksRaycasts = false;
+            // 씬에는 닫힌 모습으로 저장돼 있다 — 판은 화면 오른쪽 밖(열린 자리 + paneHiddenOffset), 머리줄 · 정보 줄은 투명
+            _paneOrigin = pane.anchoredPosition - new Vector2(paneHiddenOffset, 0f);
         }
 
         private void OnEnable()
@@ -138,7 +135,7 @@ namespace Chapchu.UI.Lobby
             if (grade.HasValue)
             {
                 Color color = LobbyStyle.GradeColor(grade.Value);
-                gradeTagBorder.color = color;
+                gradeTagBox.BorderColor = color;
                 gradeTagText.color = color;
                 gradeTagText.text = LobbyHubData.GradeName(grade.Value);
             }

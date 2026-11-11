@@ -30,7 +30,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject ownedStrip;
         [SerializeField] private GameObject shopInfo;
         [SerializeField] private TMP_Text nameText;
-        [SerializeField] private Image priceBorder;
+        [SerializeField] private RoundBox priceBox;
         [SerializeField] private Image priceIcon;
         [SerializeField] private TMP_Text priceText;
         [SerializeField] private GameObject bonusTag;
@@ -58,7 +58,7 @@ namespace Chapchu.UI.Lobby
                 || iconImage == null || captionText == null || lockIcon == null || equippedStrip == null || ownedStrip == null)
                 Debug.LogError($"[{nameof(LobbyItemCellView)}] 그림 참조가 비어 있습니다.", this);
 
-            if (shopInfo == null || nameText == null || priceBorder == null || priceIcon == null || priceText == null
+            if (shopInfo == null || nameText == null || priceBox == null || priceIcon == null || priceText == null
                 || bonusTag == null || bonusText == null)
                 Debug.LogError($"[{nameof(LobbyItemCellView)}] 상점 칸 참조가 비어 있습니다.", this);
         }
@@ -135,7 +135,7 @@ namespace Chapchu.UI.Lobby
             priceIcon.sprite = currencyIcon;
             priceText.text = text;
             priceText.color = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
-            priceBorder.color = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
+            priceBox.BorderColor = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
         }
 
         private void HandleClicked() => OnClicked?.Invoke(this);

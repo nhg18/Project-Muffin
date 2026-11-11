@@ -29,11 +29,14 @@ namespace Chapchu.UI.Title
         [SerializeField] private float hoverLift;
 
         // 꺼진 모양에서 회색으로 바뀌는 것들 — 꺼진 모양을 쓰는 버튼에만 연결한다
-        [SerializeField] private Image fill;
+        [Tooltip("몸체의 채움 — Image 또는 RoundBox. RoundBox 면 꺼진 모양에서 테두리도 회색이 된다")]
+        [SerializeField] private Graphic fill;
         [SerializeField] private Graphic[] inkParts;
 
         private Vector2 _bodyOrigin;
         private Color _fillColor;
+        private RoundBox _box;
+        private Color _borderColor;
         private Color[] _inkColors;
         private bool _isPressed;
         private Button _button;
@@ -53,6 +56,10 @@ namespace Chapchu.UI.Title
 
             if (fill != null)
                 _fillColor = fill.color;
+
+            _box = fill as RoundBox;
+            if (_box != null)
+                _borderColor = _box.BorderColor;
 
             _inkColors = new Color[inkParts?.Length ?? 0];
             for (int i = 0; i < _inkColors.Length; i++)
@@ -101,6 +108,9 @@ namespace Chapchu.UI.Title
             _isDimmed = dimmed;
             if (fill != null)
                 fill.color = dimmed ? Color.white : _fillColor;
+
+            if (_box != null)
+                _box.BorderColor = dimmed ? OffColor : _borderColor;
 
             for (int i = 0; i < _inkColors.Length; i++)
                 inkParts[i].color = dimmed ? OffColor : _inkColors[i];
