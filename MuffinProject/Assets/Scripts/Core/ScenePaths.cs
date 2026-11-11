@@ -35,5 +35,12 @@
         /// 기본값은 인게임.
         /// </summary>
         public static string GameSceneAfterRoom = ScenePaths.Game;
+
+        /// <summary>
+        /// 로비가 10초 시간 초과로 포기한 방 요청이 있다 (14-lobby-ui 6절). 늦은 입장 응답이 PUN 씬 동기화로
+        /// 방 씬을 먼저 열면 로비는 이미 사라졌으므로, 방 화면이 이 값을 보고 바로 방을 나간다.
+        /// 로비가 새 방 요청을 보낼 때 끈다.
+        /// </summary>
+        public static bool IsRoomRequestAbandoned;
     }
 }
