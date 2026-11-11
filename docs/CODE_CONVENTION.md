@@ -93,8 +93,8 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 
 | 시안 | Unity |
 | --- | --- |
-| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. `Sprites/UI/<화면>/` |
-| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다 |
+| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
+| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `RoundBox` 한 컴포넌트로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다 |
 | 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다 |
 | 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
 | 그라데이션 | `Common` 의 흰 → 투명 띠 스프라이트 + 색 |
@@ -109,3 +109,9 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 * 자주 바뀌는 영역(타이머 · 손패 · 카드 연출)은 Canvas 를 따로 둔다.
 * 누를 수 없는 Graphic 은 `raycastTarget` 을 끈다.
 * 화면을 붙이면 Frame Debugger 로 batches 를 재서 worklog 에 남긴다.
+
+씬과 프리팹은 사람이 열어서 고친다:
+
+* 씬 · 프리팹에는 시작할 때의 모습 그대로 저장한다 — 닫힌 판은 화면 밖에, 숨은 것은 투명하게(또는 꺼서). `Awake` · `Start` 에서 자리 · 알파 · 활성을 고쳐 놓지 않는다.
+* 되풀이되는 것(칸 · 줄 · 카드 · 알림)은 프리팹(`Prefab/UI/<화면>/`). 씬 안에 복사본이나 숨긴 템플릿을 두지 않는다.
+* 씬과 프리팹이 화면의 원본이다. 씬을 통째로 지우고 다시 조립하는 에디터 코드를 새로 만들지 않는다.
