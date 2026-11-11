@@ -5,8 +5,7 @@
       "Bash(SKIP_REVIEW=1 *)",
       "Bash(bash scripts/review/prepush.sh --accept *)",
       "Bash(bash scripts/review/prepush.sh --accept)",
-      "Edit(.review/**)",
-      "Write(.review/**)"
+      "Edit(.review/**)"
     ]
   },
   "hooks": {
