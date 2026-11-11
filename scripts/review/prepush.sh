@@ -118,7 +118,7 @@ else
   SCOPE="이번 diff가 새로 만들거나 건드린 문제만 보고한다. diff와 무관한 기존 코드의 문제는 보고하지 않는다."
 fi
 # 2라운드부터: 앞 라운드 수정 커밋만 본다 (두 모드 공통)
-VERIFY_SCOPE="이번 diff 는 앞 라운드 수정 세션이 고친 내용이다. 두 가지만 보고한다 — (1) 앞 라운드 기록의 '고친 지적'이 이 수정으로 실제로 해결되지 않았다 (2) 이 수정이 새로 만든 문제. 수정과 무관한 기존 코드의 문제, 앞 라운드에서 철회된 지적은 보고하지 않는다."
+VERIFY_SCOPE="이번 diff 는 앞 라운드 수정 세션이 고친 내용이다. 두 가지만 보고한다 — (1) 앞 라운드 기록의 '고친 지적'이 이 수정으로 실제로 해결되지 않았다 (2) 이 수정이 새로 만든 문제. 수정과 무관한 기존 코드의 문제, 앞 라운드에서 철회된 지적은 보고하지 않는다. 설계 지적(Q-)은 이 라운드에서 하지 않는다."
 
 RUN_ROOT="$STATE_DIR/runs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$RUN_ROOT"
@@ -157,27 +157,29 @@ minus() { comm -23 <(clean_list "$1") <(clean_list "$2"); }   # $1 - $2
 inter() { comm -12 <(clean_list "$1") <(clean_list "$2"); }   # $1 ∩ $2
 count() { clean_list "$1" | sed '/^$/d' | wc -l | tr -d ' '; }
 oneline() { clean_list "$1" | tr '\n' ' ' | sed 's/ $//'; }
+only_kind() { clean_list "$1" | grep -E "^$2-" || true; }   # C(문제) 또는 Q(설계 권고)만
 
-finding_ids() { grep -oE '^### C-[0-9]+' "$1" | sed 's/^### //' | sort -u; }
+# 지적 ID: C-번호 = 문제(확정되면 고친다), Q-번호 = 설계 권고(보고만 한다)
+finding_ids() { grep -oE '^### [CQ]-[0-9]+' "$1" | sed 's/^### //' | sort -u; }
 
 # 판정 줄(VERDICT C-01 ACCEPT)에서 특정 판정의 ID만 뽑는다
 verdicts() {
   sed -E 's/[*`>]//g' "$1" \
-    | grep -E '^[[:space:]-]*VERDICT[[:space:]]+C-[0-9]+[[:space:]]+[A-Z]+' \
-    | sed -E 's/^[[:space:]-]*VERDICT[[:space:]]+(C-[0-9]+)[[:space:]]+([A-Z]+).*/\1 \2/' \
+    | grep -E '^[[:space:]-]*VERDICT[[:space:]]+[CQ]-[0-9]+[[:space:]]+[A-Z]+' \
+    | sed -E 's/^[[:space:]-]*VERDICT[[:space:]]+([CQ]-[0-9]+)[[:space:]]+([A-Z]+).*/\1 \2/' \
     | awk -v w="$2" '$2==w {print $1}' | sort -u
 }
 # 판정 줄이 하나도 없으면 형식이 깨진 것 — 기본값(인정 · 유지)으로 넘기지 않고 멈춘다
 need_verdicts() {
-  sed -E 's/[*`>]//g' "$1" | grep -qE '^[[:space:]-]*VERDICT[[:space:]]+C-[0-9]+[[:space:]]+[A-Z]+' \
-    || die "$2 출력에서 판정 줄(VERDICT C-번호 …)을 찾지 못했습니다: $1"
+  sed -E 's/[*`>]//g' "$1" | grep -qE '^[[:space:]-]*VERDICT[[:space:]]+[CQ]-[0-9]+[[:space:]]+[A-Z]+' \
+    || die "$2 출력에서 판정 줄(VERDICT C-번호 · Q-번호 …)을 찾지 못했습니다: $1"
 }
 
 # 지적 목록 파일에서 특정 ID 블록만 뽑는다
 extract_blocks() {
   awk -v ids=" $(oneline "$2") " '
-    /^### C-[0-9]+/ { id=$2; keep = (index(ids, " " id " ") > 0) }
-    /^### / && !/^### C-[0-9]+/ { keep = 0 }
+    /^### [CQ]-[0-9]+/ { id=$2; keep = (index(ids, " " id " ") > 0) }
+    /^### / && !/^### [CQ]-[0-9]+/ { keep = 0 }
     keep { print }' "$1"
 }
 
@@ -214,7 +216,7 @@ review_round() {
   local all; all="$(finding_ids "$dir/con-review.md")"
   if [[ -z "$all" ]]; then
     # 형식이 깨진 출력을 '문제 없음'으로 넘기면 리뷰 없이 push 된다
-    grep -q 'NO_FINDINGS' "$dir/con-review.md" || die "반대파 출력에서 지적(### C-번호)도 NO_FINDINGS 도 찾지 못했습니다: $dir/con-review.md"
+    grep -q 'NO_FINDINGS' "$dir/con-review.md" || die "반대파 출력에서 지적(### C-번호 · Q-번호)도 NO_FINDINGS 도 찾지 못했습니다: $dir/con-review.md"
     log "라운드 $r: 지적 없음"
     STATUS="PASS"; return
   fi
@@ -251,19 +253,29 @@ review_round() {
     contested="$rebut_again"
   done
 
-  ACCEPTED="$(clean_list "$accepted")"
-  UNRESOLVED="$(clean_list "$contested")"
+  local accepted_all contested_all withdrawn q_ok q_open
+  accepted_all="$(clean_list "$accepted")"; contested_all="$(clean_list "$contested")"
+  withdrawn="$(minus "$(minus "$all" "$accepted_all")" "$contested_all")"
+  # 설계 지적(Q-)은 권고다 — 고치지도 push 를 막지도 않고 quality.md 로만 사람에게 넘긴다
+  ACCEPTED="$(only_kind "$accepted_all" C)"
+  UNRESOLVED="$(only_kind "$contested_all" C)"
+  q_ok="$(only_kind "$accepted_all" Q)"; q_open="$(only_kind "$contested_all" Q)"
+  if [[ -n "$q_ok$q_open" ]]; then
+    { printf '# 설계 권고 (자동 수정 안 함 · push 를 막지 않음)\n\n'
+      if [[ -n "$q_ok" ]];   then printf '## 찬반을 거쳐 확정\n\n'; extract_blocks "$dir/con-review.md" "$q_ok"; printf '\n'; fi
+      if [[ -n "$q_open" ]]; then printf '## 찬반이 합의하지 못함 (공방: debate.md)\n\n'; extract_blocks "$dir/con-review.md" "$q_open"; fi
+    } > "$dir/quality.md"
+  fi
   [[ -n "$ACCEPTED" ]] && extract_blocks "$dir/con-review.md" "$ACCEPTED" > "$dir/fix-list.md"
   if [[ -n "$UNRESOLVED" ]]; then
     { printf '# 합의 안 된 쟁점 (사람 판단 필요)\n\n찬반 공방 전체는 같은 폴더의 debate.md에 있습니다.\n\n'
       extract_blocks "$dir/con-review.md" "$UNRESOLVED"; } > "$dir/unresolved.md"
   fi
-  local withdrawn; withdrawn="$(minus "$(minus "$all" "$ACCEPTED")" "$UNRESOLVED")"
   if [[ -n "$withdrawn" ]]; then
     { printf '#### 라운드 %s 에서 철회 (공방: %s)\n\n' "$r" "$transcript"
       extract_blocks "$dir/con-review.md" "$withdrawn"; } >> "$RUN/withdrawn.md"
   fi
-  log "  결과 → 수정 대상 $(count "$ACCEPTED")건, 합의 안 됨 $(count "$UNRESOLVED")건, 철회 $(count "$withdrawn")건"
+  log "  결과 → 수정 대상 $(count "$ACCEPTED")건, 합의 안 됨 $(count "$UNRESOLVED")건, 철회 $(count "$withdrawn")건, 설계 권고 $(count "$q_ok $q_open")건"
   [[ -z "$ACCEPTED" && -z "$UNRESOLVED" ]] && STATUS="PASS"
 }
 
@@ -332,6 +344,7 @@ run_target() {
       [[ -f "$d/fix-list.md" ]]   && printf -- '- 수정 대상: %s\n' "$(oneline "$(finding_ids "$d/fix-list.md")")"
       [[ -f "$d/fix.md" ]]        && printf -- '- 수정 결과: round%s/fix.md\n' "$i"
       [[ -f "$d/unresolved.md" ]] && printf -- '- 합의 안 됨: round%s/unresolved.md\n' "$i"
+      [[ -f "$d/quality.md" ]]    && printf -- '- 설계 권고: round%s/quality.md\n' "$i"
       printf -- '- 토론 기록: round%s/debate.md\n\n' "$i"
     done
   } > "$RUN/report.md"
@@ -374,6 +387,9 @@ TARGET_LABEL="changes"; TARGET_PATHS=("${PATHS_ARR[@]}"); RUN="$RUN_ROOT"
 run_target
 rm -rf "$STATE_DIR/latest" && cp -r "$RUN" "$STATE_DIR/latest"
 echo "$(git rev-parse HEAD) $FINAL $FIX_COMMITS" > "$STATE_DIR/last-status"
+if compgen -G "$STATE_DIR/latest/round*/quality.md" > /dev/null; then
+  log "설계 권고가 있습니다 (push 와 무관): $STATE_DIR/latest/report.md 의 「설계 권고」 파일"
+fi
 
 case "$FINAL" in
   PASS)
