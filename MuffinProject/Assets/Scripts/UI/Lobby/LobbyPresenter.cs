@@ -101,6 +101,7 @@ namespace Chapchu.UI.Lobby
 
         // 앱이 뒤로 갔다 돌아온 프레임의 큰 시간은 세지 않는다 (TitlePresenter 와 같다)
         private const float MaxCountedFrameSeconds = 0.1f;
+        private const float RoomRequestTimeoutSeconds = 10f; // 14-lobby-ui 6절
 
         [Header("화면")]
         [SerializeField] private LobbyHomeView home;
@@ -135,6 +136,7 @@ namespace Chapchu.UI.Lobby
         private LobbyShopTab _lastShopTab = LobbyShopTab.Gacha;
         private bool _isMoving;
         private RoomRequest _request;
+        private Coroutine _roomTimeout; // 방 요청의 응답을 기다리는 동안만 있다
 
         private void Awake()
         {
@@ -1029,6 +1031,8 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _request = request;
+            // 요청이 부르는 자리에서 바로 실패할 수 있어, 요청보다 먼저 센다
+            _roomTimeout = StartCoroutine(RoomTimeoutRoutine());
             switch (request)
             {
                 case RoomRequest.Random:
@@ -1065,8 +1069,33 @@ namespace Chapchu.UI.Lobby
 
         private void ShowRoomError(string title, short code, string message)
         {
+            if (_roomTimeout == null) // 10초가 지나 이미 실패로 알린 요청의 늦은 응답
+                return;
+
+            StopCoroutine(_roomTimeout);
+            _roomTimeout = null;
             modal.HideLoading();
             modal.ShowWarn(title, GetFailureMessage(code, message));
+        }
+
+        // 10초 안에 응답이 없으면 실패로 알린다 (14-lobby-ui 6절)
+        private IEnumerator RoomTimeoutRoutine()
+        {
+            float waited = 0f;
+            while (waited < RoomRequestTimeoutSeconds)
+            {
+                waited += Mathf.Min(Time.unscaledDeltaTime, MaxCountedFrameSeconds);
+                yield return null;
+            }
+
+            _roomTimeout = null;
+            modal.HideLoading();
+            modal.ShowWarn(_request switch
+            {
+                RoomRequest.Random => RandomMatchFailedTitle,
+                RoomRequest.Join   => JoinFailedTitle,
+                _                  => CreateFailedTitle,
+            }, RetryLaterText);
         }
 
         // 08-room.md 7절. Photon 원문(message)은 우리 코드가 직접 만든 사유(InvalidOperation)일 때만 그대로 쓴다.
