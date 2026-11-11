@@ -28,6 +28,7 @@ namespace Chapchu.UI.GameScreen
         private PointerEventData _pointer;
         private CardView _pressed;
         private Vector2 _pressPosition;
+        private bool _pressedInDoubleClickWindow; // _pressed 를 포인터 아래가 아니라 첫 클릭의 카드로 잡았다
         private CardView _lastClicked;
         private float _lastClickTime;
         private Vector2 _lastClickPosition;
@@ -87,6 +88,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (IsOverHud(position)) return;
 
+            _pressedInDoubleClickWindow = false;
+
             // 더블클릭의 둘째 누름 — 첫 클릭으로 카드를 골라 손패가 내려가며 배치가 바뀌었어도, 같은 곳을 눌렀으면 첫 클릭의 카드로 본다 (10-ui.md 4절)
             if (IsAwaitingDoubleClick)
             {
@@ -95,6 +98,7 @@ namespace Chapchu.UI.GameScreen
                 {
                     _pressed = _lastClicked;
                     _pressPosition = position;
+                    _pressedInDoubleClickWindow = true;
                     return;
                 }
             }
@@ -116,6 +120,14 @@ namespace Chapchu.UI.GameScreen
             {
                 float threshold = dragThreshold * Screen.height / ReferenceHeight;
                 if ((position - _pressPosition).sqrMagnitude <= threshold * threshold) return;
+
+                // 더블클릭 창으로 잡은 카드는 클릭 판정에만 쓴다 — 끌기는 누른 곳에 지금 있는 카드로만 시작한다 (잡은 지점 유지, 10-ui.md 4절)
+                if (_pressedInDoubleClickWindow)
+                {
+                    _pressedInDoubleClickWindow = false;
+                    _pressed = _view.CardAt(_pressPosition);
+                    if (_pressed == null) return;
+                }
 
                 _view.BeginDrag(_pressed, _pressPosition);
                 if (!_view.IsDragging)
