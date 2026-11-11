@@ -24,7 +24,7 @@ namespace Chapchu.EditorTools
         private const string FontAssetPath = "Assets/Fonts/Jua/Jua SDF.asset";
         private const string LogoFontAssetPath = "Assets/Fonts/Jua/Jua Logo SDF.asset";
         private const string OutlineMaterialPath = "Assets/Fonts/Jua/Jua SDF - Outline.mat";
-        private const string ArtPath = "Assets/Sprites/UI/Title/title_key_art.png"; // 「타이틀화면 v3.3」 원본 PNG — 시안이 쓰는 4:3 키 아트
+        private const string ArtPath = "Assets/Sprites/UI/Background/bg_title.png"; // 16:9 키 아트 (12-title-ui 9-1)
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string RingSpritePath = "Assets/Sprites/UI/Hud/timer_ring.png";
         private const string TermsOfServicePath = "Assets/Texts/terms_of_service.txt";
