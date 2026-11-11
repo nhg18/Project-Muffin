@@ -85,6 +85,8 @@ namespace Chapchu.UI.GameScreen
         private Coroutine _showRoutine;
 
         private HandView _view;
+        private HandInput _input;
+        private bool _hudRestorePending; // 손패는 내려갔지만 더블클릭 창이 지날 때까지 덮였던 HUD 를 막아 둔다
 
         /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
         public event System.Action<bool> OnRaisedChanged;
@@ -92,6 +94,7 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             _view = GetComponent<HandView>();
+            _input = GetComponent<HandInput>();
 
             if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || topLayer == null || revealView == null)
                 Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(topLayer)} · {nameof(revealView)} 참조 중 비어 있는 것이 있습니다.", this);
@@ -113,11 +116,33 @@ namespace Chapchu.UI.GameScreen
             _view.OnCardUseRequested -= HandleCardUseRequested;
             _view.OnRaisedChanged -= HandleRaisedChanged;
             _view.OnDraggingChanged -= HandleDraggingChanged;
-            FinishShow();
+
+            // 씬이 내려가는 중이면 카드 재배치 · 층 전환 · HUD 호출을 하지 않는다 — 카메라 · 캔버스가 먼저 파괴됐을 수 있다
+            if (gameObject.scene.isLoaded)
+            {
+                FinishShow();
+                return;
+            }
+
+            if (_showRoutine != null)
+            {
+                StopCoroutine(_showRoutine);
+                _showRoutine = null;
+            }
+
+            _showing.Clear();
         }
 
         private void Update()
         {
+            // 더블클릭 창이 지났다 — 막아 두었던 HUD 를 되살린다
+            if (_hudRestorePending && !_input.IsAwaitingDoubleClick)
+            {
+                _hudRestorePending = false;
+                foreach (CanvasGroup group in coveredHud)
+                    group.blocksRaycasts = true;
+            }
+
             // 보여 주는 중에 화면을 누르면 바로 손패로
             if (_showing.Count > 0 && Input.GetMouseButtonDown(0) && Time.time - _showLastAddAt > showClickGuard)
                 FinishShow();
@@ -345,8 +370,14 @@ namespace Chapchu.UI.GameScreen
         // 올라온 손패가 덮는 HUD 는 그동안 눌리지 않는다 — 카드를 고르려다 찹츄 버튼이 눌리지 않게 (프로토타입 v2 #game.handup).
         private void HandleRaisedChanged(bool raised)
         {
-            foreach (CanvasGroup group in coveredHud)
-                group.blocksRaycasts = !raised;
+            // 카드를 골라 내려간 직후에는 더블클릭의 둘째 클릭이 올 수 있다 — 그 클릭이 찹츄 버튼에 떨어지지 않게 창이 지난 뒤에 되살린다 (Update)
+            _hudRestorePending = !raised && _input != null && _input.IsAwaitingDoubleClick;
+            if (!_hudRestorePending)
+            {
+                foreach (CanvasGroup group in coveredHud)
+                    group.blocksRaycasts = !raised;
+            }
+
             OnRaisedChanged?.Invoke(raised);
         }
 

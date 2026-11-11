@@ -30,6 +30,10 @@ namespace Chapchu.UI.GameScreen
         private Vector2 _pressPosition;
         private CardView _lastClicked;
         private float _lastClickTime;
+        private Vector2 _lastClickPosition;
+
+        /// <summary>방금 카드를 클릭해 더블클릭의 둘째 클릭을 기다리는 중인가 — 그동안 손패가 덮던 HUD 는 그 클릭을 받지 않아야 한다 (10-ui.md 4절).</summary>
+        public bool IsAwaitingDoubleClick => _lastClicked != null && Time.unscaledTime - _lastClickTime < doubleClickSeconds;
 
         private void Awake()
         {
@@ -39,7 +43,9 @@ namespace Chapchu.UI.GameScreen
         private void OnDisable()
         {
             _pressed = null;
-            _view.CancelDrag();
+            // 씬이 내려가는 중이면 카드를 자리로 돌리지 않는다 — 카메라 · HUD 위 층이 먼저 파괴됐을 수 있다
+            if (gameObject.scene.isLoaded)
+                _view.CancelDrag();
         }
 
         // 창이 가려지면 끌던 카드는 제자리 (10-ui.md 4절).
@@ -80,6 +86,18 @@ namespace Chapchu.UI.GameScreen
         private void Press(Vector2 position)
         {
             if (IsOverHud(position)) return;
+
+            // 더블클릭의 둘째 누름 — 첫 클릭으로 카드를 골라 손패가 내려가며 배치가 바뀌었어도, 같은 곳을 눌렀으면 첫 클릭의 카드로 본다 (10-ui.md 4절)
+            if (IsAwaitingDoubleClick)
+            {
+                float threshold = dragThreshold * Screen.height / ReferenceHeight;
+                if ((position - _lastClickPosition).sqrMagnitude <= threshold * threshold)
+                {
+                    _pressed = _lastClicked;
+                    _pressPosition = position;
+                    return;
+                }
+            }
 
             CardView card = _view.CardAt(position);
             if (card == null)
@@ -132,6 +150,7 @@ namespace Chapchu.UI.GameScreen
 
             _lastClicked = card;
             _lastClickTime = Time.unscaledTime;
+            _lastClickPosition = _pressPosition;
             _view.ToggleSelect(card);
         }
 
