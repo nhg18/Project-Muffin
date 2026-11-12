@@ -449,6 +449,14 @@ run_multi() {
         until_ok "$project" TableUiExpect || return
     done
 
+    log "▶ 대상 선택에서 나를 고름 — 나를 포함하는 카드 (10-ui.md 6절)"
+    local main="${EDITORS[0]}"
+    until_ok "$main" SelfPickOpen || return
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$main" Shot "$SHOT_DIR/self_pick_$(name_of "$main").png")"; sleep 2; fi
+    out=$(call "$main" SelfPickTap)
+    case "$out" in OK*) log "  $(name_of "$main"): $out" ;; *) fail "$(name_of "$main"): $out"; return ;; esac
+    until_ok "$main" SelfPickDone || return
+
     log "▶ 내 카드 다시 받기 · 묵은 처리 번호 (09-network.md 5 · 10절)"
     for project in "${EDITORS[@]}"; do
         until_ok "$project" SyncProbe || return
