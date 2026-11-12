@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Photon.Pun;
+using Chapchu.UI.Title;
 using Photon.Realtime;
 using UnityEngine;
 
@@ -36,9 +37,12 @@ namespace Chapchu.UI.GameScreen
             new Color32(0x0e, 0x7d, 0x6a, 0xFF),
         };
 
-        /// <summary>닉네임, 비어 있으면 P{actorNumber}.</summary>
+        /// <summary>닉네임(서식 태그 · 제어 문자를 거른 것, NicknameValidator.ForDisplay), 비면 P{actorNumber}.</summary>
         public static string NameOf(Player player)
-            => string.IsNullOrEmpty(player.NickName) ? string.Format(NicknameFallbackFormat, player.ActorNumber) : player.NickName;
+        {
+            string name = NicknameValidator.ForDisplay(player.NickName);
+            return name.Length == 0 ? string.Format(NicknameFallbackFormat, player.ActorNumber) : name;
+        }
 
         /// <summary>
         /// 방 안 플레이어를 좌석 순서로 — 나(좌석 0) 먼저, 상대는 actorNumber 오름차순 (02-player.md 3절). 턴 순서 띠가 이 순서로 칩을 놓는다.

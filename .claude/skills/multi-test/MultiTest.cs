@@ -723,6 +723,17 @@ public static class MultiTest
         }
         failed |= !strangerOk;
         sb.AppendLine((strangerOk ? "" : "FAIL ") + "참가자가 아닌 사람의 찹츄 · 카운터 · 함정 발동 요청 → 10 (" + requests.Count + "건)");
+
+        // 남의 닉네임 표시 거르기 — 서식 태그 · 제어 문자 · 길이. 검사를 통과한 이름은 그대로
+        var names = new (string raw, string shown)[]
+        {
+            ("배고픈찹츄42", "배고픈찹츄42"), ("Player#2", "Player#2"), ("<b>방장</b><size=200>", "b방장/bsize=200"),
+            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength)),
+            (new string('a', NicknameValidator.MaxLength - 1) + "\U0001F600", new string('a', NicknameValidator.MaxLength - 1)),
+        };
+        var badNames = names.Where(n => NicknameValidator.ForDisplay(n.raw) != n.shown).Select(n => NicknameValidator.ForDisplay(n.raw)).ToList();
+        failed |= badNames.Count > 0;
+        sb.AppendLine((badNames.Count == 0 ? "" : "FAIL ") + "닉네임 표시 거르기 " + (names.Length - badNames.Count) + "/" + names.Length + (badNames.Count == 0 ? "" : " — 틀림: " + string.Join(" | ", badNames)));
         sb.Append("끝 " + server.DebugState());
 
         return (failed ? "FAIL\n" : "OK\n") + sb;
