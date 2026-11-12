@@ -700,6 +700,29 @@ public static class MultiTest
         bool rejectOk = rejected.Count == 1 && rejected[0] is RequestRejected;
         failed |= !rejectOk;
         sb.AppendLine((rejectOk ? "" : "FAIL ") + "남의 턴 요청 → " + rejected[0].GetType().Name);
+
+        // 참가자가 아닌 사람의 요청 — 예외 없이 거절 10. 시작 전 원본(방장의 첫 프레임 · 방장이 바뀐 뒤)과 진행 중인 게임의 모르는 번호
+        const int stranger = 99;
+        var notStarted = new GameServer(new System.Random(1), () => now);
+        var requests = new List<Func<IReadOnlyList<GameEvent>>>
+        {
+            () => notStarted.DeclareChapchu(actors[0]), () => notStarted.PlayCounter(actors[0], 1, null), () => notStarted.ActivateTrap(actors[0], 1, null)
+        };
+        if (!server.IsGameOver)
+            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.DeclareChapchu(stranger), () => server.PlayCounter(stranger, 1, null), () => server.ActivateTrap(stranger, 1, null) });
+
+        bool strangerOk;
+        try
+        {
+            strangerOk = requests.All(request => request() is var r && r.Count == 1 && r[0] is RequestRejected rr && rr.Code == RejectCode.NotAlive);
+        }
+        catch (Exception e)
+        {
+            strangerOk = false;
+            sb.AppendLine("FAIL 참가자가 아닌 요청에서 예외 — " + e.GetType().Name);
+        }
+        failed |= !strangerOk;
+        sb.AppendLine((strangerOk ? "" : "FAIL ") + "참가자가 아닌 사람의 찹츄 · 카운터 · 함정 발동 요청 → 10 (" + requests.Count + "건)");
         sb.Append("끝 " + server.DebugState());
 
         return (failed ? "FAIL\n" : "OK\n") + sb;
