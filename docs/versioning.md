@@ -10,4 +10,5 @@
 
 * Android `Bundle Version Code` 는 기기 · 스토어에 올리는 빌드마다 +1, 재사용 금지. iOS `Build` 도 같은 숫자.
 * 버전 변경은 따로 커밋한다: `chore: 버전 0.2.0 (code 3)`.
+* 버전이 다른 앱끼리는 매칭되지 않는다 — 접속할 때 이 값을 Photon `GameVersion` 으로 보낸다 (`PhotonConnection.Connect`). PATCH 만 달라도 나뉜다 (2026-11-12).
 * 현재: `0.1.0` · code 1.

@@ -61,7 +61,12 @@ namespace Chapchu.Network
             }
 
             _isTimedOut = false;
-            return PhotonNetwork.ConnectUsingSettings();
+            bool started = PhotonNetwork.ConnectUsingSettings();
+
+            // 앱 버전(Player Settings Version, versioning.md)이 다르면 서로 매칭되지 않게 한다 — 패치 차이도 나눈다.
+            // ConnectUsingSettings 가 설정 파일의 AppVersion(비어 있음)으로 덮어쓰므로 그 뒤에 넣는다. 서버 인증 전이라 이 값이 쓰인다.
+            PhotonNetwork.GameVersion = Application.version;
+            return started;
         }
 
         /// <summary>
