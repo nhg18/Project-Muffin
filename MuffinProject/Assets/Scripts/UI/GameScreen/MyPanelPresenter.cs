@@ -119,9 +119,7 @@ namespace Chapchu.UI.GameScreen
 
             if (state != ChapchuButtonState.Unavailable || PopupManager.Instance == null) return;
 
-            PopupManager.Instance.ShowToast(_handCount == GameServer.ChapchuHandCount
-                ? RejectText.Get(RejectCode.NotYourTurn) // 10장인데 남의 턴
-                : string.Format(NotTenCardsToastFormat, _handCount));
+            PopupManager.Instance.ShowToast(string.Format(NotTenCardsToastFormat, _handCount));
         }
     }
 }

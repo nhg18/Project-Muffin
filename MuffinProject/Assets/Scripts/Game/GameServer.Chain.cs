@@ -39,12 +39,8 @@ namespace Chapchu.Game
             if (card.Type != CardType.Counter)
                 return Reject(requester, RejectCode.NotCounterCard);
 
-            // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11)
-            if (_players[requester].Life == LifeState.DeathPending && card.Condition != ReactCondition.WouldKillMe)
-                return Reject(requester, RejectCode.CannotReact);
-
             ChainEntry top = _chain[_chain.Count - 1];
-            if (!CanReactTo(card, requester, top))
+            if (!CanPlayCounter(requester, card, top))
                 return Reject(requester, RejectCode.CannotReact);
 
             int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User);
@@ -77,7 +73,7 @@ namespace Chapchu.Game
         }
 
         // 반응 시간이 정해질 때마다, 지금 맨 위 카드에 낼 수 있는 카운터를 손패에 가진 사람에게 그 목록을 알린다 — 화면의 초록 빛용 (10-ui.md 5절, 09-network.md 3절: 본인에게만).
-        // PlayCounter 의 검사와 같은 조건이다 (대상 확정은 뺀다 — 낼 때 판정). 낼 수 있는 것이 없는 사람에겐 보내지 않는다.
+        // PlayCounter 와 같은 판정(CanPlayCounter)을 쓴다 (대상 확정은 뺀다 — 낼 때 판정). 낼 수 있는 것이 없는 사람에겐 보내지 않는다.
         private void AddCountersUsable(ChainEntry top)
         {
             foreach (KeyValuePair<int, PlayerState> pair in _players)
@@ -86,15 +82,21 @@ namespace Chapchu.Game
                 if (!IsInGame(actor))
                     continue;
 
-                bool deathPending = pair.Value.Life == LifeState.DeathPending; // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절)
                 int[] usable = pair.Value.Hand
-                    .Where(c => c.Type == CardType.Counter && (!deathPending || c.Condition == ReactCondition.WouldKillMe) && CanReactTo(c, actor, top))
+                    .Where(c => CanPlayCounter(actor, c, top))
                     .Select(c => c.InstanceId)
                     .ToArray();
                 if (usable.Length > 0)
                     _events.Add(new CountersUsable(actor, usable));
             }
         }
+
+        // actor 가 손패의 card 를 카운터로 top 에 낼 수 있는가 (대상 확정 전) — PlayCounter 와 AddCountersUsable 이 같이 쓴다.
+        // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11).
+        private bool CanPlayCounter(int actor, Card card, ChainEntry top) =>
+            card.Type == CardType.Counter
+            && (_players[actor].Life != LifeState.DeathPending || card.Condition == ReactCondition.WouldKillMe)
+            && CanReactTo(card, actor, top);
 
         /// <summary>
         /// card(카운터 · 「카드 반응」 함정)로 맨 위 카드 top 에 반응할 수 있는가 — 반응 대상 종류 + 반응 조건 (04-card.md 7절).

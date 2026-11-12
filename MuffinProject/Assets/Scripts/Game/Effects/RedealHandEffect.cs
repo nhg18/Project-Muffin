@@ -17,10 +17,12 @@ namespace Chapchu.Game.Effects
 
         internal override bool BotWants(GameServer server, int bot, int[] targets)
         {
-            if (targets.Length == 0)
+            // 113 은 자동 대상(AllOthers)이라 봇 단계의 targets 는 비어 있다 — 받는 사람(게임에 남은 상대)을 서버 상태에서 구한다.
+            int[] receivers = server.ActorsInGame.Where(actor => actor != bot).ToArray();
+            if (receivers.Length == 0)
                 return false;
-            return targets.Any(actor => server.StateOf(actor).IsChapchu)
-                || targets.Average(actor => (double)server.HandCountOf(actor)) > GameServer.InitialHandCount;
+            return receivers.Any(actor => server.StateOf(actor).IsChapchu)
+                || receivers.Average(actor => (double)server.HandCountOf(actor)) > GameServer.InitialHandCount;
         }
 
         internal override void Apply(GameServer server, ChainEntry entry)
