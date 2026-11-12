@@ -1,166 +1,128 @@
-﻿using Chapchu.Core;
-using Chapchu.Network;
-using Chapchu.Network.Events;
-using Chapchu.UI.Popups;
-using Photon.Realtime;
+﻿using Chapchu.Network;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 로비 뷰와 네트워크 · 팝업 · 씬 전환을 잇는다. Scripts/UI/Lobby 에서 네트워크를 아는 유일한 파일이다 (TitlePresenter 와 같은 구조).
-    /// 규칙: 방 생성 · 참가는 NetworkManager 에 요청만 하고, 결과는 RoomEvents 로 받는다.
-    /// 기준 문서: docs/systems/14-lobby-ui.md 5 · 6절, docs/systems/08-room.md 4 · 7절
+    /// 로비 허브의 뼈대 — 시안 데이터 · 지갑 · 배지 · 뒤로가기 · 초대 배너. 화면 영역마다의 흐름은 옆 파일에 있다:
+    /// LobbySectionPresenter(홈 ↔ 꾸미기 · 상점 · 뽑기) · LobbyPopupPresenter(친구 · 프로필 · 설정 · 퀘스트 창) ·
+    /// LobbyRoomRequester(방 요청) · LobbyAccountPresenter(닉네임 변경 · 계정 삭제). 서버에 요청을 보내는 것은 뒤의 두 파일뿐이다.
+    /// 진짜인 것: 닉네임(변경은 서버 저장) · 방 만들기 / 참가 / 랜덤 매칭 / 혼자 하기 · 설정 스위치(기기 저장).
+    /// 임시인 것: 친구 · 재화 · 퀘스트 · 상점 · 뽑기 — LobbyHubData 의 시안 값, 이 기기 메모리에만 있다.
+    /// 기준: 「통합 화면 UI v2」 로비(게시본 1794316285-7080) · docs/systems/17-lobby-ui-full.md · 14-lobby-ui.md
     /// </summary>
-    [RequireComponent(typeof(LobbyView))]
     public class LobbyPresenter : MonoBehaviour
     {
-        // 화면 문구 (14-lobby-ui · 08-room.md 7절)
-        private const string JoinPlaceholderText = "방 코드 입력";
-        private const string JoinSubmitText = "참가";
-        private const string CreateFailedTitle = "방 생성 실패";
-        private const string JoinFailedTitle = "방 참가 실패";
-        private const string RandomMatchFailedTitle = "랜덤 매칭 실패";
-        private const string RoomNotFoundText = "방을 찾을 수 없습니다.";
-        private const string RoomFullText = "방이 가득 찼습니다.";
-        private const string RoomClosedText = "이미 시작된 방입니다.";
-        private const string NoRandomRoomText = "참가할 수 있는 방이 없습니다.";
-        private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
+        private const int InviteSeconds = 30; // 초대 만료 (17 4-4 · 13-friend 4절)
+        private const string RequestToastFormat = "{0} 님이 친구 요청을 보냈어요.";
 
-        private LobbyView _view;
+        [Header("화면")]
+        [SerializeField] private LobbyHomeView home;
+        [SerializeField] private LobbyTopBarView topBar;
+        [SerializeField] private LobbyInviteBannerView invite;
+        [SerializeField] private LobbyFxView fx;
 
-        // 요청을 보낸 뒤 결과가 올 때까지 띄우는 대기 표시. 성공하면 씬 전환이 닫고, 실패하면 여기서 닫는다.
-        private LoadingPopup _loading;
+        [Header("뒤로가기가 닫는 것 — 위층부터")]
+        [SerializeField] private LobbyGachaResultView gachaResult;
+        [SerializeField] private LobbyModalView modal;
+        [SerializeField] private LobbyPopupPresenter popups;
+        [SerializeField] private LobbySectionPresenter sections;
 
-        // 방 코드 입력 팝업. 닫기 버튼으로 닫히면 팝업과 함께 구독도 사라진다.
-        private InputPopup _joinPopup;
+        /// <summary>이 로비가 쓰는 시안 데이터 — 친구 · 재화 · 퀘스트 · 아이템. 로비의 다른 컴포넌트도 이것 하나를 본다.</summary>
+        public LobbyHubData Data { get; private set; }
 
         private void Awake()
         {
-            _view = GetComponent<LobbyView>();
+            if (home == null || topBar == null || invite == null || fx == null)
+                Debug.LogError($"[{nameof(LobbyPresenter)}] 화면 참조가 비어 있습니다.", this);
+
+            if (gachaResult == null || modal == null || popups == null || sections == null)
+                Debug.LogError($"[{nameof(LobbyPresenter)}] 뒤로가기 참조가 비어 있습니다.", this);
+
+            Data = new LobbyHubData();
         }
 
         private void OnEnable()
         {
-            _view.OnRandomMatchRequested += HandleRandomMatchRequested;
-            _view.OnCreateRoomRequested += HandleCreateRoomRequested;
-            _view.OnJoinRoomRequested += HandleJoinRoomRequested;
-
-            RoomEvents.OnJoinedRoom += HandleJoinedRoom;
-            RoomEvents.OnCreateRoomFailed += HandleCreateRoomFailed;
-            RoomEvents.OnJoinRoomFailed += HandleJoinRoomFailed;
-            RoomEvents.OnJoinRandomFailed += HandleJoinRandomFailed;
+            invite.OnAccepted += RefreshBadges;
+            invite.OnDeclined += RefreshBadges;
+            invite.OnExpired += RefreshBadges;
         }
 
         private void OnDisable()
         {
-            _view.OnRandomMatchRequested -= HandleRandomMatchRequested;
-            _view.OnCreateRoomRequested -= HandleCreateRoomRequested;
-            _view.OnJoinRoomRequested -= HandleJoinRoomRequested;
-
-            RoomEvents.OnJoinedRoom -= HandleJoinedRoom;
-            RoomEvents.OnCreateRoomFailed -= HandleCreateRoomFailed;
-            RoomEvents.OnJoinRoomFailed -= HandleJoinRoomFailed;
-            RoomEvents.OnJoinRandomFailed -= HandleJoinRandomFailed;
+            invite.OnAccepted -= RefreshBadges;
+            invite.OnDeclined -= RefreshBadges;
+            invite.OnExpired -= RefreshBadges;
         }
 
         private void Start()
         {
-            // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다. 입장 콜백(OnJoinedRoom)에서 정하면 안 된다 —
-            // 이미 있는 방에 들어가면 PUN 씬 동기화(AutomaticallySyncScene)가 콜백보다 먼저 RoomScene 을 불러
-            // 이 오브젝트가 사라지고, 값이 기본값(Lobby)으로 남는다.
-            SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
-            SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
-
-            _view.SetNickname(NetworkManager.Nickname);
+            home.SetProfile(NetworkManager.Nickname, Data.MyCode);
+            RefreshWallet();
+            RefreshBadges();
         }
 
-        private void HandleRandomMatchRequested()
+        private void Update()
         {
-            ShowLoading();
-            NetworkManager.Instance.JoinRandomRoom();
+            // Android 뒤로가기 (17 3절 #5)
+            if (Input.GetKeyDown(KeyCode.Escape))
+                Back();
         }
 
-        private void HandleCreateRoomRequested()
+        /// <summary>윗줄의 재화 숫자를 데이터에 맞춘다.</summary>
+        public void RefreshWallet() => topBar.SetWallet(Data.Balance(HubCurrency.Bone), Data.Balance(HubCurrency.Churu));
+
+        /// <summary>친구 · 퀘스트 버튼의 빨간 숫자를 데이터에 맞춘다.</summary>
+        public void RefreshBadges()
         {
-            ShowLoading();
-            NetworkManager.Instance.CreateRoom();
+            topBar.SetFriendsBadge(Data.RequestsIn.Count + (invite.IsShown ? 1 : 0));
+            home.SetQuestBadge(Data.ReadyCount(true) + Data.ReadyCount(false));
         }
 
-        private void HandleJoinRoomRequested()
+        // 뒤로가기 한 번에 한 겹 — 뽑기 결과 → 위층 창 → 줄 메뉴 → 창 → 섹션
+        private void Back()
         {
-            _joinPopup = PopupManager.Instance.OpenModal<InputPopup>();
-            _joinPopup.PlaceholderText = JoinPlaceholderText;
-            _joinPopup.SubmitButtonText = JoinSubmitText;
-            _joinPopup.CharacterLimit = RandomCode.Length;
-            _joinPopup.OnSubmitted += HandleSubmitted;
+            if (gachaResult.IsOpen)
+                gachaResult.Back();
+            else if (modal.IsLoading)
+                return;
+            else if (modal.IsWarnOpen)
+                modal.HideWarn();
+            else if (modal.IsInputOpen)
+                modal.HideInput();
+            else if (!popups.Back())
+                sections.GoHome();
         }
 
-        private void HandleSubmitted(string roomCode)
-        {
-            _joinPopup.OnSubmitted -= HandleSubmitted;
-            _joinPopup.Close();
-            _joinPopup = null;
+        #region 초대 · 친구 요청 — 친구 서버가 없어 인스펙터 메뉴로만 띄운다
 
-            ShowLoading();
-            NetworkManager.Instance.JoinRoom(roomCode);
-        }
-
-        private void HandleJoinedRoom()
+        /// <summary>확인용 — 온라인 친구 한 명이 방으로 초대한다. 초대 알림이 꺼져 있으면 아무것도 뜨지 않는다.</summary>
+        [ContextMenu("확인용 — 초대 받기")]
+        private void DebugReceiveInvite()
         {
-            SceneManager.LoadScene(ScenePaths.Room);
-        }
-
-        private void HandleCreateRoomFailed(short code, string message)
-        {
-            ShowError(CreateFailedTitle, GetFailureMessage(code, message));
-        }
-
-        private void HandleJoinRoomFailed(short code, string message)
-        {
-            ShowError(JoinFailedTitle, GetFailureMessage(code, message));
-        }
-
-        private void HandleJoinRandomFailed(short code, string message)
-        {
-            ShowError(RandomMatchFailedTitle, GetFailureMessage(code, message));
-        }
-
-        // 08-room.md 7절. Photon 원문(message)은 우리 코드가 직접 만든 사유(InvalidOperation)일 때만 그대로 쓴다.
-        private static string GetFailureMessage(short code, string message) => code switch
-        {
-            ErrorCode.GameDoesNotExist   => RoomNotFoundText,
-            ErrorCode.GameFull           => RoomFullText,
-            ErrorCode.GameClosed         => RoomClosedText,
-            ErrorCode.NoRandomMatchFound => NoRandomRoomText,
-            ErrorCode.InvalidOperation   => message,
-            _                            => RetryLaterText,
-        };
-
-        private void ShowLoading()
-        {
-            if (_loading != null)
+            HubPerson inviter = Data?.PickInviter();
+            if (!Application.isPlaying || inviter == null || modal.IsLoading || !LobbyPopupPresenter.IsInviteNoticeOn)
                 return;
 
-            _loading = PopupManager.Instance.OpenModal<LoadingPopup>();
+            invite.Show(inviter.Nickname, InviteSeconds);
+            topBar.SetFriendsBadge(Data.RequestsIn.Count + 1, true);
+            topBar.ShakeFriends();
         }
 
-        private void HideLoading()
+        /// <summary>확인용 — 누군가 친구 요청을 보낸다.</summary>
+        [ContextMenu("확인용 — 친구 요청 받기")]
+        private void DebugReceiveFriendRequest()
         {
-            if (_loading == null)
+            HubPerson request = Application.isPlaying ? Data?.ReceiveRequest() : null;
+            if (request == null)
                 return;
 
-            _loading.Close();
-            _loading = null;
+            topBar.SetFriendsBadge(Data.RequestsIn.Count + (invite.IsShown ? 1 : 0), true);
+            popups.RefreshFriends();
+            fx.Toast(string.Format(RequestToastFormat, request.Nickname));
         }
 
-        private void ShowError(string title, string message)
-        {
-            HideLoading();
-            WarningPopup popup = PopupManager.Instance.OpenModal<WarningPopup>();
-            popup.MainText = title;
-            popup.SubText = message;
-        }
+        #endregion
     }
 }

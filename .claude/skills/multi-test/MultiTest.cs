@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -33,12 +33,20 @@ public static class MultiTest
     // ── 부르는 함수 (코드에서 이름이 바뀌면 여기를 고친다) ──
     private const string JoinButtonMethod = "ClickJoinButton";             // DebugScript
     private const string StartRequestedMethod = "HandleStartRequested";    // RoomPresenter
-    private const string ConnectClickedMethod = "HandleConnectClicked";    // TitleView
-    private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyPresenter
-    private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyPresenter
-    private const string SubmitClickedMethod = "HandleSubmitClicked";      // InputPopup
-    private const string OkClickedMethod = "HandleOkClicked";              // WarningPopup
-    private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomView
+    private const string TappedMethod = "HandleTapped";                    // TitlePresenter — 「화면을 눌러 시작」
+    private const string AllAgreeMethod = "HandleAllClicked";              // TermsAgreeView — 「모두 동의하기」
+    private const string AgreeConfirmMethod = "HandleConfirmClicked";      // TermsAgreeView — 「동의하고 계속」
+    private const string GuestClickedMethod = "HandleGuestClicked";        // LoginSheetView — 「게스트로 시작」
+    private const string StartClickedMethod = "HandleStartClicked";        // LoginSheetView — 닉네임 「시작」
+    private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyRoomRequester
+    private const string CreateRoomRequestedMethod = "HandleCreateRoomRequested"; // LobbyRoomRequester
+    private const string SubmitClickedMethod = "HandleSubmitClicked";      // LobbyModalView — 입력 창 「참가」
+    private const string WarnOkClickedMethod = "HandleWarnOkClicked";      // LobbyModalView — 경고 창 「확인」
+    private const string ModalFieldField = "field";                        // LobbyModalView — 입력칸
+    private const string WarnTitleField = "warnTitle";                     // LobbyModalView — 경고 창 제목 · 본문
+    private const string WarnMessageField = "warnMessage";
+    private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomPresenter — 「나가기」 (혼자면 확인 없이 나간다)
+    private const string RoomLastLogField = "lastLineText";                // RoomLogView — 접힌 로그의 최근 한 줄
     private const string ChapchuClickedMethod = "HandleChapchuClicked";    // MyPanelPresenter — 찹츄 버튼 탭
     private const string ChapchuStateMethod = "GetChapchuState";           // MyPanelPresenter — 찹츄 버튼 상태
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
@@ -49,7 +57,7 @@ public static class MultiTest
     private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
     private const string TrapPreviewField = "_preview";                    // MyTrapsPresenter — 크게 보기 중인 카드
     private const string TrapsOfField = "_trapsOf";                        // OpponentSeatsPresenter — actorNumber → 함정 칸
-    private const string MyHandField = "_myHand";                        // GameDebugInput — 카드 ID
+    private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
     private const string MyTrapsField = "_myTraps";                        // GameDebugInput — 설치한 함정 인스턴스 ID
@@ -548,43 +556,71 @@ public static class MultiTest
         {
             case "title":
             {
-                TitleView view = Object.FindFirstObjectByType<TitleView>();
-                if (view == null)
-                    return "WAIT 타이틀 아님 (" + scene + ")";
+                // 계정(Google · Apple) 로그인이 저장돼 있으면 누르지 않아도 로비로 간다. 게스트는 매번 터치 → (처음만 약관 동의) → 게스트 → 닉네임 → 시작
+                TitlePresenter presenter = Object.FindFirstObjectByType<TitlePresenter>();
+                if (presenter == null)
+                    return scene == "LobbyScene" ? "OK 자동 로그인 → 로비" : "WAIT 타이틀 아님 (" + scene + ")";
 
-                view.SetNickname("테스터");
-                Call(view, ConnectClickedMethod);
-                return "OK 접속 요청";
+                LoginSheetView sheet = Object.FindFirstObjectByType<LoginSheetView>();
+                TitleBottomView bottom = Object.FindFirstObjectByType<TitleBottomView>();
+                if (!sheet.IsOpen)
+                {
+                    if (!bottom.IsWaitingForTap)
+                        return "WAIT 자동 로그인 · 접속 중";
+
+                    Call(presenter, TappedMethod);
+                    return "WAIT 화면 터치";
+                }
+
+                switch (sheet.Step)
+                {
+                    case LoginSheetStep.Agree:
+                        TermsAgreeView terms = Object.FindFirstObjectByType<TermsAgreeView>();
+                        Call(terms, AllAgreeMethod);
+                        Call(terms, AgreeConfirmMethod);
+                        return "WAIT 약관 동의";
+                    case LoginSheetStep.Login:
+                        Call(sheet, GuestClickedMethod);
+                        return "WAIT 게스트로 시작";
+                    case LoginSheetStep.Nickname:
+                        Object.FindFirstObjectByType<NicknameFieldView>().SetText("테스터");
+                        Call(sheet, StartClickedMethod);
+                        return "OK 닉네임 「테스터」 로 시작";
+                    case LoginSheetStep.Fail:
+                        return "FAIL 로그인 창 실패 — 콘솔을 본다";
+                    default:
+                        return "WAIT 로그인 창 " + sheet.Step;
+                }
             }
             case "bad-code":
             {
-                LobbyPresenter presenter = Object.FindFirstObjectByType<LobbyPresenter>();
+                LobbyRoomRequester presenter = Object.FindFirstObjectByType<LobbyRoomRequester>();
                 if (presenter == null || !PhotonNetwork.IsConnectedAndReady)
                     return "WAIT 로비 아님 (" + scene + ")";
 
                 Call(presenter, JoinRoomRequestedMethod);
-                InputPopup popup = Object.FindFirstObjectByType<InputPopup>();
-                if (popup == null)
-                    return "FAIL 입력 팝업이 안 열림";
+                LobbyModalView modal = Object.FindFirstObjectByType<LobbyModalView>();
+                if (modal == null || !modal.IsInputOpen)
+                    return "FAIL 방 코드 입력 창이 안 열림";
 
-                ((TMP_InputField)typeof(InputPopup).GetField("inputField", Private).GetValue(popup)).text = "ZZZZ";
-                Call(popup, SubmitClickedMethod);
+                ((TMP_InputField)typeof(LobbyModalView).GetField(ModalFieldField, Private).GetValue(modal)).text = "ZZZZ";
+                Call(modal, SubmitClickedMethod);
                 return "OK 없는 방 코드 ZZZZ 제출";
             }
             case "warning":
             {
-                WarningPopup popup = Object.FindFirstObjectByType<WarningPopup>();
-                if (popup == null)
-                    return "WAIT 경고 팝업 없음";
+                LobbyModalView modal = Object.FindFirstObjectByType<LobbyModalView>();
+                if (modal == null || !modal.IsWarnOpen)
+                    return "WAIT 경고 창 없음";
 
-                string text = ReadText(popup, "mainText") + " / " + ReadText(popup, "subText");
-                Call(popup, OkClickedMethod);
+                string text = ReadText(modal, WarnTitleField) + " / " + ReadText(modal, WarnMessageField);
+                Call(modal, WarnOkClickedMethod);
                 PopupManager.Instance.ShowToast("토스트 확인");
                 return "OK 경고 \"" + text + "\" 확인 · 토스트 띄움";
             }
             case "create":
             {
-                LobbyPresenter presenter = Object.FindFirstObjectByType<LobbyPresenter>();
+                LobbyRoomRequester presenter = Object.FindFirstObjectByType<LobbyRoomRequester>();
                 if (presenter == null)
                     return "WAIT 로비 아님 (" + scene + ")";
 
@@ -593,12 +629,12 @@ public static class MultiTest
             }
             case "leave":
             {
-                RoomView view = Object.FindFirstObjectByType<RoomView>();
-                if (view == null)
+                RoomPresenter room = Object.FindFirstObjectByType<RoomPresenter>();
+                if (room == null)
                     return "WAIT 방 아님 (" + scene + ")";
 
-                string log = ReadText(view, "logText");
-                Call(view, LeaveClickedMethod);
+                string log = ReadText(Object.FindFirstObjectByType<RoomLogView>(), RoomLastLogField);
+                Call(room, LeaveClickedMethod);
                 return "OK 방 로그 \"" + log + "\" → 나가기";
             }
             default:
@@ -1725,7 +1761,8 @@ public static class MultiTest
 
     private static string ReadText(object target, string field)
     {
-        return ((TMP_Text)target.GetType().GetField(field, Private).GetValue(target)).text;
+        string text = ((TMP_Text)target.GetType().GetField(field, Private).GetValue(target)).text;
+        return System.Text.RegularExpressions.Regex.Replace(text, "</?nobr>", ""); // 줄 바꿈 막는 태그는 빼고 읽는다
     }
 
     private static bool TryGetTurnActor(out int actor)

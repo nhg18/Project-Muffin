@@ -36,6 +36,7 @@ namespace Chapchu.EditorTools
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
+        private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
         private const string CardBackSpritePath = "Assets/Sprites/Cards/CardBack.jpg";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
 
@@ -1365,6 +1366,8 @@ namespace Chapchu.EditorTools
         private static Sprite Hud(string name)
         {
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{HudSpriteFolder}/{name}.png");
+            if (sprite == null) // 다른 화면도 쓰는 아이콘(icon_x · icon_gear · timer_ring …)은 Common 에 있다
+                sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{CommonSpriteFolder}/{name}.png");
             if (sprite == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] HUD 스프라이트가 없다: {HudSpriteFolder}/{name}.png");
             return sprite;
