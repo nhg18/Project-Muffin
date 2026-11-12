@@ -1,6 +1,6 @@
 # 05. 덱 · 손패 · 버림 더미
 
-**최종 수정일**: 2026-11-07
+**최종 수정일**: 2026-11-12
 **분류**: Core
 
 ---
@@ -115,10 +115,11 @@
 | --- | --- | --- |
 | `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 이미지, 타입, 대상, 조건, 효과, 카운터의 반응 대상, 연출 시간 — `10-ui` 5-1) | `Assets/Cards/*.asset` |
 | `DeckData.GetCard(id)` | id → `CardData` 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다 (옛 `CardDatabase` 는 2026-10-10 삭제) |  |
-| `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` |
+| `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` · `Assets/Cards/Main/Deck_Main.asset` |
 
 * 덱 에셋이 카드와 매수를 짝으로 갖는다. 카드 정의(`CardData`)에는 매수를 두지 않는다 — 카드가 무엇인지와 덱에 몇 장인지는 다른 질문이다.
 * 덱 구성(어떤 카드를 몇 장)은 **미정**이다.
+* 지금 게임 덱은 `Assets/Cards/Main/Deck_Main.asset` — 카드 묶음을 넣는 대로 「카드 가져오기」 가 다시 짠다 (11-card-list 0절). 2026-11-12 묶음 2 까지 넣어 **29장** (묶음 1 의 12장 + 묶음 2 의 17장). 함정 · 카운터는 아직 없다. 시험용 `Assets/Cards/Decks/Deck_Default.asset` 는 rules 시험이 쓴다.
 
 ---
 
