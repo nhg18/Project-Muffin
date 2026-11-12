@@ -48,6 +48,7 @@ namespace Chapchu.UI.GameScreen
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
             if (room.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 ShowTurn(turnActorValue);
+            ShowDirection(room.TryGetValue(RoomProps.TurnDirection, out object reversed) && reversed is bool reversedValue && reversedValue);
         }
 
         /// <summary>턴이 바뀌었다 (OnTurnStarted).</summary>
@@ -59,6 +60,9 @@ namespace Chapchu.UI.GameScreen
             _view.SetCurrent(_actors.IndexOf(actorNumber));
             _view.SetNow(isMe ? TurnNowState.Me : TurnNowState.Other, PlayerLook.NameOf(actorNumber));
         }
+
+        /// <summary>턴 진행 방향이 바뀌었다 (OnTurnDirectionChanged) — 역방향이면 화살표를 뒤집는다.</summary>
+        public void ShowDirection(bool reversed) => _view.SetReversed(reversed);
 
         /// <summary>찹츄 상태가 바뀌었다 (OnChapchuChanged) — 그 사람 칩에 분홍 테.</summary>
         public void ShowChapchu(int actorNumber, bool isChapchu)

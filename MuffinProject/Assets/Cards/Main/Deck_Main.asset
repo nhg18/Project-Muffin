@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b55e3353851a7fb4c8f9d88c4beb4eee, type: 3}
+  m_Name: Deck_Main
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.DeckData
+  entries:
+  - card: {fileID: 11400000, guid: 1f7c1bb7b4ba87a41b44e87f94d05f07, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: af85b105d175276429e70595de742d11, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: a88e0164dc0f374408e99f0d9d1a67f8, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 5620fcc3628a82f4fa6557dbbc14558c, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: f0dcd5c5cb808234c907fae4c5d3f6e1, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 1239787dc6a94fa498ee059374210550, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: f8e51a2a9f08c0f4491b10e6af44ea62, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: b04867f2edd4e6649a0b27d468ff90e3, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: d1eb4dcde57b08649aeff41e673c33d0, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: ab687a006e5ba2e4699efb049bf1f7be, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: 0599dfb01a1c67147988c17a53fcfd3f, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: ab55594078720d848ad27bcf74a9ad21, type: 2}
+    count: 2

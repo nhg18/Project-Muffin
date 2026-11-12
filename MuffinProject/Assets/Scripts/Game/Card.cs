@@ -23,7 +23,19 @@ namespace Chapchu.Game
         TriggerSource, // 함정을 발동시킨 사람 — 피해를 준 · 반응한 카드를 낸 플레이어 (자동, 04-card.md 11절)
         ChapchuPlayers, // 찹츄 상태 플레이어 전원, 나 포함 (자동 — A02)
         ChapchuOthers,  // 나를 뺀 찹츄 상태 플레이어 전원 (자동 — T04)
-        MoreHandThanMe  // 나보다 손패가 많은 모든 플레이어 — 이 카드를 낸 뒤의 내 장수와 비교 (자동 — A23)
+        MoreHandThanMe, // 나보다 손패가 많은 모든 플레이어 — 이 카드를 낸 뒤의 내 장수와 비교 (자동 — A23)
+        OneAny,         // 나를 포함한 1명 고름 (106 핥아주기, 04-card.md 11절)
+        MostHand        // 나를 포함한 생존자 중 손패가 가장 많은 1명 — 이 카드를 낸 뒤의 장수, 동률이면 무작위 (자동 — 118 무야호)
+    }
+
+    // 고르는 대상 타입(OneOther · TwoOthers · OneAny)의 대상 후보 조건 — 카드별 「추가 사용 조건」 (11-card-list.md 1-2 · 04-card.md 5 · 11절).
+    // 맞지 않는 사람은 고를 수 없다 (방장이 거절). 카드 에셋에는 순서 번호로 저장된다 — 끝에만 추가한다.
+    public enum TargetCondition
+    {
+        None,       // 조건 없음
+        HasHand,    // 손패 1장 이상 (102 낚아채기)
+        HpBelowMax, // HP 가 최대보다 낮다 (106 핥아주기)
+        HasTrap     // 설치한 함정 1장 이상 (104 파헤치기)
     }
 
     // 함정의 발동 조건 종류 (04-card.md 6절 「발동 시점」). 카드 에셋에는 순서 번호로 저장된다 — 끝에만 추가한다.
@@ -75,6 +87,9 @@ namespace Chapchu.Game
         public CardType Type { get; }
         public TargetType Target { get; }
 
+        /// <summary>고르는 대상의 후보 조건 (11-card-list.md 1-2 「추가 사용 조건」). 자동 대상 타입에는 쓰지 않는다.</summary>
+        public TargetCondition TargetCondition { get; }
+
         /// <summary>카드에 적힌 순서대로 실행할 효과들. 비어 있으면 효과 없음.</summary>
         public IReadOnlyList<CardEffect> Effects { get; }
 
@@ -96,12 +111,14 @@ namespace Chapchu.Game
 
         public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects,
             IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds,
-            TrapTrigger trigger = TrapTrigger.None, int triggerValue = 0, ReactCondition condition = ReactCondition.Any)
+            TrapTrigger trigger = TrapTrigger.None, int triggerValue = 0, ReactCondition condition = ReactCondition.Any,
+            TargetCondition targetCondition = TargetCondition.None)
         {
             InstanceId = instanceId;
             CardId = cardId;
             Type = type;
             Target = target;
+            TargetCondition = targetCondition;
             Effects = effects ?? Array.Empty<CardEffect>();
             ReactsTo = reactsTo ?? Array.Empty<CardType>();
             RevealSeconds = revealSeconds;

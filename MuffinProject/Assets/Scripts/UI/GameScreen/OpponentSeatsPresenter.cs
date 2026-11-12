@@ -18,7 +18,8 @@ namespace Chapchu.UI.GameScreen
     /// 퇴장은 RoomEvents.OnPlayerLeft 로 받아 좌석을 숨긴다 (02-player.md 6절) — 게임 이벤트가 아니라 큐 밖.
     /// 늦게 열렸을 때는 Start 에서 각 Player 의 CustomProperties 와 방의 턴 주인을 한 번 읽는다 (09-network.md 6.1).
     /// 대상 선택(10-ui.md 6절)도 여기서 — 좌석에 빨간 고리 · 테를 켜고 안내 바(TargetAskView)를 띄운 뒤 탭을 모아 actorNumber 로 돌려준다.
-    /// 취소 = 안내 바의 「취소」 버튼(모바일 포함) 또는 PC 우클릭.
+    /// 나를 포함하는 카드(OneAny)는 내 패널도 빨간 테 + 탭을 받는다.
+    /// 취소 = 안내 바의 「취소」 버튼(모바일 포함) · PC 우클릭 · Esc · 내 턴이 끝남. 제한 시간은 없다 (턴 30초가 유일한 타이머).
     /// </summary>
     public class OpponentSeatsPresenter : MonoBehaviour
     {
@@ -28,12 +29,12 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private OpponentSeatView[] seats = new OpponentSeatView[SeatCount];
         [Tooltip("좌석마다의 함정 칸 3개 (3D 층) — seats 와 같은 순서. 빈 좌석의 칸은 숨긴다.")]
         [SerializeField] private TrapSlotsView[] trapSlots = new TrapSlotsView[SeatCount];
-        [Tooltip("대상 선택 안내 바 — 「카드 · 누구에게 쓸까요?」 + 남은 초 + 취소.")]
+        [Tooltip("대상 선택 안내 바 — 「카드 · 누구에게 쓸까요?」 + 취소.")]
         [SerializeField] private TargetAskView targetAsk;
+        [Tooltip("내 패널 — 나를 포함하는 카드(OneAny)의 대상 선택 때 나를 고르는 자리.")]
+        [SerializeField] private MyPanelView myPanel;
         [Tooltip("상대가 뽑은 뒷면을 꺼낸 뒤 다음 일로 넘어가기까지 초. 내 손패(HandPresenter.dealInterval)와 같게 — 첫 분배 때 한 장씩 날아온다.")]
         [SerializeField] private float dealInterval = 0.15f;
-        [Tooltip("대상 선택 제한 초. 지나면 취소 (10-ui.md 6절 — 제안값 5).")]
-        [SerializeField] private float targetSelectTimeout = 5f;
 
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
         private readonly Dictionary<int, TrapSlotsView> _trapsOf = new Dictionary<int, TrapSlotsView>(); // actorNumber → 함정 칸
@@ -53,12 +54,15 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(trapSlots)} 는 {SeatCount}개가 모두 연결돼야 합니다.", this);
             if (targetAsk == null)
                 Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(targetAsk)} 참조가 비어 있습니다.", this);
+            if (myPanel == null)
+                Debug.LogError($"[{nameof(OpponentSeatsPresenter)}] {nameof(myPanel)} 참조가 비어 있습니다.", this);
         }
 
         private void OnEnable()
         {
             RoomEvents.OnPlayerLeft += HandlePlayerLeft;
             targetAsk.CancelClicked += HandleCancelClicked;
+            myPanel.OnClicked += HandleMeClicked;
             foreach (OpponentSeatView seat in seats)
                 seat.OnClicked += HandleSeatClicked;
         }
@@ -67,6 +71,7 @@ namespace Chapchu.UI.GameScreen
         {
             RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
             targetAsk.CancelClicked -= HandleCancelClicked;
+            myPanel.OnClicked -= HandleMeClicked;
             foreach (OpponentSeatView seat in seats)
                 seat.OnClicked -= HandleSeatClicked;
         }
@@ -74,6 +79,7 @@ namespace Chapchu.UI.GameScreen
         private void Start()
         {
             targetAsk.Hide();
+            myPanel.SetTargetable(false);
             foreach (OpponentSeatView seat in seats)
                 seat.gameObject.SetActive(false);
             foreach (TrapSlotsView slots in trapSlots)
@@ -192,11 +198,14 @@ namespace Chapchu.UI.GameScreen
                 seat.SetChapchu(isChapchu);
         }
 
-        /// <summary>턴 주인의 좌석에만 노란 머리 띠 · 발밑 타원. 내 턴이면 모두 끈다.</summary>
+        /// <summary>턴 주인의 좌석에만 노란 머리 띠 · 발밑 타원. 내 턴이면 모두 끈다. 대상을 고르는 중에 내 턴이 끝나면 선택을 취소한다 (10-ui.md 6절).</summary>
         public void ShowTurn(int turnActorNumber)
         {
             foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
                 pair.Value.SetTurn(pair.Key == turnActorNumber);
+
+            if (_selecting && PhotonNetwork.LocalPlayer != null && turnActorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
+                _selectCancelled = true;
         }
 
         /// <summary>이 화면 좌표에 앉은 상대의 actorNumber — 끄는 카드를 상대 위에 놓았는지 볼 때 (10-ui.md 4절). 없으면 0.</summary>
@@ -221,10 +230,11 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 상대 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 안내 바에 카드 이름 · 남은 초를 띄우고, 앉은 상대 전부에 빨간 고리 · 테 + 탭. 고른 좌석은 강조를 꺼서 같은 사람을 두 번 못 고른다.
-        /// 다 고르면 actorNumber 배열, 취소 · 제한 시간이면 null 을 done 으로 돌려준다. 호출한 코루틴은 yield return 으로 끝까지 기다린다.
+        /// 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 안내 바에 카드 이름을 띄우고, 앉은 상대 전부(includeMe 면 내 패널도)에 빨간 고리 · 테 + 탭.
+        /// 고른 자리는 강조를 꺼서 같은 사람을 두 번 못 고른다. 대상 후보 조건은 보지 않는다 — 맞지 않으면 방장이 거절한다 (04-card.md 11절).
+        /// 다 고르면 actorNumber 배열, 취소면 null 을 done 으로 돌려준다. 호출한 코루틴은 yield return 으로 끝까지 기다린다.
         /// </summary>
-        public IEnumerator SelectTargetsRoutine(string cardName, int count, Action<int[]> done)
+        public IEnumerator SelectTargetsRoutine(string cardName, int count, bool includeMe, Action<int[]> done)
         {
             if (_selecting)
             {
@@ -239,35 +249,36 @@ namespace Chapchu.UI.GameScreen
             _picked.Clear();
             foreach (OpponentSeatView seat in _seatOf.Values)
                 seat.SetTargetable(true);
+            myPanel.SetTargetable(includeMe);
             targetAsk.Show(cardName);
 
-            float elapsed = 0f;
-            int shownSeconds = -1;
-            while (elapsed < targetSelectTimeout && _picked.Count < count && !_selectCancelled)
+            while (_picked.Count < count && !_selectCancelled)
             {
-                if (Input.GetMouseButtonDown(1)) // PC 우클릭 취소 (10-ui.md 6절). 모바일은 안내 바의 취소 버튼
+                if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)) // PC 우클릭 · Esc 취소 (10-ui.md 6절). 모바일은 안내 바의 취소 버튼
                     _selectCancelled = true;
-
-                int seconds = Mathf.CeilToInt(targetSelectTimeout - elapsed);
-                if (seconds != shownSeconds)
-                {
-                    shownSeconds = seconds;
-                    targetAsk.SetRemainingSeconds(seconds);
-                }
-
-                elapsed += Time.deltaTime;
                 yield return null;
             }
 
             targetAsk.Hide();
             foreach (OpponentSeatView seat in _seatOf.Values)
                 seat.SetTargetable(false);
+            myPanel.SetTargetable(false);
             _selecting = false;
 
             bool complete = _picked.Count == count;
             if (!complete)
-                Debug.Log($"[{nameof(OpponentSeatsPresenter)}] 대상 선택 {(_selectCancelled ? "취소" : "시간 초과")} — {_picked.Count}/{count}명", this);
+                Debug.Log($"[{nameof(OpponentSeatsPresenter)}] 대상 선택 취소 — {_picked.Count}/{count}명", this);
             done(complete ? _picked.ToArray() : null);
+        }
+
+        // 내 패널 탭 — includeMe 일 때만 탭을 받는다 (MyPanelView.SetTargetable).
+        private void HandleMeClicked()
+        {
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
+            if (!_selecting || _picked.Contains(me)) return;
+
+            _picked.Add(me);
+            myPanel.SetTargetable(false);
         }
 
         private void HandleSeatClicked(OpponentSeatView seat)

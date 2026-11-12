@@ -374,8 +374,11 @@ namespace Chapchu.Game.Bots
                 if (card.Type != CardType.Action || !card.Effects.Any(e => e.BotRole == role))
                     continue;
 
-                if (!TryTargets(card, me, opponents, role, preferredTarget, out int[] targets))
+                if (!TryTargets(bot, card, me, opponents, role, preferredTarget, out int[] targets))
                     continue;
+
+                if (!card.Effects.Where(e => e.BotRole == role).All(e => e.BotWants(_server, bot, targets)))
+                    continue; // 이 묶음의 효과가 지금은 쓸 만하지 않다 (18-bot.md 7-3 조건 — 예: 111 은 대상 HP 가 내 HP 보다 높을 때만)
 
                 int instanceId = card.InstanceId;
                 string to = targets.Length > 0 ? " → " + string.Join(", ", targets.Select(t => $"P{t}")) : "";
@@ -388,15 +391,38 @@ namespace Chapchu.Game.Bots
         }
 
         // 카드 대상 타입에 맞는 요청 대상. 쓸 수 없으면 false (TwoOthers 는 1단계에서 쓰지 않는다, 7-2).
-        private bool TryTargets(Card card, PlayerState me, int[] opponents, BotRole role, int preferredTarget, out int[] targets)
+        // 고르는 타입은 대상 후보 조건(11-card-list 1-2)에 맞는 사람만 — 방장 검증과 같은 기준 (7-1 「쓸 수 있는」).
+        private bool TryTargets(int bot, Card card, PlayerState me, int[] opponents, BotRole role, int preferredTarget, out int[] targets)
         {
             targets = Array.Empty<int>();
             switch (card.Target)
             {
                 case TargetType.OneOther:
-                    if (opponents.Length == 0)
+                    int[] pickable = opponents.Where(a => _server.MeetsTargetCondition(a, card.TargetCondition)).ToArray();
+                    if (pickable.Length == 0)
                         return false;
-                    targets = new[] { preferredTarget > 0 ? preferredTarget : opponents[0] };
+                    if (role == BotRole.Heal)
+                    {
+                        // 상대를 거쳐 내 HP 를 올리는 카드(111 HP 맞바꾸기) — HP 가 가장 높은 상대 (18-bot.md 7-2, 제안)
+                        targets = new[] { pickable.OrderByDescending(a => _server.StateOf(a).Hp).First() };
+                        return true;
+                    }
+                    targets = new[] { pickable.Contains(preferredTarget) ? preferredTarget : pickable[0] };
+                    return true;
+
+                case TargetType.OneAny:
+                    // 나를 포함한 1명 — 회복(7-1 #4 는 내 HP 기준)은 나에게. 그 밖의 쓰임은 7-2 순서의 상대에게
+                    if (role == BotRole.Heal)
+                    {
+                        if (!_server.MeetsTargetCondition(bot, card.TargetCondition))
+                            return false;
+                        targets = new[] { bot };
+                        return true;
+                    }
+                    int[] others = opponents.Where(a => _server.MeetsTargetCondition(a, card.TargetCondition)).ToArray();
+                    if (others.Length == 0)
+                        return false;
+                    targets = new[] { others.Contains(preferredTarget) ? preferredTarget : others[0] };
                     return true;
 
                 case TargetType.AllOthers:
@@ -415,6 +441,10 @@ namespace Chapchu.Game.Bots
 
                 case TargetType.ChapchuOthers:
                     return opponents.Any(a => _server.StateOf(a).IsChapchu);
+
+                case TargetType.MostHand:
+                    // 손패 최다 1명이 대상 — 상대 중 누가 나(낸 뒤 장수)보다 많을 때만. 동률이면 내가 대상이 될 수 있어 쓰지 않는다 (18-bot.md 7-3, 제안)
+                    return opponents.Any(a => _server.StateOf(a).Hand.Count > me.Hand.Count - 1);
 
                 case TargetType.MoreHandThanMe:
                     return opponents.Any(a => _server.StateOf(a).Hand.Count > me.Hand.Count - 1);

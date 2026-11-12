@@ -17,7 +17,7 @@ namespace Chapchu.UI.GameScreen
     /// 화면 위 턴 순서 띠 (10-ui.md 2-1 HUD v2 「턴 순서 띠」) — 방향 화살표 · 플레이어 칩(목걸이 색 점 + 이름, 발자국으로 구분) · 지금 차례 칩.
     /// 남은 초는 여기 없다 — 지금 턴인 캐릭터 옆 스톱워치(TurnTimerView, 2026-11-08).
     /// 칩은 템플릿을 복제해 만든다 (구조: 루트 → Chapchu · Border · Fill · Dot/Fill · Name). 값을 받아 그리기만 하고, 누가 몇 번째인지는 프레젠터가 정한다.
-    /// 턴 방향은 한 방향뿐이다 (03-turn.md 에 방향 개념이 없어 「반대로」는 두지 않는다).
+    /// 방향 화살표는 진행 방향을 보인다 — 역방향이면 좌우를 뒤집는다 (03-turn.md 6절 #4 · 10-ui.md 2-1 「턴 띠」, 시안 .dir.rev).
     /// </summary>
     public class TurnStripView : MonoBehaviour
     {
@@ -31,6 +31,9 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("칩 사이 발자국 — 비활성으로 둔다.")]
         [SerializeField] private RectTransform separatorTemplate;
 
+        [Tooltip("진행 방향 화살표 — 역방향이면 좌우를 뒤집는다.")]
+        [SerializeField] private RectTransform directionIcon;
+
         [Header("지금 차례")]
         [SerializeField] private Image nowChip;
         [SerializeField] private TMP_Text nowText;
@@ -43,8 +46,16 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (rail == null || chipTemplate == null || separatorTemplate == null || nowChip == null || nowText == null)
+            if (rail == null || chipTemplate == null || separatorTemplate == null || nowChip == null || nowText == null || directionIcon == null)
                 Debug.LogError($"[{nameof(TurnStripView)}] 참조 중 비어 있는 것이 있습니다.", this);
+        }
+
+        /// <summary>진행 방향 — 역방향이면 화살표 좌우를 뒤집는다.</summary>
+        public void SetReversed(bool reversed)
+        {
+            Vector3 scale = directionIcon.localScale;
+            scale.x = Mathf.Abs(scale.x) * (reversed ? -1f : 1f);
+            directionIcon.localScale = scale;
         }
 
         /// <summary>칩을 순서대로 다시 만든다 — 이름 · 목걸이 색.</summary>

@@ -35,6 +35,8 @@ namespace Chapchu.Network.Events
         public static event Action<int, int, int, int> OnTrapMoved;          // from, to, fromTrapCount, toTrapCount — 함정 빼앗기 (종류는 두 사람만)
         public static event Action<int> OnTurnSkipMarked;                    // actorNumber — 다음 턴 스킵이 걸림
         public static event Action<int> OnTurnSkipped;                       // actorNumber — 턴이 스킵됨
+        public static event Action<int, int, int, int, int, int> OnDiscardTaken; // actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId(비면 0) — 버림 더미 맨 위를 손패로 (109)
+        public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (145)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
         public static event Action<int, GameEndReason, double> OnGameEnded;  // winner(무승부 -1), reason, returnAt(방으로 이동하는 서버 시각)
@@ -75,6 +77,8 @@ namespace Chapchu.Network.Events
         public static void RaiseTrapMoved(int from, int to, int fromTrapCount, int toTrapCount) => OnTrapMoved?.Invoke(from, to, fromTrapCount, toTrapCount);
         public static void RaiseTurnSkipMarked(int actorNumber) => OnTurnSkipMarked?.Invoke(actorNumber);
         public static void RaiseTurnSkipped(int actorNumber) => OnTurnSkipped?.Invoke(actorNumber);
+        public static void RaiseDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId) => OnDiscardTaken?.Invoke(actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId);
+        public static void RaiseTurnDirectionChanged(bool reversed, int extraTurn) => OnTurnDirectionChanged?.Invoke(reversed, extraTurn);
         public static void RaiseCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount) => OnCardReturnedToHand?.Invoke(actorNumber, cardInstanceId, cardId, handCount);
         public static void RaiseDeathAvoided(int actorNumber, int hp) => OnDeathAvoided?.Invoke(actorNumber, hp);
         public static void RaiseMyTrapRemoved(int cardInstanceId) => OnMyTrapRemoved?.Invoke(cardInstanceId);

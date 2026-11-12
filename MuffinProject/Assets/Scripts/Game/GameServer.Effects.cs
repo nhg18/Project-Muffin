@@ -139,6 +139,70 @@ namespace Chapchu.Game
             RecordAfter(AfterKind.Stolen, from, to, cards.Count);
         }
 
+        /// <summary>
+        /// 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (113 기억 삭제). 교환 · 재분배라 「버려진 후」 · 「여러 장 뽑은 후」 기록을 남기지 않는다
+        /// — 훔침 · 버림에 반응하는 카드의 대상이 아니다 (11-card-list 113).
+        /// </summary>
+        internal void RedealHand(int actor)
+        {
+            if (!IsInGame(actor))
+                return;
+
+            DiscardCards(actor, _players[actor].Hand.ToList(), -1);
+            DrawCards(actor, InitialHandCount, null);
+        }
+
+        /// <summary>
+        /// 처리되는 시점의 버림 더미 맨 위 1장을 손패로 (109 아 맞다!). 처리 중인 이 카드 자신은 이미 더미에 있지만 가져올 수 없다 — 그 아래 장.
+        /// 가져올 카드가 없으면 불발.
+        /// </summary>
+        internal void TakeDiscardTop(int actor, ChainEntry entry)
+        {
+            if (!IsInGame(actor))
+                return;
+
+            int index = _discardPile.Count - 1;
+            if (index >= 0 && _discardPile[index] == entry.Card)
+                index--;
+            if (index < 0)
+                return;
+
+            Card card = _discardPile[index];
+            _discardPile.RemoveAt(index);
+            _players[actor].Hand.Add(card);
+            int top = _discardPile.Count > 0 ? _discardPile[_discardPile.Count - 1].CardId : 0;
+            _events.Add(new DiscardTaken(actor, card.InstanceId, card.CardId, _players[actor].Hand.Count, _discardPile.Count, top));
+            OnHandChanged(actor);
+        }
+
+        /// <summary>
+        /// 대상 손패에서 나머지 모두가 1장씩 가져간다 (118 무야호). 받는 순서는 쓴 사람부터 턴 진행 방향 — 카드가 떨어지면 거기서 끝 (11-card-list 118).
+        /// 가져가기는 훔침이라 「훔쳐진 후」 기록이 남는다.
+        /// </summary>
+        internal void ShareFromTarget(int target, ChainEntry entry)
+        {
+            foreach (int receiver in TurnOrderFrom(entry.User).Where(a => a != target && IsInGame(a)).ToList())
+            {
+                if (_players[target].Hand.Count == 0)
+                    break;
+                StealRandom(target, receiver, 1);
+            }
+        }
+
+        /// <summary>두 사람의 HP 를 서로 바꾼다 (111 운명 뒤집기). HP 설정이라 피해 · 회복이 아니다 — 감소 · 반사 · 함정이 걸리지 않는다.</summary>
+        internal void SwapHp(int a, int b)
+        {
+            if (a == b || !IsInGame(a) || !IsInGame(b))
+                return;
+
+            int hpA = _players[a].Hp, hpB = _players[b].Hp;
+            SetHp(a, hpB);
+            SetHp(b, hpA);
+        }
+
+        /// <summary>min ~ max 사이 무작위 정수 (둘 다 포함) — 효과가 낼 때 정하는 값 (116).</summary>
+        internal int RollRange(int min, int max) => _random.Next(min, max + 1);
+
         /// <summary>두 사람의 손패 전체를 바꾼다 (A11 · A18).</summary>
         internal void SwapHands(int a, int b)
         {

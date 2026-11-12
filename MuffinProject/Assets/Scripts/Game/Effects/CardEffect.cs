@@ -22,6 +22,12 @@ namespace Chapchu.Game.Effects
         /// <summary>방장의 규칙이 체인을 처리할 때 부른다. entry = 체인에 오른 이 카드 (쓴 사람 · 확정된 대상).</summary>
         internal abstract void Apply(GameServer server, ChainEntry entry);
 
+        /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 116 뽑을 장수). 기본은 없음.</summary>
+        internal virtual void Prepare(GameServer server, ChainEntry entry) { }
+
+        /// <summary>봇이 이 카드를 이 대상에게 지금 쓸 만한가 (18-bot.md 7-3 조건). 기본은 언제나.</summary>
+        internal virtual bool BotWants(GameServer server, int bot, int[] targets) => true;
+
         /// <summary>봇이 이 효과를 어떤 묶음으로 보는가 (18-bot.md 7-3). 새 효과는 자기 쓰임을 여기서 정한다.</summary>
         internal virtual Bots.BotRole BotRole => Bots.BotRole.None;
 

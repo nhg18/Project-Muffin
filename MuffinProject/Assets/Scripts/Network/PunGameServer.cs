@@ -31,7 +31,7 @@ namespace Chapchu.Network
     [RequireComponent(typeof(PhotonView))]
     public class PunGameServer : MonoBehaviourPunCallbacks
     {
-        [Tooltip("이번 게임의 덱 구성 (05-deck.md 8절). 덱 구성은 미정이라 임시 에셋(Deck_Default)을 쓴다.")]
+        [Tooltip("이번 게임의 덱 구성 (05-deck.md 8절). 덱 구성은 미정 — 지금은 카드 묶음 덱(Deck_Main, 11-card-list 0절)을 쓴다.")]
         [SerializeField] private DeckData deck;
 
         [Tooltip("게임이 끝나고 결과를 보여 주는 시간(초). 지나면 방장이 방을 다시 열고 전원을 방 씬으로 옮긴다 (08-room.md 4절).")]
@@ -75,8 +75,8 @@ namespace Chapchu.Network
             foreach (Player player in PhotonNetwork.PlayerList)
                 player.SetCustomProperties(reset);
 
-            // 버림 더미는 빈 채로 시작한다 — 값이 null 이면 Photon 이 키를 지운다
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null };
+            // 버림 더미는 빈 채로 · 턴 방향은 정방향으로 시작한다 — 값이 null 이면 Photon 이 키를 지운다
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null };
             foreach (int bot in bots)
             {
                 foreach (DictionaryEntry entry in reset)
@@ -366,6 +366,19 @@ namespace Chapchu.Network
                         PlayerPropsOf(playerProps, back.Actor)[PlayerProps.HandCount] = back.HandCount;
                         break;
 
+                    case DiscardTaken taken:
+                        // 버림 더미는 공개라 가져간 카드도 전원에게 (05-deck.md 7절). 맨 위가 비면 키를 지운다
+                        Broadcast(nameof(RPC_OnDiscardTaken), taken.Actor, taken.CardInstanceId, taken.CardId, taken.HandCount, taken.DiscardCount, taken.TopCardId);
+                        PlayerPropsOf(playerProps, taken.Actor)[PlayerProps.HandCount] = taken.HandCount;
+                        roomProps[RoomProps.DiscardCount] = taken.DiscardCount;
+                        roomProps[RoomProps.DiscardTop] = taken.TopCardId > 0 ? (object)taken.TopCardId : null;
+                        break;
+
+                    case TurnDirectionChanged direction:
+                        Broadcast(nameof(RPC_OnTurnDirectionChanged), direction.Reversed, direction.ExtraTurn);
+                        roomProps[RoomProps.TurnDirection] = direction.Reversed ? (object)true : null;
+                        break;
+
                     case DeathAvoided avoided:
                         Broadcast(nameof(RPC_OnDeathAvoided), avoided.Actor, avoided.Hp);
                         PlayerPropsOf(playerProps, avoided.Actor)[PlayerProps.LifeState] = (byte)LifeState.Alive;
@@ -431,7 +444,7 @@ namespace Chapchu.Network
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
             // 찹츄 · 함정 장수도 같은 이유로 여기서 지운다 — 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다. 봇은 방 속성 키 (18-bot.md 9절)
             var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0 };
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null };
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null };
             foreach (int bot in BotRoster.Actors)
             {
                 foreach (DictionaryEntry entry in playerReset)
@@ -702,6 +715,20 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseTurnSkipped(actorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_OnDiscardTaken(int seq, int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseDiscardTaken(actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId);
+        }
+
+        [PunRPC]
+        private void RPC_OnTurnDirectionChanged(int seq, bool reversed, int extraTurn, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseTurnDirectionChanged(reversed, extraTurn);
         }
 
         [PunRPC]

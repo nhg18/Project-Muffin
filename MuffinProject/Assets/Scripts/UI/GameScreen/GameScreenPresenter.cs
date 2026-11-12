@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Chapchu.Cards;
 using Chapchu.Network.Events;
 using Photon.Pun;
 using UnityEngine;
@@ -29,6 +30,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
         [SerializeField] private MyTrapsPresenter myTraps;
+        [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 113).")]
+        [SerializeField] private ScreenFlashView screenFlash;
+        [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
+        [SerializeField] private DeckData cardDeck;
 
         // 단계 하나 = 영역에 값을 넣고, 기다릴 연출이 있으면 그 코루틴을 돌려준다 (없으면 null).
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
@@ -44,7 +49,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || chainCards == null || reactionTimer == null || myTraps == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -72,6 +77,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardResolved += HandleCardResolved;
             GameEvents.OnCardNegated += HandleCardNegated;
             GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken += HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
@@ -103,6 +110,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardResolved -= HandleCardResolved;
             GameEvents.OnCardNegated -= HandleCardNegated;
             GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken -= HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
@@ -392,8 +401,15 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 효과 적용 · 무효화 — 어느 쪽이든 카드는 버림 더미로 간다 (04-card.md 4절). 4 · 5 단계 · 도장 연출이 생기면 버림 더미로 보내기 전에 넣는다 (10-ui.md 5-1).
+        // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (113).
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
-            => Enqueue(() => ChainCardToDiscardRoutine(cardInstanceId, cardId, discardCount));
+            => Enqueue(() =>
+            {
+                CardData data = cardDeck.GetCard(cardId);
+                if (data != null)
+                    screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
+                return ChainCardToDiscardRoutine(cardInstanceId, cardId, discardCount);
+            });
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Enqueue(() => ChainCardToDiscardRoutine(cardInstanceId, cardId, discardCount));
@@ -404,6 +420,34 @@ namespace Chapchu.UI.GameScreen
             LeaveChain();
             yield return chainCards.DiscardRoutine(cardInstanceId);
             discardPile.Show(cardId, discardCount);
+        }
+
+        // 버림 더미 맨 위 카드를 손패로 (109 아 맞다!) — 내 것은 더미 자리에서 꺼내 손패에 붙이고, 남의 것은 장수만. 더미는 그 뒤의 맨 위 · 장수로.
+        private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
+        {
+            bool isMe = IsMe(actorNumber);
+
+            Enqueue(() =>
+            {
+                if (isMe)
+                    hand.TakeFromDiscard(cardInstanceId, cardId, discardPile.TopPosition);
+                ShowHandCount(actorNumber, handCount);
+                if (topCardId > 0)
+                    discardPile.Show(topCardId, discardCount);
+                else
+                    discardPile.Clear();
+                return null;
+            });
+        }
+
+        // 턴 진행 방향 (145 뒤로 돌아) — 턴 띠 화살표.
+        private void HandleTurnDirectionChanged(bool reversed, int extraTurn)
+        {
+            Enqueue(() =>
+            {
+                turnStrip.ShowDirection(reversed);
+                return null;
+            });
         }
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.

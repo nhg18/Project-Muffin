@@ -481,4 +481,38 @@
             Code = code;
         }
     }
+
+    /// <summary>버림 더미 맨 위 카드를 손패로 가져왔다 (109 아 맞다! — 05-deck.md 7절). 버림 더미는 공개라 카드도 전원에게. TopCardId = 가져간 뒤 맨 위 (비면 0).</summary>
+    public sealed class DiscardTaken : GameEvent
+    {
+        public int Actor { get; }
+        public int CardInstanceId { get; }
+        public int CardId { get; }
+        public int HandCount { get; }
+        public int DiscardCount { get; }
+        public int TopCardId { get; }
+
+        public DiscardTaken(int actor, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
+        {
+            Actor = actor;
+            CardInstanceId = cardInstanceId;
+            CardId = cardId;
+            HandCount = handCount;
+            DiscardCount = discardCount;
+            TopCardId = topCardId;
+        }
+    }
+
+    /// <summary>턴 진행 방향이 바뀌었다 (145 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
+    public sealed class TurnDirectionChanged : GameEvent
+    {
+        public bool Reversed { get; }
+        public int ExtraTurn { get; }
+
+        public TurnDirectionChanged(bool reversed, int extraTurn)
+        {
+            Reversed = reversed;
+            ExtraTurn = extraTurn;
+        }
+    }
 }

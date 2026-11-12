@@ -223,6 +223,16 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
+        /// <summary>버림 더미에서 가져온 카드 (109 아 맞다!) — 더미 자리에서 꺼내 뽑은 카드처럼 크게 보여 준 뒤 손패 끝에 붙인다.</summary>
+        public void TakeFromDiscard(int cardInstanceId, int cardId, Vector3 from)
+        {
+            CardData data = deck.GetCard(cardId);
+            if (data == null)
+                Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+            else
+                AddAndShow(cardInstanceId, data, from);
+        }
+
         /// <summary>내가 뽑은 카드를 덱 자리에서 꺼내 크게 보여 준 뒤 손패 끝에 붙인다. 연출 큐는 꺼내는 간격만 기다린다 — 보여 주는 동안 다음 일은 이어진다.</summary>
         public IEnumerator DrawRoutine(int cardInstanceId, int cardId)
         {
@@ -434,10 +444,17 @@ namespace Chapchu.UI.GameScreen
                     _view.ReturnCard(card);
                     break;
                 case TargetType.OneOther:
-                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1));
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, false));
                     break;
                 case TargetType.TwoOthers:
-                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 2));
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 2, false));
+                    break;
+                case TargetType.OneAny when seatActor != 0: // 상대 위에 놓았다 — 그 상대로
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
+                case TargetType.OneAny: // 나를 포함한 1명 — 내 패널도 고를 수 있다
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, true));
                     break;
                 default:
                     RequestPlay(card, Array.Empty<int>());
@@ -448,7 +465,7 @@ namespace Chapchu.UI.GameScreen
 
         // 대상 선택 동안 손패를 잠그고, 카드는 손패에서 빼 테이블 가운데에 가림판 위로 밝게 둔다. 안내 바에 카드 이름을 보여 준다.
         // 고르면 요청, 취소 · 시간 초과면 요청하지 않는다. 끝나면 풀고 카드를 손패 자리로 돌린다 (10-ui.md 6절).
-        private IEnumerator PlayWithTargetsRoutine(CardView card, string cardName, int targetCount)
+        private IEnumerator PlayWithTargetsRoutine(CardView card, string cardName, int targetCount, bool includeMe)
         {
             _view.SetLocked(true);
             _view.Hold(card);
@@ -456,7 +473,7 @@ namespace Chapchu.UI.GameScreen
             ShowAtTargetSpot(card);
 
             int[] targets = null;
-            yield return seats.SelectTargetsRoutine(cardName, targetCount, picked => targets = picked);
+            yield return seats.SelectTargetsRoutine(cardName, targetCount, includeMe, picked => targets = picked);
 
             if (card == null) // 고르는 사이 손패에서 빠져 지워졌다 (강제 버림 · 사망)
             {

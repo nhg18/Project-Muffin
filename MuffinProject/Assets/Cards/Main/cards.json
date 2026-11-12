@@ -1,0 +1,76 @@
+{
+  "cards": [
+    {
+      "id": 101, "name": "물어뜯기", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "대상에게 20 피해를 준다",
+      "art": "Assets/Sprites/Cards/Images/1.jpg",
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=20" } ]
+    },
+    {
+      "id": 102, "name": "낚아채기", "type": "Action", "target": "OneOther", "targetCondition": "HasHand", "grade": "Fine", "count": 3,
+      "text": "대상 손패에서 무작위 1장을 빼앗는다",
+      "art": "",
+      "effects": [ { "type": "StealEffect", "args": "count=1" } ]
+    },
+    {
+      "id": 106, "name": "핥아주기", "type": "Action", "target": "OneAny", "targetCondition": "HpBelowMax", "grade": "Normal", "count": 2,
+      "text": "고른 1명의 HP를 20 회복한다",
+      "art": "",
+      "effects": [ { "type": "HealEffect", "args": "subject=Target, amount=20" } ]
+    },
+    {
+      "id": 114, "name": "군침이 싹 도노", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "나를 뺀 모두에게서 1장씩 빼앗는다",
+      "art": "",
+      "effects": [ { "type": "StealEffect", "args": "count=1" } ]
+    },
+    {
+      "id": 117, "name": "지옥참마도", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "나를 뺀 모두에게 40 피해를 준다",
+      "art": "Assets/Sprites/Cards/Art/117.jpg",
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=40" } ]
+    },
+    {
+      "id": 104, "name": "파헤치기", "type": "Action", "target": "OneOther", "targetCondition": "HasTrap", "grade": "Normal", "count": 2,
+      "text": "대상 함정 무작위 1장을 파괴한다",
+      "art": "",
+      "effects": [ { "type": "DestroyTrapEffect", "args": "count=1" } ]
+    },
+    {
+      "id": 109, "name": "아 맞다!", "type": "Action", "target": "Self", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "버림 더미 맨 위 1장을 가져온다",
+      "art": "",
+      "effects": [ { "type": "TakeDiscardTopEffect", "args": "" } ]
+    },
+    {
+      "id": 111, "name": "운명 뒤집기", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 2,
+      "text": "대상과 HP를 맞바꾼다",
+      "art": "Assets/Sprites/Cards/Art/111.jpg",
+      "effects": [ { "type": "SwapHpEffect", "args": "" } ]
+    },
+    {
+      "id": 113, "name": "기억 삭제", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Rare", "count": 2,
+      "text": "나를 뺀 모두 손패를 버리고 5장씩 새로 뽑는다",
+      "art": "Assets/Sprites/Cards/Art/113.jpg",
+      "effects": [ { "type": "RedealHandEffect", "args": "subject=Target" } ]
+    },
+    {
+      "id": 116, "name": "상상도 못한 정체", "type": "Action", "target": "Self", "targetCondition": "None", "grade": "Fine", "count": 3,
+      "text": "무작위로 1~10장을 뽑는다",
+      "art": "Assets/Sprites/Cards/Art/116.jpg",
+      "effects": [ { "type": "DrawEffect", "args": "subject=Self, count=1, randomMax=10" } ]
+    },
+    {
+      "id": 118, "name": "무야호", "type": "Action", "target": "MostHand", "targetCondition": "None", "grade": "Rare", "count": 3,
+      "text": "손패가 가장 많은 사람이 나머지 모두에게 1장씩 빼앗긴다",
+      "art": "Assets/Sprites/Cards/Art/118.jpg",
+      "effects": [ { "type": "ShareFromTargetEffect", "args": "" } ]
+    },
+    {
+      "id": 145, "name": "뒤로 돌아", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Normal", "count": 2,
+      "text": "턴 진행 방향을 반대로 바꾼다",
+      "art": "",
+      "effects": [ { "type": "ReverseTurnOrderEffect", "args": "" } ]
+    }
+  ]
+}

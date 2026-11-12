@@ -58,6 +58,9 @@ namespace Chapchu.UI.GameScreen
                 Show(discardedCardIds[discardedCardIds.Length - 1], count);
         }
 
+        /// <summary>맨 위 카드 자리 (월드 좌표) — 더미에서 손패로 가져오는 카드가 여기서 나온다 (109).</summary>
+        public Vector3 TopPosition => _view.TopAnchor.position;
+
         /// <summary>더미를 비운다 — 덱을 다시 채웠다 (05-deck.md 5절).</summary>
         public void Clear() => _view.Set(null, 0);
     }

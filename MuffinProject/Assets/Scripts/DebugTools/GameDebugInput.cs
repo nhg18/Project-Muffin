@@ -64,6 +64,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCardsMoved += HandleHandCardsMoved;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken += HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
@@ -99,6 +101,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCardsMoved -= HandleHandCardsMoved;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken -= HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
@@ -336,6 +340,20 @@ namespace Chapchu.DebugTools
             }
             Log($"P{actorNumber} 카드 {cardId} 손패로 반환");
         }
+
+        private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
+        {
+            _handCounts[actorNumber] = handCount;
+            if (actorNumber == Me)
+            {
+                _myHandInstances.Add(cardInstanceId);
+                _myHand.Add(cardId);
+            }
+            Log($"P{actorNumber} 버림 더미에서 카드 {cardId} 가져옴 — 버림 {discardCount}장");
+        }
+
+        private void HandleTurnDirectionChanged(bool reversed, int extraTurn)
+            => Log($"턴 방향 {(reversed ? "역방향" : "정방향")}{(extraTurn >= 0 ? $" — P{extraTurn} 다시 턴" : "")}");
 
         private void HandleTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
         {

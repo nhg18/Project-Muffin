@@ -29,6 +29,9 @@ namespace Chapchu.Game
         public readonly Dictionary<int, int> SurviveAt = new Dictionary<int, int>();       // C11 — 받는 사람 → 남길 HP
         public readonly HashSet<int> ProtectTraps = new HashSet<int>();                     // C12 — 함정 주인
 
+        /// <summary>낼 때 정한 값 — 효과 → 값 (116 뽑을 장수). CardEffect.Prepare 가 채운다.</summary>
+        public readonly Dictionary<Effects.CardEffect, int> Rolled = new Dictionary<Effects.CardEffect, int>();
+
         public ChainEntry(Card card, int user, int[] targets)
         {
             Card = card;

@@ -61,6 +61,8 @@ namespace Chapchu.Game
         private ChainEntry AddToChain(Card card, int user, int[] targets, bool fromTrapSlot = false)
         {
             var entry = new ChainEntry(card, user, targets);
+            foreach (CardEffect effect in card.Effects)
+                effect.Prepare(this, entry); // 낼 때 정하는 값 (116 뽑을 장수)
             _chain.Add(entry);
             if (fromTrapSlot)
                 _events.Add(new TrapActivated(user, card.InstanceId, card.CardId, targets, _players[user].Traps.Count));

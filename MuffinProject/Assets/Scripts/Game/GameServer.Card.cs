@@ -36,7 +36,7 @@ namespace Chapchu.Game
             if (card.Type != CardType.Action)
                 return Reject(requester, RejectCode.NotActionCard);
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets);
+            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, condition: card.TargetCondition);
             if (targets == null || (targets.Length == 0 && card.Target != TargetType.None))
                 return Reject(requester, RejectCode.InvalidTarget); // 대상이 필요한 카드인데 0명(찹츄 · 손패 조건) — 거절, 카드는 손패에 (04 5절 5 · 10절)
 
@@ -50,10 +50,13 @@ namespace Chapchu.Game
 
         // 대상 타입에 맞게 대상을 정한다. 자동 타입은 서버가 정하고, 고르는 타입은 요청을 검사한다. 맞지 않으면 null.
         // 대상 후보 = 게임에 남은 사람. source = 발동시킨 사람(TriggerSource) — 없으면 -1.
-        private int[] ResolveTargets(int requester, TargetType type, int[] requested, int source = -1, bool fromHand = true)
+        // condition = 고르는 타입의 대상 후보 조건 (11-card-list.md 1-2 「추가 사용 조건」) — 맞지 않는 사람을 고르면 null.
+        private int[] ResolveTargets(int requester, TargetType type, int[] requested, int source = -1, bool fromHand = true,
+            TargetCondition condition = TargetCondition.None)
         {
             int[] inGame = _turnOrder.Where(IsInGame).ToArray();
             int[] others = inGame.Where(actor => actor != requester).ToArray();
+            int[] pickable = (type == TargetType.OneAny ? inGame : others).Where(actor => MeetsTargetCondition(actor, condition)).ToArray();
 
             switch (type)
             {
@@ -61,11 +64,21 @@ namespace Chapchu.Game
                 case TargetType.Self:      return new[] { requester };
                 case TargetType.AllOthers: return others;
                 case TargetType.Everyone:  return inGame;
-                case TargetType.OneOther:  return PickOthers(requested, 1, others);
-                case TargetType.TwoOthers: return PickOthers(requested, 2, others);
+                case TargetType.OneOther:  return PickOthers(requested, 1, pickable);
+                case TargetType.TwoOthers: return PickOthers(requested, 2, pickable);
+                case TargetType.OneAny:    return PickOthers(requested, 1, pickable);
                 case TargetType.TriggerSource: return source >= 0 && others.Contains(source) ? new[] { source } : null;
                 case TargetType.ChapchuPlayers: return inGame.Where(a => _players[a].IsChapchu).ToArray();
                 case TargetType.ChapchuOthers:  return others.Where(a => _players[a].IsChapchu).ToArray();
+                case TargetType.MostHand:
+                    // 나를 포함한 생존자 중 손패 최다 1명 — 낸 카드는 뺀 장수, 동률이면 무작위 (11-card-list 118). 낼 때 정해 공개한다
+                    System.Func<int, int> handAfter = a => _players[a].Hand.Count - (a == requester && fromHand ? 1 : 0);
+                    int[] alive = inGame.Where(a => _players[a].Life == LifeState.Alive).ToArray();
+                    if (alive.Length == 0)
+                        return new int[0];
+                    int most = alive.Max(handAfter);
+                    int[] tied = alive.Where(a => handAfter(a) == most).ToArray();
+                    return new[] { tied[_random.Next(tied.Length)] };
                 case TargetType.MoreHandThanMe:
                     // 이 카드를 낸 뒤의 내 장수와 비교 — 손패에서 낸 카드면 1장 줄어든 값 (04 11절)
                     int mine = _players[requester].Hand.Count - (fromHand ? 1 : 0);
@@ -74,7 +87,20 @@ namespace Chapchu.Game
             }
         }
 
-        // 고른 대상이 정확히 count 명이고, 서로 다르고, 모두 나를 뺀 사람인지 본다.
+        /// <summary>actor 가 이 대상 후보 조건에 맞는가 (11-card-list.md 1-2). 봇 · 시험이 고르기 전에 같은 판정을 쓴다.</summary>
+        internal bool MeetsTargetCondition(int actor, TargetCondition condition)
+        {
+            PlayerState player = _players[actor];
+            switch (condition)
+            {
+                case TargetCondition.HasHand:    return player.Hand.Count > 0;
+                case TargetCondition.HpBelowMax: return player.Hp < MaxHp;
+                case TargetCondition.HasTrap:    return player.Traps.Count > 0;
+                default:                         return true;
+            }
+        }
+
+        // 고른 대상이 정확히 count 명이고, 서로 다르고, 모두 후보(others) 안의 사람인지 본다.
         private static int[] PickOthers(int[] requested, int count, int[] others)
         {
             if (requested == null || requested.Length != count)

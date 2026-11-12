@@ -6,7 +6,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (05-deck.md 2절). 덱 총 구성(카드별 매수)은 미정이라 임시 덱 에셋이 대신한다.
-        private const int InitialHandCount = 5;
+        internal const int InitialHandCount = 5;
         // 턴 뽑기(메인 행동) 장수 — 손패가 찹츄 장수 − 1 이면 1장만 뽑아 딱 맞게 한다 (05-deck.md 4절, 2026-11-11). 카드 효과 뽑기는 효과의 장수 그대로.
         public const int TurnDrawCount = 2;
 
