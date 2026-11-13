@@ -169,6 +169,7 @@ public static class RoomProps
     public const string DiscardTop   = "discardTop"; // 맨 위 카드 종류 ID. 더미가 비면 키 없음 (2026-11-09)
     public const string TurnDirection = "turnDir";
     public const string WaitCasters  = "wait";     // 「기다려」 를 건 사람들 (int[], 123). 없으면 키 없음 (2026-11-13)
+    public const string Gaepan       = "gaepan";   // 개판 오분전 [건 사람, 남은 바퀴] (int[], 121). 없으면 키 없음 (2026-11-13)
     public const string Fallout      = "fallout";  // 대소동 피폭 [n 대소동 횟수, k 지난 턴 수] (int[], 112). 없으면 키 없음 (2026-11-13)
     public const string DeckOrder    = "deck";     // 이주용 (6.1 예외, 2026-11-07)
     public const string DiscardOrder = "discard";  // 이주용
@@ -215,7 +216,7 @@ public static class RoomProps
 | 상태 | 어디서 되살리나 | 누가 보내나 | 구분 |
 | --- | --- | --- | --- |
 | 덱 순서 · 버림 더미 순서 | **Room CustomProperties** (6.1 예외) — 늘 최신으로 두므로 새 마스터는 읽기만 | (이미 있음) | 확정 (2026-11-07) |
-| 공개 값 (HP · 손패 장수 · 함정 개수 · 생존 · 찹츄 · 행동 금지 · 턴 주인 · 방향 · 기다려 · 피폭 · 덱 장수 · 처리 번호) | Player · Room CustomProperties 스냅샷 (6절) | (이미 있음) | 확정 (기존) |
+| 공개 값 (HP · 손패 장수 · 함정 개수 · 생존 · 찹츄 · 행동 금지 · 턴 주인 · 방향 · 기다려 · 개판 · 피폭 · 덱 장수 · 처리 번호) | Player · Room CustomProperties 스냅샷 (6절) | (이미 있음) | 확정 (기존) |
 | **손패 내용** | 각 클라이언트가 **자기 손패**(카드 인스턴스 ID 목록)를 새 마스터에게 다시 보낸다 | 각 클라이언트 → 새 마스터 (소유자 지정 RPC) | 확정 (2026-11-07) |
 | **함정 슬롯 내용** | 소유자가 **자기 함정**(인스턴스 ID · 슬롯 순서)을 다시 보낸다 | 소유자 → 새 마스터 | 확정 (2026-11-07) |
 | 처리 체인 · 반응 타이머 | 복원하지 않는다 — 진행 중이던 체인은 **불발**로 끝내고(카드는 버림 더미로), 턴은 지금 턴 주인의 턴 종료로 넘긴다 | 새 마스터가 판정 | 확정 (2026-11-07) |
