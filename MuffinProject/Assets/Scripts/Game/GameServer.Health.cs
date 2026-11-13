@@ -75,6 +75,7 @@ namespace Chapchu.Game
                 player.Life = LifeState.Dead;
                 int[] discarded = DiscardAll(actor);
                 _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
+                EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 123)
             }
         }
 

@@ -25,7 +25,8 @@ namespace Chapchu.Game
         ChapchuOthers,  // 나를 뺀 찹츄 상태 플레이어 전원 (자동 — T04)
         MoreHandThanMe, // 나보다 손패가 많은 모든 플레이어 — 이 카드를 낸 뒤의 내 장수와 비교 (자동 — A23)
         OneAny,         // 나를 포함한 1명 고름 (106 핥아주기, 04-card.md 11절)
-        MostHand        // 나를 포함한 생존자 중 손패가 가장 많은 1명 — 이 카드를 낸 뒤의 장수, 동률이면 무작위 (자동 — 118 무야호)
+        MostHand,       // 나를 포함한 생존자 중 손패가 가장 많은 1명 — 이 카드를 낸 뒤의 장수, 동률이면 무작위 (자동 — 118 무야호)
+        NextPlayer      // 턴 진행 방향으로 다음 차례 1명 (자동 — 120 얼음!, 03-turn.md 6절 #4)
     }
 
     // 고르는 대상 타입(OneOther · TwoOthers · OneAny)의 대상 후보 조건 — 카드별 「추가 사용 조건」 (11-card-list.md 1-2 · 04-card.md 5 · 11절).

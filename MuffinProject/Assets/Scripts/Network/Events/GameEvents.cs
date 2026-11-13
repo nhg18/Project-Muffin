@@ -37,6 +37,9 @@ namespace Chapchu.Network.Events
         public static event Action<int> OnTurnSkipped;                       // actorNumber — 턴이 스킵됨
         public static event Action<int, int, int, int, int, int> OnDiscardTaken; // actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId(비면 0) — 버림 더미 맨 위를 손패로 (109)
         public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (145)
+        public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (107 짖기: 다음 실제 턴 · 이번 턴 · 없음)
+        public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (123). 비면 끝, 그동안 찹츄 승리 없음
+        public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
         public static event Action<int, GameEndReason, double> OnGameEnded;  // winner(무승부 -1), reason, returnAt(방으로 이동하는 서버 시각)
@@ -79,6 +82,9 @@ namespace Chapchu.Network.Events
         public static void RaiseTurnSkipped(int actorNumber) => OnTurnSkipped?.Invoke(actorNumber);
         public static void RaiseDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId) => OnDiscardTaken?.Invoke(actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId);
         public static void RaiseTurnDirectionChanged(bool reversed, int extraTurn) => OnTurnDirectionChanged?.Invoke(reversed, extraTurn);
+        public static void RaiseActionBlockChanged(int actorNumber, ActionBlock state) => OnActionBlockChanged?.Invoke(actorNumber, state);
+        public static void RaiseWaitChanged(int[] casters) => OnWaitChanged?.Invoke(casters);
+        public static void RaiseChapchuWinHeld(int actorNumber) => OnChapchuWinHeld?.Invoke(actorNumber);
         public static void RaiseCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount) => OnCardReturnedToHand?.Invoke(actorNumber, cardInstanceId, cardId, handCount);
         public static void RaiseDeathAvoided(int actorNumber, int hp) => OnDeathAvoided?.Invoke(actorNumber, hp);
         public static void RaiseMyTrapRemoved(int cardInstanceId) => OnMyTrapRemoved?.Invoke(cardInstanceId);

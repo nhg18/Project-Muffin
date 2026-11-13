@@ -99,6 +99,9 @@ MonoBehaviour:
   - RPC_OnMyCountersUsable
   - RPC_OnDiscardTaken
   - RPC_OnTurnDirectionChanged
+  - RPC_OnActionBlockChanged
+  - RPC_OnChapchuWinHeld
+  - RPC_OnWaitChanged
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

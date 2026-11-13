@@ -13,6 +13,7 @@
         public const string EventSeq = "eventSeq";         // 이 스냅샷이 반영한 마지막 처리 번호 (int, 09-network.md 5절)
         public const string Bots = "bots";                 // 봇 번호 배열 (int[], 18-bot.md 9절). 봇의 공개 값은 BotRoster.PropKey
         public const string TurnDirection = "turnDir"; // 턴 진행 방향 — true 면 역방향 (bool, 03-turn.md 6절 #4). 정방향이면 키를 지운다
+        public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 123 기다려! — 07 4.3). 아무도 없으면 키를 지운다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
     }
 }

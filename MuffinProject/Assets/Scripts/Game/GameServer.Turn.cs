@@ -96,6 +96,7 @@ namespace Chapchu.Game
             player.HasLeft = true;
             int[] discarded = DiscardAll(actor);
             _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count));
+            EndWaitOf(actor);
             if (_gameOver)
                 return TakeEvents();
 
@@ -134,10 +135,16 @@ namespace Chapchu.Game
                 next = GetNextActor(next);
             }
 
+            // 건 사람의 「기다려」 는 그 사람의 실제 턴이 시작되기 전에 끝난다 — 그래서 건 사람은 이 턴에 찹츄로 이길 수 있다 (11-card-list 123)
+            EndWaitOf(next);
             if (_players[next].IsChapchu)
             {
-                EndGame(next, GameEndReason.Chapchu);
-                return;
+                if (!IsWaiting)
+                {
+                    EndGame(next, GameEndReason.Chapchu);
+                    return;
+                }
+                _events.Add(new ChapchuWinHeld(next)); // 판정만 건너뛴다 — 찹츄는 그대로, 다음 자기 턴에 다시 판정 (07 4.3)
             }
 
             SetTurn(next);
@@ -147,6 +154,7 @@ namespace Chapchu.Game
 
         private void SetTurn(int actor)
         {
+            EndTurnStatus(CurrentTurnActor);
             CurrentTurnActor = actor;
             _lastTickAt = _clock();
             _turnDeadline = _lastTickAt + TurnTimeLimit;
@@ -157,6 +165,7 @@ namespace Chapchu.Game
             TurnSerial++;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
+            BeginTurnStatus(actor);
 
             // 다음 실제 턴 시작에 더 뽑기 (T15) — 메인 행동이 아니다
             int extra = _players[actor].TurnStartDraws;

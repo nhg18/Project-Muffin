@@ -68,6 +68,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
+            GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnMySync += HandleMySync;
             GameEvents.OnGameEnded += HandleGameEnded;
@@ -105,6 +108,9 @@ namespace Chapchu.DebugTools
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
+            GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnMySync -= HandleMySync;
             GameEvents.OnGameEnded -= HandleGameEnded;
@@ -363,6 +369,12 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleTurnSkipped(int actorNumber) => Log($"P{actorNumber} 턴 스킵");
+
+        private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Log($"P{actorNumber} 행동 카드 금지 — {state}");
+
+        private void HandleWaitChanged(int[] casters) => Log($"기다려 — {(casters.Length > 0 ? string.Join(" ", System.Linq.Enumerable.Select(casters, a => $"P{a}")) : "끝")}");
+
+        private void HandleChapchuWinHeld(int actorNumber) => Log($"P{actorNumber} 찹츄 판정 미룸 (기다려)");
 
         private void HandleDeathAvoided(int actorNumber, int hp) => Log($"P{actorNumber} 생존 — ♥{hp}");
 

@@ -503,6 +503,49 @@
         }
     }
 
+    /// <summary>행동 카드 금지 상태 (107 짖기, 11-card-list 107). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
+    public enum ActionBlock : byte
+    {
+        None,     // 없음
+        NextTurn, // 다음 실제 턴에 금지 — 걸렸다
+        ThisTurn  // 이번 턴 금지 — 그 턴이 끝나면 None
+    }
+
+    /// <summary>행동 카드 금지 상태가 바뀌었다 (107 짖기). 공개 — 전원.</summary>
+    public sealed class ActionBlockChanged : GameEvent
+    {
+        public int Actor { get; }
+        public ActionBlock State { get; }
+
+        public ActionBlockChanged(int actor, ActionBlock state)
+        {
+            Actor = actor;
+            State = state;
+        }
+    }
+
+    /// <summary>「기다려」 를 건 사람들이 바뀌었다 (123 기다려!, 07 4.3). 비어 있지 않은 동안 아무도 찹츄로 이기지 않는다. 공개 — 전원.</summary>
+    public sealed class WaitChanged : GameEvent
+    {
+        public int[] Casters { get; }
+
+        public WaitChanged(int[] casters)
+        {
+            Casters = casters;
+        }
+    }
+
+    /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
+    public sealed class ChapchuWinHeld : GameEvent
+    {
+        public int Actor { get; }
+
+        public ChapchuWinHeld(int actor)
+        {
+            Actor = actor;
+        }
+    }
+
     /// <summary>턴 진행 방향이 바뀌었다 (145 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
     public sealed class TurnDirectionChanged : GameEvent
     {

@@ -79,6 +79,10 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
             GameEvents.OnDiscardTaken += HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
+            GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
+            GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
@@ -112,6 +116,10 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
             GameEvents.OnDiscardTaken -= HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
+            GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
+            GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
@@ -449,6 +457,15 @@ namespace Chapchu.UI.GameScreen
                 return null;
             });
         }
+
+        // 턴 스킵 (120 얼음!) · 행동 카드 금지 (107 짖기) · 기다려 (123) — 상태 표시 시안이 없어 기록에 한 줄만 (11-card-list 4절 #10, 2026-11-13)
+        private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); return null; });
+
+        private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });
+
+        private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); return null; });
+
+        private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)

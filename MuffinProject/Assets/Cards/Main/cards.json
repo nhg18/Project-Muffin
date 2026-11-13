@@ -71,6 +71,24 @@
       "text": "턴 진행 방향을 반대로 바꾼다",
       "art": "",
       "effects": [ { "type": "ReverseTurnOrderEffect", "args": "" } ]
+    },
+    {
+      "id": 107, "name": "짖기", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Normal", "count": 1,
+      "text": "대상은 다음 턴에 행동 카드를 사용할 수 없다",
+      "art": "",
+      "effects": [ { "type": "BlockActionEffect", "args": "subject=Target" } ]
+    },
+    {
+      "id": 120, "name": "얼음!", "type": "Action", "target": "NextPlayer", "targetCondition": "None", "grade": "Fine", "count": 3,
+      "text": "다음 사람은 턴을 한 번 건너뛴다",
+      "art": "",
+      "effects": [ { "type": "SkipTurnEffect", "args": "subject=Target" } ]
+    },
+    {
+      "id": 123, "name": "기다려!", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Rare", "count": 1,
+      "text": "다음 내 턴 시작 전까지 아무도 승리할 수 없다",
+      "art": "",
+      "effects": [ { "type": "StartWaitEffect", "args": "" } ]
     }
   ]
 }

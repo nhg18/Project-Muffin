@@ -23,6 +23,12 @@ namespace Chapchu.UI.GameScreen
         private const string PlayFormat = "{0} → {1}";
         private const string HpText = "HP";
         private const string ChapchuText = "찹츄!";
+        private const string SkippedText = "턴 건너뜀";
+        private const string BlockNextText = "다음 턴 행동 카드 금지";
+        private const string BlockThisText = "이번 턴 행동 카드 금지";
+        private const string WaitStartText = "기다려! — 다음 차례까지 찹츄 승리 없음";
+        private const string WaitEndText = "기다려 끝";
+        private const string ChapchuHeldText = "찹츄 판정 미룸 (기다려)";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -33,6 +39,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private DeckData deck;
 
         private readonly List<HistoryEntry> _entries = new List<HistoryEntry>();
+        private readonly HashSet<int> _waitCasters = new HashSet<int>(); // 마지막으로 본 「기다려」 를 건 사람들 — 시작 · 끝 줄을 가린다
         private readonly Dictionary<int, int> _lastHp = new Dictionary<int, int>(); // actorNumber → 마지막으로 본 HP (변화량 계산용)
         private bool _turnStarted; // 첫 턴이 시작됐는가 — 그 전의 뽑기는 초기 배분
 
@@ -124,6 +131,33 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>찹츄 선언 — 왕관 아이콘 한 줄. 해제는 적지 않는다.</summary>
         public void ShowChapchuDeclared(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = ChapchuText, Icon = HistoryIcon.Crown });
+
+        /// <summary>턴이 스킵됐다 (120 얼음!).</summary>
+        public void ShowTurnSkipped(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = SkippedText, Icon = HistoryIcon.Card });
+
+        /// <summary>행동 카드 금지 (107 짖기) — 걸렸을 때 · 그 턴이 시작될 때. 풀리는 것은 적지 않는다.</summary>
+        public void ShowActionBlock(int actorNumber, ActionBlock state)
+        {
+            if (state == ActionBlock.None) return;
+
+            Add(new HistoryEntry { Actor = actorNumber, Text = state == ActionBlock.ThisTurn ? BlockThisText : BlockNextText, Icon = HistoryIcon.Card });
+        }
+
+        /// <summary>「기다려」 를 건 사람들이 바뀌었다 (123) — 새로 건 사람은 시작, 빠진 사람은 끝 줄.</summary>
+        public void ShowWaitChanged(int[] casters)
+        {
+            var now = new HashSet<int>(casters ?? System.Array.Empty<int>());
+            foreach (int ended in _waitCasters.Where(a => !now.Contains(a)).ToArray())
+                Add(new HistoryEntry { Actor = ended, Text = WaitEndText, Icon = HistoryIcon.Card });
+            foreach (int started in now.Where(a => !_waitCasters.Contains(a)).ToArray())
+                Add(new HistoryEntry { Actor = started, Text = WaitStartText, Icon = HistoryIcon.Card });
+
+            _waitCasters.Clear();
+            _waitCasters.UnionWith(now);
+        }
+
+        /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123).</summary>
+        public void ShowChapchuWinHeld(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = ChapchuHeldText, Icon = HistoryIcon.Crown });
 
         private void Add(HistoryEntry entry)
         {

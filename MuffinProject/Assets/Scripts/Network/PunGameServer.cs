@@ -379,6 +379,20 @@ namespace Chapchu.Network
                         roomProps[RoomProps.TurnDirection] = direction.Reversed ? (object)true : null;
                         break;
 
+                    case ActionBlockChanged block:
+                        Broadcast(nameof(RPC_OnActionBlockChanged), block.Actor, (byte)block.State);
+                        PlayerPropsOf(playerProps, block.Actor)[PlayerProps.ActionBlock] = block.State != ActionBlock.None ? (object)(byte)block.State : null;
+                        break;
+
+                    case WaitChanged wait:
+                        Broadcast(nameof(RPC_OnWaitChanged), wait.Casters);
+                        roomProps[RoomProps.WaitCasters] = wait.Casters.Length > 0 ? wait.Casters : null;
+                        break;
+
+                    case ChapchuWinHeld held:
+                        Broadcast(nameof(RPC_OnChapchuWinHeld), held.Actor);
+                        break;
+
                     case DeathAvoided avoided:
                         Broadcast(nameof(RPC_OnDeathAvoided), avoided.Actor, avoided.Hp);
                         PlayerPropsOf(playerProps, avoided.Actor)[PlayerProps.LifeState] = (byte)LifeState.Alive;
@@ -729,6 +743,27 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseTurnDirectionChanged(reversed, extraTurn);
+        }
+
+        [PunRPC]
+        private void RPC_OnActionBlockChanged(int seq, int actorNumber, byte state, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseActionBlockChanged(actorNumber, (ActionBlock)state);
+        }
+
+        [PunRPC]
+        private void RPC_OnWaitChanged(int seq, int[] casters, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseWaitChanged(casters);
+        }
+
+        [PunRPC]
+        private void RPC_OnChapchuWinHeld(int seq, int actorNumber, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseChapchuWinHeld(actorNumber);
         }
 
         [PunRPC]

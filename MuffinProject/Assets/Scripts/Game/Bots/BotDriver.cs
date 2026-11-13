@@ -369,6 +369,12 @@ namespace Chapchu.Game.Bots
         // preferredTarget 이 있으면 그 사람에게 (찹츄 상대), 없으면 7-2 순서 첫 사람.
         private bool TryCard(int bot, PlayerState me, int[] opponents, BotRole role, int preferredTarget, int line, string reason, out Choice choice)
         {
+            if (me.ActionBlocked)
+            {
+                choice = default;
+                return false; // 107 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준, 7-1 「쓸 수 있는」) → 뽑기 줄로
+            }
+
             foreach (Card card in me.Hand)
             {
                 if (card.Type != CardType.Action || !card.Effects.Any(e => e.BotRole == role))

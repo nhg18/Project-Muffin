@@ -36,6 +36,9 @@ namespace Chapchu.Game
             if (card.Type != CardType.Action)
                 return Reject(requester, RejectCode.NotActionCard);
 
+            if (_players[requester].ActionBlocked)
+                return Reject(requester, RejectCode.ActionBlocked); // 107 짖기 — 이번 턴은 행동 카드만 막는다. 뽑기 · 함정 설치 · 카운터는 된다
+
             int[] targets = ResolveTargets(requester, card.Target, requestedTargets, condition: card.TargetCondition);
             if (targets == null || (targets.Length == 0 && card.Target != TargetType.None))
                 return Reject(requester, RejectCode.InvalidTarget); // 대상이 필요한 카드인데 0명(찹츄 · 손패 조건) — 거절, 카드는 손패에 (04 5절 5 · 10절)
@@ -79,6 +82,10 @@ namespace Chapchu.Game
                     int most = alive.Max(handAfter);
                     int[] tied = alive.Where(a => handAfter(a) == most).ToArray();
                     return new[] { tied[_random.Next(tied.Length)] };
+                case TargetType.NextPlayer:
+                    // 턴 진행 방향으로 다음 차례 (120 얼음!). 나밖에 없으면 대상 0명 — 거절
+                    int nextActor = GetNextActor(requester);
+                    return nextActor != requester ? new[] { nextActor } : new int[0];
                 case TargetType.MoreHandThanMe:
                     // 이 카드를 낸 뒤의 내 장수와 비교 — 손패에서 낸 카드면 1장 줄어든 값 (04 11절)
                     int mine = _players[requester].Hand.Count - (fromHand ? 1 : 0);
