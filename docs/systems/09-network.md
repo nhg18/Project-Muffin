@@ -116,6 +116,7 @@
 | 16 | `NotSetTrap` | 설치되지 않은 함정 |
 | 17 | `TrapConditionNotMet` | 함정 발동 조건 · 시점이 맞지 않는다 (`04` 6절 「발동 시점」) |
 | 18 | `Resolving` | 체인 · 함정 시간 · 사망 대기 중이라 메인 행동을 할 수 없다 — 끝난 뒤에 (`03-turn` 4절) |
+| 19 | `ActionBlocked` | 이번 턴은 행동 카드를 쓸 수 없다 — 107 짖기 (`11-card-list` 107). 뽑기 · 함정 설치 · 카운터는 된다 (2026-11-13) |
 
 ---
 
@@ -157,6 +158,7 @@ public static class PlayerProps
     public const string TrapCount = "trapCount";
     public const string LifeState = "lifeState";
     public const string ChapChu   = "chapChu";
+    public const string ActionBlock = "actionBlock"; // 행동 카드 금지 (byte: 1 다음 턴 · 2 이번 턴, 107). 없으면 키 없음 (2026-11-13)
 }
 
 public static class RoomProps
@@ -166,6 +168,7 @@ public static class RoomProps
     public const string DiscardCount = "discardCount";
     public const string DiscardTop   = "discardTop"; // 맨 위 카드 종류 ID. 더미가 비면 키 없음 (2026-11-09)
     public const string TurnDirection = "turnDir";
+    public const string WaitCasters  = "wait";     // 「기다려」 를 건 사람들 (int[], 123). 없으면 키 없음 (2026-11-13)
     public const string DeckOrder    = "deck";     // 이주용 (6.1 예외, 2026-11-07)
     public const string DiscardOrder = "discard";  // 이주용
 }
@@ -211,7 +214,7 @@ public static class RoomProps
 | 상태 | 어디서 되살리나 | 누가 보내나 | 구분 |
 | --- | --- | --- | --- |
 | 덱 순서 · 버림 더미 순서 | **Room CustomProperties** (6.1 예외) — 늘 최신으로 두므로 새 마스터는 읽기만 | (이미 있음) | 확정 (2026-11-07) |
-| 공개 값 (HP · 손패 장수 · 함정 개수 · 생존 · 찹츄 · 턴 주인 · 방향 · 덱 장수 · 처리 번호) | Player · Room CustomProperties 스냅샷 (6절) | (이미 있음) | 확정 (기존) |
+| 공개 값 (HP · 손패 장수 · 함정 개수 · 생존 · 찹츄 · 행동 금지 · 턴 주인 · 방향 · 기다려 · 덱 장수 · 처리 번호) | Player · Room CustomProperties 스냅샷 (6절) | (이미 있음) | 확정 (기존) |
 | **손패 내용** | 각 클라이언트가 **자기 손패**(카드 인스턴스 ID 목록)를 새 마스터에게 다시 보낸다 | 각 클라이언트 → 새 마스터 (소유자 지정 RPC) | 확정 (2026-11-07) |
 | **함정 슬롯 내용** | 소유자가 **자기 함정**(인스턴스 ID · 슬롯 순서)을 다시 보낸다 | 소유자 → 새 마스터 | 확정 (2026-11-07) |
 | 처리 체인 · 반응 타이머 | 복원하지 않는다 — 진행 중이던 체인은 **불발**로 끝내고(카드는 버림 더미로), 턴은 지금 턴 주인의 턴 종료로 넘긴다 | 새 마스터가 판정 | 확정 (2026-11-07) |

@@ -26,6 +26,7 @@
 | `isChapChu` | bool | false | 마스터 | 전체 | 확정 |
 | `handCount` | int | 5 | 마스터 | 전체 | 확정 |
 | `trapCount` | int | 0 | 마스터 | 전체 | 확정 |
+| `actionBlock` | None / NextTurn / ThisTurn | None | 마스터 | 전체 | 확정 (2026-11-13 — 107 짖기의 행동 카드 금지, `11-card-list` 107 · `03-turn` 7절) |
 
 > 노션 원본의 **이름 없는 속성 4칸**은 위 `lifeState / isChapChu / handCount / trapCount` 다 — **확정 (2026-11-07, PM)**.
 
