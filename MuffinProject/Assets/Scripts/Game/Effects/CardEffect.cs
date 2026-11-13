@@ -31,6 +31,9 @@ namespace Chapchu.Game.Effects
         /// <summary>봇이 이 효과를 어떤 묶음으로 보는가 (18-bot.md 7-3). 새 효과는 자기 쓰임을 여기서 정한다.</summary>
         internal virtual Bots.BotRole BotRole => Bots.BotRole.None;
 
+        /// <summary>봇이 이 카드를 쓸 때 먼저 노릴 상대 (pickable 중). 없으면 -1 — 7-2 순서대로. 이 값이 있는 카드는 같은 줄에서 먼저 쓴다 (18-bot.md 7-3).</summary>
+        internal virtual int BotPreferredTarget(GameServer server, int bot, int[] pickable) => -1;
+
         /// <summary>이 효과가 하는 일 (반응 조건 판정용, 04-card.md 7절).</summary>
         internal virtual EffectTag Tag => EffectTag.None;
 

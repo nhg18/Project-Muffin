@@ -32,6 +32,9 @@ namespace Chapchu.Game
         /// <summary>낼 때 정한 값 — 효과 → 값 (116 뽑을 장수). CardEffect.Prepare 가 채운다.</summary>
         public readonly Dictionary<Effects.CardEffect, int> Rolled = new Dictionary<Effects.CardEffect, int>();
 
+        /// <summary>이 카드의 피해로 HP 가 0 이 된 사람 — 그 순간에 정한다 (사망 대기에서 살아나도 남는다). 105 드롭킥 「못 쓰러뜨리면」 판정 (11-card-list 4절 #2).</summary>
+        public readonly HashSet<int> KnockedDown = new HashSet<int>();
+
         /// <summary>체인에서 바로 아래 카드 (맨 아래면 null) — 체인에 오를 때 정한다. 카운터가 반응한 카드다 (04 7절).</summary>
         public ChainEntry Below;
 

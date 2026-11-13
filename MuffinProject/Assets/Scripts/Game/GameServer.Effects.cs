@@ -31,6 +31,8 @@ namespace Chapchu.Game
                 hp = Math.Max(1, keep);
 
             SetHp(actor, hp);
+            if (hp <= 0)
+                entry.KnockedDown.Add(actor);
             if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
             {
                 _players[actor].Life = LifeState.Alive; // 사망 방지(C11)로 HP 1 이상 — 바로 생존 (06 3 · 8절)
@@ -47,6 +49,8 @@ namespace Chapchu.Game
                 if (amount > 0)
                 {
                     SetHp(actor, _players[actor].Hp - amount);
+                    if (_players[actor].Hp <= 0)
+                        entry.KnockedDown.Add(actor);
                     RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
                 }
                 return;

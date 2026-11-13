@@ -13,6 +13,12 @@
       "effects": [ { "type": "StealEffect", "args": "count=1" } ]
     },
     {
+      "id": 105, "name": "드롭킥", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 3,
+      "text": "대상에게 49 피해를 입힌다. 못 쓰러뜨리면 나도 49 피해를 받는다",
+      "art": "",
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=49" }, { "type": "RecoilDamageEffect", "args": "amount=49" } ]
+    },
+    {
       "id": 106, "name": "핥아주기", "type": "Action", "target": "OneAny", "targetCondition": "HpBelowMax", "grade": "Normal", "count": 2,
       "text": "고른 1명의 HP를 20 회복한다",
       "art": "",

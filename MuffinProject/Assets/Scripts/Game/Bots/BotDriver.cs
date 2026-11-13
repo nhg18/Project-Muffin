@@ -378,7 +378,8 @@ namespace Chapchu.Game.Bots
                 return false; // 107 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준, 7-1 「쓸 수 있는」) → 뽑기 줄로
             }
 
-            foreach (Card card in me.Hand)
+            // 노릴 상대가 따로 있는 카드(105 — 쓰러뜨릴 수 있는 상대)를 먼저 본다. 나머지는 손패 순서 그대로 (18-bot.md 7-3)
+            foreach (Card card in me.Hand.OrderByDescending(c => c.Effects.Any(e => e.BotPreferredTarget(_server, bot, opponents) != -1)))
             {
                 if (card.Type != CardType.Action || !card.Effects.Any(e => e.BotRole == role))
                     continue;
@@ -386,8 +387,8 @@ namespace Chapchu.Game.Bots
                 if (!TryTargets(bot, card, me, opponents, role, preferredTarget, out int[] targets))
                     continue;
 
-                if (!card.Effects.Where(e => e.BotRole == role).All(e => e.BotWants(_server, bot, targets)))
-                    continue; // 이 묶음의 효과가 지금은 쓸 만하지 않다 (18-bot.md 7-3 조건 — 예: 111 은 대상 HP 가 내 HP 보다 높을 때만)
+                if (!card.Effects.All(e => e.BotWants(_server, bot, targets)))
+                    continue; // 이 카드의 효과가 지금은 쓸 만하지 않다 (18-bot.md 7-3 조건 — 예: 111 은 대상 HP 가 내 HP 보다 높을 때만 · 105 는 반동으로 내가 쓰러지면 안 씀)
 
                 int instanceId = card.InstanceId;
                 string to = targets.Length > 0 ? " → " + string.Join(", ", targets.Select(t => $"P{t}")) : "";
@@ -416,7 +417,8 @@ namespace Chapchu.Game.Bots
                         targets = new[] { pickable.OrderByDescending(a => _server.StateOf(a).Hp).First() };
                         return true;
                     }
-                    targets = new[] { pickable.Contains(preferredTarget) ? preferredTarget : pickable[0] };
+                    int wish = card.Effects.Select(e => e.BotPreferredTarget(_server, bot, pickable)).Where(t => t != -1).DefaultIfEmpty(-1).First();
+                    targets = new[] { pickable.Contains(preferredTarget) ? preferredTarget : pickable.Contains(wish) ? wish : pickable[0] };
                     return true;
 
                 case TargetType.OneAny:
