@@ -1373,8 +1373,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1 };
-            Check(ids.Length == 38 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 38장 (묶음 1 ~ 5, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3 };
+            Check(ids.Length == 41 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 41장 (묶음 1 ~ 6, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1382,7 +1382,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 38)
+            if (ids.Length == 41)
             {
                 {
                     var t = new ChainTable();
@@ -1772,6 +1772,73 @@ public static class MultiTest
                     for (now2 = 0; now2 < 4; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 112), "봇 — 112 는 내 HP 가 꼴찌이거나 찹츄 상대가 있을 때만");
+                }
+
+                // ── 묶음 6 — 105 드롭킥: 못 쓰러뜨리면 나도 49 — 피해로 HP 0 이 된 순간에 판정 (11-card-list 4절 #2) ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 40);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    events.AddRange(t.Run(t.Now + 10));
+                    Check(t.Hp(t.Turn) == 100 && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1), "105 드롭킥 — 쓰러뜨리면 반동 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.Run(t.Now + 3);
+                    Check(t.Hp(t.O1) == 51 && t.Hp(t.Turn) == 51, "105 못 쓰러뜨리면 — 대상 49 · 나도 49");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 40);
+                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    DeathPending pending = t.RunUntil<DeathPending>(40);
+                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
+                    var events = t.Run(t.Now + 25);
+                    Check(fired && t.Hp(t.O1) == 10 && t.Hp(t.Turn) == 100 && !events.OfType<PlayerDied>().Any(), "105 사망 대기에서 살아나도 — 쓰러뜨린 것, 반동 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    Card guard = t.Give(t.O1, Guard(ReactCondition.DamagesMe, new ReduceDamageEffect { amount = 49 }));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.At(t.Now + 2);
+                    bool countered = !(t.Counter(t.O1, guard)[0] is RequestRejected);
+                    t.Run(t.Now + 20);
+                    Check(countered && t.Hp(t.O1) == 100 && t.Hp(t.Turn) == 51, "105 피해 감소로 0 — 못 쓰러뜨림, 반동 49");
+                }
+                {
+                    var t = new ChainTable();
+                    Card negate = t.Give(t.O1, Guard(ReactCondition.Any, new NegateEffect()));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.At(t.Now + 2);
+                    t.Counter(t.O1, negate);
+                    t.Run(t.Now + 20);
+                    Check(t.Hp(t.O1) == 100 && t.Hp(t.Turn) == 100, "105 카드 전체 무효 — 피해 · 반동 둘 다 없음");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.SetHandSize(t.O2, 9); // 7-2 순서로는 O2 가 먼저 — 쓰러뜨릴 수 있는 O1 을 노리는지
+                    t.Give(t.Turn, Real(105));
+                    t.SetHp(t.O1, 40);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool killFirst = events.OfType<CardPlayed>().Any(e => e.CardId == 105 && e.Targets.SequenceEqual(new[] { t.O1 }));
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(105));
+                    t2.SetHp(t2.Turn, 49);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(killFirst && !events2.OfType<CardPlayed>().Any(e => e.CardId == 105), "봇 — 105 는 쓰러뜨릴 수 있으면 먼저 그 상대에게 · 못 쓰러뜨리는데 내 HP ≤ 49 면 안 씀");
                 }
             }
         }
