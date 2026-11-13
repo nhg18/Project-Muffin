@@ -18,6 +18,8 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class GameScreenPresenter : MonoBehaviour
     {
+        private const string ChoosingFormat = "{0} 고르는 중";
+
         [SerializeField] private DeckPresenter deck;
         [SerializeField] private DiscardPilePresenter discardPile;
         [SerializeField] private HandPresenter hand;
@@ -88,6 +90,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
             GameEvents.OnGaepanChanged += HandleGaepanChanged;
+            GameEvents.OnChoiceStarted += HandleChoiceStarted;
+            GameEvents.OnChoiceMade += HandleChoiceMade;
             GameEvents.OnGaepanJudged += HandleGaepanJudged;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
@@ -129,6 +133,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
             GameEvents.OnGaepanChanged -= HandleGaepanChanged;
+            GameEvents.OnChoiceStarted -= HandleChoiceStarted;
+            GameEvents.OnChoiceMade -= HandleChoiceMade;
             GameEvents.OnGaepanJudged -= HandleGaepanJudged;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
@@ -509,6 +515,17 @@ namespace Chapchu.UI.GameScreen
         }
 
         private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
+
+        // 대상이 고르는 중 (119) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        {
+            if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
+                return;
+            Enqueue(() => { reactionTimer.ShowChoosing(string.Format(ChoosingFormat, PlayerLook.NameOf(actor)), startsAt, deadline); return null; });
+        }
+
+        private void HandleChoiceMade(int actor, int option, bool timedOut) =>
+            Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut); return null; });
 
         // 개판 오분전 (121) — 판 효과 줄 · 기록만. 시작 제목 · 자명종 · 판정 팻말은 다음 작업 (사용자 2026-11-13)
         private void HandleGaepanChanged(int caster, int left, bool again) =>

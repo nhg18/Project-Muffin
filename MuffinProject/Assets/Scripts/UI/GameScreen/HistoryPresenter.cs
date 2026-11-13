@@ -43,6 +43,10 @@ namespace Chapchu.UI.GameScreen
         private const string GaepanByHp = "HP";
         private const string GaepanByCard = "손패";
         private const string NameSeparator = ", ";
+        private const string ChoiceDiscardText = "목표 조준 — 손패 전부 버리기";
+        private const string ChoiceDamageText = "목표 조준 — 피해 받기";
+        private const string ChoiceLeftText = "목표 조준 — 나가서 불발";
+        private const string ChoiceTimeoutSuffix = " (시간 초과 · 무작위)";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -216,6 +220,13 @@ namespace Chapchu.UI.GameScreen
             string tiedText = tied.Length > 1 ? string.Format(GaepanTiedFormat, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf))) : "";
             string valueText = string.Format(byHp ? GaepanHpValueFormat : GaepanCardValueFormat, value);
             Add(new HistoryEntry { Actor = loser, Text = string.Format(GaepanJudgeFormat, byHp ? GaepanByHp : GaepanByCard, PlayerLook.NameOf(loser), valueText) + tiedText, Icon = HistoryIcon.Card });
+        }
+
+        /// <summary>119 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
+        public void ShowChoiceMade(int actor, int option, bool timedOut)
+        {
+            string text = option < 0 ? ChoiceLeftText : option == 0 ? ChoiceDiscardText : ChoiceDamageText;
+            Add(new HistoryEntry { Actor = actor, Text = timedOut ? text + ChoiceTimeoutSuffix : text, Icon = HistoryIcon.Card });
         }
 
         /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123).</summary>

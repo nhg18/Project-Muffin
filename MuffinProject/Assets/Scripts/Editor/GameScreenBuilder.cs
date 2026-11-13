@@ -152,6 +152,7 @@ namespace Chapchu.EditorTools
             sheets.gameObject.AddComponent<SafeArea>();
             LogSheetView log = BuildLogSheet(sheets);
             BuildMenuSheet(sheets, menu);
+            BuildChoicePopup(sheets, TableBuilder.FindServer(nameof(ChoicePopupPresenter)));
 
             // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
             var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
@@ -1171,6 +1172,56 @@ namespace Chapchu.EditorTools
             Wire(view, ("closeButton", close), ("content", content), ("headerTemplate", header), ("entryTemplate", entry), ("scroll", scroll));
             frame.Root.gameObject.SetActive(false);
             return view;
+        }
+
+        // 카드 효과 고르기 판 (프로토타입 v2 .pop2.pick · G.choose 선택지 — 119 목표 조준). 판 폭 880 · 머리 띠(Band) = 발 아이콘 + 제목 + 남은 초(오른쪽).
+        // 몸통 = 설명 + 버튼 줄(첫 버튼 주 버튼 노랑 · 둘째 흰색). 바탕 가림이 탭을 먹는다 — 눌러도 닫히지 않는다. 판(Panel)은 비활성으로 둔다.
+        public static ChoicePopupPresenter BuildChoicePopup(RectTransform parent, PunGameServer server)
+        {
+            RectTransform root = NewRect("ChoicePopup", parent);
+            Stretch(root);
+            RectTransform panel = NewRect("Panel", root);
+            Stretch(panel);
+            Image popDim = NewImage("PopDim", panel, Dim, null, true);
+            Anchor(popDim.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6000f, 6000f));
+
+            Frame pop = BuildFrame("Popup", panel, 6f, 24f, Band, 68f, 4f);
+            Anchor(pop.Root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 300f));
+            pop.Root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            HorizontalLayout(pop.Head, new RectOffset(24, 24, 0, 0), 12f, TextAnchor.MiddleLeft, true, false);
+            Image paw = Icon("Icon", pop.Head, Hud("icon_paw"), 36f, Ink);
+            LayoutElement pawSize = paw.gameObject.AddComponent<LayoutElement>();
+            pawSize.preferredWidth = 36f;
+            pawSize.preferredHeight = 36f;
+            TMP_Text title = NewText("Title", pop.Head, "목표 조준!", 36f, Ink, true);
+            NewRect("Spacer", pop.Head).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            TMP_Text seconds = NewText("Seconds", pop.Head, "5초", 30f, Ink, false);
+
+            VerticalLayoutGroup body = pop.Body.gameObject.AddComponent<VerticalLayoutGroup>();
+            body.padding = new RectOffset(32, 32, 28, 32);
+            body.spacing = 20f;
+            body.childControlWidth = true;
+            body.childControlHeight = true;
+            body.childForceExpandWidth = true;
+            body.childForceExpandHeight = false;
+            TMP_Text desc = NewText("Desc", pop.Body, "누구: 둘 중 하나를 고르세요. 5초 안에 안 고르면 무작위", 30f, Ink, false, TextAlignmentOptions.Left);
+            desc.textWrappingMode = TextWrappingModes.Normal;
+
+            RectTransform row = NewRect("Buttons", pop.Body);
+            HorizontalLayout(row, new RectOffset(0, 0, 8, 0), 20f, TextAnchor.MiddleCenter, true, true);
+            Button first = BuildButton("FirstButton", row, 0f, 88f, Turn, 22f, "손패 전부 버리기 (5장)", 32f, Ink);
+            first.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            Button second = BuildButton("SecondButton", row, 0f, 88f, White, 22f, "80 피해 받기", 32f, Ink);
+            second.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            panel.gameObject.SetActive(false);
+
+            var view = root.gameObject.AddComponent<ChoicePopupView>();
+            Wire(view, ("panel", panel.gameObject), ("titleText", title), ("secondsText", seconds), ("descText", desc),
+                ("firstButton", first), ("firstLabel", first.GetComponentInChildren<TMP_Text>(true)),
+                ("secondButton", second), ("secondLabel", second.GetComponentInChildren<TMP_Text>(true)));
+            var presenter = root.gameObject.AddComponent<ChoicePopupPresenter>();
+            Wire(presenter, ("server", server));
+            return presenter;
         }
 
         // 설정 서랍 (「게임 나가기」만 — 배경 음악 · 효과음은 다음 작업) + 나가기 확인 팝업 (시안 .pop2.bad)

@@ -106,6 +106,9 @@ MonoBehaviour:
   - RPC_OnGameRestarted
   - RPC_OnGaepanChanged
   - RPC_OnGaepanJudged
+  - RPC_OnChoiceMade
+  - RPC_OnChoiceStarted
+  - RPC_RequestChoose
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

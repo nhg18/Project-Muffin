@@ -19,6 +19,7 @@ namespace Chapchu.UI.GameScreen
         private bool _showing;
         private double _opensAt;  // 서버 시각(PhotonNetwork.Time, 초)
         private double _deadline;
+        private string _label; // null 이면 「반응」. 남이 고르는 중이면 「{이름} 고르는 중」 (119)
 
         private void Awake()
         {
@@ -44,13 +45,23 @@ namespace Chapchu.UI.GameScreen
             }
 
             float total = (float)(_deadline - _opensAt);
-            _view.ShowRemaining(Mathf.CeilToInt(remaining), total > 0f ? remaining / total : 0f, remaining <= lowSeconds);
+            _view.ShowRemaining(Mathf.CeilToInt(remaining), total > 0f ? remaining / total : 0f, remaining <= lowSeconds, _label);
         }
 
         /// <summary>반응 시간이 정해졌다 (OnReactionStarted) — opensAt 전은 카드 연출 중.</summary>
         public void Show(double opensAt, double deadline)
         {
+            _label = null;
             _opensAt = opensAt;
+            _deadline = deadline;
+            _showing = true;
+        }
+
+        /// <summary>남이 고르는 중 (119 목표 조준) — 반응 타이머와 같은 알약에 「{이름} 고르는 중」 + 남은 초 (사용자 2026-11-13).</summary>
+        public void ShowChoosing(string label, double startsAt, double deadline)
+        {
+            _label = label;
+            _opensAt = startsAt;
             _deadline = deadline;
             _showing = true;
         }

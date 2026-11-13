@@ -67,6 +67,13 @@ namespace Chapchu.Game
                     return;
             }
 
+            if (IsChoosing)
+            {
+                if (now < _choiceDeadline)
+                    return; // 대상이 고르는 중 (119) — 게임 · 턴 시간이 멈춘다
+                FinishChoice(_random.Next(2), true); // 시간 초과 — 방장이 무작위 (11-card-list 119)
+            }
+
             if (IsGaepanJudging)
             {
                 if (now < _gaepanJudgeAt)
@@ -114,6 +121,7 @@ namespace Chapchu.Game
             int[] discarded = DiscardAll(actor);
             _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count));
             EndWaitOf(actor);
+            CancelChoiceOf(actor); // 고르는 중에 나갔다 — 그 효과는 불발 (119)
             if (_gameOver)
                 return TakeEvents();
 
@@ -215,8 +223,8 @@ namespace Chapchu.Game
             CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
-        // 체인 · 함정 시간 · 사망 대기 · 개판 판정 공개 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
-        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || IsGaepanJudging || now < _resumeAt;
+        // 체인 · 함정 시간 · 사망 대기 · 개판 판정 공개 · 대상의 고르기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
+        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || IsGaepanJudging || IsChoosing || now < _resumeAt;
 
         // 메인 행동 전에 멈춘 동안은 턴 마감을 미룬다. 풀리는 순간 남은 시간으로 다시 알린다 (03-turn.md 4절).
         private void UpdateTurnClock(double now)

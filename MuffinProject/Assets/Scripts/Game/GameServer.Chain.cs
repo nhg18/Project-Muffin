@@ -179,6 +179,8 @@ namespace Chapchu.Game
                     effect.Apply(this, entry);
                     if (_restartPending)
                         return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
+                    if (IsChoosing)
+                        return; // 대상이 고르는 중 (119) — 고르면 Advance 가 이어 간다
                     if (effect.Tag == EffectTag.Damage && entry.NextEffect < effects.Count && Settle(settleAt))
                         return;
                 }

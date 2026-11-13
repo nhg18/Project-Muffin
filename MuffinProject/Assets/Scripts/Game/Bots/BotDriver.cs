@@ -240,6 +240,14 @@ namespace Chapchu.Game.Bots
         // 반응할 거리를 우선순위로 하나 (7-4). 없으면 false.
         private bool TryFindReaction(int bot, double now, out Reaction reaction)
         {
+            if (_server.IsChoosing && _server.ChoiceActor == bot)
+            {
+                // 119 목표 조준의 대상 — 반응처럼 1 ~ 3초 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
+                int option = _server.BotChoiceOption(bot);
+                reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"고르기 → {(option == 0 ? "손패 전부 버리기" : "피해 받기")}", () => _server.Choose(bot, option));
+                return true;
+            }
+
             PlayerState me = _server.StateOf(bot);
             ChainEntry top = _server.ChainTop;
             bool reactionOpen = _server.IsReactionOpen(now);

@@ -107,12 +107,12 @@ namespace Chapchu.UI.GameScreen
             unitText.SetActive(false);
         }
 
-        /// <summary>반응 시간 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강.</summary>
-        public void ShowRemaining(int seconds, float fraction, bool low)
+        /// <summary>반응 시간 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강. label 이 있으면 「반응」 대신 (119 「{이름} 고르는 중」).</summary>
+        public void ShowRemaining(int seconds, float fraction, bool low, string label = null)
         {
             ShowParts(true);
             border.color = ink;
-            labelText.text = ReactionLabel;
+            labelText.text = label ?? ReactionLabel;
             labelText.color = ink;
             SetFill(fraction, low ? lowFillColor : fillColor);
             secondsText.text = seconds.ToString();

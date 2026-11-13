@@ -629,4 +629,46 @@
             Tied = tied;
         }
     }
+    /// <summary>
+    /// 대상이 고르기 시작 (119 목표 조준). Actor = 고르는 사람, User = 카드를 쓴 사람, HandCount = 고르는 사람의 손패 장수 (「손패 전부 버리기 (n장)」),
+    /// Damage = 피해 쪽 수치, StartsAt · Deadline = 서버 시각. 그동안 게임 · 턴 시간이 멈춘다. 공개 — 전원 (고르는 사람은 팝업, 나머지는 「고르는 중」 타이머).
+    /// </summary>
+    public sealed class ChoiceStarted : GameEvent
+    {
+        public int Actor { get; }
+        public int User { get; }
+        public int CardId { get; }
+        public int HandCount { get; }
+        public int Damage { get; }
+        public double StartsAt { get; }
+        public double Deadline { get; }
+
+        public ChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        {
+            Actor = actor;
+            User = user;
+            CardId = cardId;
+            HandCount = handCount;
+            Damage = damage;
+            StartsAt = startsAt;
+            Deadline = deadline;
+        }
+    }
+
+    /// <summary>
+    /// 고르기가 끝났다 (119). Option 0 손패 전부 버리기 · 1 피해 받기 · -1 고르는 사람이 나가 불발. TimedOut = 시간 초과로 방장이 무작위. 결과(버림 · 피해)는 뒤따르는 사건들. 공개 — 전원.
+    /// </summary>
+    public sealed class ChoiceMade : GameEvent
+    {
+        public int Actor { get; }
+        public int Option { get; }
+        public bool TimedOut { get; }
+
+        public ChoiceMade(int actor, int option, bool timedOut)
+        {
+            Actor = actor;
+            Option = option;
+            TimedOut = timedOut;
+        }
+    }
 }

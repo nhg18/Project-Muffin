@@ -128,6 +128,9 @@ namespace Chapchu.Network
         /// <summary>찹츄 선언 — 손패가 정확히 10장일 때 언제든 (07-win-condition.md 4.1).</summary>
         public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
 
+        /// <summary>내가 고르는 효과의 답 (119 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
+        public void RequestChoose(int option) => photonView.RPC(nameof(RPC_RequestChoose), RpcTarget.MasterClient, option);
+
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCounter), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
 
@@ -175,6 +178,13 @@ namespace Chapchu.Network
         {
             if (!PhotonNetwork.IsMasterClient) return;
             Send(_server.DeclareChapchu(info.Sender.ActorNumber));
+        }
+
+        [PunRPC]
+        private void RPC_RequestChoose(int option, PhotonMessageInfo info)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            Send(_server.Choose(info.Sender.ActorNumber, option));
         }
 
         [PunRPC]
@@ -415,6 +425,15 @@ namespace Chapchu.Network
                     case GaepanChanged gaepan:
                         Broadcast(nameof(RPC_OnGaepanChanged), gaepan.Caster, gaepan.Left, gaepan.Again);
                         roomProps[RoomProps.Gaepan] = gaepan.Left > 0 ? new[] { gaepan.Caster, gaepan.Left } : null;
+                        break;
+
+                    case ChoiceStarted choice:
+                        Broadcast(nameof(RPC_OnChoiceStarted), choice.Actor, choice.User, choice.CardId, choice.HandCount, choice.Damage, choice.StartsAt, choice.Deadline);
+                        break;
+
+                    case ChoiceMade made:
+                        Broadcast(nameof(RPC_OnChoiceMade), made.Actor, made.Option, made.TimedOut);
+                        Debug.Log($"[{nameof(PunGameServer)}] P{made.Actor} 고르기 — {(made.Option < 0 ? "나가서 불발" : made.Option == 0 ? "손패 전부 버리기" : "피해 받기")}{(made.TimedOut ? " (시간 초과 무작위)" : "")}");
                         break;
 
                     case GaepanJudged judged:
@@ -804,6 +823,20 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseFalloutChanged(n, turns);
+        }
+
+        [PunRPC]
+        private void RPC_OnChoiceStarted(int seq, int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseChoiceStarted(actor, user, cardId, handCount, damage, startsAt, deadline);
+        }
+
+        [PunRPC]
+        private void RPC_OnChoiceMade(int seq, int actor, int option, bool timedOut, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseChoiceMade(actor, option, timedOut);
         }
 
         [PunRPC]

@@ -25,5 +25,6 @@
         public const int TrapConditionNotMet = 17; // 함정 발동 조건 · 시점이 맞지 않는다 (04 6절)
         public const int Resolving = 18;      // 체인 · 함정 시간 · 사망 대기 중 — 메인 행동은 끝난 뒤에 (03 4절)
         public const int ActionBlocked = 19;  // 이번 턴은 행동 카드를 쓸 수 없다 — 107 짖기 (11-card-list 107)
+        public const int NotChoosing = 20;    // 내가 고를 차례가 아니다 · 없는 선택지 — 119 목표 조준 (11-card-list 119)
     }
 }

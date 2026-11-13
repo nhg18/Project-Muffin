@@ -85,6 +85,12 @@
       "effects": [ { "type": "BlockActionEffect", "args": "subject=Target" } ]
     },
     {
+      "id": 119, "name": "목표 조준", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Gaepan", "count": 3,
+      "text": "대상은 손패 전부 버리기와 80 피해 중 하나를 고른다",
+      "art": "",
+      "effects": [ { "type": "DiscardOrDamageEffect", "args": "amount=80, seconds=5" } ]
+    },
+    {
       "id": 120, "name": "얼음!", "type": "Action", "target": "NextPlayer", "targetCondition": "None", "grade": "Fine", "count": 3,
       "text": "다음 사람은 턴을 한 번 건너뛴다",
       "art": "",

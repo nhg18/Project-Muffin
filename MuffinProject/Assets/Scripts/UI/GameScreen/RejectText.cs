@@ -15,6 +15,7 @@ namespace Chapchu.UI.GameScreen
                 case RejectCode.NotActionCard: return "행동 카드만 낼 수 있습니다.";
                 case RejectCode.InvalidTarget: return "대상이 올바르지 않습니다.";
                 case RejectCode.ActionBlocked: return "이번 턴에는 행동 카드를 쓸 수 없습니다.";
+                case RejectCode.NotChoosing:   return "고르는 시간이 끝났습니다.";
                 default:                       return $"거절 (코드 {code})";
             }
         }

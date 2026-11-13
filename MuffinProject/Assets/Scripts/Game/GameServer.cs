@@ -71,6 +71,7 @@ namespace Chapchu.Game
             _restartPending = false;
             _heldNext = -1;
             ResetGaepan();
+            ClearChoice();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();

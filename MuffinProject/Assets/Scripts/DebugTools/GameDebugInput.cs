@@ -73,6 +73,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
             GameEvents.OnGaepanChanged += HandleGaepanChanged;
+            GameEvents.OnChoiceStarted += HandleChoiceStarted;
+            GameEvents.OnChoiceMade += HandleChoiceMade;
             GameEvents.OnGaepanJudged += HandleGaepanJudged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
@@ -117,6 +119,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
             GameEvents.OnGaepanChanged -= HandleGaepanChanged;
+            GameEvents.OnChoiceStarted -= HandleChoiceStarted;
+            GameEvents.OnChoiceMade -= HandleChoiceMade;
             GameEvents.OnGaepanJudged -= HandleGaepanJudged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
@@ -387,6 +391,8 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => Log($"고르기 시작 — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
+        private void HandleChoiceMade(int actor, int option, bool timedOut) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
         private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
         private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명");
 
