@@ -614,19 +614,24 @@ run_restart() {
     done
 }
 
-# 121 개판 오분전: 방장이 턴 주인에게 121 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 같은 바퀴 · 판정 줄 · 같은 결과.
+# 121 개판 오분전: 방장이 턴 주인에게 121 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
 run_gaepan() {
     local clients="${1:-2}" project out lines first="" ended=""
     enter_game "$clients" || return
-    until_ok "$MAIN" ForceCard 121 || return
-    log "▶ 처리 대기"
-    sleep 16
     if [ -n "${SHOT_DIR:-}" ]; then
         mkdir -p "$SHOT_DIR"
         for project in "${EDITORS[@]}"; do
-            log "  $(name_of "$project"): $(call "$project" Shot "$SHOT_DIR/gaepan_$(name_of "$project").png")"
+            call "$project" ArmGaepanShots "$SHOT_DIR/gaepan_$(name_of "$project")" >/dev/null
         done
     fi
+    until_ok "$MAIN" ForceCard 121 || return
+    log "▶ 처리 대기 (시작 제목 → 자명종)"
+    sleep 16
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" GaepanHud)
+        log "  $(name_of "$project"): 자명종 $out"
+        [ "$out" = "OK HUD 5" ] || fail "$(name_of "$project") 자명종이 「5」 로 보이지 않는다: $out"
+    done
     log "▶ 턴을 시간 초과로 넘겨 5바퀴"
     for _ in $(seq 1 80); do
         out=$(call "$MAIN" ExpireTurn)
@@ -636,6 +641,10 @@ run_gaepan() {
     done
     log "▶ 판정 공개 · 사망 처리 대기"
     sleep 20
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" GaepanHud)
+        case "$out" in "OK NONE"|"WAIT 게임 화면 아님") ;; *) fail "$(name_of "$project") 판정 뒤에도 자명종이 남았다: $out" ;; esac # 2인 판은 판정 사망으로 끝나 방으로 돌아간다
+    done
     log "▶ 판정"
     for project in "${EDITORS[@]}"; do
         lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '개판 — |개판 판정 — ' | sed -E 's/.*(개판 — |개판 판정 — )/\1/')

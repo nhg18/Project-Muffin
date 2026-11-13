@@ -65,6 +65,7 @@ public static class MultiTest
     private const string TrapWindowOpensField = "_trapWindowOpensAt";      // GameDebugInput — 함정 시간
     private const string TrapWindowDeadlineField = "_trapWindowDeadline";
     private const string HitByField = "_hitBy";                            // GameDebugInput — 마지막으로 나를 맞힌 사람
+    private const string GaepanHudNumberField = "numberText";              // GaepanHudView — 남은 바퀴 숫자 (121)
     private const string ChoiceSecondButtonField = "secondButton";         // ChoicePopupView — 「80 피해 받기」 (119)
     private const string ChoiceFirstButtonField = "firstButton";           // ChoicePopupView — 「손패 전부 버리기」
     private const string TimerLabelField = "labelText";                    // ReactionTimerView — 알약 글 (「반응」 · 「{이름} 고르는 중」)
@@ -1955,13 +1956,14 @@ public static class MultiTest
                     int round1 = StartsBefore(events.FindIndex(e => e is GaepanChanged g && g.Left == 4)); // 쓴 턴 끝(안 셈) 뒤 3턴
                     GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
                     int turns = StartsBefore(events.IndexOf(judged));
-                    bool held = t.Run(t.Now + 2.0).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
-                    var after = t.Run(t.Now + 0.6);
+                    bool listed = judged != null && judged.Actors.Length == 3 && judged.Values[System.Array.IndexOf(judged.Actors, t.O2)] == judged.Value;
+                    bool held = t.Run(t.Now + 3.9).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
+                    var after = t.Run(t.Now + 0.5);
                     bool zero = t.Hp(t.O2) == 0 && after.OfType<DeathPending>().Any(e => e.Actor == t.O2);
                     after = t.Run(t.Now + 20);
-                    Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && held && zero
+                    Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && listed && held && zero
                           && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2) && after.OfType<TurnStarted>().Any(),
-                        $"121 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 · 2.3초 공개 뒤 꼴찌 HP 0 → 사망 대기 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
+                        $"121 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 4.17초 공개 뒤 꼴찌 HP 0 → 사망 대기 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
                 }
                 {
                     var t = new ChainTable();
@@ -2732,6 +2734,55 @@ public static class MultiTest
     }
 
     /// <summary>플레이 중인 게임 뷰를 PNG 로 찍는다 (끝 프레임에 쓰임 — 호출 뒤 파일이 생기길 기다린다). 화면 배치를 눈으로 볼 때.</summary>
+    // 121 개판 연출 — 시작 제목 · 자명종 · 마지막 바퀴 · 판정 팻말이 화면에 뜨는 순간을 에디터 안에서 지켜보다 찍는다 (CLI 부름 사이로는 순간을 놓친다).
+    // prefix + "_title.png"(제목이 뜨고 1.6초) · "_hud.png"(자명종이 뜨고 0.6초) · "_hot.png"(마지막 바퀴 0.6초) · "_roll.png"(판정 1.3초 — 룰렛) · "_low.png"(판정 3.4초 — 꼴찌). 한 번씩.
+    public static string ArmGaepanShots(string prefix)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        var seen = new Dictionary<string, double>();
+        var taken = new HashSet<string>();
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+            double now = EditorApplication.timeSinceStartup;
+            GaepanTitleView title = Object.FindFirstObjectByType<GaepanTitleView>(FindObjectsInactive.Include);
+            GaepanHudView hud = Object.FindFirstObjectByType<GaepanHudView>(FindObjectsInactive.Include);
+            GaepanJudgeView judge = Object.FindFirstObjectByType<GaepanJudgeView>(FindObjectsInactive.Include);
+            bool hot = hud != null && hud.gameObject.activeInHierarchy
+                       && ((TMP_Text)typeof(GaepanHudView).GetField(GaepanHudNumberField, Private).GetValue(hud)).text == "1";
+            void Watch(string key, bool on, double after)
+            {
+                if (!on || taken.Contains(key)) return;
+                if (!seen.ContainsKey(key)) seen[key] = now;
+                if (now - seen[key] < after) return;
+                ScreenCapture.CaptureScreenshot(prefix + "_" + key + ".png");
+                taken.Add(key);
+            }
+            Watch("title", title != null && title.gameObject.activeInHierarchy, 1.6);
+            Watch("hud", hud != null && hud.gameObject.activeInHierarchy && !hot, 0.6);
+            Watch("hot", hot, 0.6);
+            Watch("roll", judge != null && judge.gameObject.activeInHierarchy, 1.3);
+            Watch("low", judge != null && judge.gameObject.activeInHierarchy, 3.4);
+            if (taken.Count == 5) EditorApplication.update -= tick;
+        };
+        EditorApplication.update += tick;
+        return "OK 개판 스크린샷 대기 → " + prefix + "_title · _hud · _hot · _roll · _low";
+    }
+
+    // 121 자명종 — 보이면 「HUD n」(남은 바퀴), 없으면 「NONE」.
+    public static string GaepanHud()
+    {
+        GaepanHudView hud = Object.FindFirstObjectByType<GaepanHudView>(FindObjectsInactive.Include);
+        if (hud == null) return "WAIT 게임 화면 아님";
+        if (!hud.gameObject.activeInHierarchy) return "OK NONE";
+        return "OK HUD " + ((TMP_Text)typeof(GaepanHudView).GetField(GaepanHudNumberField, Private).GetValue(hud)).text;
+    }
+
     public static string Shot(string path)
     {
         if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
