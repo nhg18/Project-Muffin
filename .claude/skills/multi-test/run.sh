@@ -614,6 +614,44 @@ run_restart() {
     done
 }
 
+# 121 개판 오분전: 방장이 턴 주인에게 121 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 같은 바퀴 · 판정 줄 · 같은 결과.
+run_gaepan() {
+    local clients="${1:-2}" project out lines first="" ended=""
+    enter_game "$clients" || return
+    until_ok "$MAIN" ForceCard 121 || return
+    log "▶ 처리 대기"
+    sleep 16
+    if [ -n "${SHOT_DIR:-}" ]; then
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            log "  $(name_of "$project"): $(call "$project" Shot "$SHOT_DIR/gaepan_$(name_of "$project").png")"
+        done
+    fi
+    log "▶ 턴을 시간 초과로 넘겨 5바퀴"
+    for _ in $(seq 1 80); do
+        out=$(call "$MAIN" ExpireTurn)
+        case "$out" in FAIL*) fail "$out"; return ;; esac
+        sleep 2
+        console_lines "$MAIN" | grep -q '\[GameDebugInput\].*개판 판정 — ' && break
+    done
+    log "▶ 판정 공개 · 사망 처리 대기"
+    sleep 20
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '개판 — |개판 판정 — ' | sed -E 's/.*(개판 — |개판 판정 — )/\1/')
+        ended=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/') · 「${ended:-끝 없음}」"
+        printf '%s' "$lines" | grep -q '5바퀴 남음' || fail "$(name_of "$project") 개판 시작 줄이 없다"
+        printf '%s' "$lines" | grep -q '0바퀴 남음' || fail "$(name_of "$project") 개판 끝 줄이 없다"
+        printf '%s' "$lines" | grep -q '개판 판정 — ' || fail "$(name_of "$project") 판정 줄이 없다"
+        if [ -z "$first" ]; then first="$lines|$ended"; elif [ "$lines|$ended" != "$first" ]; then fail "$(name_of "$project") 의 개판 줄 · 결과가 메인과 다르다"; fi
+    done
+    compare_turns
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
@@ -622,6 +660,7 @@ case "${1:-}" in
     solo)  shift; run_solo "$@" ;;
     chapchu) shift; run_chapchu "$@" ;;
     restart) shift; run_restart "$@" ;;
+    gaepan)  shift; run_gaepan "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 

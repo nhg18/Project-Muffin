@@ -647,6 +647,22 @@ public static class MultiTest
         return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" : "FAIL 사용 결과 " + first;
     }
 
+    // 방장: 지금 턴의 제한 시간을 끝낸다 — 다음 Tick 에 시간 초과로 넘어간다 (행동 없이 턴을 빨리 돌리기 — 121 개판 바퀴)
+    public static string ExpireTurn()
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        if (rules.IsGameOver)
+            return "SKIP 게임 끝";
+        typeof(GameServer).GetField("_turnDeadline", Private).SetValue(rules, 0d);
+        return "OK P" + rules.CurrentTurnActor + " 턴 시간 끝 — " + rules.DebugState();
+    }
+
     public static string Ui(string step)
     {
         string scene = SceneManager.GetActiveScene().name;
@@ -1373,8 +1389,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3 };
-            Check(ids.Length == 41 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 41장 (묶음 1 ~ 6, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3, [121] = 1 };
+            Check(ids.Length == 42 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 42장 (묶음 1 ~ 7, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1382,7 +1398,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 41)
+            if (ids.Length == 42)
             {
                 {
                     var t = new ChainTable();
@@ -1839,6 +1855,121 @@ public static class MultiTest
                     for (now2 = 0; now2 < 4; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(killFirst && !events2.OfType<CardPlayed>().Any(e => e.CardId == 105), "봇 — 105 는 쓰러뜨릴 수 있으면 먼저 그 상대에게 · 못 쓰러뜨리는데 내 HP ≤ 49 면 안 씀");
+                }
+
+                // ── 묶음 7 — 121 개판 오분전: 쓴 턴 뒤부터 생존자 수만큼 턴이면 한 바퀴 · 5바퀴 뒤 반반 기준 꼴찌 HP 0 (11-card-list 121) ──
+                // 턴은 시간 초과로 넘긴다 (뽑기로 넘기면 손패가 늘어 꼴찌가 바뀐다). until 이 참이 되거나 시간이 다하면 멈춘다
+                List<GameEvent> RunWhile(ChainTable t, Func<List<GameEvent>, bool> until, double seconds)
+                {
+                    var all = new List<GameEvent>();
+                    double end = t.Now + seconds;
+                    while (t.Now < end && !until(all))
+                        all.AddRange(t.Run(t.Now + 0.1));
+                    return all;
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 10);
+                    t.SetHandSize(t.O2, 0); // HP · 손패 둘 다 꼴찌 — 어느 기준이든 O2
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    bool started = events.OfType<GaepanChanged>().Any(g => g.Caster == t.Turn && g.Left == 5 && !g.Again);
+                    events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 2400);
+                    int StartsBefore(int index) => events.Take(index < 0 ? 0 : index).OfType<TurnStarted>().Count();
+                    int round1 = StartsBefore(events.FindIndex(e => e is GaepanChanged g && g.Left == 4)); // 쓴 턴 끝(안 셈) 뒤 3턴
+                    GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
+                    int turns = StartsBefore(events.IndexOf(judged));
+                    bool held = t.Run(t.Now + 2.0).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
+                    var after = t.Run(t.Now + 0.6);
+                    bool zero = t.Hp(t.O2) == 0 && after.OfType<DeathPending>().Any(e => e.Actor == t.O2);
+                    after = t.Run(t.Now + 20);
+                    Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && held && zero
+                          && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2) && after.OfType<TurnStarted>().Any(),
+                        $"121 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 · 2.3초 공개 뒤 꼴찌 HP 0 → 사망 대기 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayCard(t.Turn, t.Give(t.Turn, Real(121))).ToList();
+                    t.State(t.NextOf(t.Turn)).SkipNextTurn = true;
+                    events = RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    int started = events.Take(events.FindIndex(e => e is GaepanChanged g && g.Left == 4)).OfType<TurnStarted>().Count();
+                    Check(events.OfType<TurnSkipped>().Any() && started == 2, $"121 스킵된 턴도 1턴으로 센다 (한 바퀴까지 시작된 턴 {started})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 1), 2400);
+                    int y = t.Server.CurrentTurnActor, z = t.NextOf(y), x = t.NextOf(z);
+                    t.State(x).SkipNextTurn = true; // 마지막(15번째) 턴이 x 의 스킵된 턴
+                    t.SetHp(z, 10);
+                    t.SetHandSize(z, 0);
+                    var events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 200);
+                    int judgedAt = events.FindIndex(e => e is GaepanJudged);
+                    bool skippedFirst = events.FindIndex(e => e is TurnSkipped s && s.Actor == x) is int k && k >= 0 && k < judgedAt;
+                    events.AddRange(t.Run(t.Now + 25));
+                    TurnStarted next = events.Skip(judgedAt + 1).OfType<TurnStarted>().FirstOrDefault();
+                    Check(judgedAt >= 0 && skippedFirst && t.State(z).Life == LifeState.Dead && next != null && next.Actor == y,
+                        $"121 스킵된 턴 끝에 판정 — 사망 처리 뒤 스킵 다음 사람부터 (다음 턴 P{next?.Actor} · 기대 P{y})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(121)));
+                    Check(events.OfType<GaepanChanged>().Any(g => g.Caster == user && g.Left == 5 && g.Again), "121 개판 중에 다시 쓰면 5바퀴부터 다시");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<TurnStarted>().Any(), 60);
+                    t.Server.RemovePlayer(t.Turn); // 건 사람이 나가도 이어진다 · 바퀴는 남은 2명으로
+                    var events = RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    Check(events.OfType<GaepanChanged>().Any(g => g.Caster == t.Turn && g.Left == 4), "121 건 사람이 나가도 개판은 이어진다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    t.SetHp(t.O2, 10);
+                    t.SetHandSize(t.O1, 0);
+                    t.SetHandSize(t.O2, 0);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    var events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 2400);
+                    GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
+                    Check(judged != null && judged.Tied.Length == 2 && judged.Tied.Contains(judged.Loser) && judged.Loser != t.Turn,
+                        $"121 동점이면 그중 무작위 1명 (꼴찌 P{judged?.Loser} · 동점 {judged?.Tied.Length})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<TurnStarted>().Any(), 60);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(events.OfType<GameRestarted>().Any() && events.OfType<GaepanChanged>().Any(g => g.Caster == -1 && g.Left == 0) && !t.Server.IsGaepanActive,
+                        "121 개판은 112 대소동 새 판에서 지워진다");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.Give(t.Turn, Real(121));
+                    t.SetHp(t.O1, 70);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 121);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(121));
+                    t2.SetHp(t2.O1, 90);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 121), "봇 — 121 은 개판이 없고 HP 가 상대 최저보다 20 · 손패가 상대 최소보다 2장 이상 많을 때만");
                 }
             }
         }
