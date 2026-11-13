@@ -149,16 +149,25 @@ namespace Chapchu.Game
         // 사망 대기 · 함정 시간은 이 시각에 시작하고, 다음 턴(메인 행동 전이면 턴 재개)도 이 시각 뒤로 미룬다 (04 8 · 9.3절 · 06 8절).
         private void ContinueResolve(double settleAt)
         {
-            if (_mainActionUsed)
-                _nextTurnAt = System.Math.Max(_nextTurnAt, settleAt);
-            else
-                _resumeAt = System.Math.Max(_resumeAt, settleAt);
+            DelayTurnUntil(settleAt);
 
+            bool first = true;
             while (_resolving.Count > 0)
             {
                 ChainEntry entry = _resolving[0];
-                if (entry.NextEffect > 0 && Settle(settleAt))
-                    return; // 멈췄던 카드 — 그사이 끼어든 체인(사망 대기 중 함정 등)을 처리했어도 사망 대기 · 함정 시간이 남았으면 더 기다린다
+                if (entry.NextEffect > 0)
+                {
+                    if (Settle(settleAt))
+                        return; // 멈췄던 카드 — 그사이 끼어든 체인(사망 대기 중 함정 등)을 처리했어도 사망 대기 · 함정 시간이 남았으면 더 기다린다
+
+                    if (!first)
+                    {
+                        // 이번에 끼어든 체인(함정 시간의 함정 등)을 먼저 처리하고 돌아왔다 — 남은 효과의 후처리는 그 뒤에 이어진다 (04 9.3절)
+                        settleAt += entry.Card.ResolveSeconds;
+                        DelayTurnUntil(settleAt);
+                    }
+                }
+                first = false;
 
                 if (entry.NextEffect == 0)
                 {
@@ -192,6 +201,15 @@ namespace Chapchu.Game
 
             Settle(settleAt);
             CheckElimination();                    // 함정 시간 · 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
+        }
+
+        // 다음 턴(메인 행동 전이면 턴 재개)을 at 뒤로 미룬다.
+        private void DelayTurnUntil(double at)
+        {
+            if (_mainActionUsed)
+                _nextTurnAt = System.Math.Max(_nextTurnAt, at);
+            else
+                _resumeAt = System.Math.Max(_resumeAt, at);
         }
 
         // 피해의 뒤처리를 연다. 사망 대기 · 함정 시간 중 하나라도 생겼으면 true — 처리를 멈추고 그것이 끝나길 기다린다.
