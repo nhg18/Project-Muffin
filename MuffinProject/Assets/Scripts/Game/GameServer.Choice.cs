@@ -41,7 +41,7 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
-        // 고른 것을 적용한다. 남은 처리(체인)는 Advance 가 이어 간다 — 그 피해의 사망 대기 · 함정도 거기서 (04 9.3).
+        // 고른 것을 적용한다. 남은 처리(체인)는 Advance 가 이어 간다 — 그 피해의 사망 대기 · 함정 · 연출 시간만큼 다음 턴 미루기도 거기서 (04 8 · 9.3절).
         private void FinishChoice(int option, bool timedOut)
         {
             int actor = _choiceActor;
@@ -51,13 +51,6 @@ namespace Chapchu.Game
 
             _events.Add(new ChoiceMade(actor, option, timedOut));
             effect.ApplyOption(this, entry, actor, option);
-
-            // 고른 결과의 연출 시간 — 카드의 처리 연출 길이만큼 다음 턴을 미룬다 (04 8절)
-            double after = _clock() + entry.Card.ResolveSeconds;
-            if (_mainActionUsed && _nextTurnAt >= 0)
-                _nextTurnAt = System.Math.Max(_nextTurnAt, after);
-            else
-                _resumeAt = System.Math.Max(_resumeAt, after);
         }
 
         // 고르는 사람이 나갔다 — 그 효과만 불발 (사용자 2026-11-13). 남은 처리는 Advance 가 이어 간다.

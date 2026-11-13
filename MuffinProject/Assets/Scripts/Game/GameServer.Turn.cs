@@ -85,7 +85,7 @@ namespace Chapchu.Game
 
             if (IsResolvePaused)
             {
-                ContinueResolve(now); // 피해의 사망 · 함정 처리가 끝났다 — 남은 효과로 (11-card-list 115)
+                ContinueResolve(now + _resolving[0].Card.ResolveSeconds); // 피해의 사망 · 함정 처리 · 고르기가 끝났다 — 남은 효과로 (11-card-list 115 · 119)
                 if (_gameOver || IsResolvePaused || IsTrapWindowOpen || IsDeathPending)
                     return;
             }

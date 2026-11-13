@@ -56,7 +56,8 @@ namespace Chapchu.UI.Title
                 if (c == '<' || c == '>')
                     continue;
                 UnicodeCategory category = char.GetUnicodeCategory(c);
-                if (category == UnicodeCategory.Control || category == UnicodeCategory.Format)
+                if (category == UnicodeCategory.Control || category == UnicodeCategory.Format
+                    || category == UnicodeCategory.LineSeparator || category == UnicodeCategory.ParagraphSeparator)
                     continue;
                 sb.Append(c);
             }

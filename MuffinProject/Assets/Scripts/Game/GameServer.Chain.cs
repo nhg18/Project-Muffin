@@ -135,10 +135,6 @@ namespace Chapchu.Game
         private void ResolveChain()
         {
             double animationEnd = _clock() + _chain[0].Card.ResolveSeconds;
-            if (_mainActionUsed)
-                _nextTurnAt = System.Math.Max(_nextTurnAt, animationEnd);
-            else
-                _resumeAt = animationEnd;
 
             // 위에서부터 처리 — 멈춰 있던 처리(_resolving)가 있으면 이 체인을 먼저 마치고 그것으로 돌아간다 (06 5절 「기존 처리로 복귀」)
             for (int i = 0; i < _chain.Count; i++)
@@ -149,9 +145,15 @@ namespace Chapchu.Game
 
         // 처리할 카드가 남아 있는 동안 위에서부터 효과를 적용한다. 피해 효과 뒤에 효과가 더 있고 그 피해로 사망 대기 · 함정 시간이 생기면
         // 거기서 멈추고, 그것이 끝난 뒤 Advance 가 다시 부른다 (06 5절 「HP 반영 → 사망 대기 판정 → 함정·카운터 처리 → 기존 처리로 복귀」 · 11-card-list 115).
-        // settleAt = 사망 대기 · 함정 시간이 시작되는 시각 — 처음엔 후처리 연출(3 · 4 단계)이 끝나는 시각, 이어 갈 때는 지금.
+        // settleAt = 이번에 적용하는 결과의 후처리 연출(3 · 4 단계)이 끝나는 시각 — 처음엔 맨 아래 카드의, 이어 갈 때는 멈췄던 카드의 (남은 효과 · 고른 결과).
+        // 사망 대기 · 함정 시간은 이 시각에 시작하고, 다음 턴(메인 행동 전이면 턴 재개)도 이 시각 뒤로 미룬다 (04 8 · 9.3절 · 06 8절).
         private void ContinueResolve(double settleAt)
         {
+            if (_mainActionUsed)
+                _nextTurnAt = System.Math.Max(_nextTurnAt, settleAt);
+            else
+                _resumeAt = System.Math.Max(_resumeAt, settleAt);
+
             while (_resolving.Count > 0)
             {
                 ChainEntry entry = _resolving[0];

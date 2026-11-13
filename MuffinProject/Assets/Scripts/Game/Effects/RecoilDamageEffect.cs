@@ -27,6 +27,8 @@ namespace Chapchu.Game.Effects
             return killable.Length == 0 ? -1 : killable.OrderBy(t => server.PlayerHp(t)).First();
         }
 
+        internal override bool BotPlaysFirst(GameServer server, int bot, int[] opponents) => BotPreferredTarget(server, bot, opponents) != -1;
+
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             if (entry.Targets.Length == 0 || entry.Targets.Any(entry.KnockedDown.Contains))

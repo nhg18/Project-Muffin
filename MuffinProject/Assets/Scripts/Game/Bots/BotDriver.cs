@@ -387,7 +387,7 @@ namespace Chapchu.Game.Bots
             }
 
             // 노릴 상대가 따로 있는 카드(105 — 쓰러뜨릴 수 있는 상대)를 먼저 본다. 나머지는 손패 순서 그대로 (18-bot.md 7-3)
-            foreach (Card card in me.Hand.OrderByDescending(c => c.Effects.Any(e => e.BotPreferredTarget(_server, bot, opponents) != -1)))
+            foreach (Card card in me.Hand.OrderByDescending(c => c.Effects.Any(e => e.BotPlaysFirst(_server, bot, opponents))))
             {
                 if (card.Type != CardType.Action || !card.Effects.Any(e => e.BotRole == role))
                     continue;
