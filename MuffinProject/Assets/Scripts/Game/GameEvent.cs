@@ -592,4 +592,41 @@
             Turns = turns;
         }
     }
+    /// <summary>
+    /// 개판 오분전 상태가 바뀌었다 (121). Caster = 건 사람 (-1 이면 112 대소동으로 지워짐), Left = 남은 바퀴 (0 이면 끝 — 판정이 따르면 GaepanJudged),
+    /// Again = 개판 중에 다시 써서 처음부터. 판 효과 줄 「개판 오분전 · N바퀴 남음」. 공개 — 전원.
+    /// </summary>
+    public sealed class GaepanChanged : GameEvent
+    {
+        public int Caster { get; }
+        public int Left { get; }
+        public bool Again { get; }
+
+        public GaepanChanged(int caster, int left, bool again)
+        {
+            Caster = caster;
+            Left = left;
+            Again = again;
+        }
+    }
+
+    /// <summary>
+    /// 개판 오분전 판정 (121). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
+    /// 공개 2.3초 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
+    /// </summary>
+    public sealed class GaepanJudged : GameEvent
+    {
+        public int Loser { get; }
+        public bool ByHp { get; }
+        public int Value { get; }
+        public int[] Tied { get; }
+
+        public GaepanJudged(int loser, bool byHp, int value, int[] tied)
+        {
+            Loser = loser;
+            ByHp = byHp;
+            Value = value;
+            Tied = tied;
+        }
+    }
 }

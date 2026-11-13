@@ -87,6 +87,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
+            GameEvents.OnGaepanChanged += HandleGaepanChanged;
+            GameEvents.OnGaepanJudged += HandleGaepanJudged;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
@@ -126,6 +128,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
+            GameEvents.OnGaepanChanged -= HandleGaepanChanged;
+            GameEvents.OnGaepanJudged -= HandleGaepanJudged;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
@@ -505,6 +509,12 @@ namespace Chapchu.UI.GameScreen
         }
 
         private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
+
+        // 개판 오분전 (121) — 판 효과 줄 · 기록만. 시작 제목 · 자명종 · 판정 팻말은 다음 작업 (사용자 2026-11-13)
+        private void HandleGaepanChanged(int caster, int left, bool again) =>
+            Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); boardEffects.ShowGaepan(left); return null; });
+
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied) => Enqueue(() => { history.ShowGaepanJudged(loser, byHp, value, tied); return null; });
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)

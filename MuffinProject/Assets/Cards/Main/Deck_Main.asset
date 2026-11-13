@@ -43,6 +43,8 @@ MonoBehaviour:
     count: 1
   - card: {fileID: 11400000, guid: 5f70a425e6df5504e8e12b110dc29a47, type: 2}
     count: 3
+  - card: {fileID: 11400000, guid: d6d95f18d76420a48a15fda78ba522ab, type: 2}
+    count: 1
   - card: {fileID: 11400000, guid: 6f0e257f27405f04b8c1cfa4639aba4e, type: 2}
     count: 1
   - card: {fileID: 11400000, guid: 0ec53ca9896fb03469850ff9f3cb5200, type: 2}

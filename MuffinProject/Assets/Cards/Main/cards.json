@@ -91,6 +91,12 @@
       "effects": [ { "type": "SkipTurnEffect", "args": "subject=Target" } ]
     },
     {
+      "id": 121, "name": "개판 오분전", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "5바퀴 뒤 반반 확률로 HP 꼴찌 또는 손패 꼴찌가 즉시 사망한다 (동점이면 무작위 1명)",
+      "art": "",
+      "effects": [ { "type": "StartGaepanEffect", "args": "" } ]
+    },
+    {
       "id": 123, "name": "기다려!", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Rare", "count": 1,
       "text": "다음 내 턴 시작 전까지 아무도 승리할 수 없다",
       "art": "",

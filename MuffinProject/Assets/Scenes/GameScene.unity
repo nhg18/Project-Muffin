@@ -28752,7 +28752,6 @@ RectTransform:
   m_Children:
   - {fileID: 1240690182}
   - {fileID: 769836194}
-  - {fileID: 1397039246}
   - {fileID: 1645452397}
   - {fileID: 942515797}
   - {fileID: 46709830}
@@ -32623,7 +32622,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1269283003}
-  m_Father: {fileID: 1247879455}
+  m_Father: {fileID: 1691084295}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
@@ -39640,6 +39639,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1688833899}
   m_CullTransparentMesh: 1
+--- !u!1 &1691084294
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1691084295}
+  - component: {fileID: 1691084296}
+  m_Layer: 5
+  m_Name: BoardLayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1691084295
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691084294}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1397039246}
+  m_Father: {fileID: 1842077309}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1691084296
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691084294}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7658c2b61bd643c28e3fe8883a22cc92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.SafeArea
 --- !u!1 &1693023201
 GameObject:
   m_ObjectHideFlags: 0
@@ -42929,6 +42977,7 @@ RectTransform:
   m_Children:
   - {fileID: 1247879455}
   - {fileID: 647702563}
+  - {fileID: 1691084295}
   - {fileID: 1371502760}
   - {fileID: 1211240101}
   - {fileID: 834791764}

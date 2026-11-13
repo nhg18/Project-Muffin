@@ -121,7 +121,6 @@ namespace Chapchu.EditorTools
             // 가장자리 HUD
             RoomCodeView roomCode = BuildRoomCodeTag(safeArea);
             TurnStripView turnStrip = BuildTurnStrip(safeArea);
-            BoardEffectsPresenter boardEffects = BuildBoardEffects(safeArea);
             GameMenuView menu = BuildGearButton(safeArea);
             FeedView feed = BuildFeed(safeArea);
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
@@ -137,6 +136,9 @@ namespace Chapchu.EditorTools
             Wire(seats, ("targetAsk", targetAsk), ("myPanel", myPanel));
             CardOwnerTagView ownerTag = BuildCardOwnerTag(center);
             ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
+
+            // 판 효과 줄 — 상대 좌석보다 위 (프로토타입 v2 .gfx z 24), 손패 층 · 서랍보다 아래
+            BoardEffectsPresenter boardEffects = BuildBoardEffects(BuildBoardLayer(canvasRect));
 
             // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
             PlayLineView playLine = BuildPlayLine(canvasRect);
@@ -316,6 +318,15 @@ namespace Chapchu.EditorTools
                 ("nowChip", nowFill), ("nowText", nowText), ("directionIcon", dir.rectTransform));
             root.gameObject.AddComponent<TurnStripPresenter>();
             return view;
+        }
+
+        /// <summary>판 효과 줄을 담는 층 — 화면 전체 · 안전 영역 (SafeArea 와 같은 자리). 가운데 묶음(좌석) 바로 뒤에 둔다.</summary>
+        public static RectTransform BuildBoardLayer(RectTransform canvasRect)
+        {
+            RectTransform layer = NewRect("BoardLayer", canvasRect);
+            Stretch(layer);
+            layer.gameObject.AddComponent<SafeArea>();
+            return layer;
         }
 
         // 판 효과 줄 (프로토타입 v2 .gfx · .gf, 960 폭 시안 × 2) — 턴 띠 아래(위 끝에서 112) 가운데, 알약 높이 48 · 간격 10 · 테 4 · 반지름 16.

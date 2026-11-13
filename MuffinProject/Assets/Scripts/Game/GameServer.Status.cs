@@ -72,7 +72,8 @@ namespace Chapchu.Game
                 .Select(p => $"P{p.Key}{(p.Value.ActionBlocked ? "" : "(다음)")}"));
             string wait = string.Join(" ", _waitCasters.Select(a => $"P{a}"));
             return (blocked.Length > 0 ? $" · 금지 {blocked}" : "") + (wait.Length > 0 ? $" · 기다려 {wait}" : "")
-                + (_restartCount > 0 ? $" · 피폭 n{_restartCount} k{_falloutTurns}" : "");
+                + (_restartCount > 0 ? $" · 피폭 n{_restartCount} k{_falloutTurns}" : "")
+                + (_gaepanCaster != -1 ? $" · 개판 {_gaepanLeft}바퀴 ({_gaepanTurns}턴)" : "") + (IsGaepanJudging ? $" · 개판 판정 P{_gaepanLoser}" : "");
         }
     }
 }

@@ -72,6 +72,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnWaitChanged += HandleWaitChanged;
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
+            GameEvents.OnGaepanChanged += HandleGaepanChanged;
+            GameEvents.OnGaepanJudged += HandleGaepanJudged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnMySync += HandleMySync;
@@ -114,6 +116,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnWaitChanged -= HandleWaitChanged;
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
+            GameEvents.OnGaepanChanged -= HandleGaepanChanged;
+            GameEvents.OnGaepanJudged -= HandleGaepanJudged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnMySync -= HandleMySync;
@@ -383,6 +387,8 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
+        private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명");
 
         private void HandleWaitChanged(int[] casters) => Log($"기다려 — {(casters.Length > 0 ? string.Join(" ", System.Linq.Enumerable.Select(casters, a => $"P{a}")) : "끝")}");
 

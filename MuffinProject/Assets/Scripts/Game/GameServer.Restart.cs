@@ -11,7 +11,7 @@ namespace Chapchu.Game
         private int _restartCount;      // 이 판에서 대소동을 쓴 횟수 n — 새로 시작해도 남는다
         private int _falloutTurns;      // 새로 시작한 뒤 피폭이 들어간 턴 수 k. _restartCount 가 0 이면 피폭 없음
         private bool _restartPending;   // 대소동이 처리됐다 — 지금 턴이 끝나면 피폭 없이 새 판
-        private bool _turnEndDone;      // 이번 턴 끝의 피폭을 이미 넣었다 (그 피해의 사망 대기를 기다리는 중) — SetTurn 이 푼다
+        private int _turnEndStage;      // 이번 턴 끝 처리를 어디까지 했나 — 0 아직 · 1 피폭 · 2 개판 세기. 그 사망 대기 · 판정을 기다렸다 다시 올 때 건너뛴다. SetTurn 이 푼다
 
         internal int RestartCount => _restartCount;
         internal int FalloutTurns => _falloutTurns;
@@ -23,8 +23,9 @@ namespace Chapchu.Game
             _resolving.Clear(); // 체인에 남은 것 · 그 뒤처리는 새 판에서 의미가 없다
         }
 
-        // 턴이 끝나는 순간 (AdvanceTurn 첫머리). 대소동이면 새 판. 피폭 중이면 모두에게 k^n — 그 피해로 사망 대기 · 함정 시간이 생기면 true (끝난 뒤 다시 온다).
-        // 스킵된 턴은 여기를 지나지 않는다 — 피폭 없음, k 도 늘지 않는다 (사용자 2026-11-13).
+        // 턴이 끝나는 순간 (AdvanceTurn 첫머리) — 프로토타입 v2 turnEnd2 순서: 대소동이면 새 판 → 피폭 → 개판 세기.
+        // 피폭 피해의 사망 대기 · 함정 시간, 개판 판정이 생기면 true (끝난 뒤 Advance 가 다시 오고, 한 단계는 한 번만).
+        // 스킵된 턴은 여기를 지나지 않는다 — 피폭 없음 · k 도 그대로 (사용자 2026-11-13). 개판은 스킵된 턴도 센다 (AdvanceTurn).
         private bool HoldTurnEnd()
         {
             if (_restartPending)
@@ -33,25 +34,47 @@ namespace Chapchu.Game
                 return true;
             }
 
-            if (_restartCount == 0 || _turnEndDone || CurrentTurnActor < 0)
+            if (CurrentTurnActor < 0)
                 return false;
 
-            _turnEndDone = true;
-            _falloutTurns++;
-            int damage = FalloutDamage(_falloutTurns, _restartCount);
-            _events.Add(new FalloutChanged(_restartCount, _falloutTurns));
-            foreach (int actor in _turnOrder.Where(a => IsInGame(a) && _players[a].Life == LifeState.Alive).ToList())
-                DealDamage(actor, damage, -1);
+            if (_turnEndStage == 0)
+            {
+                _turnEndStage = 1;
+                if (_restartCount > 0)
+                {
+                    _falloutTurns++;
+                    int damage = FalloutDamage(_falloutTurns, _restartCount);
+                    _events.Add(new FalloutChanged(_restartCount, _falloutTurns));
+                    foreach (int actor in AliveActors())
+                        DealDamage(actor, damage, -1);
 
-            double now = _clock();
-            CheckDeathPending(now);
-            OpenTrapWindowIfNeeded(now);
-            if (!IsDeathPending && !IsTrapWindowOpen)
+                    double at = _clock();
+                    CheckDeathPending(at);
+                    OpenTrapWindowIfNeeded(at);
+                    if (HoldForTurnEnd())
+                        return true;
+                }
+            }
+
+            if (_turnEndStage == 1)
+            {
+                _turnEndStage = 2;
+                TickGaepan();
+                if (HoldForTurnEnd())
+                    return true;
+            }
+
+            return false;
+        }
+
+        // 이 턴은 끝났다 — 사망 · 함정 처리 · 개판 판정이 끝나면 Advance 가 다시 넘긴다 (남은 시간을 되살리지 않게 메인 행동을 쓴 것으로)
+        private bool HoldForTurnEnd()
+        {
+            if (!IsDeathPending && !IsTrapWindowOpen && !IsGaepanJudging)
                 return false;
 
-            // 이 턴은 끝났다 — 사망 · 함정 처리가 끝나면 Advance 가 다시 넘긴다 (남은 시간을 되살리지 않게 메인 행동을 쓴 것으로)
             _mainActionUsed = true;
-            _nextTurnAt = now;
+            _nextTurnAt = _clock();
             return true;
         }
 
@@ -78,6 +101,8 @@ namespace Chapchu.Game
             _waitCasters.Clear();
             _reversed = false;
             _extraTurnActor = -1;
+            _heldNext = -1;
+            ResetGaepan(); // 개판도 처음으로 (사용자 2026-11-13)
             InitDeck(_allCards);
 
             _turnOrder.Clear();

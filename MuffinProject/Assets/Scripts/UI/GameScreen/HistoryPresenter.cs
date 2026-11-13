@@ -33,6 +33,16 @@ namespace Chapchu.UI.GameScreen
         private const string NewRoundFormat = "새 판: {0} 순서, {1}부터";
         private const string OrderSeparator = " → ";
         private const string FalloutFormat = "피폭 데미지: 모두 {0} ({1}턴째)";
+        private const string GaepanStartFormat = "개판 오분전! {0}바퀴 뒤 반반 확률로 HP 꼴찌 또는 손패 꼴찌가 즉시 사망 (동점이면 무작위 1명)";
+        private const string GaepanAgainText = "개판 오분전 다시 처음부터!";
+        private const string GaepanLeftFormat = "개판 오분전: {0}바퀴 남음";
+        private const string GaepanJudgeFormat = "개판 오분전 종료: 기준 {0} 꼴찌 — {1}{2} → 즉시 사망";
+        private const string GaepanHpValueFormat = "(HP {0})";
+        private const string GaepanCardValueFormat = "({0}장)";
+        private const string GaepanTiedFormat = " · 동점 {0} 중 무작위";
+        private const string GaepanByHp = "HP";
+        private const string GaepanByCard = "손패";
+        private const string NameSeparator = ", ";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -185,6 +195,27 @@ namespace Chapchu.UI.GameScreen
             if (turns <= 0) return;
 
             Add(new HistoryEntry { Actor = _turnActor, Text = string.Format(FalloutFormat, GameServer.FalloutDamage(turns, n), turns), Icon = HistoryIcon.Card });
+        }
+
+        /// <summary>개판 오분전 (121) — 시작 · 다시 처음부터 · 남은 바퀴. 대소동으로 지워짐(caster -1)은 적지 않는다. 문구는 프로토타입 v2.</summary>
+        public void ShowGaepan(int caster, int left, bool again, bool started)
+        {
+            if (caster < 0)
+                return;
+            if (again)
+                Add(new HistoryEntry { Actor = caster, Text = GaepanAgainText, Icon = HistoryIcon.Card });
+            if (started)
+                Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanStartFormat, left), Icon = HistoryIcon.Card });
+            else
+                Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanLeftFormat, left), Icon = HistoryIcon.Card });
+        }
+
+        /// <summary>개판 오분전 판정 (121) — 기준 · 꼴찌 · 동점. HP 0 은 뒤따르는 HP 변화가 적는다.</summary>
+        public void ShowGaepanJudged(int loser, bool byHp, int value, int[] tied)
+        {
+            string tiedText = tied.Length > 1 ? string.Format(GaepanTiedFormat, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf))) : "";
+            string valueText = string.Format(byHp ? GaepanHpValueFormat : GaepanCardValueFormat, value);
+            Add(new HistoryEntry { Actor = loser, Text = string.Format(GaepanJudgeFormat, byHp ? GaepanByHp : GaepanByCard, PlayerLook.NameOf(loser), valueText) + tiedText, Icon = HistoryIcon.Card });
         }
 
         /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123).</summary>

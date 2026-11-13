@@ -17,6 +17,7 @@ namespace Chapchu.Game
         private double _lastTickAt;
         private bool _reversed;           // 턴 진행 방향 — false 정방향(배열 순) · true 역방향 (03-turn.md 6절 #4). 한 판 동안 유지
         private int _extraTurnActor = -1; // 생존자 2명일 때 방향 반전 — 다음 턴이 다시 이 사람 (03-turn.md 7절). 없으면 -1
+        private int _heldNext = -1;       // 스킵된 턴 끝의 개판 판정을 기다리는 중 — 끝나면 이 사람부터 다음 턴을 찾는다. 없으면 -1
 
         /// <summary>
         /// 방장이 매 프레임 부른다. 지금 멈춰 있는 것 하나를 시각에 따라 진행한다 —
@@ -63,6 +64,15 @@ namespace Chapchu.Game
                 FinalizeDeaths();
                 CheckElimination();
                 if (_gameOver)
+                    return;
+            }
+
+            if (IsGaepanJudging)
+            {
+                if (now < _gaepanJudgeAt)
+                    return; // 개판 판정 공개 중 (11-card-list 121)
+                FinishGaepanJudge(now);
+                if (IsDeathPending)
                     return;
             }
 
@@ -132,17 +142,36 @@ namespace Chapchu.Game
             if (HoldTurnEnd())
                 return; // 대소동 → 새 판 · 피폭 피해의 사망 대기 · 함정 시간 (11-card-list 112)
 
-            // 2인 방향 반전 — 다음 사람을 건너뛰어 내 턴이 다시 온다 (03-turn.md 7절). 그 사람이 빠졌으면 보통대로
-            int next = _extraTurnActor == CurrentTurnActor && CurrentTurnActor != -1 && IsInGame(CurrentTurnActor) ? CurrentTurnActor : GetNextActor(CurrentTurnActor);
-            _extraTurnActor = -1;
+            int next;
             bool skipped = false;
+            if (_heldNext != -1)
+            {
+                // 스킵된 턴 끝의 개판 판정 · 사망을 마쳤다 — 거기서 이어 간다. 그 사람이 빠졌으면 그다음
+                next = IsInGame(_heldNext) ? _heldNext : GetNextActor(_heldNext);
+                _heldNext = -1;
+                skipped = true;
+            }
+            else
+            {
+                // 2인 방향 반전 — 다음 사람을 건너뛰어 내 턴이 다시 온다 (03-turn.md 7절). 그 사람이 빠졌으면 보통대로
+                next = _extraTurnActor == CurrentTurnActor && CurrentTurnActor != -1 && IsInGame(CurrentTurnActor) ? CurrentTurnActor : GetNextActor(CurrentTurnActor);
+                _extraTurnActor = -1;
+            }
+
             for (int guard = 0; guard < _turnOrder.Count && _players[next].SkipNextTurn; guard++)
             {
                 _players[next].SkipNextTurn = false;
                 _events.Add(new TurnSkipped(next));
                 RecordAfter(AfterKind.TurnSkipped, next, -1, 1);
                 skipped = true;
+                TickGaepan(); // 개판은 스킵된 턴도 1턴으로 센다 (11-card-list 121)
                 next = GetNextActor(next);
+            }
+
+            if (HoldForTurnEnd())
+            {
+                _heldNext = next; // 스킵된 턴 끝에 개판 판정이 열렸다 — 마친 뒤 이 사람부터
+                return;
             }
 
             // 건 사람의 「기다려」 는 그 사람의 실제 턴이 시작되기 전에 끝난다 — 그래서 건 사람은 이 턴에 찹츄로 이길 수 있다 (11-card-list 123)
@@ -172,7 +201,7 @@ namespace Chapchu.Game
             _nextTurnAt = -1;
             _resumeAt = -1;
             _turnPaused = false;
-            _turnEndDone = false;
+            _turnEndStage = 0;
             TurnSerial++;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
@@ -186,8 +215,8 @@ namespace Chapchu.Game
             CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
-        // 체인 · 함정 시간 · 사망 대기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
-        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || now < _resumeAt;
+        // 체인 · 함정 시간 · 사망 대기 · 개판 판정 공개 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
+        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || IsGaepanJudging || now < _resumeAt;
 
         // 메인 행동 전에 멈춘 동안은 턴 마감을 미룬다. 풀리는 순간 남은 시간으로 다시 알린다 (03-turn.md 4절).
         private void UpdateTurnClock(double now)

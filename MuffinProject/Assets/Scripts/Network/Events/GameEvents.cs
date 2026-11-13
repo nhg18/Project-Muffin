@@ -40,6 +40,8 @@ namespace Chapchu.Network.Events
         public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (107 짖기: 다음 실제 턴 · 이번 턴 · 없음)
         public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (123). 비면 끝, 그동안 찹츄 승리 없음
         public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (112)
+        public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대소동으로 지움), again 이면 다시 써서 처음부터 (121)
+        public static event Action<int, bool, int, int[]> OnGaepanJudged;    // loser, byHp, value, tied — 개판 판정 공개. 2.3초 뒤 loser 의 HP 0 (121)
         public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (112)
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
@@ -88,6 +90,8 @@ namespace Chapchu.Network.Events
         public static void RaiseWaitChanged(int[] casters) => OnWaitChanged?.Invoke(casters);
         public static void RaiseGameRestarted(int user, int count, int[] order) => OnGameRestarted?.Invoke(user, count, order);
         public static void RaiseFalloutChanged(int n, int turns) => OnFalloutChanged?.Invoke(n, turns);
+        public static void RaiseGaepanChanged(int caster, int left, bool again) => OnGaepanChanged?.Invoke(caster, left, again);
+        public static void RaiseGaepanJudged(int loser, bool byHp, int value, int[] tied) => OnGaepanJudged?.Invoke(loser, byHp, value, tied);
         public static void RaiseChapchuWinHeld(int actorNumber) => OnChapchuWinHeld?.Invoke(actorNumber);
         public static void RaiseCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount) => OnCardReturnedToHand?.Invoke(actorNumber, cardInstanceId, cardId, handCount);
         public static void RaiseDeathAvoided(int actorNumber, int hp) => OnDeathAvoided?.Invoke(actorNumber, hp);
