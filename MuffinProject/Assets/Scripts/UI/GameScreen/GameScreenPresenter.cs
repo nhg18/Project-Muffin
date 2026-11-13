@@ -26,6 +26,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TurnStripPresenter turnStrip;
         [SerializeField] private TurnTimerPresenter turnTimer;
         [SerializeField] private HistoryPresenter history;
+        [Tooltip("판 효과 줄 — 턴 순서 띠 아래 (기다려! · 피폭).")]
+        [SerializeField] private BoardEffectsPresenter boardEffects;
         [Tooltip("체인에 올라간 카드 — 낸 카드를 모든 화면에 크게 보여 주고 처리되면 버림 더미로.")]
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
@@ -49,7 +51,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || cardDeck == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -83,6 +85,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
+            GameEvents.OnGameRestarted += HandleGameRestarted;
+            GameEvents.OnFalloutChanged += HandleFalloutChanged;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
@@ -120,6 +124,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
+            GameEvents.OnGameRestarted -= HandleGameRestarted;
+            GameEvents.OnFalloutChanged -= HandleFalloutChanged;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
@@ -463,9 +469,42 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });
 
-        private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); return null; });
+        private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); boardEffects.ShowWait(casters); return null; });
 
         private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
+
+        // 대소동 (112) — 판 상태를 처음으로: 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
+        // 새 HP · 손패 · 첫 턴은 뒤따르는 알림이 시작 때처럼 채운다. 기록은 이어진다. 컷인 · 테이블 빛 연출은 넣지 않는다 (사용자 2026-11-13).
+        private void HandleGameRestarted(int user, int count, int[] order) => Enqueue(() => GameRestartedRoutine(user, count, order));
+
+        private IEnumerator GameRestartedRoutine(int user, int count, int[] order)
+        {
+            history.ShowGameRestarted(user, count, order);
+            boardEffects.ShowRestarted();
+            hand.EndReaction();
+            reactionTimer.Hide();
+            _chainCount = 0;
+
+            myTraps.Clear();
+            myTraps.ShowCount(0);
+            myPanel.ShowChapchu(false);
+            myPanel.ShowHandCount(0);
+            turnStrip.ShowDirection(false);
+            foreach (int actor in order)
+            {
+                turnStrip.ShowChapchu(actor, false);
+                if (IsMe(actor))
+                    continue;
+                seats.ShowChapchu(actor, false);
+                seats.ShowHandCount(actor, 0);
+                seats.ShowTrapCount(actor, 0);
+            }
+
+            yield return hand.DiscardHandRoutine();
+            discardPile.Clear();
+        }
+
+        private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)

@@ -70,6 +70,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnGameRestarted += HandleGameRestarted;
+            GameEvents.OnFalloutChanged += HandleFalloutChanged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnMySync += HandleMySync;
@@ -110,6 +112,8 @@ namespace Chapchu.DebugTools
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnGameRestarted -= HandleGameRestarted;
+            GameEvents.OnFalloutChanged -= HandleFalloutChanged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnMySync -= HandleMySync;
@@ -371,6 +375,14 @@ namespace Chapchu.DebugTools
         private void HandleTurnSkipped(int actorNumber) => Log($"P{actorNumber} 턴 스킵");
 
         private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Log($"P{actorNumber} 행동 카드 금지 — {state}");
+
+        private void HandleGameRestarted(int user, int count, int[] order)
+        {
+            ClearMyCards(); // 새 판 — 손패 · 함정은 처음부터 다시 나눈다 (11-card-list 112)
+            Log($"대소동 — P{user} · 새 판 {count}번째 · 순서 {string.Join(" → ", System.Linq.Enumerable.Select(order, a => $"P{a}"))}");
+        }
+
+        private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
 
         private void HandleWaitChanged(int[] casters) => Log($"기다려 — {(casters.Length > 0 ? string.Join(" ", System.Linq.Enumerable.Select(casters, a => $"P{a}")) : "끝")}");
 

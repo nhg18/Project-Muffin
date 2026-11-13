@@ -558,4 +558,38 @@
             ExtraTurn = extraTurn;
         }
     }
+
+    /// <summary>
+    /// 대소동(112)으로 게임을 새로 시작한다 — 이 뒤로 HP · 손패 · 첫 턴이 시작 때처럼 온다. 화면은 판 상태(손패 · 함정 · 버림 더미 · 찹츄 · 사망 · 방향 · 판 효과)를 처음으로 되돌린다.
+    /// User = 대소동을 쓴 사람. Count = 이 판에서 대소동을 쓴 횟수 n. Order = 새 턴 순서 (나간 사람 제외, 죽은 사람 포함). 통계 · 기록 서랍은 이어진다 (11-card-list 112).
+    /// </summary>
+    public sealed class GameRestarted : GameEvent
+    {
+        public int User { get; }
+        public int Count { get; }
+        public int[] Order { get; }
+
+        public GameRestarted(int user, int count, int[] order)
+        {
+            User = user;
+            Count = count;
+            Order = order;
+        }
+    }
+
+    /// <summary>
+    /// 피폭 상태가 바뀌었다 (112 대소동). N = 대소동 횟수, Turns = 새로 시작한 뒤 피폭이 들어간 턴 수 k. Turns 가 1 이상이면 방금 모두가 k^N 피해를 입었다.
+    /// 다음 턴 끝의 피해는 (k+1)^N — 판 효과 줄 「피폭 · 턴이 끝날 때마다 모두 −N」. N 이 0 이면 피폭 없음. 공개 — 전원.
+    /// </summary>
+    public sealed class FalloutChanged : GameEvent
+    {
+        public int N { get; }
+        public int Turns { get; }
+
+        public FalloutChanged(int n, int turns)
+        {
+            N = n;
+            Turns = turns;
+        }
+    }
 }

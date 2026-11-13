@@ -102,6 +102,8 @@ MonoBehaviour:
   - RPC_OnActionBlockChanged
   - RPC_OnChapchuWinHeld
   - RPC_OnWaitChanged
+  - RPC_OnFalloutChanged
+  - RPC_OnGameRestarted
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

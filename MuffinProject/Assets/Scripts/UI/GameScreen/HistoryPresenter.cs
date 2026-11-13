@@ -29,6 +29,10 @@ namespace Chapchu.UI.GameScreen
         private const string WaitStartText = "기다려! — 다음 차례까지 찹츄 승리 없음";
         private const string WaitEndText = "기다려 끝";
         private const string ChapchuHeldText = "찹츄 판정 미룸 (기다려)";
+        private const string RestartFormat = "대소동! 게임을 새로 시작 ({0}번째)";
+        private const string NewRoundFormat = "새 판: {0} 순서, {1}부터";
+        private const string OrderSeparator = " → ";
+        private const string FalloutFormat = "피폭 데미지: 모두 {0} ({1}턴째)";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -42,6 +46,7 @@ namespace Chapchu.UI.GameScreen
         private readonly HashSet<int> _waitCasters = new HashSet<int>(); // 마지막으로 본 「기다려」 를 건 사람들 — 시작 · 끝 줄을 가린다
         private readonly Dictionary<int, int> _lastHp = new Dictionary<int, int>(); // actorNumber → 마지막으로 본 HP (변화량 계산용)
         private bool _turnStarted; // 첫 턴이 시작됐는가 — 그 전의 뽑기는 초기 배분
+        private int _turnActor = -1; // 지금 턴 주인 — 피폭 줄(턴 끝)을 그 사람 이름으로
 
         private void Awake()
         {
@@ -79,6 +84,7 @@ namespace Chapchu.UI.GameScreen
         public void ShowTurnStarted(int actorNumber)
         {
             _turnStarted = true;
+            _turnActor = actorNumber;
             bool isMe = PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == actorNumber;
             _entries.Add(HistoryEntry.HeaderOf(isMe ? MyTurnHeader : string.Format(TurnHeaderFormat, PlayerLook.NameOf(actorNumber))));
             RefreshLogIfOpen();
@@ -154,6 +160,31 @@ namespace Chapchu.UI.GameScreen
 
             _waitCasters.Clear();
             _waitCasters.UnionWith(now);
+        }
+
+        /// <summary>
+        /// 대소동으로 새 판 (112) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
+        /// </summary>
+        public void ShowGameRestarted(int user, int count, int[] order)
+        {
+            Add(new HistoryEntry { Actor = user, Text = string.Format(RestartFormat, count), Icon = HistoryIcon.Card });
+
+            string[] names = order.Select(PlayerLook.NameOf).ToArray();
+            _entries.Add(HistoryEntry.HeaderOf(string.Format(NewRoundFormat, string.Join(OrderSeparator, names), names.FirstOrDefault())));
+            RefreshLogIfOpen();
+
+            foreach (int actor in order)
+                _lastHp[actor] = GameServer.MaxHp;
+            _waitCasters.Clear();
+            _turnStarted = false;
+        }
+
+        /// <summary>피폭 (112) — 턴이 끝나 모두 k^n 피해를 입었으면 한 줄. 새 판(k 0)은 적지 않는다.</summary>
+        public void ShowFallout(int n, int turns)
+        {
+            if (turns <= 0) return;
+
+            Add(new HistoryEntry { Actor = _turnActor, Text = string.Format(FalloutFormat, GameServer.FalloutDamage(turns, n), turns), Icon = HistoryIcon.Card });
         }
 
         /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123).</summary>

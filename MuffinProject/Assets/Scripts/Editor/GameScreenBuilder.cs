@@ -121,6 +121,7 @@ namespace Chapchu.EditorTools
             // 가장자리 HUD
             RoomCodeView roomCode = BuildRoomCodeTag(safeArea);
             TurnStripView turnStrip = BuildTurnStrip(safeArea);
+            BoardEffectsPresenter boardEffects = BuildBoardEffects(safeArea);
             GameMenuView menu = BuildGearButton(safeArea);
             FeedView feed = BuildFeed(safeArea);
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
@@ -175,7 +176,7 @@ namespace Chapchu.EditorTools
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
-                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history),
+                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects),
                 ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("cardDeck", gameDeck));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
@@ -315,6 +316,36 @@ namespace Chapchu.EditorTools
                 ("nowChip", nowFill), ("nowText", nowText), ("directionIcon", dir.rectTransform));
             root.gameObject.AddComponent<TurnStripPresenter>();
             return view;
+        }
+
+        // 판 효과 줄 (프로토타입 v2 .gfx · .gf, 960 폭 시안 × 2) — 턴 띠 아래(위 끝에서 112) 가운데, 알약 높이 48 · 간격 10 · 테 4 · 반지름 16.
+        // 알약 = 주황(#ff9f1a) 이름표(높이 36 · 반지름 10 · Jua 26) + 설명(25). 알약 템플릿은 비활성 — 뷰가 복제한다.
+        public static BoardEffectsPresenter BuildBoardEffects(RectTransform parent)
+        {
+            RectTransform root = NewRect("BoardEffects", parent);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(EdgeTop + 76f + 16f)), new Vector2(0f, 48f));
+            HorizontalLayout(root, new RectOffset(), 10f, TextAnchor.UpperCenter, true, true);
+            FitBoth(root.gameObject);
+
+            RectTransform pill = NewRect("Pill", root);
+            pill.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
+            RoundBox(pill, Ink, 4f, 16f, White);
+            HorizontalLayout(pill, new RectOffset(8, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
+
+            RectTransform label = NewRect("Label", pill);
+            label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+            Image labelFill = RoundImage("Fill", label, Hex(0xff9f1a), 10f);
+            Stretch(labelFill.rectTransform);
+            labelFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            HorizontalLayout(label, new RectOffset(12, 12, 0, 0), 0f, TextAnchor.MiddleCenter, true, true);
+            NewText("Text", label, "피폭", 26f, Ink, true);
+
+            NewText("Text", pill, "턴이 끝날 때마다 모두 −1", 25f, Ink, false);
+            pill.gameObject.SetActive(false);
+
+            var view = root.gameObject.AddComponent<BoardEffectsView>();
+            Wire(view, ("pillTemplate", pill));
+            return root.gameObject.AddComponent<BoardEffectsPresenter>();
         }
 
         // 플레이어 칩 템플릿 (시안 .pn2) — 루트 → Chapchu(분홍 테, 바깥 5) · Border(잉크 테) · Fill(노랑) · Dot(잉크 고리 → Fill 목걸이 색) · Name. 비활성.

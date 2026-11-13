@@ -71,7 +71,8 @@ namespace Chapchu.Game
             string blocked = string.Join(" ", _players.Where(p => p.Value.ActionBlocked || p.Value.BlockActionNextTurn)
                 .Select(p => $"P{p.Key}{(p.Value.ActionBlocked ? "" : "(다음)")}"));
             string wait = string.Join(" ", _waitCasters.Select(a => $"P{a}"));
-            return (blocked.Length > 0 ? $" · 금지 {blocked}" : "") + (wait.Length > 0 ? $" · 기다려 {wait}" : "");
+            return (blocked.Length > 0 ? $" · 금지 {blocked}" : "") + (wait.Length > 0 ? $" · 기다려 {wait}" : "")
+                + (_restartCount > 0 ? $" · 피폭 n{_restartCount} k{_falloutTurns}" : "");
         }
     }
 }

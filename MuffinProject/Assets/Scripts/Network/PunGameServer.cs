@@ -76,7 +76,7 @@ namespace Chapchu.Network
                 player.SetCustomProperties(reset);
 
             // 버림 더미는 빈 채로 · 턴 방향은 정방향으로 시작한다 — 값이 null 이면 Photon 이 키를 지운다
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null };
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null, [RoomProps.Fallout] = null };
             foreach (int bot in bots)
             {
                 foreach (DictionaryEntry entry in reset)
@@ -389,6 +389,29 @@ namespace Chapchu.Network
                         roomProps[RoomProps.WaitCasters] = wait.Casters.Length > 0 ? wait.Casters : null;
                         break;
 
+                    case GameRestarted restarted:
+                        Broadcast(nameof(RPC_OnGameRestarted), restarted.User, restarted.Count, restarted.Order);
+                        foreach (int actor in restarted.Order)
+                        {
+                            Hashtable props = PlayerPropsOf(playerProps, actor);
+                            props[PlayerProps.LifeState] = (byte)LifeState.Alive;
+                            props[PlayerProps.ChapChu] = false;
+                            props[PlayerProps.TrapCount] = 0;
+                            props[PlayerProps.HandCount] = 0;
+                            props[PlayerProps.ActionBlock] = null;
+                        }
+                        roomProps[RoomProps.DiscardCount] = 0;
+                        roomProps[RoomProps.DiscardTop] = null;
+                        roomProps[RoomProps.TurnDirection] = null;
+                        roomProps[RoomProps.WaitCasters] = null;
+                        Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
+                        break;
+
+                    case FalloutChanged fallout:
+                        Broadcast(nameof(RPC_OnFalloutChanged), fallout.N, fallout.Turns);
+                        roomProps[RoomProps.Fallout] = fallout.N > 0 ? new[] { fallout.N, fallout.Turns } : null;
+                        break;
+
                     case ChapchuWinHeld held:
                         Broadcast(nameof(RPC_OnChapchuWinHeld), held.Actor);
                         break;
@@ -458,7 +481,7 @@ namespace Chapchu.Network
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
             // 찹츄 · 함정 장수도 같은 이유로 여기서 지운다 — 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다. 봇은 방 속성 키 (18-bot.md 9절)
             var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0 };
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null };
+            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null, [RoomProps.Fallout] = null };
             foreach (int bot in BotRoster.Actors)
             {
                 foreach (DictionaryEntry entry in playerReset)
@@ -757,6 +780,20 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseWaitChanged(casters);
+        }
+
+        [PunRPC]
+        private void RPC_OnGameRestarted(int seq, int user, int count, int[] order, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseGameRestarted(user, count, order);
+        }
+
+        [PunRPC]
+        private void RPC_OnFalloutChanged(int seq, int n, int turns, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseFalloutChanged(n, turns);
         }
 
         [PunRPC]

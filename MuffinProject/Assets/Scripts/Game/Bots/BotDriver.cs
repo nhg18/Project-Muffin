@@ -348,6 +348,9 @@ namespace Chapchu.Game.Bots
             if (!skipped.Contains(6) && me.Hand.Count < DrawBelowHand)
                 return DrawChoice(bot, 6, $"손패 {me.Hand.Count}장 < {DrawBelowHand}");
 
+            if (!skipped.Contains(10) && TryCard(bot, me, opponents, BotRole.Board, -1, 10, "판 카드 조건 맞음", out found))
+                return found;
+
             if (!skipped.Contains(7) && TryCard(bot, me, opponents, BotRole.Attack, -1, 7, "공격", out found))
                 return found;
 
@@ -435,12 +438,12 @@ namespace Chapchu.Game.Bots
                     return opponents.Length > 0;
 
                 case TargetType.Everyone:
-                    // 나도 맞는다 — 공격으로는 내 HP 가 상대 전원보다 높을 때만 (7-3 ㄱ A14)
+                    // 나도 맞는다 — 공격으로는 내 HP 가 상대 전원보다 높을 때만 (7-3 ㄱ A14). 판 카드는 효과의 조건(BotWants)으로
                     return role != BotRole.Attack || opponents.All(a => _server.StateOf(a).Hp < me.Hp);
 
                 case TargetType.Self:
                 case TargetType.None:
-                    return role == BotRole.Heal;
+                    return role == BotRole.Heal || role == BotRole.Board;
 
                 case TargetType.ChapchuPlayers: // 나도 찹츄면 나도 맞는다 — 찹츄 상대가 있고 나는 아닐 때만 (7-3 ㄱ A02)
                     return !me.IsChapchu && opponents.Any(a => _server.StateOf(a).IsChapchu);

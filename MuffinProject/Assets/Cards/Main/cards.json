@@ -95,6 +95,12 @@
       "text": "대상에게 10 피해를 주고 1장을 빼앗는다",
       "art": "",
       "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" }, { "type": "StealEffect", "args": "count=1" } ]
+    },
+    {
+      "id": 112, "name": "대소동", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "게임을 새로 시작한다. 이후 매 턴 모두 1, 2, 3…씩 커지는 피폭 피해를 받는다",
+      "art": "",
+      "effects": [ { "type": "RestartEffect", "args": "" } ]
     }
   ]
 }

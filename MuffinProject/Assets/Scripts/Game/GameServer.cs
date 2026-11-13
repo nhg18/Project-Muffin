@@ -64,6 +64,11 @@ namespace Chapchu.Game
             _trapWindowDeadline = -1;
             _afterRecords.Clear();
             _waitCasters.Clear();
+            _allCards.Clear();
+            _allCards.AddRange(deck);
+            _restartCount = 0;
+            _falloutTurns = 0;
+            _restartPending = false;
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();

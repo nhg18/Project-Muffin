@@ -177,6 +177,8 @@ namespace Chapchu.Game
                 {
                     CardEffect effect = effects[entry.NextEffect++];
                     effect.Apply(this, entry);
+                    if (_restartPending)
+                        return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
                     if (effect.Tag == EffectTag.Damage && entry.NextEffect < effects.Count && Settle(settleAt))
                         return;
                 }

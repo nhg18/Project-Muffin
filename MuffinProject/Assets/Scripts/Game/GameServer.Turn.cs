@@ -129,6 +129,9 @@ namespace Chapchu.Game
         // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 시간.
         private void AdvanceTurn()
         {
+            if (HoldTurnEnd())
+                return; // 대소동 → 새 판 · 피폭 피해의 사망 대기 · 함정 시간 (11-card-list 112)
+
             // 2인 방향 반전 — 다음 사람을 건너뛰어 내 턴이 다시 온다 (03-turn.md 7절). 그 사람이 빠졌으면 보통대로
             int next = _extraTurnActor == CurrentTurnActor && CurrentTurnActor != -1 && IsInGame(CurrentTurnActor) ? CurrentTurnActor : GetNextActor(CurrentTurnActor);
             _extraTurnActor = -1;
@@ -169,6 +172,7 @@ namespace Chapchu.Game
             _nextTurnAt = -1;
             _resumeAt = -1;
             _turnPaused = false;
+            _turnEndDone = false;
             TurnSerial++;
 
             _events.Add(new TurnStarted(actor, _turnDeadline));
