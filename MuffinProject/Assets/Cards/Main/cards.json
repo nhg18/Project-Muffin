@@ -89,6 +89,12 @@
       "text": "다음 내 턴 시작 전까지 아무도 승리할 수 없다",
       "art": "",
       "effects": [ { "type": "StartWaitEffect", "args": "" } ]
+    },
+    {
+      "id": 115, "name": "팍씨", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "대상에게 10 피해를 주고 1장을 빼앗는다",
+      "art": "",
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" }, { "type": "StealEffect", "args": "count=1" } ]
     }
   ]
 }

@@ -66,6 +66,13 @@ namespace Chapchu.Game
                     return;
             }
 
+            if (IsResolvePaused)
+            {
+                ContinueResolve(now); // 피해의 사망 · 함정 처리가 끝났다 — 남은 효과로 (11-card-list 115)
+                if (_gameOver || IsResolvePaused || IsTrapWindowOpen || IsDeathPending)
+                    return;
+            }
+
             if (now < _resumeAt)
                 return; // 끼어든 체인의 후처리 연출 중
 
@@ -176,7 +183,7 @@ namespace Chapchu.Game
         }
 
         // 체인 · 함정 시간 · 사망 대기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
-        private bool IsPaused(double now) => _chain.Count > 0 || IsTrapWindowOpen || IsDeathPending || now < _resumeAt;
+        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || now < _resumeAt;
 
         // 메인 행동 전에 멈춘 동안은 턴 마감을 미룬다. 풀리는 순간 남은 시간으로 다시 알린다 (03-turn.md 4절).
         private void UpdateTurnClock(double now)

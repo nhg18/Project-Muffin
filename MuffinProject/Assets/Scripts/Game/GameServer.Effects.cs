@@ -335,11 +335,7 @@ namespace Chapchu.Game
         // ── 아래 카드를 바꾸는 카운터 (04-card.md 7절) ──
 
         /// <summary>체인에서 entry 바로 아래 카드 — 카운터는 낼 때의 맨 위 카드에 반응한다. 맨 아래면 null.</summary>
-        internal ChainEntry Below(ChainEntry entry)
-        {
-            int index = _chain.IndexOf(entry);
-            return index > 0 ? _chain[index - 1] : null;
-        }
+        internal ChainEntry Below(ChainEntry entry) => entry.Below;
 
         /// <summary>반응한 카드(바로 아래)에 표시를 남긴다 — 그 카드가 처리될 때 반영된다 (04 7절).</summary>
         internal void MarkBelow(ChainEntry entry, Action<ChainEntry> mark)
