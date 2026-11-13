@@ -583,6 +583,37 @@ run_chapchu() {
     done
 }
 
+# 112 대소동 (드문 카드): 방장이 턴 주인에게 112 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
+run_restart() {
+    local clients="${1:-2}" project out lines first=""
+    enter_game "$clients" || return
+    until_ok "$MAIN" ForceCard 112 || return
+    log "▶ 처리 · 새 판 대기"
+    sleep 20
+    log "▶ 새 판에서 두 턴 진행 (피폭 1턴째 · 2턴째)"
+    for _ in $(seq 1 40); do
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ActIfMyTurn)
+            case "$out" in OK*) log "  $(name_of "$project"): $out"; sleep 2 ;; FAIL*) fail "$out"; return ;; esac
+        done
+        console_lines "$MAIN" | grep -q '\[GameDebugInput\].*피폭 — n 1 · k 2' && break
+        sleep 2
+    done
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '대소동 — |피폭 — ' | sed -E 's/.*(대소동 — |피폭 — )/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
+        printf '%s' "$lines" | grep -q '대소동 — P[0-9]* · 새 판 1번째' || fail "$(name_of "$project") 새 판 줄이 없다"
+        printf '%s' "$lines" | grep -q '피폭 — n 1 · k 1 · 모두 −1' || fail "$(name_of "$project") 피폭 1턴째 줄이 없다"
+        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 대소동 · 피폭 줄이 메인과 다르다"; fi
+    done
+    compare_turns
+    check_table_ui restart
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
@@ -590,6 +621,7 @@ case "${1:-}" in
     full)  shift; run_full "$@" ;;
     solo)  shift; run_solo "$@" ;;
     chapchu) shift; run_chapchu "$@" ;;
+    restart) shift; run_restart "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 

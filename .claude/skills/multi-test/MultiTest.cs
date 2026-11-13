@@ -620,6 +620,33 @@ public static class MultiTest
         return "OK 모두 체력 " + hp + " — " + rules.DebugState();
     }
 
+    // 방장: 지금 턴 주인 손패에 카드 한 장을 넣고 바로 쓴다 (드문 카드의 네트워크 경로 확인 — 112 대소동). 결과는 실제 Send 로 보낸다
+    public static string ForceCard(string cardId)
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        int actor = rules.CurrentTurnActor;
+        if (actor == -1)
+            return "WAIT 턴 없음";
+        var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(rules);
+        int id = int.Parse(cardId);
+        Card c = server.Deck.CreateCards().FirstOrDefault(card => card.CardId == id);
+        if (c == null)
+            return "FAIL 덱에 카드 " + cardId + " 없음";
+
+        var forced = new Card(90000 + id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, c.RevealSeconds, c.ResolveSeconds, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
+        ((PlayerState)states[actor]).Hand.Add(forced);
+        IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, new int[0]);
+        string first = events.Count > 0 ? events[0].GetType().Name : "없음";
+        typeof(PunGameServer).GetMethod("Send", Private).Invoke(server, new object[] { events });
+        return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" : "FAIL 사용 결과 " + first;
+    }
+
     public static string Ui(string step)
     {
         string scene = SceneManager.GetActiveScene().name;
@@ -1346,8 +1373,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3 };
-            Check(ids.Length == 37 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 37장 (묶음 1 ~ 4, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1 };
+            Check(ids.Length == 38 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 38장 (묶음 1 ~ 5, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1355,7 +1382,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 37)
+            if (ids.Length == 38)
             {
                 {
                     var t = new ChainTable();
@@ -1662,6 +1689,89 @@ public static class MultiTest
                     var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
                     events.AddRange(t.Run(t.Now + 3));
                     Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == 0 && events.OfType<TurnStarted>().Any(), "115 대상 손패 없음 — 피해만, 강탈 불발");
+                }
+
+                // ── 묶음 5 — 112 대소동: 새 판 · 피폭 k^n (11-card-list 112) ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 30);
+                    t.State(t.O2).Life = LifeState.Dead; // 죽은 사람도 다시 들어온다
+                    t.State(t.Turn).IsChapchu = true;
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    int[] all = { t.Turn, t.O1, t.O2 };
+                    bool fresh = restarted != null && restarted.Count == 1 && restarted.User == t.Turn && restarted.Order.OrderBy(a => a).SequenceEqual(all.OrderBy(a => a))
+                                 && all.All(a => t.Hp(a) == 100 && t.HandCount(a) == 5 && t.State(a).Life == LifeState.Alive && !t.State(a).IsChapchu)
+                                 && t.Server.CurrentTurnActor == restarted.Order[0]
+                                 && events.OfType<FalloutChanged>().Any(f => f.N == 1 && f.Turns == 0)
+                                 && !events.OfType<HpChanged>().Any(h => h.Hp < 100 && events.IndexOf(h) > events.IndexOf(restarted));
+                    Check(fresh, "112 대소동 — 쓴 턴이 끝나면 새 판: 죽은 사람 포함 전원 HP 100 · 손패 5 · 찹츄 해제 · 새 순서 첫 사람 · 쓴 턴은 피폭 없음");
+
+                    int first = restarted?.Order[0] ?? t.Turn, second = restarted?.Order[1] ?? t.O1, third = restarted?.Order[2] ?? t.O2;
+                    t.State(second).SkipNextTurn = true;
+                    events = t.Server.Draw(first).ToList();
+                    bool k1 = events.OfType<FalloutChanged>().Any(f => f.Turns == 1) && all.All(a => t.Hp(a) == 99);
+                    events = t.Server.Draw(t.Server.CurrentTurnActor).ToList(); // 스킵 뒤 third 의 턴
+                    bool k2 = t.Server.CurrentTurnActor != second && events.OfType<FalloutChanged>().Any(f => f.Turns == 2) && all.All(a => t.Hp(a) == 97);
+                    Check(k1 && k2, $"112 피폭 — 턴이 끝날 때마다 모두 k^1 (−1 · −2), 스킵된 턴은 피폭 없음 · k 도 그대로 (HP {t.Hp(first)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.Server.RemovePlayer(t.O2);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    Check(restarted != null && !restarted.Order.Contains(t.O2) && restarted.Order.Length == 2, "112 나간 사람은 빼고 새 판 (봇으로 채우지 않는다)");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    t.Run(t.Now + 3);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted again = events.OfType<GameRestarted>().FirstOrDefault();
+                    int first = again?.Order[0] ?? user;
+                    t.Server.Draw(first);
+                    t.Server.Draw(t.Server.CurrentTurnActor);
+                    Check(again != null && again.Count == 2 && t.Hp(first) == 100 - 1 - 4, $"112 두 번째 — n 2, 피폭 1 · 4 · 9 … (HP {t.Hp(first)})");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    foreach (int a in new[] { t.Turn, t.O1, t.O2 })
+                        t.SetHp(a, 1);
+                    events = t.Server.Draw(restarted?.Order[0] ?? t.Turn).ToList();
+                    events.AddRange(t.Run(t.Now + 10));
+                    GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+                    Check(events.OfType<DeathPending>().Count() == 3 && ended != null && ended.Reason == GameEndReason.Draw && !events.OfType<TurnStarted>().Any(),
+                        "112 피폭으로 남은 사람이 동시에 모두 죽으면 무승부 · 다음 턴 없음");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.Give(t.Turn, Real(112));
+                    t.SetHp(t.Turn, 40);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 112);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(112));
+                    t2.SetHp(t2.O1, 40);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 112), "봇 — 112 는 내 HP 가 꼴찌이거나 찹츄 상대가 있을 때만");
                 }
             }
         }
