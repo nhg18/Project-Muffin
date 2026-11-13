@@ -27,7 +27,7 @@ MonoBehaviour:
   triggerValue: 0
   reactCondition: 0
   revealSeconds: 1
-  resolveSeconds: 1.28
+  resolveSeconds: 3
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:

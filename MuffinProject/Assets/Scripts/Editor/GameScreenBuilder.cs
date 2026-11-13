@@ -22,7 +22,7 @@ namespace Chapchu.EditorTools
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
     /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다. 시안 글꼴(Jua · 고운돋움)은 아직 안 쓴다 — 굵은 자리 Bold · 본문 Regular (2026-11-07 결정).
     /// </summary>
-    public static class GameScreenBuilder
+    public static partial class GameScreenBuilder
     {
         private const string CanvasName = "GameCanvas";
         private const string BackgroundCanvasName = "BackgroundCanvas";
@@ -138,13 +138,17 @@ namespace Chapchu.EditorTools
             ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
 
             // 판 효과 줄 — 상대 좌석보다 위 (프로토타입 v2 .gfx z 24), 손패 층 · 서랍보다 아래
-            BoardEffectsPresenter boardEffects = BuildBoardEffects(BuildBoardLayer(canvasRect));
+            RectTransform boardLayer = BuildBoardLayer(canvasRect);
+            BoardEffectsPresenter boardEffects = BuildBoardEffects(boardLayer);
 
             // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
             PlayLineView playLine = BuildPlayLine(canvasRect);
             TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera);
             HandRevealView handReveal = BuildHandReveal(canvasRect);
             ScreenFlashView screenFlash = BuildScreenFlash(canvasRect);
+
+            // 121 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 시작 제목 · 판정 팻말은 화면 덮기 위 · 서랍 아래
+            GaepanPresenter gaepan = BuildGaepan(canvasRect, boardLayer, seats, (RectTransform)safeArea.Find("MyCharacter"));
 
             // 서랍 · 팝업 — 가장 위
             RectTransform sheets = NewRect("Sheets", canvasRect);
@@ -179,7 +183,7 @@ namespace Chapchu.EditorTools
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
-                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects),
+                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects), ("gaepan", gaepan),
                 ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("cardDeck", gameDeck));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);

@@ -159,6 +159,17 @@ namespace Chapchu.UI.GameScreen
                 seat.SetHandCount(handCount);
         }
 
+        /// <summary>상대 캐릭터 가운데(화면 좌표). 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetCharacterScreenPoint(int actorNumber, out Vector2 screenPoint)
+        {
+            screenPoint = default;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            screenPoint = seat.CharacterScreenPoint;
+            return true;
+        }
+
         /// <summary>상대 좌석의 손 자리(화면 좌표) — 그 사람이 낸 카드가 출발하고, 손패로 돌아가는 카드가 닿는다. 좌석이 없으면(나 · 나간 사람) false.</summary>
         public bool TryGetHandScreenPoint(int actorNumber, out Vector2 screenPoint)
         {

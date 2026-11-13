@@ -437,7 +437,7 @@ namespace Chapchu.Network
                         break;
 
                     case GaepanJudged judged:
-                        Broadcast(nameof(RPC_OnGaepanJudged), judged.Loser, judged.ByHp, judged.Value, judged.Tied);
+                        Broadcast(nameof(RPC_OnGaepanJudged), judged.Loser, judged.ByHp, judged.Value, judged.Tied, judged.Actors, judged.Values);
                         Debug.Log($"[{nameof(PunGameServer)}] 개판 판정 — 기준 {(judged.ByHp ? "HP" : "손패")} 꼴찌 P{judged.Loser} ({judged.Value}) · 동점 {judged.Tied.Length}명");
                         break;
 
@@ -847,10 +847,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnGaepanJudged(int seq, int loser, bool byHp, int value, int[] tied, PhotonMessageInfo info)
+        private void RPC_OnGaepanJudged(int seq, int loser, bool byHp, int value, int[] tied, int[] actors, int[] values, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseGaepanJudged(loser, byHp, value, tied);
+                GameEvents.RaiseGaepanJudged(loser, byHp, value, tied, actors, values);
         }
 
         [PunRPC]

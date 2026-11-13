@@ -69,6 +69,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>뒷면 부채꼴의 화면 좌표 — 이 좌석이 낸 카드가 출발하는 자리. Overlay 캔버스라 월드 위치가 곧 화면 픽셀이다.</summary>
         public Vector2 HandScreenPoint => hand.transform.position;
 
+        /// <summary>캐릭터 가운데(화면 좌표) — 121 판정 표가 뜨는 자리.</summary>
+        public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
+
         /// <summary>손패 장수 — 배지와 뒷면 부채꼴을 같이 맞춘다.</summary>
         public void SetHandCount(int count)
         {

@@ -7,7 +7,9 @@ namespace Chapchu.Game
     {
         // 확정 (11-card-list 121 · 사용자 2026-11-13).
         public const int GaepanRounds = 5;
-        private const double GaepanJudgeSeconds = 2.3; // 판정 공개 뒤 HP 0 까지 — 프로토타입 v2 GP_JUDGE_MS
+        // 판정 공개 뒤 HP 0 까지 — 프로토타입 v2 판정 팻말 연출(4명 기준 최대): 기준 룰렛 0.52 + 1.6 + 0.26 → 수치 표 1.14 → 「꼴찌는?!」 0.65.
+        // 처형씬(6.75초)은 넣지 않는다 (사용자 2026-11-13 — 2.3초를 이 길이로 바꿈). 화면은 GaepanJudgeView 가 같은 시간표로 그린다.
+        public const double GaepanJudgeSeconds = 4.17;
 
         private int _gaepanCaster = -1; // 개판을 건 사람. -1 이면 개판 없음 — 건 사람이 죽거나 나가도 이어진다
         private int _gaepanLeft;        // 남은 바퀴
@@ -64,7 +66,7 @@ namespace Chapchu.Game
             int[] tied = alive.Where(actor => ValueOf(actor) == lowest).ToArray();
             _gaepanLoser = tied[_random.Next(tied.Length)];
             _gaepanJudgeAt = _clock() + GaepanJudgeSeconds;
-            _events.Add(new GaepanJudged(_gaepanLoser, byHp, lowest, tied));
+            _events.Add(new GaepanJudged(_gaepanLoser, byHp, lowest, tied, alive, alive.Select(ValueOf).ToArray()));
         }
 
         // 판정 공개가 끝났다 — 꼴찌의 HP 를 0 으로 (피해가 아니라 설정). 사망 대기는 보통대로 (06 3절).

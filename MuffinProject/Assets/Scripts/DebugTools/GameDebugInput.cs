@@ -394,7 +394,7 @@ namespace Chapchu.DebugTools
         private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => Log($"고르기 시작 — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
         private void HandleChoiceMade(int actor, int option, bool timedOut) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
         private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
-        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명");
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명 · 값 {string.Join(" ", actors.Select((a, i) => $"P{a}={values[i]}"))}");
 
         private void HandleWaitChanged(int[] casters) => Log($"기다려 — {(casters.Length > 0 ? string.Join(" ", System.Linq.Enumerable.Select(casters, a => $"P{a}")) : "끝")}");
 

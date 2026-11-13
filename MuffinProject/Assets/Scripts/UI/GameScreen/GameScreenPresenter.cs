@@ -30,6 +30,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HistoryPresenter history;
         [Tooltip("판 효과 줄 — 턴 순서 띠 아래 (기다려! · 피폭).")]
         [SerializeField] private BoardEffectsPresenter boardEffects;
+        [Tooltip("121 개판 오분전 — 시작 제목 · 자명종 · 판정 팻말.")]
+        [SerializeField] private GaepanPresenter gaepan;
         [Tooltip("체인에 올라간 카드 — 낸 카드를 모든 화면에 크게 보여 주고 처리되면 버림 더미로.")]
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
@@ -491,6 +493,7 @@ namespace Chapchu.UI.GameScreen
         {
             history.ShowGameRestarted(user, count, order);
             boardEffects.ShowRestarted();
+            gaepan.ShowRestarted();
             hand.EndReaction();
             reactionTimer.Hide();
             _chainCount = 0;
@@ -527,11 +530,17 @@ namespace Chapchu.UI.GameScreen
         private void HandleChoiceMade(int actor, int option, bool timedOut) =>
             Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut); return null; });
 
-        // 개판 오분전 (121) — 판 효과 줄 · 기록만. 시작 제목 · 자명종 · 판정 팻말은 다음 작업 (사용자 2026-11-13)
+        // 개판 오분전 (121, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
         private void HandleGaepanChanged(int caster, int left, bool again) =>
-            Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); boardEffects.ShowGaepan(left); return null; });
+            Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); return gaepan.ChangedRoutine(left); });
 
-        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied) => Enqueue(() => { history.ShowGaepanJudged(loser, byHp, value, tied); return null; });
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Enqueue(() => GaepanJudgedRoutine(loser, byHp, value, tied, actors, values));
+
+        private IEnumerator GaepanJudgedRoutine(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
+        {
+            yield return gaepan.JudgedRoutine(loser, byHp, actors, values);
+            history.ShowGaepanJudged(loser, byHp, value, tied);
+        }
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)

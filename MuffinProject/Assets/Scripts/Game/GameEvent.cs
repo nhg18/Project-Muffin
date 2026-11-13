@@ -612,7 +612,7 @@
 
     /// <summary>
     /// 개판 오분전 판정 (121). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
-    /// 공개 2.3초 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
+    /// Actors · Values = 판정 때 살아 있던 사람과 그 기준 값 (같은 순서) — 각자 머리 위 수치 표. 공개 GameServer.GaepanJudgeSeconds 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
     /// </summary>
     public sealed class GaepanJudged : GameEvent
     {
@@ -620,13 +620,17 @@
         public bool ByHp { get; }
         public int Value { get; }
         public int[] Tied { get; }
+        public int[] Actors { get; }
+        public int[] Values { get; }
 
-        public GaepanJudged(int loser, bool byHp, int value, int[] tied)
+        public GaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
             Loser = loser;
             ByHp = byHp;
             Value = value;
             Tied = tied;
+            Actors = actors;
+            Values = values;
         }
     }
     /// <summary>
