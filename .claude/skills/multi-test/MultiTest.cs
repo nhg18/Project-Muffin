@@ -1346,8 +1346,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1 };
-            Check(ids.Length == 34 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 34장 (묶음 1 · 2 · 3, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3 };
+            Check(ids.Length == 37 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 37장 (묶음 1 ~ 4, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1355,7 +1355,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 34)
+            if (ids.Length == 37)
             {
                 {
                     var t = new ChainTable();
@@ -1585,6 +1585,83 @@ public static class MultiTest
                         events.AddRange(driver.Tick());
                     Check(!events.OfType<RequestRejected>().Any() && !events.OfType<CardPlayed>().Any() && events.OfType<CardDrawn>().Any(),
                         "봇 — 행동 카드 금지 턴에는 뽑기만 (거절 없이)");
+                }
+
+                // ── 묶음 4 — 115 팍씨: 피해의 사망 · 함정 처리를 마친 뒤 강탈 (11-card-list 115 · 06 5절) ──
+                Func<int, Card> Guard(ReactCondition condition, params CardEffect[] effects) =>
+                    id => new Card(id, 901, CardType.Counter, TargetType.None, effects, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.None, 0, condition);
+                {
+                    var t = new ChainTable();
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.Run(t.Now + 3);
+                    Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == theirs - 1 && t.HandCount(t.Turn) == mine + 1, "115 팍씨 — 10 피해 + 무작위 1장 강탈");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    int mine = t.HandCount(t.Turn);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    bool held = events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && t.HandCount(t.O1) > 0;
+                    events = t.Run(t.Now + 10);
+                    Check(held && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && events.OfType<TurnStarted>().Any(),
+                        "115 대상이 사망 대기 — 강탈은 기다린다 · 최종 사망하면 강탈 불발 · 다음 턴으로");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    DeathPending pending = t.RunUntil<DeathPending>(40);
+                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
+                    t.Run(t.Now + 3);
+                    bool held = t.HandCount(t.Turn) == mine; // 함정 체인 반응 시간 — 사망 대기가 남아 아직 강탈 전
+                    var events = t.Run(t.Now + 20);
+                    Check(fired && held && t.Hp(t.O1) == 10 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && !events.OfType<PlayerDied>().Any(),
+                        "115 사망 대기에서 살아나면 — 사망 처리를 마친 뒤 강탈");
+                }
+                {
+                    var t = new ChainTable();
+                    Card back = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged, 0));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
+                    bool held = window != null && t.HandCount(t.Turn) == mine;
+                    t.At(window != null ? window.OpensAt + 0.5 : t.Now);
+                    bool fired = window != null && t.Fire(t.O1, back).OfType<TrapActivated>().Any();
+                    var events = t.Run(t.Now + 20);
+                    int hitAt = events.FindIndex(e => e is HpChanged h && h.Actor == t.Turn);
+                    int stealAt = events.FindIndex(e => e is HandCardsMoved m && m.From == t.O1 && m.To == t.Turn);
+                    Check(held && fired && t.Hp(t.Turn) == 90 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && hitAt >= 0 && stealAt > hitAt,
+                        $"115 「피해 받은 후」 함정 — 함정 처리를 마친 뒤 강탈 (반격 {hitAt} · 강탈 {stealAt})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card guard = t.Give(t.O1, Guard(ReactCondition.DamagesMe, new ReduceDamageEffect { amount = 10 }));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.At(t.Now + 2);
+                    bool countered = !(t.Counter(t.O1, guard)[0] is RequestRejected);
+                    t.Run(t.Now + 20);
+                    Check(countered && t.Hp(t.O1) == 100 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 2, "115 피해만 감소(0) — 강탈은 진행");
+                }
+                {
+                    var t = new ChainTable();
+                    Card negate = t.Give(t.O1, Guard(ReactCondition.Any, new NegateEffect()));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.At(t.Now + 2);
+                    t.Counter(t.O1, negate);
+                    t.Run(t.Now + 20);
+                    Check(t.Hp(t.O1) == 100 && t.HandCount(t.Turn) == mine && t.HandCount(t.O1) == theirs - 1, "115 카드 전체 무효 — 둘 다 미적용");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == 0 && events.OfType<TurnStarted>().Any(), "115 대상 손패 없음 — 피해만, 강탈 불발");
                 }
             }
         }
