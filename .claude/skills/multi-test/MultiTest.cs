@@ -1346,8 +1346,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2 };
-            Check(ids.Length == 29 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 29장 (묶음 1 · 2, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1 };
+            Check(ids.Length == 34 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 34장 (묶음 1 · 2 · 3, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1355,7 +1355,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 29)
+            if (ids.Length == 34)
             {
                 {
                     var t = new ChainTable();
@@ -1485,6 +1485,106 @@ public static class MultiTest
                     TurnStarted next = events.OfType<TurnStarted>().FirstOrDefault();
                     Check(events.OfType<TurnDirectionChanged>().Any(e => e.ExtraTurn == t.Turn) && next != null && next.Actor == t.Turn,
                         "145 생존자 2명 — 다음 사람을 건너뛰어 내 턴이 다시 (03-turn 7절)");
+                }
+
+                // ── 묶음 3 — 턴 · 상태 (107 · 120 · 123). 「다음 턴」 은 실제로 오는 턴 — 스킵된 턴은 세지 않는다 (03-turn 7절, 2026-11-13) ──
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(107)), t.O1);
+                    bool marked = events.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.NextTurn);
+                    events = t.Run(t.Now + 3);
+                    bool blocked = t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).ActionBlocked
+                                   && events.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.ThisTurn);
+                    Card hit = t.Give(t.O1, Real(101));
+                    int code = t.Code(t.PlayCard(t.O1, hit, t.O2));
+                    Check(marked && blocked && code == RejectCode.ActionBlocked && t.Hand(t.O1).Contains(hit),
+                        $"107 짖기 — 대상의 다음 턴에 행동 카드 → 거절 19, 카드는 손패에 (코드 {code})");
+                    var drawn = t.Server.Draw(t.O1);
+                    Check(!(drawn[0] is RequestRejected) && !t.State(t.O1).ActionBlocked && drawn.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.None),
+                        "107 금지된 턴에도 뽑기는 된다 · 그 턴이 끝나면 해제");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(107)), t.O1);
+                    t.State(t.O1).SkipNextTurn = true; // 120 얼음! 이 함께 걸린 것과 같다
+                    t.Run(t.Now + 3);
+                    bool waitingOnSkip = t.Server.CurrentTurnActor == t.O2 && t.State(t.O1).BlockActionNextTurn && !t.State(t.O1).ActionBlocked;
+                    t.Server.Draw(t.O2);
+                    t.Server.Draw(t.Turn);
+                    Check(waitingOnSkip && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).ActionBlocked,
+                        "107 + 턴 스킵 — 금지는 건너뛴 턴이 아니라 실제로 오는 다음 턴에");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(120)));
+                    bool target = events.OfType<CardPlayed>().Any(e => e.CardId == 120 && e.Targets.SequenceEqual(new[] { t.O1 }));
+                    events.AddRange(t.Run(t.Now + 3));
+                    TurnStarted next = events.OfType<TurnStarted>().FirstOrDefault();
+                    Check(target && events.OfType<TurnSkipped>().Any(e => e.Actor == t.O1) && next != null && next.Actor == t.O2,
+                        $"120 얼음! 다음 차례(자동) 1명의 턴을 건너뛴다 (다음 P{next?.Actor} · 기대 P{t.O2})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(145)));
+                    t.Run(t.Now + 3); // 역방향 — 이제 O2 의 턴, 그다음은 O1 (정방향이면 Turn)
+                    var events = t.PlayAndResolve(t.O2, t.Give(t.O2, Real(120)));
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 120 && e.Targets.SequenceEqual(new[] { t.O1 })),
+                        "120 역방향이면 반대쪽 다음 사람이 대상");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, GameServer.ChapchuHandCount);
+                    t.State(t.O1).IsChapchu = true;
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    bool started = events.OfType<WaitChanged>().Any(e => e.Casters.SequenceEqual(new[] { t.Turn }));
+                    events = t.Run(t.Now + 3);
+                    Check(started && !t.Server.IsGameOver && events.OfType<ChapchuWinHeld>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).IsChapchu,
+                        "123 기다려! — 찹츄 상태로 턴이 와도 이기지 않는다 · 찹츄는 그대로");
+                    events = t.Run(t.Now + 31); // O1 시간 초과 → O2
+                    events.AddRange(t.Run(t.Now + 31)); // O2 시간 초과 → 건 사람
+                    int endAt = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
+                    int turnAt = events.FindIndex(e => e is TurnStarted ts && ts.Actor == t.Turn);
+                    Check(endAt >= 0 && turnAt > endAt, "123 건 사람의 다음 턴이 시작되기 전에 끝난다");
+                    GameEnded ended = t.Run(t.Now + 31).OfType<GameEnded>().FirstOrDefault();
+                    Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu, "123 끝난 뒤 다음 자기 턴에 다시 판정 → 찹츄 승리");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    t.State(t.Turn).SkipNextTurn = true;
+                    var events = t.Run(t.Now + 3);
+                    t.Server.Draw(t.O1);
+                    events.AddRange(t.Server.Draw(t.O2)); // 건 사람의 턴은 스킵 → 다시 O1
+                    Check(events.OfType<TurnSkipped>().Any(e => e.Actor == t.Turn) && t.Server.CurrentTurnActor == t.O1 && !events.OfType<WaitChanged>().Any(),
+                        "123 건 사람의 턴이 스킵되면 기다려는 실제로 오는 다음 턴까지 이어진다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    t.Run(t.Now + 3);
+                    t.SetHp(t.Turn, 10);
+                    var events = t.PlayAndResolve(t.O1, t.Give(t.O1, Real(101)), t.Turn);
+                    events.AddRange(t.Run(t.Now + 10)); // 사망 대기 5초 (06 8절)
+                    int died = events.FindIndex(e => e is PlayerDied d && d.Actor == t.Turn);
+                    int ended = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
+                    Check(died >= 0 && ended > died, "123 건 사람이 최종 사망하면 즉시 끝");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    Check(t.Server.RemovePlayer(t.Turn).OfType<WaitChanged>().Any(e => e.Casters.Length == 0), "123 건 사람이 나가면 즉시 끝");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.State(t.Turn).ActionBlocked = true;
+                    t.SetHandSize(t.Turn, 8); // 손패 8장 — 뽑기 줄(#5 · #6)이 아니라 공격 줄(#7)이 먼저 맞는다
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 6; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    Check(!events.OfType<RequestRejected>().Any() && !events.OfType<CardPlayed>().Any() && events.OfType<CardDrawn>().Any(),
+                        "봇 — 행동 카드 금지 턴에는 뽑기만 (거절 없이)");
                 }
             }
         }
