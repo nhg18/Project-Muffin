@@ -652,6 +652,48 @@ run_gaepan() {
     done
 }
 
+# 119 목표 조준: 방장이 턴 주인에게 119 를 쥐여 상대에게 쓰게 한다 → 대상 화면에 고르기 판 · 다른 화면에 「고르는 중」 → 대상이 판의 「피해 받기」 를 누른다(화면 경로)
+# → 모든 화면에 같은 고르기 줄 · 표가 방장 값과 같은지.
+run_aim() {
+    local clients="${1:-2}" project out lines shot first="" opened="" seen=""
+    enter_game "$clients" || return
+    # 5초 안에 눌러야 해서 고르기는 에디터 안에서 한다 (ArmChoice) — CLI 부름은 한 번에 몇 초라 늦다.
+    for project in "${EDITORS[@]}"; do
+        shot="-"
+        [ -n "${SHOT_DIR:-}" ] && { mkdir -p "$SHOT_DIR"; shot="$SHOT_DIR/aim_choice_$(name_of "$project").png"; }
+        call "$project" ArmChoice 1 "$shot" >/dev/null
+    done
+    until_ok "$MAIN" ForceCard 119 || return
+    log "▶ 고르기 판 (반응 시간 · 체인 처리 뒤 시작)"
+    for project in "${EDITORS[@]}"; do
+        for _ in $(seq 1 30); do
+            out=$(call "$project" ChoiceResult)
+            case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
+        done
+        log "  $(name_of "$project"): $out"
+        case "$out" in
+            OPEN*) opened="$project" ;;
+            SEEN*) seen="$project" ;;
+            *) fail "$(name_of "$project"): $out" ;;
+        esac
+    done
+    [ -n "$opened" ] || { fail "고르기 판을 누른 화면이 없다"; return; }
+    [ "$clients" -lt 2 ] || [ -n "$seen" ] || fail "다른 화면에 「고르는 중」 이 보이지 않았다"
+    sleep 12
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '고르기 시작 — |고르기 — ' | sed -E 's/.*(고르기 시작 — |고르기 — )/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
+        printf '%s' "$lines" | grep -q '고르기 — P[0-9]* 피해 받기$' || fail "$(name_of "$project") 「피해 받기」 줄이 없다 (시간 초과면 '(시간 초과)')"
+        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 고르기 줄이 메인과 다르다"; fi
+    done
+    compare_turns
+    check_table_ui aim
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
@@ -661,6 +703,7 @@ case "${1:-}" in
     chapchu) shift; run_chapchu "$@" ;;
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;
+    aim)     shift; run_aim "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 

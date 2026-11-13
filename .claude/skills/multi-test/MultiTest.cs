@@ -65,6 +65,10 @@ public static class MultiTest
     private const string TrapWindowOpensField = "_trapWindowOpensAt";      // GameDebugInput — 함정 시간
     private const string TrapWindowDeadlineField = "_trapWindowDeadline";
     private const string HitByField = "_hitBy";                            // GameDebugInput — 마지막으로 나를 맞힌 사람
+    private const string ChoiceSecondButtonField = "secondButton";         // ChoicePopupView — 「80 피해 받기」 (119)
+    private const string ChoiceFirstButtonField = "firstButton";           // ChoicePopupView — 「손패 전부 버리기」
+    private const string TimerLabelField = "labelText";                    // ReactionTimerView — 알약 글 (「반응」 · 「{이름} 고르는 중」)
+    private const string TurnDeadlineField = "_turnDeadline";              // GameServer — 턴 마감 (ExpireTurn)
     private const string PunServerField = "_server";                       // PunGameServer — 규칙 원본 (방장)
     private const string ServerDeckField = "deck";                         // PunGameServer — 게임에 쓰는 덱
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
@@ -641,10 +645,22 @@ public static class MultiTest
 
         var forced = new Card(90000 + id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, c.RevealSeconds, c.ResolveSeconds, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
         ((PlayerState)states[actor]).Hand.Add(forced);
-        IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, new int[0]);
+        int[] targets = new int[0];
+        if (c.Target == TargetType.OneOther)
+        {
+            foreach (int other in states.Keys)
+            {
+                if (other != actor && ((PlayerState)states[other]).Life == LifeState.Alive)
+                {
+                    targets = new[] { other };
+                    break;
+                }
+            }
+        }
+        IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, targets);
         string first = events.Count > 0 ? events[0].GetType().Name : "없음";
         typeof(PunGameServer).GetMethod("Send", Private).Invoke(server, new object[] { events });
-        return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" : "FAIL 사용 결과 " + first;
+        return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" + (targets.Length > 0 ? " → P" + targets[0] : "") : "FAIL 사용 결과 " + first;
     }
 
     // 방장: 지금 턴의 제한 시간을 끝낸다 — 다음 Tick 에 시간 초과로 넘어간다 (행동 없이 턴을 빨리 돌리기 — 121 개판 바퀴)
@@ -659,9 +675,70 @@ public static class MultiTest
         var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
         if (rules.IsGameOver)
             return "SKIP 게임 끝";
-        typeof(GameServer).GetField("_turnDeadline", Private).SetValue(rules, 0d);
+        typeof(GameServer).GetField(TurnDeadlineField, Private).SetValue(rules, 0d);
         return "OK P" + rules.CurrentTurnActor + " 턴 시간 끝 — " + rules.DebugState();
     }
+
+    // 119 목표 조준 — 고르기 시작 알림을 기다렸다가 (5초 안에 골라야 해서 CLI 부름 사이로는 늦다 — 에디터 안에서 바로 한다)
+    // 고르는 사람이면 판이 열린 것을 보고 ChoiceClickDelay 뒤 pick("0" · "1") 버튼을 누른다 (화면 경로 — Button.onClick).
+    // 남이면 ChoiceLookDelay 뒤 반응 타이머 알약이 「{이름} 고르는 중」 인지 본다. shot 이 있으면 그 순간 게임 뷰를 찍는다. 결과는 ChoiceResult.
+    private const string ChoiceResultKey = "MultiTest.Choice";
+    private const double ChoiceLookDelay = 1.5;
+    private const double ChoiceClickDelay = 2.5;
+
+    public static string ArmChoice(string pick, string shot)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        SessionState.SetString(ChoiceResultKey, "WAIT 고르기 시작 전");
+
+        Action<int, int, int, int, int, double, double> onStarted = null;
+        onStarted = (actor, user, cardId, handCount, damage, startsAt, deadline) =>
+        {
+            Chapchu.Network.Events.GameEvents.OnChoiceStarted -= onStarted;
+            bool mine = actor == PhotonNetwork.LocalPlayer.ActorNumber;
+            double startedAt = EditorApplication.timeSinceStartup;
+            bool shotTaken = false;
+            EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                double elapsed = EditorApplication.timeSinceStartup - startedAt;
+                if (!shotTaken && elapsed >= ChoiceLookDelay)
+                {
+                    shotTaken = true;
+                    if (!string.IsNullOrEmpty(shot) && shot != "-")
+                        ScreenCapture.CaptureScreenshot(shot);
+                    if (!mine)
+                    {
+                        EditorApplication.update -= tick;
+                        ReactionTimerView timer = Object.FindFirstObjectByType<ReactionTimerView>();
+                        var text = timer == null ? null : (TMP_Text)typeof(ReactionTimerView).GetField(TimerLabelField, Private).GetValue(timer);
+                        SessionState.SetString(ChoiceResultKey, text != null && text.gameObject.activeInHierarchy && text.text.EndsWith("고르는 중")
+                            ? "SEEN 「" + text.text + "」" : "FAIL 「고르는 중」 이 안 보인다 (알약 「" + (text == null ? "없음" : text.text) + "」)");
+                    }
+                    return;
+                }
+                if (!mine || elapsed < ChoiceClickDelay)
+                    return;
+
+                EditorApplication.update -= tick;
+                ChoicePopupView popup = Object.FindFirstObjectByType<ChoicePopupView>();
+                if (popup == null || !popup.IsOpen)
+                {
+                    SessionState.SetString(ChoiceResultKey, "FAIL 고르기 판이 열리지 않았다");
+                    return;
+                }
+                var button = (UnityEngine.UI.Button)typeof(ChoicePopupView).GetField(pick == "0" ? ChoiceFirstButtonField : ChoiceSecondButtonField, Private).GetValue(popup);
+                string label = button.GetComponentInChildren<TMP_Text>(true).text;
+                button.onClick.Invoke();
+                SessionState.SetString(ChoiceResultKey, "OPEN 고르기 판에서 「" + label + "」 누름 · 닫힘 " + !popup.IsOpen);
+            };
+            EditorApplication.update += tick;
+        };
+        Chapchu.Network.Events.GameEvents.OnChoiceStarted += onStarted;
+        return "OK 고르기 대기";
+    }
+
+    public static string ChoiceResult() => SessionState.GetString(ChoiceResultKey, "WAIT 준비 안 됨");
 
     public static string Ui(string step)
     {
@@ -1389,8 +1466,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3, [121] = 1 };
-            Check(ids.Length == 42 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 42장 (묶음 1 ~ 7, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3, [121] = 1, [119] = 3 };
+            Check(ids.Length == 45 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 45장 (묶음 1 ~ 8, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -1398,7 +1475,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
             }
 
-            if (ids.Length == 42)
+            if (ids.Length == 45)
             {
                 {
                     var t = new ChainTable();
@@ -1970,6 +2047,110 @@ public static class MultiTest
                     for (now2 = 0; now2 < 4; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 121), "봇 — 121 은 개판이 없고 HP 가 상대 최저보다 20 · 손패가 상대 최소보다 2장 이상 많을 때만");
+                }
+
+                // ── 묶음 8 — 119 목표 조준: 대상이 5초 안에 고른다 (버리기 / 80 피해), 안 고르면 무작위 · 그동안 멈춤 (11-card-list 119) ──
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    ChoiceStarted started = events.OfType<ChoiceStarted>().FirstOrDefault();
+                    var waiting = t.Run(t.Now + 4);
+                    bool paused = !waiting.OfType<ChoiceMade>().Any() && !waiting.OfType<TurnStarted>().Any() && t.Hp(t.O1) == 100;
+                    var rejected = t.Server.Choose(t.Turn, 1); // 고르는 사람이 아니다
+                    var chosen = t.Server.Choose(t.O1, 1).ToList();
+                    chosen.AddRange(t.Run(t.Now + 3));
+                    Check(started != null && started.Actor == t.O1 && started.Damage == 80 && System.Math.Abs(started.Deadline - started.StartsAt - 5) < 0.01 && paused
+                          && rejected.OfType<RequestRejected>().Any(r => r.Code == RejectCode.NotChoosing)
+                          && chosen.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == 1 && !c.TimedOut) && t.Hp(t.O1) == 20 && chosen.OfType<TurnStarted>().Any(),
+                        "119 목표 조준 — 대상이 고르는 동안 멈춤 · 남의 고르기 거절(코드 20) · 피해 받기 80 → 다음 턴");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 0).ToList();
+                    Check(t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 && events.OfType<CardsDiscarded>().Any(), "119 손패 전부 버리기 — 피해 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 0).ToList();
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 && events.OfType<TurnStarted>().Any(), "119 손패 0장이어도 버리기를 고를 수 있다 — 아무 손해 없이");
+                }
+                {
+                    var t = new ChainTable();
+                    int hand = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Run(t.Now + 8);
+                    ChoiceMade made = events.OfType<ChoiceMade>().FirstOrDefault();
+                    bool applied = made != null && (made.Option == 0 ? t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 : t.Hp(t.O1) == 20 && t.HandCount(t.O1) == hand);
+                    Check(made != null && made.TimedOut && applied, $"119 5초 안에 안 고르면 방장이 무작위 (고름 {made?.Option})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.RemovePlayer(t.O1).ToList();
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(events.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == -1) && events.OfType<TurnStarted>().Any(), "119 고르는 사람이 나가면 불발 · 처리를 마치고 다음 턴");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 50);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 1).ToList();
+                    events.AddRange(t.Run(t.Now + 15));
+                    Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
+                        "119 피해 받기로 HP 0 — 사망 대기 → 최종 사망 → 다음 턴");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHp(t.O1, 70);
+                    t.SetHandSize(t.O1, 0);
+                    for (int i = 0; i < 3; i++)
+                        t.Give(t.O1, Real(123)); // 카운터 없는 손패 — 봇이 119 를 무효화하지 않게
+                    var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 25 && !events.OfType<ChoiceMade>().Any(); now += 0.1)
+                    {
+                        events.AddRange(t.Server.Tick());
+                        events.AddRange(driver.Tick());
+                    }
+                    bool lowDiscard = events.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == 0 && !c.TimedOut);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.O1, 0);
+                    for (int i = 0; i < 6; i++)
+                        t2.Give(t2.O1, Real(123));
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.O1 }, new System.Random(1), () => now2);
+                    t2.PlayCard(t2.Turn, t2.Give(t2.Turn, Real(119)), t2.O1);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 25 && !events2.OfType<ChoiceMade>().Any(); now2 += 0.1)
+                    {
+                        events2.AddRange(t2.Server.Tick());
+                        events2.AddRange(driver2.Tick());
+                    }
+                    Check(lowDiscard && events2.OfType<ChoiceMade>().Any(c => c.Actor == t2.O1 && c.Option == 1 && !c.TimedOut),
+                        "봇 대상 — HP ≤ 80 이면 버리기 · HP 높고 손패 5장 이상이면 피해 받기 (시간 안에)");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 0);
+                    t.Give(t.Turn, Real(119));
+                    for (int i = 0; i < 6; i++)
+                        t.Give(t.Turn, Real(123)); // 봇이 쓰지 않는 카드로 손패 7장
+                    t.SetHandSize(t.O1, 3);
+                    t.SetHandSize(t.O2, 2);
+                    t.SetHp(t.O2, 50); // O1 3×3 = 9 · O2 2×3 + 40 = 46
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 119 && e.Targets.SequenceEqual(new[] { t.O2 })), "봇 — 119 대상은 손패 × 3 + (HP ≤ 80 이면 40) 가 가장 큰 상대");
                 }
             }
         }
