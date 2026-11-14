@@ -930,6 +930,7 @@ namespace Chapchu.EditorTools
             shape.raycastTarget = false;
             shape.Set(UIShape.ShapeKind.Ellipse, 0f, 6f, Tgt, 1f, 18f, 12f);
             ring.gameObject.AddComponent<PulseScale>();
+            AddPickLayer(ring.gameObject); // 맥동이 매 프레임 배율을 바꾼다 — 다시 배치되는 범위를 링 하나로 (정렬은 부모 그대로)
             ring.gameObject.SetActive(false);
             return ring;
         }

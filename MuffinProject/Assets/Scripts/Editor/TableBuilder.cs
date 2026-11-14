@@ -102,7 +102,7 @@ namespace Chapchu.EditorTools
         private const int TrapSlotCount = 3;
         private const float TableAxisYPx = 620f; // 테이블 면이 도는 축 (시안 y 310)
         private const float TrapSlotZ = -0.01f;   // 방석보다 조금 앞
-        private const string TrapSlotTexturePath = "Assets/Sprites/Cards/TrapSlotEmpty.png"; // 빈 칸 — 흰 45% · 잉크 30% 점선 테 (프로토타입 v2 .slot 2px dashed × 2)
+        private const string TrapSlotTextureName = "TrapSlotEmpty"; // 빈 칸 — 흰 45% · 잉크 30% 점선 테 (프로토타입 v2 .slot 2px dashed × 2). 줄 너비(px)를 붙여 줄마다 따로 — 배율이 달라 테 · 점선 값이 다르다
         private static readonly Color TrapSlotFill = new Color(1f, 1f, 1f, 0.45f);
         private static readonly Color TrapSlotEdge = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
         private const float TrapSlotDashPx = 12f; // 점선 칸 · 틈 (캔버스 px) — 브라우저 dashed 는 두께 2px 에 칸 · 틈 6px (× 2)
@@ -434,7 +434,8 @@ namespace Chapchu.EditorTools
             float scale = row.widthPx * UnitsPerPixel / CardSize.x;
             Quaternion rotation = TableRotation * Quaternion.Euler(0f, 0f, row.angle);
 
-            Material emptyMaterial = EnsureAlphaMaterial("TrapSlotEmpty", EnsureRoundTexture(TrapSlotTexturePath, CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
+            string emptyName = $"{TrapSlotTextureName}{Mathf.RoundToInt(row.widthPx)}";
+            Material emptyMaterial = EnsureAlphaMaterial(emptyName, EnsureRoundTexture($"Assets/Sprites/Cards/{emptyName}.png", CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
             Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(CardSize));
             Material back = EnsureMaterial("CardBack", BackTexturePath);
 

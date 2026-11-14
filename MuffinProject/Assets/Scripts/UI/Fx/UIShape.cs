@@ -60,14 +60,22 @@ namespace Chapchu.UI.Fx
             Color32 fill = color;
             Color32 edge = bordered && !dashed ? (Color32)borderColor : fill;
 
-            // 면 (점선이면 틈에 보이도록 바깥 끝까지) + 바깥 번짐
-            float fillEdge = bordered && !dashed ? borderWidth + 0.5f : half;
+            // 바깥 번짐
             Contour(rect, -half, dashed, _a);
             Contour(rect, half, dashed, _b);
-            if (bordered && !dashed)
+            if (!bordered)
             {
-                Contour(rect, Mathf.Max(borderWidth - 0.5f, half), false, _c);
-                Contour(rect, fillEdge, false, _d);
+                Strip(vh, _a, Transparent(fill), _b, fill);
+                Fan(vh, rect.center, _b, fill);
+                return;
+            }
+
+            // 테 안쪽 가장자리 (안쪽 번짐 0.5 의 끝) — 실선이면 면이 여기서 시작, 점선이면 칸이 여기까지
+            float innerEdge = borderWidth + 0.5f;
+            Contour(rect, Mathf.Max(borderWidth - 0.5f, half), dashed, _c);
+            Contour(rect, innerEdge, dashed, _d);
+            if (!dashed)
+            {
                 Strip(vh, _a, Transparent(edge), _b, edge);
                 Strip(vh, _b, edge, _c, edge);
                 Strip(vh, _c, edge, _d, fill);
@@ -75,21 +83,20 @@ namespace Chapchu.UI.Fx
                 return;
             }
 
+            // 점선 — 면은 틈에 보이도록 바깥 끝까지, 바깥 번짐 · 띠 · 안쪽 번짐을 칸마다
             Strip(vh, _a, Transparent(fill), _b, fill);
             Fan(vh, rect.center, _b, fill);
-            if (!dashed)
-                return;
-
-            // 점선 — 바깥 번짐 · 띠 · 안쪽 번짐을 칸마다
             Color32 ink = borderColor;
-            Contour(rect, Mathf.Max(borderWidth - 0.5f, half), true, _c);
-            Contour(rect, borderWidth + 0.5f, true, _d);
-            float period = dash + Mathf.Max(gap, 0f);
+            // 둘레가 주기로 나눠 떨어지게 맞춘다 — 윤곽이 시작하는 3시 자리에서 마지막 틈이 잘리지 않게
+            float total = 0f;
+            for (int i = 0; i < _b.Count; i++)
+                total += MidLength(i);
+            float period = total / Mathf.Max(1, Mathf.RoundToInt(total / (dash + Mathf.Max(gap, 0f))));
             float along = 0f;
             for (int i = 0; i < _b.Count; i++)
             {
                 int next = (i + 1) % _b.Count;
-                float length = Vector2.Distance((_b[i] + _c[i]) / 2f, (_b[next] + _c[next]) / 2f);
+                float length = MidLength(i);
                 bool on = (along + length / 2f) % period < dash;
                 along += length;
                 if (!on)
@@ -145,6 +152,13 @@ namespace Chapchu.UI.Fx
                 for (int j = 1; j < pieces; j++)
                     points.Add(Vector2.Lerp(from, to, (float)j / pieces));
             }
+        }
+
+        // 테 가운데 선에서 i 번째 꼭짓점부터 다음 꼭짓점까지의 길이 (점선 칸을 재는 선)
+        private float MidLength(int i)
+        {
+            int next = (i + 1) % _b.Count;
+            return Vector2.Distance((_b[i] + _c[i]) / 2f, (_b[next] + _c[next]) / 2f);
         }
 
         private int EllipseSegments(Rect rect, bool fine)
