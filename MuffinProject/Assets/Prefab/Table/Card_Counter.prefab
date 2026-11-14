@@ -102,6 +102,8 @@ MonoBehaviour:
   - 1
   - 1.15
   dimGray: 0.35
+  pawAlpha: 0.7
+  balancedWidthMin: 0.55
 --- !u!210 &5065842111526637667
 SortingGroup:
   m_ObjectHideFlags: 0
