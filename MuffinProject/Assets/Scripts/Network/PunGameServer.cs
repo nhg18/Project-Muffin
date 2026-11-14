@@ -509,7 +509,8 @@ namespace Chapchu.Network
 
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
             // 찹츄 · 함정 장수도 같은 이유로 여기서 지운다 — 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다. 봇은 방 속성 키 (18-bot.md 9절)
-            var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0 };
+            // HP 는 시작 값(MaxHp)으로 — 다음 판 화면이 지난 판 HP 를 보이거나 시작 HP 100 을 변화로 기록하지 않게
+            var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0, [PlayerProps.Hp] = GameServer.MaxHp };
             var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null, [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null };
             foreach (int bot in BotRoster.Actors)
             {
