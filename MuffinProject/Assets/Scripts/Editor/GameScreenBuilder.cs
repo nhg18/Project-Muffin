@@ -191,6 +191,28 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(GameScreenBuilder)}] {CanvasName} 조립 완료 — 씬을 저장할 것.");
         }
 
+        /// <summary>열린 씬에 이미 있는 HUD 위 카드 층(TopCards)에 앞 층 합성 재질만 넣는다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다.</summary>
+        [MenuItem("Chapchu/Game Screen/Upgrade Top Card Layer")]
+        public static void UpgradeTopCardLayer()
+        {
+            TopCardLayerView[] views = Object.FindObjectsByType<TopCardLayerView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (views.Length == 0)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 TopCardLayerView 가 없다.");
+                return;
+            }
+
+            Material material = TableBuilder.TopLayerCompositeMaterial();
+            foreach (TopCardLayerView view in views)
+            {
+                var image = view.GetComponent<RawImage>();
+                Undo.RecordObject(image, "Upgrade Top Card Layer");
+                image.material = material;
+                EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            }
+            Debug.Log($"[{nameof(GameScreenBuilder)}] TopCards {views.Length}개에 앞 층 합성 재질을 넣음 — 씬을 저장할 것.");
+        }
+
         /// <summary>uGUI 손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지). CardFxTestBench 가 쓴다 — 인게임 손패는 3D 카드(TableBuilder). 사람이 프리팹을 손봤다면 지워진다.</summary>
         [MenuItem("Chapchu/Game Screen/Rebuild Hand Card Prefabs")]
         public static void RebuildHandCardPrefabs()
