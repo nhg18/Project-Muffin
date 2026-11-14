@@ -14,12 +14,14 @@ namespace Chapchu.UI.Fx
     {
         public enum ShapeKind { RoundRect, Ellipse }
 
+        [Tooltip("모양 — 둥근 사각형 또는 타원.")]
         [SerializeField] private ShapeKind shape = ShapeKind.RoundRect;
         [Tooltip("둥근 사각형의 모서리 반지름 (타원에는 쓰지 않는다).")]
         [SerializeField] private float radius = 16f;
         [Tooltip("테두리 두께 — 0 이면 테두리 없음.")]
         [SerializeField] private float borderWidth;
-        [SerializeField] private Color borderColor = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("테두리 색 — 점선이면 칸의 색 (틈은 면 색).")]
+        [SerializeField] private Color borderColor =new Color32(0x2a, 0x24, 0x20, 0xFF);
         [Tooltip("점선 한 칸 길이 — 0 이면 실선.")]
         [SerializeField] private float dash;
         [Tooltip("점선 사이 틈 길이.")]

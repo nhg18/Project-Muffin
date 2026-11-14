@@ -248,9 +248,9 @@ namespace Chapchu.EditorTools
             Stretch(wall.rectTransform);
 
             // 테이블 방석 — 3D 층이 아니라 배경(2D) 에 둔다. 3D Quad 로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 방석 면 뒤로 들어가 가려진다
-            // 판(Table) = 바닥 그림자 · 두께 테 · 방석 그림. 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
+            // 판(CushionBoard) = 바닥 그림자 · 두께 테 · 방석 그림. 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
             // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
-            RectTransform table = NewRect("Table", parent);
+            RectTransform table = NewRect("CushionBoard", parent); // 3D 층 루트(TableBuilder 의 "Table")와 이름이 겹치면 BuildTable 이 「이미 있음」으로 멈춘다
             CenterAt(table, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
             table.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
 
@@ -261,7 +261,7 @@ namespace Chapchu.EditorTools
             shadow.raycastTarget = false;
             shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 60f);
             UIShape rim = NewRect("Rim", table).gameObject.AddComponent<UIShape>();
-            Stretch(rim.rectTransform, 0f, 18f, 0f, -18f);
+            Stretch(rim.rectTransform, -22f, 18f - 22f, -22f, -18f - 22f);
             rim.color = Fur3;
             rim.raycastTarget = false;
             rim.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear);
@@ -470,8 +470,7 @@ namespace Chapchu.EditorTools
                 text.overflowMode = TextOverflowModes.Ellipsis;
                 NewText("Value", chip, "−20", 26f, Hp, true);
 
-                if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                    AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+                EnsureHandCardPrefabFolder();
                 chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, chipPath);
                 Object.DestroyImmediate(chip.gameObject);
             }
@@ -1460,6 +1459,15 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        // 게임 화면 프리팹 폴더가 없으면 만든다 — 부모 경로 · 폴더 이름은 HandCardPrefabFolder 에서 구한다
+        private static void EnsureHandCardPrefabFolder()
+        {
+            if (AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                return;
+            int slash = HandCardPrefabFolder.LastIndexOf('/');
+            AssetDatabase.CreateFolder(HandCardPrefabFolder.Substring(0, slash), HandCardPrefabFolder.Substring(slash + 1));
+        }
+
         // 뒷면 카드 프리팹 — 카드 뒷면 그림 + 잉크 테 3, 모서리 6, 피벗 (0.5, −0.6). 빌더 산출물이라 늘 다시 만든다 (GUID 유지).
         private static RectTransform EnsureBackCardPrefab()
         {
@@ -1467,8 +1475,7 @@ namespace Chapchu.EditorTools
                 return _backCardPrefab;
 
             string path = $"{HandCardPrefabFolder}/HandCard_Back.prefab";
-            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+            EnsureHandCardPrefabFolder();
 
             RectTransform root = NewRect("HandCard_Back", null);
             root.sizeDelta = BackCardSize;
@@ -1629,8 +1636,7 @@ namespace Chapchu.EditorTools
             if (existing != null && !overwrite)
                 return existing;
 
-            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+            EnsureHandCardPrefabFolder();
 
             var frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(framePath);
             if (frameSprite == null)
