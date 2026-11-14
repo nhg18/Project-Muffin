@@ -10,13 +10,14 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 오른쪽 위 「방금 일어난 일」 칩 (10-ui.md 2-1 HUD v2 「기록」). 최신 2개만 — 둘째는 조금 흐리고, 4초 지나면 더 흐려진다.
-    /// 전체를 누르면 기록 서랍이 열린다 (Clicked). 칩은 템플릿을 복제한다 — 구조: 루트 → Icon · MiniCard(→ Band) · Crown · Name · Text · Value.
+    /// 전체를 누르면 기록 서랍이 열린다 (Clicked). 칩은 프리팹(`Prefab/UI/GameScreen/FeedChip`)을 이 아래에 만든다 — 구조: 루트 → Icon · MiniCard(→ Band) · Crown · Name · Text · Value.
     /// </summary>
     public class FeedView : MonoBehaviour, IPointerClickHandler
     {
         private const int MaxChips = 2;
 
-        [SerializeField] private RectTransform chipTemplate;
+        [Tooltip("칩 프리팹 (Prefab/UI/GameScreen/FeedChip).")]
+        [SerializeField] private RectTransform chipPrefab;
         [Tooltip("둘째 칩의 투명도 (시안 .old 0.8).")]
         [SerializeField] private float oldAlpha = 0.8f;
         [Tooltip("이 초가 지난 칩의 투명도 (시안 .stale 0.55).")]
@@ -34,8 +35,8 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (chipTemplate == null)
-                Debug.LogError($"[{nameof(FeedView)}] {nameof(chipTemplate)} 참조가 비어 있습니다.", this);
+            if (chipPrefab == null)
+                Debug.LogError($"[{nameof(FeedView)}] {nameof(chipPrefab)} 참조가 비어 있습니다.", this);
         }
 
         private void Update()
@@ -51,8 +52,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>새 항목을 맨 위에 넣는다. 2개를 넘으면 가장 오래된 것을 지운다.</summary>
         public void Push(HistoryEntry entry, string actorName, Color actorInk)
         {
-            var chip = new Chip(Instantiate(chipTemplate, chipTemplate.parent), Time.unscaledTime);
-            chip.Root.gameObject.SetActive(true);
+            var chip = new Chip(Instantiate(chipPrefab, transform), Time.unscaledTime);
             chip.Root.SetAsFirstSibling();
             chip.Fill(entry, actorName, actorInk, CardColor(entry.CardType));
             _chips.Insert(0, chip);

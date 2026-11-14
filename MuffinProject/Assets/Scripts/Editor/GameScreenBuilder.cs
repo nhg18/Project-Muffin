@@ -422,12 +422,13 @@ namespace Chapchu.EditorTools
             root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             // 전체가 탭 영역 — 칩이 없을 때도 눌리지 않게 칩 자체에만 레이캐스트
 
-            RectTransform chip = NewRect("ChipTemplate", root);
+            // 칩은 되풀이되므로 프리팹 (CODE_CONVENTION 「씬과 프리팹」). 아이콘 · 작은 카드의 높이도 레이아웃이 맞춘다 — 작은 카드가 칩 밖으로 길어지지 않게
+            RectTransform chip = NewRect("FeedChip", null);
             chip.gameObject.AddComponent<CanvasGroup>();
             Image chipFill = RoundBox(chip, Ink, 4f, 16f, White, true);
             LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
             chipSize.preferredHeight = 48f;
-            HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, false);
+            HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
 
             Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
             LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
@@ -447,10 +448,14 @@ namespace Chapchu.EditorTools
             TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
             text.overflowMode = TextOverflowModes.Ellipsis;
             NewText("Value", chip, "−20", 26f, Hp, true);
-            chip.gameObject.SetActive(false);
+
+            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+            GameObject chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, $"{HandCardPrefabFolder}/FeedChip.prefab");
+            Object.DestroyImmediate(chip.gameObject);
 
             var view = root.gameObject.AddComponent<FeedView>();
-            Wire(view, ("chipTemplate", chip));
+            Wire(view, ("chipPrefab", chipPrefab.transform));
             return view;
         }
 
@@ -501,16 +506,21 @@ namespace Chapchu.EditorTools
             nick.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             TMP_Text nickname = NewText("NicknameText", nick, "두부", 38f, Ink, true);
             nickname.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement nicknameLayout = nickname.gameObject.AddComponent<LayoutElement>(); // 폭 = 글 너비, 최대 180 (MyPanelView.SetNickname)
+            nicknameLayout.preferredWidth = nickname.GetPreferredValues("두부").x;
             NewText("MeText", nick, "(나)", 28f, Ink, false);
             Image crown = Icon("Crown", frame.Head, Hud("icon_crown"), 40f, White);
             LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
             crownSize.preferredWidth = 40f;
             crownSize.preferredHeight = 34f;
             crown.gameObject.SetActive(false);
-            RectTransform spacer = NewRect("Spacer", frame.Head);
-            spacer.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            // 상황 글은 닉네임 뒤 남은 폭을 다 쓰고 오른쪽에 붙는다. 모자라면 상황 글만 … 로 줄인다 — 닉네임 · (나) 는 줄지 않는다 (시안 .mine2 .st min-width 0)
             TMP_Text status = NewText("StatusText", frame.Head, "기다리는 중", 26f, Ink2, false, TextAlignmentOptions.Right);
-            status.textWrappingMode = TextWrappingModes.NoWrap; // 글 너비만큼만 — 비어 있으면 닉네임이 자리를 다 쓴다
+            status.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
+            statusLayout.minWidth = 0f;
+            statusLayout.preferredWidth = 0f;
+            statusLayout.flexibleWidth = 1f;
 
             HorizontalLayout(frame.Body, new RectOffset(20, 22, 0, 0), 16f, TextAnchor.MiddleLeft, true, false);
             BoneGaugeView bone = BuildBone("Bone", frame.Body, 310f);
@@ -521,7 +531,7 @@ namespace Chapchu.EditorTools
 
             var view = frame.Root.gameObject.AddComponent<MyPanelView>();
             Wire(view,
-                ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("crown", crown.gameObject), ("statusText", status),
+                ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("nicknameLayout", nicknameLayout), ("crown", crown.gameObject), ("statusText", status),
                 ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject));
             frame.Root.gameObject.AddComponent<MyPanelPresenter>();
             BuildMyPick(view, spot, character.rectTransform);
@@ -538,7 +548,7 @@ namespace Chapchu.EditorTools
             BottomRight(root, EdgeX, EdgeBottom + 24f, 392f, 168f);
 
             Image shadow = RoundImage("Shadow", root, ChapchuOffShadow, 48f);
-            Stretch(shadow.rectTransform, 0f, -10f, 0f, 10f);
+            Stretch(shadow.rectTransform, 0f, 10f, 0f, -10f); // 아래로 10 (시안 box-shadow 0 5px 0)
             Image fill = RoundBox(root, Ink, 6f, 48f, White, true);
 
             // 꼬리 — 왼쪽 아래 (60, −20) 32 × 32 를 45° 돌린 마름모. 잉크 마름모 위에 바탕색 마름모를 6 위로 겹쳐 아래 두 변만 잉크가 보인다

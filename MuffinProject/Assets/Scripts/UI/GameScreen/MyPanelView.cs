@@ -19,6 +19,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image band;
         [SerializeField] private Image dot;
         [SerializeField] private TMP_Text nicknameText;
+        [Tooltip("닉네임 글의 레이아웃 — 폭을 글 너비(최대 maxNicknameWidth)로 맞춘다. 상황 글이 남은 폭을 쓰고 넘치면 … 로 줄인다.")]
+        [SerializeField] private LayoutElement nicknameLayout;
+        [Tooltip("닉네임 최대 폭 — 넘치면 … (시안 .mine2 .nk span max-width 90 × 2).")]
+        [SerializeField] private float maxNicknameWidth = 180f;
         [SerializeField] private GameObject crown;
         [SerializeField] private TMP_Text statusText;
         [Tooltip("내 캐릭터 발밑 타원 — 내 턴에만 켠다 (시안 .spot).")]
@@ -56,11 +60,15 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (band == null || dot == null || nicknameText == null || crown == null || statusText == null || turnSpot == null || turnTimer == null || bone == null || hpText == null || handBadge == null || pickRing == null || pickOutline == null || tapArea == null || pickLayers == null || pickLayers.Length == 0)
+            if (band == null || dot == null || nicknameText == null || nicknameLayout == null || crown == null || statusText == null || turnSpot == null || turnTimer == null || bone == null || hpText == null || handBadge == null || pickRing == null || pickOutline == null || tapArea == null || pickLayers == null || pickLayers.Length == 0)
                 Debug.LogError($"[{nameof(MyPanelView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
-        public void SetNickname(string nickname) => nicknameText.text = nickname;
+        public void SetNickname(string nickname)
+        {
+            nicknameText.text = nickname;
+            nicknameLayout.preferredWidth = Mathf.Min(nicknameText.GetPreferredValues(nickname).x, maxNicknameWidth);
+        }
 
         public void SetColor(Color necklace) => dot.color = necklace;
 
