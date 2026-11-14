@@ -99,6 +99,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (nameText == null || descriptionText == null || frameRenderer == null || artRenderer == null)
                 Debug.LogError($"[{nameof(CardView)}] 이름 · 설명 · 틀 · 그림 참조 중 비어 있는 것이 있습니다.", this);
+            if (auraRenderer == null || sparks == null)
+                Debug.LogError($"[{nameof(CardView)}] 오라 · 별 참조 중 비어 있는 것이 있습니다.", this);
 
             Camera main = Camera.main;
             _camera = main != null ? main.transform : null;

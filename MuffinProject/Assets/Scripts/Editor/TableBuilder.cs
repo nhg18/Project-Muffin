@@ -380,9 +380,9 @@ namespace Chapchu.EditorTools
 
             var view = root.AddComponent<DiscardPileView>();
             GameScreenBuilder.Wire(view,
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
+                ("actionCardPrefab", EnsureCardPrefab(CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab(CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab(CardType.Trap)),
                 ("topAnchor", topAnchor), ("countText", count));
             GameScreenBuilder.WireArray(view, "underCards", underCards);
 
@@ -400,9 +400,9 @@ namespace Chapchu.EditorTools
 
             var view = root.AddComponent<HandView>();
             GameScreenBuilder.Wire(view,
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
+                ("actionCardPrefab", EnsureCardPrefab(CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab(CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab(CardType.Trap)),
                 ("topLayer", topLayer));
             root.AddComponent<HandInput>();
 
@@ -443,9 +443,9 @@ namespace Chapchu.EditorTools
             var presenter = root.gameObject.AddComponent<ChainCardsPresenter>();
             GameScreenBuilder.Wire(presenter,
                 ("deck", gameDeck),
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
+                ("actionCardPrefab", EnsureCardPrefab(CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab(CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab(CardType.Trap)),
                 ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer),
                 ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
             return presenter;
@@ -474,7 +474,7 @@ namespace Chapchu.EditorTools
             TrapSlotsView mine = BuildTrapSlotRow("Mine", root, MyTrapSlots, true);
             var presenter = mine.gameObject.AddComponent<MyTrapsPresenter>();
             GameScreenBuilder.Wire(presenter,
-                ("deck", gameDeck), ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)), ("previewSpot", previewSpot));
+                ("deck", gameDeck), ("trapCardPrefab", EnsureCardPrefab(CardType.Trap)), ("previewSpot", previewSpot));
             return presenter;
         }
 
@@ -602,6 +602,16 @@ namespace Chapchu.EditorTools
             ("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter),
             ("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap),
         };
+
+        // 종류의 카드 프리팹 — CardPrefabs 표에서 이름 · 틀 경로를 찾는다.
+        private static CardView EnsureCardPrefab(CardType type)
+        {
+            foreach ((string name, string framePath, CardType entryType) in CardPrefabs)
+                if (entryType == type)
+                    return EnsureCardPrefab(name, framePath, type);
+            throw new System.ArgumentOutOfRangeException(nameof(type), type, "CardPrefabs 표에 없는 카드 종류");
+        }
+
         private const int EdgeCornerSegments = 8;
         private const int SparkPointCount = 64;
 
