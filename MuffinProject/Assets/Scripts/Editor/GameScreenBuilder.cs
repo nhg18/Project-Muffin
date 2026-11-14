@@ -423,36 +423,42 @@ namespace Chapchu.EditorTools
             // 전체가 탭 영역 — 칩이 없을 때도 눌리지 않게 칩 자체에만 레이캐스트
 
             // 칩은 되풀이되므로 프리팹 (CODE_CONVENTION 「씬과 프리팹」). 아이콘 · 작은 카드의 높이도 레이아웃이 맞춘다 — 작은 카드가 칩 밖으로 길어지지 않게
-            RectTransform chip = NewRect("FeedChip", null);
-            chip.gameObject.AddComponent<CanvasGroup>();
-            Image chipFill = RoundBox(chip, Ink, 4f, 16f, White, true);
-            LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
-            chipSize.preferredHeight = 48f;
-            HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
+            // 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존) — 다시 만들려면 프리팹을 지우고 빌드
+            string chipPath = $"{HandCardPrefabFolder}/FeedChip.prefab";
+            GameObject chipPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(chipPath);
+            if (chipPrefab == null)
+            {
+                RectTransform chip = NewRect("FeedChip", null);
+                chip.gameObject.AddComponent<CanvasGroup>();
+                Image chipFill = RoundBox(chip, Ink, 4f, 16f, White, true);
+                LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
+                chipSize.preferredHeight = 48f;
+                HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
 
-            Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
-            LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
-            iconSize.preferredWidth = 24f;
-            iconSize.preferredHeight = 28f;
+                Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
+                LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
+                iconSize.preferredWidth = 24f;
+                iconSize.preferredHeight = 28f;
 
-            RectTransform miniCard = BuildMiniCard(chip, Act);
-            miniCard.gameObject.SetActive(false);
+                RectTransform miniCard = BuildMiniCard(chip, Act);
+                miniCard.gameObject.SetActive(false);
 
-            Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
-            LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
-            crownSize.preferredWidth = 32f;
-            crownSize.preferredHeight = 26f;
-            crown.gameObject.SetActive(false);
+                Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
+                LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
+                crownSize.preferredWidth = 32f;
+                crownSize.preferredHeight = 26f;
+                crown.gameObject.SetActive(false);
 
-            NewText("Name", chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
-            TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
-            text.overflowMode = TextOverflowModes.Ellipsis;
-            NewText("Value", chip, "−20", 26f, Hp, true);
+                NewText("Name", chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
+                TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
+                text.overflowMode = TextOverflowModes.Ellipsis;
+                NewText("Value", chip, "−20", 26f, Hp, true);
 
-            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
-            GameObject chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, $"{HandCardPrefabFolder}/FeedChip.prefab");
-            Object.DestroyImmediate(chip.gameObject);
+                if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                    AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+                chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, chipPath);
+                Object.DestroyImmediate(chip.gameObject);
+            }
 
             var view = root.gameObject.AddComponent<FeedView>();
             Wire(view, ("chipPrefab", chipPrefab.transform));
