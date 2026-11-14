@@ -11,7 +11,12 @@ namespace Chapchu.Game.Effects
         public EffectSubject subject;
         public int count;
 
-        internal override Bots.BotRole BotRole => subject == EffectSubject.Target ? Bots.BotRole.HandChange : Bots.BotRole.None;
+        internal override double BotScore(Bots.BotView view, int[] receivers) =>
+            subject == EffectSubject.Self ? 0 : receivers.Sum(actor => view.HandScore(actor, -Math.Min(count, view.Server.HandCountOf(actor))));
+
+        // 내 손패를 버리는 카드 (A21) — 낸 카드를 뺀 장수에서
+        internal override int BotHandGain(Bots.BotView view, int[] receivers) =>
+            subject == EffectSubject.Self ? -Math.Min(count, view.MyHand - 1) : 0;
         internal override EffectTag Tag => EffectTag.TakeHand;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(subject, entry);
 

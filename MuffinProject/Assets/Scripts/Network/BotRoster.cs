@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Chapchu.Game.Bots;
 using Photon.Pun;
 using Photon.Realtime;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
@@ -48,6 +49,39 @@ namespace Chapchu.Network
             }
         }
 
+        /// <summary>
+        /// 봇의 난이도 (18-bot.md 7-7 · 9절) — 봇 번호(1 ~ 3)를 받는다. 방 속성에 없거나 틀린 값이면 보통.
+        /// 원본은 봇 목록과 같이 방장 메모리다 — 방장은 자기가 정한 값을, 다른 클라는 방 속성 사본을 읽는다.
+        /// </summary>
+        public static BotLevel LevelOf(int number)
+        {
+            if (number < 1 || number > MaxBots)
+                return BotLevel.Normal;
+
+            int[] levels = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBotLevels : null) ?? RoomLevels;
+            return (BotLevel)levels[number - 1];
+        }
+
+        // 방 속성에 적힌 난이도 — [봇 번호 − 1] 자리. 방 속성은 아무 클라나 쓸 수 있다 — 키가 없거나 모양 · 값이 틀리면 그 자리는 보통
+        internal static int[] RoomLevels
+        {
+            get
+            {
+                int[] levels = Enumerable.Repeat((int)BotLevel.Normal, MaxBots).ToArray();
+                Room room = PhotonNetwork.CurrentRoom;
+                if (room == null || !room.CustomProperties.TryGetValue(RoomProps.BotLevels, out object value) || !(value is int[] written) || written.Length != MaxBots)
+                    return levels;
+
+                for (int i = 0; i < MaxBots; i++)
+                {
+                    if (Enum.IsDefined(typeof(BotLevel), written[i]))
+                        levels[i] = written[i];
+                }
+
+                return levels;
+            }
+        }
+
         /// <summary>봇의 식별자 (actorNumber 자리). 턴 순서 · 좌석은 사람 뒤에 이 순서로 (02-player.md 3절).</summary>
         public static int[] Actors => Numbers.Select(ActorOf).ToArray();
 
@@ -82,6 +116,7 @@ namespace Chapchu.Network
             return player != null && player.CustomProperties.TryGetValue(playerPropKey, out value);
         }
 
-        internal static Hashtable BotsTable(int[] numbers) => new Hashtable { [RoomProps.Bots] = numbers };
+        // 봇 목록과 난이도는 늘 한 번에 쓴다 — 둘이 엇갈린 순간이 없게
+        internal static Hashtable BotsTable(int[] numbers, int[] levels) => new Hashtable { [RoomProps.Bots] = numbers, [RoomProps.BotLevels] = levels };
     }
 }

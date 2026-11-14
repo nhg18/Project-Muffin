@@ -7,12 +7,12 @@ namespace Chapchu.UI.RoomScreen
 {
     /// <summary>
     /// 플레이어 칸 하나 (프리팹 RoomSlot) — 방석 위에 선 캐릭터 + 이름표 + 꼬리표(방장 · 나 · 봇).
-    /// 빈 칸은 흐린 방석만 남고, 방장에게는 「봇 추가」 가 보인다. 봇 칸은 방장에게 「제거」 가 보인다.
+    /// 빈 칸은 흐린 방석만 남고, 방장에게는 「봇 추가」 가 보인다. 봇 칸은 방장에게 「제거」 가 보이고, 방장이 누르면 난이도가 바뀐다.
     /// 기준 문서: docs/systems/16-room-ui-full.md 7-3 · 7-4, docs/systems/18-bot.md 8-1
     /// </summary>
     public class RoomSlotView : MonoBehaviour
     {
-        [Tooltip("칸 전체 — 사람이 있는 칸만 눌린다 (플레이어 정보 판)")]
+        [Tooltip("칸 전체 — 사람 칸은 누구나 (플레이어 정보 판), 봇 칸은 방장만 (난이도 바꾸기) 눌린다")]
         [SerializeField] private Button slotButton;
 
         [Header("방석 · 캐릭터")]
@@ -35,11 +35,17 @@ namespace Chapchu.UI.RoomScreen
         [SerializeField] private GameObject meTag;
         [SerializeField] private GameObject botTag;
 
+        [Tooltip("봇 꼬리표의 글자 — 난이도를 함께 적는다 「(봇 · 보통)」")]
+        [SerializeField] private TMP_Text botTagLabel;
+
+        [Tooltip("봇 꼬리표의 좌우 여백 합 — 꼬리표 너비 = 글자 너비 + 이 값")]
+        [SerializeField] private float botTagPadding = 28f;
+
         [Header("봇 버튼 — 방장에게만")]
         [SerializeField] private Button addBotButton;
         [SerializeField] private Button removeBotButton;
 
-        /// <summary>사람이 있는 칸을 눌렀다.</summary>
+        /// <summary>사람 칸 또는 (방장이) 봇 칸을 눌렀다.</summary>
         public event Action<RoomSlotView> OnClicked;
 
         /// <summary>빈 칸의 「봇 추가」 를 눌렀다.</summary>
@@ -76,6 +82,9 @@ namespace Chapchu.UI.RoomScreen
 
             if (botTag == null)
                 Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(botTag)} 참조가 비어 있습니다.", this);
+
+            if (botTagLabel == null)
+                Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(botTagLabel)} 참조가 비어 있습니다.", this);
 
             if (addBotButton == null)
                 Debug.LogError($"[{nameof(RoomSlotView)}] {nameof(addBotButton)} 참조가 비어 있습니다.", this);
@@ -114,13 +123,21 @@ namespace Chapchu.UI.RoomScreen
             meTag.SetActive(isMe);
         }
 
-        public void ShowBot(string nickname, bool canRemove)
+        /// <param name="tagText">봇 꼬리표 글자 — 난이도를 함께 적는다 「(봇 · 보통)」 (18-bot.md 8-1). 이름표에는 닉네임만 둔다.</param>
+        /// <param name="canEdit">방장 · 시작 전 — 「제거」 가 보이고, 칸을 누르면 난이도가 바뀐다.</param>
+        public void ShowBot(string nickname, string tagText, bool canEdit)
         {
             Show(isOccupied: true);
             nameText.text = nickname;
             characterBody.color = botTint;
+            slotButton.interactable = canEdit;
+            removeBotButton.gameObject.SetActive(canEdit);
+
+            // 꼬리표 너비를 글자에 맞춘다 — 난이도마다 글자 수가 다르다
             botTag.SetActive(true);
-            removeBotButton.gameObject.SetActive(canRemove);
+            botTagLabel.text = tagText;
+            var tagRect = (RectTransform)botTag.transform;
+            tagRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, botTagLabel.preferredWidth + botTagPadding);
         }
 
         // 칸을 비우거나 채운 기본 모습 — 꼬리표 · 버튼은 전부 끄고, 부른 쪽이 필요한 것만 켠다

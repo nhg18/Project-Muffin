@@ -11,8 +11,9 @@ namespace Chapchu.Game.Effects
         public EffectSubject subject;
         public int amount;
 
-        // 대상에게 주는 피해만 공격이다 — 나에게 주는 피해(A12)는 아니다
-        internal override Bots.BotRole BotRole => subject == EffectSubject.Target ? Bots.BotRole.Attack : Bots.BotRole.None;
+        // 18-bot 7-1 — 받는 사람마다 피해 점수 (쓰러뜨리면 더). 나에게 주는 피해(A12 · 전원 피해)는 감점
+        internal override double BotScore(Bots.BotView view, int[] receivers) =>
+            subject == EffectSubject.Self ? view.SelfDamageScore(amount) : receivers.Sum(actor => view.DamageScore(actor, amount));
         internal override EffectTag Tag => EffectTag.Damage;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(subject, entry);
         internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;

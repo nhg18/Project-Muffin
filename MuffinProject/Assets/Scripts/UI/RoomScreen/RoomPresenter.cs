@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
+using Chapchu.Game.Bots;
 using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Lobby;
@@ -32,6 +33,11 @@ namespace Chapchu.UI.RoomScreen
         private const string PrivateLog = "비공개로 변경";
         private const string BotAddedLogFormat = "봇 {0} 추가";
         private const string BotRemovedLogFormat = "봇 {0} 제거";
+
+        // 18-bot.md 8-1 — 봇 칸의 꼬리표 「(봇 · 보통)」, 방장이 칸을 누를 때마다 보통 → 어려움 → 쉬움 → 보통
+        private const string BotTagFormat = "(봇 · {0})";
+        private const string BotLevelLogFormat = "봇 {0} 난이도 {1}";
+        private static readonly BotLevel[] BotLevelCycle = { BotLevel.Normal, BotLevel.Hard, BotLevel.Easy };
         private const string BecameHostToast = "방장이 되었습니다. 2명 이상이면 시작할 수 있어요.";
         private const string FallbackNickname = "플레이어";
 
@@ -67,10 +73,11 @@ namespace Chapchu.UI.RoomScreen
         private bool _isLocked;
         private bool _isLeaving;
 
-        // 공개 여부 · 열림 · 봇 목록의 지난 값 — 바뀐 것을 찾아 로그 · 잠금에 쓴다
+        // 공개 여부 · 열림 · 봇 목록 · 봇 난이도([봇 번호 − 1])의 지난 값 — 바뀐 것을 찾아 로그 · 잠금에 쓴다
         private bool _wasPublic;
         private bool _wasOpen;
         private int[] _bots = Array.Empty<int>();
+        private readonly BotLevel[] _botLevels = new BotLevel[BotRoster.MaxBots];
 
         private readonly struct Seat
         {
@@ -208,6 +215,8 @@ namespace Chapchu.UI.RoomScreen
             _wasPublic = room.IsVisible;
             _wasOpen = room.IsOpen;
             _bots = BotRoster.Numbers;
+            foreach (int number in _bots)
+                _botLevels[number - 1] = BotRoster.LevelOf(number);
 
             // 로그는 내가 들어온 뒤의 일만 가진다 — 먼저 와 있던 사람은 칸으로만 보인다 (7-9)
             codeCard.SetCode(room.Name);
@@ -239,7 +248,7 @@ namespace Chapchu.UI.RoomScreen
                 if (i >= _seats.Count)
                     slots[i].ShowEmpty(canAddBot);
                 else if (_seats[i].IsBot)
-                    slots[i].ShowBot(_seats[i].Nickname, canEditBots);
+                    slots[i].ShowBot(_seats[i].Nickname, string.Format(BotTagFormat, LevelName(BotRoster.LevelOf(_seats[i].ActorNumber - BotRoster.ActorBase))), canEditBots);
                 else
                     slots[i].ShowPlayer(_seats[i].Nickname, _seats[i].ActorNumber == room.MasterClientId, _seats[i].ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber);
             }
@@ -316,6 +325,8 @@ namespace Chapchu.UI.RoomScreen
         // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절)
         private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers;
 
+        private static string LevelName(BotLevel level) => level == BotLevel.Easy ? "쉬움" : level == BotLevel.Hard ? "어려움" : "보통";
+
         // 서식 태그 · 제어 문자를 거른 닉네임(NicknameValidator.ForDisplay), 비면 「플레이어」 (16-room-ui-full 9절)
         private static string DisplayName(string nickname)
         {
@@ -356,6 +367,16 @@ namespace Chapchu.UI.RoomScreen
                 log.Add(string.Format(BotAddedLogFormat, number));
             foreach (int number in _bots.Except(numbers))
                 log.Add(string.Format(BotRemovedLogFormat, number));
+
+            // 난이도 로그는 계속 있던 봇만 — 새로 든 봇은 「추가」 한 줄로 충분하다
+            foreach (int number in numbers)
+            {
+                BotLevel level = BotRoster.LevelOf(number);
+                if (_bots.Contains(number) && level != _botLevels[number - 1])
+                    log.Add(string.Format(BotLevelLogFormat, number, LevelName(level)));
+
+                _botLevels[number - 1] = level;
+            }
 
             _bots = numbers;
             Refresh();
@@ -414,6 +435,17 @@ namespace Chapchu.UI.RoomScreen
             if (_isLocked) return;
 
             Seat seat = _seats[Array.IndexOf(slots, slot)];
+
+            // 봇 칸은 방장에게만 눌린다 — 난이도를 다음 것으로 (18-bot.md 8-1). 칸은 바로, 로그는 OnBotsChanged 에서
+            if (seat.IsBot)
+            {
+                int number = seat.ActorNumber - BotRoster.ActorBase;
+                int next = (Array.IndexOf(BotLevelCycle, BotRoster.LevelOf(number)) + 1) % BotLevelCycle.Length;
+                if (NetworkManager.Instance.SetBotLevel(number, BotLevelCycle[next]))
+                    Refresh();
+                return;
+            }
+
             playerInfo.Show(seat.ActorNumber, seat.Nickname, seat.ActorNumber == PhotonNetwork.CurrentRoom.MasterClientId,
                 seat.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber);
         }

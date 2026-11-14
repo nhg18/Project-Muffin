@@ -5,6 +5,7 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Chapchu.Core;
+using Chapchu.Game.Bots;
 using Chapchu.Network.Events;
 
 namespace Chapchu.Network
@@ -31,6 +32,7 @@ namespace Chapchu.Network
 
         /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _room.HostBots;
+        internal int[] HostBotLevels => _room.HostBotLevels;
         
         protected override void Awake()
         {
@@ -133,6 +135,9 @@ namespace Chapchu.Network
 
         /// <summary>봇 제거 — 방장 · 시작 전. 봇 번호(1 ~ 3)를 받는다. 못 하면 false.</summary>
         public bool RemoveBot(int botNumber) => _room.RemoveBot(botNumber);
+
+        /// <summary>봇 난이도 바꾸기 — 방장 · 시작 전 (18-bot.md 5절 · 7-7). 봇 번호(1 ~ 3)를 받는다. 못 하면 false. 결과는 RoomEvents.OnBotsChanged.</summary>
+        public bool SetBotLevel(int botNumber, BotLevel level) => _room.SetBotLevel(botNumber, level);
 
         #endregion
 
