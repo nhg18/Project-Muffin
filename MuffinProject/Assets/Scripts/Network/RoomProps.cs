@@ -12,6 +12,7 @@
         public const string DiscardTop = "discardTop";     // 버림 더미 맨 위 카드 종류 ID (int). 더미가 비면 키를 지운다 (09-network.md 6절)
         public const string EventSeq = "eventSeq";         // 이 스냅샷이 반영한 마지막 처리 번호 (int, 09-network.md 5절)
         public const string Bots = "bots";                 // 봇 번호 배열 (int[], 18-bot.md 9절). 봇의 공개 값은 BotRoster.PropKey
+        public const string BotLevels = "botLv";           // 봇 난이도 (int[3] — [봇 번호 − 1] 자리에 BotLevel, 18-bot.md 9절). 키가 없으면 전부 보통
         public const string TurnDirection = "turnDir"; // 턴 진행 방향 — true 면 역방향 (bool, 03-turn.md 6절 #4). 정방향이면 키를 지운다
         public const string Gaepan = "gaepan";            // 개판 오분전 [건 사람, 남은 바퀴] (int[], 121). 개판이 없으면 키를 지운다
         public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 112 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
