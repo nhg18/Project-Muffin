@@ -194,7 +194,7 @@ namespace Chapchu.Game.Bots
         private void DeclareIfReady(int bot, BotMind mind, double now, List<GameEvent> events)
         {
             PlayerState me = _server.StateOf(bot);
-            if (me.Life != LifeState.Alive || me.IsChapchu || me.Hand.Count != GameServer.ChapchuHandCount || _server.IsBusy)
+            if (me.Life != LifeState.Alive || me.IsChapchu || me.Hand.Count != GameServer.ChapchuHandCount || _server.IsResolving)
                 return;
 
             if (_server.IsDeclareWait)
@@ -325,7 +325,38 @@ namespace Chapchu.Game.Bots
                 if (card.Type != CardType.Action || !seen.Add(card.CardId))
                     continue;
 
-                foreach (int[] receivers in ReceiverOptions(view, card))
+                int[][] options = ReceiverOptions(view, card).ToArray();
+                if (card.Target == TargetType.MostHand && options.Length > 1)
+                {
+                    // 118 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 118). 동률인 사람마다 점수를 내 평균한 수 하나
+                    var notes = new List<string>();
+                    double sum = 0;
+                    bool usable = true;
+                    foreach (int[] receivers in options)
+                    {
+                        view.Notes.Clear();
+                        if (!TryScore(view, card, receivers, out double each, out int eachGain))
+                        {
+                            usable = false;
+                            break;
+                        }
+
+                        sum += each + view.OwnHandScore(hand - 1 + eachGain);
+                        notes.AddRange(view.Notes);
+                    }
+
+                    if (usable)
+                    {
+                        view.Notes.Clear();
+                        view.Notes.AddRange(notes);
+                        int tiedInstanceId = card.InstanceId;
+                        string tied = string.Join(" · ", options.Select(t => $"P{t[0]}"));
+                        moves.Add(new Move { Text = $"카드 {card.CardId} (#{tiedInstanceId}) → {tied} 중 무작위{NotesOf(view)}", Score = sum / options.Length, Request = () => _server.PlayCard(bot, tiedInstanceId, Array.Empty<int>()) });
+                    }
+                    continue;
+                }
+
+                foreach (int[] receivers in options)
                 {
                     view.Notes.Clear();
                     if (!TryScore(view, card, receivers, out double score, out int gain))
@@ -388,7 +419,7 @@ namespace Chapchu.Game.Bots
             return best;
         }
 
-        // 카드의 대상이 될 사람들 — 고르는 카드는 후보마다 하나씩, 자동 대상은 방장이 정할 그대로 하나. 낼 수 없으면 비어 있다.
+        // 카드의 대상이 될 사람들 — 고르는 카드는 후보마다 하나씩, 자동 대상은 방장이 정할 그대로 하나(118 동률이면 동률인 사람마다). 낼 수 없으면 비어 있다.
         // 대상 후보 조건(11-card-list 1-2)은 방장 검증과 같은 기준으로 먼저 거른다. TwoOthers 는 쓰지 않는다 (7-3).
         private IEnumerable<int[]> ReceiverOptions(BotView view, Card card)
         {
@@ -434,13 +465,17 @@ namespace Chapchu.Game.Bots
                     break;
 
                 case TargetType.MostHand:
-                    // 손패 최다 1명 (낸 뒤의 장수). 내가 최다이거나 동률이면 내가 대상이 될 수 있어 쓰지 않는다
+                    // 손패 최다 1명 (낸 뒤의 장수). 내가 최다이거나 동률이면 내가 대상이 될 수 있어 쓰지 않는다.
+                    // 상대끼리 동률이면 방장이 무작위로 고르므로 동률인 사람마다 하나씩 — Moves 가 평균을 낸다
                     int[] alive = view.Opponents;
                     if (alive.Length > 0)
                     {
                         int most = alive.Max(_server.HandCountOf);
                         if (most > myHandAfter)
-                            yield return new[] { alive.First(a => _server.HandCountOf(a) == most) };
+                        {
+                            foreach (int actor in alive.Where(a => _server.HandCountOf(a) == most))
+                                yield return new[] { actor };
+                        }
                     }
                     break;
 

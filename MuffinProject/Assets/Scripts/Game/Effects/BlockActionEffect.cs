@@ -17,7 +17,7 @@ namespace Chapchu.Game.Effects
 
         // 그 상대가 다음 턴에 나를 때리거나 내 손패를 건드리지 못한다 — 내 HP 가 낮을수록 값지다
         internal override double BotScore(Bots.BotView view, int[] receivers) =>
-            subject == EffectSubject.Self ? double.NaN : receivers.Count(actor => actor != view.Bot) * (8 + (view.MyHp <= 40 ? 12 : 0));
+            subject == EffectSubject.Self ? double.NaN : receivers.Count(actor => actor != view.Bot) * (8 + (view.MyHp <= Bots.BotView.GuardHp ? 12 : 0));
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {

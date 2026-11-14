@@ -14,6 +14,9 @@ namespace Chapchu.Game
         /// <summary>체인 · 함정 시간 · 사망 대기 등으로 메인 행동을 할 수 없는 때 (코드 18) · 게임 끝.</summary>
         internal bool IsBusy => _gameOver || IsPaused(_clock());
 
+        /// <summary>카드 효과가 아직 처리 중 (체인 · 효과 처리 멈춤 · 개판 판정 · 고르기) — 봇이 찹츄를 선언하지 않는 때. 함정 시간 · 사망 대기는 들지 않는다 (18-bot.md 7-5).</summary>
+        internal bool IsResolving => _chain.Count > 0 || IsResolvePaused || IsGaepanJudging || IsChoosing;
+
         internal PlayerState StateOf(int actor) => _players[actor];
 
         internal bool InGame(int actor) => _players.ContainsKey(actor) && IsInGame(actor);

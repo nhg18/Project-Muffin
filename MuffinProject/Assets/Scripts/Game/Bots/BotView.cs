@@ -20,6 +20,11 @@ namespace Chapchu.Game.Bots
         private const double LostCardValue = 4;   // 상대가 카드 1장을 잃음
         private const double WeakFocus = 0.1;     // 잃은 HP 1 마다 — 약한 상대를 먼저 노리는 정도
 
+        // 18-bot.md 7-1 「내가 받는 피해」 · 「회복」, 7-3 「행동 카드 금지」 — HP 기준
+        private const int LowHp = 30;             // 이 미만이면 위험 — 자해 −20 · 회복 × 1.5
+        private const int MidHp = 50, HighHp = 70; // 회복 × 1.0 · × 0.6 의 경계
+        public const int GuardHp = 40;            // 107 짖기 — 내 HP 가 이 이하면 몸을 지키는 값을 더한다
+
         public readonly GameServer Server;
         public readonly int Bot;
         public readonly BotLevelSpec Level;
@@ -60,7 +65,8 @@ namespace Chapchu.Game.Bots
         /// </summary>
         public double NearChapchu(int hand)
         {
-            double near = hand == 10 ? 50 : hand == 9 || hand == 8 ? 35 : hand == 11 ? 20 : hand == 7 ? 12 : 0;
+            const int ten = GameServer.ChapchuHandCount;
+            double near = hand == ten ? 50 : hand == ten - 1 || hand == ten - 2 ? 35 : hand == ten + 1 ? 20 : hand == ten - 3 ? 12 : 0;
             return near * Level.Foresight;
         }
 
@@ -118,7 +124,7 @@ namespace Chapchu.Game.Bots
             if (MyHp <= amount)
                 return -1000;
 
-            return -(amount * 1.2 + (MyHp - amount < 30 ? 20 : 0));
+            return -(amount * 1.2 + (MyHp - amount < LowHp ? 20 : 0));
         }
 
         /// <summary>actor 가 amount 회복할 때의 점수. 내 회복은 HP 가 낮을수록 값지고, 상대의 회복은 손해다.</summary>
@@ -131,7 +137,7 @@ namespace Chapchu.Game.Bots
             if (actor != Bot)
                 return -healed;
 
-            double weight = hp < 30 ? 1.5 : hp < 50 ? 1.0 : hp < 70 ? 0.6 : 0.3;
+            double weight = hp < LowHp ? 1.5 : hp < MidHp ? 1.0 : hp < HighHp ? 0.6 : 0.3;
             return healed * weight;
         }
 
@@ -142,8 +148,8 @@ namespace Chapchu.Game.Bots
         public double HandPotential(int hand)
         {
             double bonus = hand == GameServer.ChapchuHandCount ? ChapchuReady
-                : hand == 9 ? 15 * Level.Foresight
-                : hand == 8 ? 10 * Level.Foresight
+                : hand == GameServer.ChapchuHandCount - 1 ? 15 * Level.Foresight
+                : hand == GameServer.ChapchuHandCount - 2 ? 10 * Level.Foresight
                 : hand > GameServer.ChapchuHandCount ? -18 * (hand - GameServer.ChapchuHandCount)
                 : 0;
             return hand * CardValue + bonus;
