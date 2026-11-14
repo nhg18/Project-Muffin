@@ -5,6 +5,7 @@ using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Chapchu.Core;
+using Chapchu.Game.Bots;
 using Chapchu.Network.Events;
 
 namespace Chapchu.Network
@@ -26,6 +27,13 @@ namespace Chapchu.Network
 
         /// <summary>방장이 정한 봇 목록 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _hostBots;
+
+        // 봇 난이도 ([봇 번호 − 1] 자리) — 봇 목록과 같은 방식이고 늘 함께 쓴다 (18-bot.md 9절)
+        private int[] _pendingBotLevels;
+        private int[] _hostBotLevels;
+
+        /// <summary>방장이 정한 봇 난이도 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.LevelOf 로.</summary>
+        internal int[] HostBotLevels => _hostBotLevels;
 
         public void JoinRoom(string roomName)
         {
@@ -111,7 +119,10 @@ namespace Chapchu.Network
             while (numbers.Contains(number))
                 number++;
 
-            SetBots(numbers.Append(number).OrderBy(n => n).ToArray());
+            // 새로 든 봇은 보통부터 — 지난번에 그 번호였던 봇의 난이도를 물려받지 않는다 (18-bot.md 5절)
+            int[] levels = (int[])CurrentBotLevels.Clone();
+            levels[number - 1] = (int)BotLevel.Normal;
+            SetBots(numbers.Append(number).OrderBy(n => n).ToArray(), levels);
             return true;
         }
 
@@ -125,7 +136,23 @@ namespace Chapchu.Network
             if (!numbers.Contains(number))
                 return false;
 
-            SetBots(numbers.Where(n => n != number).ToArray());
+            SetBots(numbers.Where(n => n != number).ToArray(), CurrentBotLevels);
+            return true;
+        }
+
+        /// <summary>봇 난이도 바꾸기 (18-bot.md 5절 · 7-7). 방장 · 게임 시작 전 · 방에 있는 봇만. 결과는 RoomEvents.OnBotsChanged.</summary>
+        public bool SetBotLevel(int number, BotLevel level)
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = CurrentBots;
+            int[] levels = (int[])CurrentBotLevels.Clone();
+            if (!numbers.Contains(number) || levels[number - 1] == (int)level)
+                return false;
+
+            levels[number - 1] = (int)level;
+            SetBots(numbers, levels);
             return true;
         }
 
@@ -134,21 +161,29 @@ namespace Chapchu.Network
 
         // 방장이 정한 원본 — 서버 확인 전이어도 방금 쓴 목록이라 「제거」 직후 「추가」 가 지운 봇을 되살리지 않는다
         private int[] CurrentBots => _hostBots ?? BotRoster.Numbers;
+        private int[] CurrentBotLevels => _hostBotLevels ?? BotRoster.RoomLevels;
 
-        private void SetBots(int[] numbers)
+        private void SetBots(int[] numbers, int[] levels)
         {
             Room room = PhotonNetwork.CurrentRoom;
             room.MaxPlayers = NetworkManager.MaxPlayers - numbers.Length;
-            if (room.SetCustomProperties(BotRoster.BotsTable(numbers)))
-                _pendingBots = _hostBots = numbers;
+            if (!room.SetCustomProperties(BotRoster.BotsTable(numbers, levels)))
+                return;
+
+            _pendingBots = _hostBots = numbers;
+            _pendingBotLevels = _hostBotLevels = levels;
         }
 
-        // 방장이 되면 지금 방의 봇 목록(거른 사본)을 원본으로 이어받는다 (18-bot.md 9절 「방장 교체 (방 대기 중)」)
+        // 방장이 되면 지금 방의 봇 목록 · 난이도(거른 사본)를 원본으로 이어받는다 (18-bot.md 9절 「방장 교체 (방 대기 중)」)
         private void AdoptBots()
         {
             _hostBots = null;
-            if (PhotonNetwork.IsMasterClient)
-                _hostBots = BotRoster.Numbers;
+            _hostBotLevels = null;
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+
+            _hostBots = BotRoster.Numbers;
+            _hostBotLevels = BotRoster.RoomLevels;
         }
     
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen)
@@ -221,6 +256,8 @@ namespace Chapchu.Network
             PhotonNetwork.LocalPlayer.CustomProperties.Clear();
             _pendingBots = null;
             _hostBots = null;
+            _pendingBotLevels = null;
+            _hostBotLevels = null;
 
             RoomEvents.RaiseLeftRoom();
         }
@@ -251,7 +288,7 @@ namespace Chapchu.Network
                 int[] numbers = CurrentBots;
                 int seats = NetworkManager.MaxPlayers - PhotonNetwork.CurrentRoom.PlayerCount;
                 if (numbers.Length > seats)
-                    SetBots(numbers.Take(seats).ToArray());
+                    SetBots(numbers.Take(seats).ToArray(), CurrentBotLevels);
             }
 
             RoomEvents.RaisePlayerEntered(player);
@@ -264,19 +301,21 @@ namespace Chapchu.Network
 
         public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changed)
         {
-            if (!changed.ContainsKey(RoomProps.Bots))
+            if (!changed.ContainsKey(RoomProps.Bots) && !changed.ContainsKey(RoomProps.BotLevels))
                 return;
 
-            // 마지막으로 쓴 목록까지 서버가 확인해 주면 대기를 푼다
+            // 마지막으로 쓴 목록 · 난이도까지 서버가 확인해 주면 대기를 푼다
             int[] inRoom = BotRoster.RoomNumbers;
-            if (_pendingBots != null && inRoom.SequenceEqual(_pendingBots))
-                _pendingBots = null;
+            int[] levelsInRoom = BotRoster.RoomLevels;
+            if (_pendingBots != null && inRoom.SequenceEqual(_pendingBots) && levelsInRoom.SequenceEqual(_pendingBotLevels))
+                _pendingBots = _pendingBotLevels = null;
 
             // 확인 대기가 없는데 원본과 다르면 방장이 쓴 값이 아니다 — 원본과 정원으로 다시 쓴다 (09-network.md 2절 #3 · 18-bot.md 3절 #7)
-            if (PhotonNetwork.IsMasterClient && _pendingBots == null && _hostBots != null && !inRoom.SequenceEqual(_hostBots))
+            if (PhotonNetwork.IsMasterClient && _pendingBots == null && _hostBots != null
+                && (!inRoom.SequenceEqual(_hostBots) || !levelsInRoom.SequenceEqual(_hostBotLevels)))
             {
-                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장이 쓰지 않은 봇 목록 [{string.Join(",", inRoom)}] — 원본 [{string.Join(",", _hostBots)}] 으로 되돌린다");
-                SetBots(_hostBots);
+                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장이 쓰지 않은 봇 목록 [{string.Join(",", inRoom)}] · 난이도 [{string.Join(",", levelsInRoom)}] — 원본 [{string.Join(",", _hostBots)}] · [{string.Join(",", _hostBotLevels)}] 으로 되돌린다");
+                SetBots(_hostBots, _hostBotLevels);
             }
             RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
         }

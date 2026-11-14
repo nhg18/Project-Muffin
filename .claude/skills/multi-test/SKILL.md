@@ -12,7 +12,7 @@ bash .claude/skills/multi-test/run.sh rules [인원=4] [턴=8]      # 규칙 계
 bash .claude/skills/multi-test/run.sh ui                          # 한 클라이언트 UI 흐름 — 1분
 bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메인 + 클론 — 2~3분 (클론을 새로 열면 더)
 bash .claude/skills/multi-test/run.sh full [클라이언트=2] [HP=20]   # 한 판 끝까지 — 체력을 낮춰 시작 → 사망 · 게임 종료 · 방 복귀
-bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
+bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 · 난이도 → 한 판 끝까지 → 방 복귀
 bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 두 화면 표시 → 찹츄 승리 → 방 복귀 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디터마다 게임 뷰 PNG — 처음 나온 카드의 3 단계 확대(_zoom) · 반응 시간(_reaction · _later) + 턴이 끝난 뒤. 화면 눈 확인용 (MultiTest.ArmCardShots · Shot)
 ```
@@ -42,7 +42,9 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 
 * **full** — multi 와 같이 입장 · 시작한 뒤 방장 규칙 원본의 체력을 낮추고(`SetAllHp`), 끝날 때까지 차례인 클라이언트가 행동한다(손패의 함정은 먼저 설치). 함정 시간이면 맞은 클라이언트가 함정을 낸다(`TrapProbe`). 함정 설치는 **화면 경로**(손패의 함정 카드의 사용을 청함, 더블클릭과 같은 길 — `HandPresenter`)로 하고, 처음 설치한 뒤 모든 화면의 함정 칸 수 · 손패 장수가 방장 값과 같은지(`TableUiExpect`) · 내 칸을 누르면 크게 보이는지(`TrapPreview`) 본다 (SHOT_DIR 이 있으면 `trap_*.png`). 함정을 쓰려면 HP 를 한 방에 죽지 않게(예: 45). 판정: 모든 화면의 「게임 종료 — 유형 · 승자」 가 같음 · 턴 줄이 같음 · 결과 표시 뒤 전원 `RoomScene` · 콘솔 에러 0.
 
-* **solo** — 메인 혼자 디버그 로비에서 「혼자 하기」(`NetworkManager.CreateSoloRoom`) → 봇 3 · 정원 1 · 비공개 확인 → 봇 2 제거 · 다시 추가(번호 2 재사용) → 시작 → 체력을 낮춰 끝까지(봇은 방장 기기에서 스스로) → 판정: 게임 종료 · `[BotDriver]` 이유 줄 · 방 복귀 뒤 봇 3 · 비공개 그대로 · 콘솔 에러 0.
+* **solo** — 메인 혼자 디버그 로비에서 「혼자 하기」(`NetworkManager.CreateSoloRoom`) → 봇 3 · 정원 1 · 비공개 확인 → 봇 2 제거 · 다시 추가(번호 2 재사용) → 봇 칸을 눌러 난이도(봇 1 어려움 · 봇 3 쉬움 — 방장 값 · 방 속성 · 꼬리표 글자와 너비) → 시작 → 봇이 그 난이도로 만들어졌는지 → 체력을 낮춰 끝까지(봇은 방장 기기에서 스스로) → 판정: 게임 종료 · `[BotDriver]` 이유 줄(`7-1 … 점`) · 방 복귀 뒤 봇 3 · 난이도 · 비공개 그대로 · 콘솔 에러 0.
+
+* **BotArena** (run.sh 에 없는 진입점 — 봇 값을 맞출 때) — `unity command script.run --file <MultiTest.cs> --entry MultiTest.BotArena --args '["NEEE","200"]'`. 자리마다 난이도(E 쉬움 · N 보통 · H 어려움)로 봇끼리 게임 덱 N판 → 난이도별 승률 · 승리 방식 · 판 길이 · 카드별 사용 (`18-bot` 7-7 「난이도 확인」). 통과 · 실패 없이 숫자만 낸다. `rules` 의 Bot 시나리오 ⑤ 가 같은 방법으로 「보통 한 자리 승률: 쉬움 셋 사이 > 어려움 셋 사이」 를 본다.
 
 ## 사전 조건 · 스크립트가 지키는 것
 

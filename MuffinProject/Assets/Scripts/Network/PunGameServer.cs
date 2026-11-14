@@ -85,7 +85,7 @@ namespace Chapchu.Network
             PhotonNetwork.CurrentRoom.SetCustomProperties(roomReset);
 
             if (bots.Length > 0)
-                _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time);
+                _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
 
             Send(_server.StartGame(actors, cards));
         }
@@ -125,7 +125,7 @@ namespace Chapchu.Network
         /// </summary>
         public void RequestMySync() => photonView.RPC(nameof(RPC_RequestMySync), RpcTarget.MasterClient);
 
-        /// <summary>찹츄 선언 — 손패가 정확히 10장일 때 언제든 (07-win-condition.md 4.1).</summary>
+        /// <summary>찹츄 선언 — 내 턴 · 손패가 정확히 10장일 때 (07-win-condition.md 4.1).</summary>
         public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
 
         /// <summary>내가 고르는 효과의 답 (119 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
@@ -221,6 +221,8 @@ namespace Chapchu.Network
         {
             if (events.Count == 0)
                 return;
+
+            _bots?.Observe(events); // 봇도 판에서 일어난 일을 본다 — 누가 자기를 노렸는지 (18-bot.md 7-8)
 
             var roomProps = new Hashtable();
             var playerProps = new Dictionary<int, Hashtable>();

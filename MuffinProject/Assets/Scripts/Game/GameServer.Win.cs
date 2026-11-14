@@ -14,7 +14,7 @@ namespace Chapchu.Game
 
         public bool IsGameOver => _gameOver;
 
-        /// <summary>찹츄 선언 (07-win-condition.md 4.1). 살아 있고 손패가 정확히 10장이면 턴과 관계없이 언제든.</summary>
+        /// <summary>찹츄 선언 (07-win-condition.md 4.1). 내 턴에만 — 살아 있고 손패가 정확히 10장일 때. 선언 대기 중에 승인되면 그 순간 턴이 끝난다 (03-turn.md 4절).</summary>
         public IReadOnlyList<GameEvent> DeclareChapchu(int requester)
         {
             if (_gameOver)
@@ -23,6 +23,9 @@ namespace Chapchu.Game
             // 참가자가 아닌 요청(시작 전 · 방장이 바뀐 뒤)도 여기서 거절한다 — 원본을 꺼내기 전에
             if (!InGame(requester) || _players[requester].Life != LifeState.Alive)
                 return Reject(requester, RejectCode.NotAlive);
+
+            if (requester != CurrentTurnActor)
+                return Reject(requester, RejectCode.NotYourTurn); // 남의 턴에는 선언할 수 없다 (07 4.1, 2026-11-07)
 
             PlayerState player = _players[requester];
 
@@ -33,6 +36,9 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotTenCards);
 
             SetChapchu(requester, true);
+            if (_declareWait)
+                AdvanceTurn(); // 선언 대기 중 — 승인된 순간 턴 종료, 남은 시간을 기다리지 않는다 (03-turn.md 4절)
+
             return TakeEvents();
         }
 

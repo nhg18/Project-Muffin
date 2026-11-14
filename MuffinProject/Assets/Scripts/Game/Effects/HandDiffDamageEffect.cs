@@ -10,7 +10,13 @@ namespace Chapchu.Game.Effects
     {
         public int amount;
 
-        internal override Bots.BotRole BotRole => Bots.BotRole.Attack;
+        // 낸 뒤의 내 손패 장수와 견준다
+        internal override double BotScore(Bots.BotView view, int[] receivers) =>
+            receivers.Sum(actor =>
+            {
+                int diff = view.Server.HandCountOf(actor) - (view.MyHand - 1);
+                return view.DamageScore(actor, (diff < 0 ? 1 : diff) * amount);
+            });
         internal override EffectTag Tag => EffectTag.Damage;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry).Where(a => DamageTo(server, entry, a) > 0);
         internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => server.ReceiversOf(EffectSubject.Target, entry).Contains(actor) ? DamageTo(server, entry, actor) : 0;
