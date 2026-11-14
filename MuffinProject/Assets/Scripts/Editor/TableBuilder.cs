@@ -102,9 +102,10 @@ namespace Chapchu.EditorTools
         private const int TrapSlotCount = 3;
         private const float TableAxisYPx = 620f; // 테이블 면이 도는 축 (시안 y 310)
         private const float TrapSlotZ = -0.01f;   // 방석보다 조금 앞
-        private const string TrapSlotTexturePath = "Assets/Sprites/Cards/TrapSlotEmpty.png"; // 빈 칸 — 흰 45% · 잉크 30% 테 (시안의 점선은 실선으로)
+        private const string TrapSlotTexturePath = "Assets/Sprites/Cards/TrapSlotEmpty.png"; // 빈 칸 — 흰 45% · 잉크 30% 점선 테 (프로토타입 v2 .slot 2px dashed × 2)
         private static readonly Color TrapSlotFill = new Color(1f, 1f, 1f, 0.45f);
         private static readonly Color TrapSlotEdge = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
+        private const float TrapSlotDashPx = 12f; // 점선 칸 · 틈 (캔버스 px) — 브라우저 dashed 는 두께 2px 에 칸 · 틈 6px (× 2)
 
         // 낼 수 있는 카운터의 초록 링 (10-ui.md 2-1 「손패 입력 값」) — 카드보다 사방 12px 큰 초록 판을 카드 뒤에 깐다. 흐린 빛은 아직 없다.
         private const string CounterGlowTexturePath = "Assets/Sprites/Cards/CardGlowCounter.png";
@@ -433,7 +434,7 @@ namespace Chapchu.EditorTools
             float scale = row.widthPx * UnitsPerPixel / CardSize.x;
             Quaternion rotation = TableRotation * Quaternion.Euler(0f, 0f, row.angle);
 
-            Material emptyMaterial = EnsureAlphaMaterial("TrapSlotEmpty", EnsureRoundTexture(TrapSlotTexturePath, CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge));
+            Material emptyMaterial = EnsureAlphaMaterial("TrapSlotEmpty", EnsureRoundTexture(TrapSlotTexturePath, CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
             Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(CardSize));
             Material back = EnsureMaterial("CardBack", BackTexturePath);
 
@@ -557,7 +558,8 @@ namespace Chapchu.EditorTools
         }
 
         // 둥근 사각형 그림 — 안쪽 fill, 테두리 edge. 있으면 덮어쓰지 않는다. solidAlpha 가 1 이면 안쪽 알파를 1 로(컷아웃 셰이더용), 0 이면 색의 알파 그대로(알파 블렌드용). 크기 · 테 · 반지름은 유닛 · 캔버스 px.
-        private static string EnsureRoundTexture(string path, Vector2 size, float solidAlpha, float borderPx, float radiusPx, Color fill, Color edge)
+        // dashPx > 0 이면 테두리를 점선으로 — 틈에는 fill (CSS dashed 처럼 바탕이 테두리 밑까지 깔린다).
+        private static string EnsureRoundTexture(string path, Vector2 size, float solidAlpha, float borderPx, float radiusPx, Color fill, Color edge, float dashPx = 0f, float gapPx = 0f)
         {
             if (File.Exists(path))
                 return path;
@@ -565,6 +567,7 @@ namespace Chapchu.EditorTools
             float scale = BlankTexturePixelsPerPx / UnitsPerPixel;
             int width = Mathf.RoundToInt(size.x * scale), height = Mathf.RoundToInt(size.y * scale);
             float radius = radiusPx * BlankTexturePixelsPerPx, border = borderPx * BlankTexturePixelsPerPx;
+            float dash = dashPx * BlankTexturePixelsPerPx, gap = gapPx * BlankTexturePixelsPerPx;
             var half = new Vector2(width / 2f, height / 2f);
 
             var pixels = new Color[width * height];
@@ -575,7 +578,8 @@ namespace Chapchu.EditorTools
                     var d = new Vector2(Mathf.Abs(x + 0.5f - half.x), Mathf.Abs(y + 0.5f - half.y)) - half + Vector2.one * radius;
                     float distance = Vector2.Max(d, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(d.x, d.y), 0f) - radius;
 
-                    Color color = Color.Lerp(fill, edge, Mathf.Clamp01(distance + border + 0.5f));
+                    bool inDash = dash <= 0f || OnDash(new Vector2(x + 0.5f - half.x, y + 0.5f - half.y), half, radius, dash, gap);
+                    Color color = Color.Lerp(fill, inDash ? edge : fill, Mathf.Clamp01(distance + border + 0.5f));
                     if (distance > 0f)
                         color.a = 0f;
                     else if (solidAlpha > 0f)
@@ -596,6 +600,31 @@ namespace Chapchu.EditorTools
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.SaveAndReimport();
             return path;
+        }
+
+        // 점선의 칸 위인가 (p = 가운데 기준 픽셀 위치). 변마다 모서리 호의 가운데에서 가운데까지를 한 변으로 보고, 칸이 양 끝 모서리에 걸치도록 간격을 맞춘다 —
+        // 모서리마다 칸이 하나 놓이고 변 길이가 달라도 칸이 잘리지 않는다. 네 귀퉁이가 같은 모양이라 한 귀퉁이(|p|)로 잰다.
+        private static bool OnDash(Vector2 p, Vector2 half, float radius, float dash, float gap)
+        {
+            float ax = Mathf.Abs(p.x), ay = Mathf.Abs(p.y);
+            var corner = new Vector2(half.x - radius, half.y - radius);
+            bool vertical;
+            float along; // 변 가운데부터 잰 길이
+            if (ax > corner.x && ay > corner.y)
+            {
+                float angle = Mathf.Atan2(ay - corner.y, ax - corner.x);
+                vertical = angle < Mathf.PI / 4f;
+                along = vertical ? corner.y + angle * radius : corner.x + (Mathf.PI / 2f - angle) * radius;
+            }
+            else
+            {
+                vertical = ay <= corner.y && (ax > corner.x || half.x - ax <= half.y - ay);
+                along = vertical ? ay : ax;
+            }
+
+            float side = 2f * (vertical ? corner.y : corner.x) + Mathf.PI / 2f * radius;
+            float period = side / Mathf.Max(1, Mathf.RoundToInt(side / (dash + gap)));
+            return (side / 2f + along + dash / 2f) % period < dash;
         }
 
         // 어두운 판 머티리얼 — 잉크 색 · 알파 0 에서 시작 (ChainCardsPresenter 가 알파를 올린다). 있으면 덮어쓰지 않는다.
