@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Chapchu.Cards;
+using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.UI.GameScreen;
 using TMPro;
@@ -14,7 +15,8 @@ namespace Chapchu.EditorTools
     /// <summary>
     /// 인게임 3D 층(카드 · 덱 · 버림 더미 · 손패 · 카드 내는 자리)을 조립한다 — 10-ui.md 2-1 「3D 층」. GameScreenBuilder.Build 가 부른다.
     /// 단위: 캔버스 100px = 1 유닛, 테이블 면 z = 0, 카메라는 원근 · 수직 FOV 40° 로 1080px 높이가 화면을 채우는 거리에. 좌석 이름표는 2D 층(HUD v2).
-    /// 카드 · 덱 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)과 카드 프리팹 3개는 없으면 만들고, 있으면 덮어쓰지 않는다.
+    /// 덱 · 함정 칸 머티리얼(Unlit · 컷아웃 · 뒷면 컬링)은 없으면 만들고, 있으면 덮어쓰지 않는다.
+    /// 카드 프리팹 3개는 없으면 만들고, 있으면 「Upgrade Card Prefabs」 메뉴로 그 자리에서 지금 생김새에 맞춘다 (UpgradeCard — 카드 셰이더 Chapchu/Card *).
     /// 내 카드(손패 · 내는 카드)는 HandCards 레이어 — 메인 카메라 자식인 손패 카메라가 깊이만 지우고 그 위에 그린다. 기울인 카드(4° · 40°)의 윗부분이 덱 뒤로 들어가 가려지지 않게 (10-ui.md 2-1 「3D 층 구현」 손패 층).
     /// HUD 를 덮어야 하는 카드(올린 손패 · 끄는 카드 · 대상 고르는 카드)는 TopCards 레이어 — 앞 층 카메라가 렌더 텍스처에 그리고 HUD 의 RawImage 가 얹는다 (TopCardLayerView).
     /// </summary>
@@ -32,18 +34,60 @@ namespace Chapchu.EditorTools
         public const string HandLayerName = "HandCards"; // 내 카드 전용 레이어 — TagManager 에 없으면 빈 사용자 칸(8~)에 만든다
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
-        private const string CardShaderName = "Unlit/Transparent Cutout"; // 알파 컷아웃 + ZWrite — 겹친 카드가 깊이로 정렬된다. 뒷면 컬링
+        private const string CardShaderName = "Unlit/Transparent Cutout"; // 덱 · 함정 칸 · 받침 카드 — 알파 컷아웃 + ZWrite, 뒷면 컬링 (카드 프리팹은 Chapchu/Card *)
         private const string BackTexturePath = "Assets/Sprites/Cards/CardBack.jpg";
         private const float CardThickness = 0.02f; // 더미 장당 두께
         private const float LayerGap = 0.005f;     // 그림 · 글자를 틀 앞에 띄우는 간격 — 같은 면이면 z 싸움
 
-        // 카드 226 × 336 px → 2.26 × 3.36 유닛. 기준점 아래 가운데 (10-ui.md 2-1 「손패」).
+        // 카드 226 × 336 px → 2.26 × 3.36 유닛. 기준점 아래 가운데 (10-ui.md 2-1 「손패」). 틀 이미지 크기 — 콜라이더 · 손패 간격의 기준.
         private static readonly Vector2 CardSize = new Vector2(2.26f, 3.36f);
-        // 그림 칸 x 0.19 ~ 0.81 · y 0.39 ~ 0.80, 이름 띠 x 0.33 ~ 0.89 · y 0.85 ~ 0.95, 설명 x 0.11 ~ 0.89 · y 0.07 ~ 0.34 (카드 크기 대비 비율, 왼쪽 아래 기준).
-        private static readonly Rect ArtBox = Rect.MinMaxRect(0.1925f, 0.389f, 0.8075f, 0.801f);
-        private static readonly Rect NameBox = Rect.MinMaxRect(0.3256f, 0.8482f, 0.8896f, 0.9502f);
-        private static readonly Rect DescriptionBox = Rect.MinMaxRect(0.11f, 0.074f, 0.89f, 0.336f);
-        private const float NameFontPx = 18f, NameFontMinPx = 12f, DescriptionFontPx = 15f, DescriptionFontMinPx = 10f;
+        // 그림 칸 · 이름 띠 · 설명 칸 (카드 크기 대비 비율, 왼쪽 아래 기준) — 프로토타입 v2 CF.front 그대로 (10-ui.md 2-1 「손패 · 카드 (3D 층)」).
+        private static readonly Rect ArtBox = Rect.MinMaxRect(0.19f, 0.39f, 0.81f, 0.80f);
+        private static readonly Rect NameBox = Rect.MinMaxRect(0.318f, 0.845f, 0.883f, 0.948f);
+        private static readonly Rect DescriptionBox = Rect.MinMaxRect(0.085f, 0.06f, 0.915f, 0.347f);
+        // 글자 크기 (캔버스 px) — 시안 틀 폭 820 에 84 · 72, 줄일 때 40 까지를 카드 폭 226 에 맞춘 값.
+        private const float NameFontPx = 23.15f, NameFontMinPx = 11f, DescriptionFontPx = 19.8f, DescriptionFontMinPx = 11f;
+        private const float DescriptionLineSpacing = -5f; // 줄 높이 1.28 (시안) — Galmuri 1.33 에서 TMP 단위(em ÷ 100)로 줄인다
+        private const float NameShadowOffset = -0.51f;    // 이름 밑 그림자 0.07 em 아래 — TMP 밑깔림 오프셋 단위 = SDF 범위 6 / 44 pt
+
+        // 카드 생김새 — 프로토타입 v2 C3D (카드 196 → 226, 1.153 배). 틀 이미지 바깥에 흰 여백 · 외곽선을 두른다 → 겉 크기 253.7 × 363.7 (캔버스 px).
+        private const float CardMarginPx = 9.22f, CardOutlinePx = 4.61f, CardCornerPx = 9.22f; // 시안 M 8 · OL 4 · CR 8
+        private const float CardDepth = 0.018f;  // 앞뒤 면 사이 두께 (시안 THICK 3) — 손패 장당 간격 0.02 보다 얇게 해 옆 카드와 겹치지 않는다
+        private const float FaceGap = 0.003f;    // 그림 · 글자 · 덮는 판을 틀 앞에 띄우는 간격
+        private const float GlowPadPx = 73.8f;   // 빛 판이 카드 겉보다 사방으로 큰 정도 (시안 GP 64)
+        private const float ShadowPadPx = 55.4f, ShadowBlurPx = 27.7f, ShadowDropPx = 13.8f; // 그림자 판 여유 · 흐림 · 아래로 (시안 SP 48 · 24 · 12)
+        private const float ShadowBehind = 0.012f;
+        private const float CardFoil = 0.85f, CardGlare = 0.6f, BackGlare = 0.48f; // 홀로(그림만) · 빛 반사 (시안 LOOK)
+        private static readonly Color CardInk = new Color32(0x2B, 0x28, 0x56, 0xFF);             // 시안 C3D INK — 뒷면 외곽선 · 옆면 · 설명 글자
+        private static readonly Color CardShadowColor = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
+        private static readonly Color CardShadeColor = new Color(0f, 0f, 0f, 0.48f);             // 낼 수 없는 카드 (시안 dark .48)
+        private static readonly Color PawPaper = new Color32(0xF6, 0xF0, 0xE7, 0xFF);             // 그림 없는 카드의 바탕
+        private static readonly Color SelectGlowColor = new Color32(0xFF, 0xD2, 0x3F, 0xFF);      // 고른 카드 (시안 GLOWS 1)
+        private static readonly Color CounterGlowColor = new Color32(0x5E, 0xF0, 0x9C, 0xFF);     // 낼 수 있는 카운터 (시안 GLOWS 2)
+        private static readonly Color RareAuraColor = new Color32(0xA7, 0x79, 0xFF, 0xFF);        // 희귀 오라 — 보라 (행동 카드 파란 테두리에 묻히지 않게)
+        private const string MeshFolder = "Assets/Prefab/Table/Meshes";
+        private const string SparksPrefabPath = "Assets/Prefab/Table/CardSparks.prefab"; // 개판 별 — 카드 프리팹 3개가 같은 것을 품는다
+        private const string CardFaceShaderName = "Chapchu/Card Face";
+        private const string CardGlowShaderName = "Chapchu/Card Glow";
+        private const string CardSoftShaderName = "Chapchu/Card Soft";
+        private const string CardSparkShaderName = "Chapchu/Card Spark";
+        private const string CardEdgeShaderName = "Chapchu/Card Edge";
+        private const string NameFontMaterialPrefix = "Galmuri11-Bold SDF - Card Name"; // TMP 재질 프리셋 목록에 보이게 글꼴 에셋 이름으로 시작
+
+        // 카드 한 장 안의 그리는 순서 — 루트의 SortingGroup 이 카드를 묶고, 그 안에서 이 순서로 그린다.
+        private enum CardPart { Shadow, Glow, Edge, Back, Frame, Art, Text, Shade }
+
+        // 종류별 색 (시안 CF TYPES) — 외곽선 · 이름 그림자 · 설명 숫자
+        private static (Color line, Color dark, Color number) TypeColors(CardType type) => type switch
+        {
+            CardType.Counter => (new Color32(0x6F, 0xA4, 0x34, 0xFF), new Color32(0x46, 0x70, 0x1C, 0xFF), new Color32(0x4F, 0x8A, 0x1D, 0xFF)),
+            CardType.Trap => (new Color32(0xF6, 0x46, 0x12, 0xFF), new Color32(0xA8, 0x2C, 0x06, 0xFF), new Color32(0xD2, 0x3A, 0x0A, 0xFF)),
+            _ => (new Color32(0x00, 0x9D, 0xFF, 0xFF), new Color32(0x00, 0x65, 0xA8, 0xFF), new Color32(0x00, 0x77, 0xC8, 0xFF)),
+        };
+
+        private static float CardPadPx => CardMarginPx + CardOutlinePx;
+        private static Vector2 CardOuterPx => CardSize / UnitsPerPixel + Vector2.one * (CardPadPx * 2f);
+        private static Vector2 CardOuterSize => CardOuterPx * UnitsPerPixel;
 
         // 테이블 방석 — 시안 TABLE (200, 170) 560 × 280 × 2 = 중심 (960, 620) 1120 × 560. 카드 뒤(z +0.01)에 눕힌 그림 한 장.
 
@@ -106,12 +150,6 @@ namespace Chapchu.EditorTools
         private static readonly Color TrapSlotFill = new Color(1f, 1f, 1f, 0.45f);
         private static readonly Color TrapSlotEdge = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.3f);
 
-        // 낼 수 있는 카운터의 초록 링 (10-ui.md 2-1 「손패 입력 값」) — 카드보다 사방 12px 큰 초록 판을 카드 뒤에 깐다. 흐린 빛은 아직 없다.
-        private const string CounterGlowTexturePath = "Assets/Sprites/Cards/CardGlowCounter.png";
-        private const float GlowRingPx = 12f;
-        private static readonly Color CounterGlowFill = new Color32(0x5E, 0xF0, 0x9C, 0xFF);
-        private static readonly Color CounterGlowEdge = new Color32(0x2F, 0xBF, 0x6A, 0xFF);
-
         /// <summary>캔버스 좌표(왼쪽 위 원점 · px) → 테이블 면 월드 좌표.</summary>
         public static Vector3 CanvasToWorld(float x, float y) => new Vector3((x - 960f) * UnitsPerPixel, (540f - y) * UnitsPerPixel, 0f);
 
@@ -127,6 +165,9 @@ namespace Chapchu.EditorTools
 
             camera.orthographic = false;
             camera.fieldOfView = CameraFieldOfView;
+            // 반투명은 카메라 앞뒤(z)로 줄 세운다 — 원근 기본값(카메라와의 거리)이면 손패 오른쪽 카드가 옆 카드보다 멀다고 보고 먼저 그려
+            // 겹친 가장자리가 뒤 카드 위에 섞이지 않는다. 프로젝트 설정(Graphics)이라 모든 카메라에 같다.
+            GraphicsSettings.transparencySortMode = TransparencySortMode.Orthographic;
             camera.transform.SetPositionAndRotation(new Vector3(0f, 0f, -CameraDistance), Quaternion.identity);
             if (camera.GetComponent<PhysicsRaycaster>() == null)
                 camera.gameObject.AddComponent<PhysicsRaycaster>();
@@ -134,6 +175,17 @@ namespace Chapchu.EditorTools
             SetupTopCamera(camera);
             return camera;
         }
+
+        /// <summary>
+        /// 앞 층 그림을 HUD 에 얹는 재질 — 렌더 텍스처의 색은 이미 알파가 곱해져 있으므로(카드 셰이더의 알파 따로 쌓기) One · OneMinusSrcAlpha 로 섞는다.
+        /// 기본 UI 재질로 얹으면 반투명 가장자리 · 빛 · 그림자가 알파를 두 번 곱해 어둡게 보인다. 있으면 그대로 쓴다.
+        /// </summary>
+        public static Material TopLayerCompositeMaterial() =>
+            CardMaterial("TopCardsComposite", "Chapchu/UI Fx Blend", material =>
+            {
+                material.SetFloat("_SrcBlend", (float)BlendMode.One);
+                material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            });
 
         /// <summary>
         /// 앞 층 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopCards 레이어만 투명 바탕에 그린다. 그림은 TopCardLayerView 가 렌더 텍스처로 받아 HUD 위에 얹는다.
@@ -472,77 +524,6 @@ namespace Chapchu.EditorTools
             return rowView;
         }
 
-        // 고른 카드 · 놓으면 사용되는 카드의 노란 링 (10-ui.md 2-1 「손패 입력 값」, 시안 .card.sel · .armed 4 × 2) — 카드보다 사방 8px 큰 노란 판을 카드 뒤에. 흐린 빛은 아직 없다.
-        private const string SelectRingTexturePath = "Assets/Sprites/Cards/CardRingSelect.png";
-        private const float SelectRingPx = 8f;
-        private static readonly Color SelectRingColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
-        // 지금 낼 수 없는 카드를 덮는 어두운 판 (시안 .card.dim brightness .5 — 채도 낮춤은 없다). 카드 모양 그대로, 글자보다 앞.
-        private const string ShadeTexturePath = "Assets/Sprites/Cards/CardShade.png";
-        private static readonly Color ShadeColor = new Color(0f, 0f, 0f, 0.5f);
-
-        /// <summary>카드 프리팹에 노란 링(고름 · 놓으면 사용)과 어두운 판(낼 수 없음)을 붙인다 (없을 때만) — 꺼 둔다. 이미 있는 프리팹을 고칠 때도 쓴다.</summary>
-        public static void AddSelectRingAndShade(GameObject cardRoot)
-        {
-            var view = cardRoot.GetComponent<CardView>();
-            if (cardRoot.transform.Find("SelectRing") == null)
-            {
-                Vector2 size = CardSize + Vector2.one * (SelectRingPx * 2f * UnitsPerPixel);
-                Material material = EnsureMaterial("CardRingSelect", EnsureRoundTexture(SelectRingTexturePath, size, 1f, 0f, BlankRadiusPx + SelectRingPx, SelectRingColor, SelectRingColor));
-                MeshRenderer ring = Quad("SelectRing", cardRoot.transform, material, size, new Vector3(0f, CardSize.y / 2f, LayerGap * 2f), Quaternion.identity);
-                ring.gameObject.SetActive(false);
-                GameScreenBuilder.Wire(view, ("selectRing", ring.gameObject));
-            }
-
-            if (cardRoot.transform.Find("Shade") == null)
-            {
-                Material material = EnsureAlphaMaterial("CardShade", EnsureRoundTexture(ShadeTexturePath, CardSize, 0f, 0f, BlankRadiusPx, ShadeColor, ShadeColor));
-                MeshRenderer shade = Quad("Shade", cardRoot.transform, material, CardSize, new Vector3(0f, CardSize.y / 2f, -LayerGap * 3f), Quaternion.identity); // 글자(−2)보다 앞, 옆 카드(장당 0.02)보다 뒤
-                shade.gameObject.SetActive(false);
-                GameScreenBuilder.Wire(view, ("shade", shade.gameObject));
-            }
-
-            SetHandLayer(cardRoot);
-        }
-
-        /// <summary>이미 만든 카드 프리팹 3개에 노란 링 · 어두운 판을 붙여 저장한다 (GUID 유지).</summary>
-        [MenuItem("Chapchu/Game Screen/Add Select Ring And Shade To Card Prefabs")]
-        public static void AddSelectRingAndShadeToPrefabs()
-        {
-            foreach (string name in new[] { "Card_Action", "Card_Counter", "Card_Trap" })
-            {
-                string path = $"{PrefabFolder}/{name}.prefab";
-                GameObject root = PrefabUtility.LoadPrefabContents(path);
-                AddSelectRingAndShade(root);
-                PrefabUtility.SaveAsPrefabAsset(root, path);
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        /// <summary>카운터 카드 프리팹에 「낼 수 있다」 초록 링을 붙인다 (없을 때만) — 카드 뒤에 사방 12px 큰 초록 판, 꺼 둔다. 이미 있는 프리팹을 고칠 때도 쓴다.</summary>
-        public static void AddCounterGlow(GameObject cardRoot)
-        {
-            if (cardRoot.transform.Find("Glow") != null)
-                return;
-
-            Vector2 size = CardSize + Vector2.one * (GlowRingPx * 2f * UnitsPerPixel);
-            Material material = EnsureMaterial("CardGlowCounter", EnsureRoundTexture(CounterGlowTexturePath, size, 1f, 4f, BlankRadiusPx + GlowRingPx, CounterGlowFill, CounterGlowEdge));
-            MeshRenderer glow = Quad("Glow", cardRoot.transform, material, size, new Vector3(0f, CardSize.y / 2f, LayerGap), Quaternion.identity);
-            SetHandLayer(glow.gameObject);
-            glow.gameObject.SetActive(false);
-            GameScreenBuilder.Wire(cardRoot.GetComponent<CardView>(), ("glow", glow.gameObject));
-        }
-
-        /// <summary>이미 만든 카운터 카드 프리팹에 초록 링을 붙여 저장한다 (GUID 유지).</summary>
-        [MenuItem("Chapchu/Game Screen/Add Counter Glow To Card Prefab")]
-        public static void AddCounterGlowToPrefab()
-        {
-            string path = $"{PrefabFolder}/Card_Counter.prefab";
-            GameObject root = PrefabUtility.LoadPrefabContents(path);
-            AddCounterGlow(root);
-            PrefabUtility.SaveAsPrefabAsset(root, path);
-            PrefabUtility.UnloadPrefabContents(root);
-        }
-
         // 반투명 판 머티리얼 (알파 블렌드) — 빈 함정 칸. 있으면 덮어쓰지 않는다.
         private static Material EnsureAlphaMaterial(string name, string texturePath)
         {
@@ -615,18 +596,100 @@ namespace Chapchu.EditorTools
             return material;
         }
 
+        private static readonly (string name, string framePath, CardType type)[] CardPrefabs =
+        {
+            ("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action),
+            ("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter),
+            ("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap),
+        };
+        private const int EdgeCornerSegments = 8;
+        private const int SparkPointCount = 64;
+
         /// <summary>카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지 — 씬 · HandView 참조가 그대로). 사람이 프리팹을 손봤다면 지워진다.</summary>
         [MenuItem("Chapchu/Game Screen/Rebuild Table Card Prefabs")]
         public static void RebuildCardPrefabs()
         {
-            EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, true);
-            EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, true);
-            EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, true);
+            foreach ((string name, string framePath, CardType _) in CardPrefabs)
+                EnsureCardPrefab(name, framePath, true);
             Debug.Log($"[{nameof(TableBuilder)}] 3D 카드 프리팹 3개 다시 만듦.");
         }
 
-        // 카드 프리팹 — 루트(BoxCollider · CardView, 기준점 아래 가운데) → Front(틀 · 그림 · 이름 · 설명) · Back(뒷면, Y 180°). 전부 HandCards 레이어.
-        // 틀 · 뒷면 Quad 는 같은 면에 서로 반대를 보고 있고 머티리얼이 뒷면을 컬링하므로 보는 쪽만 그려진다. 그림 · 글자는 틀보다 조금 앞에.
+        /// <summary>이미 있는 카드 프리팹 3개를 그 자리에서 지금 생김새로 맞춘다 (UpgradeCard) — 프리팹 안 오브젝트가 그대로라 사람이 더한 자식 · 값은 남는다.</summary>
+        [MenuItem("Chapchu/Game Screen/Upgrade Card Prefabs")]
+        public static void UpgradeCardPrefabs()
+        {
+            foreach ((string name, string framePath, CardType type) in CardPrefabs)
+            {
+                string path = $"{PrefabFolder}/{name}.prefab";
+                GameObject root = PrefabUtility.LoadPrefabContents(path);
+                UpgradeCard(root, type, framePath);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[{nameof(TableBuilder)}] 3D 카드 프리팹 3개를 지금 생김새로 맞춤.");
+        }
+
+        /// <summary>
+        /// 카드 한 장의 부분을 지금 생김새로 맞춘다 (10-ui.md 2-1 「손패 · 카드 (3D 층)」 · 「카드 등급 연출」, 프로토타입 v2 C3D). 없는 부분은 만들고, 있는 부분은 자리 · 크기 · 머티리얼만 고친다.
+        ///   루트(콜라이더 · CardView · SortingGroup, 기준점 아래 가운데) ─ Shadow · Glow(카운터만) · SelectRing · Aura · Edge · Front(Frame · Art · Name · Description) · Back(Back) · Sparks · Shade
+        /// 앞면 · 뒷면은 두께(CardDepth)만큼 떨어져 서로 반대를 보고, 셰이더가 뒷면을 컬링하므로 보는 쪽만 그려진다. 전부 HandCards 레이어.
+        /// 머티리얼 · 파티클 값은 새로 만들 때(또는 옛 셰이더에서 바꿀 때)만 넣는다 — 사람이 Inspector 에서 고친 값은 덮어쓰지 않는다.
+        /// </summary>
+        public static void UpgradeCard(GameObject root, CardType type, string framePath)
+        {
+            Transform card = root.transform;
+            var center = new Vector3(0f, CardSize.y / 2f, 0f);
+            Vector2 outer = CardOuterSize;
+            Vector2 glowSize = outer + Vector2.one * (GlowPadPx * 2f * UnitsPerPixel);
+            (Color line, Color _, Color number) = TypeColors(type);
+
+            var collider = Ensure<BoxCollider>(root);
+            collider.size = new Vector3(CardSize.x, CardSize.y, CardThickness);
+            collider.center = center;
+            Ensure<SortingGroup>(root);
+            var view = Ensure<CardView>(root);
+
+            EnsureQuad("Shadow", card, ShadowMaterial(), outer + Vector2.one * (ShadowPadPx * 2f * UnitsPerPixel),
+                center + new Vector3(0f, -ShadowDropPx * UnitsPerPixel, ShadowBehind), CardPart.Shadow);
+            MeshRenderer glow = type == CardType.Counter ? EnsureQuad("Glow", card, GlowMaterial("CardGlowCounter", CounterGlowColor, true), glowSize, center, CardPart.Glow) : null;
+            MeshRenderer ring = EnsureQuad("SelectRing", card, GlowMaterial("CardRingSelect", SelectGlowColor, false), glowSize, center, CardPart.Glow);
+            MeshRenderer aura = EnsureQuad("Aura", card, AuraMaterial(), glowSize, center, CardPart.Glow);
+            EnsureEdge(card, center);
+
+            Transform front = EnsureChild("Front", card, center + new Vector3(0f, 0f, -CardDepth / 2f), Quaternion.identity);
+            MeshRenderer frame = EnsureQuad("Frame", front, FaceMaterial(Path.GetFileNameWithoutExtension(framePath), framePath, line, CardGlare), outer, Vector3.zero, CardPart.Frame);
+            MeshRenderer art = EnsureQuad("Art", front, ArtMaterial(), BoxSize(ArtBox), BoxCenter(ArtBox, -FaceGap), CardPart.Art);
+            art.enabled = true; // 그림 없는 카드도 발자국을 그린다
+            TMP_Text nameText = EnsureNameText(front, type);
+            TMP_Text description = EnsureDescriptionText(front);
+
+            Transform back = EnsureChild("Back", card, center + new Vector3(0f, 0f, CardDepth / 2f), Quaternion.Euler(0f, 180f, 0f));
+            EnsureQuad("Back", back, FaceMaterial("CardBackFace", BackTexturePath, CardInk, BackGlare), outer, Vector3.zero, CardPart.Back);
+
+            ParticleSystem sparks = EnsureSparks(card, center);
+            MeshRenderer shade = EnsureQuad("Shade", card, ShadeMaterial(), outer, center + new Vector3(0f, 0f, -CardDepth / 2f - FaceGap * 3f), CardPart.Shade);
+
+            // 시작 모습: 빛 · 오라 · 별 · 덮는 판은 꺼 둔다 — CardView 가 상태 · 등급으로 켠다
+            foreach (MeshRenderer hidden in new[] { glow, ring, aura, shade })
+            {
+                if (hidden != null)
+                    hidden.gameObject.SetActive(false);
+            }
+            sparks.gameObject.SetActive(false);
+
+            GameScreenBuilder.Wire(view,
+                ("nameText", nameText), ("descriptionText", description), ("frameRenderer", frame), ("artRenderer", art),
+                ("glow", glow != null ? glow.gameObject : null), ("selectRing", ring.gameObject), ("shade", shade.gameObject),
+                ("auraRenderer", aura), ("sparks", sparks));
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("numberColor").colorValue = number;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            SetHandLayer(root);
+        }
+
+        // 카드 프리팹 — 빈 루트를 만들고 부분은 UpgradeCard 가 붙인다. 있으면 그대로 돌려준다 (overwrite 면 다시 만든다).
         private static CardView EnsureCardPrefab(string name, string framePath, bool overwrite = false)
         {
             string path = $"{PrefabFolder}/{name}.prefab";
@@ -637,50 +700,434 @@ namespace Chapchu.EditorTools
             if (!AssetDatabase.IsValidFolder(PrefabFolder))
                 AssetDatabase.CreateFolder("Assets/Prefab", "Table");
 
-            Material frame = EnsureMaterial(Path.GetFileNameWithoutExtension(framePath), framePath);
-            Material back = EnsureMaterial("CardBack", BackTexturePath);
-            Material art = EnsureMaterial("CardArt", null); // 그림은 CardView 가 프로퍼티 블록으로 입힌다
+            CardType type = CardType.Action;
+            foreach ((string prefabName, string _, CardType prefabType) in CardPrefabs)
+            {
+                if (prefabName == name)
+                    type = prefabType;
+            }
 
-            var root = new GameObject(name, typeof(BoxCollider));
-            var collider = root.GetComponent<BoxCollider>();
-            collider.size = new Vector3(CardSize.x, CardSize.y, CardThickness);
-            collider.center = new Vector3(0f, CardSize.y / 2f, 0f);
-
-            Transform front = Child("Front", root.transform, new Vector3(0f, CardSize.y / 2f, 0f), Quaternion.identity);
-            Quad("Frame", front, frame, CardSize, Vector3.zero, Quaternion.identity);
-
-            MeshRenderer artRenderer = Quad("Art", front, art, BoxSize(ArtBox), BoxCenter(ArtBox, -LayerGap), Quaternion.identity);
-            artRenderer.enabled = false;
-
-            TMP_Text nameText = NewText3D("Name", front, "Name", NameFontPx, Color.white, true, TextAlignmentOptions.Left,
-                BoxSize(NameBox), BoxCenter(NameBox, -LayerGap * 2f));
-            nameText.enableAutoSizing = true;
-            nameText.fontSizeMin = NameFontMinPx / 10f;
-            nameText.fontSizeMax = NameFontPx / 10f;
-            nameText.overflowMode = TextOverflowModes.Ellipsis;
-
-            // 더미는 흰 글자인데 흰 바탕 위라 보이지 않아 잉크로 쓴다.
-            TMP_Text description = NewText3D("Description", front, "Description", DescriptionFontPx, Ink, false, TextAlignmentOptions.Top,
-                BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -LayerGap * 2f));
-            description.textWrappingMode = TextWrappingModes.Normal;
-            description.enableAutoSizing = true;
-            description.fontSizeMin = DescriptionFontMinPx / 10f;
-            description.fontSizeMax = DescriptionFontPx / 10f;
-            description.overflowMode = TextOverflowModes.Ellipsis;
-
-            Transform backRoot = Child("Back", root.transform, new Vector3(0f, CardSize.y / 2f, 0f), Quaternion.Euler(0f, 180f, 0f));
-            Quad("Back", backRoot, back, CardSize, Vector3.zero, Quaternion.identity);
-
-            var view = root.AddComponent<CardView>();
-            GameScreenBuilder.Wire(view, ("nameText", nameText), ("descriptionText", description), ("artRenderer", artRenderer));
-            SetHandLayer(root);
-            if (name == "Card_Counter")
-                AddCounterGlow(root);
-            AddSelectRingAndShade(root);
-
+            var root = new GameObject(name);
+            UpgradeCard(root, type, framePath);
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return saved.GetComponent<CardView>();
+        }
+
+        private static T Ensure<T>(GameObject go) where T : Component => go.TryGetComponent(out T component) ? component : go.AddComponent<T>();
+
+        private static Transform EnsureChild(string name, Transform parent, Vector3 localPosition, Quaternion localRotation)
+        {
+            Transform child = parent.Find(name);
+            if (child == null)
+                return Child(name, parent, localPosition, localRotation);
+
+            child.SetLocalPositionAndRotation(localPosition, localRotation);
+            return child;
+        }
+
+        // 이름의 Quad 자식 — 없으면 만들고, 자리 · 크기 · 머티리얼 · 그리는 순서를 맞춘다.
+        private static MeshRenderer EnsureQuad(string name, Transform parent, Material material, Vector2 size, Vector3 localPosition, CardPart part)
+        {
+            Transform existing = parent.Find(name);
+            MeshRenderer renderer = existing != null ? existing.GetComponent<MeshRenderer>() : Quad(name, parent, material, size, localPosition, Quaternion.identity);
+            renderer.transform.SetLocalPositionAndRotation(localPosition, Quaternion.identity);
+            renderer.transform.localScale = new Vector3(size.x, size.y, 1f);
+            renderer.sharedMaterial = material;
+            renderer.sortingOrder = (int)part;
+            return renderer;
+        }
+
+        // 이름 — 머리 띠 안, 흰 굵은 글자 + 종류 색 짙은 그림자 한 겹 (시안: 파랑 · 초록 · 주황 위에서도 읽히게). 넘치면 줄이고 말줄임.
+        private static TMP_Text EnsureNameText(Transform front, CardType type)
+        {
+            TMP_Text text = EnsureText("Name", front, true, BoxSize(NameBox), BoxCenter(NameBox, -FaceGap * 2f));
+            text.fontSharedMaterial = NameMaterial(type);
+            text.color = Color.white;
+            text.alignment = TextAlignmentOptions.Left;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = NameFontMinPx / 10f;
+            text.fontSizeMax = NameFontPx / 10f;
+            text.fontSize = NameFontPx / 10f;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            return text;
+        }
+
+        // 설명 — 점선 아래 칸 가운데, 잉크 글자 (숫자 색 · 줄 고르기는 CardView). 넘치면 줄이고 말줄임.
+        private static TMP_Text EnsureDescriptionText(Transform front)
+        {
+            TMP_Text text = EnsureText("Description", front, false, BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -FaceGap * 2f));
+            text.color = CardInk;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.richText = true;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = DescriptionFontMinPx / 10f;
+            text.fontSizeMax = DescriptionFontPx / 10f;
+            text.fontSize = DescriptionFontPx / 10f;
+            text.lineSpacing = DescriptionLineSpacing;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            return text;
+        }
+
+        private static TMP_Text EnsureText(string name, Transform parent, bool bold, Vector2 size, Vector3 localPosition)
+        {
+            Transform existing = parent.Find(name);
+            TMP_Text text = existing != null ? existing.GetComponent<TMP_Text>()
+                : NewText3D(name, parent, name, NameFontPx, Color.white, bold, TextAlignmentOptions.Center, size, localPosition);
+            var rect = (RectTransform)text.transform;
+            rect.sizeDelta = size;
+            rect.localPosition = localPosition;
+            rect.localRotation = Quaternion.identity;
+            TMP_FontAsset font = bold ? GameScreenBuilder.BoldFont : GameScreenBuilder.RegularFont;
+            if (font != null)
+                text.font = font;
+            text.GetComponent<MeshRenderer>().sortingOrder = (int)CardPart.Text;
+            return text;
+        }
+
+        // 옆면 — 카드 겉 모양 둘레를 두께만큼 늘인 띠 (잉크). 뒤집히거나 크게 기울 때 카드가 판처럼 보이게 (시안 edge).
+        private static void EnsureEdge(Transform card, Vector3 center)
+        {
+            Transform existing = card.Find("Edge");
+            GameObject go = existing != null ? existing.gameObject : new GameObject("Edge", typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(card, false);
+            go.transform.SetLocalPositionAndRotation(center, Quaternion.identity);
+            go.GetComponent<MeshFilter>().sharedMesh = EnsureEdgeMesh();
+            var renderer = go.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = CardMaterial("CardEdge", CardEdgeShaderName, material => material.color = CardInk);
+            renderer.sortingOrder = (int)CardPart.Edge;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        // 개판 별 — CardSparks 프리팹을 카드 가운데에 품는다 (값을 고칠 곳이 한 군데).
+        private static ParticleSystem EnsureSparks(Transform card, Vector3 center)
+        {
+            Transform sparks = card.Find("Sparks");
+            if (sparks == null)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(EnsureSparksPrefab(), card);
+                instance.name = "Sparks";
+                sparks = instance.transform;
+            }
+
+            sparks.SetLocalPositionAndRotation(center, Quaternion.identity);
+            return sparks.GetComponent<ParticleSystem>();
+        }
+
+        // 개판 별 프리팹 (10-ui.md 2-1 「카드 등급 연출」, 프로토타입 v2 PT) — 카드 둘레에서 바깥으로 피어올라 흩어지는 무지개 별 26개. 그림 파일 없이 Card Spark 셰이더가 별을 그린다.
+        // 둘레의 꼭짓점(CardSparkPoints 메쉬, 법선 = 바깥)에서 그 방향으로 나가고 조금씩 위로 뜬다. 카드와 같이 움직이고(Local) 같이 커진다(Hierarchy). 있으면 그대로 쓴다.
+        private static GameObject EnsureSparksPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(SparksPrefabPath);
+            if (existing != null)
+                return existing;
+
+            var go = new GameObject("CardSparks", typeof(ParticleSystem));
+            var system = go.GetComponent<ParticleSystem>();
+
+            ParticleSystem.MainModule main = system.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.prewarm = true;
+            main.playOnAwake = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.43f, 3.13f);   // 시안 1 ÷ (0.32 ~ 0.70) 초
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.2f);        // 수명 동안 바깥으로 30 px
+            main.startSize = new ParticleSystem.MinMaxCurve(0.138f, 0.277f);     // 시안 12 ~ 24 px × 1.153
+            main.startColor = new ParticleSystem.MinMaxGradient(SparkRainbow()) { mode = ParticleSystemGradientMode.RandomColor };
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.maxParticles = 26;
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 12f; // 26개 ÷ 평균 수명 2.1 초
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Mesh;
+            shape.meshShapeType = ParticleSystemMeshShapeType.Vertex;
+            shape.mesh = EnsureSparkPointsMesh();
+
+            ParticleSystem.VelocityOverLifetimeModule velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.1f); // 수명 동안 위로 21 px (시안 18 × 1.153)
+            velocity.z = new ParticleSystem.MinMaxCurve(0f);
+
+            // 수명의 12% 동안 나타나고 55% 부터 사라진다 · 끝에는 0.55 배로 (시안)
+            ParticleSystem.ColorOverLifetimeModule color = system.colorOverLifetime;
+            color.enabled = true;
+            var fade = new Gradient();
+            fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.12f), new GradientAlphaKey(1f, 0.55f), new GradientAlphaKey(0f, 1f) });
+            color.color = new ParticleSystem.MinMaxGradient(fade);
+
+            ParticleSystem.SizeOverLifetimeModule size = system.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.55f));
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = CardMaterial("CardSpark", CardSparkShaderName, _ => { });
+            renderer.sortingOrder = (int)CardPart.Glow; // 시안: 오라와 같이 카드 뒤
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            SetHandLayer(go);
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(go, SparksPrefabPath);
+            Object.DestroyImmediate(go);
+            return saved;
+        }
+
+        // 별 색 — 무지개를 흰색 쪽으로 30% (시안 mix(1, 무지개, 0.7)). 파티클마다 이 중 하나를 고른다.
+        private static Gradient SparkRainbow()
+        {
+            var keys = new GradientColorKey[7];
+            for (int i = 0; i < keys.Length; i++)
+            {
+                float t = i / (keys.Length - 1f);
+                keys[i] = new GradientColorKey(Color.Lerp(Color.white, Color.HSVToRGB(t % 1f, 1f, 1f), 0.7f), t);
+            }
+
+            var gradient = new Gradient();
+            gradient.SetKeys(keys, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+            return gradient;
+        }
+
+        // 옆면 메쉬 — 겉 모양(둥근 사각형) 둘레의 벽, 앞뒤 면 사이(두께 CardDepth). 바깥을 보는 면만. 있으면 그대로 쓴다.
+        private static Mesh EnsureEdgeMesh()
+        {
+            string path = $"{MeshFolder}/CardEdge.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing != null)
+                return existing;
+
+            Vector2 half = CardOuterSize / 2f;
+            float radius = (CardCornerPx + CardOutlinePx) * UnitsPerPixel;
+            // 모서리 넷을 시계 반대 방향으로 (오른쪽 위 → 왼쪽 위 → 왼쪽 아래 → 오른쪽 아래) — 바깥을 보는 면이 앞면이 되는 순서
+            float[] cornerX = { 1f, -1f, -1f, 1f }, cornerY = { 1f, 1f, -1f, -1f };
+            int perCorner = EdgeCornerSegments + 1, count = perCorner * 4;
+            var vertices = new Vector3[count * 2];
+            var normals = new Vector3[count * 2];
+            for (int i = 0; i < count; i++)
+            {
+                int corner = i / perCorner;
+                float angle = (corner + i % perCorner / (float)EdgeCornerSegments) * Mathf.PI / 2f;
+                var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                var cornerCenter = new Vector2(cornerX[corner] * (half.x - radius), cornerY[corner] * (half.y - radius));
+                Vector2 point = cornerCenter + direction * radius;
+                vertices[i * 2] = new Vector3(point.x, point.y, -CardDepth / 2f);
+                vertices[i * 2 + 1] = new Vector3(point.x, point.y, CardDepth / 2f);
+                normals[i * 2] = normals[i * 2 + 1] = direction;
+            }
+
+            var triangles = new int[count * 6];
+            for (int i = 0; i < count; i++)
+            {
+                int a = i * 2, b = (i + 1) % count * 2;
+                triangles[i * 6] = a;
+                triangles[i * 6 + 1] = b;
+                triangles[i * 6 + 2] = b + 1;
+                triangles[i * 6 + 3] = a;
+                triangles[i * 6 + 4] = b + 1;
+                triangles[i * 6 + 5] = a + 1;
+            }
+
+            var mesh = new Mesh { name = "CardEdge", vertices = vertices, normals = normals, triangles = triangles };
+            mesh.RecalculateBounds();
+            return SaveMesh(mesh, path);
+        }
+
+        // 별이 피어나는 자리 — 카드 겉 둘레에 고르게 놓은 꼭짓점 (법선 = 바깥). 파티클 메쉬 모양은 삼각형이 있어야 해서 1 px 폭 띠로 만든다. 있으면 그대로 쓴다.
+        private static Mesh EnsureSparkPointsMesh()
+        {
+            string path = $"{MeshFolder}/CardSparkPoints.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing != null)
+                return existing;
+
+            Vector2 half = CardOuterSize / 2f;
+            float[] sides = { half.x * 2f, half.y * 2f, half.x * 2f, half.y * 2f }; // 위 · 오른쪽 · 아래 · 왼쪽
+            float perimeter = sides[0] + sides[1] + sides[2] + sides[3];
+            var vertices = new Vector3[SparkPointCount * 2];
+            var normals = new Vector3[SparkPointCount * 2];
+            var triangles = new int[SparkPointCount * 6];
+            for (int i = 0; i < SparkPointCount; i++)
+            {
+                float d = (i + 0.5f) / SparkPointCount * perimeter;
+                Vector2 point, normal;
+                if (d < sides[0]) { point = new Vector2(-half.x + d, half.y); normal = Vector2.up; }
+                else if ((d -= sides[0]) < sides[1]) { point = new Vector2(half.x, half.y - d); normal = Vector2.right; }
+                else if ((d -= sides[1]) < sides[2]) { point = new Vector2(half.x - d, -half.y); normal = Vector2.down; }
+                else { d -= sides[2]; point = new Vector2(-half.x, -half.y + d); normal = Vector2.left; }
+                vertices[i * 2] = point;
+                vertices[i * 2 + 1] = point - normal * UnitsPerPixel;
+                normals[i * 2] = normals[i * 2 + 1] = normal;
+
+                int a = i * 2, b = (i + 1) % SparkPointCount * 2;
+                triangles[i * 6] = a;
+                triangles[i * 6 + 1] = b;
+                triangles[i * 6 + 2] = b + 1;
+                triangles[i * 6 + 3] = a;
+                triangles[i * 6 + 4] = b + 1;
+                triangles[i * 6 + 5] = a + 1;
+            }
+
+            var mesh = new Mesh { name = "CardSparkPoints", vertices = vertices, normals = normals, triangles = triangles };
+            mesh.RecalculateBounds();
+            return SaveMesh(mesh, path);
+        }
+
+        private static Mesh SaveMesh(Mesh mesh, string path)
+        {
+            if (!AssetDatabase.IsValidFolder(MeshFolder))
+                AssetDatabase.CreateFolder(PrefabFolder, "Meshes");
+            AssetDatabase.CreateAsset(mesh, path);
+            return mesh;
+        }
+
+        // 카드 머티리얼 — 없으면 만들고, 다른 셰이더(옛 컷아웃 · 그림 판)면 이 셰이더로 바꿔 값을 넣는다. 이미 이 셰이더면 사람이 고친 값을 그대로 둔다.
+        private static Material CardMaterial(string name, string shaderName, System.Action<Material> setup)
+        {
+            string path = $"{MaterialFolder}/{name}.mat";
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogError($"[{nameof(TableBuilder)}] 셰이더가 없다: {shaderName}");
+                return null;
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null && material.shader == shader)
+                return material;
+
+            if (material == null)
+            {
+                material = new Material(shader);
+                setup(material);
+                AssetDatabase.CreateAsset(material, path);
+                return material;
+            }
+
+            // 옛 셰이더의 그림(링 · 어두운 판 텍스처)은 비운다 — 그 그림 파일을 지워도 빈 참조가 남지 않게
+            if (material.HasProperty("_MainTex"))
+                material.SetTexture("_MainTex", null);
+            material.shader = shader;
+            setup(material);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        // 카드 면 (틀 · 뒷면) — 텍스처를 흰 여백 안쪽에 얹고 바깥에 외곽선. 빛 계산용 카드 좌표(_CardRect)는 틀 이미지가 0 ~ 1.
+        private static Material FaceMaterial(string name, string texturePath, Color outline, float glare) =>
+            CardMaterial(name, CardFaceShaderName, material =>
+            {
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+                if (texture == null)
+                    Debug.LogError($"[{nameof(TableBuilder)}] 텍스처가 없다: {texturePath}");
+                material.mainTexture = texture;
+                material.SetFloat("_HasTex", 1f);
+                material.SetFloat("_Opaque", 1f);
+                material.SetVector("_Size", CardOuterPx);
+                material.SetFloat("_Pad", CardPadPx);
+                material.SetFloat("_Radius", CardCornerPx);
+                material.SetFloat("_Outline", CardOutlinePx);
+                material.SetColor("_OutlineColor", outline);
+                float padX = CardPadPx * UnitsPerPixel / CardSize.x, padY = CardPadPx * UnitsPerPixel / CardSize.y;
+                material.SetVector("_CardRect", new Vector4(-padX, -padY, 1f + padX, 1f + padY));
+                material.SetFloat("_Foil", 0f);
+                material.SetFloat("_Glare", glare);
+            });
+
+        // 그림 — 그림 칸 크기 그대로, 투명한 곳은 틀이 보인다. 홀로(은박 결)는 그림에만. 그림 없는 카드의 발자국 바탕도 여기서.
+        private static Material ArtMaterial() =>
+            CardMaterial("CardArt", CardFaceShaderName, material =>
+            {
+                material.SetFloat("_HasTex", 1f);
+                material.SetFloat("_Opaque", 0f);
+                material.SetVector("_Size", BoxSize(ArtBox) / UnitsPerPixel);
+                material.SetFloat("_Pad", 0f);
+                material.SetFloat("_Radius", 0f);
+                material.SetFloat("_Outline", 0f);
+                material.SetColor("_PawPaper", PawPaper);
+                material.SetVector("_CardRect", new Vector4(ArtBox.xMin, ArtBox.yMin, ArtBox.xMax, ArtBox.yMax));
+                material.SetFloat("_Foil", CardFoil);
+                material.SetFloat("_Glare", CardGlare);
+            });
+
+        private static Material GlowMaterial(string name, Color color, bool pulse) =>
+            CardMaterial(name, CardGlowShaderName, material =>
+            {
+                material.color = color;
+                material.SetFloat("_Amount", 1f);
+                material.SetFloat("_Pulse", pulse ? 1f : 0f);
+                SetGlowShape(material);
+            });
+
+        // 등급 오라 — 세기 · 퍼짐 · 무지개는 CardView 가 등급으로 넣는다. 앞면이 보일 때만 (뒷면에서 등급이 새지 않게).
+        private static Material AuraMaterial() =>
+            CardMaterial("CardAura", CardGlowShaderName, material =>
+            {
+                material.color = RareAuraColor;
+                material.SetFloat("_Amount", 0f);
+                material.SetFloat("_FaceFade", 1f);
+                SetGlowShape(material);
+            });
+
+        private static void SetGlowShape(Material material)
+        {
+            material.SetVector("_Size", CardOuterPx + Vector2.one * (GlowPadPx * 2f));
+            material.SetVector("_Half", CardOuterPx / 2f);
+            material.SetFloat("_Radius", CardCornerPx + CardOutlinePx);
+        }
+
+        // 그림자 — 카드 겉 모양을 흐리게, 조금 아래로. 깊이 비교 없이 카드 묶음 순서로 뒤 카드 위에 진다.
+        private static Material ShadowMaterial() =>
+            CardMaterial("CardShadow", CardSoftShaderName, material =>
+            {
+                material.color = CardShadowColor;
+                material.SetVector("_Size", CardOuterPx + Vector2.one * (ShadowPadPx * 2f));
+                material.SetVector("_Half", CardOuterPx / 2f);
+                material.SetFloat("_Radius", CardCornerPx + CardOutlinePx);
+                material.SetFloat("_Blur", ShadowBlurPx);
+                material.SetFloat("_ZTest", (float)CompareFunction.Always);
+            });
+
+        // 낼 수 없는 카드를 덮는 어두운 판 — 카드 겉 모양 그대로, 글자보다 앞.
+        private static Material ShadeMaterial() =>
+            CardMaterial("CardShade", CardSoftShaderName, material =>
+            {
+                material.color = CardShadeColor;
+                material.SetVector("_Size", CardOuterPx);
+                material.SetVector("_Half", CardOuterPx / 2f);
+                material.SetFloat("_Radius", CardCornerPx + CardOutlinePx);
+                material.SetFloat("_Blur", 0f);
+                material.SetFloat("_ZTest", (float)CompareFunction.LessEqual);
+            });
+
+        // 이름 글자 재질 — 굵은 글꼴 재질에 밑깔림(종류 색을 짙게, 0.07 em 아래)을 켠 것. 있으면 그대로 쓴다.
+        private static Material NameMaterial(CardType type)
+        {
+            string path = $"{MaterialFolder}/{NameFontMaterialPrefix} {type}.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null)
+                return existing;
+
+            TMP_FontAsset font = GameScreenBuilder.BoldFont;
+            if (font == null)
+                return null;
+
+            var material = new Material(font.material);
+            material.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+            material.SetColor(ShaderUtilities.ID_UnderlayColor, TypeColors(type).dark);
+            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+            material.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, NameShadowOffset);
+            material.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0f);
+            material.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static Material EnsureMaterial(string name, string texturePath)
