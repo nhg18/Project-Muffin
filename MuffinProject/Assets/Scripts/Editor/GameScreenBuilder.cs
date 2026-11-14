@@ -2,6 +2,7 @@
 using Chapchu.Cards;
 using Chapchu.Network;
 using Chapchu.UI;
+using Chapchu.UI.Fx;
 using Chapchu.UI.GameScreen;
 using TMPro;
 using UnityEditor;
@@ -269,16 +270,32 @@ namespace Chapchu.EditorTools
             Stretch(wall.rectTransform);
 
             // 테이블 방석 — 3D 층이 아니라 배경(2D) 에 둔다. 3D Quad 로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 방석 면 뒤로 들어가 가려진다
+            // 판(CushionBoard) = 바닥 그림자 · 두께 테 · 방석 그림. 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
+            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
+            RectTransform table = NewRect("CushionBoard", parent); // 3D 층 루트(TableBuilder 의 "Table")와 이름이 겹치면 BuildTable 이 「이미 있음」으로 멈춘다
+            CenterAt(table, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
+            table.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
+
+            // 시안 .table box-shadow — 0 24px 30px 8px rgba(90,60,30,.18) (바닥 그림자) · 0 9px 0 11px fur3 (두께), × 2. 면 안에서 아래로 밀어 눕힌 판의 두께로 보인다
+            // CSS 는 먼저 적은 그림자가 위 — 두께 테를 먼저, 바닥 그림자를 그 위에 둔다
+            UIShape rim = NewRect("Rim", table).gameObject.AddComponent<UIShape>();
+            Stretch(rim.rectTransform, -22f, 18f - 22f, -22f, -18f - 22f);
+            rim.color = Fur3;
+            rim.raycastTarget = false;
+            rim.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear);
+            UIShape shadow = NewRect("Shadow", table).gameObject.AddComponent<UIShape>();
+            Stretch(shadow.rectTransform, -16f, -16f + 48f, -16f, -16f - 48f);
+            shadow.color = new Color(90f / 255f, 60f / 255f, 30f / 255f, 0.18f);
+            shadow.raycastTarget = false;
+            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 120f); // CSS blur 60 (가우스, 가장자리 ±60 까지 번짐) → feather 는 선형 페이드 전체 폭이라 × 2
+
             var cushion = new GameObject("Cushion", typeof(RawImage)).GetComponent<RawImage>();
-            cushion.transform.SetParent(parent, false);
+            cushion.transform.SetParent(table, false);
             cushion.texture = AssetDatabase.LoadAssetAtPath<Texture2D>(CushionTexturePath);
             cushion.raycastTarget = false;
             if (cushion.texture == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] 방석 그림이 없다: {CushionTexturePath}");
-            CenterAt(cushion.rectTransform, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
-            // 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
-            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
-            cushion.rectTransform.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
+            Stretch(cushion.rectTransform);
         }
 
         #endregion
@@ -444,49 +461,56 @@ namespace Chapchu.EditorTools
             root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             // 전체가 탭 영역 — 칩이 없을 때도 눌리지 않게 칩 자체에만 레이캐스트
 
-            RectTransform chip = NewRect("ChipTemplate", root);
-            chip.gameObject.AddComponent<CanvasGroup>();
-            Image chipFill = RoundBox(chip, Ink, 4f, 16f, White, true);
-            LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
-            chipSize.preferredHeight = 48f;
-            HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, false);
+            // 칩은 되풀이되므로 프리팹 (CODE_CONVENTION 「씬과 프리팹」). 아이콘 · 작은 카드의 높이도 레이아웃이 맞춘다 — 작은 카드가 칩 밖으로 길어지지 않게
+            // 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존) — 다시 만들려면 프리팹을 지우고 빌드
+            string chipPath = $"{HandCardPrefabFolder}/FeedChip.prefab";
+            GameObject chipPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(chipPath);
+            if (chipPrefab == null)
+            {
+                RectTransform chip = NewRect("FeedChip", null);
+                chip.gameObject.AddComponent<CanvasGroup>();
+                ShapeBox(chip, Ink, 4f, 16f, White, true); // 흐려져도(4초 뒤 55%) 테두리가 바탕 너머로 비치지 않게 한 메시로
+                LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
+                chipSize.preferredHeight = 48f;
+                HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
 
-            Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
-            LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
-            iconSize.preferredWidth = 24f;
-            iconSize.preferredHeight = 28f;
+                Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
+                LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
+                iconSize.preferredWidth = 24f;
+                iconSize.preferredHeight = 28f;
 
-            RectTransform miniCard = BuildMiniCard(chip, Act);
-            miniCard.gameObject.SetActive(false);
+                RectTransform miniCard = BuildMiniCard(chip, Act);
+                miniCard.gameObject.SetActive(false);
 
-            Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
-            LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
-            crownSize.preferredWidth = 32f;
-            crownSize.preferredHeight = 26f;
-            crown.gameObject.SetActive(false);
+                Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
+                LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
+                crownSize.preferredWidth = 32f;
+                crownSize.preferredHeight = 26f;
+                crown.gameObject.SetActive(false);
 
-            NewText("Name", chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
-            TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
-            text.overflowMode = TextOverflowModes.Ellipsis;
-            NewText("Value", chip, "−20", 26f, Hp, true);
-            chip.gameObject.SetActive(false);
+                NewText("Name", chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
+                TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
+                text.overflowMode = TextOverflowModes.Ellipsis;
+                NewText("Value", chip, "−20", 26f, Hp, true);
+
+                EnsureHandCardPrefabFolder();
+                chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, chipPath);
+                Object.DestroyImmediate(chip.gameObject);
+            }
 
             var view = root.gameObject.AddComponent<FeedView>();
-            Wire(view, ("chipTemplate", chip));
+            Wire(view, ("chipPrefab", chipPrefab.transform));
             return view;
         }
 
-        // 종류 색 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38)
+        // 종류 색 테 · 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38). 테 · 면은 UIShape 한 장(Box) — 흐려져도 테가 면 너머로 비치지 않게
         private static RectTransform BuildMiniCard(Transform parent, Color kind)
         {
             RectTransform root = NewRect("MiniCard", parent);
             LayoutElement size = root.gameObject.AddComponent<LayoutElement>();
             size.preferredWidth = 28f;
             size.preferredHeight = 38f;
-            Image border = RoundImage("Border", root, kind, 6f);
-            Stretch(border.rectTransform);
-            Image face = RoundImage("Face", root, White, 3f);
-            Stretch(face.rectTransform, 3f, 3f, 3f, 3f);
+            ShapeBox(root, kind, 3f, 6f, White);
             Image band = NewImage("Band", root, kind);
             band.rectTransform.anchorMin = new Vector2(0f, 1f);
             band.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -523,16 +547,20 @@ namespace Chapchu.EditorTools
             nick.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             TMP_Text nickname = NewText("NicknameText", nick, "두부", 38f, Ink, true);
             nickname.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement nicknameLayout = nickname.gameObject.AddComponent<LayoutElement>(); // 폭 = 글 너비, 최대 180 — 아래 view.SetNickname 이 넣는다
             NewText("MeText", nick, "(나)", 28f, Ink, false);
             Image crown = Icon("Crown", frame.Head, Hud("icon_crown"), 40f, White);
             LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
             crownSize.preferredWidth = 40f;
             crownSize.preferredHeight = 34f;
             crown.gameObject.SetActive(false);
-            RectTransform spacer = NewRect("Spacer", frame.Head);
-            spacer.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            // 상황 글은 닉네임 뒤 남은 폭을 다 쓰고 오른쪽에 붙는다. 모자라면 상황 글만 … 로 줄인다 — 닉네임 · (나) 는 줄지 않는다 (시안 .mine2 .st min-width 0)
             TMP_Text status = NewText("StatusText", frame.Head, "기다리는 중", 26f, Ink2, false, TextAlignmentOptions.Right);
-            status.textWrappingMode = TextWrappingModes.NoWrap; // 글 너비만큼만 — 비어 있으면 닉네임이 자리를 다 쓴다
+            status.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
+            statusLayout.minWidth = 0f;
+            statusLayout.preferredWidth = 0f;
+            statusLayout.flexibleWidth = 1f;
 
             HorizontalLayout(frame.Body, new RectOffset(20, 22, 0, 0), 16f, TextAnchor.MiddleLeft, true, false);
             BoneGaugeView bone = BuildBone("Bone", frame.Body, 310f);
@@ -543,8 +571,9 @@ namespace Chapchu.EditorTools
 
             var view = frame.Root.gameObject.AddComponent<MyPanelView>();
             Wire(view,
-                ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("crown", crown.gameObject), ("statusText", status),
+                ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("nicknameLayout", nicknameLayout), ("crown", crown.gameObject), ("statusText", status),
                 ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject));
+            view.SetNickname("두부"); // 처음 모습도 실행 때와 같은 폭 규칙
             frame.Root.gameObject.AddComponent<MyPanelPresenter>();
             BuildMyPick(view, spot, character.rectTransform);
 
@@ -560,7 +589,7 @@ namespace Chapchu.EditorTools
             BottomRight(root, EdgeX, EdgeBottom + 24f, 392f, 168f);
 
             Image shadow = RoundImage("Shadow", root, ChapchuOffShadow, 48f);
-            Stretch(shadow.rectTransform, 0f, -10f, 0f, 10f);
+            Stretch(shadow.rectTransform, 0f, 10f, 0f, -10f); // 아래로 10 (시안 box-shadow 0 5px 0)
             Image fill = RoundBox(root, Ink, 6f, 48f, White, true);
 
             // 꼬리 — 왼쪽 아래 (60, −20) 32 × 32 를 45° 돌린 마름모. 잉크 마름모 위에 바탕색 마름모를 6 위로 겹쳐 아래 두 변만 잉크가 보인다
@@ -657,7 +686,7 @@ namespace Chapchu.EditorTools
 
             RectTransform label = NewRect("Label", root);
             Anchor(label, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, PlayLineBottom + 12f), new Vector2(360f, 36f));
-            RoundBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill);
+            ShapeBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill); // 반투명 판을 한 장으로 — 두 장 겹치면 85% 가 98% 로 짙어진다
             HorizontalLayout(label, new RectOffset(18, 18, 2, 2), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(label.gameObject);
             NewText("Text", label, "이 선 위에서 놓으면 사용", 26f, Ink2, false);
@@ -711,7 +740,7 @@ namespace Chapchu.EditorTools
 
             RectTransform hint = NewRect("Hint", content);
             Anchor(hint, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(360f, 40f));
-            RoundBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill);
+            ShapeBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill); // 반투명 판을 한 장으로 — 두 장 겹치면 90% 가 99% 로 짙어진다
             HorizontalLayout(hint, new RectOffset(20, 20, 4, 4), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(hint.gameObject);
             NewText("Text", hint, "화면을 누르면 바로 손패로", 28f, Ink2, false);
@@ -772,7 +801,7 @@ namespace Chapchu.EditorTools
             return presenter;
         }
 
-        // 좌석 하나 — 발밑(턴 타원 · 대상 고리) → 캐릭터 자리 → 뒷면 부채꼴 → 이름표(판 328) → 말풍선. 좌석 전체를 덮는 탭 영역은 맨 앞.
+        // 좌석 하나 — 발밑 턴 타원 → 캐릭터 자리 → 대상 링(발 위) → 뒷면 부채꼴 → 이름표(판 328) → 말풍선. 좌석 전체를 덮는 탭 영역은 맨 앞.
         private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot, DeckView deck)
         {
             SeatGeo g = Seats[slot];
@@ -787,12 +816,13 @@ namespace Chapchu.EditorTools
             CenterAt(spot, g.Cx, feetY, spot.sizeDelta.x, spot.sizeDelta.y);
             spot.gameObject.SetActive(false);
 
-            RectTransform ring = BuildPickRing("PickRing", root);
-            CenterAt(ring, g.Cx, feetY, PickRingSize.x, PickRingSize.y);
-
             Image character = RoundImage("Character", root, new Color(Fur2.r, Fur2.g, Fur2.b, 0.5f), 40f);
             TopLeft(character.rectTransform, g.Cx - g.Width / 2f, g.Top, g.Width, g.Height);
             character.preserveAspect = true;
+
+            // 대상 링은 캐릭터 발 위에 (시안 .ring z 31 > .char 2) — 턴 타원은 발 밑 그대로
+            RectTransform ring = BuildPickRing("PickRing", root);
+            CenterAt(ring, g.Cx, feetY, PickRingSize.x, PickRingSize.y);
 
             // 뒷면 부채꼴 축 — 손 위치(그림 안 비율) + 6 아래, 카드 피벗(아래 바깥 0.6h)까지 16.2 더 아래 (시안 .fback transform-origin 50% 160%)
             float handX = g.Cx - g.Width / 2f + g.Width * g.HandRatio.x;
@@ -915,11 +945,14 @@ namespace Chapchu.EditorTools
         // 대상 선택 발밑 빨간 링 (시안 .ring.pick). 기본 숨김 — 부르는 쪽이 자리를 잡는다.
         private static RectTransform BuildPickRing(string name, Transform parent)
         {
+            // 시안 .ring — 타원 100 × 26 · 대상 색 점선 테 3 · 흰 40% 바탕 · 1.08 배 맥동 0.8초 (ringp), × 2
             RectTransform ring = NewRect(name, parent);
-            Image ringOuter = RoundImage("Outer", ring, Tgt, 26f);
-            Stretch(ringOuter.rectTransform);
-            Image ringInner = RoundImage("Inner", ring, new Color(1f, 1f, 1f, 0.4f), 20f);
-            Stretch(ringInner.rectTransform, 6f, 6f, 6f, 6f);
+            UIShape shape = ring.gameObject.AddComponent<UIShape>();
+            shape.color = new Color(1f, 1f, 1f, 0.4f);
+            shape.raycastTarget = false;
+            shape.Set(UIShape.ShapeKind.Ellipse, 0f, 6f, Tgt, 1f, 18f, 12f);
+            ring.gameObject.AddComponent<PulseScale>();
+            AddPickLayer(ring.gameObject); // 맥동이 매 프레임 배율을 바꾼다 — 다시 배치되는 범위를 링 하나로 (정렬은 부모 그대로)
             ring.gameObject.SetActive(false);
             return ring;
         }
@@ -934,7 +967,8 @@ namespace Chapchu.EditorTools
             RectTransform panel = (RectTransform)view.transform;
 
             RectTransform ring = (RectTransform)spot.parent.Find("MyPickRing") ?? BuildPickRing("MyPickRing", spot.parent);
-            ring.SetSiblingIndex(spot.GetSiblingIndex() + 1);
+            int afterCharacter = character.GetSiblingIndex(); // 링은 캐릭터 바로 뒤 = 발 위 (시안 .ring z 31 > .char 2). 링이 앞에 있었으면 빼낸 만큼 당겨진다
+            ring.SetSiblingIndex(ring.GetSiblingIndex() < afterCharacter ? afterCharacter : afterCharacter + 1);
             Anchor(ring, spot.anchorMin, new Vector2(0.5f, 0.5f), spot.anchoredPosition, PickRingSize);
 
             // 패널 테 — 판 바깥 8 에 두께 5 빨강 (상대 이름판과 같다). 세로 레이아웃에서 뺀다
@@ -959,7 +993,7 @@ namespace Chapchu.EditorTools
             float characterTop = character.anchoredPosition.y + character.sizeDelta.y - panel.anchoredPosition.y - panel.sizeDelta.y; // 패널 위끝에서 캐릭터 머리까지
             Stretch(tapArea.rectTransform, -16f, -(characterTop + 16f), -16f, -16f);
 
-            Canvas[] layers = { AddPickLayer(ring.gameObject), AddPickLayer(character.gameObject), AddPickLayer(panel.gameObject) };
+            Canvas[] layers = { AddPickLayer(character.gameObject), AddPickLayer(ring.gameObject), AddPickLayer(panel.gameObject) };
             if (panel.GetComponent<GraphicRaycaster>() == null)
                 panel.gameObject.AddComponent<GraphicRaycaster>(); // 하위 캔버스의 탭은 그 캔버스의 레이캐스터가 받는다
 
@@ -983,12 +1017,13 @@ namespace Chapchu.EditorTools
 
         private static RectTransform BuildSpot(string name, Transform parent)
         {
+            // 시안 .spot — 턴 색 타원 92 × 22 + 흰 테 3 (box-shadow 0 0 0 3px #fff), × 2
             RectTransform root = NewRect(name, parent);
             root.sizeDelta = new Vector2(196f, 56f);
-            Image white = RoundImage("White", root, White, 28f);
-            Stretch(white.rectTransform);
-            Image fill = RoundImage("Fill", root, Turn, 22f);
-            Stretch(fill.rectTransform, 6f, 6f, 6f, 6f);
+            UIShape spot = root.gameObject.AddComponent<UIShape>();
+            spot.color = Turn;
+            spot.raycastTarget = false;
+            spot.Set(UIShape.ShapeKind.Ellipse, 0f, 6f, White);
             return root;
         }
 
@@ -1048,8 +1083,8 @@ namespace Chapchu.EditorTools
             TMP_Text owner = NewText("OwnerText", body, "낸 사람 → 대상", 30f, Ink, true);
 
             var view = root.gameObject.AddComponent<CardOwnerTagView>();
-            Wire(view, ("body", body.gameObject), ("ownerText", owner));
-            WireArray(view, "kindImages", new Object[] { miniCard.Find("Border").GetComponent<Image>(), miniCard.Find("Band").GetComponent<Image>() });
+            Wire(view, ("body", body.gameObject), ("ownerText", owner), ("kindBox", miniCard.Find("Box").GetComponent<UIShape>()));
+            WireArray(view, "kindImages", new Object[] { miniCard.Find("Band").GetComponent<Image>() });
             body.gameObject.SetActive(false);
             return view;
         }
@@ -1448,6 +1483,15 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        // 게임 화면 프리팹 폴더가 없으면 만든다 — 부모 경로 · 폴더 이름은 HandCardPrefabFolder 에서 구한다
+        private static void EnsureHandCardPrefabFolder()
+        {
+            if (AssetDatabase.IsValidFolder(HandCardPrefabFolder))
+                return;
+            int slash = HandCardPrefabFolder.LastIndexOf('/');
+            AssetDatabase.CreateFolder(HandCardPrefabFolder.Substring(0, slash), HandCardPrefabFolder.Substring(slash + 1));
+        }
+
         // 뒷면 카드 프리팹 — 카드 뒷면 그림 + 잉크 테 3, 모서리 6, 피벗 (0.5, −0.6). 빌더 산출물이라 늘 다시 만든다 (GUID 유지).
         private static RectTransform EnsureBackCardPrefab()
         {
@@ -1455,8 +1499,7 @@ namespace Chapchu.EditorTools
                 return _backCardPrefab;
 
             string path = $"{HandCardPrefabFolder}/HandCard_Back.prefab";
-            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+            EnsureHandCardPrefabFolder();
 
             RectTransform root = NewRect("HandCard_Back", null);
             root.sizeDelta = BackCardSize;
@@ -1564,6 +1607,18 @@ namespace Chapchu.EditorTools
             return fill;
         }
 
+        /// <summary>RoundBox 와 같은 자리 · 모양을 UIShape 한 메시로 — 바탕이 반투명이거나 판 전체를 흐리게 할 때 테두리가 바탕 너머로 비치지 않는다.</summary>
+        private static UIShape ShapeBox(Transform parent, Color borderColor, float borderWidth, float radius, Color fillColor, bool raycastTarget = false)
+        {
+            UIShape box = NewRect("Box", parent).gameObject.AddComponent<UIShape>();
+            Stretch(box.rectTransform);
+            box.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            box.color = fillColor;
+            box.raycastTarget = raycastTarget;
+            box.Set(UIShape.ShapeKind.RoundRect, radius, borderWidth, borderColor);
+            return box;
+        }
+
         private static Sprite Hud(string name)
         {
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{HudSpriteFolder}/{name}.png");
@@ -1605,8 +1660,7 @@ namespace Chapchu.EditorTools
             if (existing != null && !overwrite)
                 return existing;
 
-            if (!AssetDatabase.IsValidFolder(HandCardPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Prefab/UI", "GameScreen");
+            EnsureHandCardPrefabFolder();
 
             var frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>(framePath);
             if (frameSprite == null)

@@ -9,7 +9,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 턴 순서 띠에 값을 넣는다 (10-ui.md 2-1 HUD v2 「턴 순서 띠」 · 03-turn.md 7절). 순서는 좌석 순서(PlayerLook.OrderedPlayers)와 같다.
+    /// 턴 순서 띠에 값을 넣는다 (10-ui.md 2-1 HUD v2 「턴 순서 띠」 · 03-turn.md 7절). 순서는 좌석 순서(PlayerLook.OrderedActors)와 같다 — 봇 포함.
     /// 턴 주인은 GameScreenPresenter 가 연출 큐에서 넘긴다. 남은 초는 여기 없다 — 캐릭터 옆 스톱워치(TurnTimerPresenter, 2026-11-08). 멈춤(체인 · 사망 대기)은 기능 5 · 7 에서.
     /// 퇴장은 RoomEvents.OnPlayerLeft 로 받아 칩을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
@@ -41,9 +41,9 @@ namespace Chapchu.UI.GameScreen
             RebuildChips();
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
 
-            foreach (Player player in PhotonNetwork.PlayerList)
-                if (player.CustomProperties.TryGetValue(PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue && chapchuValue)
-                    ShowChapchu(player.ActorNumber, true);
+            foreach (int actor in _actors)
+                if (BotRoster.TryGetPublic(actor, PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue && chapchuValue)
+                    ShowChapchu(actor, true);
 
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
             if (room.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
@@ -79,10 +79,10 @@ namespace Chapchu.UI.GameScreen
         {
             _actors.Clear();
             var players = new List<(string, Color)>();
-            foreach (Player player in PlayerLook.OrderedPlayers())
+            foreach (int actor in PlayerLook.OrderedActors())
             {
-                _actors.Add(player.ActorNumber);
-                players.Add((PlayerLook.NameOf(player), PlayerLook.ColorOf(player.ActorNumber)));
+                _actors.Add(actor);
+                players.Add((PlayerLook.NameOf(actor), PlayerLook.ColorOf(actor)));
             }
 
             _view.SetPlayers(players);

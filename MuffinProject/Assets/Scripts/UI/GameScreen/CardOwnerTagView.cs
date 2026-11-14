@@ -1,4 +1,5 @@
 ﻿using Chapchu.Game;
+using Chapchu.UI.Fx;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,7 +15,9 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("켜고 끄는 몸통 — 루트는 켜 둔다.")]
         [SerializeField] private GameObject body;
         [SerializeField] private TMP_Text ownerText;
-        [Tooltip("작은 카드에서 종류 색으로 칠하는 부분 (테두리 · 띠).")]
+        [Tooltip("작은 카드의 테 · 면 (UIShape 한 장) — 테를 종류 색으로 칠한다.")]
+        [SerializeField] private UIShape kindBox;
+        [Tooltip("작은 카드에서 종류 색으로 칠하는 이미지 (띠).")]
         [SerializeField] private Image[] kindImages;
         [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
         [SerializeField] private Color counterColor = new Color32(0x6f, 0xa4, 0x34, 0xFF);
@@ -22,7 +25,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (body == null || ownerText == null || kindImages == null || kindImages.Length == 0)
+            if (body == null || ownerText == null || kindBox == null || kindImages == null || kindImages.Length == 0)
             {
                 Debug.LogError($"[{nameof(CardOwnerTagView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
@@ -34,6 +37,7 @@ namespace Chapchu.UI.GameScreen
         public void Show(CardType type, string text)
         {
             Color kind = type == CardType.Counter ? counterColor : type == CardType.Trap ? trapColor : actionColor;
+            kindBox.BorderColor = kind;
             foreach (Image image in kindImages)
                 image.color = kind;
 

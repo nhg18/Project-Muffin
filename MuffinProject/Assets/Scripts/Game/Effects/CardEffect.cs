@@ -25,17 +25,18 @@ namespace Chapchu.Game.Effects
         /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 116 뽑을 장수). 기본은 없음.</summary>
         internal virtual void Prepare(GameServer server, ChainEntry entry) { }
 
-        /// <summary>봇이 이 카드를 이 대상에게 지금 쓸 만한가 (18-bot.md 7-3 조건). 기본은 언제나.</summary>
-        internal virtual bool BotWants(GameServer server, int bot, int[] targets) => true;
+        /// <summary>
+        /// 봇이 이 효과를 이 대상(receivers — 카드의 대상이 될 사람들)에게 지금 쓸 때의 점수 (18-bot.md 7-1, 1점 = 상대 HP 1).
+        /// 새 효과는 자기 쓰임을 여기서 정한다. 기본은 NaN = 봇이 쓰지 않는 효과 — 이런 효과가 든 카드는 내지 않는다 (7-3).
+        /// 내 손패가 늘고 주는 값은 BotHandGain 으로 따로 알린다 (봇이 한꺼번에 계산한다).
+        /// </summary>
+        internal virtual double BotScore(Bots.BotView view, int[] receivers) => double.NaN;
 
-        /// <summary>봇이 이 효과를 어떤 묶음으로 보는가 (18-bot.md 7-3). 새 효과는 자기 쓰임을 여기서 정한다.</summary>
-        internal virtual Bots.BotRole BotRole => Bots.BotRole.None;
+        /// <summary>이 효과로 봇의 손패가 몇 장 느는가 (훔침 · 뽑기 · 회수). 기본 0.</summary>
+        internal virtual int BotHandGain(Bots.BotView view, int[] receivers) => 0;
 
-        /// <summary>봇이 이 카드를 쓸 때 먼저 노릴 상대 (pickable 중). 없으면 -1 — 7-2 순서대로.</summary>
-        internal virtual int BotPreferredTarget(GameServer server, int bot, int[] pickable) => -1;
-
-        /// <summary>봇이 이 카드를 같은 줄의 다른 카드보다 먼저 쓰는가 (18-bot.md 7-3 — 105 는 쓰러뜨릴 수 있는 상대가 있을 때). 기본은 아니다 — 손패 순서.</summary>
-        internal virtual bool BotPlaysFirst(GameServer server, int bot, int[] opponents) => false;
+        /// <summary>봇이 이 카드를 이 대상에게 지금 써도 되는가 — 카드별로 정한 조건 (18-bot.md 7-3). 거짓이면 점수와 관계없이 내지 않는다. 기본은 언제나.</summary>
+        internal virtual bool BotWants(GameServer server, int bot, int[] receivers) => true;
 
         /// <summary>이 효과가 하는 일 (반응 조건 판정용, 04-card.md 7절).</summary>
         internal virtual EffectTag Tag => EffectTag.None;
