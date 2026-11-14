@@ -2,6 +2,7 @@
 using Chapchu.Cards;
 using Chapchu.Network;
 using Chapchu.UI;
+using Chapchu.UI.Fx;
 using Chapchu.UI.GameScreen;
 using TMPro;
 using UnityEditor;
@@ -247,16 +248,31 @@ namespace Chapchu.EditorTools
             Stretch(wall.rectTransform);
 
             // 테이블 방석 — 3D 층이 아니라 배경(2D) 에 둔다. 3D Quad 로 두면 기울인 카드(뽑기 · 드래그 · 내기 40°)의 윗부분이 방석 면 뒤로 들어가 가려진다
+            // 판(Table) = 바닥 그림자 · 두께 테 · 방석 그림. 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
+            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
+            RectTransform table = NewRect("Table", parent);
+            CenterAt(table, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
+            table.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
+
+            // 시안 .table box-shadow — 0 24px 30px 8px rgba(90,60,30,.18) (바닥 그림자) · 0 9px 0 11px fur3 (두께), × 2. 면 안에서 아래로 밀어 눕힌 판의 두께로 보인다
+            UIShape shadow = NewRect("Shadow", table).gameObject.AddComponent<UIShape>();
+            Stretch(shadow.rectTransform, -16f, -16f + 48f, -16f, -16f - 48f);
+            shadow.color = new Color(90f / 255f, 60f / 255f, 30f / 255f, 0.18f);
+            shadow.raycastTarget = false;
+            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 60f);
+            UIShape rim = NewRect("Rim", table).gameObject.AddComponent<UIShape>();
+            Stretch(rim.rectTransform, 0f, 18f, 0f, -18f);
+            rim.color = Fur3;
+            rim.raycastTarget = false;
+            rim.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear);
+
             var cushion = new GameObject("Cushion", typeof(RawImage)).GetComponent<RawImage>();
-            cushion.transform.SetParent(parent, false);
+            cushion.transform.SetParent(table, false);
             cushion.texture = AssetDatabase.LoadAssetAtPath<Texture2D>(CushionTexturePath);
             cushion.raycastTarget = false;
             if (cushion.texture == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] 방석 그림이 없다: {CushionTexturePath}");
-            CenterAt(cushion.rectTransform, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
-            // 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
-            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
-            cushion.rectTransform.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
+            Stretch(cushion.rectTransform);
         }
 
         #endregion
@@ -430,7 +446,7 @@ namespace Chapchu.EditorTools
             {
                 RectTransform chip = NewRect("FeedChip", null);
                 chip.gameObject.AddComponent<CanvasGroup>();
-                Image chipFill = RoundBox(chip, Ink, 4f, 16f, White, true);
+                ShapeBox(chip, Ink, 4f, 16f, White, true); // 흐려져도(4초 뒤 55%) 테두리가 바탕 너머로 비치지 않게 한 메시로
                 LayoutElement chipSize = chip.gameObject.AddComponent<LayoutElement>();
                 chipSize.preferredHeight = 48f;
                 HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
@@ -908,11 +924,13 @@ namespace Chapchu.EditorTools
         // 대상 선택 발밑 빨간 링 (시안 .ring.pick). 기본 숨김 — 부르는 쪽이 자리를 잡는다.
         private static RectTransform BuildPickRing(string name, Transform parent)
         {
+            // 시안 .ring — 타원 100 × 26 · 대상 색 점선 테 3 · 흰 40% 바탕 · 1.08 배 맥동 0.8초 (ringp), × 2
             RectTransform ring = NewRect(name, parent);
-            Image ringOuter = RoundImage("Outer", ring, Tgt, 26f);
-            Stretch(ringOuter.rectTransform);
-            Image ringInner = RoundImage("Inner", ring, new Color(1f, 1f, 1f, 0.4f), 20f);
-            Stretch(ringInner.rectTransform, 6f, 6f, 6f, 6f);
+            UIShape shape = ring.gameObject.AddComponent<UIShape>();
+            shape.color = new Color(1f, 1f, 1f, 0.4f);
+            shape.raycastTarget = false;
+            shape.Set(UIShape.ShapeKind.Ellipse, 0f, 6f, Tgt, 1f, 18f, 12f);
+            ring.gameObject.AddComponent<PulseScale>();
             ring.gameObject.SetActive(false);
             return ring;
         }
@@ -976,12 +994,13 @@ namespace Chapchu.EditorTools
 
         private static RectTransform BuildSpot(string name, Transform parent)
         {
+            // 시안 .spot — 턴 색 타원 92 × 22 + 흰 테 3 (box-shadow 0 0 0 3px #fff), × 2
             RectTransform root = NewRect(name, parent);
             root.sizeDelta = new Vector2(196f, 56f);
-            Image white = RoundImage("White", root, White, 28f);
-            Stretch(white.rectTransform);
-            Image fill = RoundImage("Fill", root, Turn, 22f);
-            Stretch(fill.rectTransform, 6f, 6f, 6f, 6f);
+            UIShape spot = root.gameObject.AddComponent<UIShape>();
+            spot.color = Turn;
+            spot.raycastTarget = false;
+            spot.Set(UIShape.ShapeKind.Ellipse, 0f, 6f, White);
             return root;
         }
 
@@ -1555,6 +1574,18 @@ namespace Chapchu.EditorTools
             Stretch(fill.rectTransform, borderWidth, borderWidth, borderWidth, borderWidth);
             fill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             return fill;
+        }
+
+        /// <summary>RoundBox 와 같은 자리 · 모양을 UIShape 한 메시로 — 바탕이 반투명이거나 판 전체를 흐리게 할 때 테두리가 바탕 너머로 비치지 않는다.</summary>
+        private static UIShape ShapeBox(Transform parent, Color borderColor, float borderWidth, float radius, Color fillColor, bool raycastTarget = false)
+        {
+            UIShape box = NewRect("Box", parent).gameObject.AddComponent<UIShape>();
+            Stretch(box.rectTransform);
+            box.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            box.color = fillColor;
+            box.raycastTarget = raycastTarget;
+            box.Set(UIShape.ShapeKind.RoundRect, radius, borderWidth, borderColor);
+            return box;
         }
 
         private static Sprite Hud(string name)
