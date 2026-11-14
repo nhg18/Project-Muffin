@@ -666,7 +666,7 @@ namespace Chapchu.EditorTools
 
             RectTransform label = NewRect("Label", root);
             Anchor(label, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, PlayLineBottom + 12f), new Vector2(360f, 36f));
-            RoundBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill);
+            ShapeBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill); // 반투명 판을 한 장으로 — 두 장 겹치면 85% 가 98% 로 짙어진다
             HorizontalLayout(label, new RectOffset(18, 18, 2, 2), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(label.gameObject);
             NewText("Text", label, "이 선 위에서 놓으면 사용", 26f, Ink2, false);
@@ -719,7 +719,7 @@ namespace Chapchu.EditorTools
 
             RectTransform hint = NewRect("Hint", content);
             Anchor(hint, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(360f, 40f));
-            RoundBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill);
+            ShapeBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill); // 반투명 판을 한 장으로 — 두 장 겹치면 90% 가 99% 로 짙어진다
             HorizontalLayout(hint, new RectOffset(20, 20, 4, 4), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(hint.gameObject);
             NewText("Text", hint, "화면을 누르면 바로 손패로", 28f, Ink2, false);
