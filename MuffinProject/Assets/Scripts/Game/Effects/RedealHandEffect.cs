@@ -13,17 +13,17 @@ namespace Chapchu.Game.Effects
     {
         public EffectSubject subject;
 
-        internal override bool BotWants(GameServer server, int bot, int[] receivers)
+        // 받는 사람마다 지금 장수 → 시작 장수. 찹츄 상대(알아챈 상대만, 7-7)가 없고 평균 손패도 시작 장수 이하면 쓰지 않는다
+        internal override double BotScore(Bots.BotView view, int[] receivers)
         {
             if (subject != EffectSubject.Target || receivers.Length == 0)
-                return false;
-            return receivers.Any(actor => server.StateOf(actor).IsChapchu)
-                || receivers.Average(actor => (double)server.HandCountOf(actor)) > GameServer.InitialHandCount;
-        }
+                return double.NaN;
+            if (!receivers.Any(view.SeesChapchu)
+                && receivers.Average(actor => (double)view.Server.HandCountOf(actor)) <= GameServer.InitialHandCount)
+                return double.NaN;
 
-        // 받는 사람마다 지금 장수 → 시작 장수
-        internal override double BotScore(Bots.BotView view, int[] receivers) =>
-            receivers.Sum(actor => view.HandScore(actor, GameServer.InitialHandCount - view.Server.HandCountOf(actor)));
+            return receivers.Sum(actor => view.HandScore(actor, GameServer.InitialHandCount - view.Server.HandCountOf(actor)));
+        }
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {

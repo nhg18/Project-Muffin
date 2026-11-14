@@ -459,7 +459,7 @@ namespace Chapchu.Game.Bots
 
                 case TargetType.ChapchuPlayers: // 나도 찹츄면 나도 맞는다 — 찹츄 상대가 있고 나는 아닐 때만
                 case TargetType.ChapchuOthers:
-                    int[] chapchu = others.Where(a => _server.StateOf(a).IsChapchu).ToArray();
+                    int[] chapchu = others.Where(view.SeesChapchu).ToArray(); // 알아챈 찹츄 상대만 (7-7)
                     if (chapchu.Length > 0 && !view.Me.IsChapchu)
                         yield return chapchu;
                     break;

@@ -17,18 +17,18 @@ namespace Chapchu.Game.Effects
 
         internal override bool BotWants(GameServer server, int bot, int[] receivers) => receivers.Length == 1 && receivers[0] != bot;
 
-        // 대상은 나눠 준 만큼 잃고, 나를 뺀 나머지는 1장씩 얻는다 (그 1장이 누군가의 10장째면 감점). 내 1장은 BotHandGain
+        // 대상은 나눠 준 만큼 잃고, 나(쓴 사람)부터 턴 순서로 앞의 그 장수만큼 1장씩 얻는다 (그 1장이 누군가의 10장째면 감점). 내 1장은 BotHandGain
         internal override double BotScore(Bots.BotView view, int[] receivers)
         {
             if (receivers.Length != 1)
                 return 0;
 
             int target = receivers[0];
-            int[] takers = view.Server.ActorsInGame.Where(actor => actor != target).ToArray();
+            int[] inGame = view.Server.ActorsInGame.ToArray();
+            int[] takers = view.Server.TurnOrderFrom(view.Bot).Where(actor => actor != target && inGame.Contains(actor)).ToArray();
             int given = Math.Min(view.Server.HandCountOf(target), takers.Length);
             double score = view.HandScore(target, -given);
-            if (given == takers.Length)
-                score += takers.Sum(actor => view.HandScore(actor, 1));
+            score += takers.Take(given).Sum(actor => view.HandScore(actor, 1));
             return score;
         }
 
