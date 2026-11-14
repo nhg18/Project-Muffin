@@ -1098,7 +1098,7 @@ namespace Chapchu.EditorTools
                 material.SetFloat("_ZTest", (float)CompareFunction.Always);
             });
 
-        // 낼 수 없는 카드를 덮는 어두운 판 — 카드 겉 모양 그대로, 글자보다 앞.
+        // 낼 수 없는 카드를 덮는 어두운 판 — 카드 겉 모양 그대로, 글자보다 앞. 그림과 같은 깊이라 깊이 비교 없이(Always) sortingOrder 로 위에 그린다.
         private static Material ShadeMaterial() =>
             CardMaterial("CardShade", CardSoftShaderName, material =>
             {
@@ -1107,7 +1107,7 @@ namespace Chapchu.EditorTools
                 material.SetVector("_Half", CardOuterPx / 2f);
                 material.SetFloat("_Radius", CardCornerPx + CardOutlinePx);
                 material.SetFloat("_Blur", 0f);
-                material.SetFloat("_ZTest", (float)CompareFunction.LessEqual);
+                material.SetFloat("_ZTest", (float)CompareFunction.Always);
             });
 
         // 이름 글자 재질 — 굵은 글꼴 재질에 밑깔림(종류 색을 짙게, 0.07 em 아래)을 켠 것. 있으면 그대로 쓴다.
