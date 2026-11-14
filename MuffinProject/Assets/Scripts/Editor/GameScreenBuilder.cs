@@ -658,6 +658,7 @@ namespace Chapchu.EditorTools
 
             var image = go.GetComponent<RawImage>();
             image.raycastTarget = false;
+            image.material = TableBuilder.TopLayerCompositeMaterial();
             image.enabled = false;
 
             var view = go.AddComponent<TopCardLayerView>();

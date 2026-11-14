@@ -17,10 +17,8 @@ namespace Chapchu.UI.GameScreen
     [RequireComponent(typeof(BoxCollider))]
     public class CardView : MonoBehaviour
     {
-        private const float PawAlpha = 0.7f;           // 그림 없는 카드의 발자국 — 종류 색 70% (프로토타입 v2)
         private const float DimmedGradeFade = 0.8f;    // 낼 수 없는 카드의 오라 — 회색 × 0.8 만큼 줄인다 (시안 1 − 0.8 × 회색, 반짝은 셰이더가 같은 값으로)
         private const float FacingMin = 0.15f;         // 앞면이 이만큼 이상 카메라를 볼 때만 별을 그린다 (시안 cos ry − 0.15)
-        private const float BalancedWidthMin = 0.55f;  // 설명 줄을 고르게 맞출 때 칸 폭을 이만큼까지 좁혀 본다 (시안)
         private const int BalanceSteps = 6;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
@@ -66,6 +64,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float[] gradeAuraReaches = { 1f, 1f, 1f, 1.15f };
         [Tooltip("낼 수 없는 카드의 채도 빼기 (0 ~ 1, 시안 .card.dim 0.35). 밝기는 Shade 판이 낮춘다.")]
         [SerializeField, Range(0f, 1f)] private float dimGray = 0.35f;
+        [Tooltip("그림 없는 카드의 발자국 알파 — 종류 색의 이만큼 (0 ~ 1, 프로토타입 v2 0.7).")]
+        [SerializeField, Range(0f, 1f)] private float pawAlpha = 0.7f;
+        [Tooltip("설명 줄을 고르게 맞출 때 칸 폭을 이 비율까지 좁혀 본다 (0 ~ 1, 시안 0.55).")]
+        [SerializeField, Range(0f, 1f)] private float balancedWidthMin = 0.55f;
 
         private BoxCollider _collider;
         private MaterialPropertyBlock _block;
@@ -210,7 +212,7 @@ namespace Chapchu.UI.GameScreen
             text.enableAutoSizing = false;
             text.fontSize = fontSize;
 
-            float fits = 0f, overflows = text.rectTransform.rect.width * (1f - BalancedWidthMin) / 2f;
+            float fits = 0f, overflows = text.rectTransform.rect.width * (1f - balancedWidthMin) / 2f;
             for (int i = 0; i < BalanceSteps; i++)
             {
                 float side = (fits + overflows) / 2f;
@@ -233,7 +235,7 @@ namespace Chapchu.UI.GameScreen
             if (sprite == null)
             {
                 Color paw = frameRenderer.sharedMaterial.GetColor(OutlineColorId);
-                paw.a = PawAlpha;
+                paw.a = pawAlpha;
                 block.SetFloat(HasTexId, 0f);
                 block.SetColor(PawColorId, paw);
                 artRenderer.SetPropertyBlock(block);

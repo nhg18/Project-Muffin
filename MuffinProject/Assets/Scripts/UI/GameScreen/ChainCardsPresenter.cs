@@ -221,6 +221,7 @@ namespace Chapchu.UI.GameScreen
             if (card == null)
                 yield break;
 
+            card.SetGradeVisible(false); // 닿으면 바꿔 끼우는 더미의 맨 위 카드와 같게 — 등급 연출은 버림 더미에서 보이지 않는다
             MoveTo(card, discardSpot.position, discardSpot.rotation, discardSpot.lossyScale, discardDuration, Ease.InQuad);
             yield return new WaitForSeconds(discardDuration);
             Destroy(card.gameObject);

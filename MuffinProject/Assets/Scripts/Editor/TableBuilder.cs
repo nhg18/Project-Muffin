@@ -380,9 +380,9 @@ namespace Chapchu.EditorTools
 
             var view = root.AddComponent<DiscardPileView>();
             GameScreenBuilder.Wire(view,
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
                 ("topAnchor", topAnchor), ("countText", count));
             GameScreenBuilder.WireArray(view, "underCards", underCards);
 
@@ -400,9 +400,9 @@ namespace Chapchu.EditorTools
 
             var view = root.AddComponent<HandView>();
             GameScreenBuilder.Wire(view,
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
                 ("topLayer", topLayer));
             root.AddComponent<HandInput>();
 
@@ -443,9 +443,9 @@ namespace Chapchu.EditorTools
             var presenter = root.gameObject.AddComponent<ChainCardsPresenter>();
             GameScreenBuilder.Wire(presenter,
                 ("deck", gameDeck),
-                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath)),
-                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath)),
-                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)),
+                ("actionCardPrefab", EnsureCardPrefab("Card_Action", GameScreenBuilder.ActionCardFramePath, CardType.Action)),
+                ("counterCardPrefab", EnsureCardPrefab("Card_Counter", GameScreenBuilder.CounterCardFramePath, CardType.Counter)),
+                ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)),
                 ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer),
                 ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
             return presenter;
@@ -474,7 +474,7 @@ namespace Chapchu.EditorTools
             TrapSlotsView mine = BuildTrapSlotRow("Mine", root, MyTrapSlots, true);
             var presenter = mine.gameObject.AddComponent<MyTrapsPresenter>();
             GameScreenBuilder.Wire(presenter,
-                ("deck", gameDeck), ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath)), ("previewSpot", previewSpot));
+                ("deck", gameDeck), ("trapCardPrefab", EnsureCardPrefab("Card_Trap", GameScreenBuilder.TrapCardFramePath, CardType.Trap)), ("previewSpot", previewSpot));
             return presenter;
         }
 
@@ -609,8 +609,8 @@ namespace Chapchu.EditorTools
         [MenuItem("Chapchu/Game Screen/Rebuild Table Card Prefabs")]
         public static void RebuildCardPrefabs()
         {
-            foreach ((string name, string framePath, CardType _) in CardPrefabs)
-                EnsureCardPrefab(name, framePath, true);
+            foreach ((string name, string framePath, CardType type) in CardPrefabs)
+                EnsureCardPrefab(name, framePath, type, true);
             Debug.Log($"[{nameof(TableBuilder)}] 3D 카드 프리팹 3개 다시 만듦.");
         }
 
@@ -690,7 +690,7 @@ namespace Chapchu.EditorTools
         }
 
         // 카드 프리팹 — 빈 루트를 만들고 부분은 UpgradeCard 가 붙인다. 있으면 그대로 돌려준다 (overwrite 면 다시 만든다).
-        private static CardView EnsureCardPrefab(string name, string framePath, bool overwrite = false)
+        private static CardView EnsureCardPrefab(string name, string framePath, CardType type, bool overwrite = false)
         {
             string path = $"{PrefabFolder}/{name}.prefab";
             var existing = AssetDatabase.LoadAssetAtPath<CardView>(path);
@@ -699,13 +699,6 @@ namespace Chapchu.EditorTools
 
             if (!AssetDatabase.IsValidFolder(PrefabFolder))
                 AssetDatabase.CreateFolder("Assets/Prefab", "Table");
-
-            CardType type = CardType.Action;
-            foreach ((string prefabName, string _, CardType prefabType) in CardPrefabs)
-            {
-                if (prefabName == name)
-                    type = prefabType;
-            }
 
             var root = new GameObject(name);
             UpgradeCard(root, type, framePath);
