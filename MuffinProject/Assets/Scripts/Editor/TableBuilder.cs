@@ -571,6 +571,15 @@ namespace Chapchu.EditorTools
             float dash = dashPx * BlankTexturePixelsPerPx, gap = gapPx * BlankTexturePixelsPerPx;
             var half = new Vector2(width / 2f, height / 2f);
 
+            // 점선의 칸 = fill 위에 edge 를 알파 합성한 색 — 칸 자리에서도 바탕 판이 빠지지 않는다
+            Color dashEdge = edge;
+            if (dash > 0f)
+            {
+                float alpha = edge.a + fill.a * (1f - edge.a);
+                dashEdge = alpha > 0f ? (edge * edge.a + fill * (fill.a * (1f - edge.a))) / alpha : Color.clear;
+                dashEdge.a = alpha;
+            }
+
             var pixels = new Color[width * height];
             for (int y = 0; y < height; y++)
             {
@@ -580,7 +589,7 @@ namespace Chapchu.EditorTools
                     float distance = Vector2.Max(d, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(d.x, d.y), 0f) - radius;
 
                     bool inDash = dash <= 0f || OnDash(new Vector2(x + 0.5f - half.x, y + 0.5f - half.y), half, radius, dash, gap);
-                    Color color = Color.Lerp(fill, inDash ? edge : fill, Mathf.Clamp01(distance + border + 0.5f));
+                    Color color = Color.Lerp(fill, inDash ? dashEdge : fill, Mathf.Clamp01(distance + border + 0.5f));
                     if (distance > 0f)
                         color.a = 0f;
                     else if (solidAlpha > 0f)

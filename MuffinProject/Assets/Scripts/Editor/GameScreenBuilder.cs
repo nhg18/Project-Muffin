@@ -255,16 +255,17 @@ namespace Chapchu.EditorTools
             table.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
 
             // 시안 .table box-shadow — 0 24px 30px 8px rgba(90,60,30,.18) (바닥 그림자) · 0 9px 0 11px fur3 (두께), × 2. 면 안에서 아래로 밀어 눕힌 판의 두께로 보인다
-            UIShape shadow = NewRect("Shadow", table).gameObject.AddComponent<UIShape>();
-            Stretch(shadow.rectTransform, -16f, -16f + 48f, -16f, -16f - 48f);
-            shadow.color = new Color(90f / 255f, 60f / 255f, 30f / 255f, 0.18f);
-            shadow.raycastTarget = false;
-            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 60f);
+            // CSS 는 먼저 적은 그림자가 위 — 두께 테를 먼저, 바닥 그림자를 그 위에 둔다
             UIShape rim = NewRect("Rim", table).gameObject.AddComponent<UIShape>();
             Stretch(rim.rectTransform, -22f, 18f - 22f, -22f, -18f - 22f);
             rim.color = Fur3;
             rim.raycastTarget = false;
             rim.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear);
+            UIShape shadow = NewRect("Shadow", table).gameObject.AddComponent<UIShape>();
+            Stretch(shadow.rectTransform, -16f, -16f + 48f, -16f, -16f - 48f);
+            shadow.color = new Color(90f / 255f, 60f / 255f, 30f / 255f, 0.18f);
+            shadow.raycastTarget = false;
+            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 60f);
 
             var cushion = new GameObject("Cushion", typeof(RawImage)).GetComponent<RawImage>();
             cushion.transform.SetParent(table, false);
