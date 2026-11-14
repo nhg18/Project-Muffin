@@ -671,7 +671,7 @@ namespace Chapchu.EditorTools
             EnsureQuad("Back", back, FaceMaterial("CardBackFace", BackTexturePath, CardInk, BackGlare), outer, Vector3.zero, CardPart.Back);
 
             ParticleSystem sparks = EnsureSparks(card, center);
-            MeshRenderer shade = EnsureQuad("Shade", card, ShadeMaterial(), outer, center + new Vector3(0f, 0f, -CardDepth / 2f - FaceGap * 3f), CardPart.Shade);
+            MeshRenderer shade = EnsureQuad("Shade", card, ShadeMaterial(), outer, center + new Vector3(0f, 0f, -CardDepth / 2f - FaceGap), CardPart.Shade);
 
             // 시작 모습: 빛 · 오라 · 별 · 덮는 판은 꺼 둔다 — CardView 가 상태 · 등급으로 켠다
             foreach (MeshRenderer hidden in new[] { glow, ring, aura, shade })
@@ -739,7 +739,7 @@ namespace Chapchu.EditorTools
         // 이름 — 머리 띠 안, 흰 굵은 글자 + 종류 색 짙은 그림자 한 겹 (시안: 파랑 · 초록 · 주황 위에서도 읽히게). 넘치면 줄이고 말줄임.
         private static TMP_Text EnsureNameText(Transform front, CardType type)
         {
-            TMP_Text text = EnsureText("Name", front, true, BoxSize(NameBox), BoxCenter(NameBox, -FaceGap * 2f), out bool created);
+            TMP_Text text = EnsureText("Name", front, true, BoxSize(NameBox), BoxCenter(NameBox, -FaceGap), out bool created);
             if (!created)
                 return text;
 
@@ -758,7 +758,7 @@ namespace Chapchu.EditorTools
         // 설명 — 점선 아래 칸 가운데, 잉크 글자 (숫자 색 · 줄 고르기는 CardView). 넘치면 줄이고 말줄임.
         private static TMP_Text EnsureDescriptionText(Transform front)
         {
-            TMP_Text text = EnsureText("Description", front, false, BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -FaceGap * 2f), out bool created);
+            TMP_Text text = EnsureText("Description", front, false, BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -FaceGap), out bool created);
             if (!created)
                 return text;
 

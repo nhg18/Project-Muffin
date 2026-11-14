@@ -18,7 +18,8 @@ namespace Chapchu.UI.GameScreen
     public class CardView : MonoBehaviour
     {
         private const float DimmedGradeFade = 0.8f;    // 낼 수 없는 카드의 오라 — 회색 × 0.8 만큼 줄인다 (시안 1 − 0.8 × 회색, 반짝은 셰이더가 같은 값으로)
-        private const float FacingMin = 0.15f;         // 앞면이 이만큼 이상 카메라를 볼 때만 별을 그린다 (시안 cos ry − 0.15)
+        private const float FacingMin = 0.15f;         // 앞면이 이만큼 이상 카메라를 볼 때만 별을 그린다 (시안 clamp((cos ry − .15) / .5))
+        private const float FacingRange = 0.5f;        // 그 위로 이만큼에 걸쳐 별이 옅게에서 진하게 (반짝 · 오라 셰이더와 같은 식)
         private const int BalanceSteps = 6;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
@@ -33,6 +34,7 @@ namespace Chapchu.UI.GameScreen
         private static readonly int AmountId = Shader.PropertyToID("_Amount");
         private static readonly int ReachId = Shader.PropertyToID("_Reach");
         private static readonly int RainbowId = Shader.PropertyToID("_Rainbow");
+        private static readonly int FadeId = Shader.PropertyToID("_Fade");
         private static readonly Regex Digits = new Regex(@"\d+");
         private static readonly Regex Words = new Regex(@"\S+");
 
@@ -104,13 +106,20 @@ namespace Chapchu.UI.GameScreen
                 _sparksRenderer = sparks.GetComponent<ParticleSystemRenderer>();
         }
 
-        // 개판 별은 화면을 보는 빌보드라 뒷면에서도 보인다 — 앞면이 카메라를 볼 때만 그린다 (뒷면에서 등급이 새지 않게).
+        // 개판 별은 화면을 보는 빌보드라 뒷면에서도 보인다 — 앞면이 카메라를 보는 만큼만 그린다 (뒤집히는 동안 옅어지고, 뒷면에서 등급이 새지 않게).
         private void LateUpdate()
         {
             if (_sparksRenderer == null || _camera == null || !sparks.gameObject.activeSelf) return;
 
-            Vector3 toCamera = _camera.position - transform.position;
-            _sparksRenderer.enabled = Vector3.Dot(-transform.forward, toCamera) > FacingMin * toCamera.magnitude;
+            Vector3 toCamera = (_camera.position - transform.position).normalized;
+            float fade = Mathf.Clamp01((Vector3.Dot(-transform.forward, toCamera) - FacingMin) / FacingRange);
+            _sparksRenderer.enabled = fade > 0f;
+            if (fade <= 0f) return;
+
+            MaterialPropertyBlock block = Block;
+            _sparksRenderer.GetPropertyBlock(block);
+            block.SetFloat(FadeId, fade);
+            _sparksRenderer.SetPropertyBlock(block);
         }
 
         /// <summary>false 면 포인터를 가리지 않고 아래 오브젝트(좌석 등)로 넘긴다. 보이는 것은 그대로.</summary>
