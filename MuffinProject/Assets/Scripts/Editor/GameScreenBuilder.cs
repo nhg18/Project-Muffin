@@ -457,7 +457,7 @@ namespace Chapchu.EditorTools
                 iconSize.preferredWidth = 24f;
                 iconSize.preferredHeight = 28f;
 
-                RectTransform miniCard = BuildMiniCard(chip, Act, true);
+                RectTransform miniCard = BuildMiniCard(chip, Act);
                 miniCard.gameObject.SetActive(false);
 
                 Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
@@ -481,23 +481,14 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 종류 색 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38).
-        // oneShape — 테 · 면을 UIShape 한 장으로: 흐려지는 칩 안에서 테가 면 너머로 비치지 않게. CardOwnerTag 는 Border Image 에 종류 색을 넣으므로 두 장 그대로
-        private static RectTransform BuildMiniCard(Transform parent, Color kind, bool oneShape = false)
+        // 종류 색 테 · 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38). 테 · 면은 UIShape 한 장(Box) — 흐려져도 테가 면 너머로 비치지 않게
+        private static RectTransform BuildMiniCard(Transform parent, Color kind)
         {
             RectTransform root = NewRect("MiniCard", parent);
             LayoutElement size = root.gameObject.AddComponent<LayoutElement>();
             size.preferredWidth = 28f;
             size.preferredHeight = 38f;
-            if (oneShape)
-                ShapeBox(root, kind, 3f, 6f, White);
-            else
-            {
-                Image border = RoundImage("Border", root, kind, 6f);
-                Stretch(border.rectTransform);
-                Image face = RoundImage("Face", root, White, 3f);
-                Stretch(face.rectTransform, 3f, 3f, 3f, 3f);
-            }
+            ShapeBox(root, kind, 3f, 6f, White);
             Image band = NewImage("Band", root, kind);
             band.rectTransform.anchorMin = new Vector2(0f, 1f);
             band.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -1069,8 +1060,8 @@ namespace Chapchu.EditorTools
             TMP_Text owner = NewText("OwnerText", body, "낸 사람 → 대상", 30f, Ink, true);
 
             var view = root.gameObject.AddComponent<CardOwnerTagView>();
-            Wire(view, ("body", body.gameObject), ("ownerText", owner));
-            WireArray(view, "kindImages", new Object[] { miniCard.Find("Border").GetComponent<Image>(), miniCard.Find("Band").GetComponent<Image>() });
+            Wire(view, ("body", body.gameObject), ("ownerText", owner), ("kindBox", miniCard.Find("Box").GetComponent<UIShape>()));
+            WireArray(view, "kindImages", new Object[] { miniCard.Find("Band").GetComponent<Image>() });
             body.gameObject.SetActive(false);
             return view;
         }
