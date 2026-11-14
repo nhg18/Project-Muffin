@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Chapchu.Game;
+using Chapchu.UI.Fx;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -10,7 +11,7 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 오른쪽 위 「방금 일어난 일」 칩 (10-ui.md 2-1 HUD v2 「기록」). 최신 2개만 — 둘째는 조금 흐리고, 4초 지나면 더 흐려진다.
-    /// 전체를 누르면 기록 서랍이 열린다 (Clicked). 칩은 프리팹(`Prefab/UI/GameScreen/FeedChip`)을 이 아래에 만든다 — 구조: 루트 → Icon · MiniCard(→ Band) · Crown · Name · Text · Value.
+    /// 전체를 누르면 기록 서랍이 열린다 (Clicked). 칩은 프리팹(`Prefab/UI/GameScreen/FeedChip`)을 이 아래에 만든다 — 구조: 루트 → Icon · MiniCard(→ Box · Band) · Crown · Name · Text · Value.
     /// </summary>
     public class FeedView : MonoBehaviour, IPointerClickHandler
     {
@@ -82,6 +83,7 @@ namespace Chapchu.UI.GameScreen
             public readonly float ShownAt;
             private readonly GameObject _icon;
             private readonly GameObject _miniCard;
+            private readonly UIShape _miniBox;
             private readonly Image _miniBand;
             private readonly GameObject _crown;
             private readonly TMP_Text _name;
@@ -96,6 +98,7 @@ namespace Chapchu.UI.GameScreen
                 Group = root.GetComponent<CanvasGroup>();
                 _icon = root.Find("Icon").gameObject;
                 _miniCard = root.Find("MiniCard").gameObject;
+                _miniBox = root.Find("MiniCard/Box").GetComponent<UIShape>();
                 _miniBand = root.Find("MiniCard/Band").GetComponent<Image>();
                 _crown = root.Find("Crown").gameObject;
                 _name = root.Find("Name").GetComponent<TMP_Text>();
@@ -109,6 +112,7 @@ namespace Chapchu.UI.GameScreen
                 _icon.SetActive(entry.Icon == HistoryIcon.Card);
                 _miniCard.SetActive(entry.Icon == HistoryIcon.MiniCard);
                 _crown.SetActive(entry.Icon == HistoryIcon.Crown);
+                _miniBox.BorderColor = cardColor; // 작은 카드는 테 · 띠 모두 종류 색 (시안 키트 .mc)
                 _miniBand.color = cardColor;
                 _name.text = actorName;
                 _nameLayout.minWidth = _name.GetPreferredValues(actorName).x; // 칩이 넘치면 이름은 그대로, 내용(Text)만 … 로 줄인다

@@ -34,6 +34,19 @@ namespace Chapchu.UI.Fx
         private readonly List<Vector2> _c = new List<Vector2>();
         private readonly List<Vector2> _d = new List<Vector2>();
 
+        /// <summary>테 색 — 실행 중 바꿀 때 (예: 기록 칩 작은 카드의 종류 색). 바뀔 때만 다시 그린다.</summary>
+        public Color BorderColor
+        {
+            get => borderColor;
+            set
+            {
+                if (borderColor == value)
+                    return;
+                borderColor = value;
+                SetVerticesDirty();
+            }
+        }
+
         /// <summary>코드에서 모양을 정할 때 (빌더) — 값을 넣고 다시 그린다.</summary>
         public void Set(ShapeKind newShape, float newRadius, float newBorderWidth, Color newBorderColor, float newFeather = 1f, float newDash = 0f, float newGap = 0f)
         {
