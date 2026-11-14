@@ -18408,7 +18408,7 @@ MonoBehaviour:
   borderColor: {r: 0, g: 0, b: 0, a: 0}
   dash: 0
   gap: 0
-  feather: 60
+  feather: 120
 --- !u!222 &657294185
 CanvasRenderer:
   m_ObjectHideFlags: 0
