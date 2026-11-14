@@ -1,4 +1,5 @@
-﻿using Chapchu.Network;
+﻿using Chapchu.Game;
+using Chapchu.Network;
 using Photon.Pun;
 using UnityEngine;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
@@ -14,8 +15,6 @@ namespace Chapchu.UI.GameScreen
     {
         [Tooltip("스톱워치 전부 — 내 것 + 상대 좌석 3개. 값은 모두에게 같이 넣는다.")]
         [SerializeField] private TurnTimerView[] timers;
-        [Tooltip("턴 제한 시간(초) — 링의 전체 길이. 03-turn.md 15초, GameServer 와 같게.")]
-        [SerializeField] private float turnSeconds = 15f;
 
         private double _turnDeadline = -1; // 서버 시각(PhotonNetwork.Time, 초). 음수면 아직 턴이 없다
 
@@ -40,7 +39,7 @@ namespace Chapchu.UI.GameScreen
 
             float remaining = Mathf.Max(0f, (float)(_turnDeadline - PhotonNetwork.Time));
             int seconds = Mathf.CeilToInt(remaining);
-            float fraction = turnSeconds > 0f ? remaining / turnSeconds : 0f;
+            float fraction = remaining / (float)GameServer.TurnTimeLimit; // 링의 전체 길이 = 방장 규칙의 제한 시간
             // 링이 매 프레임 부드럽게 줄어들도록 매 프레임 넣는다 (글자는 초가 바뀔 때만 달라진다)
             foreach (TurnTimerView timer in timers)
                 timer.SetRemaining(seconds, fraction, false);
