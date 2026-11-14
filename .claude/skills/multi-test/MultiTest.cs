@@ -607,6 +607,27 @@ public static class MultiTest
 
     public static string AddBot() => NetworkManager.Instance.AddBot() ? "OK 봇 추가 요청" : "FAIL 봇 추가 안 됨";
 
+    /// <summary>
+    /// 게임이 끝나 방으로 돌아온 뒤 — 모두(사람 = Player 속성, 봇 = 방 속성)의 공개 HP 가 시작 값으로 되돌려졌는가 (PunGameServer.ReturnToRoomRoutine).
+    /// 지난 판 HP 가 남으면 다음 판 화면이 그 값을 보이고 기록에 가짜 「HP +N」 줄이 생긴다. 속성이 닿을 때까지 WAIT.
+    /// </summary>
+    public static string ExpectHpReset()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        var log = new StringBuilder();
+        bool all = true;
+        foreach (int actor in PhotonNetwork.PlayerList.Select(player => player.ActorNumber).Concat(BotRoster.Actors))
+        {
+            int hp = BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object value) && value is int number ? number : -1;
+            log.Append(" P" + actor + " ♥" + hp);
+            all &= hp == GameServer.MaxHp;
+        }
+
+        return (all ? "OK 공개 HP 시작 값 —" : "WAIT 공개 HP 가 시작 값이 아님 —") + log;
+    }
+
     /// <summary>방장의 규칙 원본에서 모두의 체력을 hp 로 — 한 판을 빨리 끝내 보는 full 시나리오용. 화면 값은 다음 HpChanged 부터 맞는다.</summary>
     public static string SetAllHp(string hp)
     {

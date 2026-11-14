@@ -346,6 +346,7 @@ run_full() {
     wait_scene RoomScene && log "  결과 표시 뒤 전원 방으로 돌아옴"
     sleep 2
     for project in "${EDITORS[@]}"; do
+        until_ok "$project" ExpectHpReset   # 모든 화면에서 지난 판 HP 가 남지 않는다
         check_errors "$project"
     done
 }
@@ -394,6 +395,7 @@ run_solo() {
     if console_lines "$MAIN" | grep '\[BotDriver\]' | grep -q '7-1 #[0-9]'; then log "  봇이 7-1 표로 행동"; else fail "봇의 7-1 행동 줄이 없다"; fi
     wait_scene RoomScene && log "  결과 표시 뒤 방으로 돌아옴"
     until_ok "$MAIN" ExpectBots "1,2,3" 1 False && log "  봇 3 그대로 · 혼자 하기 방은 비공개 그대로"
+    until_ok "$MAIN" ExpectHpReset   # 지난 판 HP 가 남지 않는다 — 다음 판 좌석 · 기록의 기준 값
     check_errors "$MAIN"
 }
 
