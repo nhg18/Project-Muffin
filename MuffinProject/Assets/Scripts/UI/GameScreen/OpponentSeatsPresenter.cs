@@ -13,7 +13,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 상대 좌석 3개에 값을 넣는다 (10-ui.md 2-1 「상대 좌석」 · 02-player.md 3절). 좌석 인덱스 ↔ actorNumber 는 여기서만 계산한다 —
+    /// 상대 좌석 3개에 값을 넣는다 (10-ui.md 2-1 「상대 좌석」 · 02-player.md 3절). 봇도 사람과 같이 앉는다 (18-bot.md 8-2). 좌석 인덱스 ↔ actorNumber 는 여기서만 계산한다 —
     /// 목걸이 색(PlayerLook) 등 다른 UI 도 이 결과를 쓴다. HP · 손패 수 · 턴은 GameScreenPresenter 가 연출 큐 순서로 넘긴다.
     /// 퇴장은 RoomEvents.OnPlayerLeft 로 받아 좌석을 숨긴다 (02-player.md 6절) — 게임 이벤트가 아니라 큐 밖.
     /// 늦게 열렸을 때는 Start 에서 각 Player 의 CustomProperties 와 방의 턴 주인을 한 번 읽는다 (09-network.md 6.1).
@@ -24,6 +24,7 @@ namespace Chapchu.UI.GameScreen
     public class OpponentSeatsPresenter : MonoBehaviour
     {
         private const int SeatCount = 3; // 좌석 인덱스 1 · 2 · 3 (02-player.md 3절)
+        private const string BotNicknameFormat = "{0} (봇)"; // 봇 좌석은 닉네임 옆에 「(봇)」 (18-bot.md 8-2)
 
         [Tooltip("좌석 인덱스 1 · 2 · 3 순서 (02-player.md 3절). 빈 좌석은 숨긴다.")]
         [SerializeField] private OpponentSeatView[] seats = new OpponentSeatView[SeatCount];
@@ -87,8 +88,7 @@ namespace Chapchu.UI.GameScreen
 
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때 — 좌석 없음
 
-            int me = PhotonNetwork.LocalPlayer.ActorNumber;
-            int[] opponents = PhotonNetwork.PlayerList.Select(player => player.ActorNumber).Where(actor => actor != me).OrderBy(actor => actor).ToArray();
+            int[] opponents = PlayerLook.OrderedActors().Skip(1).ToArray(); // 나를 뺀 좌석 순서 — 사람 뒤에 봇 (18-bot.md 8-3)
             int[] seatIndices = GetOpponentSeatIndices(opponents.Length);
             if (seatIndices.Length != opponents.Length)
             {
@@ -98,33 +98,34 @@ namespace Chapchu.UI.GameScreen
 
             for (int i = 0; i < opponents.Length; i++)
             {
-                Player player = PhotonNetwork.CurrentRoom.GetPlayer(opponents[i]);
+                int actor = opponents[i];
                 int seatIndex = seatIndices[i];
                 OpponentSeatView seat = seats[seatIndex - 1];
-                _seatOf[opponents[i]] = seat;
+                _seatOf[actor] = seat;
                 TrapSlotsView traps = trapSlots[seatIndex - 1];
-                _trapsOf[opponents[i]] = traps;
+                _trapsOf[actor] = traps;
                 traps.gameObject.SetActive(true);
                 traps.SetCount(0);
 
                 seat.gameObject.SetActive(true);
-                seat.SetNickname(PlayerLook.NameOf(player));
+                string nickname = PlayerLook.NameOf(actor);
+                seat.SetNickname(BotRoster.IsBot(actor) ? string.Format(BotNicknameFormat, nickname) : nickname);
                 seat.SetColor(PlayerLook.SeatColors[seatIndex - 1]);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
                 seat.SetTargetable(false);
 
-                // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다.
-                if (player.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
+                // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
+                if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
                     seat.SetHp(hpValue, GameServer.MaxHp);
 
-                if (player.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
+                if (BotRoster.TryGetPublic(actor, PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                     seat.SetHandCount(handCountValue);
 
-                if (player.CustomProperties.TryGetValue(PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue)
+                if (BotRoster.TryGetPublic(actor, PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue)
                     seat.SetChapchu(chapchuValue);
 
-                if (player.CustomProperties.TryGetValue(PlayerProps.TrapCount, out object trapCount) && trapCount is int trapCountValue)
+                if (BotRoster.TryGetPublic(actor, PlayerProps.TrapCount, out object trapCount) && trapCount is int trapCountValue)
                     traps.SetCount(trapCountValue);
             }
 
