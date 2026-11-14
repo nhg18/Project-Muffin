@@ -635,7 +635,7 @@ namespace Chapchu.EditorTools
         /// 카드 한 장의 부분을 지금 생김새로 맞춘다 (10-ui.md 2-1 「손패 · 카드 (3D 층)」 · 「카드 등급 연출」, 프로토타입 v2 C3D). 없는 부분은 만들고, 있는 부분은 자리 · 크기 · 머티리얼만 고친다.
         ///   루트(콜라이더 · CardView · SortingGroup, 기준점 아래 가운데) ─ Shadow · Glow(카운터만) · SelectRing · Aura · Edge · Front(Frame · Art · Name · Description) · Back(Back) · Sparks · Shade
         /// 앞면 · 뒷면은 두께(CardDepth)만큼 떨어져 서로 반대를 보고, 셰이더가 뒷면을 컬링하므로 보는 쪽만 그려진다. 전부 HandCards 레이어.
-        /// 머티리얼 · 파티클 값은 새로 만들 때(또는 옛 셰이더에서 바꿀 때)만 넣는다 — 사람이 Inspector 에서 고친 값은 덮어쓰지 않는다.
+        /// 머티리얼 · 파티클 값은 새로 만들 때(또는 옛 셰이더에서 바꿀 때)만, 글자 모양 · 숫자 색은 그 부분을 새로 만들 때만 넣는다 — 사람이 Inspector 에서 고친 값은 덮어쓰지 않는다.
         /// </summary>
         public static void UpgradeCard(GameObject root, CardType type, string framePath)
         {
@@ -649,7 +649,9 @@ namespace Chapchu.EditorTools
             collider.size = new Vector3(CardSize.x, CardSize.y, CardThickness);
             collider.center = center;
             Ensure<SortingGroup>(root);
-            var view = Ensure<CardView>(root);
+            bool viewCreated = !root.TryGetComponent(out CardView view);
+            if (viewCreated)
+                view = root.AddComponent<CardView>();
 
             EnsureQuad("Shadow", card, ShadowMaterial(), outer + Vector2.one * (ShadowPadPx * 2f * UnitsPerPixel),
                 center + new Vector3(0f, -ShadowDropPx * UnitsPerPixel, ShadowBehind), CardPart.Shadow);
@@ -683,9 +685,12 @@ namespace Chapchu.EditorTools
                 ("nameText", nameText), ("descriptionText", description), ("frameRenderer", frame), ("artRenderer", art),
                 ("glow", glow != null ? glow.gameObject : null), ("selectRing", ring.gameObject), ("shade", shade.gameObject),
                 ("auraRenderer", aura), ("sparks", sparks));
-            var serialized = new SerializedObject(view);
-            serialized.FindProperty("numberColor").colorValue = number;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            if (viewCreated)
+            {
+                var serialized = new SerializedObject(view);
+                serialized.FindProperty("numberColor").colorValue = number;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
             SetHandLayer(root);
         }
 
@@ -734,7 +739,10 @@ namespace Chapchu.EditorTools
         // 이름 — 머리 띠 안, 흰 굵은 글자 + 종류 색 짙은 그림자 한 겹 (시안: 파랑 · 초록 · 주황 위에서도 읽히게). 넘치면 줄이고 말줄임.
         private static TMP_Text EnsureNameText(Transform front, CardType type)
         {
-            TMP_Text text = EnsureText("Name", front, true, BoxSize(NameBox), BoxCenter(NameBox, -FaceGap * 2f));
+            TMP_Text text = EnsureText("Name", front, true, BoxSize(NameBox), BoxCenter(NameBox, -FaceGap * 2f), out bool created);
+            if (!created)
+                return text;
+
             text.fontSharedMaterial = NameMaterial(type);
             text.color = Color.white;
             text.alignment = TextAlignmentOptions.Left;
@@ -750,7 +758,10 @@ namespace Chapchu.EditorTools
         // 설명 — 점선 아래 칸 가운데, 잉크 글자 (숫자 색 · 줄 고르기는 CardView). 넘치면 줄이고 말줄임.
         private static TMP_Text EnsureDescriptionText(Transform front)
         {
-            TMP_Text text = EnsureText("Description", front, false, BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -FaceGap * 2f));
+            TMP_Text text = EnsureText("Description", front, false, BoxSize(DescriptionBox), BoxCenter(DescriptionBox, -FaceGap * 2f), out bool created);
+            if (!created)
+                return text;
+
             text.color = CardInk;
             text.alignment = TextAlignmentOptions.Center;
             text.textWrappingMode = TextWrappingModes.Normal;
@@ -764,18 +775,17 @@ namespace Chapchu.EditorTools
             return text;
         }
 
-        private static TMP_Text EnsureText(string name, Transform parent, bool bold, Vector2 size, Vector3 localPosition)
+        // 이름의 글자 자식 — 없으면 만들고(글꼴은 NewText3D 가 넣는다), 있으면 자리 · 크기 · 그리는 순서만 맞춘다. created 는 새로 만들었는지.
+        private static TMP_Text EnsureText(string name, Transform parent, bool bold, Vector2 size, Vector3 localPosition, out bool created)
         {
             Transform existing = parent.Find(name);
+            created = existing == null;
             TMP_Text text = existing != null ? existing.GetComponent<TMP_Text>()
                 : NewText3D(name, parent, name, NameFontPx, Color.white, bold, TextAlignmentOptions.Center, size, localPosition);
             var rect = (RectTransform)text.transform;
             rect.sizeDelta = size;
             rect.localPosition = localPosition;
             rect.localRotation = Quaternion.identity;
-            TMP_FontAsset font = bold ? GameScreenBuilder.BoldFont : GameScreenBuilder.RegularFont;
-            if (font != null)
-                text.font = font;
             text.GetComponent<MeshRenderer>().sortingOrder = (int)CardPart.Text;
             return text;
         }
