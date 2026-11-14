@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-11-14 · 게임 화면에 봇 좌석 (`feature/bot-seats`)
+
+### 한 것
+- 봇이 든 판에서 상대 좌석 · 턴 순서 띠 · 기록에 봇이 빠지던 것을 고쳤다 (11-06 「다음 할 일」 의 첫 줄). 화면이 `PhotonNetwork.PlayerList`(사람)만 보고 있었다.
+- `PlayerLook.OrderedPlayers` → **`OrderedActors`** (actorNumber 목록 — 나 · 사람 번호순 · 봇 번호순, `18-bot` 8-3). `NameOf(int)` 는 봇이면 「봇 N」. 색(`ColorOf` · `InkOf`)도 이 순서로 정해진다.
+- `OpponentSeatsPresenter` — 상대 = `OrderedActors` 에서 나를 뺀 것. 봇 좌석 이름표는 「봇 N (봇)」 (`18-bot` 8-2). 늦게 열린 화면의 HP · 손패 장수 · 찹츄 · 함정 수는 `BotRoster.TryGetPublic` (사람 = Player 속성, 봇 = 방 속성).
+- `TurnStripPresenter` 칩 · 찹츄 스냅샷, `HistoryPresenter` 의 HP 변화 기준도 같은 목록 · 같은 읽기.
+- 「(봇)」 은 좌석 이름표에만 붙는다. 턴 띠 · 기록 · 대상 안내는 「봇 N」 그대로.
+
+### 확인
+- `solo 30` **통과** — 혼자 하기 → 봇 3 → 한 판 끝(처치 승리) → 방 복귀, 콘솔 에러 0. 스크린샷 2장으로 좌석 3개(「봇 1 (봇)」 ~ 「봇 3 (봇)」 · 좌석 색) · 턴 띠 4칩 · 봇 턴 노란 띠 · 봇 HP 20 · 손패 장수 · 기록 칩의 봇 이름을 봤다.
+- **확인 못 한 것**: 사람 2명 이상 + 봇(클론) — 방장이 아닌 화면이 방 속성 사본으로 봇을 읽는 길 · 사람 1 + 봇 1 · 2 의 좌석 배치 · 게임 중 사람이 나간 뒤의 봇 좌석.
+
+### 다음 할 일
+- [ ] 결과 화면 — `VictoryOverlayView` 를 부르는 곳이 없다. 봇이 이기면 승자 「봇 N」 (`18-bot` 8-2 · `10-ui` 결과 화면)
+- [ ] 좌석 캐릭터 그림 (지금은 사람 · 봇 모두 빈 실루엣)
+
+---
+
 ## 2026-11-13 · 121 개판 오분전 연출 — 시작 제목 · 자명종 · 판정 팻말 (`feature/game-screen`)
 
 ### 한 것
@@ -1400,7 +1419,7 @@
 - **확인 못 한 것**: 거절 3회 상한 — 봇이 요청 전에 걸러 거절을 일부러 만들 수 없어 시험하지 못했다. 봇이 든 방에 사람 2명 이상(클론)으로는 돌려 보지 않았다.
 
 ### 다음 할 일 (게임 화면 · 방 화면 — UI)
-- [ ] **봇 좌석이 화면에 안 나온다** — `OpponentSeatsPresenter` 가 `PhotonNetwork.PlayerList` 만 본다. 상대 = 사람(번호순) + `BotRoster.Actors`, 닉네임 `BotRoster.NicknameOf` + 「(봇)」, 늦게 열린 화면의 값은 `BotRoster.TryGetPublic`
+- [x] **봇 좌석이 화면에 안 나온다** (2026-11-14 `feature/bot-seats`) — `OpponentSeatsPresenter` 가 `PhotonNetwork.PlayerList` 만 본다. 상대 = 사람(번호순) + `BotRoster.Actors`, 닉네임 `BotRoster.NicknameOf` + 「(봇)」, 늦게 열린 화면의 값은 `BotRoster.TryGetPublic`
 - [ ] 방 화면: 빈 칸 「봇 추가」 · 봇 칸 「제거」(방장 · 시작 전) → `NetworkManager.AddBot` · `RemoveBot`, `RoomEvents.OnBotsChanged` 로 칸 · 로그 「봇 N 추가 · 제거」, 인원 표시에 봇 포함 (`BotRoster.MemberCount`)
 - [ ] 로비 「혼자 하기」 버튼 → `NetworkManager.CreateSoloRoom` (14-lobby-ui 5절)
 - [ ] `MyPanelPresenter.ChapchuHandCount` → `GameServer.ChapchuHandCount`
