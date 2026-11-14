@@ -456,7 +456,7 @@ namespace Chapchu.EditorTools
                 iconSize.preferredWidth = 24f;
                 iconSize.preferredHeight = 28f;
 
-                RectTransform miniCard = BuildMiniCard(chip, Act);
+                RectTransform miniCard = BuildMiniCard(chip, Act, true);
                 miniCard.gameObject.SetActive(false);
 
                 Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
@@ -480,17 +480,23 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 종류 색 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38)
-        private static RectTransform BuildMiniCard(Transform parent, Color kind)
+        // 종류 색 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38).
+        // oneShape — 테 · 면을 UIShape 한 장으로: 흐려지는 칩 안에서 테가 면 너머로 비치지 않게. CardOwnerTag 는 Border Image 에 종류 색을 넣으므로 두 장 그대로
+        private static RectTransform BuildMiniCard(Transform parent, Color kind, bool oneShape = false)
         {
             RectTransform root = NewRect("MiniCard", parent);
             LayoutElement size = root.gameObject.AddComponent<LayoutElement>();
             size.preferredWidth = 28f;
             size.preferredHeight = 38f;
-            Image border = RoundImage("Border", root, kind, 6f);
-            Stretch(border.rectTransform);
-            Image face = RoundImage("Face", root, White, 3f);
-            Stretch(face.rectTransform, 3f, 3f, 3f, 3f);
+            if (oneShape)
+                ShapeBox(root, kind, 3f, 6f, White);
+            else
+            {
+                Image border = RoundImage("Border", root, kind, 6f);
+                Stretch(border.rectTransform);
+                Image face = RoundImage("Face", root, White, 3f);
+                Stretch(face.rectTransform, 3f, 3f, 3f, 3f);
+            }
             Image band = NewImage("Band", root, kind);
             band.rectTransform.anchorMin = new Vector2(0f, 1f);
             band.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -527,8 +533,7 @@ namespace Chapchu.EditorTools
             nick.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             TMP_Text nickname = NewText("NicknameText", nick, "두부", 38f, Ink, true);
             nickname.overflowMode = TextOverflowModes.Ellipsis;
-            LayoutElement nicknameLayout = nickname.gameObject.AddComponent<LayoutElement>(); // 폭 = 글 너비, 최대 180 (MyPanelView.SetNickname)
-            nicknameLayout.preferredWidth = nickname.GetPreferredValues("두부").x;
+            LayoutElement nicknameLayout = nickname.gameObject.AddComponent<LayoutElement>(); // 폭 = 글 너비, 최대 180 — 아래 view.SetNickname 이 넣는다
             NewText("MeText", nick, "(나)", 28f, Ink, false);
             Image crown = Icon("Crown", frame.Head, Hud("icon_crown"), 40f, White);
             LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
@@ -554,6 +559,7 @@ namespace Chapchu.EditorTools
             Wire(view,
                 ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("nicknameLayout", nicknameLayout), ("crown", crown.gameObject), ("statusText", status),
                 ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject));
+            view.SetNickname("두부"); // 처음 모습도 실행 때와 같은 폭 규칙
             frame.Root.gameObject.AddComponent<MyPanelPresenter>();
             BuildMyPick(view, spot, character.rectTransform);
 
