@@ -2301,6 +2301,29 @@ public static class MultiTest
                         events.AddRange(driver.Tick());
                     Check(events.OfType<CardPlayed>().Any(e => e.CardId == 119 && e.Targets.SequenceEqual(new[] { t.O2 })), "봇 — 119 대상은 손패 × 3 + (HP ≤ 80 이면 40) 가 가장 큰 상대");
                 }
+
+                // 자동 대상이 무작위로 갈리는 때 (7-2) — 118 무야호에서 상대끼리 손패 최다 동률이면 대상을 비워 내고, 로그에 「중 무작위」
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 0);
+                    t.Give(t.Turn, Real(118));
+                    for (int i = 0; i < 4; i++)
+                        t.Give(t.Turn, Real(107));
+                    t.SetHandSize(t.O1, 10);
+                    t.SetHandSize(t.O2, 10);
+                    t.State(t.O1).IsChapchu = true;
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now, _ => BotLevel.Hard);
+                    var events = new List<GameEvent>();
+                    var logs = new List<string>();
+                    for (now = 0; now < 7; now += 0.1)
+                    {
+                        events.AddRange(driver.Tick());
+                        logs.AddRange(driver.TakeLogs());
+                    }
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 118) && !events.OfType<RequestRejected>().Any() && logs.Any(l => l.Contains("중 무작위")),
+                        "봇 — 118 손패 최다가 동률이면 동률인 사람들의 평균 점수로 내고 대상은 방장이 고른다 (" + (logs.LastOrDefault(l => l.Contains("7-1")) ?? "로그 없음") + ")");
+                }
             }
         }
 

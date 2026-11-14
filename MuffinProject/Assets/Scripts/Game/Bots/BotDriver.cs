@@ -328,7 +328,7 @@ namespace Chapchu.Game.Bots
                 int[][] options = ReceiverOptions(view, card).ToArray();
                 if (card.Target == TargetType.MostHand && options.Length > 1)
                 {
-                    // 118 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 118). 동률인 사람마다 점수를 내 평균한 수 하나
+                    // 118 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 118). 동률인 사람마다 점수를 내 평균한 수 하나 (18-bot.md 7-2)
                     var notes = new List<string>();
                     double sum = 0;
                     bool usable = true;
