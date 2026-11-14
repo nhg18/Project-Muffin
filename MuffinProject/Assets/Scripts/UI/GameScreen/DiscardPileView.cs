@@ -57,9 +57,9 @@ namespace Chapchu.UI.GameScreen
             if (top != null && count > 0)
             {
                 _top = Instantiate(PrefabOf(top.type), topAnchor);
+                _top.SetGradeVisible(false); // 등급 연출은 손패 · 가운데 연출 · 크게 보기에서만 (10-ui.md 2-1 「카드 등급 연출」)
                 _top.Setup(NoInstanceId, top);
                 _top.SetRaycastBlocking(false);
-                _top.SetGradeVisible(false); // 등급 연출은 손패 · 가운데 연출 · 크게 보기에서만 (10-ui.md 2-1 「카드 등급 연출」)
                 foreach (Transform child in _top.GetComponentsInChildren<Transform>(true))
                     child.gameObject.layer = gameObject.layer;
             }
