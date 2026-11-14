@@ -49959,7 +49959,7 @@ MonoBehaviour:
   - {fileID: 1034490033}
   - {fileID: 808988131}
   - {fileID: 101715801}
-  turnSeconds: 30
+  turnSeconds: 15
 --- !u!114 &1842077303
 MonoBehaviour:
   m_ObjectHideFlags: 0

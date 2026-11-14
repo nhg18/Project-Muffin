@@ -7,7 +7,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (03-turn.md 2절).
-        private const double TurnTimeLimit = 30;
+        private const double TurnTimeLimit = 15;
         internal const double DeclareWaitSeconds = 5; // 뽑아서 손패가 정확히 10장이 된 뒤 선언을 기다리는 시간 (03-turn.md 2 · 4절)
 
         private double _turnDeadline;

@@ -14,8 +14,8 @@ namespace Chapchu.UI.GameScreen
     {
         [Tooltip("스톱워치 전부 — 내 것 + 상대 좌석 3개. 값은 모두에게 같이 넣는다.")]
         [SerializeField] private TurnTimerView[] timers;
-        [Tooltip("턴 제한 시간(초) — 링의 전체 길이. 03-turn.md 30초, GameServer 와 같게.")]
-        [SerializeField] private float turnSeconds = 30f;
+        [Tooltip("턴 제한 시간(초) — 링의 전체 길이. 03-turn.md 15초, GameServer 와 같게.")]
+        [SerializeField] private float turnSeconds = 15f;
 
         private double _turnDeadline = -1; // 서버 시각(PhotonNetwork.Time, 초). 음수면 아직 턴이 없다
 
