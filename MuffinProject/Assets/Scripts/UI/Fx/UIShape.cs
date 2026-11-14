@@ -110,14 +110,30 @@ namespace Chapchu.UI.Fx
             {
                 int next = (i + 1) % _b.Count;
                 float length = MidLength(i);
-                bool on = (along + length / 2f) % period < dash;
+                float start = along;
                 along += length;
-                if (!on)
+                if (length <= 0f)
                     continue;
-                Quad(vh, _a[i], _a[next], Transparent(ink), _b[next], _b[i], ink);
-                Quad(vh, _b[i], _b[next], ink, _c[next], _c[i], ink);
-                Quad(vh, _c[i], _c[next], ink, _d[next], _d[i], Transparent(ink));
+                // 이 조각 [start, along] 에 걸친 칸 [k·period, k·period + dash] 부분만 잘라 그린다 — 칸 경계가 조각 안에 걸려도 칸 · 틈 길이가 값대로 나오게
+                for (float dashStart = Mathf.Floor(start / period) * period; dashStart < along; dashStart += period)
+                {
+                    float from = Mathf.Max(start, dashStart), to = Mathf.Min(along, dashStart + dash);
+                    if (to > from)
+                        DashPiece(vh, i, next, (from - start) / length, (to - start) / length, ink);
+                }
             }
+        }
+
+        // i 번째 조각의 t0 ~ t1 부분 칸 — 바깥 번짐 · 띠 · 안쪽 번짐
+        private void DashPiece(VertexHelper vh, int i, int next, float t0, float t1, Color32 ink)
+        {
+            Vector2 a0 = Vector2.Lerp(_a[i], _a[next], t0), a1 = Vector2.Lerp(_a[i], _a[next], t1);
+            Vector2 b0 = Vector2.Lerp(_b[i], _b[next], t0), b1 = Vector2.Lerp(_b[i], _b[next], t1);
+            Vector2 c0 = Vector2.Lerp(_c[i], _c[next], t0), c1 = Vector2.Lerp(_c[i], _c[next], t1);
+            Vector2 d0 = Vector2.Lerp(_d[i], _d[next], t0), d1 = Vector2.Lerp(_d[i], _d[next], t1);
+            Quad(vh, a0, a1, Transparent(ink), b1, b0, ink);
+            Quad(vh, b0, b1, ink, c1, c0, ink);
+            Quad(vh, c0, c1, ink, d1, d0, Transparent(ink));
         }
 
         // 바깥에서 inset 만큼 안쪽 윤곽 (음수면 바깥). 안쪽 띠끼리 꼭짓점이 맞도록 inset 과 무관하게 같은 개수 · 같은 자리 순서로 낸다.
