@@ -37,5 +37,20 @@ namespace Chapchu.Game
         internal bool HasAfterTrigger(int actor, Card trap) => IsAfterTrigger(trap.Trigger) && FindAfterRecord(actor, trap) != null;
 
         internal double DeathDeadline => _deathDeadline;
+
+        /// <summary>선언 대기 중 — 턴 주인이 뽑아서 10장이 됐고 아직 턴이 넘어가지 않았다 (03-turn.md 4절).</summary>
+        internal bool IsDeclareWait => _declareWait;
+
+        /// <summary>덱 + 버림 더미 장수 — 이보다 많이 뽑으면 빈 덱 피해 (05-deck.md 5절). 둘 다 공개 값이다.</summary>
+        internal int DrawableCount => _deck.Count + _discardPile.Count;
+
+        /// <summary>버림 더미 맨 위 카드 (공개). 비었으면 null.</summary>
+        internal Card DiscardTop => _discardPile.Count > 0 ? _discardPile[_discardPile.Count - 1] : null;
+
+        /// <summary>턴 진행 방향으로 actor 다음 차례인 사람 (스킵 표시는 보지 않는다).</summary>
+        internal int NextActorAfter(int actor) => GetNextActor(actor);
+
+        /// <summary>actor 에게 「다음 턴 스킵」 이 걸려 있다 (공개 — 03-turn.md 7절).</summary>
+        internal bool WillSkipTurn(int actor) => _players[actor].SkipNextTurn;
     }
 }
