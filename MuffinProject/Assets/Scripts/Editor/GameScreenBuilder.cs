@@ -265,7 +265,7 @@ namespace Chapchu.EditorTools
             Stretch(shadow.rectTransform, -16f, -16f + 48f, -16f, -16f - 48f);
             shadow.color = new Color(90f / 255f, 60f / 255f, 30f / 255f, 0.18f);
             shadow.raycastTarget = false;
-            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 60f);
+            shadow.Set(UIShape.ShapeKind.Ellipse, 0f, 0f, Color.clear, 120f); // CSS blur 60 (가우스, 가장자리 ±60 까지 번짐) → feather 는 선형 페이드 전체 폭이라 × 2
 
             var cushion = new GameObject("Cushion", typeof(RawImage)).GetComponent<RawImage>();
             cushion.transform.SetParent(table, false);
