@@ -94,9 +94,9 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 | 시안 | Unity |
 | --- | --- |
 | 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
-| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `RoundBox` 한 컴포넌트로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다 |
-| 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다 |
-| 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
+| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `UI/Fx/UIShape` 한 컴포넌트(면 + 테두리를 한 메시, 빌더 `ShapeBox`)로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다. 둘로 나누면 판을 흐리게 할 때(`CanvasGroup`) 테두리가 면 너머로 비친다. 빌더의 `RoundBox`(테두리 · 채움 두 오브젝트)는 옛 방식 — 그 상자를 고칠 때 `ShapeBox` 로 바꾼다. 타원 · 점선 테(`border-style: dashed`)도 `UIShape` |
+| 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다. 반투명 판은 한 장으로 — 같은 판을 두 장 겹치면 알파가 짙어진다 (85% 두 장 = 약 98%) |
+| 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. 모양을 따라 번지는 그림자(타원 판의 바닥 그림자 등)는 `UIShape` 의 번짐(`feather`). uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
 | 그라데이션 | `Common` 의 흰 → 투명 띠 스프라이트 + 색 |
 | 글자 | TMP. 글자를 이미지에 넣지 않는다 |
 
@@ -104,7 +104,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 
 * 머티리얼은 기본 UI 머티리얼 하나. 요소마다 다른 머티리얼 · 셰이더를 쓰지 않는다. 연출용은 연출 Canvas 안에서만 쓴다.
 * 스프라이트는 화면마다 아틀라스 하나, `Common` 은 공용 아틀라스 하나.
-* 겹치는 요소는 같은 아틀라스끼리, TMP 끼리 형제 순서를 묶는다. 이미지 · 글자 · 이미지가 번갈아 겹치면 그때마다 배치가 끊긴다.
+* 겹치는 요소는 같은 아틀라스끼리, TMP 끼리 형제 순서를 묶는다. 이미지 · 글자 · 이미지가 번갈아 겹치면 그때마다 배치가 끊긴다. `UIShape` 는 텍스처 없이(흰 텍스처) 그려 아틀라스 이미지와 배치가 나뉜다 — `UIShape` 끼리 묶는다.
 * 잘라내기는 `RectMask2D`. `Mask` 는 사각형이 아닌 모양으로 잘라야 할 때만 쓴다.
 * 자주 바뀌는 영역(타이머 · 손패 · 카드 연출)은 Canvas 를 따로 둔다.
 * 누를 수 없는 Graphic 은 `raycastTarget` 을 끈다.

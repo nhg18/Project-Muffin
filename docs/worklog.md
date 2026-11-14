@@ -12,7 +12,9 @@
 - 알림 칩: 씬에 숨겨 둔 칩 템플릿 → 프리팹 `Prefab/UI/GameScreen/FeedChip`. 바탕 · 테두리를 한 메시로 그리는 `UI/Fx/UIShape`(둥근 사각형 · 타원 · 점선 테 · 바깥 번짐)를 새로 — 4초 뒤 흐려질 때 잉크 테두리가 바탕 너머로 비쳐 회색으로 보이던 것.
 - 테이블 판: 방석 밑에 바닥 그림자 · 털3 두께 테 (시안 `.table` box-shadow × 2). 배경 판 이름 `CushionBoard` (3D 루트 `Table` 과 겹치면 `Build UI` 가 멈춘다).
 - 발밑 타원 = 턴 색 + 흰 테 한 메시. 대상 링 = 흰 40% + 빨간 점선 테 + 1.08 배 맥동 0.8초 (`UI/Fx/PulseScale`, 시안 ringp — 문서의 「점멸」 을 「맥동」 으로).
-- 함정 빈 칸 점선 — `TableBuilder.EnsureRoundTexture` 에 점선 값, `TrapSlotEmpty.png` 를 같은 파일에 다시 그림 (GUID 그대로).
+- 함정 빈 칸 점선 — `TableBuilder.EnsureRoundTexture` 에 점선 값. 줄 너비마다 그림 · 머티리얼 한 벌(`TrapSlotEmpty40` · `TrapSlotEmpty52` — 배율이 달라 한 장을 같이 쓰면 내 줄의 테가 두꺼워진다), 씬의 빈 칸 12개를 줄마다 다시 연결, 옛 `TrapSlotEmpty` 한 벌은 쓰는 곳이 없어 지움.
+- 상대 대상 링에 정렬을 바꾸지 않는 Canvas — 맥동이 매 프레임 배율을 바꿔 HUD 전체가 다시 배치되던 것 (`CODE_CONVENTION` 10절 「자주 바뀌는 영역은 Canvas 를 따로」).
+- `CODE_CONVENTION` 10절에 `UIShape` (상자 · 타원 · 점선 테 · 모양 따라 번지는 그림자, 반투명 판은 한 장).
 - 버그: `UIPie`(121 개판 자명종의 칸)에 `CanvasRenderer` 가 붙지 않아 아무것도 그려지지 않았다 — Graphic 을 코드로 붙이면 CanvasRenderer 가 따라오지 않는다. `[RequireComponent(typeof(CanvasRenderer))]` (`UIShape` 도).
 - 사용 기준선 꼬리표(흰 85%) · 손패 안내 판(흰 90%)이 같은 반투명 판 두 장 겹침이라 약 98% 로 짙었다 — `UIShape` 한 장으로 (씬은 그 두 판만 바꿈).
 - 문서와 시안이 다르던 값: 발밑 타원 200 × 52 → 196 × 56 (시안 `.spot` 92 × 22 + 흰 테 3, × 2 — 코드는 이미 196 × 56).
