@@ -656,8 +656,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 136936781}
-  - {fileID: 812076228}
   - {fileID: 904660184}
+  - {fileID: 812076228}
   - {fileID: 497977519}
   - {fileID: 557000768}
   - {fileID: 340901712}
@@ -12894,8 +12894,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 169550518}
-  - {fileID: 1219167379}
   - {fileID: 1898737480}
+  - {fileID: 1219167379}
   - {fileID: 361557696}
   - {fileID: 240384841}
   - {fileID: 827538092}
@@ -16698,8 +16698,8 @@ MonoBehaviour:
   pickOutline: {fileID: 1328120916}
   tapArea: {fileID: 432938071}
   pickLayers:
-  - {fileID: 901470615}
   - {fileID: 2084065825}
+  - {fileID: 901470615}
   - {fileID: 602916078}
 --- !u!114 &602916074
 MonoBehaviour:
@@ -33831,8 +33831,8 @@ RectTransform:
   - {fileID: 1645452397}
   - {fileID: 942515797}
   - {fileID: 46709830}
-  - {fileID: 901470616}
   - {fileID: 2084065822}
+  - {fileID: 901470616}
   - {fileID: 1737425669}
   - {fileID: 602916072}
   - {fileID: 922974968}
@@ -57525,8 +57525,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1761652329}
-  - {fileID: 847555571}
   - {fileID: 25614247}
+  - {fileID: 847555571}
   - {fileID: 976513952}
   - {fileID: 586993193}
   - {fileID: 575195493}

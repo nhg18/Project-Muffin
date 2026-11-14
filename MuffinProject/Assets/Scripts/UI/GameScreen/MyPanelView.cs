@@ -49,7 +49,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject pickOutline;
         [Tooltip("패널 전체를 덮는 투명 탭 영역 — 대상 선택 중에만 레이캐스트를 켠다.")]
         [SerializeField] private Image tapArea;
-        [Tooltip("고르는 동안 가림판 위로 올리는 하위 캔버스 — 뒤에서 앞 순서 (링 · 캐릭터 · 패널).")]
+        [Tooltip("고르는 동안 가림판 위로 올리는 하위 캔버스 — 뒤에서 앞 순서 (캐릭터 · 링 · 패널) — 링은 캐릭터 발 위.")]
         [SerializeField] private Canvas[] pickLayers;
 
         /// <summary>대상 선택 중 내 패널을 탭했다.</summary>

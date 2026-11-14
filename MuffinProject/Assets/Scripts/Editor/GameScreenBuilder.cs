@@ -787,7 +787,7 @@ namespace Chapchu.EditorTools
             return presenter;
         }
 
-        // 좌석 하나 — 발밑(턴 타원 · 대상 고리) → 캐릭터 자리 → 뒷면 부채꼴 → 이름표(판 328) → 말풍선. 좌석 전체를 덮는 탭 영역은 맨 앞.
+        // 좌석 하나 — 발밑 턴 타원 → 캐릭터 자리 → 대상 링(발 위) → 뒷면 부채꼴 → 이름표(판 328) → 말풍선. 좌석 전체를 덮는 탭 영역은 맨 앞.
         private static OpponentSeatView BuildOpponentSeat(RectTransform area, int slot, DeckView deck)
         {
             SeatGeo g = Seats[slot];
@@ -802,12 +802,13 @@ namespace Chapchu.EditorTools
             CenterAt(spot, g.Cx, feetY, spot.sizeDelta.x, spot.sizeDelta.y);
             spot.gameObject.SetActive(false);
 
-            RectTransform ring = BuildPickRing("PickRing", root);
-            CenterAt(ring, g.Cx, feetY, PickRingSize.x, PickRingSize.y);
-
             Image character = RoundImage("Character", root, new Color(Fur2.r, Fur2.g, Fur2.b, 0.5f), 40f);
             TopLeft(character.rectTransform, g.Cx - g.Width / 2f, g.Top, g.Width, g.Height);
             character.preserveAspect = true;
+
+            // 대상 링은 캐릭터 발 위에 (시안 .ring z 31 > .char 2) — 턴 타원은 발 밑 그대로
+            RectTransform ring = BuildPickRing("PickRing", root);
+            CenterAt(ring, g.Cx, feetY, PickRingSize.x, PickRingSize.y);
 
             // 뒷면 부채꼴 축 — 손 위치(그림 안 비율) + 6 아래, 카드 피벗(아래 바깥 0.6h)까지 16.2 더 아래 (시안 .fback transform-origin 50% 160%)
             float handX = g.Cx - g.Width / 2f + g.Width * g.HandRatio.x;
@@ -952,7 +953,8 @@ namespace Chapchu.EditorTools
             RectTransform panel = (RectTransform)view.transform;
 
             RectTransform ring = (RectTransform)spot.parent.Find("MyPickRing") ?? BuildPickRing("MyPickRing", spot.parent);
-            ring.SetSiblingIndex(spot.GetSiblingIndex() + 1);
+            int afterCharacter = character.GetSiblingIndex(); // 링은 캐릭터 바로 뒤 = 발 위 (시안 .ring z 31 > .char 2). 링이 앞에 있었으면 빼낸 만큼 당겨진다
+            ring.SetSiblingIndex(ring.GetSiblingIndex() < afterCharacter ? afterCharacter : afterCharacter + 1);
             Anchor(ring, spot.anchorMin, new Vector2(0.5f, 0.5f), spot.anchoredPosition, PickRingSize);
 
             // 패널 테 — 판 바깥 8 에 두께 5 빨강 (상대 이름판과 같다). 세로 레이아웃에서 뺀다
@@ -977,7 +979,7 @@ namespace Chapchu.EditorTools
             float characterTop = character.anchoredPosition.y + character.sizeDelta.y - panel.anchoredPosition.y - panel.sizeDelta.y; // 패널 위끝에서 캐릭터 머리까지
             Stretch(tapArea.rectTransform, -16f, -(characterTop + 16f), -16f, -16f);
 
-            Canvas[] layers = { AddPickLayer(ring.gameObject), AddPickLayer(character.gameObject), AddPickLayer(panel.gameObject) };
+            Canvas[] layers = { AddPickLayer(character.gameObject), AddPickLayer(ring.gameObject), AddPickLayer(panel.gameObject) };
             if (panel.GetComponent<GraphicRaycaster>() == null)
                 panel.gameObject.AddComponent<GraphicRaycaster>(); // 하위 캔버스의 탭은 그 캔버스의 레이캐스터가 받는다
 
