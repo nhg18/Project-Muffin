@@ -85,10 +85,10 @@ namespace Chapchu.UI.GameScreen
             log.Hide();
             if (!PhotonNetwork.InRoom) return;
 
-            // 변화량의 기준 — 지금 HP 스냅샷
-            foreach (Photon.Realtime.Player player in PhotonNetwork.PlayerList)
-                if (player.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _lastHp[player.ActorNumber] = hpValue;
+            // 변화량의 기준 — 지금 HP 스냅샷 (봇의 값은 방 속성에 있다, 18-bot.md 9절)
+            foreach (int actor in PlayerLook.OrderedActors())
+                if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
+                    _lastHp[actor] = hpValue;
 
             // 씬이 늦게 열려 첫 턴 이벤트를 놓쳤을 때 — 턴 주인이 이미 있으면 게임이 진행 중이라 그 뒤 뽑기는 기록한다
             _turnStarted = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomProps.TurnActor);

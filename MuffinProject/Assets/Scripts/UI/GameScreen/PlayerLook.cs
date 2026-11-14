@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Chapchu.Network;
 using Photon.Pun;
 using Chapchu.UI.Title;
 using Photon.Realtime;
@@ -45,17 +46,18 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 방 안 플레이어를 좌석 순서로 — 나(좌석 0) 먼저, 상대는 actorNumber 오름차순 (02-player.md 3절). 턴 순서 띠가 이 순서로 칩을 놓는다.
-        /// 방 밖이면 빈 목록.
+        /// 방 안 플레이어(봇 포함)의 actorNumber 를 좌석 순서로 — 나(좌석 0) 먼저, 상대는 actorNumber 오름차순, 봇은 사람 뒤에 봇 번호 순
+        /// (02-player.md 3절 · 18-bot.md 8-3). 상대 좌석 · 턴 순서 띠가 이 순서로 놓는다. 방 밖이면 빈 목록.
         /// </summary>
-        public static List<Player> OrderedPlayers()
+        public static List<int> OrderedActors()
         {
-            var ordered = new List<Player>();
+            var ordered = new List<int>();
             if (!PhotonNetwork.InRoom) return ordered;
 
-            Player me = PhotonNetwork.LocalPlayer;
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
             ordered.Add(me);
-            ordered.AddRange(PhotonNetwork.PlayerList.Where(player => player.ActorNumber != me.ActorNumber).OrderBy(player => player.ActorNumber));
+            ordered.AddRange(PhotonNetwork.PlayerList.Select(player => player.ActorNumber).Where(actor => actor != me).OrderBy(actor => actor));
+            ordered.AddRange(BotRoster.Actors);
             return ordered;
         }
 
@@ -65,17 +67,20 @@ namespace Chapchu.UI.GameScreen
         /// <summary>플레이어의 흰 바탕 위 글자색.</summary>
         public static Color InkOf(int actorNumber) => LookOf(actorNumber, MeInk, SeatInks);
 
-        /// <summary>actorNumber 의 표시 이름. 방에 없으면 P{actorNumber}.</summary>
+        /// <summary>actorNumber 의 표시 이름. 봇이면 「봇 N」 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
         public static string NameOf(int actorNumber)
         {
+            if (BotRoster.IsBot(actorNumber))
+                return BotRoster.NicknameOf(actorNumber);
+
             Player player = PhotonNetwork.InRoom ? PhotonNetwork.CurrentRoom.GetPlayer(actorNumber) : null;
             return player != null ? NameOf(player) : string.Format(NicknameFallbackFormat, actorNumber);
         }
 
         private static Color LookOf(int actorNumber, Color me, Color[] seats)
         {
-            List<Player> ordered = OrderedPlayers();
-            int index = ordered.FindIndex(player => player.ActorNumber == actorNumber);
+            List<int> ordered = OrderedActors();
+            int index = ordered.IndexOf(actorNumber);
             if (index == 0) return me;
             if (index < 0) return new Color32(0x6e, 0x64, 0x5c, 0xFF);
 
