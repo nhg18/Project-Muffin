@@ -2,6 +2,11 @@
 // 색 · 투명도는 파티클 정점 색(무지개 · 수명에 따라 나타났다 사라짐). 프로토타입 v2 C3D 의 PT_FS.
 Shader "Chapchu/Card Spark"
 {
+    Properties
+    {
+        _Fade ("Fade (앞면이 카메라를 보는 정도 — CardView 가 넣는다)", Range(0, 1)) = 1
+    }
+
     SubShader
     {
         Tags { "Queue"="Transparent" "RenderType"="Transparent" "IgnoreProjector"="True" "PreviewType"="Plane" }
@@ -17,6 +22,8 @@ Shader "Chapchu/Card Spark"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
+
+            float _Fade;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
@@ -36,7 +43,7 @@ Shader "Chapchu/Card Spark"
                 float ax = abs(q.x), ay = abs(q.y);
                 float cross = max(smoothstep(0.07, 0.0, ax) * smoothstep(0.5, 0.0, ay), smoothstep(0.07, 0.0, ay) * smoothstep(0.5, 0.0, ax));
                 float core = smoothstep(0.2, 0.0, length(q));
-                float a = max(cross, core) * i.color.a;
+                float a = max(cross, core) * i.color.a * _Fade;
                 clip(a - 0.01);
                 return fixed4(lerp(i.color.rgb, float3(1, 1, 1), core * 0.5), a);
             }
