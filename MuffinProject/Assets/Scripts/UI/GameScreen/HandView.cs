@@ -703,7 +703,10 @@ namespace Chapchu.UI.GameScreen
             Vector2 center = axis + (pose.Center - axis) * near;
 
             scale = pose.Scale * near;
-            localRotation = Quaternion.Euler(pose.TiltX, 0f, pose.Angle);
+            // 기울기는 부채꼴로 돌린 카드 자신의 가로축으로 — 카드마다 윗변이 원호 바깥쪽으로 멀어진다.
+            // 세계 X 축으로 기울이면 카드 면이 모두 평행해져, 원호 끝에서 이웃 카드의 높이 차 × tan(기울기)가 장 간격(CardZStep)을 넘고
+            // 오른쪽 카드 면이 왼쪽 카드 뒤로 들어가 앞면 깊이에 가려진다 (깊이를 보지 않는 그림자만 왼쪽 카드 위에 남는다).
+            localRotation = Quaternion.Euler(0f, 0f, pose.Angle) * Quaternion.Euler(pose.TiltX, 0f, 0f);
             Vector3 world = new Vector3(center.x, center.y, transform.position.z - pose.Lift) - localRotation * new Vector3(0f, CardHeight * scale / 2f, 0f);
             localPosition = transform.InverseTransformPoint(world);
         }
