@@ -100,11 +100,11 @@ namespace Chapchu.UI.Fx
             Strip(vh, _a, Transparent(fill), _b, fill);
             Fan(vh, rect.center, _b, fill);
             Color32 ink = borderColor;
-            // 둘레가 주기로 나눠 떨어지게 맞춘다 — 윤곽이 시작하는 3시 자리에서 마지막 틈이 잘리지 않게
+            // 둘레가 주기로 나눠 떨어지게 맞춘다 — 윤곽이 시작하는 3시 자리에서 마지막 틈이 잘리지 않게. 주기는 1px 이상 — Inspector 에서 아주 작은 값을 넣어도 칸 수 · 꼭짓점 수가 둘레만큼으로 묶이게
             float total = 0f;
             for (int i = 0; i < _b.Count; i++)
                 total += MidLength(i);
-            float period = total / Mathf.Max(1, Mathf.RoundToInt(total / (dash + Mathf.Max(gap, 0f))));
+            float period = total / Mathf.Max(1, Mathf.RoundToInt(total / Mathf.Max(dash + Mathf.Max(gap, 0f), 1f)));
             float along = 0f;
             for (int i = 0; i < _b.Count; i++)
             {
