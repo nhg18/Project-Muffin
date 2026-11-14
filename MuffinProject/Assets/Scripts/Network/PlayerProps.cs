@@ -10,5 +10,6 @@
         public const string TrapCount = "trapCount";
         public const string LifeState = "lifeState";
         public const string ChapChu = "chapChu";
+        public const string ActionBlock = "actionBlock"; // 행동 카드 금지 (byte = Game.ActionBlock — 107 짖기). 없으면 키를 지운다
     }
 }

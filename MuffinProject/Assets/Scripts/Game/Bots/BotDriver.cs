@@ -240,6 +240,14 @@ namespace Chapchu.Game.Bots
         // 반응할 거리를 우선순위로 하나 (7-4). 없으면 false.
         private bool TryFindReaction(int bot, double now, out Reaction reaction)
         {
+            if (_server.IsChoosing && _server.ChoiceActor == bot)
+            {
+                // 119 목표 조준의 대상 — 반응처럼 1 ~ 3초 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
+                int option = _server.BotChoiceOption(bot);
+                reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"고르기 → {(option == 0 ? "손패 전부 버리기" : "피해 받기")}", () => _server.Choose(bot, option));
+                return true;
+            }
+
             PlayerState me = _server.StateOf(bot);
             ChainEntry top = _server.ChainTop;
             bool reactionOpen = _server.IsReactionOpen(now);
@@ -348,6 +356,9 @@ namespace Chapchu.Game.Bots
             if (!skipped.Contains(6) && me.Hand.Count < DrawBelowHand)
                 return DrawChoice(bot, 6, $"손패 {me.Hand.Count}장 < {DrawBelowHand}");
 
+            if (!skipped.Contains(10) && TryCard(bot, me, opponents, BotRole.Board, -1, 10, "판 카드 조건 맞음", out found))
+                return found;
+
             if (!skipped.Contains(7) && TryCard(bot, me, opponents, BotRole.Attack, -1, 7, "공격", out found))
                 return found;
 
@@ -369,13 +380,23 @@ namespace Chapchu.Game.Bots
         // preferredTarget 이 있으면 그 사람에게 (찹츄 상대), 없으면 7-2 순서 첫 사람.
         private bool TryCard(int bot, PlayerState me, int[] opponents, BotRole role, int preferredTarget, int line, string reason, out Choice choice)
         {
-            foreach (Card card in me.Hand)
+            if (me.ActionBlocked)
+            {
+                choice = default;
+                return false; // 107 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준, 7-1 「쓸 수 있는」) → 뽑기 줄로
+            }
+
+            // 노릴 상대가 따로 있는 카드(105 — 쓰러뜨릴 수 있는 상대)를 먼저 본다. 나머지는 손패 순서 그대로 (18-bot.md 7-3)
+            foreach (Card card in me.Hand.OrderByDescending(c => c.Effects.Any(e => e.BotPlaysFirst(_server, bot, opponents))))
             {
                 if (card.Type != CardType.Action || !card.Effects.Any(e => e.BotRole == role))
                     continue;
 
-                if (!TryTargets(card, me, opponents, role, preferredTarget, out int[] targets))
+                if (!TryTargets(bot, card, me, opponents, role, preferredTarget, out int[] targets))
                     continue;
+
+                if (!card.Effects.All(e => e.BotWants(_server, bot, targets)))
+                    continue; // 이 카드의 효과가 지금은 쓸 만하지 않다 (18-bot.md 7-3 조건 — 예: 111 은 대상 HP 가 내 HP 보다 높을 때만 · 105 는 반동으로 내가 쓰러지면 안 씀)
 
                 int instanceId = card.InstanceId;
                 string to = targets.Length > 0 ? " → " + string.Join(", ", targets.Select(t => $"P{t}")) : "";
@@ -388,33 +409,61 @@ namespace Chapchu.Game.Bots
         }
 
         // 카드 대상 타입에 맞는 요청 대상. 쓸 수 없으면 false (TwoOthers 는 1단계에서 쓰지 않는다, 7-2).
-        private bool TryTargets(Card card, PlayerState me, int[] opponents, BotRole role, int preferredTarget, out int[] targets)
+        // 고르는 타입은 대상 후보 조건(11-card-list 1-2)에 맞는 사람만 — 방장 검증과 같은 기준 (7-1 「쓸 수 있는」).
+        private bool TryTargets(int bot, Card card, PlayerState me, int[] opponents, BotRole role, int preferredTarget, out int[] targets)
         {
             targets = Array.Empty<int>();
             switch (card.Target)
             {
                 case TargetType.OneOther:
-                    if (opponents.Length == 0)
+                    int[] pickable = opponents.Where(a => _server.MeetsTargetCondition(a, card.TargetCondition)).ToArray();
+                    if (pickable.Length == 0)
                         return false;
-                    targets = new[] { preferredTarget > 0 ? preferredTarget : opponents[0] };
+                    if (role == BotRole.Heal)
+                    {
+                        // 상대를 거쳐 내 HP 를 올리는 카드(111 HP 맞바꾸기) — HP 가 가장 높은 상대 (18-bot.md 7-2, 제안)
+                        targets = new[] { pickable.OrderByDescending(a => _server.StateOf(a).Hp).First() };
+                        return true;
+                    }
+                    int wish = card.Effects.Select(e => e.BotPreferredTarget(_server, bot, pickable)).Where(t => t != -1).DefaultIfEmpty(-1).First();
+                    targets = new[] { pickable.Contains(preferredTarget) ? preferredTarget : pickable.Contains(wish) ? wish : pickable[0] };
+                    return true;
+
+                case TargetType.OneAny:
+                    // 나를 포함한 1명 — 회복(7-1 #4 는 내 HP 기준)은 나에게. 그 밖의 쓰임은 7-2 순서의 상대에게
+                    if (role == BotRole.Heal)
+                    {
+                        if (!_server.MeetsTargetCondition(bot, card.TargetCondition))
+                            return false;
+                        targets = new[] { bot };
+                        return true;
+                    }
+                    int[] others = opponents.Where(a => _server.MeetsTargetCondition(a, card.TargetCondition)).ToArray();
+                    if (others.Length == 0)
+                        return false;
+                    targets = new[] { others.Contains(preferredTarget) ? preferredTarget : others[0] };
                     return true;
 
                 case TargetType.AllOthers:
                     return opponents.Length > 0;
 
                 case TargetType.Everyone:
-                    // 나도 맞는다 — 공격으로는 내 HP 가 상대 전원보다 높을 때만 (7-3 ㄱ A14)
+                    // 나도 맞는다 — 공격으로는 내 HP 가 상대 전원보다 높을 때만 (7-3 ㄱ A14). 판 카드는 효과의 조건(BotWants)으로
                     return role != BotRole.Attack || opponents.All(a => _server.StateOf(a).Hp < me.Hp);
 
                 case TargetType.Self:
                 case TargetType.None:
-                    return role == BotRole.Heal;
+                    return role == BotRole.Heal || role == BotRole.Board;
 
                 case TargetType.ChapchuPlayers: // 나도 찹츄면 나도 맞는다 — 찹츄 상대가 있고 나는 아닐 때만 (7-3 ㄱ A02)
                     return !me.IsChapchu && opponents.Any(a => _server.StateOf(a).IsChapchu);
 
                 case TargetType.ChapchuOthers:
                     return opponents.Any(a => _server.StateOf(a).IsChapchu);
+
+                case TargetType.MostHand:
+                    // 손패 최다 1명이 대상 — 상대 중 누가 나(낸 뒤 장수)보다 많을 때만. 동률이면 내가 대상이 될 수 있어 쓰지 않는다 (18-bot.md 7-3, 제안)
+                    return opponents.Any(a => _server.StateOf(a).Hand.Count > me.Hand.Count - 1);
 
                 case TargetType.MoreHandThanMe:
                     return opponents.Any(a => _server.StateOf(a).Hand.Count > me.Hand.Count - 1);

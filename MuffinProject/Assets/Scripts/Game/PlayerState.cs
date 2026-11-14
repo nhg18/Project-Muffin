@@ -37,6 +37,12 @@ namespace Chapchu.Game
         // 다음 턴 스킵 (03-turn.md 7절 — 겹쳐도 1회).
         public bool SkipNextTurn;
 
+        // 다음 실제 턴에 행동 카드 금지 (107 짖기 — 겹쳐도 1회). 스킵된 턴은 세지 않는다 — 실제로 오는 다음 턴에 ActionBlocked 로 바뀐다 (03-turn.md 7절).
+        public bool BlockActionNextTurn;
+
+        // 이번 턴에 행동 카드를 쓸 수 없다 (107 짖기) — 공개. 그 턴이 끝나면 해제. 뽑기 · 함정 설치 · 카운터는 된다.
+        public bool ActionBlocked;
+
         // 다음 실제 턴 시작에 더 뽑을 장수 (T15, 03-turn.md 7절).
         public int TurnStartDraws;
 

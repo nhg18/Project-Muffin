@@ -6,6 +6,7 @@ using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Lobby;
 using Chapchu.UI.Popups;
+using Chapchu.UI.Title;
 using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
@@ -315,8 +316,12 @@ namespace Chapchu.UI.RoomScreen
         // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절)
         private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers;
 
-        // 닉네임이 비었으면 「플레이어」 (16-room-ui-full 9절)
-        private static string DisplayName(string nickname) => string.IsNullOrWhiteSpace(nickname) ? FallbackNickname : nickname;
+        // 서식 태그 · 제어 문자를 거른 닉네임(NicknameValidator.ForDisplay), 비면 「플레이어」 (16-room-ui-full 9절)
+        private static string DisplayName(string nickname)
+        {
+            string name = NicknameValidator.ForDisplay(nickname);
+            return name.Length == 0 ? FallbackNickname : name;
+        }
 
         #endregion
 

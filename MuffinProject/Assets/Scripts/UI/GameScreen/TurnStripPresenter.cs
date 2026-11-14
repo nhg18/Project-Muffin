@@ -19,6 +19,7 @@ namespace Chapchu.UI.GameScreen
         private TurnStripView _view;
         private readonly List<int> _actors = new List<int>(); // 칩 순서 = 좌석 순서
         private int _turnActor = -1;
+        private readonly HashSet<int> _chapchuActors = new HashSet<int>(); // 칩을 다시 만들 때 분홍 테를 되살린다
 
         private void Awake()
         {
@@ -40,9 +41,14 @@ namespace Chapchu.UI.GameScreen
             RebuildChips();
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
 
+            foreach (Player player in PhotonNetwork.PlayerList)
+                if (player.CustomProperties.TryGetValue(PlayerProps.ChapChu, out object chapchu) && chapchu is bool chapchuValue && chapchuValue)
+                    ShowChapchu(player.ActorNumber, true);
+
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
             if (room.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 ShowTurn(turnActorValue);
+            ShowDirection(room.TryGetValue(RoomProps.TurnDirection, out object reversed) && reversed is bool reversedValue && reversedValue);
         }
 
         /// <summary>턴이 바뀌었다 (OnTurnStarted).</summary>
@@ -53,6 +59,20 @@ namespace Chapchu.UI.GameScreen
             bool isMe = PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == actorNumber;
             _view.SetCurrent(_actors.IndexOf(actorNumber));
             _view.SetNow(isMe ? TurnNowState.Me : TurnNowState.Other, PlayerLook.NameOf(actorNumber));
+        }
+
+        /// <summary>턴 진행 방향이 바뀌었다 (OnTurnDirectionChanged) — 역방향이면 화살표를 뒤집는다.</summary>
+        public void ShowDirection(bool reversed) => _view.SetReversed(reversed);
+
+        /// <summary>찹츄 상태가 바뀌었다 (OnChapchuChanged) — 그 사람 칩에 분홍 테.</summary>
+        public void ShowChapchu(int actorNumber, bool isChapchu)
+        {
+            if (isChapchu)
+                _chapchuActors.Add(actorNumber);
+            else
+                _chapchuActors.Remove(actorNumber);
+
+            _view.SetChapchu(_actors.IndexOf(actorNumber), isChapchu);
         }
 
         private void RebuildChips()
@@ -67,6 +87,8 @@ namespace Chapchu.UI.GameScreen
 
             _view.SetPlayers(players);
             _view.SetCurrent(_actors.IndexOf(_turnActor));
+            for (int i = 0; i < _actors.Count; i++)
+                _view.SetChapchu(i, _chapchuActors.Contains(_actors[i]));
         }
 
         private void HandlePlayerLeft(Player player) => RebuildChips();

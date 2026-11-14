@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
+  m_Name: Card_105
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
+  id: 105
+  cardName: "\uB4DC\uB86D\uD0A5"
+  cardImage: {fileID: 0}
+  type: 0
+  targetType: 1
+  targetCondition: 0
+  grade: 2
+  description: "\uB300\uC0C1\uC5D0\uAC8C 49 \uD53C\uD574\uB97C \uC785\uD78C\uB2E4.
+    \uBABB \uC4F0\uB7EC\uB728\uB9AC\uBA74 \uB098\uB3C4 49 \uD53C\uD574\uB97C \uBC1B\uB294\uB2E4"
+  reactsTo: 
+  trapTrigger: 0
+  triggerValue: 0
+  reactCondition: 0
+  revealSeconds: 1
+  resolveSeconds: 1.28
+  resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
+  resolveFlashSeconds: 0
+  effects:
+  - rid: 4532117965319438431
+  - rid: 4532117965319438432
+  references:
+    version: 2
+    RefIds:
+    - rid: 4532117965319438431
+      type: {class: DamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        subject: 0
+        amount: 49
+    - rid: 4532117965319438432
+      type: {class: RecoilDamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        amount: 49

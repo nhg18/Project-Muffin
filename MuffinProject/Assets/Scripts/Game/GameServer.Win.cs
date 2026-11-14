@@ -20,9 +20,11 @@ namespace Chapchu.Game
             if (_gameOver)
                 return Reject(requester, RejectCode.GameOver);
 
-            PlayerState player = _players[requester];
-            if (!IsInGame(requester) || player.Life != LifeState.Alive)
+            // 참가자가 아닌 요청(시작 전 · 방장이 바뀐 뒤)도 여기서 거절한다 — 원본을 꺼내기 전에
+            if (!InGame(requester) || _players[requester].Life != LifeState.Alive)
                 return Reject(requester, RejectCode.NotAlive);
+
+            PlayerState player = _players[requester];
 
             if (player.IsChapchu)
                 return Reject(requester, RejectCode.AlreadyChapchu);

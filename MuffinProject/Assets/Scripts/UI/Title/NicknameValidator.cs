@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -37,6 +39,37 @@ namespace Chapchu.UI.Title
         // 추천 닉네임 = 꾸밈말 + 이름 + 두 자리 — 최대 8자라 4-2 를 늘 통과한다 (통합 화면 UI v2 타이틀)
         private static readonly string[] SuggestAdjectives = { "용감한", "배고픈", "졸린", "신난", "수상한", "날쌘", "씩씩한", "엉뚱한", "느긋한", "말랑한" };
         private static readonly string[] SuggestNouns = { "치와와", "멍멍이", "찹츄", "강아지", "뼈다귀" };
+
+        /// <summary>
+        /// 남의 닉네임을 화면에 쓰기 전에 거른다 — 검사는 입력한 클라이언트만 하므로 고친 클라이언트가 보낸 이름도 들어온다.
+        /// TMP 서식 태그(&lt; &gt;) · 보이지 않는 제어 · 서식 문자(줄바꿈 · 폭 0 · 방향 바꿈)를 지우고 앞뒤 공백을 자른 뒤 MaxLength 글자까지만 남긴다.
+        /// 검사를 통과한 닉네임은 그대로다. 다 지워지면 빈 문자열 — 부른 쪽이 대체 이름을 쓴다.
+        /// </summary>
+        public static string ForDisplay(string nickname)
+        {
+            if (string.IsNullOrEmpty(nickname))
+                return string.Empty;
+
+            var sb = new StringBuilder(nickname.Length);
+            foreach (char c in nickname)
+            {
+                if (c == '<' || c == '>')
+                    continue;
+                UnicodeCategory category = char.GetUnicodeCategory(c);
+                if (category == UnicodeCategory.Control || category == UnicodeCategory.Format
+                    || category == UnicodeCategory.LineSeparator || category == UnicodeCategory.ParagraphSeparator)
+                    continue;
+                sb.Append(c);
+            }
+
+            string cleaned = sb.ToString().Trim();
+            if (cleaned.Length <= MaxLength)
+                return cleaned;
+
+            // 서로게이트 쌍(이모지 등)을 반으로 자르지 않는다
+            int cut = char.IsHighSurrogate(cleaned[MaxLength - 1]) ? MaxLength - 1 : MaxLength;
+            return cleaned.Substring(0, cut);
+        }
 
         /// <summary>앞뒤 공백을 자른 닉네임을 검사한다. 순서: 비었음 → 짧음 → 김 → 허용 안 된 문자.</summary>
         public static NicknameValidationResult Validate(string nickname)

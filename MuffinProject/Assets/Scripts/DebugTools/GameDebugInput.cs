@@ -64,8 +64,19 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCardsMoved += HandleHandCardsMoved;
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken += HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
+            GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnGameRestarted += HandleGameRestarted;
+            GameEvents.OnFalloutChanged += HandleFalloutChanged;
+            GameEvents.OnGaepanChanged += HandleGaepanChanged;
+            GameEvents.OnChoiceStarted += HandleChoiceStarted;
+            GameEvents.OnChoiceMade += HandleChoiceMade;
+            GameEvents.OnGaepanJudged += HandleGaepanJudged;
+            GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnMySync += HandleMySync;
             GameEvents.OnGameEnded += HandleGameEnded;
@@ -99,8 +110,19 @@ namespace Chapchu.DebugTools
             GameEvents.OnHandCardsMoved -= HandleHandCardsMoved;
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
+            GameEvents.OnDiscardTaken -= HandleDiscardTaken;
+            GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
+            GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnGameRestarted -= HandleGameRestarted;
+            GameEvents.OnFalloutChanged -= HandleFalloutChanged;
+            GameEvents.OnGaepanChanged -= HandleGaepanChanged;
+            GameEvents.OnChoiceStarted -= HandleChoiceStarted;
+            GameEvents.OnChoiceMade -= HandleChoiceMade;
+            GameEvents.OnGaepanJudged -= HandleGaepanJudged;
+            GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnMySync -= HandleMySync;
             GameEvents.OnGameEnded -= HandleGameEnded;
@@ -237,20 +259,20 @@ namespace Chapchu.DebugTools
         private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
             => Log($"P{actorNumber} 사망 대기 — {startsAt - PhotonNetwork.Time:0.0}초 뒤부터 {deadline - PhotonNetwork.Time:0.0}초 뒤까지");
 
-        private void HandlePlayerDied(int actorNumber, int discardCount)
+        private void HandlePlayerDied(int actorNumber, int[] cardIds, int discardCount)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 사망 · 버림 {discardCount}");
+            Log($"P{actorNumber} 사망 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
-        private void HandlePlayerLeftGame(int actorNumber, int discardCount)
+        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount}");
+            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
         // 방장이 내 손패 · 함정을 0 으로 만들었다
@@ -337,6 +359,20 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 카드 {cardId} 손패로 반환");
         }
 
+        private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
+        {
+            _handCounts[actorNumber] = handCount;
+            if (actorNumber == Me)
+            {
+                _myHandInstances.Add(cardInstanceId);
+                _myHand.Add(cardId);
+            }
+            Log($"P{actorNumber} 버림 더미에서 카드 {cardId} 가져옴 — 버림 {discardCount}장");
+        }
+
+        private void HandleTurnDirectionChanged(bool reversed, int extraTurn)
+            => Log($"턴 방향 {(reversed ? "역방향" : "정방향")}{(extraTurn >= 0 ? $" — P{extraTurn} 다시 턴" : "")}");
+
         private void HandleTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
         {
             if (owner == Me)
@@ -345,6 +381,24 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleTurnSkipped(int actorNumber) => Log($"P{actorNumber} 턴 스킵");
+
+        private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Log($"P{actorNumber} 행동 카드 금지 — {state}");
+
+        private void HandleGameRestarted(int user, int count, int[] order)
+        {
+            ClearMyCards(); // 새 판 — 손패 · 함정은 처음부터 다시 나눈다 (11-card-list 112)
+            Log($"대소동 — P{user} · 새 판 {count}번째 · 순서 {string.Join(" → ", System.Linq.Enumerable.Select(order, a => $"P{a}"))}");
+        }
+
+        private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => Log($"고르기 시작 — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
+        private void HandleChoiceMade(int actor, int option, bool timedOut) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
+        private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명 · 값 {string.Join(" ", actors.Select((a, i) => $"P{a}={values[i]}"))}");
+
+        private void HandleWaitChanged(int[] casters) => Log($"기다려 — {(casters.Length > 0 ? string.Join(" ", System.Linq.Enumerable.Select(casters, a => $"P{a}")) : "끝")}");
+
+        private void HandleChapchuWinHeld(int actorNumber) => Log($"P{actorNumber} 찹츄 판정 미룸 (기다려)");
 
         private void HandleDeathAvoided(int actorNumber, int hp) => Log($"P{actorNumber} 생존 — ♥{hp}");
 

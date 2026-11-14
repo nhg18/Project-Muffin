@@ -58,7 +58,7 @@ namespace Chapchu.Game
             if (_gameOver)
                 return Reject(requester, RejectCode.GameOver);
 
-            if (!IsInGame(requester))
+            if (!InGame(requester)) // 참가자가 아닌 요청(시작 전 · 방장이 바뀐 뒤)도 — 원본을 꺼내기 전에
                 return Reject(requester, RejectCode.NotAlive);
 
             PlayerState player = _players[requester];

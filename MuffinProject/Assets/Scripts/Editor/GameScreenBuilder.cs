@@ -22,7 +22,7 @@ namespace Chapchu.EditorTools
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
     /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다. 시안 글꼴(Jua · 고운돋움)은 아직 안 쓴다 — 굵은 자리 Bold · 본문 Regular (2026-11-07 결정).
     /// </summary>
-    public static class GameScreenBuilder
+    public static partial class GameScreenBuilder
     {
         private const string CanvasName = "GameCanvas";
         private const string BackgroundCanvasName = "BackgroundCanvas";
@@ -60,7 +60,15 @@ namespace Chapchu.EditorTools
         private static readonly Color Fur3 = Hex(0xbea983);
         private static readonly Color HpBg = Hex(0xffe6e3);
         private static readonly Color Line = Hex(0xe7ded2);
+        // 3 단계에서 크게 둔 카드의 아래 가장자리 y (캔버스, 위에서) — 가운데 524 + 336 × 1.85 ÷ 2 (TableBuilder 의 ShowSpot 과 같은 값)
+        private const float ShownCardBottom = 835f;
         private static readonly Color Dim = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.42f);
+        // 사용 기준선 (시안 #playline × 2) — 잉크 32% · 두께 6, 화면 아래 끝에서 카드 높이 336 + 48, 좌우 (가장자리 16 + 40) × 2
+        private static readonly Color PlayLineColor = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.32f);
+        private static readonly Color PlayLineLabelFill = new Color(1f, 1f, 1f, 0.85f);
+        private static readonly Color HandRevealHintFill = new Color(1f, 1f, 1f, 0.9f);
+        private const float HandRevealBarWidth = 440f;
+        private const float PlayLineBottom = 384f, PlayLineThickness = 6f, PlayLineInset = 112f;
         private static readonly Color ChapchuOffLabel = Hex(0xc4bab0);
         private static readonly Color ChapchuOffShadow = Hex(0xddd3c8);
         private static readonly Color ChapchuOverInk = Hex(0xc81e2b);
@@ -101,6 +109,7 @@ namespace Chapchu.EditorTools
                 return;
             DeckView deck = TableBuilder.BuildDeck(table);
             DeckData gameDeck = FindGameDeck();
+            DiscardPileView discardPile = TableBuilder.BuildDiscardPile(table, gameDeck);
 
             GameScreenView screen = BuildCanvas(out RectTransform canvasRect);
             BuildBackgroundCanvas(camera);
@@ -116,8 +125,7 @@ namespace Chapchu.EditorTools
             FeedView feed = BuildFeed(safeArea);
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
             ChapchuButtonView chapchu = BuildChapchuButton(safeArea);
-            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu));
-            RectTransform dropZone = BuildDropZone(safeArea);
+            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu), ("server", TableBuilder.FindServer(nameof(MyPanelPresenter))));
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
             RectTransform center = NewRect("Center", canvasRect);
@@ -125,7 +133,22 @@ namespace Chapchu.EditorTools
             Image dimmer = BuildDimmer(center);
             OpponentSeatsPresenter seats = BuildOpponentSeats(center, deck);
             TargetAskView targetAsk = BuildTargetAsk(center, dimmer);
-            Wire(seats, ("targetAsk", targetAsk));
+            Wire(seats, ("targetAsk", targetAsk), ("myPanel", myPanel));
+            CardOwnerTagView ownerTag = BuildCardOwnerTag(center);
+            ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
+
+            // 판 효과 줄 — 상대 좌석보다 위 (프로토타입 v2 .gfx z 24), 손패 층 · 서랍보다 아래
+            RectTransform boardLayer = BuildBoardLayer(canvasRect);
+            BoardEffectsPresenter boardEffects = BuildBoardEffects(boardLayer);
+
+            // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
+            PlayLineView playLine = BuildPlayLine(canvasRect);
+            TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera);
+            HandRevealView handReveal = BuildHandReveal(canvasRect);
+            ScreenFlashView screenFlash = BuildScreenFlash(canvasRect);
+
+            // 121 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 시작 제목 · 판정 팻말은 화면 덮기 위 · 서랍 아래
+            GaepanPresenter gaepan = BuildGaepan(canvasRect, boardLayer, seats, (RectTransform)safeArea.Find("MyCharacter"));
 
             // 서랍 · 팝업 — 가장 위
             RectTransform sheets = NewRect("Sheets", canvasRect);
@@ -133,14 +156,19 @@ namespace Chapchu.EditorTools
             sheets.gameObject.AddComponent<SafeArea>();
             LogSheetView log = BuildLogSheet(sheets);
             BuildMenuSheet(sheets, menu);
+            BuildChoicePopup(sheets, TableBuilder.FindServer(nameof(ChoicePopupPresenter)));
 
-            HandPresenter hand = TableBuilder.BuildHand(table, deck, dropZone, seats, gameDeck);
+            // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
+            var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
+            HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, handReveal, coveredHud);
+            ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck);
+            MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
             EnsureEventSystem();
 
             Wire(screen,
                 ("roomCode", roomCode), ("turnStrip", turnStrip), ("feed", feed), ("log", log), ("myPanel", myPanel), ("chapchuButton", chapchu),
-                ("deck", deck), ("dropZone", dropZone), ("targetAsk", targetAsk), ("menu", menu));
+                ("deck", deck), ("targetAsk", targetAsk), ("menu", menu));
             WireArray(screen, "opponentSeats", seats.GetComponentsInChildren<OpponentSeatView>(true));
             screen.gameObject.AddComponent<RejectToastPresenter>();
 
@@ -154,8 +182,9 @@ namespace Chapchu.EditorTools
 
             var presenter = screen.gameObject.AddComponent<GameScreenPresenter>();
             Wire(presenter,
-                ("deck", deck.GetComponent<DeckPresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
-                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history));
+                ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
+                ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects), ("gaepan", gaepan),
+                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("cardDeck", gameDeck));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -225,6 +254,9 @@ namespace Chapchu.EditorTools
             if (cushion.texture == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] 방석 그림이 없다: {CushionTexturePath}");
             CenterAt(cushion.rectTransform, CushionCenter.x, CushionCenter.y, CushionSize.x, CushionSize.y);
+            // 덱 · 버림 더미와 같은 테이블 면 기울기로 눕힌다 (프로토타입 v2 `.plane`). 이 캔버스는 카메라에서 같은 방향으로 멀리 놓은 면이라
+            // 가운데를 축으로 같은 각도만큼 돌리면 3D 층에서 돌린 것과 똑같이 보인다 (카메라 기준 균일 확대는 원근 투영을 바꾸지 않는다).
+            cushion.rectTransform.localRotation = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
         }
 
         #endregion
@@ -288,9 +320,48 @@ namespace Chapchu.EditorTools
             var view = root.gameObject.AddComponent<TurnStripView>();
             Wire(view,
                 ("rail", rail), ("chipTemplate", chipTemplate), ("separatorTemplate", separatorTemplate),
-                ("nowChip", nowFill), ("nowText", nowText));
+                ("nowChip", nowFill), ("nowText", nowText), ("directionIcon", dir.rectTransform));
             root.gameObject.AddComponent<TurnStripPresenter>();
             return view;
+        }
+
+        /// <summary>판 효과 줄을 담는 층 — 화면 전체 · 안전 영역 (SafeArea 와 같은 자리). 가운데 묶음(좌석) 바로 뒤에 둔다.</summary>
+        public static RectTransform BuildBoardLayer(RectTransform canvasRect)
+        {
+            RectTransform layer = NewRect("BoardLayer", canvasRect);
+            Stretch(layer);
+            layer.gameObject.AddComponent<SafeArea>();
+            return layer;
+        }
+
+        // 판 효과 줄 (프로토타입 v2 .gfx · .gf, 960 폭 시안 × 2) — 턴 띠 아래(위 끝에서 112) 가운데, 알약 높이 48 · 간격 10 · 테 4 · 반지름 16.
+        // 알약 = 주황(#ff9f1a) 이름표(높이 36 · 반지름 10 · Jua 26) + 설명(25). 알약 템플릿은 비활성 — 뷰가 복제한다.
+        public static BoardEffectsPresenter BuildBoardEffects(RectTransform parent)
+        {
+            RectTransform root = NewRect("BoardEffects", parent);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(EdgeTop + 76f + 16f)), new Vector2(0f, 48f));
+            HorizontalLayout(root, new RectOffset(), 10f, TextAnchor.UpperCenter, true, true);
+            FitBoth(root.gameObject);
+
+            RectTransform pill = NewRect("Pill", root);
+            pill.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
+            RoundBox(pill, Ink, 4f, 16f, White);
+            HorizontalLayout(pill, new RectOffset(8, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
+
+            RectTransform label = NewRect("Label", pill);
+            label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+            Image labelFill = RoundImage("Fill", label, Hex(0xff9f1a), 10f);
+            Stretch(labelFill.rectTransform);
+            labelFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            HorizontalLayout(label, new RectOffset(12, 12, 0, 0), 0f, TextAnchor.MiddleCenter, true, true);
+            NewText("Text", label, "피폭", 26f, Ink, true);
+
+            NewText("Text", pill, "턴이 끝날 때마다 모두 −1", 25f, Ink, false);
+            pill.gameObject.SetActive(false);
+
+            var view = root.gameObject.AddComponent<BoardEffectsView>();
+            Wire(view, ("pillTemplate", pill));
+            return root.gameObject.AddComponent<BoardEffectsPresenter>();
         }
 
         // 플레이어 칩 템플릿 (시안 .pn2) — 루트 → Chapchu(분홍 테, 바깥 5) · Border(잉크 테) · Fill(노랑) · Dot(잉크 고리 → Fill 목걸이 색) · Name. 비활성.
@@ -453,6 +524,7 @@ namespace Chapchu.EditorTools
                 ("band", frame.BandImage), ("dot", dot), ("nicknameText", nickname), ("crown", crown.gameObject), ("statusText", status),
                 ("bone", bone), ("hpText", hp), ("handBadge", badge), ("turnSpot", spot.gameObject), ("turnTimer", timer.gameObject));
             frame.Root.gameObject.AddComponent<MyPanelPresenter>();
+            BuildMyPick(view, spot, character.rectTransform);
 
             // 발밑 타원은 내 턴에만 (MyPanelView.SetMyTurn 이 켜고 끈다). 기본 숨김
             spot.gameObject.SetActive(false);
@@ -507,7 +579,7 @@ namespace Chapchu.EditorTools
             over.gameObject.SetActive(false);
 
             RectTransform readyTag = BuildChapchuTag(content, "ReadyTag", "지금 외치기!", false);
-            RectTransform doneTag = BuildChapchuTag(content, "DoneTag", "내 턴까지 10장 지키기", true);
+            RectTransform doneTag = BuildChapchuTag(content, "DoneTag", "찹츄 완료", true);
             readyTag.gameObject.SetActive(false);
             doneTag.gameObject.SetActive(false);
 
@@ -546,13 +618,85 @@ namespace Chapchu.EditorTools
             return root;
         }
 
-        // 드롭 영역 — 손패 영역 위쪽 화면 전체 (10-ui.md 2-1 「드롭 영역」, 사용자 결정 2026-11-05). 투명 이미지는 디버그 때 색을 켜 보라고 둔다.
-        // 레이캐스트는 끈다 — 판정은 HandPresenter 가 Rect 포함으로 하므로 덱 · 좌석 탭을 가리지 않는다. 위치 · 크기는 씬에서 바꾼다.
-        private static RectTransform BuildDropZone(RectTransform parent)
+        // 사용 기준선 (시안 #playline × 2) — 화면 아래 끝에서 카드 높이 + 48 위, 좌우 112 안쪽. 끄는 동안만 보인다 (PlayLineView). 시안의 점선은 실선으로.
+        // 글자 「이 선 위에서 놓으면 사용」 은 줄 위 가운데 — 흰 85% 알약 · 26.
+        public static PlayLineView BuildPlayLine(RectTransform canvasRect)
         {
-            Image image = NewImage("DropZone", parent, Color.clear);
-            Stretch(image.rectTransform, 0f, 0f, 0f, HandAreaBottom + HandCardSize.y);
-            return image.rectTransform;
+            RectTransform root = NewRect("PlayLine", canvasRect);
+            Stretch(root);
+            root.gameObject.AddComponent<SafeArea>();
+
+            Image line = NewImage("Line", root, PlayLineColor);
+            line.rectTransform.anchorMin = new Vector2(0f, 0f);
+            line.rectTransform.anchorMax = new Vector2(1f, 0f);
+            line.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            line.rectTransform.offsetMin = new Vector2(PlayLineInset, PlayLineBottom - PlayLineThickness / 2f);
+            line.rectTransform.offsetMax = new Vector2(-PlayLineInset, PlayLineBottom + PlayLineThickness / 2f);
+
+            RectTransform label = NewRect("Label", root);
+            Anchor(label, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, PlayLineBottom + 12f), new Vector2(360f, 36f));
+            RoundBox(label, PlayLineLabelFill, 0f, 14f, PlayLineLabelFill);
+            HorizontalLayout(label, new RectOffset(18, 18, 2, 2), 0f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(label.gameObject);
+            NewText("Text", label, "이 선 위에서 놓으면 사용", 26f, Ink2, false);
+
+            var view = root.gameObject.AddComponent<PlayLineView>();
+            Wire(view, ("line", line), ("label", label.gameObject));
+            line.gameObject.SetActive(false);
+            label.gameObject.SetActive(false);
+            return view;
+        }
+
+        // HUD 위 카드 층 — TopCards 레이어만 그리는 카메라의 그림을 화면 전체에 얹는다 (TopCardLayerView). 올린 손패 · 끄는 카드 · 대상 고르는 카드가 HUD 를 덮는다.
+        public static TopCardLayerView BuildTopCardLayer(RectTransform canvasRect, Camera mainCamera)
+        {
+            var go = new GameObject("TopCards", typeof(RectTransform), typeof(RawImage));
+            go.layer = LayerMask.NameToLayer("UI");
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(canvasRect, false);
+            Stretch(rect);
+
+            var image = go.GetComponent<RawImage>();
+            image.raycastTarget = false;
+            image.enabled = false;
+
+            var view = go.AddComponent<TopCardLayerView>();
+            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)));
+            return view;
+        }
+
+        // 새 카드 보여 주기의 HUD (시안 .rvbar · .rvhint × 2) — 크게 띄운 카드 아래에 남은 시간 막대 440 × 20 과 안내 글. 카드는 앞 층(3D)이 그린다.
+        // 세로 자리는 HandRevealView 가 카드 묶음 아래 끝에 맞춘다 — 캔버스 가운데 기준. 눌리지 않는다.
+        public static HandRevealView BuildHandReveal(RectTransform canvasRect)
+        {
+            RectTransform root = NewRect("HandReveal", canvasRect);
+            Stretch(root);
+
+            RectTransform content = NewRect("Content", root);
+            Anchor(content, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(HandRevealBarWidth, 80f));
+
+            RectTransform bar = NewRect("Bar", content);
+            Anchor(bar, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(HandRevealBarWidth, 20f));
+            RoundBox(bar, Ink, 4f, 10f, White);
+            Image drain = NewImage("Drain", bar, Turn);
+            RectTransform fill = drain.rectTransform;
+            fill.pivot = new Vector2(0f, 0.5f);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = new Vector2(4f, 4f);
+            fill.offsetMax = new Vector2(-4f, -4f);
+
+            RectTransform hint = NewRect("Hint", content);
+            Anchor(hint, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(360f, 40f));
+            RoundBox(hint, HandRevealHintFill, 0f, 14f, HandRevealHintFill);
+            HorizontalLayout(hint, new RectOffset(20, 20, 4, 4), 0f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(hint.gameObject);
+            NewText("Text", hint, "화면을 누르면 바로 손패로", 28f, Ink2, false);
+
+            var view = root.gameObject.AddComponent<HandRevealView>();
+            Wire(view, ("content", content), ("fill", fill));
+            content.gameObject.SetActive(false);
+            return view;
         }
 
         #endregion
@@ -620,13 +764,8 @@ namespace Chapchu.EditorTools
             CenterAt(spot, g.Cx, feetY, spot.sizeDelta.x, spot.sizeDelta.y);
             spot.gameObject.SetActive(false);
 
-            RectTransform ring = NewRect("PickRing", root);
-            CenterAt(ring, g.Cx, feetY, 200f, 52f);
-            Image ringOuter = RoundImage("Outer", ring, Tgt, 26f);
-            Stretch(ringOuter.rectTransform);
-            Image ringInner = RoundImage("Inner", ring, new Color(1f, 1f, 1f, 0.4f), 20f);
-            Stretch(ringInner.rectTransform, 6f, 6f, 6f, 6f);
-            ring.gameObject.SetActive(false);
+            RectTransform ring = BuildPickRing("PickRing", root);
+            CenterAt(ring, g.Cx, feetY, PickRingSize.x, PickRingSize.y);
 
             Image character = RoundImage("Character", root, new Color(Fur2.r, Fur2.g, Fur2.b, 0.5f), 40f);
             TopLeft(character.rectTransform, g.Cx - g.Width / 2f, g.Top, g.Width, g.Height);
@@ -660,6 +799,7 @@ namespace Chapchu.EditorTools
 
             // 대상 선택 테 — 판 바깥 8 에 두께 5 빨강 (시안 .plate.pick outline). 기본 숨김
             RectTransform pickOutline = NewRect("PickOutline", plate.Root);
+            pickOutline.gameObject.AddComponent<LayoutElement>().ignoreLayout = true; // 이름판 세로 레이아웃에서 뺀다 — 안 빼면 켤 때 한 줄로 끼어든다
             Stretch(pickOutline, -8f, -8f, -8f, -8f);
             BuildEdgeFrame("Frame", pickOutline, Tgt, 5f);
             pickOutline.gameObject.SetActive(false);
@@ -734,6 +874,90 @@ namespace Chapchu.EditorTools
         }
 
         // 발밑 노란 타원 184 × 44 + 흰 테 6 (시안 .spot)
+        /// <summary>
+        /// 화면 덮기 (10-ui.md 5-1 — 113 기억 삭제의 하얀 화면). 캔버스 전체 · 손패 층 위 · 서랍 아래. 입력을 막지 않는다. 기본 숨김.
+        /// 이미 만든 씬에 더할 때도 이 함수를 부른다 — 부르는 쪽이 서랍(Sheets) 앞에 둔다.
+        /// </summary>
+        internal static ScreenFlashView BuildScreenFlash(RectTransform canvasRect)
+        {
+            Image flash = NewImage("ScreenFlash", canvasRect, Color.clear);
+            Anchor(flash.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6000f, 6000f)); // 가림판처럼 넓은 화면도 덮게
+            var view = flash.gameObject.AddComponent<ScreenFlashView>();
+            flash.gameObject.SetActive(false);
+            return view;
+        }
+
+        private static readonly Vector2 PickRingSize = new Vector2(200f, 52f);
+
+        // 대상 선택 발밑 빨간 링 (시안 .ring.pick). 기본 숨김 — 부르는 쪽이 자리를 잡는다.
+        private static RectTransform BuildPickRing(string name, Transform parent)
+        {
+            RectTransform ring = NewRect(name, parent);
+            Image ringOuter = RoundImage("Outer", ring, Tgt, 26f);
+            Stretch(ringOuter.rectTransform);
+            Image ringInner = RoundImage("Inner", ring, new Color(1f, 1f, 1f, 0.4f), 20f);
+            Stretch(ringInner.rectTransform, 6f, 6f, 6f, 6f);
+            ring.gameObject.SetActive(false);
+            return ring;
+        }
+
+        /// <summary>
+        /// 나를 고르는 자리 (10-ui.md 6절 — 나를 포함하는 카드 OneAny). 상대 좌석과 같은 발밑 빨간 링 · 패널 빨간 테 + 캐릭터와 패널을 덮는 탭 영역.
+        /// 내 캐릭터 · 패널은 가림판(가운데 묶음)보다 아래 층이라, 고르는 동안만 올리도록 링 · 캐릭터 · 패널에 하위 캔버스를 단다 (MyPanelView.SetTargetable).
+        /// 이미 만든 씬에 더할 때도 이 함수를 부른다 — 이름이 있으면 만들지 않는다.
+        /// </summary>
+        internal static void BuildMyPick(MyPanelView view, RectTransform spot, RectTransform character)
+        {
+            RectTransform panel = (RectTransform)view.transform;
+
+            RectTransform ring = (RectTransform)spot.parent.Find("MyPickRing") ?? BuildPickRing("MyPickRing", spot.parent);
+            ring.SetSiblingIndex(spot.GetSiblingIndex() + 1);
+            Anchor(ring, spot.anchorMin, new Vector2(0.5f, 0.5f), spot.anchoredPosition, PickRingSize);
+
+            // 패널 테 — 판 바깥 8 에 두께 5 빨강 (상대 이름판과 같다). 세로 레이아웃에서 뺀다
+            RectTransform outline = (RectTransform)panel.Find("PickOutline");
+            if (outline == null)
+            {
+                outline = NewRect("PickOutline", panel);
+                outline.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                Stretch(outline, -8f, -8f, -8f, -8f);
+                BuildEdgeFrame("Frame", outline, Tgt, 5f);
+                outline.gameObject.SetActive(false);
+            }
+
+            // 탭 영역 — 패널과 그 위 캐릭터를 덮는 투명 이미지 (상대 좌석처럼 둘레 16). 레이캐스트는 고르는 동안만
+            Image tapArea = panel.Find("TapArea")?.GetComponent<Image>();
+            if (tapArea == null)
+            {
+                tapArea = NewImage("TapArea", panel, Color.clear);
+                tapArea.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            }
+            tapArea.transform.SetAsLastSibling();
+            float characterTop = character.anchoredPosition.y + character.sizeDelta.y - panel.anchoredPosition.y - panel.sizeDelta.y; // 패널 위끝에서 캐릭터 머리까지
+            Stretch(tapArea.rectTransform, -16f, -(characterTop + 16f), -16f, -16f);
+
+            Canvas[] layers = { AddPickLayer(ring.gameObject), AddPickLayer(character.gameObject), AddPickLayer(panel.gameObject) };
+            if (panel.GetComponent<GraphicRaycaster>() == null)
+                panel.gameObject.AddComponent<GraphicRaycaster>(); // 하위 캔버스의 탭은 그 캔버스의 레이캐스터가 받는다
+
+            Wire(view, ("pickRing", ring.gameObject), ("pickOutline", outline.gameObject), ("tapArea", tapArea));
+            var so = new SerializedObject(view);
+            SerializedProperty list = so.FindProperty("pickLayers");
+            list.arraySize = layers.Length;
+            for (int i = 0; i < layers.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = layers[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static Canvas AddPickLayer(GameObject go)
+        {
+            Canvas layer = go.GetComponent<Canvas>();
+            if (layer == null) // ?? 는 Unity 의 가짜 null 을 못 거른다
+                layer = go.AddComponent<Canvas>();
+            layer.overrideSorting = false;
+            return layer;
+        }
+
         private static RectTransform BuildSpot(string name, Transform parent)
         {
             RectTransform root = NewRect(name, parent);
@@ -777,13 +1001,87 @@ namespace Chapchu.EditorTools
 
             BuildMiniCard(bar, Act);
             TMP_Text question = NewText("QuestionText", bar, "<color=#009dff>카드</color> · 누구에게 쓸까요?", 30f, Ink, false);
-            TMP_Text seconds = NewText("SecondsText", bar, "5초", 34f, Hp, true);
             Button cancel = BuildButton("CancelButton", bar, 0f, 76f, White, 22f, "취소", 30f, Ink);
 
             var view = bar.gameObject.AddComponent<TargetAskView>();
-            Wire(view, ("dimmer", dimmer.gameObject), ("bar", bar.gameObject), ("questionText", question), ("secondsText", seconds), ("cancelButton", cancel));
+            Wire(view, ("dimmer", dimmer.gameObject), ("bar", bar.gameObject), ("questionText", question), ("cancelButton", cancel));
             bar.gameObject.SetActive(false);
             return view;
+        }
+
+        // 3 단계(확대) 동안 크게 보인 카드 아래의 주인 태그 (시안 .owner) — 카드 아래 가장자리에서 20 아래. 종류 색 작은 카드 + 「낸 사람 → 대상」
+        public static CardOwnerTagView BuildCardOwnerTag(RectTransform center)
+        {
+            RectTransform root = NewRect("CardOwnerTag", center);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(ShownCardBottom + 20f)), Vector2.zero);
+
+            RectTransform body = NewRect("Body", root);
+            Anchor(body, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(300f, 54f));
+            RoundBox(body, Ink, 5f, 16f, White);
+            HorizontalLayout(body, new RectOffset(20, 20, 6, 6), 10f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(body.gameObject);
+
+            RectTransform miniCard = BuildMiniCard(body, Act);
+            TMP_Text owner = NewText("OwnerText", body, "낸 사람 → 대상", 30f, Ink, true);
+
+            var view = root.gameObject.AddComponent<CardOwnerTagView>();
+            Wire(view, ("body", body.gameObject), ("ownerText", owner));
+            WireArray(view, "kindImages", new Object[] { miniCard.Find("Border").GetComponent<Image>(), miniCard.Find("Band").GetComponent<Image>() });
+            body.gameObject.SetActive(false);
+            return view;
+        }
+
+        // 반응 타이머 (시안 .rt2 × 2) — 크게 둔 카드의 아래 가장자리에서 40 위에 윗변: 알약(높이 60 · 테두리 5 · 반지름 20)에 시계 + 「반응」 + 막대 192 × 24 + 남은 초.
+        // 마감 뒤에는 시계 · 막대 · 초 대신 멈춤 아이콘 + 「처리하는 중」 (뷰가 바꾼다). 열리기 전 막대의 빗금 무늬는 아직 없다 — 빈 막대.
+        public static ReactionTimerPresenter BuildReactionTimer(RectTransform center)
+        {
+            RectTransform root = NewRect("ReactionTimer", center);
+            Anchor(root, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(ShownCardBottom - 40f)), Vector2.zero);
+
+            RectTransform body = NewRect("Body", root);
+            Anchor(body, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(400f, 60f));
+            RoundBox(body, Ink, 5f, 20f, White);
+            HorizontalLayout(body, new RectOffset(16, 22, 0, 0), 12f, TextAnchor.MiddleLeft, true, true);
+            body.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize; // 높이는 60 고정
+
+            Image clock = Icon("ClockIcon", body, Hud("icon_clock"), 34f, Ink);
+            Image pause = Icon("PauseIcon", body, Hud("icon_pause"), 34f, Ink);
+            foreach (Image icon in new[] { clock, pause })
+            {
+                LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
+                iconSize.preferredWidth = 34f;
+                iconSize.preferredHeight = 34f;
+            }
+
+            TMP_Text label = NewText("LabelText", body, "반응", 30f, Ink, true);
+            TMP_Text cardName = AddReactionCardName(body);
+
+            RectTransform bar = NewRect("Bar", body);
+            LayoutElement barSize = bar.gameObject.AddComponent<LayoutElement>();
+            barSize.preferredWidth = 192f;
+            barSize.preferredHeight = 24f;
+            Image track = RoundBox(bar, Ink, 4f, 12f, Hex(0xf1ece5));
+            Image barFill = RoundImage("Value", track.transform, Turn, 8f);
+            Stretch(barFill.rectTransform); // 오른쪽 앵커를 뷰가 남은 비율로 옮긴다
+
+            TMP_Text seconds = NewText("SecondsText", body, "10", 40f, Ink, true);
+            TMP_Text unit = NewText("UnitText", body, "초", 24f, Ink, true);
+
+            var view = root.gameObject.AddComponent<ReactionTimerView>();
+            Wire(view,
+                ("body", body.gameObject), ("border", body.Find("Border").GetComponent<Image>()), ("clockIcon", clock.gameObject), ("pauseIcon", pause.gameObject),
+                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject), ("cardNameText", cardName));
+            body.gameObject.SetActive(false);
+            return root.gameObject.AddComponent<ReactionTimerPresenter>();
+        }
+
+        // 반응 타이머의 카드 이름 (시계 뒤 · 「반응」 앞) — 손패를 올렸을 때만 보인다 (ReactionTimerView.SetDocked). 시안 .rt2.dock .cn
+        public static TMP_Text AddReactionCardName(RectTransform timerBody)
+        {
+            TMP_Text cardName = NewText("CardNameText", timerBody, "카드 이름", 30f, Ink, true);
+            cardName.transform.SetSiblingIndex(timerBody.Find("ClockIcon").GetSiblingIndex() + 1); // 시계 바로 뒤 — 맨 앞에 두면 알약 바탕(RoundBox 의 자식)에 가린다
+            cardName.gameObject.SetActive(false);
+            return cardName;
         }
 
         #endregion
@@ -878,6 +1176,56 @@ namespace Chapchu.EditorTools
             Wire(view, ("closeButton", close), ("content", content), ("headerTemplate", header), ("entryTemplate", entry), ("scroll", scroll));
             frame.Root.gameObject.SetActive(false);
             return view;
+        }
+
+        // 카드 효과 고르기 판 (프로토타입 v2 .pop2.pick · G.choose 선택지 — 119 목표 조준). 판 폭 880 · 머리 띠(Band) = 발 아이콘 + 제목 + 남은 초(오른쪽).
+        // 몸통 = 설명 + 버튼 줄(첫 버튼 주 버튼 노랑 · 둘째 흰색). 바탕 가림이 탭을 먹는다 — 눌러도 닫히지 않는다. 판(Panel)은 비활성으로 둔다.
+        public static ChoicePopupPresenter BuildChoicePopup(RectTransform parent, PunGameServer server)
+        {
+            RectTransform root = NewRect("ChoicePopup", parent);
+            Stretch(root);
+            RectTransform panel = NewRect("Panel", root);
+            Stretch(panel);
+            Image popDim = NewImage("PopDim", panel, Dim, null, true);
+            Anchor(popDim.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6000f, 6000f));
+
+            Frame pop = BuildFrame("Popup", panel, 6f, 24f, Band, 68f, 4f);
+            Anchor(pop.Root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 300f));
+            pop.Root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            HorizontalLayout(pop.Head, new RectOffset(24, 24, 0, 0), 12f, TextAnchor.MiddleLeft, true, false);
+            Image paw = Icon("Icon", pop.Head, Hud("icon_paw"), 36f, Ink);
+            LayoutElement pawSize = paw.gameObject.AddComponent<LayoutElement>();
+            pawSize.preferredWidth = 36f;
+            pawSize.preferredHeight = 36f;
+            TMP_Text title = NewText("Title", pop.Head, "목표 조준!", 36f, Ink, true);
+            NewRect("Spacer", pop.Head).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            TMP_Text seconds = NewText("Seconds", pop.Head, "5초", 30f, Ink, false);
+
+            VerticalLayoutGroup body = pop.Body.gameObject.AddComponent<VerticalLayoutGroup>();
+            body.padding = new RectOffset(32, 32, 28, 32);
+            body.spacing = 20f;
+            body.childControlWidth = true;
+            body.childControlHeight = true;
+            body.childForceExpandWidth = true;
+            body.childForceExpandHeight = false;
+            TMP_Text desc = NewText("Desc", pop.Body, "누구: 둘 중 하나를 고르세요. 5초 안에 안 고르면 무작위", 30f, Ink, false, TextAlignmentOptions.Left);
+            desc.textWrappingMode = TextWrappingModes.Normal;
+
+            RectTransform row = NewRect("Buttons", pop.Body);
+            HorizontalLayout(row, new RectOffset(0, 0, 8, 0), 20f, TextAnchor.MiddleCenter, true, true);
+            Button first = BuildButton("FirstButton", row, 0f, 88f, Turn, 22f, "손패 전부 버리기 (5장)", 32f, Ink);
+            first.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            Button second = BuildButton("SecondButton", row, 0f, 88f, White, 22f, "80 피해 받기", 32f, Ink);
+            second.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            panel.gameObject.SetActive(false);
+
+            var view = root.gameObject.AddComponent<ChoicePopupView>();
+            Wire(view, ("panel", panel.gameObject), ("titleText", title), ("secondsText", seconds), ("descText", desc),
+                ("firstButton", first), ("firstLabel", first.GetComponentInChildren<TMP_Text>(true)),
+                ("secondButton", second), ("secondLabel", second.GetComponentInChildren<TMP_Text>(true)));
+            var presenter = root.gameObject.AddComponent<ChoicePopupPresenter>();
+            Wire(presenter, ("server", server));
+            return presenter;
         }
 
         // 설정 서랍 (「게임 나가기」만 — 배경 음악 · 효과음은 다음 작업) + 나가기 확인 팝업 (시안 .pop2.bad)
@@ -1369,7 +1717,7 @@ namespace Chapchu.EditorTools
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             tmp.raycastTarget = false;
 
-            TMP_FontAsset font = bold ? _boldFont : _regularFont;
+            TMP_FontAsset font = bold ? BoldFont : RegularFont;
             if (font != null)
                 tmp.font = font;
             else if (bold)
@@ -1487,7 +1835,7 @@ namespace Chapchu.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void WireArray(Component target, string field, Object[] values)
+        internal static void WireArray(Component target, string field, Object[] values)
         {
             var serialized = new SerializedObject(target);
             SerializedProperty property = serialized.FindProperty(field);

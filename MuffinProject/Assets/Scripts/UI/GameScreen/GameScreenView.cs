@@ -17,8 +17,6 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private MyPanelView myPanel;
         [SerializeField] private ChapchuButtonView chapchuButton;
         [SerializeField] private DeckView deck;
-        [Tooltip("카드를 놓으면 사용 요청이 되는 영역 — 손패 영역 위 전체 (10-ui.md 2-1 「드롭 영역」). 그래픽은 없고 Rect 만 쓴다.")]
-        [SerializeField] private RectTransform dropZone;
         [SerializeField] private TargetAskView targetAsk;
         [SerializeField] private GameMenuView menu;
 
@@ -30,14 +28,13 @@ namespace Chapchu.UI.GameScreen
         public MyPanelView MyPanel => myPanel;
         public ChapchuButtonView ChapchuButton => chapchuButton;
         public DeckView Deck => deck;
-        public RectTransform DropZone => dropZone;
         public TargetAskView TargetAsk => targetAsk;
         public GameMenuView Menu => menu;
 
         private void Awake()
         {
             if (roomCode == null || turnStrip == null || feed == null || log == null || opponentSeats == null || opponentSeats.Length != 3 || myPanel == null
-                || chapchuButton == null || deck == null || dropZone == null || targetAsk == null || menu == null)
+                || chapchuButton == null || deck == null || targetAsk == null || menu == null)
                 Debug.LogError($"[{nameof(GameScreenView)}] 영역 뷰 참조 중 비어 있는 것이 있습니다.", this);
         }
     }

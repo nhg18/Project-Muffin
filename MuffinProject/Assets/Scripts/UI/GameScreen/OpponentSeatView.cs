@@ -66,6 +66,12 @@ namespace Chapchu.UI.GameScreen
         /// <summary>목걸이 색 — 머리 띠의 점.</summary>
         public void SetColor(Color necklace) => dot.color = necklace;
 
+        /// <summary>뒷면 부채꼴의 화면 좌표 — 이 좌석이 낸 카드가 출발하는 자리. Overlay 캔버스라 월드 위치가 곧 화면 픽셀이다.</summary>
+        public Vector2 HandScreenPoint => hand.transform.position;
+
+        /// <summary>캐릭터 가운데(화면 좌표) — 121 판정 표가 뜨는 자리.</summary>
+        public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
+
         /// <summary>손패 장수 — 배지와 뒷면 부채꼴을 같이 맞춘다.</summary>
         public void SetHandCount(int count)
         {
@@ -105,6 +111,16 @@ namespace Chapchu.UI.GameScreen
             pickOutline.SetActive(targetable);
             tapArea.raycastTarget = targetable;
         }
+
+        /// <summary>끄는 카드가 이 좌석 위에 있다 — 놓으면 이 상대가 대상이라는 표시 (10-ui.md 4절). 대상 선택과 같은 고리 · 테를 쓰고 탭은 받지 않는다.</summary>
+        public void SetAimed(bool aimed)
+        {
+            pickRing.SetActive(aimed);
+            pickOutline.SetActive(aimed);
+        }
+
+        /// <summary>이 화면 좌표가 좌석(캐릭터 · 이름표를 덮는 탭 영역) 위인가.</summary>
+        public bool ContainsScreenPoint(Vector2 screenPoint) => RectTransformUtility.RectangleContainsScreenPoint(tapArea.rectTransform, screenPoint, null);
 
         public void OnPointerClick(PointerEventData eventData)
         {

@@ -9,6 +9,7 @@ using Chapchu.Game;
 using Chapchu.Game.Bots;
 using Chapchu.Game.Effects;
 using Chapchu.Network;
+using Chapchu.UI.GameScreen;
 using Chapchu.UI.Lobby;
 using Chapchu.UI.Popups;
 using Chapchu.UI.RoomScreen;
@@ -46,6 +47,17 @@ public static class MultiTest
     private const string WarnMessageField = "warnMessage";
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomPresenter — 「나가기」 (혼자면 확인 없이 나간다)
     private const string RoomLastLogField = "lastLineText";                // RoomLogView — 접힌 로그의 최근 한 줄
+    private const string ChapchuClickedMethod = "HandleChapchuClicked";    // MyPanelPresenter — 찹츄 버튼 탭
+    private const string ChapchuStateMethod = "GetChapchuState";           // MyPanelPresenter — 찹츄 버튼 상태
+    private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
+    private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
+    private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
+    private const string HandCardsField = "_cards";                        // HandView — 손패의 카드들
+    private const string CardGlowField = "glow";                           // CardView — 「낼 수 있다」 빛
+    private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
+    private const string TrapPreviewField = "_preview";                    // MyTrapsPresenter — 크게 보기 중인 카드
+    private const string TrapsOfField = "_trapsOf";                        // OpponentSeatsPresenter — actorNumber → 함정 칸
+    private const string PickedField = "_picked";                          // OpponentSeatsPresenter — 대상 선택 중 고른 actorNumber
     private const string MyHandField = "_myHand";                          // GameDebugInput — 카드 ID
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
@@ -53,6 +65,11 @@ public static class MultiTest
     private const string TrapWindowOpensField = "_trapWindowOpensAt";      // GameDebugInput — 함정 시간
     private const string TrapWindowDeadlineField = "_trapWindowDeadline";
     private const string HitByField = "_hitBy";                            // GameDebugInput — 마지막으로 나를 맞힌 사람
+    private const string GaepanHudNumberField = "numberText";              // GaepanHudView — 남은 바퀴 숫자 (121)
+    private const string ChoiceSecondButtonField = "secondButton";         // ChoicePopupView — 「80 피해 받기」 (119)
+    private const string ChoiceFirstButtonField = "firstButton";           // ChoicePopupView — 「손패 전부 버리기」
+    private const string TimerLabelField = "labelText";                    // ReactionTimerView — 알약 글 (「반응」 · 「{이름} 고르는 중」)
+    private const string TurnDeadlineField = "_turnDeadline";              // GameServer — 턴 마감 (ExpireTurn)
     private const string PunServerField = "_server";                       // PunGameServer — 규칙 원본 (방장)
     private const string ServerDeckField = "deck";                         // PunGameServer — 게임에 쓰는 덱
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
@@ -60,8 +77,12 @@ public static class MultiTest
     private const string ServerDiscardField = "_discardPile";              // GameServer — 버림 더미
     private const string ServerDeckListField = "_deck";                    // GameServer — 덱
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
+    private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 카드 가져오기)
 
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
+
+    // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
+    private const double ReactionSeconds = 10, TurnSeconds = 30;
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
     private const string ActedTurnKey = "MultiTest.ActedTurnDeadline";
@@ -178,8 +199,14 @@ public static class MultiTest
         string setLog = "";
         if (trapIndex >= 0 && traps.Count < 3)
         {
-            server.RequestSetTrap(instances[trapIndex]);
-            setLog = " · 함정 설치";
+            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (더블클릭과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
+            if (UseFromHand(instances[trapIndex]))
+                setLog = " · 함정 설치(화면)";
+            else
+            {
+                server.RequestSetTrap(instances[trapIndex]);
+                setLog = " · 함정 설치";
+            }
         }
 
         int index = hand.FindIndex(cardId => IsActionWithEffect(deck, cardId));
@@ -217,6 +244,88 @@ public static class MultiTest
         return "OK P" + me + " 남의 턴에 카드 사용 요청";
     }
 
+    // ── 찹츄 버튼 (07-win-condition.md 4.1 · 10-ui.md 「찹츄 버튼 상태」) ──
+
+    /// <summary>
+    /// 내 턴이면: 찹츄 버튼이 활성(내 턴 · 10장)이면 버튼을 누르고, 아니면 비활성 버튼을 한 번 눌러 본 뒤(요청이 가면 안 된다) 뽑는다.
+    /// 선언한 뒤 같은 턴에는 아무것도 하지 않는다 — 뽑으면 11장이 돼 해제된다. 턴은 30초 뒤 넘어간다.
+    /// </summary>
+    public static string ChapchuStep()
+    {
+        GameDebugInput input = Object.FindFirstObjectByType<GameDebugInput>();
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        MyPanelPresenter panel = Object.FindFirstObjectByType<MyPanelPresenter>();
+        if (input == null || server == null || panel == null)
+            return "WAIT 게임 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (!TryGetTurnActor(out int turnActor))
+            return "WAIT 턴 정보 없음";
+
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if ((bool)typeof(GameDebugInput).GetField(GameEndedField, Private).GetValue(input))
+            return "SKIP P" + me + " 게임 끝";
+
+        if (turnActor != me)
+            return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
+
+        int handCount = ((List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input)).Count;
+        string state = ChapchuStateOf(panel);
+        if (state == "Declared")
+            return "SKIP P" + me + " 선언함 — 턴이 넘어가길 기다림";
+
+        if (state == "Ready")
+        {
+            Call(panel, ChapchuClickedMethod);
+            return "OK P" + me + " 찹츄 버튼 누름 (손패 " + handCount + ")";
+        }
+
+        if (handCount == GameServer.ChapchuHandCount)
+            return "WAIT P" + me + " 손패 10장 · 내 턴인데 버튼이 아직 " + state + " (연출 큐 대기)";
+
+        double deadline = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDeadline, out object value) ? (double)value : -1;
+        string turnKey = deadline.ToString("R");
+        if (SessionState.GetString(ActedTurnKey, "") == turnKey)
+            return "SKIP P" + me + " 처리 중";
+        SessionState.SetString(ActedTurnKey, turnKey);
+
+        Call(panel, ChapchuClickedMethod); // 비활성 — 안내 토스트만, 선언 요청은 가지 않아야 한다 (거절 코드 11 이 오면 요청이 간 것)
+        server.RequestDraw();
+        return "OK P" + me + " 비활성 버튼 누름(손패 " + handCount + ") · 뽑기";
+    }
+
+    /// <summary>actor 의 찹츄 상태가 이 화면에 보일 때까지 WAIT — 내 것이면 버튼 「찹츄 완료」, 남의 것이면 그 좌석의 찹츄 표시.</summary>
+    public static string ChapchuExpect(string actor)
+    {
+        MyPanelPresenter panel = Object.FindFirstObjectByType<MyPanelPresenter>();
+        OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+        if (panel == null || seats == null)
+            return "WAIT 게임 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        int target = int.Parse(actor);
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        if (target == me)
+        {
+            string state = ChapchuStateOf(panel);
+            return state == "Declared" ? "OK P" + me + " 내 버튼 「찹츄 완료」" : "WAIT P" + me + " 내 버튼 " + state;
+        }
+
+        var seatOf = (Dictionary<int, OpponentSeatView>)typeof(OpponentSeatsPresenter).GetField(SeatOfField, Private).GetValue(seats);
+        if (!seatOf.TryGetValue(target, out OpponentSeatView seat))
+            return "FAIL P" + target + " 의 좌석이 없다";
+
+        bool shown = (bool)typeof(OpponentSeatView).GetField(SeatChapchuField, Private).GetValue(seat);
+        return shown ? "OK P" + me + " 화면: P" + target + " 좌석 찹츄 표시" : "WAIT P" + me + " 화면: P" + target + " 좌석 찹츄 표시 없음";
+    }
+
+    private static string ChapchuStateOf(MyPanelPresenter panel)
+    {
+        MethodInfo info = typeof(MyPanelPresenter).GetMethod(ChapchuStateMethod, Private);
+        if (info == null)
+            throw new MissingMethodException(nameof(MyPanelPresenter), ChapchuStateMethod + " — 이름이 바뀌었으면 MultiTest.cs 의 표를 고친다");
+
+        return info.Invoke(panel, null).ToString();
+    }
+
     // ── 한 클라이언트 UI 흐름: 타이틀 → 로비 → 방 → 나가기 ──
 
     /// <summary>
@@ -244,8 +353,163 @@ public static class MultiTest
             return "SKIP P" + me + " 손패 없음";
 
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
+
+        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 초록 빛(방장이 알려 준 「낼 수 있는 카운터」)도 같이 본다
+        if (counter >= 0)
+        {
+            TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
+            CardView card = FindHandCard(instances[counter]);
+            if (card != null && targetType != TargetType.OneOther && targetType != TargetType.TwoOthers)
+            {
+                var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
+                string glowLog = glow == null ? "빛 없음" : glow.activeSelf ? "초록 빛 켜짐" : "초록 빛 꺼짐";
+                UseFromHand(instances[counter]);
+                return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + glowLog;
+            }
+        }
+
         server.RequestPlayCounter(instances[Math.Max(counter, 0)], new int[0]);
         return "OK P" + me + (counter >= 0 ? " 반응 시간에 카운터 (카운터 카드)" : " 반응 시간에 카운터 (행동 카드)");
+    }
+
+    // 손패 뷰에서 그 인스턴스의 카드. 없으면 null.
+    private static CardView FindHandCard(int instanceId)
+    {
+        HandView view = Object.FindFirstObjectByType<HandView>();
+        if (view == null) return null;
+        var cards = (List<CardView>)typeof(HandView).GetField(HandCardsField, Private).GetValue(view);
+        return cards.FirstOrDefault(card => card.InstanceId == instanceId);
+    }
+
+    // 화면 경로 — 손패의 카드를 더블클릭한 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
+    private static bool UseFromHand(int instanceId)
+    {
+        HandPresenter presenter = Object.FindFirstObjectByType<HandPresenter>();
+        CardView card = FindHandCard(instanceId);
+        if (presenter == null || card == null) return false;
+
+        typeof(HandPresenter).GetMethod(CardUseRequestedMethod, Private).Invoke(presenter, new object[] { card });
+        return true;
+    }
+
+    /// <summary>내 함정 칸 0 을 누른 것처럼 — 크게 보기 카드가 떴는가. 내 함정이 없으면 SKIP.</summary>
+    public static string TrapPreview()
+    {
+        MyTrapsPresenter mine = Object.FindFirstObjectByType<MyTrapsPresenter>();
+        if (mine == null) return "WAIT 게임 화면 아님";
+        if (mine.GetComponent<TrapSlotsView>().Count == 0) return "SKIP 내 함정 없음";
+
+        typeof(MyTrapsPresenter).GetMethod(TrapSlotClickedMethod, Private).Invoke(mine, new object[] { 0 });
+        var preview = (CardView)typeof(MyTrapsPresenter).GetField(TrapPreviewField, Private).GetValue(mine);
+        return preview != null ? "OK 내 함정 크게 보기 — 카드 " + preview.CardId : "FAIL 칸을 눌렀는데 크게 보기 카드가 없다";
+    }
+
+    /// <summary>
+    /// 나를 포함하는 카드(OneAny)의 대상 선택 (10-ui.md 6절) — ① SelfPickOpen: 선택을 열고 링 · 테가 켜졌는지.
+    /// ② SelfPickTap: 내 탭 영역 가운데를 레이캐스트하면 맨 위가 내 패널 아래 물체인지(가림판 · 다른 HUD 에 가리지 않는다) 보고, 그 물체에 탭을 보내 내가 골라졌는지.
+    /// 레이캐스트는 다음 프레임부터 — 막 올린 하위 캔버스는 한 번 그려져야 깊이가 정해진다. ③ SelfPickDone: 다음 프레임 뒤 선택이 닫히고 층이 내려갔는지.
+    /// 손패 카드 없이 좌석 프레젠터를 직접 부른다 — 카드 요청은 rules 의 Effects(106) 가 본다.
+    /// </summary>
+    public static string SelfPickOpen()
+    {
+        OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+        MyPanelView panel = Object.FindFirstObjectByType<MyPanelView>();
+        if (seats == null || panel == null) return "WAIT 게임 화면 아님";
+        if (seats.IsSelectingTargets) return "WAIT 이미 대상 선택 중";
+
+        seats.StartCoroutine(seats.SelectTargetsRoutine("핥아주기", 1, true, picked => SessionState.SetString("MultiTest.SelfPick", picked == null ? "null" : string.Join(",", picked))));
+        SessionState.SetString("MultiTest.SelfPick", "pending");
+        var so = new SerializedObject(panel);
+        bool ring = ((GameObject)so.FindProperty("pickRing").objectReferenceValue).activeSelf, outline = ((GameObject)so.FindProperty("pickOutline").objectReferenceValue).activeSelf;
+        return ring && outline ? "OK 선택 열림 · 링 · 테 켜짐" : "FAIL 선택을 열었는데 링 " + ring + " · 테 " + outline;
+    }
+
+    public static string SelfPickTap()
+    {
+        OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+        MyPanelView panel = Object.FindFirstObjectByType<MyPanelView>();
+        if (seats == null || panel == null) return "FAIL 게임 화면 아님";
+        if (!seats.IsSelectingTargets) return "FAIL 선택이 닫혀 있다 (" + SessionState.GetString("MultiTest.SelfPick", "?") + ")";
+        if (!SelfPickHit(panel, out string what, out GameObject top)) return "FAIL 내 패널이 가려졌다 — 맨 위 " + what;
+
+        var click = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { button = UnityEngine.EventSystems.PointerEventData.InputButton.Left };
+        UnityEngine.EventSystems.ExecuteEvents.ExecuteHierarchy(top, click, UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+        var picked = (List<int>)typeof(OpponentSeatsPresenter).GetField(PickedField, Private).GetValue(seats);
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        return picked.Count == 1 && picked[0] == me ? "OK 내 패널 탭 → P" + me : "FAIL 탭했는데 고른 사람 [" + string.Join(",", picked) + "]";
+    }
+
+    public static string SelfPickDone()
+    {
+        MyPanelView panel = Object.FindFirstObjectByType<MyPanelView>();
+        string result = SessionState.GetString("MultiTest.SelfPick", "?");
+        var so = new SerializedObject(panel);
+        var ring = (GameObject)so.FindProperty("pickRing").objectReferenceValue;
+        var tap = (UnityEngine.UI.Image)so.FindProperty("tapArea").objectReferenceValue;
+        var layers = so.FindProperty("pickLayers");
+        bool lowered = true;
+        for (int i = 0; i < layers.arraySize; i++)
+            lowered &= !((Canvas)layers.GetArrayElementAtIndex(i).objectReferenceValue).overrideSorting;
+        string me = PhotonNetwork.LocalPlayer.ActorNumber.ToString();
+        if (result == "pending") return "WAIT 아직 닫히지 않음";
+        return result == me && !ring.activeSelf && !tap.raycastTarget && lowered
+            ? "OK 결과 [" + result + "] · 링 · 탭 · 층 원래대로"
+            : "FAIL 결과 [" + result + "] · 링 " + ring.activeSelf + " · 탭 " + tap.raycastTarget + " · 층 내려감 " + lowered;
+    }
+
+    // 내 탭 영역 가운데의 레이캐스트 맨 위가 내 패널 아래 물체인가 + 링 · 테가 켜졌나
+    private static bool SelfPickHit(MyPanelView panel, out string what, out GameObject top)
+    {
+        var so = new SerializedObject(panel);
+        var ring = (GameObject)so.FindProperty("pickRing").objectReferenceValue;
+        var outline = (GameObject)so.FindProperty("pickOutline").objectReferenceValue;
+        var tap = (UnityEngine.UI.Image)so.FindProperty("tapArea").objectReferenceValue;
+        Canvas.ForceUpdateCanvases();
+        Vector2 point = RectTransformUtility.WorldToScreenPoint(null, tap.rectTransform.TransformPoint(tap.rectTransform.rect.center));
+        var hits = new List<UnityEngine.EventSystems.RaycastResult>();
+        UnityEngine.EventSystems.EventSystem.current.RaycastAll(new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { position = point }, hits);
+        top = hits.Count > 0 ? hits[0].gameObject : null;
+        what = (top != null ? top.name + (top.transform.parent != null ? " (" + top.transform.parent.name + ")" : "") : "없음") + " · 링 " + ring.activeSelf + " · 테 " + outline.activeSelf;
+        return top != null && top.transform.IsChildOf(panel.transform) && ring.activeSelf && outline.activeSelf;
+    }
+
+    /// <summary>
+    /// 화면의 함정 칸 · 손패가 방장의 값과 같은가 — 내 함정 칸 수 · 상대 좌석마다의 함정 칸 수 = 방 속성 trapCount, 내 손패 뷰의 장수 = handCount.
+    /// 연출이 다 끝난 뒤에 부른다.
+    /// </summary>
+    public static string TableUiExpect()
+    {
+        MyTrapsPresenter mine = Object.FindFirstObjectByType<MyTrapsPresenter>();
+        OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+        HandView handView = Object.FindFirstObjectByType<HandView>();
+        if (mine == null || seats == null || handView == null)
+            return "WAIT 게임 화면 아님";
+
+        var wrong = new List<string>();
+        var log = new StringBuilder();
+        var trapsOf = (Dictionary<int, TrapSlotsView>)typeof(OpponentSeatsPresenter).GetField(TrapsOfField, Private).GetValue(seats);
+        foreach (Photon.Realtime.Player player in PhotonNetwork.PlayerList)
+        {
+            int expected = player.CustomProperties.TryGetValue(PlayerProps.TrapCount, out object value) && value is int count ? count : 0;
+            int shown;
+            if (player.IsLocal)
+                shown = mine.GetComponent<TrapSlotsView>().Count;
+            else if (trapsOf.TryGetValue(player.ActorNumber, out TrapSlotsView slots))
+                shown = slots.Count;
+            else
+                continue;
+
+            log.Append(" P" + player.ActorNumber + " 함정 " + shown);
+            if (shown != expected)
+                wrong.Add("P" + player.ActorNumber + " 함정 칸 " + shown + " ≠ " + expected);
+        }
+
+        int handExpected = PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handValue) && handValue is int handCount ? handCount : -1;
+        log.Append(" · 내 손패 " + handView.Count + "장");
+        if (handView.Count != handExpected)
+            wrong.Add("내 손패 뷰 " + handView.Count + "장 ≠ " + handExpected);
+
+        return wrong.Count > 0 ? "FAIL 화면 ≠ 방장: " + string.Join(" · ", wrong) : "OK 화면 = 방장 —" + log;
     }
 
     /// <summary>
@@ -360,6 +624,122 @@ public static class MultiTest
 
         return "OK 모두 체력 " + hp + " — " + rules.DebugState();
     }
+
+    // 방장: 지금 턴 주인 손패에 카드 한 장을 넣고 바로 쓴다 (드문 카드의 네트워크 경로 확인 — 112 대소동). 결과는 실제 Send 로 보낸다
+    public static string ForceCard(string cardId)
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        int actor = rules.CurrentTurnActor;
+        if (actor == -1)
+            return "WAIT 턴 없음";
+        var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(rules);
+        int id = int.Parse(cardId);
+        Card c = server.Deck.CreateCards().FirstOrDefault(card => card.CardId == id);
+        if (c == null)
+            return "FAIL 덱에 카드 " + cardId + " 없음";
+
+        var forced = new Card(90000 + id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, c.RevealSeconds, c.ResolveSeconds, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
+        ((PlayerState)states[actor]).Hand.Add(forced);
+        int[] targets = new int[0];
+        if (c.Target == TargetType.OneOther)
+        {
+            foreach (int other in states.Keys)
+            {
+                if (other != actor && ((PlayerState)states[other]).Life == LifeState.Alive)
+                {
+                    targets = new[] { other };
+                    break;
+                }
+            }
+        }
+        IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, targets);
+        string first = events.Count > 0 ? events[0].GetType().Name : "없음";
+        typeof(PunGameServer).GetMethod("Send", Private).Invoke(server, new object[] { events });
+        return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" + (targets.Length > 0 ? " → P" + targets[0] : "") : "FAIL 사용 결과 " + first;
+    }
+
+    // 방장: 지금 턴의 제한 시간을 끝낸다 — 다음 Tick 에 시간 초과로 넘어간다 (행동 없이 턴을 빨리 돌리기 — 121 개판 바퀴)
+    public static string ExpireTurn()
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        if (rules.IsGameOver)
+            return "SKIP 게임 끝";
+        typeof(GameServer).GetField(TurnDeadlineField, Private).SetValue(rules, 0d);
+        return "OK P" + rules.CurrentTurnActor + " 턴 시간 끝 — " + rules.DebugState();
+    }
+
+    // 119 목표 조준 — 고르기 시작 알림을 기다렸다가 (5초 안에 골라야 해서 CLI 부름 사이로는 늦다 — 에디터 안에서 바로 한다)
+    // 고르는 사람이면 판이 열린 것을 보고 ChoiceClickDelay 뒤 pick("0" · "1") 버튼을 누른다 (화면 경로 — Button.onClick).
+    // 남이면 ChoiceLookDelay 뒤 반응 타이머 알약이 「{이름} 고르는 중」 인지 본다. shot 이 있으면 그 순간 게임 뷰를 찍는다. 결과는 ChoiceResult.
+    private const string ChoiceResultKey = "MultiTest.Choice";
+    private const double ChoiceLookDelay = 1.5;
+    private const double ChoiceClickDelay = 2.5;
+
+    public static string ArmChoice(string pick, string shot)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        SessionState.SetString(ChoiceResultKey, "WAIT 고르기 시작 전");
+
+        Action<int, int, int, int, int, double, double> onStarted = null;
+        onStarted = (actor, user, cardId, handCount, damage, startsAt, deadline) =>
+        {
+            Chapchu.Network.Events.GameEvents.OnChoiceStarted -= onStarted;
+            bool mine = actor == PhotonNetwork.LocalPlayer.ActorNumber;
+            double startedAt = EditorApplication.timeSinceStartup;
+            bool shotTaken = false;
+            EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                double elapsed = EditorApplication.timeSinceStartup - startedAt;
+                if (!shotTaken && elapsed >= ChoiceLookDelay)
+                {
+                    shotTaken = true;
+                    if (!string.IsNullOrEmpty(shot) && shot != "-")
+                        ScreenCapture.CaptureScreenshot(shot);
+                    if (!mine)
+                    {
+                        EditorApplication.update -= tick;
+                        ReactionTimerView timer = Object.FindFirstObjectByType<ReactionTimerView>();
+                        var text = timer == null ? null : (TMP_Text)typeof(ReactionTimerView).GetField(TimerLabelField, Private).GetValue(timer);
+                        SessionState.SetString(ChoiceResultKey, text != null && text.gameObject.activeInHierarchy && text.text.EndsWith("고르는 중")
+                            ? "SEEN 「" + text.text + "」" : "FAIL 「고르는 중」 이 안 보인다 (알약 「" + (text == null ? "없음" : text.text) + "」)");
+                    }
+                    return;
+                }
+                if (!mine || elapsed < ChoiceClickDelay)
+                    return;
+
+                EditorApplication.update -= tick;
+                ChoicePopupView popup = Object.FindFirstObjectByType<ChoicePopupView>();
+                if (popup == null || !popup.IsOpen)
+                {
+                    SessionState.SetString(ChoiceResultKey, "FAIL 고르기 판이 열리지 않았다");
+                    return;
+                }
+                var button = (UnityEngine.UI.Button)typeof(ChoicePopupView).GetField(pick == "0" ? ChoiceFirstButtonField : ChoiceSecondButtonField, Private).GetValue(popup);
+                string label = button.GetComponentInChildren<TMP_Text>(true).text;
+                button.onClick.Invoke();
+                SessionState.SetString(ChoiceResultKey, "OPEN 고르기 판에서 「" + label + "」 누름 · 닫힘 " + !popup.IsOpen);
+            };
+            EditorApplication.update += tick;
+        };
+        Chapchu.Network.Events.GameEvents.OnChoiceStarted += onStarted;
+        return "OK 고르기 대기";
+    }
+
+    public static string ChoiceResult() => SessionState.GetString(ChoiceResultKey, "WAIT 준비 안 됨");
 
     public static string Ui(string step)
     {
@@ -494,7 +874,7 @@ public static class MultiTest
             bool waits = ((PlayerState)states[target]).Hp == before; // 체인 처리 전에는 아직 그대로
 
             // 반응 마감 → 체인 처리(효과) → 후처리 시간 → 다음 턴 (04-card.md 8절)
-            now += card.RevealSeconds + 5;
+            now += card.RevealSeconds + ReactionSeconds;
             var resolved = server.Tick();
             int after = ((PlayerState)states[target]).Hp;
             now += card.ResolveSeconds;
@@ -512,6 +892,40 @@ public static class MultiTest
         bool rejectOk = rejected.Count == 1 && rejected[0] is RequestRejected;
         failed |= !rejectOk;
         sb.AppendLine((rejectOk ? "" : "FAIL ") + "남의 턴 요청 → " + rejected[0].GetType().Name);
+
+        // 참가자가 아닌 사람의 요청 — 예외 없이 거절 10. 시작 전 원본(방장의 첫 프레임 · 방장이 바뀐 뒤)과 진행 중인 게임의 모르는 번호
+        const int stranger = 99;
+        var notStarted = new GameServer(new System.Random(1), () => now);
+        var requests = new List<Func<IReadOnlyList<GameEvent>>>
+        {
+            () => notStarted.DeclareChapchu(actors[0]), () => notStarted.PlayCounter(actors[0], 1, null), () => notStarted.ActivateTrap(actors[0], 1, null)
+        };
+        if (!server.IsGameOver)
+            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.DeclareChapchu(stranger), () => server.PlayCounter(stranger, 1, null), () => server.ActivateTrap(stranger, 1, null) });
+
+        bool strangerOk;
+        try
+        {
+            strangerOk = requests.All(request => request() is var r && r.Count == 1 && r[0] is RequestRejected rr && rr.Code == RejectCode.NotAlive);
+        }
+        catch (Exception e)
+        {
+            strangerOk = false;
+            sb.AppendLine("FAIL 참가자가 아닌 요청에서 예외 — " + e.GetType().Name);
+        }
+        failed |= !strangerOk;
+        sb.AppendLine((strangerOk ? "" : "FAIL ") + "참가자가 아닌 사람의 찹츄 · 카운터 · 함정 발동 요청 → 10 (" + requests.Count + "건)");
+
+        // 남의 닉네임 표시 거르기 — 서식 태그 · 제어 문자 · 길이. 검사를 통과한 이름은 그대로
+        var names = new (string raw, string shown)[]
+        {
+            ("배고픈찹츄42", "배고픈찹츄42"), ("Player#2", "Player#2"), ("<b>방장</b><size=200>", "b방장/bsize=200"),
+            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength)),
+            (new string('a', NicknameValidator.MaxLength - 1) + "\U0001F600", new string('a', NicknameValidator.MaxLength - 1)),
+        };
+        var badNames = names.Where(n => NicknameValidator.ForDisplay(n.raw) != n.shown).Select(n => NicknameValidator.ForDisplay(n.raw)).ToList();
+        failed |= badNames.Count > 0;
+        sb.AppendLine((badNames.Count == 0 ? "" : "FAIL ") + "닉네임 표시 거르기 " + (names.Length - badNames.Count) + "/" + names.Length + (badNames.Count == 0 ? "" : " — 틀림: " + string.Join(" | ", badNames)));
         sb.Append("끝 " + server.DebugState());
 
         return (failed ? "FAIL\n" : "OK\n") + sb;
@@ -535,14 +949,14 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 4.9);
+            t.At(ChainTable.Reveal + ReactionSeconds - 0.1);
             Check(t.Tick().Count == 0 && t.Hp(t.O1) == 100, "마감 전 — 효과 없음");
             Check(t.Code(t.Server.Draw(t.Turn)) == RejectCode.MainActionUsed, "처리 중 뽑기 → 7");
             Check(t.Code(t.Play(t.Turn, ChainTable.Hit, t.O2)) == RejectCode.MainActionUsed, "처리 중 행동 카드 → 7");
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             IReadOnlyList<GameEvent> resolved = t.Tick();
             Check(resolved.OfType<CardResolved>().Count() == 1 && t.Hp(t.O1) == 80 && !resolved.OfType<TurnStarted>().Any(), "마감 — 효과 적용 · 턴은 아직");
-            t.At(ChainTable.Reveal + 5 + ChainTable.Resolve);
+            t.At(ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve);
             Check(t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor != t.Turn, "후처리 뒤 다음 턴");
         }
 
@@ -555,10 +969,10 @@ public static class MultiTest
             t.At(1.5);
             IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
             ReactionStarted reaction = counter.OfType<ReactionStarted>().FirstOrDefault();
-            Check(reaction != null && Math.Abs(reaction.OpensAt - (1.5 + ChainTable.Reveal)) < 1e-6 && Math.Abs(reaction.Deadline - (1.5 + ChainTable.Reveal + 5)) < 1e-6, "카운터 → 반응 시간 다시 (연출 뒤 5초)");
-            t.At(ChainTable.Reveal + 5);
+            Check(reaction != null && Math.Abs(reaction.OpensAt - (1.5 + ChainTable.Reveal)) < 1e-6 && Math.Abs(reaction.Deadline - (1.5 + ChainTable.Reveal + ReactionSeconds)) < 1e-6, "카운터 → 반응 시간 다시 (연출 뒤 10초)");
+            t.At(ChainTable.Reveal + ReactionSeconds);
             Check(t.Tick().Count == 0, "처음 마감이 지나도 처리 안 함");
-            t.At(1.5 + ChainTable.Reveal + 5);
+            t.At(1.5 + ChainTable.Reveal + ReactionSeconds);
             List<GameEvent> events = t.Tick().ToList();
             int resolvedAt = events.FindIndex(e => e is CardResolved);
             int negatedAt = events.FindIndex(e => e is CardNegated);
@@ -598,18 +1012,18 @@ public static class MultiTest
             t.At(2);
             Check(t.Code(t.Counter(t.O1, ChainTable.TrapOnly)) == RejectCode.CannotReact, "함정에만 반응하는 카운터 → 9");
             Check(t.Code(t.Counter(t.O1, ChainTable.Hit)) == RejectCode.NotCounterCard, "행동 카드로 카운터 → 8");
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "마감 시각 → 6");
         }
 
-        // 6. 처리 중 턴 제한 시간은 멈춘다 — 19초에 내도 20초에 넘어가지 않는다 (03-turn.md 4절)
+        // 6. 처리 중 턴 제한 시간은 멈춘다 — 29초에 내도 30초에 넘어가지 않는다 (03-turn.md 4절)
         {
             var t = new ChainTable();
-            t.At(19);
+            t.At(TurnSeconds - 1);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(20.5);
-            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "20초가 지나도 턴 유지");
-            t.At(19 + ChainTable.Reveal + 5);
+            t.At(TurnSeconds + 0.5);
+            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "30초가 지나도 턴 유지");
+            t.At(TurnSeconds - 1 + ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             Check(t.Hp(t.O1) == 80, "체인 처리");
         }
@@ -620,7 +1034,7 @@ public static class MultiTest
             int user = t.Turn;
             t.Play(user, ChainTable.Hit, t.O1);
             Check(!t.Server.RemovePlayer(user).OfType<TurnStarted>().Any(), "나가도 처리 중엔 턴 유지");
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             t.At(100);
             t.Tick();
@@ -648,9 +1062,9 @@ public static class MultiTest
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             DeathPending pending = t.Tick().OfType<DeathPending>().FirstOrDefault();
-            double startsAt = ChainTable.Reveal + 5 + ChainTable.Resolve;
+            double startsAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
             Check(pending != null && pending.Actor == t.O1 && Math.Abs(pending.StartsAt - startsAt) < 1e-6 && Math.Abs(pending.Deadline - (startsAt + 5)) < 1e-6,
                 "HP 0 → 사망 대기 (피해 연출 뒤부터 5초)");
             t.At(startsAt + 1);
@@ -660,6 +1074,7 @@ public static class MultiTest
             List<GameEvent> events = t.Tick().ToList();
             PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
             Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
+            Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
             t.At(100);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
@@ -674,24 +1089,37 @@ public static class MultiTest
             t.SetHp(t.O1, 10);
             t.SetHp(t.O2, 10);
             t.Play(t.Turn, ChainTable.Wave, null);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             DeathPending[] pendings = t.Tick().OfType<DeathPending>().ToArray();
             Check(pendings.Length == 2 && pendings[0].Deadline == pendings[1].Deadline, "동시 HP 0 → 둘 다 사망 대기 · 같은 마감");
             t.At(100);
             Check(t.Tick().OfType<PlayerDied>().Count() == 2, "함께 최종 사망");
         }
 
-        // 3. 빈 덱 피해 1 · 2 · 3 … (사람마다), 드로우는 턴 종료
+        // 3. 턴 뽑기는 2장, 손패가 찹츄 장수 − 1 이면 1장 (05 4절)
+        {
+            var t = new ChainTable();
+            int before = t.HandCount(t.Turn);
+            IReadOnlyList<GameEvent> drawn = t.Server.Draw(t.Turn);
+            Check(drawn.OfType<CardDrawn>().Count() == GameServer.TurnDrawCount && t.HandCount(t.Turn) == before + 2 && drawn.OfType<TurnStarted>().Any(), "턴 뽑기 → 2장 · 턴 종료");
+
+            var nine = new ChainTable();
+            while (nine.HandCount(nine.Turn) < GameServer.ChapchuHandCount - 1)
+                nine.GiveCard(nine.Turn, ChainTable.Hit);
+            Check(nine.Server.Draw(nine.Turn).OfType<CardDrawn>().Count() == 1 && nine.HandCount(nine.Turn) == GameServer.ChapchuHandCount, "손패 9장에서 턴 뽑기 → 1장 · 딱 10장");
+        }
+
+        // 3-1. 빈 덱 피해 1 · 2 · 3 … (사람마다, 못 뽑은 장마다), 드로우는 턴 종료
         {
             var t = new ChainTable();
             t.EmptyDeck();
             IReadOnlyList<GameEvent> first = t.Server.Draw(t.Turn);
-            EmptyDeckDamaged damage = first.OfType<EmptyDeckDamaged>().FirstOrDefault();
-            Check(damage != null && damage.Amount == 1 && t.Hp(t.Turn) == 99 && first.OfType<TurnStarted>().Any(), "빈 덱 첫 드로우 → 피해 1 · 턴 종료");
+            int[] amounts = first.OfType<EmptyDeckDamaged>().Select(e => e.Amount).ToArray();
+            Check(amounts.SequenceEqual(new[] { 1, 2 }) && t.Hp(t.Turn) == 97 && first.OfType<TurnStarted>().Any(), "빈 덱 첫 드로우(2장) → 피해 1 + 2 · 턴 종료");
             t.Server.Draw(t.O1);
             t.Server.Draw(t.O2);
             t.Server.Draw(t.Turn);
-            Check(t.Hp(t.Turn) == 97 && t.Hp(t.O1) == 99, "두 번째 → 피해 2 (사람마다 따로)");
+            Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 97, "두 번째 → 피해 3 + 4 (사람마다 따로)");
         }
 
         // 4. 빈 덱 피해로 HP 0 → 바로 5초 사망 대기 → 사망 뒤 다음 턴
@@ -738,7 +1166,7 @@ public static class MultiTest
             Check(t.Server.DeclareChapchu(t.O1).OfType<ChapchuChanged>().Any(e => e.IsChapchu), "10장 · 남의 턴에 선언 → 찹츄");
             Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.AlreadyChapchu, "다시 선언 → 12");
             t.Play(t.Turn, ChainTable.Hit, t.O2);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             t.At(100);
             List<GameEvent> events = t.Tick().ToList();
@@ -754,7 +1182,7 @@ public static class MultiTest
             t.Server.DeclareChapchu(t.Turn);
             IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
             Check(played.OfType<ChapchuChanged>().Any(e => !e.IsChapchu), "카드를 내 9장 → 즉시 해제");
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             t.At(100);
             t.Tick();
@@ -767,7 +1195,7 @@ public static class MultiTest
             t.SetHp(t.O1, 10);
             t.SetHp(t.O2, 10);
             t.Play(t.Turn, ChainTable.Wave, null);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             Check(!t.Tick().OfType<GameEnded>().Any(), "사망 대기 중엔 판정 안 함");
             t.At(100);
             List<GameEvent> events = t.Tick().ToList();
@@ -800,7 +1228,7 @@ public static class MultiTest
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.Server.RemovePlayer(t.O1);
             Check(!t.Server.RemovePlayer(t.O2).OfType<GameEnded>().Any(), "체인 중에 모두 나감 → 아직");
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             Check(t.Tick().OfType<GameEnded>().Any(), "체인 처리 뒤 처치 승리");
         }
 
@@ -841,9 +1269,9 @@ public static class MultiTest
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.GiveTrap(t.O2, ChainTable.TrapHit);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             TrapWindowStarted window = t.Tick().OfType<TrapWindowStarted>().FirstOrDefault();
-            double opensAt = ChainTable.Reveal + 5 + ChainTable.Resolve;
+            double opensAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
             Check(window != null && Math.Abs(window.OpensAt - opensAt) < 1e-6 && Math.Abs(window.Deadline - (opensAt + 5)) < 1e-6, "피해 → 함정 시간 (후처리 뒤 5초)");
             t.At(opensAt - 0.5);
             Check(t.Code(t.Activate(t.O1, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "열리기 전 → 17");
@@ -852,7 +1280,7 @@ public static class MultiTest
             Check(t.Code(t.Activate(t.O2, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "피해 안 받은 사람 → 17");
             TrapActivated trap = t.Activate(t.O1, ChainTable.TrapHit).OfType<TrapActivated>().FirstOrDefault();
             Check(trap != null && trap.Targets.SequenceEqual(new[] { t.Turn }) && trap.TrapCount == 0, "발동 → 공개 · 대상 = 피해를 준 사람");
-            t.At(opensAt + 1 + ChainTable.Reveal + 5);
+            t.At(opensAt + 1 + ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             Check(t.Hp(t.Turn) == 90, "반격 피해 (♥90)");
             t.At(100);
@@ -865,7 +1293,7 @@ public static class MultiTest
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             t.At(100);
             Check(t.Tick().OfType<TurnStarted>().Any(), "함정 시간 끝 → 다음 턴");
@@ -874,7 +1302,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             Check(!t.Tick().OfType<TrapWindowStarted>().Any(), "함정이 없으면 함정 시간 없음");
         }
 
@@ -900,12 +1328,12 @@ public static class MultiTest
             t.At(5);
             Check(t.Activate(t.O1, ChainTable.TrapLowHp).OfType<TrapActivated>().Any(), "HP 15 ≤ 20 → 언제든 발동 (새 체인)");
             Check(t.Code(t.Play(t.Turn, ChainTable.Hit, t.O2)) == RejectCode.Resolving, "끼어든 체인 중 메인 행동 → 18");
-            t.At(5 + ChainTable.Reveal + 5);
+            t.At(5 + ChainTable.Reveal + ReactionSeconds);
             t.Tick();
-            double resumeAt = 5 + ChainTable.Reveal + 5 + ChainTable.Resolve;
+            double resumeAt = 5 + ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
             t.At(resumeAt + 0.01);
             TurnResumed resumed = t.Tick().OfType<TurnResumed>().FirstOrDefault();
-            Check(resumed != null && resumed.Actor == t.Turn && Math.Abs(resumed.Deadline - (20 + (resumeAt - 5))) < 0.05, "턴 이어짐 — 멈춘 만큼 마감이 밀림 (" + (resumed?.Deadline.ToString("0.00") ?? "-") + ")");
+            Check(resumed != null && resumed.Actor == t.Turn && Math.Abs(resumed.Deadline - (TurnSeconds + (resumeAt - 5))) < 0.05, "턴 이어짐 — 멈춘 만큼 마감이 밀림 (" + (resumed?.Deadline.ToString("0.00") ?? "-") + ")");
             Check(!(t.Play(t.Turn, ChainTable.Hit, t.O2)[0] is RequestRejected), "이어진 턴에 메인 행동 가능");
             t.SetHp(t.O2, 50);
             Check(t.Code(t.Activate(t.O2, ChainTable.TrapLowHp)) != 0, "HP 50 → 발동 못 함");
@@ -918,14 +1346,14 @@ public static class MultiTest
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.GiveTrap(t.O1, ChainTable.TrapDying);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + 5);
+            t.At(ChainTable.Reveal + ReactionSeconds);
             DeathPending pending = t.Tick().OfType<DeathPending>().FirstOrDefault();
             t.At(pending.StartsAt + 1);
             Check(t.Code(t.Activate(t.O1, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "사망 대기 중 다른 함정 → 17");
             Check(t.Activate(t.O1, ChainTable.TrapDying).OfType<TrapActivated>().Any(), "본인 사망 대기 함정 발동");
             t.At(pending.Deadline + 0.1);
             Check(!t.Tick().OfType<PlayerDied>().Any(), "체인 중엔 최종 사망 보류");
-            t.At(pending.StartsAt + 1 + ChainTable.Reveal + 5);
+            t.At(pending.StartsAt + 1 + ChainTable.Reveal + ReactionSeconds);
             Check(t.Tick().OfType<PlayerDied>().Any(), "체인 처리 뒤 최종 사망");
         }
 
@@ -936,7 +1364,7 @@ public static class MultiTest
             t.GiveTrap(t.O2, ChainTable.TrapReact);
             int before = t.DiscardCount;
             PlayerLeft left = t.Server.RemovePlayer(t.O2).OfType<PlayerLeft>().FirstOrDefault();
-            Check(left != null && left.DiscardCount == before + 6 + 2, "나감 → 손패 6 + 함정 2 버림 더미로");
+            Check(left != null && left.DiscardCount == before + 6 + 2 && left.CardIds.Length == 8, "나감 → 손패 6 + 함정 2 버림 더미로 (카드 종류 8장이 실린다)");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -1009,7 +1437,7 @@ public static class MultiTest
             var driver = new BotDriver(t.Server, new[] { t.O1, t.O2 }, new System.Random(1), () => now);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             var events = new List<GameEvent>();
-            for (now = 0; now < ChainTable.Reveal + 4.9; now += 0.1)
+            for (now = 0; now < ChainTable.Reveal + ReactionSeconds - 0.1; now += 0.1)
                 events.AddRange(driver.Tick());
             CardPlayed counter = events.OfType<CardPlayed>().FirstOrDefault();
             Check(counter != null && counter.Actor == t.O1, "나(O1)를 노린 카드 → O1 이 카운터");
@@ -1032,6 +1460,701 @@ public static class MultiTest
             }
             TrapActivated trap = events.OfType<TrapActivated>().FirstOrDefault();
             Check(trap != null && trap.Actor == t.O1 && trap.Targets.SequenceEqual(new[] { t.Turn }) && t.Hp(t.Turn) == 90, "맞은 뒤 함정 시간에 반격 (♥90)");
+        }
+
+        // ── 카드 묶음 1 (11-card-list 1-2) — Deck_Main 의 실제 에셋 값(대상 · 대상 후보 조건 · 효과). 시간만 시험용 ──
+        {
+            DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
+            List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
+            int[] ids = mainCards.Select(c => c.CardId).ToArray();
+            var expected = new Dictionary<int, int> { [101] = 3, [102] = 3, [106] = 2, [114] = 3, [117] = 1, [104] = 2, [109] = 3, [111] = 2, [113] = 2, [116] = 3, [118] = 3, [145] = 2, [107] = 1, [120] = 3, [123] = 1, [115] = 3, [112] = 1, [105] = 3, [121] = 1, [119] = 3 };
+            Check(ids.Length == 45 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 45장 (묶음 1 ~ 8, 11-card-list 1-1 장수) — {ids.Length}장");
+
+            Func<int, Card> Real(int cardId)
+            {
+                Card c = mainCards.First(x => x.CardId == cardId);
+                return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
+            }
+
+            if (ids.Length == 45)
+            {
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(101)), t.O1);
+                    Check(t.Hp(t.O1) == 80, "101 물어뜯기 대상 20 피해");
+                }
+                {
+                    var t = new ChainTable();
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(102)), t.O1);
+                    Check(t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1, "102 낚아채기 대상 1장 → 나");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    Card c = t.Give(t.Turn, Real(102));
+                    Check(t.Code(t.PlayCard(t.Turn, c, t.O1)) == RejectCode.InvalidTarget && t.Hand(t.Turn).Contains(c), "102 손패 0장 대상 → 거절 5, 카드는 손패에");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.Turn, 50);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(106)), t.Turn);
+                    Check(t.Hp(t.Turn) == 70, "106 핥아주기 나에게 (OneAny) 50 → 70");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 60);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(106)), t.O1);
+                    Check(t.Hp(t.O1) == 80, "106 핥아주기 남에게 60 → 80");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c = t.Give(t.Turn, Real(106));
+                    Check(t.Code(t.PlayCard(t.Turn, c, t.Turn)) == RejectCode.InvalidTarget, "106 체력이 가득 찬 사람 → 거절 5");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O2, 0);
+                    int mine = t.HandCount(t.Turn), o1 = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(114)));
+                    Check(t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == o1 - 1 && t.HandCount(t.O2) == 0, "114 군침이 싹 도노 나를 뺀 모두에게서 1장씩 (빈 손패는 건너뜀)");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(117)));
+                    Check(t.Hp(t.O1) == 60 && t.Hp(t.O2) == 60 && t.Hp(t.Turn) == 100, "117 지옥참마도 나를 뺀 모두에게 40 피해");
+                }
+
+                // ── 묶음 2 ──
+                {
+                    var t = new ChainTable();
+                    t.GiveTrap(t.O1, ChainTable.TrapHit);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(104)), t.O1);
+                    var t2 = new ChainTable(); // 메인 행동은 턴에 한 번 — 거절은 새 판에서
+                    Card c = t2.Give(t2.Turn, Real(104));
+                    int left = t.TrapCount(t.O1), code = t2.Code(t2.Server.PlayCard(t2.Turn, c.InstanceId, new[] { t2.O2 }));
+                    Check(left == 0 && code == RejectCode.InvalidTarget, $"104 파헤치기 대상 함정 1장 파괴 · 함정 없는 사람 → 거절 5 (함정 {left} · 코드 {code})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card old = t.PutInDiscard(ChainTable.Hit);
+                    int hand = t.HandCount(t.Turn);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(109)));
+                    Check(t.Hand(t.Turn).Contains(old) && t.HandCount(t.Turn) == hand + 1 && t.Discard.Count == 1 && t.Discard[0].CardId == 109
+                          && events.OfType<DiscardTaken>().Any(e => e.CardInstanceId == old.InstanceId && e.TopCardId == 109),
+                        "109 아 맞다! 버림 더미 맨 위(이 카드 아래 장)를 손패로");
+                }
+                {
+                    var t = new ChainTable();
+                    t.Discard.Clear();
+                    int hand = t.HandCount(t.Turn);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(109)));
+                    Check(t.HandCount(t.Turn) == hand && t.Discard.Count == 1 && !events.OfType<DiscardTaken>().Any(), "109 버림 더미가 비면 불발 (자기 자신은 못 가져옴)");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.Turn, 30);
+                    t.SetHp(t.O1, 90);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(111)), t.O1);
+                    Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 30, "111 운명 뒤집기 HP 맞바꿈 30 ↔ 90");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 9);
+                    t.SetHandSize(t.O2, 1);
+                    int mine = t.HandCount(t.Turn);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(113)));
+                    Check(t.HandCount(t.O1) == 5 && t.HandCount(t.O2) == 5 && t.HandCount(t.Turn) == mine, "113 기억 삭제 나를 뺀 모두 손패 버리고 5장 (나는 그대로)");
+                }
+                {
+                    var t = new ChainTable();
+                    int hand = t.HandCount(t.Turn);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(116)));
+                    int drew = t.HandCount(t.Turn) - hand;
+                    Check(drew >= 1 && drew <= 10, $"116 상상도 못한 정체 1 ~ 10장 뽑음 ({drew}장)");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 4);
+                    t.SetHandSize(t.O1, 8);
+                    t.SetHandSize(t.O2, 2);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(118)));
+                    bool targeted = events.OfType<CardPlayed>().Any(e => e.CardId == 118 && e.Targets.SequenceEqual(new[] { t.O1 }));
+                    Check(targeted && t.HandCount(t.O1) == 6 && t.HandCount(t.Turn) == 5 && t.HandCount(t.O2) == 3, "118 무야호 손패 최다(자동 공개) 1명에게서 나머지가 1장씩");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 0);
+                    t.SetHandSize(t.O1, 1);
+                    t.SetHandSize(t.O2, 0);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(118)));
+                    Check(t.HandCount(t.Turn) == 1 && t.HandCount(t.O1) == 0 && t.HandCount(t.O2) == 0, "118 카드가 모자라면 쓴 사람부터 턴 순서대로 · 떨어지면 끝");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(145)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    TurnStarted next = events.OfType<TurnStarted>().FirstOrDefault();
+                    Check(events.OfType<TurnDirectionChanged>().Any(e => e.Reversed && e.ExtraTurn == -1) && next != null && next.Actor == t.O2,
+                        $"145 뒤로 돌아 3인 — 역방향, 다음 턴은 이전 사람 (P{next?.Actor} · 기대 P{t.O2})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.State(t.O2).Life = LifeState.Dead;
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(145)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    TurnStarted next = events.OfType<TurnStarted>().FirstOrDefault();
+                    Check(events.OfType<TurnDirectionChanged>().Any(e => e.ExtraTurn == t.Turn) && next != null && next.Actor == t.Turn,
+                        "145 생존자 2명 — 다음 사람을 건너뛰어 내 턴이 다시 (03-turn 7절)");
+                }
+
+                // ── 묶음 3 — 턴 · 상태 (107 · 120 · 123). 「다음 턴」 은 실제로 오는 턴 — 스킵된 턴은 세지 않는다 (03-turn 7절, 2026-11-13) ──
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(107)), t.O1);
+                    bool marked = events.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.NextTurn);
+                    events = t.Run(t.Now + 3);
+                    bool blocked = t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).ActionBlocked
+                                   && events.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.ThisTurn);
+                    Card hit = t.Give(t.O1, Real(101));
+                    int code = t.Code(t.PlayCard(t.O1, hit, t.O2));
+                    Check(marked && blocked && code == RejectCode.ActionBlocked && t.Hand(t.O1).Contains(hit),
+                        $"107 짖기 — 대상의 다음 턴에 행동 카드 → 거절 19, 카드는 손패에 (코드 {code})");
+                    var drawn = t.Server.Draw(t.O1);
+                    Check(!(drawn[0] is RequestRejected) && !t.State(t.O1).ActionBlocked && drawn.OfType<ActionBlockChanged>().Any(e => e.Actor == t.O1 && e.State == ActionBlock.None),
+                        "107 금지된 턴에도 뽑기는 된다 · 그 턴이 끝나면 해제");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(107)), t.O1);
+                    t.State(t.O1).SkipNextTurn = true; // 120 얼음! 이 함께 걸린 것과 같다
+                    t.Run(t.Now + 3);
+                    bool waitingOnSkip = t.Server.CurrentTurnActor == t.O2 && t.State(t.O1).BlockActionNextTurn && !t.State(t.O1).ActionBlocked;
+                    t.Server.Draw(t.O2);
+                    t.Server.Draw(t.Turn);
+                    Check(waitingOnSkip && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).ActionBlocked,
+                        "107 + 턴 스킵 — 금지는 건너뛴 턴이 아니라 실제로 오는 다음 턴에");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(120)));
+                    bool target = events.OfType<CardPlayed>().Any(e => e.CardId == 120 && e.Targets.SequenceEqual(new[] { t.O1 }));
+                    events.AddRange(t.Run(t.Now + 3));
+                    TurnStarted next = events.OfType<TurnStarted>().FirstOrDefault();
+                    Check(target && events.OfType<TurnSkipped>().Any(e => e.Actor == t.O1) && next != null && next.Actor == t.O2,
+                        $"120 얼음! 다음 차례(자동) 1명의 턴을 건너뛴다 (다음 P{next?.Actor} · 기대 P{t.O2})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(145)));
+                    t.Run(t.Now + 3); // 역방향 — 이제 O2 의 턴, 그다음은 O1 (정방향이면 Turn)
+                    var events = t.PlayAndResolve(t.O2, t.Give(t.O2, Real(120)));
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 120 && e.Targets.SequenceEqual(new[] { t.O1 })),
+                        "120 역방향이면 반대쪽 다음 사람이 대상");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, GameServer.ChapchuHandCount);
+                    t.State(t.O1).IsChapchu = true;
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    bool started = events.OfType<WaitChanged>().Any(e => e.Casters.SequenceEqual(new[] { t.Turn }));
+                    events = t.Run(t.Now + 3);
+                    Check(started && !t.Server.IsGameOver && events.OfType<ChapchuWinHeld>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).IsChapchu,
+                        "123 기다려! — 찹츄 상태로 턴이 와도 이기지 않는다 · 찹츄는 그대로");
+                    events = t.Run(t.Now + 31); // O1 시간 초과 → O2
+                    events.AddRange(t.Run(t.Now + 31)); // O2 시간 초과 → 건 사람
+                    int endAt = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
+                    int turnAt = events.FindIndex(e => e is TurnStarted ts && ts.Actor == t.Turn);
+                    Check(endAt >= 0 && turnAt > endAt, "123 건 사람의 다음 턴이 시작되기 전에 끝난다");
+                    GameEnded ended = t.Run(t.Now + 31).OfType<GameEnded>().FirstOrDefault();
+                    Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu, "123 끝난 뒤 다음 자기 턴에 다시 판정 → 찹츄 승리");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    t.State(t.Turn).SkipNextTurn = true;
+                    var events = t.Run(t.Now + 3);
+                    t.Server.Draw(t.O1);
+                    events.AddRange(t.Server.Draw(t.O2)); // 건 사람의 턴은 스킵 → 다시 O1
+                    Check(events.OfType<TurnSkipped>().Any(e => e.Actor == t.Turn) && t.Server.CurrentTurnActor == t.O1 && !events.OfType<WaitChanged>().Any(),
+                        "123 건 사람의 턴이 스킵되면 기다려는 실제로 오는 다음 턴까지 이어진다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    t.Run(t.Now + 3);
+                    t.SetHp(t.Turn, 10);
+                    var events = t.PlayAndResolve(t.O1, t.Give(t.O1, Real(101)), t.Turn);
+                    events.AddRange(t.Run(t.Now + 10)); // 사망 대기 5초 (06 8절)
+                    int died = events.FindIndex(e => e is PlayerDied d && d.Actor == t.Turn);
+                    int ended = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
+                    Check(died >= 0 && ended > died, "123 건 사람이 최종 사망하면 즉시 끝");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(123)));
+                    Check(t.Server.RemovePlayer(t.Turn).OfType<WaitChanged>().Any(e => e.Casters.Length == 0), "123 건 사람이 나가면 즉시 끝");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.State(t.Turn).ActionBlocked = true;
+                    t.SetHandSize(t.Turn, 8); // 손패 8장 — 뽑기 줄(#5 · #6)이 아니라 공격 줄(#7)이 먼저 맞는다
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 6; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    Check(!events.OfType<RequestRejected>().Any() && !events.OfType<CardPlayed>().Any() && events.OfType<CardDrawn>().Any(),
+                        "봇 — 행동 카드 금지 턴에는 뽑기만 (거절 없이)");
+                }
+
+                // ── 묶음 4 — 115 팍씨: 피해의 사망 · 함정 처리를 마친 뒤 강탈 (11-card-list 115 · 06 5절) ──
+                Func<int, Card> Guard(ReactCondition condition, params CardEffect[] effects) =>
+                    id => new Card(id, 901, CardType.Counter, TargetType.None, effects, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.None, 0, condition);
+                {
+                    var t = new ChainTable();
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.Run(t.Now + 3);
+                    Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == theirs - 1 && t.HandCount(t.Turn) == mine + 1, "115 팍씨 — 10 피해 + 무작위 1장 강탈");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    int mine = t.HandCount(t.Turn);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    bool held = events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && t.HandCount(t.O1) > 0;
+                    events = t.Run(t.Now + 10);
+                    Check(held && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && events.OfType<TurnStarted>().Any(),
+                        "115 대상이 사망 대기 — 강탈은 기다린다 · 최종 사망하면 강탈 불발 · 다음 턴으로");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    DeathPending pending = t.RunUntil<DeathPending>(40);
+                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
+                    t.Run(t.Now + 3);
+                    bool held = t.HandCount(t.Turn) == mine; // 함정 체인 반응 시간 — 사망 대기가 남아 아직 강탈 전
+                    var events = t.Run(t.Now + 20);
+                    Check(fired && held && t.Hp(t.O1) == 10 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && !events.OfType<PlayerDied>().Any(),
+                        "115 사망 대기에서 살아나면 — 사망 처리를 마친 뒤 강탈");
+                }
+                {
+                    var t = new ChainTable();
+                    Card back = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged, 0));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
+                    bool held = window != null && t.HandCount(t.Turn) == mine;
+                    t.At(window != null ? window.OpensAt + 0.5 : t.Now);
+                    bool fired = window != null && t.Fire(t.O1, back).OfType<TrapActivated>().Any();
+                    var events = t.Run(t.Now + 20);
+                    int hitAt = events.FindIndex(e => e is HpChanged h && h.Actor == t.Turn);
+                    int stealAt = events.FindIndex(e => e is HandCardsMoved m && m.From == t.O1 && m.To == t.Turn);
+                    Check(held && fired && t.Hp(t.Turn) == 90 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && hitAt >= 0 && stealAt > hitAt,
+                        $"115 「피해 받은 후」 함정 — 함정 처리를 마친 뒤 강탈 (반격 {hitAt} · 강탈 {stealAt})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card guard = t.Give(t.O1, Guard(ReactCondition.DamagesMe, new ReduceDamageEffect { amount = 10 }));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.At(t.Now + 2);
+                    bool countered = !(t.Counter(t.O1, guard)[0] is RequestRejected);
+                    t.Run(t.Now + 20);
+                    Check(countered && t.Hp(t.O1) == 100 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 2, "115 피해만 감소(0) — 강탈은 진행");
+                }
+                {
+                    var t = new ChainTable();
+                    Card negate = t.Give(t.O1, Guard(ReactCondition.Any, new NegateEffect()));
+                    int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    t.At(t.Now + 2);
+                    t.Counter(t.O1, negate);
+                    t.Run(t.Now + 20);
+                    Check(t.Hp(t.O1) == 100 && t.HandCount(t.Turn) == mine && t.HandCount(t.O1) == theirs - 1, "115 카드 전체 무효 — 둘 다 미적용");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == 0 && events.OfType<TurnStarted>().Any(), "115 대상 손패 없음 — 피해만, 강탈 불발");
+                }
+
+                // ── 묶음 5 — 112 대소동: 새 판 · 피폭 k^n (11-card-list 112) ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 30);
+                    t.State(t.O2).Life = LifeState.Dead; // 죽은 사람도 다시 들어온다
+                    t.State(t.Turn).IsChapchu = true;
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    int[] all = { t.Turn, t.O1, t.O2 };
+                    bool fresh = restarted != null && restarted.Count == 1 && restarted.User == t.Turn && restarted.Order.OrderBy(a => a).SequenceEqual(all.OrderBy(a => a))
+                                 && all.All(a => t.Hp(a) == 100 && t.HandCount(a) == 5 && t.State(a).Life == LifeState.Alive && !t.State(a).IsChapchu)
+                                 && t.Server.CurrentTurnActor == restarted.Order[0]
+                                 && events.OfType<FalloutChanged>().Any(f => f.N == 1 && f.Turns == 0)
+                                 && !events.OfType<HpChanged>().Any(h => h.Hp < 100 && events.IndexOf(h) > events.IndexOf(restarted));
+                    Check(fresh, "112 대소동 — 쓴 턴이 끝나면 새 판: 죽은 사람 포함 전원 HP 100 · 손패 5 · 찹츄 해제 · 새 순서 첫 사람 · 쓴 턴은 피폭 없음");
+
+                    int first = restarted?.Order[0] ?? t.Turn, second = restarted?.Order[1] ?? t.O1, third = restarted?.Order[2] ?? t.O2;
+                    t.State(second).SkipNextTurn = true;
+                    events = t.Server.Draw(first).ToList();
+                    bool k1 = events.OfType<FalloutChanged>().Any(f => f.Turns == 1) && all.All(a => t.Hp(a) == 99);
+                    events = t.Server.Draw(t.Server.CurrentTurnActor).ToList(); // 스킵 뒤 third 의 턴
+                    bool k2 = t.Server.CurrentTurnActor != second && events.OfType<FalloutChanged>().Any(f => f.Turns == 2) && all.All(a => t.Hp(a) == 97);
+                    Check(k1 && k2, $"112 피폭 — 턴이 끝날 때마다 모두 k^1 (−1 · −2), 스킵된 턴은 피폭 없음 · k 도 그대로 (HP {t.Hp(first)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.Server.RemovePlayer(t.O2);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    Check(restarted != null && !restarted.Order.Contains(t.O2) && restarted.Order.Length == 2, "112 나간 사람은 빼고 새 판 (봇으로 채우지 않는다)");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    t.Run(t.Now + 3);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted again = events.OfType<GameRestarted>().FirstOrDefault();
+                    int first = again?.Order[0] ?? user;
+                    t.Server.Draw(first);
+                    t.Server.Draw(t.Server.CurrentTurnActor);
+                    Check(again != null && again.Count == 2 && t.Hp(first) == 100 - 1 - 4, $"112 두 번째 — n 2, 피폭 1 · 4 · 9 … (HP {t.Hp(first)})");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    GameRestarted restarted = events.OfType<GameRestarted>().FirstOrDefault();
+                    foreach (int a in new[] { t.Turn, t.O1, t.O2 })
+                        t.SetHp(a, 1);
+                    events = t.Server.Draw(restarted?.Order[0] ?? t.Turn).ToList();
+                    events.AddRange(t.Run(t.Now + 10));
+                    GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+                    Check(events.OfType<DeathPending>().Count() == 3 && ended != null && ended.Reason == GameEndReason.Draw && !events.OfType<TurnStarted>().Any(),
+                        "112 피폭으로 남은 사람이 동시에 모두 죽으면 무승부 · 다음 턴 없음");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.Give(t.Turn, Real(112));
+                    t.SetHp(t.Turn, 40);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 112);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(112));
+                    t2.SetHp(t2.O1, 40);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 112), "봇 — 112 는 내 HP 가 꼴찌이거나 찹츄 상대가 있을 때만");
+                }
+
+                // ── 묶음 6 — 105 드롭킥: 못 쓰러뜨리면 나도 49 — 피해로 HP 0 이 된 순간에 판정 (11-card-list 4절 #2) ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 40);
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    events.AddRange(t.Run(t.Now + 10));
+                    Check(t.Hp(t.Turn) == 100 && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1), "105 드롭킥 — 쓰러뜨리면 반동 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.Run(t.Now + 3);
+                    Check(t.Hp(t.O1) == 51 && t.Hp(t.Turn) == 51, "105 못 쓰러뜨리면 — 대상 49 · 나도 49");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 40);
+                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    DeathPending pending = t.RunUntil<DeathPending>(40);
+                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
+                    var events = t.Run(t.Now + 25);
+                    Check(fired && t.Hp(t.O1) == 10 && t.Hp(t.Turn) == 100 && !events.OfType<PlayerDied>().Any(), "105 사망 대기에서 살아나도 — 쓰러뜨린 것, 반동 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    Card guard = t.Give(t.O1, Guard(ReactCondition.DamagesMe, new ReduceDamageEffect { amount = 49 }));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.At(t.Now + 2);
+                    bool countered = !(t.Counter(t.O1, guard)[0] is RequestRejected);
+                    t.Run(t.Now + 20);
+                    Check(countered && t.Hp(t.O1) == 100 && t.Hp(t.Turn) == 51, "105 피해 감소로 0 — 못 쓰러뜨림, 반동 49");
+                }
+                {
+                    var t = new ChainTable();
+                    Card negate = t.Give(t.O1, Guard(ReactCondition.Any, new NegateEffect()));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
+                    t.At(t.Now + 2);
+                    t.Counter(t.O1, negate);
+                    t.Run(t.Now + 20);
+                    Check(t.Hp(t.O1) == 100 && t.Hp(t.Turn) == 100, "105 카드 전체 무효 — 피해 · 반동 둘 다 없음");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.SetHandSize(t.O2, 9); // 7-2 순서로는 O2 가 먼저 — 쓰러뜨릴 수 있는 O1 을 노리는지
+                    t.Give(t.Turn, Real(105));
+                    t.SetHp(t.O1, 40);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool killFirst = events.OfType<CardPlayed>().Any(e => e.CardId == 105 && e.Targets.SequenceEqual(new[] { t.O1 }));
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(105));
+                    t2.SetHp(t2.Turn, 49);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(killFirst && !events2.OfType<CardPlayed>().Any(e => e.CardId == 105), "봇 — 105 는 쓰러뜨릴 수 있으면 먼저 그 상대에게 · 못 쓰러뜨리는데 내 HP ≤ 49 면 안 씀");
+                }
+
+                // ── 묶음 7 — 121 개판 오분전: 쓴 턴 뒤부터 생존자 수만큼 턴이면 한 바퀴 · 5바퀴 뒤 반반 기준 꼴찌 HP 0 (11-card-list 121) ──
+                // 턴은 시간 초과로 넘긴다 (뽑기로 넘기면 손패가 늘어 꼴찌가 바뀐다). until 이 참이 되거나 시간이 다하면 멈춘다
+                List<GameEvent> RunWhile(ChainTable t, Func<List<GameEvent>, bool> until, double seconds)
+                {
+                    var all = new List<GameEvent>();
+                    double end = t.Now + seconds;
+                    while (t.Now < end && !until(all))
+                        all.AddRange(t.Run(t.Now + 0.1));
+                    return all;
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 10);
+                    t.SetHandSize(t.O2, 0); // HP · 손패 둘 다 꼴찌 — 어느 기준이든 O2
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    bool started = events.OfType<GaepanChanged>().Any(g => g.Caster == t.Turn && g.Left == 5 && !g.Again);
+                    events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 2400);
+                    int StartsBefore(int index) => events.Take(index < 0 ? 0 : index).OfType<TurnStarted>().Count();
+                    int round1 = StartsBefore(events.FindIndex(e => e is GaepanChanged g && g.Left == 4)); // 쓴 턴 끝(안 셈) 뒤 3턴
+                    GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
+                    int turns = StartsBefore(events.IndexOf(judged));
+                    bool listed = judged != null && judged.Actors.Length == 3 && judged.Values[System.Array.IndexOf(judged.Actors, t.O2)] == judged.Value;
+                    bool held = t.Run(t.Now + 3.9).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
+                    var after = t.Run(t.Now + 0.5);
+                    bool zero = t.Hp(t.O2) == 0 && after.OfType<DeathPending>().Any(e => e.Actor == t.O2);
+                    after = t.Run(t.Now + 20);
+                    Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && listed && held && zero
+                          && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2) && after.OfType<TurnStarted>().Any(),
+                        $"121 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 4.17초 공개 뒤 꼴찌 HP 0 → 사망 대기 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
+                }
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayCard(t.Turn, t.Give(t.Turn, Real(121))).ToList();
+                    t.State(t.NextOf(t.Turn)).SkipNextTurn = true;
+                    events = RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    int started = events.Take(events.FindIndex(e => e is GaepanChanged g && g.Left == 4)).OfType<TurnStarted>().Count();
+                    Check(events.OfType<TurnSkipped>().Any() && started == 2, $"121 스킵된 턴도 1턴으로 센다 (한 바퀴까지 시작된 턴 {started})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 1), 2400);
+                    int y = t.Server.CurrentTurnActor, z = t.NextOf(y), x = t.NextOf(z);
+                    t.State(x).SkipNextTurn = true; // 마지막(15번째) 턴이 x 의 스킵된 턴
+                    t.SetHp(z, 10);
+                    t.SetHandSize(z, 0);
+                    var events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 200);
+                    int judgedAt = events.FindIndex(e => e is GaepanJudged);
+                    bool skippedFirst = events.FindIndex(e => e is TurnSkipped s && s.Actor == x) is int k && k >= 0 && k < judgedAt;
+                    events.AddRange(t.Run(t.Now + 25));
+                    TurnStarted next = events.Skip(judgedAt + 1).OfType<TurnStarted>().FirstOrDefault();
+                    Check(judgedAt >= 0 && skippedFirst && t.State(z).Life == LifeState.Dead && next != null && next.Actor == y,
+                        $"121 스킵된 턴 끝에 판정 — 사망 처리 뒤 스킵 다음 사람부터 (다음 턴 P{next?.Actor} · 기대 P{y})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(121)));
+                    Check(events.OfType<GaepanChanged>().Any(g => g.Caster == user && g.Left == 5 && g.Again), "121 개판 중에 다시 쓰면 5바퀴부터 다시");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<TurnStarted>().Any(), 60);
+                    t.Server.RemovePlayer(t.Turn); // 건 사람이 나가도 이어진다 · 바퀴는 남은 2명으로
+                    var events = RunWhile(t, all => all.OfType<GaepanChanged>().Any(g => g.Left == 4), 400);
+                    Check(events.OfType<GaepanChanged>().Any(g => g.Caster == t.Turn && g.Left == 4), "121 건 사람이 나가도 개판은 이어진다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    t.SetHp(t.O2, 10);
+                    t.SetHandSize(t.O1, 0);
+                    t.SetHandSize(t.O2, 0);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    var events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 2400);
+                    GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
+                    Check(judged != null && judged.Tied.Length == 2 && judged.Tied.Contains(judged.Loser) && judged.Loser != t.Turn,
+                        $"121 동점이면 그중 무작위 1명 (꼴찌 P{judged?.Loser} · 동점 {judged?.Tied.Length})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(121)));
+                    RunWhile(t, all => all.OfType<TurnStarted>().Any(), 60);
+                    int user = t.Server.CurrentTurnActor;
+                    var events = t.PlayAndResolve(user, t.Give(user, Real(112)));
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(events.OfType<GameRestarted>().Any() && events.OfType<GaepanChanged>().Any(g => g.Caster == -1 && g.Left == 0) && !t.Server.IsGaepanActive,
+                        "121 개판은 112 대소동 새 판에서 지워진다");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 7);
+                    t.Give(t.Turn, Real(121));
+                    t.SetHp(t.O1, 70);
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 121);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.Turn, 7);
+                    t2.Give(t2.Turn, Real(121));
+                    t2.SetHp(t2.O1, 90);
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                        events2.AddRange(driver2.Tick());
+                    Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 121), "봇 — 121 은 개판이 없고 HP 가 상대 최저보다 20 · 손패가 상대 최소보다 2장 이상 많을 때만");
+                }
+
+                // ── 묶음 8 — 119 목표 조준: 대상이 5초 안에 고른다 (버리기 / 80 피해), 안 고르면 무작위 · 그동안 멈춤 (11-card-list 119) ──
+                {
+                    var t = new ChainTable();
+                    var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    ChoiceStarted started = events.OfType<ChoiceStarted>().FirstOrDefault();
+                    var waiting = t.Run(t.Now + 4);
+                    bool paused = !waiting.OfType<ChoiceMade>().Any() && !waiting.OfType<TurnStarted>().Any() && t.Hp(t.O1) == 100;
+                    var rejected = t.Server.Choose(t.Turn, 1); // 고르는 사람이 아니다
+                    var chosen = t.Server.Choose(t.O1, 1).ToList();
+                    chosen.AddRange(t.Run(t.Now + 3));
+                    Check(started != null && started.Actor == t.O1 && started.Damage == 80 && System.Math.Abs(started.Deadline - started.StartsAt - 5) < 0.01 && paused
+                          && rejected.OfType<RequestRejected>().Any(r => r.Code == RejectCode.NotChoosing)
+                          && chosen.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == 1 && !c.TimedOut) && t.Hp(t.O1) == 20 && chosen.OfType<TurnStarted>().Any(),
+                        "119 목표 조준 — 대상이 고르는 동안 멈춤 · 남의 고르기 거절(코드 20) · 피해 받기 80 → 다음 턴");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 0).ToList();
+                    Check(t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 && events.OfType<CardsDiscarded>().Any(), "119 손패 전부 버리기 — 피해 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 0).ToList();
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 && events.OfType<TurnStarted>().Any(), "119 손패 0장이어도 버리기를 고를 수 있다 — 아무 손해 없이");
+                }
+                {
+                    var t = new ChainTable();
+                    int hand = t.HandCount(t.O1);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Run(t.Now + 8);
+                    ChoiceMade made = events.OfType<ChoiceMade>().FirstOrDefault();
+                    bool applied = made != null && (made.Option == 0 ? t.HandCount(t.O1) == 0 && t.Hp(t.O1) == 100 : t.Hp(t.O1) == 20 && t.HandCount(t.O1) == hand);
+                    Check(made != null && made.TimedOut && applied, $"119 5초 안에 안 고르면 방장이 무작위 (고름 {made?.Option})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.RemovePlayer(t.O1).ToList();
+                    events.AddRange(t.Run(t.Now + 3));
+                    Check(events.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == -1) && events.OfType<TurnStarted>().Any(), "119 고르는 사람이 나가면 불발 · 처리를 마치고 다음 턴");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 50);
+                    t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = t.Server.Choose(t.O1, 1).ToList();
+                    events.AddRange(t.Run(t.Now + 15));
+                    Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
+                        "119 피해 받기로 HP 0 — 사망 대기 → 최종 사망 → 다음 턴");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHp(t.O1, 70);
+                    t.SetHandSize(t.O1, 0);
+                    for (int i = 0; i < 3; i++)
+                        t.Give(t.O1, Real(123)); // 카운터 없는 손패 — 봇이 119 를 무효화하지 않게
+                    var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(119)), t.O1);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 25 && !events.OfType<ChoiceMade>().Any(); now += 0.1)
+                    {
+                        events.AddRange(t.Server.Tick());
+                        events.AddRange(driver.Tick());
+                    }
+                    bool lowDiscard = events.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Option == 0 && !c.TimedOut);
+
+                    double now2 = 0;
+                    var t2 = new ChainTable(() => now2);
+                    t2.SetHandSize(t2.O1, 0);
+                    for (int i = 0; i < 6; i++)
+                        t2.Give(t2.O1, Real(123));
+                    var driver2 = new BotDriver(t2.Server, new[] { t2.O1 }, new System.Random(1), () => now2);
+                    t2.PlayCard(t2.Turn, t2.Give(t2.Turn, Real(119)), t2.O1);
+                    var events2 = new List<GameEvent>();
+                    for (now2 = 0; now2 < 25 && !events2.OfType<ChoiceMade>().Any(); now2 += 0.1)
+                    {
+                        events2.AddRange(t2.Server.Tick());
+                        events2.AddRange(driver2.Tick());
+                    }
+                    Check(lowDiscard && events2.OfType<ChoiceMade>().Any(c => c.Actor == t2.O1 && c.Option == 1 && !c.TimedOut),
+                        "봇 대상 — HP ≤ 80 이면 버리기 · HP 높고 손패 5장 이상이면 피해 받기 (시간 안에)");
+                }
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 0);
+                    t.Give(t.Turn, Real(119));
+                    for (int i = 0; i < 6; i++)
+                        t.Give(t.Turn, Real(123)); // 봇이 쓰지 않는 카드로 손패 7장
+                    t.SetHandSize(t.O1, 3);
+                    t.SetHandSize(t.O2, 2);
+                    t.SetHp(t.O2, 50); // O1 3×3 = 9 · O2 2×3 + 40 = 46
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+                    var events = new List<GameEvent>();
+                    for (now = 0; now < 4; now += 0.1)
+                        events.AddRange(driver.Tick());
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 119 && e.Targets.SequenceEqual(new[] { t.O2 })), "봇 — 119 대상은 손패 × 3 + (HP ≤ 80 이면 40) 가 가장 큰 상대");
+                }
+            }
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -1247,7 +2370,7 @@ public static class MultiTest
             t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SkipTurnEffect { subject = EffectSubject.Target })), t.O1);
             t.At(2);
             t.Counter(t.O1, c13);
-            t.Run(20); // 처리 8.5 · 다음 턴 9.7 — O1 턴 20초 안
+            t.Run(20); // 처리 13.5 · 다음 턴 14.7 — O1 턴 30초 안
             Check(!t.State(t.O1).SkipNextTurn && t.Server.CurrentTurnActor == t.O1, "C13 내 턴 스킵 무효");
         }
         {
@@ -1292,7 +2415,7 @@ public static class MultiTest
             t.At(2);
             Check(t.Code(t.Fire(t.O2, other)) == RejectCode.CannotReact, "T05 조건 「나를 대상으로」 — 대상 아닌 사람 → 9");
             t.Fire(t.O1, mine);
-            t.Run(10);
+            t.Run(20);
             Check(t.Hp(t.O1) == 100 && t.State(t.Turn).SkipNextTurn, "T05 행동 카드 무효 + 시전자 턴 스킵");
         }
 
@@ -1461,7 +2584,7 @@ public static class MultiTest
         public List<GameEvent> PlayAndResolve(int actor, Card card, params int[] targets)
         {
             var events = PlayCard(actor, card, targets).ToList();
-            events.AddRange(Run(_now + Reveal + 5.1));
+            events.AddRange(Run(_now + Reveal + ReactionSeconds + 0.1));
             return events;
         }
 
@@ -1502,6 +2625,9 @@ public static class MultiTest
         }
 
         // 손패를 n 장으로 — 모자라면 Hit 을 더한다 (찹츄 시험)
+        public List<Card> Discard => (List<Card>)typeof(GameServer).GetField(ServerDiscardField, Private).GetValue(Server);
+        public Card PutInDiscard(int kind) { Card c = MakeCard(_nextInstance++, kind); Discard.Add(c); return c; }
+
         public void SetHandSize(int actor, int n)
         {
             List<Card> hand = ((PlayerState)_players[actor]).Hand;
@@ -1608,11 +2734,98 @@ public static class MultiTest
     }
 
     /// <summary>플레이 중인 게임 뷰를 PNG 로 찍는다 (끝 프레임에 쓰임 — 호출 뒤 파일이 생기길 기다린다). 화면 배치를 눈으로 볼 때.</summary>
+    // 121 개판 연출 — 시작 제목 · 자명종 · 마지막 바퀴 · 판정 팻말이 화면에 뜨는 순간을 에디터 안에서 지켜보다 찍는다 (CLI 부름 사이로는 순간을 놓친다).
+    // prefix + "_title.png"(제목이 뜨고 1.6초) · "_hud.png"(자명종이 뜨고 0.6초) · "_hot.png"(마지막 바퀴 0.6초) · "_roll.png"(판정 1.3초 — 룰렛) · "_low.png"(판정 3.4초 — 꼴찌). 한 번씩.
+    public static string ArmGaepanShots(string prefix)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        var seen = new Dictionary<string, double>();
+        var taken = new HashSet<string>();
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+            double now = EditorApplication.timeSinceStartup;
+            GaepanTitleView title = Object.FindFirstObjectByType<GaepanTitleView>(FindObjectsInactive.Include);
+            GaepanHudView hud = Object.FindFirstObjectByType<GaepanHudView>(FindObjectsInactive.Include);
+            GaepanJudgeView judge = Object.FindFirstObjectByType<GaepanJudgeView>(FindObjectsInactive.Include);
+            bool hot = hud != null && hud.gameObject.activeInHierarchy
+                       && ((TMP_Text)typeof(GaepanHudView).GetField(GaepanHudNumberField, Private).GetValue(hud)).text == "1";
+            void Watch(string key, bool on, double after)
+            {
+                if (!on || taken.Contains(key)) return;
+                if (!seen.ContainsKey(key)) seen[key] = now;
+                if (now - seen[key] < after) return;
+                ScreenCapture.CaptureScreenshot(prefix + "_" + key + ".png");
+                taken.Add(key);
+            }
+            Watch("title", title != null && title.gameObject.activeInHierarchy, 1.6);
+            Watch("hud", hud != null && hud.gameObject.activeInHierarchy && !hot, 0.6);
+            Watch("hot", hot, 0.6);
+            Watch("roll", judge != null && judge.gameObject.activeInHierarchy, 1.3);
+            Watch("low", judge != null && judge.gameObject.activeInHierarchy, 3.4);
+            if (taken.Count == 5) EditorApplication.update -= tick;
+        };
+        EditorApplication.update += tick;
+        return "OK 개판 스크린샷 대기 → " + prefix + "_title · _hud · _hot · _roll · _low";
+    }
+
+    // 121 자명종 — 보이면 「HUD n」(남은 바퀴), 없으면 「NONE」.
+    public static string GaepanHud()
+    {
+        GaepanHudView hud = Object.FindFirstObjectByType<GaepanHudView>(FindObjectsInactive.Include);
+        if (hud == null) return "WAIT 게임 화면 아님";
+        if (!hud.gameObject.activeInHierarchy) return "OK NONE";
+        return "OK HUD " + ((TMP_Text)typeof(GaepanHudView).GetField(GaepanHudNumberField, Private).GetValue(hud)).text;
+    }
+
     public static string Shot(string path)
     {
         if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
         if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
         ScreenCapture.CaptureScreenshot(path);
         return "OK " + Screen.width + "x" + Screen.height + " → " + path;
+    }
+
+    /// <summary>
+    /// 다음에 카드가 나오면(OnCardPlayed) 그 뒤 1.0초(3 단계 확대 중) · 2.6초(반응 시간 중) · 8초(multi 에서는 카운터가 끼어든 뒤의 반응 시간)에 게임 뷰를 찍는다 —
+    /// prefix + "_zoom.png" · "_reaction.png" · "_later.png". 한 번만.
+    /// 낸 카드 · 주인 태그 · 반응 타이머의 눈 확인용 (10-ui.md 2-1 「카드 연출 자리」).
+    /// </summary>
+    private static readonly double[] ShotTimes = { 1.0, 2.6, 8.0 };
+    private static readonly string[] ShotNames = { "_zoom.png", "_reaction.png", "_later.png" };
+
+    public static string ArmCardShots(string prefix)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+
+        Action<int, int, int, int[], int, int> onPlayed = null;
+        onPlayed = (actor, instanceId, cardId, targets, handCount, discardCount) =>
+        {
+            Chapchu.Network.Events.GameEvents.OnCardPlayed -= onPlayed;
+            double startedAt = EditorApplication.timeSinceStartup;
+            int taken = 0;
+            EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                double elapsed = EditorApplication.timeSinceStartup - startedAt;
+                if (taken >= ShotTimes.Length)
+                {
+                    EditorApplication.update -= tick;
+                    return;
+                }
+
+                if (elapsed < ShotTimes[taken]) return;
+                ScreenCapture.CaptureScreenshot(prefix + ShotNames[taken]);
+                taken++;
+            };
+            EditorApplication.update += tick;
+        };
+        Chapchu.Network.Events.GameEvents.OnCardPlayed += onPlayed;
+        return "OK 카드 스크린샷 대기 → " + prefix + "_zoom.png · _reaction.png · _later.png";
     }
 }

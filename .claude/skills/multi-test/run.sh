@@ -6,6 +6,7 @@
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 · 방 복귀
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
+#   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 표시 → 찹츄 승리 → 방 복귀
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -274,8 +275,28 @@ wait_scene() {
     done
 }
 
+# 모든 화면의 함정 칸 · 손패 장수가 방장 값과 같은가 (MultiTest.TableUiExpect). 연출 중엔 잠깐 다를 수 있어 6번까지 다시 본다. SHOT_DIR 이 있으면 <이름>_<에디터>.png 도 찍는다.
+check_table_ui() {
+    local shot="$1" other out try
+    for other in "${EDITORS[@]}"; do
+        for try in 1 2 3 4 5 6; do
+            out=$(call "$other" TableUiExpect)
+            case "$out" in OK*) break ;; esac
+            sleep 2
+        done
+        case "$out" in
+            OK*) log "  $(name_of "$other"): $out" ;;
+            *)   fail "$(name_of "$other"): $out"; return 1 ;;
+        esac
+        if [ -n "${SHOT_DIR:-}" ]; then
+            mkdir -p "$SHOT_DIR"
+            log "  $(name_of "$other"): $(call "$other" Shot "$SHOT_DIR/${shot}_$(name_of "$other").png")"
+        fi
+    done
+}
+
 run_full() {
-    local clients="${1:-2}" hp="${2:-20}" project out ended=0 line first=""
+    local clients="${1:-2}" hp="${2:-20}" project out ended=0 line first="" trap_seen=""
     enter_game "$clients" || return
     until_ok "$MAIN" SetAllHp "$hp" || return
 
@@ -284,7 +305,22 @@ run_full() {
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ActIfMyTurn)
             case "$out" in
-                OK*)   log "  $(name_of "$project"): $out"; sleep 2; break ;;
+                OK*)   log "  $(name_of "$project"): $out"; sleep 2
+                       # 화면 경로로 함정을 처음 설치했으면 — 모든 화면의 함정 칸 수가 방장 값과 같은지 한 번 본다 (연출 중이면 잠깐 다를 수 있어 몇 번 다시 본다)
+                       if [ -z "$trap_seen" ] && [[ "$out" == *"함정 설치(화면)"* ]]; then
+                           trap_seen=1
+                           sleep 16   # 같이 낸 카드의 체인(연출 + 반응 10초 + 후처리)이 끝나 큰 카드가 내려간 뒤에 본다
+                           check_table_ui "trap" || return
+                           # 내 함정 칸을 누르면 그 카드가 크게 보이는가 (10-ui.md 4-1)
+                           out=$(call "$project" TrapPreview)
+                           case "$out" in
+                               OK*)   log "  $(name_of "$project"): $out"
+                                      if [ -n "${SHOT_DIR:-}" ]; then sleep 1; log "  $(call "$project" Shot "$SHOT_DIR/trap_preview_$(name_of "$project").png")"; fi ;;
+                               FAIL*) fail "$(name_of "$project"): $out"; return ;;
+                               *)     log "  $(name_of "$project"): $out" ;;
+                           esac
+                       fi
+                       break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return ;;
                 *"게임 끝"*) ended=1 ;;
             esac
@@ -372,6 +408,14 @@ run_multi() {
     done
     sleep 2
 
+    # SHOT_DIR 이 있으면 처음 나오는 카드의 3 단계(확대) · 반응 시간도 에디터마다 찍는다 (MultiTest.ArmCardShots)
+    if [ -n "${SHOT_DIR:-}" ]; then
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            log "  $(name_of "$project"): $(call "$project" ArmCardShots "$SHOT_DIR/$(name_of "$project")")"
+        done
+    fi
+
     log "▶ 턴 ${rounds}번 — 차례인 클라이언트가 행동"
     local done_rounds=0 acted probed=0
     for _ in $(seq 1 $((rounds * 10))); do
@@ -397,8 +441,21 @@ run_multi() {
         [ $acted -eq 0 ] && sleep 1
     done
     PROBED=$probed
-    # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 5 + 후처리 1.28초)가 모든 화면에 닿을 때까지
-    sleep 10
+    # 마지막 카드의 체인 처리 · 후처리(등장 1.46 + 반응 10 + 후처리 1.28초)가 모든 화면에 닿을 때까지
+    sleep 15
+
+    log "▶ 화면의 함정 칸 · 손패 장수가 방장 값과 같은가"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" TableUiExpect || return
+    done
+
+    log "▶ 대상 선택에서 나를 고름 — 나를 포함하는 카드 (10-ui.md 6절)"
+    local main="${EDITORS[0]}"
+    until_ok "$main" SelfPickOpen || return
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$main" Shot "$SHOT_DIR/self_pick_$(name_of "$main").png")"; sleep 2; fi
+    out=$(call "$main" SelfPickTap)
+    case "$out" in OK*) log "  $(name_of "$main"): $out" ;; *) fail "$(name_of "$main"): $out"; return ;; esac
+    until_ok "$main" SelfPickDone || return
 
     log "▶ 내 카드 다시 받기 · 묵은 처리 번호 (09-network.md 5 · 10절)"
     for project in "${EDITORS[@]}"; do
@@ -474,13 +531,189 @@ compare_screens() {
     done
 }
 
+# 찹츄 버튼 (기능 8 A): 모두 뽑기만 해서 손패 10장을 만들고, 내 턴에 활성이 된 버튼을 눌러 선언 → 두 화면의 표시 → 다음 자기 턴에 찹츄 승리 → 방 복귀.
+# 선언 대기(5초)가 아직 없어 선언한 턴은 30초 뒤에 넘어간다.
+run_chapchu() {
+    local clients="${1:-2}" project other out ended=0 declared="" actor line first=""
+    enter_game "$clients" || return
+
+    log "▶ 뽑기만 — 손패 10장 · 내 턴이면 찹츄 버튼"
+    for _ in $(seq 1 $((clients * 150))); do
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ChapchuStep)
+            case "$out" in
+                OK*"찹츄 버튼 누름"*)
+                    log "  $(name_of "$project"): $out"
+                    actor=$(printf '%s' "$out" | sed -E 's/^OK P([0-9]+).*/\1/')
+                    for other in "${EDITORS[@]}"; do
+                        until_ok "$other" ChapchuExpect "$actor" || return
+                    done
+                    if [ -z "$declared" ] && [ -n "${SHOT_DIR:-}" ]; then
+                        mkdir -p "$SHOT_DIR"
+                        for other in "${EDITORS[@]}"; do
+                            log "  $(name_of "$other"): $(call "$other" Shot "$SHOT_DIR/chapchu_$(name_of "$other").png")"
+                        done
+                        sleep 2
+                    fi
+                    declared="$declared $actor"
+                    break ;;
+                OK*)   log "  $(name_of "$project"): $out"; sleep 2; break ;;
+                FAIL*) fail "$(name_of "$project"): $out"; return ;;
+                *"게임 끝"*) ended=1 ;;
+            esac
+        done
+        [ $ended -eq 1 ] && break
+        sleep 1
+    done
+    [ -n "$declared" ] || { fail "찹츄 버튼이 활성이 되지 않았다"; return; }
+    [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
+
+    log "▶ 판정 — 선언한 사람:$declared"
+    for project in "${EDITORS[@]}"; do
+        line=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+        log "  $(name_of "$project"): 「${line:-없음}」 · 찹츄 선언 줄 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 찹츄 선언')개 · 선언 거절(코드 11 · 12) $(console_lines "$project" | grep -cE '내 요청 거절 — 코드 (11|12)')번"
+        printf '%s' "$line" | grep -q 'Chapchu' || fail "$(name_of "$project") 찹츄 승리로 끝나지 않았다"
+        console_lines "$project" | grep -qE '내 요청 거절 — 코드 (11|12)' && fail "$(name_of "$project") 비활성 버튼이 선언 요청을 보냈다"
+        if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
+    done
+    wait_scene RoomScene && log "  결과 표시 뒤 전원 방으로 돌아옴"
+    sleep 2
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 112 대소동 (드문 카드): 방장이 턴 주인에게 112 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
+run_restart() {
+    local clients="${1:-2}" project out lines first=""
+    enter_game "$clients" || return
+    until_ok "$MAIN" ForceCard 112 || return
+    log "▶ 처리 · 새 판 대기"
+    sleep 20
+    log "▶ 새 판에서 두 턴 진행 (피폭 1턴째 · 2턴째)"
+    for _ in $(seq 1 40); do
+        for project in "${EDITORS[@]}"; do
+            out=$(call "$project" ActIfMyTurn)
+            case "$out" in OK*) log "  $(name_of "$project"): $out"; sleep 2 ;; FAIL*) fail "$out"; return ;; esac
+        done
+        console_lines "$MAIN" | grep -q '\[GameDebugInput\].*피폭 — n 1 · k 2' && break
+        sleep 2
+    done
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '대소동 — |피폭 — ' | sed -E 's/.*(대소동 — |피폭 — )/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
+        printf '%s' "$lines" | grep -q '대소동 — P[0-9]* · 새 판 1번째' || fail "$(name_of "$project") 새 판 줄이 없다"
+        printf '%s' "$lines" | grep -q '피폭 — n 1 · k 1 · 모두 −1' || fail "$(name_of "$project") 피폭 1턴째 줄이 없다"
+        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 대소동 · 피폭 줄이 메인과 다르다"; fi
+    done
+    compare_turns
+    check_table_ui restart
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 121 개판 오분전: 방장이 턴 주인에게 121 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
+run_gaepan() {
+    local clients="${1:-2}" project out lines first="" ended=""
+    enter_game "$clients" || return
+    if [ -n "${SHOT_DIR:-}" ]; then
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            call "$project" ArmGaepanShots "$SHOT_DIR/gaepan_$(name_of "$project")" >/dev/null
+        done
+    fi
+    until_ok "$MAIN" ForceCard 121 || return
+    log "▶ 처리 대기 (시작 제목 → 자명종)"
+    sleep 16
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" GaepanHud)
+        log "  $(name_of "$project"): 자명종 $out"
+        [ "$out" = "OK HUD 5" ] || fail "$(name_of "$project") 자명종이 「5」 로 보이지 않는다: $out"
+    done
+    log "▶ 턴을 시간 초과로 넘겨 5바퀴"
+    for _ in $(seq 1 80); do
+        out=$(call "$MAIN" ExpireTurn)
+        case "$out" in FAIL*) fail "$out"; return ;; esac
+        sleep 2
+        console_lines "$MAIN" | grep -q '\[GameDebugInput\].*개판 판정 — ' && break
+    done
+    log "▶ 판정 공개 · 사망 처리 대기"
+    sleep 20
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" GaepanHud)
+        case "$out" in "OK NONE"|"WAIT 게임 화면 아님") ;; *) fail "$(name_of "$project") 판정 뒤에도 자명종이 남았다: $out" ;; esac # 2인 판은 판정 사망으로 끝나 방으로 돌아간다
+    done
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '개판 — |개판 판정 — ' | sed -E 's/.*(개판 — |개판 판정 — )/\1/')
+        ended=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/') · 「${ended:-끝 없음}」"
+        printf '%s' "$lines" | grep -q '5바퀴 남음' || fail "$(name_of "$project") 개판 시작 줄이 없다"
+        printf '%s' "$lines" | grep -q '0바퀴 남음' || fail "$(name_of "$project") 개판 끝 줄이 없다"
+        printf '%s' "$lines" | grep -q '개판 판정 — ' || fail "$(name_of "$project") 판정 줄이 없다"
+        if [ -z "$first" ]; then first="$lines|$ended"; elif [ "$lines|$ended" != "$first" ]; then fail "$(name_of "$project") 의 개판 줄 · 결과가 메인과 다르다"; fi
+    done
+    compare_turns
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 119 목표 조준: 방장이 턴 주인에게 119 를 쥐여 상대에게 쓰게 한다 → 대상 화면에 고르기 판 · 다른 화면에 「고르는 중」 → 대상이 판의 「피해 받기」 를 누른다(화면 경로)
+# → 모든 화면에 같은 고르기 줄 · 표가 방장 값과 같은지.
+run_aim() {
+    local clients="${1:-2}" project out lines shot first="" opened="" seen=""
+    enter_game "$clients" || return
+    # 5초 안에 눌러야 해서 고르기는 에디터 안에서 한다 (ArmChoice) — CLI 부름은 한 번에 몇 초라 늦다.
+    for project in "${EDITORS[@]}"; do
+        shot="-"
+        [ -n "${SHOT_DIR:-}" ] && { mkdir -p "$SHOT_DIR"; shot="$SHOT_DIR/aim_choice_$(name_of "$project").png"; }
+        call "$project" ArmChoice 1 "$shot" >/dev/null
+    done
+    until_ok "$MAIN" ForceCard 119 || return
+    log "▶ 고르기 판 (반응 시간 · 체인 처리 뒤 시작)"
+    for project in "${EDITORS[@]}"; do
+        for _ in $(seq 1 30); do
+            out=$(call "$project" ChoiceResult)
+            case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
+        done
+        log "  $(name_of "$project"): $out"
+        case "$out" in
+            OPEN*) opened="$project" ;;
+            SEEN*) seen="$project" ;;
+            *) fail "$(name_of "$project"): $out" ;;
+        esac
+    done
+    [ -n "$opened" ] || { fail "고르기 판을 누른 화면이 없다"; return; }
+    [ "$clients" -lt 2 ] || [ -n "$seen" ] || fail "다른 화면에 「고르는 중」 이 보이지 않았다"
+    sleep 12
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '고르기 시작 — |고르기 — ' | sed -E 's/.*(고르기 시작 — |고르기 — )/\1/')
+        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
+        printf '%s' "$lines" | grep -q '고르기 — P[0-9]* 피해 받기$' || fail "$(name_of "$project") 「피해 받기」 줄이 없다 (시간 초과면 '(시간 초과)')"
+        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 고르기 줄이 메인과 다르다"; fi
+    done
+    compare_turns
+    check_table_ui aim
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;
     solo)  shift; run_solo "$@" ;;
-    *)     sed -n '2,9p' "$0"; exit 2 ;;
+    chapchu) shift; run_chapchu "$@" ;;
+    restart) shift; run_restart "$@" ;;
+    gaepan)  shift; run_gaepan "$@" ;;
+    aim)     shift; run_aim "$@" ;;
+    *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 
 if [ $FAILED -eq 0 ]; then
