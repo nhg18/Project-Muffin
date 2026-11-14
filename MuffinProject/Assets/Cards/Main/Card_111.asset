@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
   id: 111
   cardName: "\uC6B4\uBA85 \uB4A4\uC9D1\uAE30"
-  cardImage: {fileID: 7199705072138568028, guid: 146c83d048ad3614aa518aa2d40c3254, type: 3}
+  cardImage: {fileID: 21300000, guid: 72414c2bbed2c2548a88e419e4aba595, type: 3}
   type: 0
   targetType: 1
   targetCondition: 0
