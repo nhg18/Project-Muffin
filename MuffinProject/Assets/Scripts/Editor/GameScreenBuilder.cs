@@ -129,7 +129,7 @@ namespace Chapchu.EditorTools
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
             RectTransform center = NewRect("Center", canvasRect);
-            Anchor(center, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1920f, 1080f));
+            Anchor(center, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(HandView.ReferenceWidth, HandView.ReferenceHeight));
             Image dimmer = BuildDimmer(center);
             OpponentSeatsPresenter seats = BuildOpponentSeats(center, deck);
             TargetAskView targetAsk = BuildTargetAsk(center, dimmer);
@@ -222,7 +222,7 @@ namespace Chapchu.EditorTools
         private static void SetupScaler(CanvasScaler scaler)
         {
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(HandView.ReferenceWidth, HandView.ReferenceHeight);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         }
 
@@ -563,7 +563,7 @@ namespace Chapchu.EditorTools
 
             RectTransform pipsRow = NewRect("Pips", content);
             HorizontalLayout(pipsRow, new RectOffset(), 8f, TextAnchor.MiddleCenter, true, true);
-            var pips = new Image[10];
+            var pips = new Image[Chapchu.Game.GameServer.ChapchuHandCount];
             for (int i = 0; i < pips.Length; i++)
             {
                 RectTransform pip = NewRect($"Pip{i}", pipsRow);

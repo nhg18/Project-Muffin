@@ -19,14 +19,6 @@ namespace Chapchu.UI.Fx
         private const float DragFps = 60f;
         private const float MaxDeltaTime = 0.05f;
 
-        // 시안 boomAt 키프레임 (950ms, ease-out) — 정적 함수 AnimateBoom 이 쓴다
-        private const float BoomSeconds = 0.95f;
-        private const float BoomRiseRatio = 0.2f; // 마지막에 떠오르는 높이 — 터짐 글자 높이 대비
-        private static readonly float[] BoomKeys = { 0f, 0.18f, 0.35f, 0.75f, 1f };
-        private static readonly float[] BoomAlphas = { 0f, 1f, 1f, 1f, 0f };
-        private static readonly float[] BoomScales = { 0.2f, 1.25f, 1f, 1f, 1.1f };
-        private static readonly float[] BoomAngles = { -25f, 8f, -4f, -4f, -4f }; // 시안 rotate(+) = 시계 방향
-
         [Tooltip("흔들고 확대할 판. 이 레이어는 판 밖에 있어야 같이 흔들리지 않는다.")]
         [SerializeField] private RectTransform stage;
         [Tooltip("시안의 1px 이 이 화면에서 몇 단위인지.")]
@@ -110,6 +102,18 @@ namespace Chapchu.UI.Fx
         [SerializeField] private float boomHaloSpread = 36f;
         [Tooltip("뒤 빛 투명도.")]
         [SerializeField] private float boomHaloAlpha = 0.8f;
+        [Tooltip("튀어나왔다 사라지는 초 (시안 boomAt 950ms, ease-out).")]
+        [SerializeField] private float boomSeconds = 0.95f;
+        [Tooltip("마지막에 떠오르는 높이 — 터짐 글자 높이 대비.")]
+        [SerializeField] private float boomRiseRatio = 0.2f;
+        [Tooltip("키프레임 시점 (0 ~ 1). 아래 투명도 · 배율 · 각도와 개수가 같아야 한다.")]
+        [SerializeField] private float[] boomKeys = { 0f, 0.18f, 0.35f, 0.75f, 1f };
+        [Tooltip("키프레임마다 투명도.")]
+        [SerializeField] private float[] boomAlphas = { 0f, 1f, 1f, 1f, 0f };
+        [Tooltip("키프레임마다 배율.")]
+        [SerializeField] private float[] boomScales = { 0.2f, 1.25f, 1f, 1f, 1.1f };
+        [Tooltip("키프레임마다 각도 (도, 시안 rotate — + 가 시계 방향).")]
+        [SerializeField] private float[] boomAngles = { -25f, 8f, -4f, -4f, -4f };
 
         [Header("판 흔들기 (시안 arenaShake · shakeStage)")]
         [Tooltip("회전 없이 흔드는 초 (시안 arenaShake 420ms).")]
@@ -450,27 +454,24 @@ namespace Chapchu.UI.Fx
             return root;
         }
 
-        // 시안 boomAt 키프레임 (950ms, ease-out): 0 → .18 → .35 → .75 → 1 — 값은 위 Boom* 상수
-        private static void AnimateBoom(RectTransform root, Vector2 position)
+        // 시안 boomAt 키프레임 (950ms, ease-out): 0 → .18 → .35 → .75 → 1 — 값은 위 「터짐 글자」 필드
+        private void AnimateBoom(RectTransform root, Vector2 position)
         {
             CanvasGroup group = root.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
-            float rise = root.sizeDelta.y * BoomRiseRatio;
-            float[] keys = BoomKeys;
-            float[] alphas = BoomAlphas;
-            float[] scales = BoomScales;
-            float[] angles = BoomAngles;
-            float[] rises = { 0f, 0f, 0f, 0f, rise };
+            // 마지막 키프레임에서만 떠오른다
+            float[] rises = new float[boomKeys.Length];
+            rises[rises.Length - 1] = root.sizeDelta.y * boomRiseRatio;
 
-            DOVirtual.Float(0f, 1f, BoomSeconds, t =>
+            DOVirtual.Float(0f, 1f, boomSeconds, t =>
             {
                 int i = 0;
-                while (i < keys.Length - 2 && t > keys[i + 1])
+                while (i < boomKeys.Length - 2 && t > boomKeys[i + 1])
                     i++;
-                float f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
-                group.alpha = Mathf.Lerp(alphas[i], alphas[i + 1], f);
-                root.localScale = Vector3.one * Mathf.Lerp(scales[i], scales[i + 1], f);
-                root.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(angles[i], angles[i + 1], f));
+                float f = Mathf.InverseLerp(boomKeys[i], boomKeys[i + 1], t);
+                group.alpha = Mathf.Lerp(boomAlphas[i], boomAlphas[i + 1], f);
+                root.localScale = Vector3.one * Mathf.Lerp(boomScales[i], boomScales[i + 1], f);
+                root.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(boomAngles[i], boomAngles[i + 1], f));
                 root.anchoredPosition = position + new Vector2(0f, Mathf.Lerp(rises[i], rises[i + 1], f));
             }).SetEase(Ease.OutQuad).SetLink(root.gameObject).OnComplete(() => Destroy(root.gameObject));
         }
