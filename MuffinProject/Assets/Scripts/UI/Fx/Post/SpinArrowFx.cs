@@ -8,6 +8,8 @@ namespace Chapchu.UI.Fx.Post
     /// 「뒤로 돌아」 4 단계 장식 — 판 가운데에 둥근 화살표(↺)가 커지며 반시계 방향으로 한 바퀴 돌고 사라진다 (시안 spinArrow, 1.1초). 3 단계는 없다 (10-ui 5-1).
     /// 화살표 모양은 <see cref="UICircleArrow"/> (시안 px 크기) — 연출 레이어 배율(PixelScale)을 곱해 키운다. 플레이어 판의 「방향 반대」 글자는 게임 화면 몫이다.
     /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 FXA 뒤로 돌아 · spinArrow · .vw-spin.
+    /// 연출 길이 1.1초 — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 키프레임 구간 찾기는 이 안에서 한다 — 공용 키프레임 도우미(FxLayer)는 만화 컷인 PR 쪽 뼈대 요청이다.
     /// </summary>
     public class SpinArrowFx : CardFx
     {

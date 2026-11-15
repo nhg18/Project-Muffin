@@ -51,8 +51,10 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private Color shadowColor = new Color32(0x2b, 0x28, 0x56, 0xff);
 
         [Header("그림")]
-        [Tooltip("그림 해상도 — 이 오브젝트 1 단위에 텍셀 몇 개. 화면에서 가장 클 때 화면 1 픽셀에 1 텍셀 이상이면 된다. 그림 크기 = 이 오브젝트 크기 × 이 값. 기본값 3.5 = 레이어 배율 1.5 × 「뒤로 돌아」 최대 1.1 배 × 캔버스 배율 2 (가로 3840) 보다 조금 크게.")]
-        [SerializeField] private float resolution = 3.5f;
+        [Tooltip("화면에서 가장 클 때 이 오브젝트의 배율 (부모 기준). 「뒤로 돌아」 = 레이어 배율 1.5 × 최대 1.1 배 = 1.65.")]
+        [SerializeField] private float maxScale = 1f;
+        [Tooltip("가장 클 때 화면 1 픽셀에 텍셀 몇 개. 그림 크기 = 이 오브젝트 크기 × 가장 큰 배율 × 실제 캔버스 배율 × 이 값 — 화면이 클수록 그림도 크고 그리는 시간도 늘어난다.")]
+        [SerializeField] private float texelsPerPixel = 1f;
 
         // 화살대 · 꺾쇠 두 팔의 변 — (바깥 법선 x, y, 법선 방향 위치). 점까지 거리 = 법선 · 점 − 위치
         private readonly Vector3[] _planes = new Vector3[PolygonCount * PolygonSides];
@@ -117,8 +119,9 @@ namespace Chapchu.UI.Fx.Post
         private void Redraw()
         {
             Rect rect = rectTransform.rect;
-            int width = Mathf.Clamp(Mathf.CeilToInt(rect.width * resolution), 1, MaxTexels);
-            int height = Mathf.Clamp(Mathf.CeilToInt(rect.height * resolution), 1, MaxTexels);
+            float texelsPerUnit = texelsPerPixel * maxScale * PixelsPerParentUnit();
+            int width = Mathf.Clamp(Mathf.CeilToInt(rect.width * texelsPerUnit), 1, MaxTexels);
+            int height = Mathf.Clamp(Mathf.CeilToInt(rect.height * texelsPerUnit), 1, MaxTexels);
             if (_texture == null || _texture.width != width || _texture.height != height)
             {
                 if (_texture != null)
@@ -181,6 +184,17 @@ namespace Chapchu.UI.Fx.Post
             _texture.Apply(true);
             SetMaterialDirty();
             SetVerticesDirty();
+        }
+
+        // 부모 1 단위가 지금 화면 몇 픽셀인가 — 실제 캔버스 배율(CanvasScaler) × 캔버스에서 부모까지의 배율. 캔버스 밖(프리팹 편집 등)이면 1
+        private float PixelsPerParentUnit()
+        {
+            Canvas root = canvas != null ? canvas.rootCanvas : null;
+            Transform parent = rectTransform.parent;
+            if (root == null || parent == null)
+                return 1f;
+            float rootScale = root.transform.lossyScale.x;
+            return rootScale > 0f ? root.scaleFactor * parent.lossyScale.x / rootScale : 1f;
         }
 
         // 고리 끝 방향과, 화살대 · 꺾쇠 두 팔(볼록 사각형)의 변을 미리 구한다
