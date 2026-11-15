@@ -2498,8 +2498,13 @@ MonoBehaviour:
   sprigB: {fileID: 3576216163580986061}
   sprigBImage: {fileID: 3552475394596734962}
   flash: {fileID: 4109681316833248968}
+  flashSeconds: 0.16
+  flashStrength: 0.3
+  flashColor: {r: 1, g: 0.9647059, b: 0.8862745, a: 1}
   tint: {fileID: 8250854939818317240}
   vignette: {fileID: 7206143727938708093}
+  vignetteRadii: {x: 0.3, y: 0.68}
+  vignetteColor: {r: 0.019607844, g: 0.03529412, b: 0.08627451, a: 0.5}
   grain: {fileID: 2478657058714435425}
   grainFps: 24
 --- !u!1 &4133081341164093525
