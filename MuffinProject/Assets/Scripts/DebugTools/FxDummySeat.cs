@@ -35,6 +35,15 @@ namespace Chapchu.DebugTools
             ResetHp();
         }
 
+        /// <summary>지금 체력.</summary>
+        public int Hp => _hp;
+
+        /// <summary>체력 바를 그 값으로 바꾼다 (흔들지 않는다 — 맞음 연출은 FxLayer.Hit 가 그린다).</summary>
+        public void ShowHp(int hp)
+        {
+            SetHp(Mathf.Clamp(hp, 0, GameServer.MaxHp), true);
+        }
+
         /// <summary>체력을 처음 값(GameServer.MaxHp, 06-health 2절)으로 되돌린다.</summary>
         public void ResetHp()
         {

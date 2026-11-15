@@ -18,6 +18,7 @@ namespace Chapchu.UI.Fx
         // 시안 PF 의 한 프레임 감속(drag)은 60fps 기준이다
         private const float DragFps = 60f;
         private const float MaxDeltaTime = 0.05f;
+        private const string SeatShakeId = "FxLayer.ShakeSeat.";
 
         [Tooltip("흔들고 확대할 판. 이 레이어는 판 밖에 있어야 같이 흔들리지 않는다.")]
         [SerializeField] private RectTransform stage;
@@ -114,6 +115,38 @@ namespace Chapchu.UI.Fx
         [SerializeField] private float[] boomScales = { 0.2f, 1.25f, 1f, 1f, 1.1f };
         [Tooltip("키프레임마다 각도 (도, 시안 rotate — + 가 시계 방향).")]
         [SerializeField] private float[] boomAngles = { -25f, 8f, -4f, -4f, -4f };
+
+        [Header("맞음 · 회복 (시안 hit · heal — 4 단계 공통)")]
+        [Tooltip("피해 숫자 · 파편 색.")]
+        [SerializeField] private Color hitColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
+        [SerializeField] private Color[] hitColors = { new Color32(0xff, 0x4f, 0x2e, 0xff), new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white };
+        [Tooltip("회복 숫자 색.")]
+        [SerializeField] private Color healColor = new Color32(0x3d, 0xdc, 0x84, 0xff);
+        [SerializeField] private Color[] healColors = { new Color32(0x3d, 0xdc, 0x84, 0xff), new Color32(0xff, 0x5c, 0x8a, 0xff), Color.white };
+        [Tooltip("터짐 숫자가 자리 가운데에서 떨어지는 범위 (시안 px — 가로 ±x, 위로 y 최소 · 최대).")]
+        [SerializeField] private Vector3 boomJitter = new Vector3(30f, 30f, 60f);
+
+        [Header("자리 흔들기 (시안 .plate.shake 380ms)")]
+        [SerializeField] private float seatShakeSeconds = 0.38f;
+        [Tooltip("키프레임마다 가로 이동 (시안 px) — 0 · 20 · 40 · 60 · 80 · 100%.")]
+        [SerializeField] private float[] seatShakeXs = { 0f, -9f, 9f, -6f, 4f, 0f };
+        [Tooltip("키프레임마다 각도 (도, + 가 시계 방향).")]
+        [SerializeField] private float[] seatShakeAngles = { 0f, -3f, 3f, 0f, 0f, 0f };
+
+        [Header("말풍선 (시안 vbubble · .vw-bub)")]
+        [SerializeField] private float bubbleFontSize = 26f;
+        [Tooltip("글자 둘레 여백 (시안 px, 가로 · 세로).")]
+        [SerializeField] private Vector2 bubblePadding = new Vector2(14f, 4f);
+        [SerializeField] private float bubbleRadius = 20f;
+        [SerializeField] private float bubbleBorder = 3f;
+        [Tooltip("아래로 떨어진 그림자 (시안 box-shadow 0 4px 0).")]
+        [SerializeField] private float bubbleShadow = 4f;
+        [SerializeField] private Color bubbleInk = new Color32(0x17, 0x11, 0x0f, 0xff);
+        [SerializeField] private float bubbleSeconds = 1.4f;
+        [Tooltip("키프레임 시점 (0 ~ 1). 아래 배율 · 투명도와 개수가 같아야 한다.")]
+        [SerializeField] private float[] bubbleKeys = { 0f, 0.4f, 0.6f, 0.85f, 1f };
+        [SerializeField] private float[] bubbleScales = { 0f, 1.25f, 1f, 1f, 0.9f };
+        [SerializeField] private float[] bubbleAlphas = { 1f, 1f, 1f, 1f, 0f };
 
         [Header("판 흔들기 (시안 arenaShake · shakeStage)")]
         [Tooltip("회전 없이 흔드는 초 (시안 arenaShake 420ms).")]
@@ -339,6 +372,104 @@ namespace Chapchu.UI.Fx
                 .Append(stage.DOScale(1f, punchOutSeconds).SetEase(Ease.OutCubic));
         }
 
+        #region 4 단계 공통 — 맞음 · 회복 · 말풍선 · 자리 흔들기
+
+        /// <summary>시안 hit — 터짐 숫자 「-n」 · 파편 · (큰 피해면) 번짐 + 판 흔들림 14, 아니면 6 · 자리 흔들림. 체력 바는 부르는 쪽이 바꾼다.</summary>
+        public void Hit(RectTransform seat, int amount, bool big)
+        {
+            Vector2 center = CenterOf(seat);
+            Boom(BoomPoint(center), hitColor, "-" + amount);
+            Burst(center, big ? 40 : 20, hitColors, new Vector2(200f, 520f), 500f);
+            if (big)
+                Bloom(center, hitColor, 260f, 0.4f);
+            ShakeStage(big ? 14f : 6f, false);
+            ShakeSeat(seat);
+        }
+
+        /// <summary>시안 heal — 터짐 숫자 「+n」 · 위로 떠오르는 파편.</summary>
+        public void Heal(RectTransform seat, int amount)
+        {
+            Vector2 center = CenterOf(seat);
+            Boom(BoomPoint(center), healColor, "+" + amount);
+            Burst(center, 22, healColors, new Vector2(120f, 320f), -80f);
+        }
+
+        /// <summary>시안 boomAt 의 자리 — 가운데에서 가로로 조금, 위로 조금 떨어진 곳.</summary>
+        public Vector2 BoomPoint(Vector2 center)
+        {
+            return center + new Vector2(Random.Range(-boomJitter.x, boomJitter.x), Random.Range(boomJitter.y, boomJitter.z)) * pixelScale;
+        }
+
+        /// <summary>시안 .plate.shake — 자리를 좌우로 흔들었다 제자리로 (380ms).</summary>
+        public void ShakeSeat(RectTransform seat)
+        {
+            // 같은 자리를 연달아 흔들면 앞 흔들기를 제자리로 끝내고 다시 — 자리의 다른 트윈은 건드리지 않게 따로 이름을 붙인다
+            string id = SeatShakeId + seat.GetInstanceID();
+            DOTween.Kill(id, true);
+            Vector2 start = seat.anchoredPosition;
+            Quaternion rotation = seat.localRotation;
+            DOVirtual.Float(0f, 1f, seatShakeSeconds, t =>
+            {
+                float k = t * (seatShakeXs.Length - 1);
+                int i = Mathf.Min(seatShakeXs.Length - 2, Mathf.FloorToInt(k));
+                float f = k - i;
+                seat.anchoredPosition = start + new Vector2(Mathf.Lerp(seatShakeXs[i], seatShakeXs[i + 1], f) * pixelScale, 0f);
+                seat.localRotation = rotation * Quaternion.Euler(0f, 0f, -Mathf.Lerp(seatShakeAngles[i], seatShakeAngles[i + 1], f));
+            }).SetId(id).SetLink(seat.gameObject).OnKill(() =>
+            {
+                seat.anchoredPosition = start;
+                seat.localRotation = rotation;
+            });
+        }
+
+        /// <summary>시안 vbubble — 자리 위 dy(시안 px, 위로 +)에 흰 말풍선이 튀어나왔다 사라진다 (1.4초).</summary>
+        public void Bubble(RectTransform seat, string text, float dy = 70f)
+        {
+            Bubble(CenterOf(seat) + new Vector2(0f, dy * pixelScale), text);
+        }
+
+        /// <summary>이 레이어 좌표에 말풍선을 띄운다.</summary>
+        public void Bubble(Vector2 position, string text)
+        {
+            RectTransform root = NewRect("Bubble", transform);
+            root.anchoredPosition = position;
+
+            UIShape shadow = NewShape("Shadow", root, bubbleInk);
+            Stretch(shadow.rectTransform);
+            shadow.rectTransform.anchoredPosition = new Vector2(0f, -bubbleShadow * pixelScale);
+            UIShape body = NewShape("Body", root, Color.white);
+            body.Set(UIShape.ShapeKind.RoundRect, bubbleRadius * pixelScale, bubbleBorder * pixelScale, bubbleInk);
+            shadow.Set(UIShape.ShapeKind.RoundRect, bubbleRadius * pixelScale, bubbleBorder * pixelScale, bubbleInk);
+            Stretch(body.rectTransform);
+
+            TextMeshProUGUI label = NewRect("Text", root).gameObject.AddComponent<TextMeshProUGUI>();
+            label.font = boomFont;
+            label.text = text;
+            label.fontSize = bubbleFontSize * pixelScale;
+            label.color = bubbleInk;
+            label.alignment = TextAlignmentOptions.Center;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.raycastTarget = false;
+            Stretch(label.rectTransform);
+            Vector2 textSize = label.GetPreferredValues(text);
+            root.sizeDelta = new Vector2(textSize.x + (bubblePadding.x + bubbleBorder) * 2f * pixelScale, textSize.y + (bubblePadding.y + bubbleBorder) * 2f * pixelScale);
+
+            CanvasGroup group = root.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            root.localScale = Vector3.zero;
+            DOVirtual.Float(0f, 1f, bubbleSeconds, t =>
+            {
+                int i = 0;
+                while (i < bubbleKeys.Length - 2 && t > bubbleKeys[i + 1])
+                    i++;
+                float f = Mathf.InverseLerp(bubbleKeys[i], bubbleKeys[i + 1], t);
+                root.localScale = Vector3.one * Mathf.Lerp(bubbleScales[i], bubbleScales[i + 1], f);
+                group.alpha = Mathf.Lerp(bubbleAlphas[i], bubbleAlphas[i + 1], f);
+            }).SetLink(root.gameObject).OnComplete(() => Destroy(root.gameObject));
+        }
+
+        #endregion
+
         #region 파티클
 
         private Particle NewParticle(Shape shape, Vector2 position, Color color, float life, float fade)
@@ -503,6 +634,16 @@ namespace Chapchu.UI.Fx
             ring.raycastTarget = false;
             ring.canvasRenderer.cullTransparentMesh = true;
             return ring;
+        }
+
+        private static UIShape NewShape(string name, Transform parent, Color color)
+        {
+            GameObject go = NewRect(name, parent).gameObject;
+            go.AddComponent<CanvasRenderer>();
+            UIShape shape = go.AddComponent<UIShape>();
+            shape.color = color;
+            shape.raycastTarget = false;
+            return shape;
         }
 
         private static RectTransform NewRect(string name, Transform parent)

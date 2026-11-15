@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Cards;
 using Chapchu.Game;
+using Chapchu.Game.Effects;
 using Chapchu.UI.Fx;
 using Chapchu.UI.GameScreen;
-using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,33 +12,30 @@ using UnityEngine.UI;
 namespace Chapchu.DebugTools
 {
     /// <summary>
-    /// 카드 연출 테스트 씬 (RPG 스킬 시험장처럼). 순서와 값은 아티팩트 「찹츄 카드 이펙트」 의 runCard 와 같다:
-    /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임(playCard) → 카드 연출 → 피해(hit) → 900ms → 버림 더미로(clearSlot).
-    /// 규칙 · 네트워크는 거치지 않는다. 새 카드 연출은 <see cref="CardFx"/> 를 상속한 프리팹을 만들고 <see cref="entries"/> 에 한 줄 더한다.
-    /// 키: 1~9 = 그 카드, Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>.
+    /// 카드 연출 시험장 (CardFxTestScene, RPG 스킬 시험장처럼). 덱의 카드가 모두 손패로 깔리고, 누르면 그 카드의 연출
+    /// (Resources/CardFx/Card_{카드 ID})을 게임과 같은 순서로 튼다 (10-ui 5-1):
+    /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임 → 3 단계(<see cref="CardFx.PlayRoutine"/>) →
+    /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(맞음 · 회복) → 장식이 끝나고 900ms → 버림 더미로.
+    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값으로 흉내 낸다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
+    /// 자리는 둘 — 나(낸 사람) · 상대(대상). 연출 프리팹이 없는 카드는 3 단계 없이 결과만.
+    /// 키: Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>. 자동 확인(run.sh fx)은 <see cref="PlayCard"/> 로 튼다.
     /// </summary>
     public class CardFxTestBench : MonoBehaviour
     {
         // 시안 카드 너비(px). 프리팹 카드를 이 크기 × 레이어 PixelScale 로 맞춘다
         private const float DesignCardWidth = 110f;
+        private const int MeActor = 1;
+        private const int OtherActor = 2;
 
-        /// <summary>시험할 카드 한 장. 카드 에셋 없이 화면에 보일 것만 적는다.</summary>
-        [Serializable]
-        public class Entry
-        {
-            public string cardName;
-            public CardType type;
-            public Sprite art;
-            [TextArea] public string description;
-            [Tooltip("Resources/CardFx/ 의 연출 프리팹 이름 (= 연출 컴포넌트 이름, 예: HellBladeFx). 재생할 때 불러온다. 비우면 결과만 보인다.")]
-            public string fxName;
-            [Tooltip("테스트 표시용 피해. 규칙 수치가 아니다.")]
-            public int damage;
-            [Tooltip("큰 피해 연출 (시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
-            public bool bigHit;
-        }
-
-        [SerializeField] private List<Entry> entries = new List<Entry>();
+        [Header("카드")]
+        [Tooltip("손패에 깔 카드 — 게임과 같은 덱 에셋 (Deck_Main). 이름 · 그림 · 종류 · 효과 값을 읽는다.")]
+        [SerializeField] private DeckData cardDeck;
+        [Tooltip("카드 뒷면 — 연출의 날아가는 카드 · 컷인 속 카드.")]
+        [SerializeField] private Sprite cardBack;
+        [Tooltip("캐릭터 그림 — 컷인에 나오는 강아지.")]
+        [SerializeField] private Sprite character;
+        [Tooltip("한 번에 이만큼 이상 줄면 큰 피해 연출 (시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
+        [Min(1)] [SerializeField] private int bigHitDamage = 40;
 
         [Header("재생 속도")]
         [Tooltip("모든 카드 연출의 배속 (Time.timeScale). 1 = 원래 속도. 플레이 중에 바꿔도 바로 적용된다.")]
@@ -71,20 +67,29 @@ namespace Chapchu.DebugTools
 
         [Header("색")]
         [SerializeField] private Color[] landColors = { new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white, new Color32(0xff, 0x5c, 0x8a, 0xff) };
-        [SerializeField] private Color hitColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
-        [SerializeField] private Color[] hitColors = { new Color32(0xff, 0x4f, 0x2e, 0xff), new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white };
 
+        private readonly List<CardData> _cards = new List<CardData>();
         private readonly List<HandCardView> _handCards = new List<HandCardView>();
         private int _lastIndex = -1;
         private bool _busy;
+        private bool _posting;
+
+        /// <summary>3 단계를 재생 중인 카드 ID — 없으면 0. 자동 확인(스크린샷 시각 맞추기)용.</summary>
+        public int PlayingCardId { get; private set; }
+
+        /// <summary>지금 재생 중인 3 단계가 시작한 시각 (Time.time).</summary>
+        public float PlayingSince { get; private set; }
+
+        /// <summary>카드 하나를 내는 중(날아감 · 3 단계 · 4 단계 · 버림)이면 true.</summary>
+        public bool IsBusy => _busy;
 
         private float CardScale => fxLayer.PixelScale * DesignCardWidth / ((RectTransform)actionCardPrefab.transform).sizeDelta.x;
 
         private void Awake()
         {
-            if (actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || handArea == null || playSpot == null
-                || discardPile == null || fxLayer == null || caster == null || target == null || captionText == null
-                || replayButton == null || resetButton == null || playedGlow == null)
+            if (cardDeck == null || cardBack == null || character == null || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null
+                || handArea == null || playSpot == null || discardPile == null || fxLayer == null || caster == null || target == null
+                || captionText == null || replayButton == null || resetButton == null || playedGlow == null)
                 Debug.LogError($"[{nameof(CardFxTestBench)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -119,29 +124,40 @@ namespace Chapchu.DebugTools
             // 마우스로 누른 버튼이 선택돼 남으면 Space 가 Submit 으로도 들어간다 — 시험장 버튼은 선택되지 않게
             replayButton.navigation = new Navigation { mode = Navigation.Mode.None };
             resetButton.navigation = new Navigation { mode = Navigation.Mode.None };
-            for (int i = 0; i < entries.Count; i++)
+
+            foreach (DeckData.Entry entry in cardDeck.entries)
+            {
+                if (entry.card != null && !_cards.Contains(entry.card))
+                    _cards.Add(entry.card);
+            }
+            _cards.Sort((a, b) => a.id.CompareTo(b.id));
+            for (int i = 0; i < _cards.Count; i++)
                 _handCards.Add(CreateHandCard(i));
-            captionText.text = entries.Count > 0 ? "카드를 누르면 연출이 나옵니다." : "entries 에 카드를 추가하세요.";
+            FitHand();
+            captionText.text = _cards.Count > 0 ? "카드를 누르면 연출이 나옵니다." : "덱에 카드가 없습니다.";
         }
 
         private void Update()
         {
-            for (int i = 0; i < Mathf.Min(entries.Count, 9); i++)
-            {
-                if (Input.GetKeyDown(KeyCode.Alpha1 + i))
-                    Play(i);
-            }
-
             if (Input.GetKeyDown(KeyCode.Space))
                 HandleReplayClicked();
             if (Input.GetKeyDown(KeyCode.R))
                 HandleResetClicked();
         }
 
-        /// <summary>목록의 index 번 카드를 낸다. 연출 중이면 무시한다.</summary>
-        public void Play(int index)
+        /// <summary>그 카드 ID 의 카드를 낸다. 덱에 없거나 연출 중이면 false.</summary>
+        public bool PlayCard(int cardId)
         {
-            if (_busy || index < 0 || index >= entries.Count)
+            int index = _cards.FindIndex(card => card.id == cardId);
+            if (index < 0 || _busy)
+                return false;
+            Play(index);
+            return true;
+        }
+
+        private void Play(int index)
+        {
+            if (_busy || index < 0 || index >= _cards.Count)
                 return;
             StartCoroutine(PlayRoutine(index));
         }
@@ -150,58 +166,110 @@ namespace Chapchu.DebugTools
         {
             _busy = true;
             _lastIndex = index;
-            Entry entry = entries[index];
-            captionText.text = $"{entry.cardName} — {entry.description}";
+            CardData data = _cards[index];
+            captionText.text = $"{data.id} {data.cardName} — {data.description}";
             HandleResetClicked();
 
             yield return new WaitForSeconds(0.25f);
-            RectTransform played = CreateFlyingCard(entry, index);
+            RectTransform played = CreateFlyingCard(data, index);
             yield return FlyRoutine(played, fxLayer.CenterOf((RectTransform)_handCards[index].transform), fxLayer.CenterOf(playSpot),
                 0.46f, 0.45f, 1.1f, -20f, 0f, 80f);
             Land(played);
 
             CardFx fx = null;
-            if (!string.IsNullOrEmpty(entry.fxName))
-                yield return CardFxLoader.CreateRoutine(entry.fxName, fxLayer.transform, created => fx = created);
+            yield return CardFxLoader.CreateRoutine(CardFxLoader.NameOf(data.id), fxLayer.transform, created => fx = created, false);
+            CardFxContext context = CreateContext(data);
+            // 3 단계가 결과를 보여 줄 순간을 정하면(Impact) 그때, 아니면 3 단계 뒤에 (게임에서는 결과가 3 단계 뒤에 온다)
+            var shown = new HashSet<CardFxSeat>();
+            context.Impact = seat => ShowResults(data, context, shown, seat);
 
             if (fx != null)
             {
                 Stretch((RectTransform)fx.transform);
-                var context = new CardFxContext
-                {
-                    Layer = fxLayer,
-                    Caster = (RectTransform)caster.transform,
-                    Targets = new[] { (RectTransform)target.transform },
-                    Impact = _ => Hit(entry),
-                };
+                PlayingCardId = data.id;
+                PlayingSince = Time.time;
                 yield return fx.PlayRoutine(context);
-                yield return ClearRoutine(played);
-                StartCoroutine(CardFxLoader.ReleaseRoutine(fx));
-                fx = null;
+                Debug.Log($"[{nameof(CardFxTestBench)}] 카드 {data.id} {data.cardName} 3 단계 {Time.time - PlayingSince:0.00}초");
+                PlayingCardId = 0;
+                StartCoroutine(PostRoutine(fx, context));
+                yield return null; // 장식이 먼저 시작해야 결과 알림을 받는다
             }
             else
             {
-                Debug.LogWarning($"[{nameof(CardFxTestBench)}] {entry.cardName} 에 연출 프리팹이 없다 — 결과만 보인다.");
-                Hit(entry);
-                yield return new WaitForSeconds(0.9f);
-                yield return ClearRoutine(played);
+                Debug.Log($"[{nameof(CardFxTestBench)}] 카드 {data.id} {data.cardName} — 연출 프리팹 없음 (Resources/CardFx/{CardFxLoader.NameOf(data.id)}), 결과만");
+            }
+
+            ShowResults(data, context, shown, null);
+            while (_posting)
+                yield return null;
+            yield return new WaitForSeconds(0.9f);
+            yield return ClearRoutine(played);
+            if (fx != null)
+            {
+                StartCoroutine(CardFxLoader.ReleaseRoutine(fx));
+                fx = null;
             }
 
             _busy = false;
         }
 
-        // 시안 hit: 터짐 숫자 · 파편 · (큰 피해면) 번짐 · 판 흔들림 · 자리 흔들림 + 체력
-        private void Hit(Entry entry)
+        private IEnumerator PostRoutine(CardFx fx, CardFxContext context)
         {
-            var seat = (RectTransform)target.transform;
-            Vector2 center = fxLayer.CenterOf(seat);
-            float px = fxLayer.PixelScale;
-            fxLayer.Boom(center + new Vector2(UnityEngine.Random.Range(-30f, 30f), UnityEngine.Random.Range(30f, 60f)) * px, hitColor, $"-{entry.damage}");
-            fxLayer.Burst(center, entry.bigHit ? 40 : 20, hitColors, new Vector2(200f, 520f), 500f);
-            if (entry.bigHit)
-                fxLayer.Bloom(center, hitColor, 260f, 0.4f);
-            fxLayer.ShakeStage(entry.bigHit ? 14f : 6f, false);
-            target.TakeDamage(entry.damage);
+            _posting = true;
+            yield return fx.PlayPostRoutine(context);
+            _posting = false;
+        }
+
+        private CardFxContext CreateContext(CardData data)
+        {
+            var me = new CardFxSeat { Actor = MeActor, Anchor = (RectTransform)caster.transform, Name = "나", Color = PlayerLook.MeColor, IsMe = true };
+            var other = new CardFxSeat { Actor = OtherActor, Anchor = (RectTransform)target.transform, Name = "상대", Color = PlayerLook.SeatColors[0], IsMe = false };
+            return new CardFxContext
+            {
+                Layer = fxLayer,
+                Caster = me.Anchor,
+                Targets = new[] { other.Anchor },
+                CardId = data.id,
+                CardName = data.cardName,
+                CardArt = data.cardImage,
+                CardBack = cardBack,
+                Character = character,
+                CasterSeat = me,
+                TargetSeats = new[] { other },
+                Seats = new[] { me, other },
+            };
+        }
+
+        // 공통 결과 흉내 — 카드 효과의 피해 · 회복 값을 그 자리에 (시안 hit · heal). onlyAnchor 면 그 자리만. 자리마다 한 번만
+        private void ShowResults(CardData data, CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor)
+        {
+            foreach (CardEffect effect in data.effects)
+            {
+                if (effect is DamageEffect damage)
+                    Apply(context, shown, onlyAnchor, damage.subject, -damage.amount);
+                else if (effect is HealEffect heal)
+                    Apply(context, shown, onlyAnchor, heal.subject, heal.amount);
+            }
+        }
+
+        private void Apply(CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor, EffectSubject subject, int delta)
+        {
+            IReadOnlyList<CardFxSeat> seats = subject == EffectSubject.Self ? new[] { context.CasterSeat } : context.TargetSeats;
+            foreach (CardFxSeat seat in seats)
+            {
+                if ((onlyAnchor != null && seat.Anchor != onlyAnchor) || shown.Contains(seat))
+                    continue;
+                shown.Add(seat);
+
+                FxDummySeat dummy = seat.Anchor.GetComponent<FxDummySeat>();
+                int before = dummy.Hp;
+                dummy.ShowHp(before + delta);
+                if (delta < 0)
+                    fxLayer.Hit(seat.Anchor, -delta, -delta >= bigHitDamage);
+                else
+                    fxLayer.Heal(seat.Anchor, delta);
+                context.NotifyHpChanged(seat, before, dummy.Hp);
+            }
         }
 
         // 시안 playCard 의 착지: 흰 고리 · 파편 16
@@ -248,16 +316,16 @@ namespace Chapchu.DebugTools
         }
 
         // 손패 카드와 같은 모양을 연출 레이어에 하나 더 만든다 (손패 카드는 남겨 둔다 — 몇 번이고 다시 낼 수 있게)
-        private RectTransform CreateFlyingCard(Entry entry, int index)
+        private RectTransform CreateFlyingCard(CardData data, int index)
         {
-            HandCardView card = Instantiate(PrefabOf(entry.type), fxLayer.transform);
-            card.Setup(index, CreateCardData(entry));
+            HandCardView card = Instantiate(PrefabOf(data.type), fxLayer.transform);
+            card.Setup(index, data);
             var rect = (RectTransform)card.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.SetAsFirstSibling();
 
-            if (entry.type == CardType.Action)
+            if (data.type == CardType.Action)
             {
                 // 시안 glow-act: 노란 테두리 + 번짐 (카드 뒤)
                 var glow = new GameObject("PlayedGlow", typeof(RectTransform), typeof(Image));
@@ -292,9 +360,8 @@ namespace Chapchu.DebugTools
 
         private HandCardView CreateHandCard(int index)
         {
-            Entry entry = entries[index];
-            HandCardView card = Instantiate(PrefabOf(entry.type), handArea);
-            card.Setup(index, CreateCardData(entry));
+            HandCardView card = Instantiate(PrefabOf(_cards[index].type), handArea);
+            card.Setup(index, _cards[index]);
 
             // 손패 카드에는 입력이 없다 — 시험장에서만 누를 수 있게 투명 판 + 버튼을 붙인다.
             Image hit = card.gameObject.AddComponent<Image>();
@@ -306,15 +373,15 @@ namespace Chapchu.DebugTools
             return card;
         }
 
-        // 화면에 보이는 값만 채운 임시 카드 정의 — 에셋으로 저장하지 않는다.
-        private static CardData CreateCardData(Entry entry)
+        // 덱의 카드가 많아 손패 줄을 넘치면 카드끼리 겹쳐 한 줄에 들어가게 한다
+        private void FitHand()
         {
-            CardData data = ScriptableObject.CreateInstance<CardData>();
-            data.cardName = entry.cardName;
-            data.type = entry.type;
-            data.cardImage = entry.art;
-            data.description = entry.description;
-            return data;
+            var layout = handArea.GetComponent<HorizontalLayoutGroup>();
+            if (layout == null || _handCards.Count < 2)
+                return;
+            float cardWidth = ((RectTransform)_handCards[0].transform).rect.width * _handCards[0].transform.localScale.x;
+            float room = handArea.rect.width - layout.padding.horizontal;
+            layout.spacing = Mathf.Min(layout.spacing, (room - cardWidth * _handCards.Count) / (_handCards.Count - 1));
         }
 
         private HandCardView PrefabOf(CardType type)
@@ -354,6 +421,7 @@ namespace Chapchu.DebugTools
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one;
         }
     }
 }
