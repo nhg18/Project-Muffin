@@ -1880,6 +1880,8 @@ MonoBehaviour:
   hostTag: {fileID: 4015255908678543165}
   meTag: {fileID: 8586211040038161405}
   botTag: {fileID: 3129965876711601406}
+  botTagLabel: {fileID: 621770660160802432}
+  botTagPadding: 28
   addBotButton: {fileID: 8631447103903567499}
   removeBotButton: {fileID: 2369777719222973111}
 --- !u!1 &5672507305780166969
