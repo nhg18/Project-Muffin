@@ -76,7 +76,7 @@ namespace Chapchu.UI.Fx.Nuke
         }
 
         /// <summary>미사일이 길을 얼마나 왔나 (0~1).</summary>
-        public float MissileProgress(float t) => Mathf.Pow(NukeMath.Clamp01((t - MissileStart) / (Hit - MissileStart)), 1.35f);
+        public float MissileProgress(float t) => Mathf.Pow(Mathf.Clamp01((t - MissileStart) / (Hit - MissileStart)), 1.35f);
 
         /// <summary>미사일 길의 중심 (나선 없이).</summary>
         public Vector3 MissileBase(float t) => NukeMath.Bezier(MissileProgress(t));
@@ -91,7 +91,7 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>미사일 코가 보는 방향.</summary>
         public Vector3 MissileDir(float t) => NukeMath.MissileDir(MissileProgress(t), t);
 
-        /// <summary>미사일 꽁무니 (비행운이 나오는 곳).</summary>
-        public Vector3 MissileTail(float t) => MissilePos(t) - MissileDir(t) * NukeMath.MissileLength;
+        /// <summary>미사일 꽁무니 (비행운이 나오는 곳) — length 는 몸 가운데에서 꽁무니까지 (<see cref="NukeCityFx.MissileTailLength"/>).</summary>
+        public Vector3 MissileTail(float t, float length) => MissilePos(t) - MissileDir(t) * length;
     }
 }

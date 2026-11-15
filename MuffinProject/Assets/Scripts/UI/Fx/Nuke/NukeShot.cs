@@ -192,9 +192,9 @@ namespace Chapchu.UI.Fx.Nuke
 
             shots[9] = Make("10 번쩍 — 멀리서 본 도시 전경", new Vector3(-196f, 86f, -232f), new Vector3(-184f, 80f, -218f), new Vector3(0f, 22f, 30f), new Vector3(0f, 44f, 30f), 1.95f, 1.95f);
             shots[9].Ease = NukeEase.Out;
-            // 충격파가 0.9초 뒤(장면 1.4초 중) 카메라에 닿아 흔들린다
-            shots[9].Shake = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.PositiveInfinity), new Keyframe(0.9f / 1.4f, 0.006f, float.PositiveInfinity, 0f));
-            shots[9].Chroma = Decay(0.006f, 3f * 1.4f);
+            // 충격파가 장면 진행 0.643 에 카메라에 닿아 흔들린다 (시안 값 기준 1.4초 장면의 0.9초) — 키는 장면 진행 기준이라 시간표를 바꿔도 장면 안 같은 자리
+            shots[9].Shake = new AnimationCurve(new Keyframe(0f, 0f, 0f, float.PositiveInfinity), new Keyframe(0.642857f, 0.006f, float.PositiveInfinity, 0f));
+            shots[9].Chroma = Decay(0.006f, 4.2f);
             shots[9].Fog = 0.0015f;
             shots[9].LightExtent = 170f;
             shots[9].PinLight = true;

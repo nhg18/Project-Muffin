@@ -241,7 +241,7 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>글자 시작에서 ms 뒤의 모습으로 놓는다 (음수 = 아직 안 보임). 돌려주는 값 = 컷인 흔들림 (화면 단위, 위로 +).</summary>
         public Vector2 Tick(float ms)
         {
-            group.alpha = ms < 0f ? 0f : NukeMath.CssEase(0f, 0f, 0.58f, 1f, ms / fadeMs);
+            group.alpha = ms < 0f ? 0f : CardFx.CssEase(0f, 0f, 0.58f, 1f, ms / fadeMs);
             Vector2 offset = Vector2.zero;
             float grow = 0f;
             for (int i = 0; i < LetterCount; i++)
@@ -253,7 +253,7 @@ namespace Chapchu.UI.Fx.Nuke
 
                 float land = start + duration * landRatio;
                 if (ms >= land)
-                    grow = (i + NukeMath.CssEase(0.16f, 0.8f, 0.24f, 1f, (ms - land) / underlineMs)) / LetterCount;
+                    grow = (i + CardFx.CssEase(0.16f, 0.8f, 0.24f, 1f, (ms - land) / underlineMs)) / LetterCount;
 
                 offset += ShakeAt(ms - land, last);
                 PlaceRing(i, ms - land, i, last);
@@ -263,12 +263,12 @@ namespace Chapchu.UI.Fx.Nuke
 
             underline.localScale = new Vector3(grow, 1f, 1f);
             underlineGlow.rectTransform.localScale = underline.localScale;
-            float rowScale = Mathf.Lerp(1f, approach.z, NukeMath.Clamp01((ms - approach.x) / approach.y));
+            float rowScale = Mathf.Lerp(1f, approach.z, Mathf.Clamp01((ms - approach.x) / approach.y));
             row.localScale = new Vector3(rowScale, rowScale, 1f);
 
             // 동 이 쿵 하면 초록 빛이 번쩍였다가 가라앉는다
             float lastLand = letterStartMs.z + letterMs.y * landRatio;
-            float flashK = ms >= lastLand && ms < lastLand + flashMs ? 1f - NukeMath.CssEase(0f, 0f, 0.58f, 1f, (ms - lastLand) / flashMs) : 0f;
+            float flashK = ms >= lastLand && ms < lastLand + flashMs ? 1f - CardFx.CssEase(0f, 0f, 0.58f, 1f, (ms - lastLand) / flashMs) : 0f;
             // 빛 폭(Glow Outer)은 그대로 둔다 — 바꾸면 글자 칸 여백이 다시 계산되지 않아 빛이 잘린다
             if (_letterMaterial != null)
                 _letterMaterial.SetColor(GlowColorId, Color.Lerp(glowColor, flashColor, flashK));
@@ -279,7 +279,7 @@ namespace Chapchu.UI.Fx.Nuke
             flash.enabled = flashK > 0f;
 
             // 설명 줄 — 조금 아래에서 올라오며 나타난다
-            float up = ms < subtitleMs.x ? 0f : NukeMath.CssEase(0.16f, 0.8f, 0.24f, 1f, (ms - subtitleMs.x) / subtitleMs.y);
+            float up = ms < subtitleMs.x ? 0f : CardFx.CssEase(0.16f, 0.8f, 0.24f, 1f, (ms - subtitleMs.x) / subtitleMs.y);
             subtitle.alpha = up;
             ((RectTransform)subtitle.transform).anchoredPosition = _subtitleBase - new Vector2(0f, (1f - up) * subtitleMs.z * _subtitleFontSize);
             return offset;
@@ -310,7 +310,7 @@ namespace Chapchu.UI.Fx.Nuke
                 return;
             }
 
-            float e = NukeMath.CssEase(0.3f, 0f, 0.5f, 1f, ms / duration);
+            float e = CardFx.CssEase(0.3f, 0f, 0.5f, 1f, ms / duration);
             float alpha = 1f;
             float y;
             float sx;
@@ -357,7 +357,7 @@ namespace Chapchu.UI.Fx.Nuke
                 return;
             }
 
-            float e = NukeMath.CssEase(0.1f, 0.7f, 0.3f, 1f, ms / duration);
+            float e = CardFx.CssEase(0.1f, 0.7f, 0.3f, 1f, ms / duration);
             Vector2 to = last ? ringScaleLast : ringScale;
             // 시안은 쿵 하는 순간(가로 1.04 · 아래로 .035em)의 글자 칸으로 고리 크기 · 자리를 잰다
             float side = _letterWidths[letter] * LandStretch * 1.05f / ringLineRatio;

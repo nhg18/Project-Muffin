@@ -220,7 +220,7 @@ namespace Chapchu.UI.Fx.Nuke
             int state = seed != 0 ? seed : Random.Range(1, 0xffff);
             dogs.Setup(ref state, timeline);
             city.Setup(ref state, timeline);
-            particles.Setup(timeline);
+            particles.Setup(timeline, city.MissileTailLength);
             BuildCuts();
             BuildBeats();
 
@@ -312,14 +312,14 @@ namespace Chapchu.UI.Fx.Nuke
         {
             int index = ShotAt(t);
             ref readonly NukeShot shot = ref shots[index];
-            float u = NukeMath.Clamp01((t - _cuts[index]) / (_cuts[index + 1] - _cuts[index]));
+            float u = Mathf.Clamp01((t - _cuts[index]) / (_cuts[index + 1] - _cuts[index]));
             float k = Ease(shot.Ease, u);
-            Vector3 eye = NukeMath.Mix(shot.Eye, shot.EyeEnd, Ease(shot.EyeEase, u));
-            Vector3 target = NukeMath.Mix(shot.Target, shot.TargetEnd, k);
+            Vector3 eye = Vector3.LerpUnclamped(shot.Eye, shot.EyeEnd, Ease(shot.EyeEase, u));
+            Vector3 target = Vector3.LerpUnclamped(shot.Target, shot.TargetEnd, k);
             switch (shot.Path)
             {
                 case NukeShotPath.TurnToMissile:
-                    target = NukeMath.Mix(shot.Target, timeline.MissileBase(t) + shot.TargetEnd, k);
+                    target = Vector3.LerpUnclamped(shot.Target, timeline.MissileBase(t) + shot.TargetEnd, k);
                     break;
                 case NukeShotPath.WatchMissile:
                     target += timeline.MissileBase(t);
@@ -327,7 +327,7 @@ namespace Chapchu.UI.Fx.Nuke
                 case NukeShotPath.FollowMissile:
                     Vector3 missile = timeline.MissileBase(t);
                     timeline.MissileFrame(t, out Vector3 forward, out Vector3 side, out Vector3 up);
-                    float angle = NukeMath.Lerp(shot.OrbitAngle, shot.OrbitAngleEnd, k) * Mathf.Deg2Rad;
+                    float angle = Mathf.LerpUnclamped(shot.OrbitAngle, shot.OrbitAngleEnd, k) * Mathf.Deg2Rad;
                     eye = missile + side * (eye.x + Mathf.Cos(angle) * shot.Orbit.x) + up * (eye.y + Mathf.Sin(angle) * shot.Orbit.y) + forward * eye.z;
                     target = missile + side * target.x + up * target.y + forward * target.z;
                     break;
@@ -338,10 +338,10 @@ namespace Chapchu.UI.Fx.Nuke
             Look(eye, target);
 
             _shot = index + 1;
-            _focal = baseFocal * NukeMath.Lerp(shot.Zoom, shot.ZoomEnd, k);
-            _roll = NukeMath.Lerp(shot.Roll, shot.RollEnd, k) + Mathf.Sin(t * shot.WobbleRate) * shot.Wobble * u;
+            _focal = baseFocal * Mathf.LerpUnclamped(shot.Zoom, shot.ZoomEnd, k);
+            _roll = Mathf.LerpUnclamped(shot.Roll, shot.RollEnd, k) + Mathf.Sin(t * shot.WobbleRate) * shot.Wobble * u;
             _zoom = 1f;
-            _radialBlur = NukeMath.Lerp(shot.RadialBlur, shot.RadialBlurEnd, k);
+            _radialBlur = Mathf.LerpUnclamped(shot.RadialBlur, shot.RadialBlurEnd, k);
             _chroma = shot.Chroma != null ? shot.Chroma.Evaluate(u) : 0f;
             _focus = shot.Focus;
             _dof = shot.Blur;
@@ -421,7 +421,7 @@ namespace Chapchu.UI.Fx.Nuke
             float rimK = p > 0f ? 1f - NukeMath.Smooth((p - 0.4f) / 2.2f) : 0f;
             float glow = hot * 0.4f;
             Vector4 pointLight = p > 0f
-                ? new Vector4(NukeMath.Impact.x, NukeMath.Lerp(8f, 50f, NukeMath.Smooth(p / 3f)), NukeMath.Impact.z, NukeMath.Lerp(55f, 90f, NukeMath.Smooth(p / 2f)))
+                ? new Vector4(NukeMath.Impact.x, Mathf.LerpUnclamped(8f, 50f, NukeMath.Smooth(p / 3f)), NukeMath.Impact.z, Mathf.LerpUnclamped(55f, 90f, NukeMath.Smooth(p / 2f)))
                 : Vector4.zero;
             Vector3 pointColor = p > 0f ? Rgb(fireballLight) * (hot * (0.8f + 0.2f * Mathf.Sin(real * 31f)) + 0.05f * gk) : Vector3.zero;
             float emi = p > 0f ? (p < 0.25f && Mathf.Sin(real * 90f) > 0f ? 0.8f : 0f) : 0.95f;
@@ -461,12 +461,12 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 Expo = 1f + (p > 0f ? grade.Flash * Mathf.Exp(-p * 5.5f) + grade.Afterglow * Mathf.Exp(-p * 1.2f) : 0f) - hold * grade.HoldDarken,
                 Bloom = grade.Bloom + hot * grade.BloomHeat,
-                Saturation = NukeMath.Lerp(grade.Saturation, grade.SaturationNear, near) - hold * grade.HoldDesaturate - gk * grade.FalloutDesaturate,
+                Saturation = Mathf.LerpUnclamped(grade.Saturation, grade.SaturationNear, near) - hold * grade.HoldDesaturate - gk * grade.FalloutDesaturate,
                 Contrast = grade.Contrast + near * grade.ContrastNear,
                 Tint = Mix3(clear.Tint, blast.Tint, fallout.Tint, dk, gk),
                 Grain = grade.Grain + gk * grade.FalloutGrain,
                 Vignette = grade.Vignette + near * grade.VignetteNear + pulse * grade.VignettePulse + hold * grade.VignetteHold,
-                VignetteColor = hold > 0f ? Vector3.zero : NukeMath.Mix(Rgb(grade.VignetteColor), Rgb(grade.VignetteNearColor), near * 0.7f + pulse * 0.3f),
+                VignetteColor = hold > 0f ? Vector3.zero : Vector3.LerpUnclamped(Rgb(grade.VignetteColor), Rgb(grade.VignetteNearColor), near * 0.7f + pulse * 0.3f),
                 RadialBlur = _radialBlur,
                 RadialCenter = new Vector2(0.5f, 0.5f),
                 Chroma = _chroma,
@@ -597,7 +597,7 @@ namespace Chapchu.UI.Fx.Nuke
                     float k = head.w;
                     if (!view.Project(head, out Vector2 at, out float scale))
                         continue;
-                    float size = scale * 0.34f * NukeMath.EaseOut(k / 0.18f) * (1f + 0.2f * Mathf.Sin(NukeMath.Clamp01(k / 0.3f) * Mathf.PI));
+                    float size = scale * 0.34f * NukeMath.EaseOut(k / 0.18f) * (1f + 0.2f * Mathf.Sin(Mathf.Clamp01(k / 0.3f) * Mathf.PI));
                     _marks.Add(new UIExclaimMarks.Mark
                     {
                         Position = at,
@@ -683,9 +683,9 @@ namespace Chapchu.UI.Fx.Nuke
 
         // 시안 mix3(mix3(맑음, 착탄, dk), 낙진, gk)
         private static Vector3 Mix3(Color clearColor, Color blastColor, Color falloutColor, float dk, float gk)
-            => NukeMath.Mix(NukeMath.Mix(Rgb(clearColor), Rgb(blastColor), dk), Rgb(falloutColor), gk);
+            => Vector3.LerpUnclamped(Vector3.LerpUnclamped(Rgb(clearColor), Rgb(blastColor), dk), Rgb(falloutColor), gk);
 
         private static float Mix3(float clearValue, float blastValue, float falloutValue, float dk, float gk)
-            => NukeMath.Lerp(NukeMath.Lerp(clearValue, blastValue, dk), falloutValue, gk);
+            => Mathf.LerpUnclamped(Mathf.LerpUnclamped(clearValue, blastValue, dk), falloutValue, gk);
     }
 }

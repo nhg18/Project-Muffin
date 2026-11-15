@@ -56,13 +56,13 @@ namespace Chapchu.UI.Fx.Nuke
             Destroy(_mesh);
         }
 
-        /// <summary>시간표를 받고, 비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다.</summary>
-        public void Setup(in NukeTimeline timeline)
+        /// <summary>시간표를 받고, 비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다. missileTail = 미사일 몸 가운데에서 꽁무니까지 (m).</summary>
+        public void Setup(in NukeTimeline timeline, float missileTail)
         {
             _timeline = timeline;
             float step = (timeline.Hit - timeline.MissileStart) / ContrailCount;
             for (int i = 0; i < ContrailCount; i++)
-                _contrail[i] = timeline.MissileTail(timeline.MissileStart + i * step);
+                _contrail[i] = timeline.MissileTail(timeline.MissileStart + i * step, missileTail);
         }
 
         /// <summary>이번 프레임의 입자를 비운다.</summary>
@@ -204,7 +204,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 NukeCityData.Building b = buildings[n];
                 int bi = n + 1;
-                if (b.Dist < 34f || b.Dist >= 82f)
+                if (b.Dist < NukeMath.CrushRadius || b.Dist >= NukeMath.CollapseRadius)
                     continue;
                 float k = p - b.Arrive;
                 if (k <= 0f || k > 4f)

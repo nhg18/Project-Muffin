@@ -12,8 +12,11 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>바닥을 훑는 먼지 벽의 속도 (m/s).</summary>
         public const float DustSpeed = 36f;
 
-        /// <summary>미사일 길이 — 몸 가운데에서 꽁무니까지 (m).</summary>
-        public const float MissileLength = 7.3f;
+        /// <summary>착탄점에서 이 거리(m) 안의 건물은 그 자리에 주저앉는다.</summary>
+        public const float CrushRadius = 34f;
+
+        /// <summary>착탄점에서 이 거리(m) 안의 건물(<see cref="CrushRadius"/> 밖)은 먼지 벽이 닿으면 기울며 무너진다 — 잔해 더미 · 무너지는 먼지도 이 구간.</summary>
+        public const float CollapseRadius = 82f;
 
         /// <summary>장면 가까운 · 먼 면 (m).</summary>
         public const float Near = 0.3f;
@@ -31,54 +34,29 @@ namespace Chapchu.UI.Fx.Nuke
 
         private static readonly float[] Rnd = BuildTable();
 
-        public static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
-
         /// <summary>시안 sm — smoothstep(0, 1, k).</summary>
         public static float Smooth(float k)
         {
-            k = Clamp01(k);
+            k = Mathf.Clamp01(k);
             return k * k * (3f - 2f * k);
         }
 
         /// <summary>시안 eo — 끝에서 느려지는 3차.</summary>
         public static float EaseOut(float k)
         {
-            float u = 1f - Clamp01(k);
+            float u = 1f - Mathf.Clamp01(k);
             return 1f - u * u * u;
         }
 
         /// <summary>시안 eio — 양끝에서 느린 3차.</summary>
         public static float EaseInOut(float k)
         {
-            k = Clamp01(k);
+            k = Mathf.Clamp01(k);
             if (k < 0.5f)
                 return 4f * k * k * k;
             float u = -2f * k + 2f;
             return 1f - u * u * u / 2f;
         }
-
-        /// <summary>CSS cubic-bezier(x1, y1, x2, y2) 이징 — 시간 비율 x(0~1) 의 진행 비율.</summary>
-        public static float CssEase(float x1, float y1, float x2, float y2, float x)
-        {
-            x = Clamp01(x);
-            float t = x;
-            for (int i = 0; i < 8; i++)
-            {
-                float error = BezierAt(x1, x2, t) - x;
-                if (Mathf.Abs(error) < 1e-5f)
-                    break;
-                float slope = BezierSlope(x1, x2, t);
-                if (Mathf.Abs(slope) < 1e-6f)
-                    break;
-                t = Clamp01(t - error / slope);
-            }
-
-            return BezierAt(y1, y2, t);
-        }
-
-        public static float Lerp(float a, float b, float k) => a + (b - a) * k;
-
-        public static Vector3 Mix(Vector3 a, Vector3 b, float k) => a + (b - a) * k;
 
         /// <summary>시안 rn(i, k) — 고정 난수 표 (0~1).</summary>
         public static float Rn(int i, int k)
@@ -146,19 +124,6 @@ namespace Chapchu.UI.Fx.Nuke
         private static float Spin(float s, float t) => Mathf.PI * 2f * 7.5f * Mathf.Pow(s, 1.1f) + t * 1.5f;
 
         private static int Imul(int a, int b) => unchecked((int)((uint)a * (uint)b));
-
-        // 0 · p1 · p2 · 1 을 잇는 3차 베지어의 한 축
-        private static float BezierAt(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
-        }
-
-        private static float BezierSlope(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * p1 + 6f * u * t * (p2 - p1) + 3f * t * t * (1f - p2);
-        }
 
         private static float[] BuildTable()
         {

@@ -96,8 +96,8 @@ namespace Chapchu.UI.Fx.Nuke
             while (ms < lengthMs)
             {
                 float fadeOutAt = lengthMs - fadeOutMs;
-                cutIn.alpha = ms < fadeOutAt ? NukeMath.Clamp01(ms / fadeInMs) : 1f - NukeMath.Clamp01((ms - fadeOutAt) / fadeOutMs);
-                float slide = (1f - NukeMath.CssEase(0f, 0f, 0.58f, 1f, ms / barsMs)) * barHeight;
+                cutIn.alpha = ms < fadeOutAt ? Mathf.Clamp01(ms / fadeInMs) : 1f - Mathf.Clamp01((ms - fadeOutAt) / fadeOutMs);
+                float slide = (1f - CssEase(0f, 0f, 0.58f, 1f, ms / barsMs)) * barHeight;
                 topBar.anchoredPosition = new Vector2(0f, slide);
                 bottomBar.anchoredPosition = new Vector2(0f, -slide);
                 cut.anchoredPosition = title.Tick(ms - titleMs);

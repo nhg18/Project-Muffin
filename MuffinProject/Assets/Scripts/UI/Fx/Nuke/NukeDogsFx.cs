@@ -66,6 +66,7 @@ namespace Chapchu.UI.Fx.Nuke
             public float Cadence;
             public Vector3 Toss;
             public float Turn;
+            public float StruckAt;
         }
 
         // 한 프레임의 강아지 판 (시안 SPR)
@@ -123,6 +124,7 @@ namespace Chapchu.UI.Fx.Nuke
                 float tossZ = NukeMath.Range(ref seed, 4f, 8f);
                 dog.Toss = new Vector3(tossX, tossY, tossZ);
                 dog.Turn = NukeMath.Range(ref seed, -6f, 6f);
+                dog.StruckAt = StruckTime(dog, timeline.Hit);
                 _dogs[i] = dog;
             }
         }
@@ -207,7 +209,7 @@ namespace Chapchu.UI.Fx.Nuke
                 {
                     // 멈칫 → 하늘을 보고 떤다
                     float k = t - d.NoticeAt;
-                    float hop = Mathf.Sin(NukeMath.Clamp01(k / 0.22f) * Mathf.PI) * 0.35f;
+                    float hop = Mathf.Sin(Mathf.Clamp01(k / 0.22f) * Mathf.PI) * 0.35f;
                     float fear = NukeMath.Smooth((t - _timeline.Sky) / 1.2f);
                     float x = d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f + Mathf.Sin(t * 38f) * 0.02f * fear;
                     Add(d, view, new Vector3(x, hop, d.Z), Mathf.PI + Mathf.Sin(d.Phase) * 0.4f, fear > 0.3f ? Pose.Shake : Pose.Stand, t * 14f,
@@ -215,12 +217,12 @@ namespace Chapchu.UI.Fx.Nuke
                 }
                 else
                 {
-                    float x0 = d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f;
+                    float x0 = RunFromX(d);
                     float tt = t - d.RunAt;
-                    float run = tt - 0.18f * (1f - Mathf.Exp(-tt * 6f));
+                    float run = RunDistance(tt);
                     float sx = x0 + d.VelocityX * run;
                     float sz = d.Z + d.VelocityZ * run;
-                    float struck = _timeline.Hit + NukeMath.Flat(sx - NukeMath.Impact.x, sz - NukeMath.Impact.z) / NukeMath.DustSpeed;
+                    float struck = d.StruckAt;
                     if (t < struck)
                     {
                         // 달아나기 + 발에서 이는 먼지
@@ -240,8 +242,7 @@ namespace Chapchu.UI.Fx.Nuke
                     else
                     {
                         // 먼지 벽에 휩쓸려 튀어 오르고 → 미끄러진다
-                        float before = struck - d.RunAt;
-                        float runStruck = before - 0.18f * (1f - Mathf.Exp(-before * 6f));
+                        float runStruck = RunDistance(struck - d.RunAt);
                         float bx = x0 + d.VelocityX * runStruck;
                         float bz = d.Z + d.VelocityZ * runStruck;
                         float k = t - struck;
@@ -393,6 +394,29 @@ namespace Chapchu.UI.Fx.Nuke
                 default:
                     return 0f;
             }
+        }
+
+        // 달아나기 시작한 자리 (멈칫한 자리)
+        private static float RunFromX(in Dog d) => d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f;
+
+        // 달아나기 시작한 뒤 tt 초 동안 간 양 (처음 0.18초 몫은 속도를 붙이는 데 쓴다)
+        private static float RunDistance(float tt) => tt - 0.18f * (1f - Mathf.Exp(-tt * 6f));
+
+        // 먼지 벽(착탄점에서 36 m/s)이 달아나는 강아지를 따라잡는 때 — t = 착탄 + 그때 자리까지 거리 / 36 을 한 번 풀어 둔다
+        private static float StruckTime(in Dog d, float hit)
+        {
+            float x0 = RunFromX(d);
+            float struck = hit;
+            for (int n = 0; n < 32; n++)
+            {
+                float run = RunDistance(struck - d.RunAt);
+                float next = hit + NukeMath.Flat(x0 + d.VelocityX * run - NukeMath.Impact.x, d.Z + d.VelocityZ * run - NukeMath.Impact.z) / NukeMath.DustSpeed;
+                if (Mathf.Abs(next - struck) < 1e-5f)
+                    return next;
+                struck = next;
+            }
+
+            return struck;
         }
 
         // 시안 toss — 튀어 올라 두 번 더 튄다 (높이, 돈 양, 눌림, 몇 번째 튐 — 3 이면 다 튐)

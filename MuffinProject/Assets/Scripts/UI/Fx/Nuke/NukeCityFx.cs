@@ -12,6 +12,7 @@ namespace Chapchu.UI.Fx.Nuke
     {
         private const int ChunkCount = 54;
         private const int NearChunks = 30;
+        private const float MissileTailRatio = 0.98f;
 
         private static readonly int MpAId = Shader.PropertyToID("_MpA");
         private static readonly int MpBId = Shader.PropertyToID("_MpB");
@@ -42,6 +43,9 @@ namespace Chapchu.UI.Fx.Nuke
         private NukeView _view;
         private CommandBuffer _shadow;
         private Material _shadowMaterial;
+
+        /// <summary>미사일 몸 가운데에서 꽁무니(불꽃 · 비행운이 나오는 곳)까지 (m) — 미사일 크기를 따른다.</summary>
+        public float MissileTailLength => missileScale * MissileTailRatio;
 
         private struct Chunk
         {
@@ -108,7 +112,7 @@ namespace Chapchu.UI.Fx.Nuke
                 float yaw = Mathf.Atan2(d.x, d.z);
                 Put(data.missile, objectMaterial, m, yaw, pitch, t * 7f, missileScale, 1f, true);
                 float flame = missileScale * (1f + 0.04f * Mathf.Sin(real * 23f));
-                Put(data.flame, objectMaterial, m - d * missileScale * 0.98f, yaw, pitch, t * 13f, flame, 1f + 0.06f * Mathf.Sin(real * 17f), false, 2.4f);
+                Put(data.flame, objectMaterial, m - d * MissileTailLength, yaw, pitch, t * 13f, flame, 1f + 0.06f * Mathf.Sin(real * 17f), false, 2.4f);
             }
 
             if (p < 0f)
@@ -147,7 +151,7 @@ namespace Chapchu.UI.Fx.Nuke
                     float k = p - b.Arrive;
                     float lean = b.Away - b.Yaw;
                     float fast = p - b.Dist / 95f;
-                    if (b.Dist < 34f)
+                    if (b.Dist < NukeMath.CrushRadius)
                     {
                         float v = NukeMath.Smooth(p / 0.55f);
                         if (v >= 1f)
@@ -155,7 +159,7 @@ namespace Chapchu.UI.Fx.Nuke
                         sy = 1f - v * 0.96f;
                         x += Mathf.Sin(real * 70f + b.X) * 0.3f * (1f - v);
                     }
-                    else if (b.Dist < 82f)
+                    else if (b.Dist < NukeMath.CollapseRadius)
                     {
                         if (k > 0f)
                         {
@@ -175,7 +179,7 @@ namespace Chapchu.UI.Fx.Nuke
                     else if (b.Dist < 150f && k > 0f)
                     {
                         float u = NukeMath.EaseOut(k / 1.6f);
-                        float tip = u * (0.03f + b.R2 * 0.13f) * (1f - (b.Dist - 82f) / 90f);
+                        float tip = u * (0.03f + b.R2 * 0.13f) * (1f - (b.Dist - NukeMath.CollapseRadius) / 90f);
                         pitch = Mathf.Cos(lean) * tip;
                         roll = -Mathf.Sin(lean) * tip;
                         y = -u * 0.5f;
@@ -193,7 +197,7 @@ namespace Chapchu.UI.Fx.Nuke
                     _shadow.DrawMesh(data.buildingMeshes[b.Variant], matrix, _shadowMaterial, 0, 0);
 
                 // 무너진 자리의 잔해 더미
-                if (p > 0f && b.Dist >= 34f && b.Dist < 82f && p - b.Arrive > 0.5f)
+                if (p > 0f && b.Dist >= NukeMath.CrushRadius && b.Dist < NukeMath.CollapseRadius && p - b.Arrive > 0.5f)
                     Put(data.rubble, objectMaterial, new Vector3(b.X + Mathf.Sin(b.Away) * 3f, 0f, b.Z + Mathf.Cos(b.Away) * 3f), b.R1 * 6f, 0f, 0f, b.Width * 0.55f * NukeMath.EaseOut((p - b.Arrive - 0.5f) / 1.2f), 1f, false);
             }
         }

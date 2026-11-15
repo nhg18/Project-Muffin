@@ -326,7 +326,7 @@ namespace Chapchu.DebugTools
 
             for (float time = 0f; time < duration; time += Time.deltaTime)
             {
-                float t = CubicBezier(0.3f, 0.6f, 0.25f, 1f, time / duration);
+                float t = CardFx.CssEase(0.3f, 0.6f, 0.25f, 1f, time / duration);
                 bool first = t < 0.5f;
                 float f = first ? t / 0.5f : (t - 0.5f) / 0.5f;
                 card.anchoredPosition = first ? Vector2.Lerp(from, middle, f) : Vector2.Lerp(middle, to, f);
@@ -420,27 +420,6 @@ namespace Chapchu.DebugTools
                 case CardType.Trap: return trapCardPrefab;
                 default: return actionCardPrefab;
             }
-        }
-
-        // CSS cubic-bezier(x1, y1, x2, y2) — 진행률 x 에 대한 y
-        private static float CubicBezier(float x1, float y1, float x2, float y2, float x)
-        {
-            float t = x;
-            for (int i = 0; i < 8; i++)
-            {
-                float current = Bezier(x1, x2, t) - x;
-                float slope = 3f * (1f - t) * (1f - t) * x1 + 6f * (1f - t) * t * (x2 - x1) + 3f * t * t * (1f - x2);
-                if (Mathf.Abs(slope) < 1e-5f)
-                    break;
-                t = Mathf.Clamp01(t - current / slope);
-            }
-            return Bezier(y1, y2, t);
-        }
-
-        private static float Bezier(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
         }
 
         private static void Stretch(RectTransform rect)
