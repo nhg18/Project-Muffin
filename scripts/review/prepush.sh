@@ -91,6 +91,12 @@ scope_changes()   { git status --porcelain --untracked-files=all -- "${PATHS_ARR
 outside_changes() { git status --porcelain --untracked-files=all -- "${OUTSIDE[@]}"; }
 
 command -v "$CLAUDE_BIN" >/dev/null 2>&1 || die "'$CLAUDE_BIN' 명령을 찾을 수 없습니다."
+# 세션 결과(JSON)를 읽는 데 쓴다. Windows 의 python3 는 스토어 바로가기일 수 있어 실제로 돌려 본다
+PY=""
+for c in python3 python; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c 1 >/dev/null 2>&1; then PY="$c"; break; fi
+done
+[[ -n "$PY" ]] || die "python 을 찾을 수 없습니다 (세션 결과 JSON 을 읽는 데 필요)."
 [[ -z "$(scope_changes)" ]] || die "리뷰 경로($REVIEW_PATHS)에 커밋 안 된 변경이 있습니다. 커밋하거나 stash한 뒤 실행하세요."
 [[ -f "$DESIGN_INTENT" ]] || warn "$DESIGN_INTENT 가 없습니다. 의도된 동작이 버그로 보고될 수 있어요."
 export REVIEW_PIPELINE=1   # 프로젝트 hook이 이 값을 보고 재귀 실행을 피할 수 있게
@@ -111,11 +117,31 @@ if (( ALL )); then
   fi
   SCOPE="이 범위에 있는 기존 코드 전체가 리뷰 대상이다. 단, 설계 의도 문서의 '알려진 한계'와 docs/worklog.md의 '다음 할 일'·'확인 못 한 것'에 이미 적힌 문제는 보고하지 않는다."
 else
+  # 원격 정보가 오래되면 남이 develop 에 넣은 코드가 diff 에 섞인다
+  git fetch -q origin 2>/dev/null || warn "git fetch 실패 — 로컬에 있는 원격 정보로 계산합니다."
   if ! git rev-parse --verify -q "$BASE_BRANCH" >/dev/null; then
     if git rev-parse --verify -q '@{u}' >/dev/null; then BASE_BRANCH='@{u}'
     else die "기준 브랜치 '$BASE_BRANCH'가 없습니다. REVIEW_BASE=브랜치 로 지정하세요."; fi
   fi
-  BASE="$(git merge-base "$BASE_BRANCH" HEAD)" || die "merge-base 계산 실패"
+  DEV_BASE="$(git merge-base "$BASE_BRANCH" HEAD)" || die "merge-base 계산 실패"
+  BASE="$DEV_BASE"; BASE_DESC="$BASE_BRANCH 에서 갈라진 곳"
+  # 이미 push 한 커밋은 그때 리뷰를 통과했다 (pre-push 훅) — 그 뒤 커밋만 본다
+  # @{u} 는 쓰지 않는다 — origin/develop 에서 만든 브랜치는 upstream 이 origin/develop 으로 잡혀 있다
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  PUSHED=""   # 브랜치가 없으면(detached) origin/HEAD 가 잡히므로 건너뛴다
+  [[ "$BRANCH" != "HEAD" ]] && PUSHED="$(git rev-parse --verify -q "origin/$BRANCH" 2>/dev/null || true)"
+  if [[ -z "$PUSHED" ]]; then
+    :   # 아직 push 안 한 브랜치 — develop 에서 갈라진 곳부터
+  elif ! git merge-base --is-ancestor "$PUSHED" HEAD; then
+    warn "원격 브랜치가 지금 커밋의 조상이 아닙니다 (rebase · 남의 push) — $BASE_DESC 부터 봅니다."
+  elif git merge-base --is-ancestor "$DEV_BASE" "$PUSHED"; then
+    BASE="$PUSHED"; BASE_DESC="이미 push 한 곳"
+  elif TREE="$(git merge-tree --write-tree "$PUSHED" "$DEV_BASE" 2>/dev/null)"; then
+    # push 뒤에 develop 을 머지했다 — 「push 한 곳 + 그 develop」을 합친 트리와 비교해 남의 코드를 뺀다
+    BASE="$TREE"; BASE_DESC="이미 push 한 곳 + 머지한 develop"
+  else
+    warn "push 한 곳과 develop 을 충돌 없이 합칠 수 없습니다 — $BASE_DESC 부터 봅니다."
+  fi
   SCOPE="이번 diff가 새로 만들거나 건드린 문제만 보고한다. diff와 무관한 기존 코드의 문제는 보고하지 않는다."
 fi
 # 2라운드부터: 앞 라운드 수정 커밋만 본다 (두 모드 공통)
@@ -136,10 +162,35 @@ render() {
   done
 }
 
+# claude -p --output-format json 결과 → 본문 파일 + usage.tsv 한 줄
+# 열: 세션 · 턴 · 입력 · 캐시 쓰기 · 캐시 읽기 · 출력 · 비용(USD, 정가 기준) · 초
+session_usage() {
+  "$PY" - "$1" "$2" "$3" <<'PYEOF'
+import json, sys
+src, out, key = sys.argv[1:4]
+d = json.load(open(src, encoding="utf-8"))
+open(out, "w", encoding="utf-8", newline="\n").write(d.get("result") or "")
+m = (d.get("modelUsage") or {}).values()
+s = lambda k: sum(v.get(k, 0) for v in m)
+print("\t".join(map(str, [key, d.get("num_turns", 0), s("inputTokens"), s("cacheCreationInputTokens"),
+      s("cacheReadInputTokens"), s("outputTokens"), "%.2f" % d.get("total_cost_usd", 0),
+      round(d.get("duration_ms", 0) / 1000)])))
+PYEOF
+}
+
+# usage.tsv → report.md 에 붙일 표 (마지막 줄 합계)
+usage_table() {
+  [[ -f "$1" ]] || return 0
+  printf '## 토큰\n\n| 세션 | 턴 | 입력 | 캐시 쓰기 | 캐시 읽기 | 출력 | 비용 $ | 초 |\n|---|---|---|---|---|---|---|---|\n'
+  awk -F'\t' '{ printf "| %s | %s | %s | %s | %s | %s | %s | %s |\n", $1,$2,$3,$4,$5,$6,$7,$8
+                for (i=2;i<=8;i++) t[i]+=$i }
+              END { printf "| **합계** | %d | %d | %d | %d | %d | %.2f | %d |\n", t[2],t[3],t[4],t[5],t[6],t[7],t[8] }' "$1"
+}
+
 # 새 세션으로 claude 실행. mode: read(읽기 전용) | find(읽기 전용 + 기본 스킬 code-review 호출) | edit(파일 수정 허용)
 run_claude() {
   local label="$1" task="$2" out="$3" mode="$4" model="$5"
-  local args=(-p "$task 파일을 읽고 그 지시를 그대로 수행해. 최종 결과 본문만 출력해.")
+  local args=(-p "$task 파일을 읽고 그 지시를 그대로 수행해. 최종 결과 본문만 출력해." --output-format json)
   case "$mode" in
     edit) args+=(--permission-mode acceptEdits --allowedTools "Read,Grep,Glob,Edit,Write" --disallowedTools "Bash") ;;
     find) args+=(--permission-mode dontAsk --allowedTools "Read,Grep,Glob,Skill(code-review)" --disallowedTools "Bash,Edit,Write") ;;
@@ -147,9 +198,12 @@ run_claude() {
   esac
   [[ -n "$model" ]] && args+=(--model "$model")
   log "  · $label"
-  if ! "$CLAUDE_BIN" "${args[@]}" > "$out" 2> "$out.err" < /dev/null; then
-    die "$label 세션 실패 (로그: $out.err)"
+  if ! "$CLAUDE_BIN" "${args[@]}" > "$out.json" 2> "$out.err" < /dev/null; then
+    die "$label 세션 실패 (로그: $out.err · $out.json)"
   fi
+  # 결과 본문은 $out 으로, 사용량은 RUN/usage.tsv 에 한 줄
+  session_usage "$out.json" "$out" "${out#"$RUN"/}" >> "$RUN/usage.tsv" \
+    || die "$label 세션 결과(JSON)를 읽지 못했습니다: $out.json"
   [[ -s "$out" ]] || die "$label 세션 출력이 비었습니다 (로그: $out.err)"
 }
 
@@ -383,6 +437,7 @@ run_target() {
       [[ -f "$d/quality.md" ]]    && printf -- '- 설계 권고 (고치지 않은 Q-): round%s/quality.md\n' "$i"
       printf -- '- 토론 기록: round%s/debate.md\n\n' "$i"
     done
+    usage_table "$RUN/usage.tsv"
   } > "$RUN/report.md"
 }
 
@@ -418,7 +473,7 @@ fi
 # =============================================================================
 # 기본: push 전 변경분 리뷰
 # =============================================================================
-log "기준: $BASE_BRANCH ($(git rev-parse --short "$BASE")) → HEAD ($(git rev-parse --short HEAD))"
+log "기준: $BASE_DESC ($(git rev-parse --short "$BASE")) → HEAD ($(git rev-parse --short HEAD))"
 TARGET_LABEL="changes"; TARGET_PATHS=("${PATHS_ARR[@]}"); RUN="$RUN_ROOT"
 run_target
 rm -rf "$STATE_DIR/latest" && cp -r "$RUN" "$STATE_DIR/latest"
