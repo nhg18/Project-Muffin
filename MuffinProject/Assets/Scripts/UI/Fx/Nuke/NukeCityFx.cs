@@ -37,6 +37,7 @@ namespace Chapchu.UI.Fx.Nuke
         [SerializeField] private float wideShotClear = 175f;
 
         private MaterialPropertyBlock _block;
+        private NukeTimeline _timeline;
         private Chunk[] _chunks;
         private NukeView _view;
         private CommandBuffer _shadow;
@@ -59,9 +60,10 @@ namespace Chapchu.UI.Fx.Nuke
             _block = new MaterialPropertyBlock();
         }
 
-        /// <summary>착탄 때 튀는 잔해 54개를 씨앗으로 정한다 (시안 chunks — 강아지 다음 난수).</summary>
-        public void Setup(ref int seed)
+        /// <summary>시간표를 받고, 착탄 때 튀는 잔해 54개를 씨앗으로 정한다 (시안 chunks — 강아지 다음 난수).</summary>
+        public void Setup(ref int seed, in NukeTimeline timeline)
         {
+            _timeline = timeline;
             _chunks = new Chunk[ChunkCount];
             for (int i = 0; i < ChunkCount; i++)
             {
@@ -86,7 +88,7 @@ namespace Chapchu.UI.Fx.Nuke
             _view = view;
             _shadow = shadow;
             _shadowMaterial = shadowMaterial;
-            float p = t - NukeMath.Hit;
+            float p = t - _timeline.Hit;
             Vector3 impact = NukeMath.Impact;
 
             Put(data.ground, groundMaterial, new Vector3(0f, 0f, 30f), 0f, 0f, 0f, 560f, 1f, false);
@@ -98,10 +100,10 @@ namespace Chapchu.UI.Fx.Nuke
             DrawCars(t, p);
 
             // 미사일 · 꽁무니 불꽃
-            if (t > NukeMath.MissileStart && p < 0f)
+            if (t > _timeline.MissileStart && p < 0f)
             {
-                Vector3 m = NukeMath.MissilePos(t);
-                Vector3 d = NukeMath.MissileDir(t);
+                Vector3 m = _timeline.MissilePos(t);
+                Vector3 d = _timeline.MissileDir(t);
                 float pitch = -Mathf.Asin(Mathf.Clamp(d.y, -1f, 1f));
                 float yaw = Mathf.Atan2(d.x, d.z);
                 Put(data.missile, objectMaterial, m, yaw, pitch, t * 7f, missileScale, 1f, true);
@@ -242,7 +244,7 @@ namespace Chapchu.UI.Fx.Nuke
             foreach (NukeCityData.Car car in data.cars)
                 PutCar(car, p, car.X, car.Z, car.Yaw);
 
-            float stopStart = NukeMath.Siren + 0.15f;
+            float stopStart = _timeline.Siren + 0.15f;
             float stopEnd = stopStart + 0.9f;
             float tt = Mathf.Min(t, stopEnd);
             float run = tt < stopStart ? tt : stopStart + (tt - stopStart) - (tt - stopStart) * (tt - stopStart) / (2f * (stopEnd - stopStart));

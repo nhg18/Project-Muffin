@@ -51,6 +51,7 @@ namespace Chapchu.UI.Fx.Nuke
     /// <summary>
     /// 「대소동」 3D 장면 (컷인 3 단계 16.4초) — 시안 NUKE3D 의 camera · env · frame 과 같다.
     /// 장면 시각마다 카메라(12 장면) · 빛 · 하늘 · 색을 정하고, 도시 · 강아지 · 입자를 이 카메라에만 그리게 한 뒤, 후처리 값을 넘긴다.
+    /// 시간표 · 장면별 카메라 키 · 빛 상태(맑음 · 착탄 · 낙진) · 후처리 세기는 Inspector 에서 바꾼다 — 기본값은 시안 값.
     /// 유니티 조명 · 그림자는 쓰지 않는다 — 셰이더가 전역 값(_Nk…)으로 빛을 계산하고, 해 쪽 그림자 맵도 여기서 그린다.
     /// 재생하면 이 오브젝트를 UI 에서 떼어 <see cref="origin"/> 에 둔다 (게임 화면 카메라가 보지 않는 곳).
     /// </summary>
@@ -89,9 +90,6 @@ namespace Chapchu.UI.Fx.Nuke
         private static readonly int CamFId = Shader.PropertyToID("_NkCamF");
         private static readonly int SunVId = Shader.PropertyToID("_NkSunV");
 
-        // 시안 D3R SHADE — 그늘 색
-        private static readonly Vector3 Shade = new Vector3(0.66f, 0.74f, 0.95f);
-
         [Header("그리는 것")]
         [Tooltip("장면을 찍는 카메라 (후처리 NukePostFx 가 붙어 있다).")]
         [SerializeField] private Camera sceneCamera;
@@ -126,6 +124,43 @@ namespace Chapchu.UI.Fx.Nuke
         [Tooltip("강아지 · 잔해 배치 씨앗 — 0 이면 재생할 때마다 바뀐다 (시안과 같다).")]
         [SerializeField] private int seed;
 
+        [Header("시간표 · 카메라")]
+        [Tooltip("장면 시각 (초, 장면 시간축) — 12 장면이 바뀌는 때와 사이렌 · 착탄 · 낙진. 도시 · 강아지 · 입자도 따른다.")]
+        [SerializeField] private NukeTimeline timeline = NukeTimeline.Default;
+        [Tooltip("12 장면의 카메라 키 — 순서대로 시간표의 장면 1~12.")]
+        [SerializeField] private NukeShot[] shots = NukeShot.Defaults();
+
+        [Header("빛 · 하늘 · 색")]
+        [Tooltip("착탄 전 — 맑은 저녁.")]
+        [SerializeField] private NukeWeather clear = NukeWeather.Clear;
+        [Tooltip("착탄 뒤 — 불바다.")]
+        [SerializeField] private NukeWeather blast = NukeWeather.Blast;
+        [Tooltip("낙진 장면 — 녹색 낙진.")]
+        [SerializeField] private NukeWeather fallout = NukeWeather.Fallout;
+        [Tooltip("착탄 뒤 맑음 → 착탄 빛으로 바뀌는 시간 (초).")]
+        [SerializeField] private float blastBlendSeconds = 0.9f;
+        [Tooltip("착탄 → 낙진 빛으로 바뀌는 시간 (초).")]
+        [SerializeField] private float falloutBlendSeconds = 1.6f;
+        [Tooltip("낙진 빛이 낙진 장면보다 먼저 바뀌기 시작하는 시간 (초).")]
+        [SerializeField] private float falloutLeadSeconds = 0.4f;
+        [Tooltip("그늘 색 (시안 SHADE).")]
+        [SerializeField] private Color shade = new Color(0.66f, 0.74f, 0.95f);
+        [Tooltip("하늘 · 안개에 비친 해 색.")]
+        [ColorUsage(false, true)]
+        [SerializeField] private Color sunGlow = new Color(1.5f, 1.05f, 0.6f);
+        [Tooltip("착탄 뒤 해 빛이 줄어드는 정도 (0~1).")]
+        [SerializeField] private float sunGlowDim = 0.9f;
+        [Tooltip("불덩이가 주위를 비추는 빛 색.")]
+        [ColorUsage(false, true)]
+        [SerializeField] private Color fireballLight = new Color(3.4f, 1.5f, 0.5f);
+        [Tooltip("착탄 뒤 하늘이 물드는 색.")]
+        [ColorUsage(false, true)]
+        [SerializeField] private Color fireballSky = new Color(1.5f, 0.6f, 0.18f);
+
+        [Header("후처리")]
+        [Tooltip("노출 · 빛 번짐 · 채도 · 대비 · 입자감 · 가장자리 어둡게 · 충격파 물결의 세기.")]
+        [SerializeField] private NukeGrade grade = NukeGrade.Default;
+
         private RawImage _target;
         private RectTransform _frame;
         private float _canvasScale = 1f;
@@ -136,6 +171,7 @@ namespace Chapchu.UI.Fx.Nuke
         private readonly List<float> _beats = new List<float>();
         private readonly List<UIExclaimMarks.Mark> _marks = new List<UIExclaimMarks.Mark>();
         private readonly List<Vector4> _heads = new List<Vector4>();
+        private readonly float[] _cuts = new float[NukeShot.Count + 1];
 
         // 시안 camera() 가 정하는 값
         private Vector3 _eye;
@@ -151,12 +187,15 @@ namespace Chapchu.UI.Fx.Nuke
         private float _focus;
         private bool _hasLightFocus;
         private Vector2 _lightFocus;
+        private float _fog;
         private int _shot;
 
         private void Awake()
         {
             if (sceneCamera == null || post == null || city == null || dogs == null || particles == null || exclaims == null || skyMesh == null || skyMaterial == null || shadowMaterial == null)
                 Debug.LogError($"[{nameof(NukeSceneFx)}] 참조 중 비어 있는 것이 있습니다.", this);
+            if (shots == null || shots.Length != NukeShot.Count)
+                Debug.LogError($"[{nameof(NukeSceneFx)}] 장면 카메라 키(shots)는 {NukeShot.Count} 개여야 합니다.", this);
         }
 
         private void OnDestroy()
@@ -179,9 +218,10 @@ namespace Chapchu.UI.Fx.Nuke
             gameObject.SetActive(true);
 
             int state = seed != 0 ? seed : Random.Range(1, 0xffff);
-            dogs.Setup(ref state);
-            city.Setup(ref state);
-            particles.Setup();
+            dogs.Setup(ref state, timeline);
+            city.Setup(ref state, timeline);
+            particles.Setup(timeline);
+            BuildCuts();
             BuildBeats();
 
             sceneCamera.enabled = true;
@@ -207,7 +247,7 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>실제로 흐른 시간(초)의 장면을 그리게 한다. 매 프레임 부른다.</summary>
         public void Draw(float real)
         {
-            float t = NukeMath.SceneTime(real);
+            float t = timeline.SceneTime(real);
             Vector2 size = _frame.rect.size;
             if (size.x < 1f || size.y < 1f)
                 return;
@@ -267,172 +307,83 @@ namespace Chapchu.UI.Fx.Nuke
             Destroy(gameObject);
         }
 
-        // 시안 camera(t) — 12 장면의 카메라
+        // 시안 camera(t) — 지금 장면의 카메라 키를 장면 진행만큼 섞는다
         private void Aim(float t, float baseFocal)
         {
-            float p = t - NukeMath.Hit;
-            _roll = 0f;
+            int index = ShotAt(t);
+            ref readonly NukeShot shot = ref shots[index];
+            float u = NukeMath.Clamp01((t - _cuts[index]) / (_cuts[index + 1] - _cuts[index]));
+            float k = Ease(shot.Ease, u);
+            Vector3 eye = NukeMath.Mix(shot.Eye, shot.EyeEnd, Ease(shot.EyeEase, u));
+            Vector3 target = NukeMath.Mix(shot.Target, shot.TargetEnd, k);
+            switch (shot.Path)
+            {
+                case NukeShotPath.TurnToMissile:
+                    target = NukeMath.Mix(shot.Target, timeline.MissileBase(t) + shot.TargetEnd, k);
+                    break;
+                case NukeShotPath.WatchMissile:
+                    target += timeline.MissileBase(t);
+                    break;
+                case NukeShotPath.FollowMissile:
+                    Vector3 missile = timeline.MissileBase(t);
+                    timeline.MissileFrame(t, out Vector3 forward, out Vector3 side, out Vector3 up);
+                    float angle = NukeMath.Lerp(shot.OrbitAngle, shot.OrbitAngleEnd, k) * Mathf.Deg2Rad;
+                    eye = missile + side * (eye.x + Mathf.Cos(angle) * shot.Orbit.x) + up * (eye.y + Mathf.Sin(angle) * shot.Orbit.y) + forward * eye.z;
+                    target = missile + side * target.x + up * target.y + forward * target.z;
+                    break;
+            }
+
+            eye.x += Mathf.Sin(t * shot.SwayRate) * shot.Sway;
+            eye.y += Mathf.Abs(Mathf.Sin(t * shot.BobRate)) * shot.Bob;
+            Look(eye, target);
+
+            _shot = index + 1;
+            _focal = baseFocal * NukeMath.Lerp(shot.Zoom, shot.ZoomEnd, k);
+            _roll = NukeMath.Lerp(shot.Roll, shot.RollEnd, k) + Mathf.Sin(t * shot.WobbleRate) * shot.Wobble * u;
             _zoom = 1f;
-            _lightExtent = 48f;
-            _radialBlur = 0f;
-            _chroma = 0f;
-            _dof = 0f;
-            _focus = 20f;
-            _hasLightFocus = false;
-            float fz = 1f;
-            float shake = 0f;
+            _radialBlur = NukeMath.Lerp(shot.RadialBlur, shot.RadialBlurEnd, k);
+            _chroma = shot.Chroma != null ? shot.Chroma.Evaluate(u) : 0f;
+            _focus = shot.Focus;
+            _dof = shot.Blur;
+            _fog = shot.Fog;
+            _lightExtent = shot.LightExtent;
+            _hasLightFocus = shot.PinLight;
+            _lightFocus = Vector2.Lerp(shot.LightCenter, shot.LightCenterEnd, k);
 
-            if (t < NukeMath.Siren)
-            {
-                // 1 하늘에서 네거리로 내려오는 크레인
-                float e = NukeMath.EaseInOut(t / NukeMath.Siren);
-                Look(new Vector3(NukeMath.Lerp(-3.6f, -2.8f, e), NukeMath.Lerp(46f, 5.2f, e), NukeMath.Lerp(-74f, -8f, e)), new Vector3(NukeMath.Lerp(1f, 0f, e), NukeMath.Lerp(12f, 3.2f, e), NukeMath.Lerp(40f, 27f, e)));
-                fz = 0.9f;
-                _lightExtent = 85f;
-                SetLightFocus(0f, NukeMath.Lerp(-20f, 16f, e));
-                _shot = 1;
-            }
-            else if (t < NukeMath.Sky)
-            {
-                // 2 강아지 눈높이 — 사이렌에 멈칫
-                float u = (t - NukeMath.Siren) / (NukeMath.Sky - NukeMath.Siren);
-                Look(new Vector3(NukeMath.Lerp(3.5f, 2.5f, u), 0.82f, NukeMath.Lerp(8.4f, 9.8f, u)), new Vector3(-0.4f, 1.45f, 20f));
-                fz = 1.32f;
-                _roll = -3.5f;
-                shake = 0.002f;
-                _focus = 9f;
-                _dof = 0.5f;
-                _shot = 2;
-            }
-            else if (t < NukeMath.Hero)
-            {
-                // 3 하늘을 올려다보며 미사일로
-                float u = (t - NukeMath.Sky) / (NukeMath.Hero - NukeMath.Sky);
-                Vector3 m = NukeMath.MissileBase(t);
-                float k = NukeMath.EaseInOut(u);
-                Look(new Vector3(0.7f, 1.05f, 8.5f), new Vector3(NukeMath.Lerp(0f, m.x, k), NukeMath.Lerp(1.8f, m.y, k), NukeMath.Lerp(22f, m.z, k)));
-                fz = NukeMath.Lerp(1f, 1.9f, k);
-                _roll = NukeMath.Lerp(0f, 4f, k);
-                _shot = 3;
-            }
-            else if (t < NukeMath.Run)
-            {
-                // 4 미사일 둘레를 도는 카메라
-                float u = (t - NukeMath.Hero) / (NukeMath.Run - NukeMath.Hero);
-                Vector3 m = NukeMath.MissileBase(t);
-                NukeMath.MissileFrame(t, out Vector3 tn, out Vector3 e1, out Vector3 e2, out _);
-                float a = 2.3f - u * 1.4f;
-                float ca = Mathf.Cos(a) * 13f;
-                float sa = 8f + Mathf.Sin(a) * 3f;
-                Look(m - tn * 21f + e1 * ca + e2 * sa, m + tn * 9f);
-                fz = 1.05f;
-                _roll = NukeMath.Lerp(-7f, 5f, u);
-                shake = 0.002f;
-                SetLightFocus(0f, 30f);
-                _lightExtent = 120f;
-                _shot = 4;
-            }
-            else if (t < NukeMath.Side)
-            {
-                // 5 달아나는 강아지들을 앞에서 뒷걸음으로
-                float u = (t - NukeMath.Run) / (NukeMath.Side - NukeMath.Run);
-                float bob = Mathf.Abs(Mathf.Sin(t * 13f)) * 0.05f;
-                Look(new Vector3(Mathf.Sin(t * 1.1f) * 0.7f, 1.02f + bob, NukeMath.Lerp(4f, -12.5f, u)), new Vector3(0f, NukeMath.Lerp(3.4f, 8.5f, u), 30f));
-                shake = 0.0025f + u * 0.0045f;
-                _roll = Mathf.Sin(t * 2.3f) * 1.5f * u;
-                fz = 0.95f;
-                _focus = 8f;
-                _dof = 0.32f;
-                _shot = 5;
-            }
-            else if (t < NukeMath.Up)
-            {
-                // 6 옆에서 나란히 달리기
-                float u = (t - NukeMath.Side) / (NukeMath.Up - NukeMath.Side);
-                float zc = NukeMath.Lerp(7.2f, -2.4f, u);
-                Look(new Vector3(-5.5f, 1.25f + Mathf.Abs(Mathf.Sin(t * 12f)) * 0.03f, zc - 3.6f), new Vector3(0f, 0.95f, zc + 1.2f));
-                fz = 1.05f;
-                shake = 0.003f;
-                _roll = -2f;
-                _focus = 9.5f;
-                _dof = 0.42f;
-                _shot = 6;
-            }
-            else if (t < NukeMath.Dive)
-            {
-                // 7 네거리 바닥에서 올려다본 미사일
-                float u = (t - NukeMath.Up) / (NukeMath.Dive - NukeMath.Up);
-                Look(new Vector3(0.6f, 0.55f, 14f), NukeMath.MissileBase(t));
-                fz = NukeMath.Lerp(3.3f, 2.2f, u);
-                _roll = NukeMath.Lerp(-9f, 7f, u);
-                shake = 0.003f + u * 0.004f;
-                _chroma = 0.004f;
-                _shot = 7;
-            }
-            else if (t < NukeMath.SlowStart)
-            {
-                // 8 미사일 뒤에 붙어 내리꽂힘
-                float u = (t - NukeMath.Dive) / (NukeMath.SlowStart - NukeMath.Dive);
-                Vector3 m = NukeMath.MissileBase(t);
-                NukeMath.MissileFrame(t, out Vector3 tn, out Vector3 e1, out Vector3 e2, out _);
-                Look(m - tn * 19f + e2 * 8f + e1 * 3.5f, m + tn * 26f + e2 * 2f);
-                shake = 0.004f + u * 0.008f;
-                _roll = -4f + u * 16f;
-                fz = NukeMath.Lerp(0.92f, 0.68f, u);
-                _radialBlur = 0.04f + u * 0.1f;
-                _chroma = 0.004f + u * 0.01f;
-                SetLightFocus(0f, 30f);
-                _lightExtent = 110f;
-                _shot = 8;
-            }
-            else if (p < 0f)
-            {
-                // 9 착탄 직전 느린 화면
-                Look(new Vector3(2.5f, 0.6f, -45f), new Vector3(0f, 2.4f, 30f));
-                fz = 1.75f;
-                _focus = 9f;
-                _dof = 0.22f;
-                _shot = 9;
-            }
-            else if (t < NukeMath.Street)
-            {
-                // 10 번쩍 — 멀리서 본 도시 전경
-                float u = p / (NukeMath.Street - NukeMath.Hit);
-                Look(new Vector3(NukeMath.Lerp(-196f, -184f, u), NukeMath.Lerp(86f, 80f, u), NukeMath.Lerp(-232f, -218f, u)), new Vector3(0f, NukeMath.Lerp(22f, 44f, NukeMath.EaseOut(u)), 30f));
-                fz = 1.95f;
-                SetLightFocus(0f, 30f);
-                _lightExtent = 170f;
-                shake = p > 0.9f ? 0.006f : 0f;
-                _chroma = 0.006f * Mathf.Exp(-p * 3f);
-                _shot = 10;
-            }
-            else if (t < NukeMath.Fall)
-            {
-                // 11 큰길로 밀려오는 먼지 벽
-                float u = (t - NukeMath.Street) / (NukeMath.Fall - NukeMath.Street);
-                Look(new Vector3(1.6f, 1.25f, -64f), new Vector3(0f, NukeMath.Lerp(5f, 10f, u), 30f));
-                fz = 1.12f;
-                shake = 0.004f + u * u * 0.05f;
-                _chroma = u * 0.01f;
-                _shot = 11;
-            }
-            else
-            {
-                // 12 낙진 — 폐허 위로 크레인 업
-                float e = NukeMath.EaseOut((t - NukeMath.Fall) / (NukeMath.End - NukeMath.Fall));
-                Look(new Vector3(NukeMath.Lerp(2.2f, -1.4f, e), NukeMath.Lerp(1.7f, 3.4f, e), NukeMath.Lerp(-64f, -86f, e)), new Vector3(0f, NukeMath.Lerp(9f, 35f, e), 30f));
-                fz = NukeMath.Lerp(1f, 0.7f, e);
-                shake = 0.002f;
-                _lightExtent = 70f;
-                SetLightFocus(0f, -36f);
-                _shot = 12;
-            }
-
-            _focal = baseFocal * fz;
+            float shake = shot.Shake != null ? shot.Shake.Evaluate(u) : 0f;
             if (shake <= 0f)
                 return;
             _yaw += (Mathf.Sin(t * 57f) + Mathf.Sin(t * 23.7f) * 0.6f) * shake;
             _pitch += (Mathf.Cos(t * 49f) + Mathf.Sin(t * 31.3f) * 0.6f) * shake;
+        }
+
+        // 장면이 바뀌는 시각 — 장면 i 는 _cuts[i] ~ _cuts[i + 1]
+        private void BuildCuts()
+        {
+            _cuts[0] = 0f;
+            _cuts[1] = timeline.Siren;
+            _cuts[2] = timeline.Sky;
+            _cuts[3] = timeline.Hero;
+            _cuts[4] = timeline.Run;
+            _cuts[5] = timeline.Side;
+            _cuts[6] = timeline.Up;
+            _cuts[7] = timeline.Dive;
+            _cuts[8] = timeline.SlowStart;
+            _cuts[9] = timeline.Hit;
+            _cuts[10] = timeline.Street;
+            _cuts[11] = timeline.Fall;
+            _cuts[12] = timeline.End;
+        }
+
+        private int ShotAt(float t)
+        {
+            for (int i = NukeShot.Count - 1; i > 0; i--)
+            {
+                if (t >= _cuts[i])
+                    return i;
+            }
+
+            return 0;
         }
 
         private void Look(Vector3 from, Vector3 to)
@@ -443,50 +394,45 @@ namespace Chapchu.UI.Fx.Nuke
             _pitch = Mathf.Atan2(d.y, Mathf.Sqrt(d.x * d.x + d.z * d.z));
         }
 
-        private void SetLightFocus(float x, float z)
-        {
-            _hasLightFocus = true;
-            _lightFocus = new Vector2(x, z);
-        }
-
         // 시안 env(t, tr) — 빛 · 하늘 · 색. 셰이더 전역 값을 넣고 후처리 값을 돌려준다
         private NukePostFx.Settings Light(float t, float real, in NukeView view)
         {
-            float p = t - NukeMath.Hit;
-            float dk = NukeMath.Smooth(p / 0.9f);
-            float gk = NukeMath.Smooth((t - NukeMath.Fall + 0.4f) / 1.6f);
+            float p = t - timeline.Hit;
+            float dk = NukeMath.Smooth(p / blastBlendSeconds);
+            float gk = NukeMath.Smooth((t - timeline.Fall + falloutLeadSeconds) / falloutBlendSeconds);
             float hot = p > 0f ? Mathf.Exp(-p * 0.5f) : 0f;
-            float near = NukeMath.Smooth((t - NukeMath.Run) / (NukeMath.Hit - NukeMath.Run));
+            float near = NukeMath.Smooth((t - timeline.Run) / (timeline.Hit - timeline.Run));
             float pulse = p < 0f ? Pulse(t) : 0f;
-            float hold = t >= NukeMath.SlowStart && p < 0f ? 1f : 0f;
+            float hold = t >= timeline.SlowStart && p < 0f ? 1f : 0f;
 
-            Vector3 sun = Mix3(new Vector3(1.7f, 1.24f, 0.8f), new Vector3(0.85f, 0.4f, 0.18f), new Vector3(0.42f, 0.5f, 0.24f), dk, gk);
-            Vector3 sunSky = new Vector3(1.5f, 1.05f, 0.6f) * (1f - dk * 0.9f);
-            Vector3 amb = Mix3(new Vector3(0.5f, 0.56f, 0.76f), new Vector3(0.46f, 0.31f, 0.25f), new Vector3(0.33f, 0.42f, 0.26f), dk, gk);
-            Vector3 gnd = Mix3(new Vector3(0.52f, 0.42f, 0.34f), new Vector3(0.42f, 0.24f, 0.14f), new Vector3(0.2f, 0.26f, 0.13f), dk, gk);
-            Vector3 fog = Mix3(new Vector3(0.98f, 0.74f, 0.52f), new Vector3(0.62f, 0.33f, 0.16f), new Vector3(0.36f, 0.43f, 0.2f), dk, gk);
-            Vector2 fogK = new Vector2(view.Shot == 10 ? 0.0015f : NukeMath.Lerp(NukeMath.Lerp(0.0028f, 0.0055f, dk), 0.0042f, gk), NukeMath.Lerp(0.9f, 0.96f, dk));
-            Vector3 zen = Mix3(new Vector3(0.2f, 0.36f, 0.72f), new Vector3(0.26f, 0.13f, 0.1f), new Vector3(0.22f, 0.28f, 0.13f), dk, gk);
-            Vector3 hor = Mix3(new Vector3(1.02f, 0.76f, 0.52f), new Vector3(0.9f, 0.42f, 0.16f), new Vector3(0.66f, 0.7f, 0.32f), dk, gk);
-            Vector3 cloudC = Mix3(new Vector3(1.25f, 1.02f, 0.84f), new Vector3(1.1f, 0.6f, 0.3f), new Vector3(0.5f, 0.58f, 0.3f), dk, gk);
-            Vector3 cloudS = Mix3(new Vector3(0.5f, 0.48f, 0.62f), new Vector3(0.3f, 0.17f, 0.13f), new Vector3(0.16f, 0.2f, 0.1f), dk, gk);
-            float cover = NukeMath.Lerp(0.5f, 0.68f, dk);
+            Vector3 sun = Mix3(clear.Sun, blast.Sun, fallout.Sun, dk, gk);
+            Vector3 sunSky = Rgb(sunGlow) * (1f - dk * sunGlowDim);
+            Vector3 amb = Mix3(clear.SkyLight, blast.SkyLight, fallout.SkyLight, dk, gk);
+            Vector3 gnd = Mix3(clear.Ground, blast.Ground, fallout.Ground, dk, gk);
+            Vector3 fog = Mix3(clear.Fog, blast.Fog, fallout.Fog, dk, gk);
+            float fogDensity = _fog > 0f ? _fog : Mix3(clear.FogDensity, blast.FogDensity, fallout.FogDensity, dk, gk);
+            var fogK = new Vector2(fogDensity, Mix3(clear.FogMax, blast.FogMax, fallout.FogMax, dk, gk));
+            Vector3 zen = Mix3(clear.Zenith, blast.Zenith, fallout.Zenith, dk, gk);
+            Vector3 hor = Mix3(clear.Horizon, blast.Horizon, fallout.Horizon, dk, gk);
+            Vector3 cloudC = Mix3(clear.CloudLit, blast.CloudLit, fallout.CloudLit, dk, gk);
+            Vector3 cloudS = Mix3(clear.CloudShade, blast.CloudShade, fallout.CloudShade, dk, gk);
+            float cover = Mix3(clear.CloudCover, blast.CloudCover, fallout.CloudCover, dk, gk);
             float hole = p > 0f ? p * 120f : 0f;
             float rimK = p > 0f ? 1f - NukeMath.Smooth((p - 0.4f) / 2.2f) : 0f;
-            Vector3 glowC = new Vector3(1.5f, 0.6f, 0.18f);
             float glow = hot * 0.4f;
             Vector4 pointLight = p > 0f
                 ? new Vector4(NukeMath.Impact.x, NukeMath.Lerp(8f, 50f, NukeMath.Smooth(p / 3f)), NukeMath.Impact.z, NukeMath.Lerp(55f, 90f, NukeMath.Smooth(p / 2f)))
                 : Vector4.zero;
-            Vector3 pointColor = p > 0f ? new Vector3(3.4f, 1.5f, 0.5f) * (hot * (0.8f + 0.2f * Mathf.Sin(real * 31f)) + 0.05f * gk) : Vector3.zero;
+            Vector3 pointColor = p > 0f ? Rgb(fireballLight) * (hot * (0.8f + 0.2f * Mathf.Sin(real * 31f)) + 0.05f * gk) : Vector3.zero;
             float emi = p > 0f ? (p < 0.25f && Mathf.Sin(real * 90f) > 0f ? 0.8f : 0f) : 0.95f;
-            Vector3 gain = NukeMath.Mix(NukeMath.Mix(new Vector3(1.04f, 1f, 0.95f), new Vector3(1.12f, 0.8f, 0.6f), dk * (0.4f + 0.6f * hot)), new Vector3(0.84f, 0.98f, 0.74f), gk);
+            // 착탄 색 보정은 열기가 식을수록 줄어든다 (식은 뒤 40%)
+            Vector3 gain = Mix3(clear.Gain, blast.Gain, fallout.Gain, dk * (0.4f + 0.6f * hot), gk);
 
             Shader.SetGlobalVector(OriginId, origin);
             Shader.SetGlobalVector(FogCId, fog);
             Shader.SetGlobalVector(LdId, view.LightDir);
             Shader.SetGlobalVector(SunCId, sun);
-            Shader.SetGlobalVector(ShCId, Shade);
+            Shader.SetGlobalVector(ShCId, Rgb(shade));
             Shader.SetGlobalVector(AmbId, amb);
             Shader.SetGlobalVector(GndId, gnd);
             Shader.SetGlobalVector(PlId, pointLight);
@@ -503,7 +449,7 @@ namespace Chapchu.UI.Fx.Nuke
             Shader.SetGlobalVector(SkySunId, sunSky);
             Shader.SetGlobalVector(CloudCId, cloudC);
             Shader.SetGlobalVector(CloudSId, cloudS);
-            Shader.SetGlobalVector(GlowCId, glowC);
+            Shader.SetGlobalVector(GlowCId, Rgb(fireballSky));
             Shader.SetGlobalVector(SkyKId, new Vector4(cover, hole, rimK, glow));
             Shader.SetGlobalVector(CamRId, view.Right);
             Shader.SetGlobalVector(CamUId, view.Up);
@@ -513,21 +459,21 @@ namespace Chapchu.UI.Fx.Nuke
 
             var settings = new NukePostFx.Settings
             {
-                Expo = 1f + (p > 0f ? 9f * Mathf.Exp(-p * 5.5f) + 0.5f * Mathf.Exp(-p * 1.2f) : 0f) - hold * 0.12f,
-                Bloom = 0.5f + hot * 0.5f,
-                Saturation = NukeMath.Lerp(1.08f, 0.92f, near) - hold * 0.45f - gk * 0.12f,
-                Contrast = 1.07f + near * 0.06f,
-                Tint = Mix3(new Vector3(1.03f, 1f, 0.96f), new Vector3(1.08f, 0.93f, 0.82f), new Vector3(0.92f, 1.03f, 0.82f), dk, gk),
-                Grain = 0.03f + gk * 0.02f,
-                Vignette = 0.3f + near * 0.25f + pulse * 0.1f + hold * 0.5f,
-                VignetteColor = hold > 0f ? Vector3.zero : NukeMath.Mix(new Vector3(0.02f, 0.02f, 0.05f), new Vector3(0.35f, 0.02f, 0.03f), near * 0.7f + pulse * 0.3f),
+                Expo = 1f + (p > 0f ? grade.Flash * Mathf.Exp(-p * 5.5f) + grade.Afterglow * Mathf.Exp(-p * 1.2f) : 0f) - hold * grade.HoldDarken,
+                Bloom = grade.Bloom + hot * grade.BloomHeat,
+                Saturation = NukeMath.Lerp(grade.Saturation, grade.SaturationNear, near) - hold * grade.HoldDesaturate - gk * grade.FalloutDesaturate,
+                Contrast = grade.Contrast + near * grade.ContrastNear,
+                Tint = Mix3(clear.Tint, blast.Tint, fallout.Tint, dk, gk),
+                Grain = grade.Grain + gk * grade.FalloutGrain,
+                Vignette = grade.Vignette + near * grade.VignetteNear + pulse * grade.VignettePulse + hold * grade.VignetteHold,
+                VignetteColor = hold > 0f ? Vector3.zero : NukeMath.Mix(Rgb(grade.VignetteColor), Rgb(grade.VignetteNearColor), near * 0.7f + pulse * 0.3f),
                 RadialBlur = _radialBlur,
                 RadialCenter = new Vector2(0.5f, 0.5f),
                 Chroma = _chroma,
                 Fade = 0f,
-                FadeColor = new Vector3(0.6f, 0.44f, 0.3f),
+                FadeColor = Rgb(grade.DustColor),
                 Ripple = new Vector4(0.5f, 0.5f, 0f, 0f),
-                AoK = 0.85f,
+                AoK = grade.Occlusion,
                 Focus = _focus,
                 DofK = _dof,
                 RayK = 0f,
@@ -542,12 +488,12 @@ namespace Chapchu.UI.Fx.Nuke
                 float u = sunAt.x / view.Size.x + 0.5f;
                 float v = sunAt.y / view.Size.y + 0.5f;
                 settings.SunUV = new Vector2(u, v);
-                settings.RayK = 0.26f * (1f - dk) * (1f - NukeMath.Smooth((Mathf.Max(Mathf.Abs(u - 0.5f), Mathf.Abs(v - 0.5f)) - 0.55f) / 0.5f));
+                settings.RayK = grade.SunRays * (1f - dk) * (1f - NukeMath.Smooth((Mathf.Max(Mathf.Abs(u - 0.5f), Mathf.Abs(v - 0.5f)) - 0.55f) / 0.5f));
             }
 
-            // 착탄 뒤 2.2초 동안 화면을 밀어내는 충격파 물결
-            if (p > 0f && p < 2.2f && view.Project(new Vector3(NukeMath.Impact.x, 8f, NukeMath.Impact.z), out Vector2 hitAt, out float hitScale))
-                settings.Ripple = new Vector4(hitAt.x / view.Size.x + 0.5f, hitAt.y / view.Size.y + 0.5f, Mathf.Min(3f, 95f * p * hitScale / view.Size.y), (1f - p / 2.2f) * 0.9f);
+            // 착탄 뒤 화면을 밀어내는 충격파 물결
+            if (p > 0f && p < grade.RippleSeconds && view.Project(new Vector3(NukeMath.Impact.x, 8f, NukeMath.Impact.z), out Vector2 hitAt, out float hitScale))
+                settings.Ripple = new Vector4(hitAt.x / view.Size.x + 0.5f, hitAt.y / view.Size.y + 0.5f, Mathf.Min(3f, 95f * p * hitScale / view.Size.y), (1f - p / grade.RippleSeconds) * grade.Ripple);
 
             if (view.Shot == 11)
             {
@@ -556,7 +502,7 @@ namespace Chapchu.UI.Fx.Nuke
             }
 
             if (view.Shot == 12)
-                settings.Fade = (1f - NukeMath.Smooth((t - NukeMath.Fall) / 0.9f)) * 0.97f;
+                settings.Fade = (1f - NukeMath.Smooth((t - timeline.Fall) / 0.9f)) * 0.97f;
 
             if (t < 0.3f)
             {
@@ -605,9 +551,9 @@ namespace Chapchu.UI.Fx.Nuke
         private void BuildBeats()
         {
             _beats.Clear();
-            float t = NukeMath.Run + 0.1f;
+            float t = timeline.Run + 0.1f;
             float interval = 0.66f;
-            while (t < NukeMath.SlowStart - 0.05f)
+            while (t < timeline.SlowStart - 0.05f)
             {
                 _beats.Add(t);
                 t += interval;
@@ -633,7 +579,7 @@ namespace Chapchu.UI.Fx.Nuke
         private void PlaceFrame(float t, Vector2 size)
         {
             float angle = _roll * Mathf.Deg2Rad;
-            float pulse = t < NukeMath.Hit ? Pulse(t) * 0.008f : 0f;
+            float pulse = t < timeline.Hit ? Pulse(t) * 0.008f : 0f;
             float scale = (Mathf.Cos(angle) + Mathf.Max(size.x / size.y, size.y / size.x) * Mathf.Abs(Mathf.Sin(angle))) * (_zoom + pulse);
             _frame.localRotation = Quaternion.Euler(0f, 0f, -_roll);
             _frame.localScale = new Vector3(scale, scale, 1f);
@@ -643,7 +589,7 @@ namespace Chapchu.UI.Fx.Nuke
         private void PlaceExclaims(float t, in NukeView view)
         {
             _marks.Clear();
-            if (t < NukeMath.Hero && view.Shot <= 3)
+            if (t < timeline.Hero && view.Shot <= 3)
             {
                 dogs.CollectHeads(t, _heads);
                 foreach (Vector4 head in _heads)
@@ -720,7 +666,26 @@ namespace Chapchu.UI.Fx.Nuke
             }
         }
 
+        private static float Ease(NukeEase ease, float u)
+        {
+            switch (ease)
+            {
+                case NukeEase.InOut:
+                    return NukeMath.EaseInOut(u);
+                case NukeEase.Out:
+                    return NukeMath.EaseOut(u);
+                default:
+                    return u;
+            }
+        }
+
+        private static Vector3 Rgb(Color color) => new Vector3(color.r, color.g, color.b);
+
         // 시안 mix3(mix3(맑음, 착탄, dk), 낙진, gk)
-        private static Vector3 Mix3(Vector3 clear, Vector3 blast, Vector3 fallout, float dk, float gk) => NukeMath.Mix(NukeMath.Mix(clear, blast, dk), fallout, gk);
+        private static Vector3 Mix3(Color clearColor, Color blastColor, Color falloutColor, float dk, float gk)
+            => NukeMath.Mix(NukeMath.Mix(Rgb(clearColor), Rgb(blastColor), dk), Rgb(falloutColor), gk);
+
+        private static float Mix3(float clearValue, float blastValue, float falloutValue, float dk, float gk)
+            => NukeMath.Lerp(NukeMath.Lerp(clearValue, blastValue, dk), falloutValue, gk);
     }
 }

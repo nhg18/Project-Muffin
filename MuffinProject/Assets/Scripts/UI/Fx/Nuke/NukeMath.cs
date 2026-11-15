@@ -3,36 +3,17 @@
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 3D 장면이 같이 쓰는 시간표 · 착탄점 · 미사일 길 · 보간 · 고정 난수 — 시안 NUKE3D 의 T · IMP · MP0 · MP1 · SW · bez · mPos · RND 와 같다.
+    /// 「대소동」 3D 장면이 같이 쓰는 착탄점 · 미사일 길 · 보간 · 고정 난수 — 시안 NUKE3D 의 IMP · MP0 · MP1 · SW · bez · mPos · RND 와 같다.
+    /// 시간표와 시각별 미사일 자리는 <see cref="NukeTimeline"/>.
     /// 좌표는 시안 그대로 (x 오른쪽 · y 위 · z 앞, 단위 m). 유니티 월드에는 <see cref="NukeSceneFx"/> 의 원점만큼 옮겨 놓는다.
     /// </summary>
     public static class NukeMath
     {
-        // 장면 시각 (초, 장면 시간축 — 착탄 직전 느린 화면 앞)
-        public const float Siren = 1.6f;
-        public const float Notice = 1.9f;
-        public const float Sky = 2.6f;
-        public const float Hero = 3.5f;
-        public const float Run = 4.4f;
-        public const float Side = 6.2f;
-        public const float Up = 7.4f;
-        public const float Dive = 8.2f;
-        public const float Hit = 9.8f;
-        public const float Street = 11.2f;
-        public const float Fall = 12.4f;
-        public const float End = 15.4f;
-
-        /// <summary>착탄 직전 느린 화면의 실제 길이 (초) — 장면 시간은 이 동안 0.1초만 흐른다.</summary>
-        public const float Hold = 0.9f;
-
-        /// <summary>느린 화면이 시작하는 장면 시각.</summary>
-        public const float SlowStart = Hit - 0.1f;
-
-        /// <summary>미사일이 나타나는 장면 시각.</summary>
-        public const float MissileStart = 1.2f;
-
         /// <summary>바닥을 훑는 먼지 벽의 속도 (m/s).</summary>
         public const float DustSpeed = 36f;
+
+        /// <summary>미사일 길이 — 몸 가운데에서 꽁무니까지 (m).</summary>
+        public const float MissileLength = 7.3f;
 
         /// <summary>장면 가까운 · 먼 면 (m).</summary>
         public const float Near = 0.3f;
@@ -49,19 +30,6 @@ namespace Chapchu.UI.Fx.Nuke
         public static readonly Vector3 SunDir = new Vector3(-0.09f, 0.4f, 0.9f).normalized;
 
         private static readonly float[] Rnd = BuildTable();
-
-        /// <summary>실제 흐른 시간 → 장면 시간 (착탄 직전 0.9초 동안 0.1초만 흐른다).</summary>
-        public static float SceneTime(float real)
-        {
-            if (real < SlowStart)
-                return real;
-            if (real < SlowStart + Hold)
-                return SlowStart + (real - SlowStart) * (0.1f / Hold);
-            return real - (Hold - 0.1f);
-        }
-
-        /// <summary>번쩍하는 순간의 실제 시각 (초).</summary>
-        public static float HitReal => Hit + Hold - 0.1f;
 
         public static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
 
@@ -135,9 +103,6 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>바닥(XZ) 위 거리.</summary>
         public static float Flat(float dx, float dz) => Mathf.Sqrt(dx * dx + dz * dz);
 
-        /// <summary>미사일이 길을 얼마나 왔나 (0~1).</summary>
-        public static float MissileProgress(float t) => Mathf.Pow(Clamp01((t - MissileStart) / (Hit - MissileStart)), 1.35f);
-
         /// <summary>미사일 길(베지어) 위의 점.</summary>
         public static Vector3 Bezier(float s)
         {
@@ -148,13 +113,9 @@ namespace Chapchu.UI.Fx.Nuke
             return a * MissileFrom + b * MissileBend + c * end;
         }
 
-        /// <summary>미사일 길의 중심 (나선 없이).</summary>
-        public static Vector3 MissileBase(float t) => Bezier(MissileProgress(t));
-
-        /// <summary>미사일 길의 방향 · 옆 · 위 (시안 mFrame).</summary>
-        public static void MissileFrame(float t, out Vector3 forward, out Vector3 side, out Vector3 up, out float s)
+        /// <summary>미사일 길 s(0~1) 의 방향 · 옆 · 위 (시안 mFrame).</summary>
+        public static void MissileFrame(float s, out Vector3 forward, out Vector3 side, out Vector3 up)
         {
-            s = MissileProgress(t);
             float a = 2f * (1f - s);
             float b = 2f * s;
             Vector3 end = Impact + new Vector3(0f, 1.2f, 0f);
@@ -163,27 +124,24 @@ namespace Chapchu.UI.Fx.Nuke
             up = Vector3.Cross(forward, side);
         }
 
-        /// <summary>미사일 위치 — 제 축으로 돌며 작게 원을 그린다.</summary>
-        public static Vector3 MissilePos(float t)
+        /// <summary>미사일 길 s · 장면 시각 t 의 미사일 위치 — 제 축으로 돌며 작게 원을 그린다.</summary>
+        public static Vector3 MissilePos(float s, float t)
         {
-            MissileFrame(t, out _, out Vector3 side, out Vector3 up, out float s);
+            MissileFrame(s, out _, out Vector3 side, out Vector3 up);
             Vector3 b = Bezier(s);
             float r = (1.1f + 2.6f * (1f - s)) * (1f - Smooth((s - 0.93f) / 0.07f));
             float th = Spin(s, t);
             return b + side * (Mathf.Cos(th) * r) + up * (Mathf.Sin(th) * r);
         }
 
-        /// <summary>미사일 코가 보는 방향.</summary>
-        public static Vector3 MissileDir(float t)
+        /// <summary>미사일 길 s · 장면 시각 t 의 미사일 코가 보는 방향.</summary>
+        public static Vector3 MissileDir(float s, float t)
         {
-            MissileFrame(t, out Vector3 forward, out Vector3 side, out Vector3 up, out float s);
+            MissileFrame(s, out Vector3 forward, out Vector3 side, out Vector3 up);
             float th = Spin(s, t);
             float k = 0.13f * (1f - Smooth((s - 0.9f) / 0.1f));
             return (forward + side * (-Mathf.Sin(th) * k) + up * (Mathf.Cos(th) * k)).normalized;
         }
-
-        /// <summary>미사일 꽁무니 (비행운이 나오는 곳).</summary>
-        public static Vector3 MissileTail(float t) => MissilePos(t) - MissileDir(t) * 7.3f;
 
         private static float Spin(float s, float t) => Mathf.PI * 2f * 7.5f * Mathf.Pow(s, 1.1f) + t * 1.5f;
 

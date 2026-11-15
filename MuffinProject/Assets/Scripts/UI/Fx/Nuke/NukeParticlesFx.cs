@@ -40,6 +40,7 @@ namespace Chapchu.UI.Fx.Nuke
         private readonly List<Vector2> _heats = new List<Vector2>(MaxParticles * 4);
         private readonly List<int> _indices = new List<int>(MaxParticles * 6);
         private Mesh _mesh;
+        private NukeTimeline _timeline;
         private int _count;
 
         private void Awake()
@@ -55,12 +56,13 @@ namespace Chapchu.UI.Fx.Nuke
             Destroy(_mesh);
         }
 
-        /// <summary>비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다.</summary>
-        public void Setup()
+        /// <summary>시간표를 받고, 비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다.</summary>
+        public void Setup(in NukeTimeline timeline)
         {
-            float step = (NukeMath.Hit - NukeMath.MissileStart) / ContrailCount;
+            _timeline = timeline;
+            float step = (timeline.Hit - timeline.MissileStart) / ContrailCount;
             for (int i = 0; i < ContrailCount; i++)
-                _contrail[i] = NukeMath.MissileTail(NukeMath.MissileStart + i * step);
+                _contrail[i] = timeline.MissileTail(timeline.MissileStart + i * step);
         }
 
         /// <summary>이번 프레임의 입자를 비운다.</summary>
@@ -84,17 +86,17 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>장면 시각 t · 실제 시각 real 의 입자를 만든다 (시안 parts).</summary>
         public void Emit(float t, float real, in NukeView view)
         {
-            float p = t - NukeMath.Hit;
+            float p = t - _timeline.Hit;
             Vector3 impact = NukeMath.Impact;
 
             // 비행운 — 나선이 하늘에 남는다
-            if (t > NukeMath.MissileStart)
+            if (t > _timeline.MissileStart)
             {
-                float step = (NukeMath.Hit - NukeMath.MissileStart) / ContrailCount;
+                float step = (_timeline.Hit - _timeline.MissileStart) / ContrailCount;
                 float blow = p > 0f ? 1f - NukeMath.Smooth((p - 0.1f) / 1.3f) : 1f;
                 for (int i = 0; i < ContrailCount; i++)
                 {
-                    float born = NukeMath.MissileStart + i * step;
+                    float born = _timeline.MissileStart + i * step;
                     if (born > t)
                         break;
                     float age = t - born;
@@ -257,7 +259,7 @@ namespace Chapchu.UI.Fx.Nuke
             }
 
             // 낙진 — 재와 초록 불티가 카메라 둘레로 내린다
-            float gk = NukeMath.Smooth((t - NukeMath.Fall + 0.3f) / 1.2f);
+            float gk = NukeMath.Smooth((t - _timeline.Fall + 0.3f) / 1.2f);
             if (gk <= 0f)
                 return;
             Vector3 eye = view.Eye;

@@ -1895,6 +1895,1074 @@ MonoBehaviour:
   shadowMapSize: 2048
   skyRadius: 900
   seed: 0
+  timeline:
+    Siren: 1.6
+    Notice: 1.9
+    Sky: 2.6
+    Hero: 3.5
+    Run: 4.4
+    Side: 6.2
+    Up: 7.4
+    Dive: 8.2
+    Hit: 9.8
+    Street: 11.2
+    Fall: 12.4
+    End: 15.4
+    MissileStart: 1.2
+    Hold: 0.9
+    HoldScene: 0.1
+  shots:
+  - Name: "1 \uD558\uB298\uC5D0\uC11C \uB124\uAC70\uB9AC\uB85C \uB0B4\uB824\uC624\uB294
+      \uD06C\uB808\uC778"
+    Path: 0
+    EyeEase: 1
+    Ease: 1
+    Eye: {x: -3.6, y: 46, z: -74}
+    EyeEnd: {x: -2.8, y: 5.2, z: -8}
+    Target: {x: 1, y: 12, z: 40}
+    TargetEnd: {x: 0, y: 3.2, z: 27}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 0.9
+    ZoomEnd: 0.9
+    Roll: 0
+    RollEnd: 0
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 85
+    PinLight: 1
+    LightCenter: {x: 0, y: -20}
+    LightCenterEnd: {x: 0, y: 16}
+  - Name: "2 \uAC15\uC544\uC9C0 \uB208\uB192\uC774 \u2014 \uC0AC\uC774\uB80C\uC5D0
+      \uBA48\uCE6B"
+    Path: 0
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 3.5, y: 0.82, z: 8.4}
+    EyeEnd: {x: 2.5, y: 0.82, z: 9.8}
+    Target: {x: -0.4, y: 1.45, z: 20}
+    TargetEnd: {x: -0.4, y: 1.45, z: 20}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.32
+    ZoomEnd: 1.32
+    Roll: -3.5
+    RollEnd: -3.5
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 9
+    Blur: 0.5
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "3 \uD558\uB298\uC744 \uC62C\uB824\uB2E4\uBCF4\uBA70 \uBBF8\uC0AC\uC77C\uB85C"
+    Path: 1
+    EyeEase: 0
+    Ease: 1
+    Eye: {x: 0.7, y: 1.05, z: 8.5}
+    EyeEnd: {x: 0.7, y: 1.05, z: 8.5}
+    Target: {x: 0, y: 1.8, z: 22}
+    TargetEnd: {x: 0, y: 0, z: 0}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1
+    ZoomEnd: 1.9
+    Roll: 0
+    RollEnd: 4
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "4 \uBBF8\uC0AC\uC77C \uB458\uB808\uB97C \uB3C4\uB294 \uCE74\uBA54\uB77C"
+    Path: 3
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 0, y: 8, z: -21}
+    EyeEnd: {x: 0, y: 8, z: -21}
+    Target: {x: 0, y: 0, z: 9}
+    TargetEnd: {x: 0, y: 0, z: 9}
+    Orbit: {x: 13, y: 3}
+    OrbitAngle: 131.78029
+    OrbitAngleEnd: 51.5662
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.05
+    ZoomEnd: 1.05
+    Roll: -7
+    RollEnd: 5
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 120
+    PinLight: 1
+    LightCenter: {x: 0, y: 30}
+    LightCenterEnd: {x: 0, y: 30}
+  - Name: "5 \uB2EC\uC544\uB098\uB294 \uAC15\uC544\uC9C0\uB4E4\uC744 \uC55E\uC5D0\uC11C
+      \uB4B7\uAC78\uC74C\uC73C\uB85C"
+    Path: 0
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 0, y: 1.02, z: 4}
+    EyeEnd: {x: 0, y: 1.02, z: -12.5}
+    Target: {x: 0, y: 3.4, z: 30}
+    TargetEnd: {x: 0, y: 8.5, z: 30}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0.05
+    BobRate: 13
+    Sway: 0.7
+    SwayRate: 1.1
+    Zoom: 0.95
+    ZoomEnd: 0.95
+    Roll: 0
+    RollEnd: 0
+    Wobble: 1.5
+    WobbleRate: 2.3
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.0025
+        inSlope: 0
+        outSlope: 0.0045000003
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.007
+        inSlope: 0.0045000003
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 8
+    Blur: 0.32
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "6 \uC606\uC5D0\uC11C \uB098\uB780\uD788 \uB2EC\uB9AC\uAE30"
+    Path: 0
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: -5.5, y: 1.25, z: 3.6}
+    EyeEnd: {x: -5.5, y: 1.25, z: -6}
+    Target: {x: 0, y: 0.95, z: 8.4}
+    TargetEnd: {x: 0, y: 0.95, z: -1.2}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0.03
+    BobRate: 12
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.05
+    ZoomEnd: 1.05
+    Roll: -2
+    RollEnd: -2
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.003
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.003
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 9.5
+    Blur: 0.42
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "7 \uB124\uAC70\uB9AC \uBC14\uB2E5\uC5D0\uC11C \uC62C\uB824\uB2E4\uBCF8
+      \uBBF8\uC0AC\uC77C"
+    Path: 2
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 0.6, y: 0.55, z: 14}
+    EyeEnd: {x: 0.6, y: 0.55, z: 14}
+    Target: {x: 0, y: 0, z: 0}
+    TargetEnd: {x: 0, y: 0, z: 0}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 3.3
+    ZoomEnd: 2.2
+    Roll: -9
+    RollEnd: 7
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.003
+        inSlope: 0
+        outSlope: 0.004
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.007
+        inSlope: 0.004
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.004
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.004
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "8 \uBBF8\uC0AC\uC77C \uB4A4\uC5D0 \uBD99\uC5B4 \uB0B4\uB9AC\uAF42\uD798"
+    Path: 3
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 3.5, y: 8, z: -19}
+    EyeEnd: {x: 3.5, y: 8, z: -19}
+    Target: {x: 0, y: 2, z: 26}
+    TargetEnd: {x: 0, y: 2, z: 26}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 0.92
+    ZoomEnd: 0.68
+    Roll: -4
+    RollEnd: 12
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.004
+        inSlope: 0
+        outSlope: 0.007999999
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.012
+        inSlope: 0.007999999
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.004
+        inSlope: 0
+        outSlope: 0.01
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.014
+        inSlope: 0.01
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0.04
+    RadialBlurEnd: 0.14
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 110
+    PinLight: 1
+    LightCenter: {x: 0, y: 30}
+    LightCenterEnd: {x: 0, y: 30}
+  - Name: "9 \uCC29\uD0C4 \uC9C1\uC804 \uB290\uB9B0 \uD654\uBA74"
+    Path: 0
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 2.5, y: 0.6, z: -45}
+    EyeEnd: {x: 2.5, y: 0.6, z: -45}
+    Target: {x: 0, y: 2.4, z: 30}
+    TargetEnd: {x: 0, y: 2.4, z: 30}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.75
+    ZoomEnd: 1.75
+    Roll: 0
+    RollEnd: 0
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 9
+    Blur: 0.22
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "10 \uBC88\uCA4D \u2014 \uBA40\uB9AC\uC11C \uBCF8 \uB3C4\uC2DC \uC804\uACBD"
+    Path: 0
+    EyeEase: 0
+    Ease: 2
+    Eye: {x: -196, y: 86, z: -232}
+    EyeEnd: {x: -184, y: 80, z: -218}
+    Target: {x: 0, y: 22, z: 30}
+    TargetEnd: {x: 0, y: 44, z: 30}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.95
+    ZoomEnd: 1.95
+    Roll: 0
+    RollEnd: 0
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: Infinity
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.64285713
+        value: 0.006
+        inSlope: Infinity
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.006
+        inSlope: -0.025199998
+        outSlope: -0.025199998
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.1
+        value: 0.003942281
+        inSlope: -0.01655758
+        outSlope: -0.01655758
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.22
+        value: 0.002381569
+        inSlope: -0.01000259
+        outSlope: -0.01000259
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.38
+        value: 0.0012162344
+        inSlope: -0.005108184
+        outSlope: -0.005108184
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.6
+        value: 0.00048275766
+        inSlope: -0.0020275821
+        outSlope: -0.0020275821
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.00008997348
+        inSlope: -0.0003778886
+        outSlope: -0.0003778886
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0.0015
+    LightExtent: 170
+    PinLight: 1
+    LightCenter: {x: 0, y: 30}
+    LightCenterEnd: {x: 0, y: 30}
+  - Name: "11 \uD070\uAE38\uB85C \uBC00\uB824\uC624\uB294 \uBA3C\uC9C0 \uBCBD"
+    Path: 0
+    EyeEase: 0
+    Ease: 0
+    Eye: {x: 1.6, y: 1.25, z: -64}
+    EyeEnd: {x: 1.6, y: 1.25, z: -64}
+    Target: {x: 0, y: 5, z: 30}
+    TargetEnd: {x: 0, y: 10, z: 30}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1.12
+    ZoomEnd: 1.12
+    Roll: 0
+    RollEnd: 0
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.004
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.054
+        inSlope: 0.1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0.01
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.01
+        inSlope: 0.01
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 48
+    PinLight: 0
+    LightCenter: {x: 0, y: 0}
+    LightCenterEnd: {x: 0, y: 0}
+  - Name: "12 \uB099\uC9C4 \u2014 \uD3D0\uD5C8 \uC704\uB85C \uD06C\uB808\uC778 \uC5C5"
+    Path: 0
+    EyeEase: 2
+    Ease: 2
+    Eye: {x: 2.2, y: 1.7, z: -64}
+    EyeEnd: {x: -1.4, y: 3.4, z: -86}
+    Target: {x: 0, y: 9, z: 30}
+    TargetEnd: {x: 0, y: 35, z: 30}
+    Orbit: {x: 0, y: 0}
+    OrbitAngle: 0
+    OrbitAngleEnd: 0
+    Bob: 0
+    BobRate: 0
+    Sway: 0
+    SwayRate: 0
+    Zoom: 1
+    ZoomEnd: 0.7
+    Roll: 0
+    RollEnd: 0
+    Wobble: 0
+    WobbleRate: 0
+    Shake:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.002
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    Chroma:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RadialBlur: 0
+    RadialBlurEnd: 0
+    Focus: 20
+    Blur: 0
+    Fog: 0
+    LightExtent: 70
+    PinLight: 1
+    LightCenter: {x: 0, y: -36}
+    LightCenterEnd: {x: 0, y: -36}
+  clear:
+    Sun: {r: 1.7, g: 1.24, b: 0.8, a: 1}
+    SkyLight: {r: 0.5, g: 0.56, b: 0.76, a: 1}
+    Ground: {r: 0.52, g: 0.42, b: 0.34, a: 1}
+    Fog: {r: 0.98, g: 0.74, b: 0.52, a: 1}
+    FogDensity: 0.0028
+    FogMax: 0.9
+    Zenith: {r: 0.2, g: 0.36, b: 0.72, a: 1}
+    Horizon: {r: 1.02, g: 0.76, b: 0.52, a: 1}
+    CloudLit: {r: 1.25, g: 1.02, b: 0.84, a: 1}
+    CloudShade: {r: 0.5, g: 0.48, b: 0.62, a: 1}
+    CloudCover: 0.5
+    Gain: {r: 1.04, g: 1, b: 0.95, a: 1}
+    Tint: {r: 1.03, g: 1, b: 0.96, a: 1}
+  blast:
+    Sun: {r: 0.85, g: 0.4, b: 0.18, a: 1}
+    SkyLight: {r: 0.46, g: 0.31, b: 0.25, a: 1}
+    Ground: {r: 0.42, g: 0.24, b: 0.14, a: 1}
+    Fog: {r: 0.62, g: 0.33, b: 0.16, a: 1}
+    FogDensity: 0.0055
+    FogMax: 0.96
+    Zenith: {r: 0.26, g: 0.13, b: 0.1, a: 1}
+    Horizon: {r: 0.9, g: 0.42, b: 0.16, a: 1}
+    CloudLit: {r: 1.1, g: 0.6, b: 0.3, a: 1}
+    CloudShade: {r: 0.3, g: 0.17, b: 0.13, a: 1}
+    CloudCover: 0.68
+    Gain: {r: 1.12, g: 0.8, b: 0.6, a: 1}
+    Tint: {r: 1.08, g: 0.93, b: 0.82, a: 1}
+  fallout:
+    Sun: {r: 0.42, g: 0.5, b: 0.24, a: 1}
+    SkyLight: {r: 0.33, g: 0.42, b: 0.26, a: 1}
+    Ground: {r: 0.2, g: 0.26, b: 0.13, a: 1}
+    Fog: {r: 0.36, g: 0.43, b: 0.2, a: 1}
+    FogDensity: 0.0042
+    FogMax: 0.96
+    Zenith: {r: 0.22, g: 0.28, b: 0.13, a: 1}
+    Horizon: {r: 0.66, g: 0.7, b: 0.32, a: 1}
+    CloudLit: {r: 0.5, g: 0.58, b: 0.3, a: 1}
+    CloudShade: {r: 0.16, g: 0.2, b: 0.1, a: 1}
+    CloudCover: 0.68
+    Gain: {r: 0.84, g: 0.98, b: 0.74, a: 1}
+    Tint: {r: 0.92, g: 1.03, b: 0.82, a: 1}
+  blastBlendSeconds: 0.9
+  falloutBlendSeconds: 1.6
+  falloutLeadSeconds: 0.4
+  shade: {r: 0.66, g: 0.74, b: 0.95, a: 1}
+  sunGlow: {r: 1.5, g: 1.05, b: 0.6, a: 1}
+  sunGlowDim: 0.9
+  fireballLight: {r: 3.4, g: 1.5, b: 0.5, a: 1}
+  fireballSky: {r: 1.5, g: 0.6, b: 0.18, a: 1}
+  grade:
+    Flash: 9
+    Afterglow: 0.5
+    HoldDarken: 0.12
+    Bloom: 0.5
+    BloomHeat: 0.5
+    Saturation: 1.08
+    SaturationNear: 0.92
+    HoldDesaturate: 0.45
+    FalloutDesaturate: 0.12
+    Contrast: 1.07
+    ContrastNear: 0.06
+    Grain: 0.03
+    FalloutGrain: 0.02
+    Vignette: 0.3
+    VignetteNear: 0.25
+    VignettePulse: 0.1
+    VignetteHold: 0.5
+    VignetteColor: {r: 0.02, g: 0.02, b: 0.05, a: 1}
+    VignetteNearColor: {r: 0.35, g: 0.02, b: 0.03, a: 1}
+    Occlusion: 0.85
+    DustColor: {r: 0.6, g: 0.44, b: 0.3, a: 1}
+    SunRays: 0.26
+    Ripple: 0.9
+    RippleSeconds: 2.2
 --- !u!114 &2015709773992210394
 MonoBehaviour:
   m_ObjectHideFlags: 0

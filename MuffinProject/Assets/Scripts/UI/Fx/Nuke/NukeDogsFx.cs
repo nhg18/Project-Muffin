@@ -39,6 +39,7 @@ namespace Chapchu.UI.Fx.Nuke
         [Tooltip("판을 카메라 위쪽으로 이만큼 기울인다 (0 = 똑바로 세움, 1 = 화면과 나란히).")]
         [SerializeField] private float tiltToCamera = 0.4f;
 
+        private NukeTimeline _timeline;
         private Dog[] _dogs;
         private readonly List<Sprite3> _sprites = new List<Sprite3>();
         private readonly List<Vector4> _shadows = new List<Vector4>();
@@ -97,9 +98,10 @@ namespace Chapchu.UI.Fx.Nuke
             Destroy(_shadowMesh);
         }
 
-        /// <summary>강아지 18마리의 자리 · 성격을 씨앗으로 정한다 (시안 dogs — 난수 순서까지 같다).</summary>
-        public void Setup(ref int seed)
+        /// <summary>시간표를 받고, 강아지 18마리의 자리 · 성격을 씨앗으로 정한다 (시안 dogs — 난수 순서까지 같다).</summary>
+        public void Setup(ref int seed, in NukeTimeline timeline)
         {
+            _timeline = timeline;
             _dogs = new Dog[DogCount];
             for (int i = 0; i < DogCount; i++)
             {
@@ -111,8 +113,8 @@ namespace Chapchu.UI.Fx.Nuke
                 NukeMath.Next(ref seed); // 시안 hd (쓰지 않는 값)
                 dog.Wander = NukeMath.Range(ref seed, 0.3f, 0.7f);
                 dog.Wander *= NukeMath.Next(ref seed) < 0.5f ? 1f : -1f;
-                dog.NoticeAt = NukeMath.Notice + NukeMath.Range(ref seed, 0f, 0.5f);
-                dog.RunAt = NukeMath.Run + NukeMath.Range(ref seed, 0f, 0.45f) + (27f - z) * 0.012f;
+                dog.NoticeAt = timeline.Notice + NukeMath.Range(ref seed, 0f, 0.5f);
+                dog.RunAt = timeline.Run + NukeMath.Range(ref seed, 0f, 0.45f) + (27f - z) * 0.012f;
                 dog.VelocityX = x * 0.02f + NukeMath.Range(ref seed, -0.12f, 0.12f);
                 dog.VelocityZ = -NukeMath.Range(ref seed, 6.6f, 9f);
                 dog.Cadence = NukeMath.Range(ref seed, 11.5f, 14.5f);
@@ -206,7 +208,7 @@ namespace Chapchu.UI.Fx.Nuke
                     // 멈칫 → 하늘을 보고 떤다
                     float k = t - d.NoticeAt;
                     float hop = Mathf.Sin(NukeMath.Clamp01(k / 0.22f) * Mathf.PI) * 0.35f;
-                    float fear = NukeMath.Smooth((t - NukeMath.Sky) / 1.2f);
+                    float fear = NukeMath.Smooth((t - _timeline.Sky) / 1.2f);
                     float x = d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f + Mathf.Sin(t * 38f) * 0.02f * fear;
                     Add(d, view, new Vector3(x, hop, d.Z), Mathf.PI + Mathf.Sin(d.Phase) * 0.4f, fear > 0.3f ? Pose.Shake : Pose.Stand, t * 14f,
                         -0.12f * NukeMath.Smooth(k / 0.3f), Mathf.Sin(t * 40f) * 0.03f * fear, 1f + hop * 0.1f - 0.05f * fear);
@@ -218,7 +220,7 @@ namespace Chapchu.UI.Fx.Nuke
                     float run = tt - 0.18f * (1f - Mathf.Exp(-tt * 6f));
                     float sx = x0 + d.VelocityX * run;
                     float sz = d.Z + d.VelocityZ * run;
-                    float struck = NukeMath.Hit + NukeMath.Flat(sx - NukeMath.Impact.x, sz - NukeMath.Impact.z) / NukeMath.DustSpeed;
+                    float struck = _timeline.Hit + NukeMath.Flat(sx - NukeMath.Impact.x, sz - NukeMath.Impact.z) / NukeMath.DustSpeed;
                     if (t < struck)
                     {
                         // 달아나기 + 발에서 이는 먼지
