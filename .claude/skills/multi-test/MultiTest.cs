@@ -3150,6 +3150,78 @@ public static class MultiTest
     private static readonly double[] ShotTimes = { 1.0, 2.6, 8.0 };
     private static readonly string[] ShotNames = { "_zoom.png", "_reaction.png", "_later.png" };
 
+    // ── 카드 연출 (연출 시험장 CardFxTestScene — run.sh fx). 게임 판 · 네트워크는 거치지 않는다 ──
+
+    private const string FxSeenKey = "MultiTest.FxSeen";
+
+    /// <summary>시험장에서 그 카드를 낸다 (CardFxTestBench.PlayCard). 시험장이 아직 준비 안 됐거나 다른 카드를 내는 중이면 WAIT.</summary>
+    public static string FxPlay(string cardId)
+    {
+        if (!EditorApplication.isPlaying) return "WAIT 플레이 전";
+        CardFxTestBench bench = Object.FindFirstObjectByType<CardFxTestBench>();
+        if (bench == null) return "WAIT 연출 시험장 아님 (" + SceneManager.GetActiveScene().name + ")";
+        return bench.PlayCard(int.Parse(cardId)) ? "OK 카드 " + cardId + " 냄" : "WAIT 준비 중 · 내는 중 · 덱에 없음";
+    }
+
+    /// <summary>
+    /// 다음에 그 카드의 연출 3 단계가 시작되면(CardFxTestBench.PlayingCardId) 그 시작부터 ms 마다 게임 뷰를 찍는다 —
+    /// prefix + "_0500.png" 처럼 (prefix "-" 면 찍지 않고 시작만 기록). msCsv = "300,800,1500". 3 단계가 끝난 뒤의 시각(4 단계)도 적을 수 있다. 한 번만.
+    /// </summary>
+    public static string ArmFxShots(string prefix, string cardId, string msCsv)
+    {
+        if (!EditorApplication.isPlaying) return "WAIT 플레이 전";
+        CardFxTestBench bench = Object.FindFirstObjectByType<CardFxTestBench>();
+        if (bench == null) return "WAIT 연출 시험장 아님";
+
+        int id = int.Parse(cardId);
+        int[] times = msCsv.Split(',').Select(t => int.Parse(t.Trim())).OrderBy(t => t).ToArray();
+        double startedAt = -1;
+        int taken = 0;
+        SessionState.EraseString(FxSeenKey);
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying || bench == null)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+
+            if (startedAt < 0)
+            {
+                if (bench.PlayingCardId != id) return;
+                startedAt = EditorApplication.timeSinceStartup - (Time.time - bench.PlayingSince) / Mathf.Max(0.01f, Time.timeScale);
+                SessionState.SetString(FxSeenKey, cardId); // 짧은 3 단계는 CLI 로 물어보는 사이에 끝난다 — 본 것을 남긴다
+            }
+
+            if (taken >= times.Length)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+
+            if ((EditorApplication.timeSinceStartup - startedAt) * 1000 < times[taken] / Mathf.Max(0.01f, Time.timeScale)) return;
+            if (prefix != "-")
+                ScreenCapture.CaptureScreenshot(prefix + "_" + times[taken].ToString("0000") + ".png");
+            taken++;
+        };
+        EditorApplication.update += tick;
+        return "OK 연출 스크린샷 대기 → " + prefix + "_<ms>.png (" + msCsv + ")";
+    }
+
+    /// <summary>그 카드의 3 단계를 봤으면 SEEN (한 번), 카드를 내는 중이면 BUSY, 다 끝났으면 OK IDLE.</summary>
+    public static string FxState(string cardId)
+    {
+        CardFxTestBench bench = Object.FindFirstObjectByType<CardFxTestBench>();
+        if (bench == null) return "WAIT 연출 시험장 아님";
+        if (SessionState.GetString(FxSeenKey, "") == cardId)
+        {
+            SessionState.EraseString(FxSeenKey);
+            return "SEEN " + cardId;
+        }
+        return bench.IsBusy ? "BUSY" : "OK IDLE";
+    }
+
     public static string ArmCardShots(string prefix)
     {
         if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";

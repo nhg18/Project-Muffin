@@ -7,6 +7,7 @@
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 · 방 복귀
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 방 복귀
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 표시 → 찹츄 승리 → 방 복귀
+#   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
 
@@ -17,6 +18,7 @@ ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
 MAIN="$ROOT/MuffinProject"
 CS="$SKILL_DIR/MultiTest.cs"
 LOBBY_SCENE="Assets/Scenes/DebugLobbyScene.unity"
+FX_SCENE="Assets/Scenes/CardFxTestScene.unity"
 TITLE_SCENE="Assets/Scenes/TitleScene.unity"
 WAIT_TRIES=30   # 대기 단계 최대 시도 (2초 간격)
 
@@ -719,6 +721,28 @@ run_aim() {
     done
 }
 
+# 카드 연출 한 장 — 게임 판 · 네트워크 없이 연출 시험장에서 (CardFxTestBench). 3 단계가 시작되면 SHOT_DIR/fx_<ID>_<ms>.png 를 찍고,
+# 3 단계 · 4 단계 장식 · 버림까지 끝나길 기다린 뒤 콘솔 오류. 3 단계 길이는 콘솔의 「[CardFxTestBench] 카드 <ID> … 3 단계 n초」.
+run_fx() {
+    local id="${1:?카드 ID}" times="${2:-300,800,1500}" prefix="-" out seen=""
+    EDITORS=("$MAIN")
+    log "▶ 준비 — 연출 시험장"
+    prepare "$FX_SCENE"
+    [ -n "${SHOT_DIR:-}" ] && { mkdir -p "$SHOT_DIR"; prefix="$SHOT_DIR/fx_$id"; }
+    until_ok "$MAIN" ArmFxShots "$prefix" "$id" "$times" || return
+    until_ok "$MAIN" FxPlay "$id" || return
+    log "▶ 연출 대기"
+    for _ in $(seq 1 90); do
+        out=$(call "$MAIN" FxState "$id")
+        case "$out" in SEEN*) seen="$out" ;; "OK IDLE") break ;; esac
+        sleep 1
+    done
+    [ "$out" = "OK IDLE" ] || fail "연출이 끝나지 않는다: $out"
+    [ -n "$seen" ] || log "  (3 단계 없음 — 연출 프리팹이 없거나 4 단계만 있는 카드)"
+    console_lines "$MAIN" | grep '\[CardFxTestBench\]' | sed 's/^[a-z]*	/  /'
+    check_errors "$MAIN"
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
     ui)    shift; run_ui ;;
@@ -729,6 +753,7 @@ case "${1:-}" in
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;
     aim)     shift; run_aim "$@" ;;
+    fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;
 esac
 
