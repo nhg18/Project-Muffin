@@ -196,7 +196,7 @@ namespace Chapchu.UI.Fx.Aim
             player.targetTexture = _texture;
             video.texture = _texture;
             player.Prepare();
-            for (float waited = 0f; !player.isPrepared && waited < videoTimeout; waited += Time.deltaTime)
+            for (float waited = 0f; !player.isPrepared && waited < videoTimeout; waited += Time.unscaledDeltaTime)
                 yield return null;
             // 시간 안에 준비되지 않으면 이번에는 영상 없이 간다 — 늦게 준비된 영상이 장면보다 뒤처진 채 틀어지지 않게
             _videoSkipped = !player.isPrepared;

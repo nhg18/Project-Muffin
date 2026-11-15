@@ -481,7 +481,7 @@ namespace Chapchu.UI.Fx.Aim
             Snow(front, t, 60, 33, 0.62f * wind);
 
             // 물러나면서 앞쪽 나무 · 가지가 화면 안으로 들어옴
-            float fz = 1f + (z / 1.42f - 1f) * 1.35f;
+            float fz = 1f + (z / hitZoom.y - 1f) * 1.35f;
             bool near = fz < 2.6f;
             SetActive(foreground.gameObject, near);
             if (near)
