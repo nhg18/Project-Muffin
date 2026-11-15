@@ -38,7 +38,7 @@ namespace Chapchu.UI.RoomScreen
         private const string BotTagFormat = "(봇 · {0})";
         private const string BotLevelLogFormat = "봇 {0} 난이도 {1}";
         private static readonly BotLevel[] BotLevelCycle = { BotLevel.Normal, BotLevel.Hard, BotLevel.Easy };
-        private const string BecameHostToast = "방장이 되었습니다. 2명 이상이면 시작할 수 있어요.";
+        private const string BecameHostToastFormat = "방장이 되었습니다. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string FallbackNickname = "플레이어";
 
         [Header("위")]
@@ -356,7 +356,7 @@ namespace Chapchu.UI.RoomScreen
         {
             log.Add(string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName)));
             if (newMaster.IsLocal)
-                PopupManager.Instance.ShowToast(BecameHostToast);
+                PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
 
             Refresh();
         }

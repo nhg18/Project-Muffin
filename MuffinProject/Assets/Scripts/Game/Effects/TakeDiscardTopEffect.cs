@@ -10,6 +10,10 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class TakeDiscardTopEffect : CardEffect
     {
+        // 18-bot.md 7-3 「버림 더미 맨 위 가져오기」
+        private const double BotWorthWeight = 0.5; // 지금 냈을 때의 가장 높은 효과 점수 × 이 값
+        private const double BotMaxScore = 60;
+
         internal override bool BotWants(GameServer server, int bot, int[] receivers) => server.DiscardTop != null;
 
         // 가져온 카드는 다음 턴에나 쓴다 — 지금 쓸 때 점수의 절반. 맨 위가 같은 카드면 가져올 까닭이 없다
@@ -19,7 +23,7 @@ namespace Chapchu.Game.Effects
             if (top == null || top.Effects.Any(effect => effect is TakeDiscardTopEffect))
                 return 0;
 
-            return Math.Min(60, Math.Max(0, view.WorthOf(top)) * 0.5);
+            return Math.Min(BotMaxScore, Math.Max(0, view.WorthOf(top)) * BotWorthWeight);
         }
 
         internal override int BotHandGain(Bots.BotView view, int[] receivers) => view.Server.DiscardTop != null ? 1 : 0;

@@ -25,6 +25,12 @@ namespace Chapchu.Game.Bots
         private const int MidHp = 50, HighHp = 70; // 회복 × 1.0 · × 0.6 의 경계
         public const int GuardHp = 40;            // 107 짖기 — 내 HP 가 이 이하면 몸을 지키는 값을 더한다
 
+        // 18-bot.md 7-1 「내가 받는 피해」 · 「내 손패」
+        private const double SelfKnockoutScore = -1000;  // 그 피해로 쓰러짐 — 그 수는 두지 않는다
+        private const double SelfDamageWeight = 1.2;     // 받는 피해 1 마다
+        private const double LowHpPenalty = 20;          // 남는 HP 가 LowHp 미만이면 더 깎는다
+        private const double BreakOwnChapchuPenalty = 50; // 찹츄 상태인데 스스로 10장을 깸
+
         public readonly GameServer Server;
         public readonly int Bot;
         public readonly BotLevelSpec Level;
@@ -66,7 +72,9 @@ namespace Chapchu.Game.Bots
         public double NearChapchu(int hand)
         {
             const int ten = GameServer.ChapchuHandCount;
-            double near = hand == ten ? 50 : hand == ten - 1 || hand == ten - 2 ? 35 : hand == ten + 1 ? 20 : hand == ten - 3 ? 12 : 0;
+            bool oneDraw = hand >= ten - GameServer.TurnDrawCount && hand < ten; // 한 번 뽑으면 10장 (손패 ten − 1 이면 1장만 뽑는다, 05-deck 4절)
+            bool twoDraws = hand == ten - 1 - GameServer.TurnDrawCount;          // 한 번 뽑아 ten − 1 → 다음에 1장 뽑아 10장
+            double near = hand == ten ? 50 : oneDraw ? 35 : hand == ten + 1 ? 20 : twoDraws ? 12 : 0;
             return near * Level.Foresight;
         }
 
@@ -122,9 +130,9 @@ namespace Chapchu.Game.Bots
             if (amount <= 0)
                 return 0;
             if (MyHp <= amount)
-                return -1000;
+                return SelfKnockoutScore;
 
-            return -(amount * 1.2 + (MyHp - amount < LowHp ? 20 : 0));
+            return -(amount * SelfDamageWeight + (MyHp - amount < LowHp ? LowHpPenalty : 0));
         }
 
         /// <summary>actor 가 amount 회복할 때의 점수. 내 회복은 HP 가 낮을수록 값지고, 상대의 회복은 손해다.</summary>
@@ -149,7 +157,7 @@ namespace Chapchu.Game.Bots
         {
             double bonus = hand == GameServer.ChapchuHandCount ? ChapchuReady
                 : hand == GameServer.ChapchuHandCount - 1 ? 15 * Level.Foresight
-                : hand == GameServer.ChapchuHandCount - 2 ? 10 * Level.Foresight
+                : hand >= GameServer.ChapchuHandCount - GameServer.TurnDrawCount && hand < GameServer.ChapchuHandCount - 1 ? 10 * Level.Foresight // 한 번 뽑으면 10장
                 : hand > GameServer.ChapchuHandCount ? -18 * (hand - GameServer.ChapchuHandCount)
                 : 0;
             return hand * CardValue + bonus;
@@ -163,7 +171,7 @@ namespace Chapchu.Game.Bots
             if (after == GameServer.ChapchuHandCount && before != after)
                 Notes.Add("찹츄 준비");
             if (Me.IsChapchu && after != GameServer.ChapchuHandCount)
-                score -= 50;
+                score -= BreakOwnChapchuPenalty;
 
             return score > 0 && Style == BotStyle.Collector ? score * StyleBonus : score;
         }

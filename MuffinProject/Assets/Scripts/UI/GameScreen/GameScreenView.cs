@@ -33,7 +33,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (roomCode == null || turnStrip == null || feed == null || log == null || opponentSeats == null || opponentSeats.Length != 3 || myPanel == null
+            if (roomCode == null || turnStrip == null || feed == null || log == null || opponentSeats == null || opponentSeats.Length != OpponentSeatsPresenter.SeatCount || myPanel == null
                 || chapchuButton == null || deck == null || targetAsk == null || menu == null)
                 Debug.LogError($"[{nameof(GameScreenView)}] 영역 뷰 참조 중 비어 있는 것이 있습니다.", this);
         }

@@ -21,6 +21,20 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class TurnStripView : MonoBehaviour
     {
+        /// <summary>칩 템플릿 안 부품 이름 — GameScreenBuilder 가 같은 이름으로 만들고, 칩을 복제할 때 이 이름으로 찾는다. 분홍 테.</summary>
+        public const string ChapchuChild = "Chapchu";
+        /// <summary>잉크 테 부품 이름.</summary>
+        public const string BorderChild = "Border";
+        /// <summary>노랑 바탕 부품 이름.</summary>
+        public const string FillChild = "Fill";
+        /// <summary>목걸이 색 점 부품 이름 (GameScreenBuilder.Dot — 잉크 고리 → DotFillChild).</summary>
+        public const string DotChild = "Dot";
+        /// <summary>목걸이 색 점 안 색 원 부품 이름 (GameScreenBuilder.Dot).</summary>
+        public const string DotFillChild = "Fill";
+        /// <summary>이름 글자 부품 이름.</summary>
+        public const string NameChild = "Name";
+
+        private const string DotFillPath = DotChild + "/" + DotFillChild;
         private const string MyTurnText = "나의 턴";
         private const string OtherTurnFormat = "{0} 차례";
 
@@ -37,8 +51,11 @@ namespace Chapchu.UI.GameScreen
         [Header("지금 차례")]
         [SerializeField] private Image nowChip;
         [SerializeField] private TMP_Text nowText;
+        [Tooltip("남의 차례일 때 「○○ 차례」 칩 바탕색.")]
         [SerializeField] private Color nowOtherColor = Color.white;
+        [Tooltip("내 턴일 때 「나의 턴」 칩 바탕색.")]
         [SerializeField] private Color nowMeColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        [Tooltip("멈춤일 때 칩 바탕색.")]
         [SerializeField] private Color nowHaltColor = new Color32(0xff, 0x9f, 0x1a, 0xFF);
 
         private readonly List<Chip> _chips = new List<Chip>();
@@ -121,12 +138,12 @@ namespace Chapchu.UI.GameScreen
             public Chip(RectTransform root)
             {
                 Root = root;
-                _border = root.Find("Border").GetComponent<Image>();
+                _border = root.Find(BorderChild).GetComponent<Image>();
                 _size = root.GetComponent<LayoutElement>();
-                Fill = root.Find("Fill").gameObject;
-                Chapchu = root.Find("Chapchu").gameObject;
-                Dot = root.Find("Dot/Fill").GetComponent<Image>();
-                Name = root.Find("Name").GetComponent<TMP_Text>();
+                Fill = root.Find(FillChild).gameObject;
+                Chapchu = root.Find(ChapchuChild).gameObject;
+                Dot = root.Find(DotFillPath).GetComponent<Image>();
+                Name = root.Find(NameChild).GetComponent<TMP_Text>();
             }
 
             // 지금 차례: 테두리 + 노랑 바탕 + 큰 글자 (시안 .pn2.cur — 높이 29 → 58 · 글자 16 → 32). 아니면 투명 · 작은 글자 (24 → 48 · 14 → 28).

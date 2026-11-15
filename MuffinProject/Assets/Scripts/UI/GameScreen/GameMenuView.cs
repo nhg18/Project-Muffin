@@ -13,6 +13,7 @@ namespace Chapchu.UI.GameScreen
     {
         [SerializeField] private Button gearButton;
         [SerializeField] private Image gearFill;
+        [Tooltip("서랍이 열려 있는 동안 설정(톱니) 버튼 바탕색. 닫혀 있으면 흰색.")]
         [SerializeField] private Color gearOpenColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
         [SerializeField] private GameObject sheet;
         [SerializeField] private Button closeButton;

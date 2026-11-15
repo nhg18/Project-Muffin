@@ -18,6 +18,9 @@ namespace Chapchu.UI.Lobby
         private const string AgainFormat = "{0}회 더";
         private const string RefundFormat = "+{0}";
 
+        // 10회 결과는 2줄 — 한 줄에 GachaTenCount / TenRows 장 (24 6-4 「10회 5열 2줄」)
+        private const int TenRows = 2;
+
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
         [SerializeField] private TMP_Text titleText;
@@ -63,7 +66,7 @@ namespace Chapchu.UI.Lobby
 
         private void Awake()
         {
-            if (content == null || frame == null || titleText == null || grid == null || cards == null || cards.Length != 10 || openAllButton == null
+            if (content == null || frame == null || titleText == null || grid == null || cards == null || cards.Length != LobbyHubData.GachaTenCount || openAllButton == null
                 || doneRow == null || refund == null || refundText == null || againButton == null || againLabel == null || wearButton == null || okButton == null)
                 Debug.LogError($"[{nameof(LobbyGachaResultView)}] 참조가 비어 있습니다.", this);
 
@@ -98,7 +101,7 @@ namespace Chapchu.UI.Lobby
             content.SetActive(true);
             titleText.text = string.Format(TitleFormat, LobbyHubData.GachaName, _count);
             grid.cellSize = _count == 1 ? singleCardSize : cardSize;
-            grid.constraintCount = _count == 1 ? 1 : 5;
+            grid.constraintCount = _count == 1 ? 1 : LobbyHubData.GachaTenCount / TenRows;
 
             int totalRefund = 0;
             bool hasNew = false;

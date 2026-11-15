@@ -15,6 +15,23 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class FeedView : MonoBehaviour, IPointerClickHandler
     {
+        /// <summary>칩 프리팹 안 부품 이름 — GameScreenBuilder 가 같은 이름으로 만들고, 칩을 복제할 때 이 이름으로 찾는다.</summary>
+        public const string IconChild = "Icon";
+        /// <summary>작은 카드 부품 이름 (GameScreenBuilder.BuildMiniCard).</summary>
+        public const string MiniCardChild = "MiniCard";
+        /// <summary>작은 카드 안 종류 색 띠 이름 (GameScreenBuilder.BuildMiniCard).</summary>
+        public const string MiniBandChild = "Band";
+        /// <summary>왕관 아이콘 부품 이름.</summary>
+        public const string CrownChild = "Crown";
+        /// <summary>한 사람(행동한 플레이어) 이름 글자 부품 이름.</summary>
+        public const string NameChild = "Name";
+        /// <summary>내용 글자 부품 이름.</summary>
+        public const string TextChild = "Text";
+        /// <summary>빨간 수치 글자 부품 이름.</summary>
+        public const string ValueChild = "Value";
+
+        private const string MiniBandPath = MiniCardChild + "/" + MiniBandChild;
+        private const string MiniBoxPath = MiniCardChild + "/Box"; // 테 · 면 한 장 (GameScreenBuilder.ShapeBox 가 만드는 이름)
         private const int MaxChips = 2;
 
         [Tooltip("칩 프리팹 (Prefab/UI/GameScreen/FeedChip).")]
@@ -23,10 +40,13 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float oldAlpha = 0.8f;
         [Tooltip("이 초가 지난 칩의 투명도 (시안 .stale 0.55).")]
         [SerializeField] private float staleAlpha = 0.55f;
+        [Tooltip("칩이 나온 뒤 이 초가 지나면 더 흐려진다 (staleAlpha).")]
         [SerializeField] private float staleAfter = 4f;
         [Tooltip("카드 종류 색 — 행동 · 카운터 · 함정 (시안 KC).")]
         [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
+        [Tooltip("카운터 카드 종류 색.")]
         [SerializeField] private Color counterColor = new Color32(0x6f, 0xa4, 0x34, 0xFF);
+        [Tooltip("함정 카드 종류 색.")]
         [SerializeField] private Color trapColor = new Color32(0xf6, 0x46, 0x12, 0xFF);
 
         private readonly List<Chip> _chips = new List<Chip>();
@@ -96,15 +116,15 @@ namespace Chapchu.UI.GameScreen
                 Root = root;
                 ShownAt = shownAt;
                 Group = root.GetComponent<CanvasGroup>();
-                _icon = root.Find("Icon").gameObject;
-                _miniCard = root.Find("MiniCard").gameObject;
-                _miniBox = root.Find("MiniCard/Box").GetComponent<UIShape>();
-                _miniBand = root.Find("MiniCard/Band").GetComponent<Image>();
-                _crown = root.Find("Crown").gameObject;
-                _name = root.Find("Name").GetComponent<TMP_Text>();
+                _icon = root.Find(IconChild).gameObject;
+                _miniCard = root.Find(MiniCardChild).gameObject;
+                _miniBox = root.Find(MiniBoxPath).GetComponent<UIShape>();
+                _miniBand = root.Find(MiniBandPath).GetComponent<Image>();
+                _crown = root.Find(CrownChild).gameObject;
+                _name = root.Find(NameChild).GetComponent<TMP_Text>();
                 _nameLayout = _name.GetComponent<LayoutElement>();
-                _text = root.Find("Text").GetComponent<TMP_Text>();
-                _value = root.Find("Value").GetComponent<TMP_Text>();
+                _text = root.Find(TextChild).GetComponent<TMP_Text>();
+                _value = root.Find(ValueChild).GetComponent<TMP_Text>();
             }
 
             public void Fill(HistoryEntry entry, string actorName, Color actorInk, Color cardColor)

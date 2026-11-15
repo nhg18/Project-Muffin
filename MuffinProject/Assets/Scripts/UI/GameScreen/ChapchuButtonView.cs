@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.Game;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -20,7 +21,7 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class ChapchuButtonView : MonoBehaviour
     {
-        private const int PipCount = 10; // 07-win-condition.md 4.1
+        private const int PipCount = GameServer.ChapchuHandCount; // 07-win-condition.md 4.1
         private const string OverFormat = "+{0}";
 
         [SerializeField] private Button button;

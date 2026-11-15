@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: bc4a95056a6bba648acf8698cb0a60fb
+guid: a914a83caff6fcd499e8620975dfdf1b
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2704736663927705549
-    second: avatar_default_0
+      213: -5331911459730431555
+    second: D01_0
+  - first:
+      213: 617760680618127840
+    second: D01_1
+  - first:
+      213: 2328780868424113488
+    second: D01
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,9 +52,9 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
-  spriteMeshType: 0
+  spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -72,10 +78,10 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -126,23 +132,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: avatar_default_0
+      name: D01
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 240
-        height: 240
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        x: 409
+        y: 97
+        width: 1394
+        height: 1805
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: dcfc2606aa7298520800000000000000
-      internalID: 2704736663927705549
+      spriteID: 05d15268cdd715020800000000000000
+      internalID: 2328780868424113488
       vertices: []
       indices: 
       edges: []
@@ -151,7 +157,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -161,7 +167,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      avatar_default_0: 2704736663927705549
+      D01: 2328780868424113488
+      D01_0: -5331911459730431555
+      D01_1: 617760680618127840
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

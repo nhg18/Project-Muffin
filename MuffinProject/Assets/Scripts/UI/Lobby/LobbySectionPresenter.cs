@@ -501,7 +501,7 @@ namespace Chapchu.UI.Lobby
 
         private void HandleRollRequested(int count)
         {
-            int cost = count == 10 ? LobbyHubData.GachaCostTen : LobbyHubData.GachaCostOne;
+            int cost = count == LobbyHubData.GachaTenCount ? LobbyHubData.GachaCostTen : LobbyHubData.GachaCostOne;
             int balance = Data.Balance(HubCurrency.Churu);
             if (balance < cost)
             {

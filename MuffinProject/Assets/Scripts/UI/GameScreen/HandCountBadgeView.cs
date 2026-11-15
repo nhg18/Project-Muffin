@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using Chapchu.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,8 +11,8 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class HandCountBadgeView : MonoBehaviour
     {
-        private const int ChapchuCount = 10; // 07-win-condition.md 4.1
-        private const int NearCount = 9;
+        private const int ChapchuCount = GameServer.ChapchuHandCount; // 07-win-condition.md 4.1
+        private const int NearCount = ChapchuCount - 1; // 한 장 모자라면 「가깝다」 (주황)
 
         [SerializeField] private TMP_Text countText;
         [SerializeField] private Image band;

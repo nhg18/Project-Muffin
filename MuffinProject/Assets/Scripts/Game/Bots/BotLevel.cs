@@ -41,9 +41,12 @@
         {
             switch (level)
             {
-                case BotLevel.Easy: return new BotLevelSpec(30, 0.25, 0.5, 0, false, 0);
-                case BotLevel.Hard: return new BotLevelSpec(4, 0, 1, 1, true, 0.3);
-                default:            return new BotLevelSpec(15, 0.1, 0.85, 0.5, true, 0);
+                case BotLevel.Easy:
+                    return new BotLevelSpec(noise: 30, mistakeRate: 0.25, noticeRate: 0.5, foresight: 0, seesKill: false, leaderFocus: 0);
+                case BotLevel.Hard:
+                    return new BotLevelSpec(noise: 4, mistakeRate: 0, noticeRate: 1, foresight: 1, seesKill: true, leaderFocus: 0.3);
+                default:
+                    return new BotLevelSpec(noise: 15, mistakeRate: 0.1, noticeRate: 0.85, foresight: 0.5, seesKill: true, leaderFocus: 0);
             }
         }
     }

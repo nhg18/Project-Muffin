@@ -26,13 +26,19 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float ringSizeRatio = 0.3f;
 
         [Header("글자")]
+        [Tooltip("내려앉기 시작할 때 글자 크기 배율.")]
         [SerializeField] private float fromScale = 1.6f;
+        [Tooltip("내려앉은 순간 글자 크기 배율.")]
         [SerializeField] private float landScale = 0.94f;
         [Tooltip("내려앉는 시간 (ms). 이 동안 나타난다.")]
         [SerializeField] private float landMs = 140f;
+        [Tooltip("내려앉은 뒤 살짝 튀어 오르는 크기 배율.")]
         [SerializeField] private float bounceScale = 1.02f;
+        [Tooltip("튀어 오르는 시간 (ms).")]
         [SerializeField] private float bounceMs = 84f;
+        [Tooltip("튄 뒤 자리 잡는 크기 배율.")]
         [SerializeField] private float settleScale = 0.98f;
+        [Tooltip("자리 잡는 시간 (ms).")]
         [SerializeField] private float settleMs = 336f;
         [Tooltip("번짐이 사라지는 시간 (ms).")]
         [SerializeField] private float glowMs = 560f;
@@ -40,7 +46,9 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float holdMs = 590f;
 
         [Header("고리")]
+        [Tooltip("고리의 처음 크기 배율.")]
         [SerializeField] private float ringFromScale = 0.1f;
+        [Tooltip("퍼져서 사라질 때 고리 크기 배율.")]
         [SerializeField] private float ringToScale = 3f;
         [Tooltip("고리가 퍼지며 사라지는 시간 (ms).")]
         [SerializeField] private float ringMs = 500f;
