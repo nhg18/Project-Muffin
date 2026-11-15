@@ -36,11 +36,11 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 포톤 네트워크 접속 전 환경 세팅 함수
-        /// 연결 가능 여부와 무관하게 항상 설정한다. (꺼진 채 연결되면 LoadLevel 이 동기화되지 않는다)
+        /// PUN 씬 동기화는 끈다 — 아무 클라나 방 속성으로 방 전원의 씬을 바꿀 수 있다. 방 전원 전환은 NetworkManager.LoadSceneForAll (09-network.md 13절)
         /// </summary>
         public void Initialize()
         {
-            PhotonNetwork.AutomaticallySyncScene = true;
+            PhotonNetwork.AutomaticallySyncScene = false;
         }
 
         /// <summary>

@@ -378,7 +378,7 @@ run_solo() {
     sleep 2
     until_ok "$MAIN" SetAllHp "$hp" || return
     # 콘솔은 끝 300줄만 읽는다 — 시작 줄은 판이 길어지기 전에 본다
-    if console_lines "$MAIN" | grep -q 'P1001 난이도 Hard' && console_lines "$MAIN" | grep -q 'P1002 난이도 Normal' && console_lines "$MAIN" | grep -q 'P1003 난이도 Easy'; then
+    if console_lines "$MAIN" | grep -q 'P1000000001 난이도 Hard' && console_lines "$MAIN" | grep -q 'P1000000002 난이도 Normal' && console_lines "$MAIN" | grep -q 'P1000000003 난이도 Easy'; then
         log "  방에서 고른 난이도로 시작 (봇 1 어려움 · 봇 2 보통 · 봇 3 쉬움)"
     else
         fail "봇이 방에서 고른 난이도로 시작하지 않았다"

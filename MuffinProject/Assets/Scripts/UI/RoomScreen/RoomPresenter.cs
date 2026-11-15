@@ -322,8 +322,8 @@ namespace Chapchu.UI.RoomScreen
             Refresh();
         }
 
-        // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절)
-        private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers;
+        // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절). 정원(4)은 남이 바꿀 수 있어 넘으면 시작하지 않는다
+        private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers && BotRoster.MemberCount <= NetworkManager.MaxPlayers;
 
         private static string LevelName(BotLevel level) => level == BotLevel.Easy ? "쉬움" : level == BotLevel.Hard ? "어려움" : "보통";
 
@@ -397,11 +397,11 @@ namespace Chapchu.UI.RoomScreen
             if (_isLocked || _isLeaving || !PhotonNetwork.IsMasterClient || !CanStartGame()) return;
 
             // 방을 닫는다 — 공개 여부는 그대로 둔다 (08-room.md 5절 #8). 닫힌 것을 보고 전원 화면이 잠긴다
-            NetworkManager.Instance.UpdateRoomOptions(PhotonNetwork.CurrentRoom.IsVisible, isOpen: false);
+            NetworkManager.Instance.UpdateRoomOptions(null, isOpen: false);
             SyncRoomOptions();
 
-            // 방 전원이 함께 넘어가야 하므로 LoadScene 이 아닌 LoadLevel (ScenePaths 설명 참고).
-            PhotonNetwork.LoadLevel(SceneFlow.GameSceneAfterRoom);
+            // 방 전원이 함께 넘어간다 (ScenePaths 설명 참고).
+            NetworkManager.Instance.LoadSceneForAll(SceneFlow.GameSceneAfterRoom);
         }
 
         private void HandleVisibilityChangeRequested(bool isPublic)
@@ -409,7 +409,7 @@ namespace Chapchu.UI.RoomScreen
             if (_isLocked || !PhotonNetwork.IsMasterClient) return;
 
             // 로그 · 글자는 바뀐 방 속성을 보고 전원 화면에서 같이 바뀐다 (SyncRoomOptions)
-            NetworkManager.Instance.UpdateRoomOptions(isPublic, PhotonNetwork.CurrentRoom.IsOpen);
+            NetworkManager.Instance.UpdateRoomOptions(isPublic, null);
         }
 
         private void HandleAddBotRequested()

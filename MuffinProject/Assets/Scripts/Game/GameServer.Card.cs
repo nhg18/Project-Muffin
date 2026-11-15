@@ -27,6 +27,9 @@ namespace Chapchu.Game
             if (IsPaused(_clock()))
                 return Reject(requester, RejectCode.Resolving);
 
+            if (IsTurnTimeUp(_clock()))
+                return Reject(requester, RejectCode.NotYourTurn);
+
             List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)

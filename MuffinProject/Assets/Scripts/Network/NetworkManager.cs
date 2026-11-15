@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -14,13 +15,18 @@ namespace Chapchu.Network
     /// Photon 연결 · 방 요청의 창구 (09-network.md). 씬이 바뀌어도 남고, 다른 코드는 PhotonNetwork 대신 이것을 부른다.
     /// 연결은 PhotonConnection, 방은 PhotonRoom 이 하고, 결과는 Network/Events 로 알린다.
     /// </summary>
-    public class NetworkManager : SingletonPersistentPun<NetworkManager>
+    public class NetworkManager : SingletonPersistentPun<NetworkManager>, IOnEventCallback
     {
         public const int MinPlayers = 2;
         public const int MaxPlayers = 4;
-    
+
+        // 방장이 방 전원의 씬을 바꾼다 (09-network.md 13절) — PUN 씬 동기화는 누가 쓴 값인지 보지 않아 쓰지 않는다
+        private const byte LoadSceneEvent = 1;
+        private static readonly string[] SharedScenes = { ScenePaths.Room, ScenePaths.Game };
+
         private PhotonConnection _connection;
         private PhotonRoom _room;
+        private RoomGuard _guard;
         private Coroutine _connectTimeout;
 
         public static string Nickname => PhotonNetwork.NickName;
@@ -33,14 +39,24 @@ namespace Chapchu.Network
         /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _room.HostBots;
         internal int[] HostBotLevels => _room.HostBotLevels;
-        
+
+        /// <summary>
+        /// 믿는 방장의 actorNumber (09-network.md 13절) — 방에 들어올 때의 방장, 그 뒤엔 방장이 나가서 바뀐 사람만.
+        /// 남이 방장 자리를 가져가도(SetMasterClient) 바뀌지 않는다. 결과 알림은 이 사람이 보낸 것만 받는다. 방 밖이면 -1.
+        /// </summary>
+        public static int TrustedMaster => Instance != null && Instance._guard != null ? Instance._guard.TrustedMaster : -1;
+
         protected override void Awake()
         {
             base.Awake(); // 싱글톤 부모클래스 Awake
         
             _connection = new PhotonConnection();
-            _room = new PhotonRoom();
+            _guard = new RoomGuard();
+            _room = new PhotonRoom(_guard);
+            PunEventFilter.Install();
         }
+
+        private void Update() => _guard.Flush();
     
         private void Start()
         {
@@ -75,7 +91,12 @@ namespace Chapchu.Network
         /// 닉네임 설정 함수
         /// </summary>
         /// <param name="nickname">닉네임</param>
-        public void SetNickname(string nickname) => _connection.SetNickname(nickname);
+        public void SetNickname(string nickname)
+        {
+            if (!string.IsNullOrEmpty(nickname))
+                _guard.RememberNickname(nickname); // 남이 내 이름 속성을 바꾸면 이것으로 되돌린다 (09-network.md 13절 #4)
+            _connection.SetNickname(nickname);
+        }
 
         /// <summary>
         /// 플레이어 식별자 — UGS 플레이어 ID (23-login 3절 #10). 접속 전에 넣는다.
@@ -121,11 +142,55 @@ namespace Chapchu.Network
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen) => _room.CreateRoomOptions(maxPlayers, isVisible, isOpen);
     
         /// <summary>
-        /// 현재 룸 옵션 업데이트 함수
+        /// 현재 룸 옵션 업데이트 함수 (방장). null 이면 그 값은 그대로 둔다.
         /// </summary>
         /// <param name="isVisible">로비 노출 여부</param>
         /// <param name="isOpen">공개 비공개 여부</param>
-        public void UpdateRoomOptions(bool isVisible, bool isOpen) => _room.UpdateRoomOptions(isVisible, isOpen);
+        public void UpdateRoomOptions(bool? isVisible, bool? isOpen) => _room.UpdateRoomOptions(isVisible, isOpen);
+
+        /// <summary>방 속성 쓰기 (방장) — 남이 바꾸면 이 값으로 되돌린다 (09-network.md 13절). 값이 null 이면 키를 지운다.</summary>
+        public void SetRoomProps(ExitGames.Client.Photon.Hashtable props) => _guard.SetRoomProps(props);
+
+        /// <summary>Player 속성 쓰기 (방장) — 남이 바꾸면 이 값으로 되돌린다.</summary>
+        public void SetPlayerProps(Player player, ExitGames.Client.Photon.Hashtable props) => _guard.SetPlayerProps(player, props);
+
+        /// <summary>
+        /// 방 전원을 같은 씬으로 (방장) — 방 → 게임 · 게임 → 방. 다른 클라는 믿는 방장이 보낸 것만 따른다.
+        /// 늦게 들어온 사람은 로비가 방 씬을 연다 (방이 닫혀 게임 중에는 못 들어온다).
+        /// </summary>
+        public void LoadSceneForAll(string scene)
+        {
+            if (!_guard.IsTrustedMaster)
+            {
+                Debug.LogWarning($"[{nameof(NetworkManager)}] 방장만 방 전원의 씬을 바꾼다");
+                return;
+            }
+
+            PhotonNetwork.RaiseEvent(LoadSceneEvent, scene, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
+            PhotonNetwork.SendAllOutgoingCommands(); // LoadLevel 이 씬을 여는 동안 보내기를 멈춘다 — 그 전에 내보낸다
+            PhotonNetwork.LoadLevel(scene);
+        }
+
+        public void OnEvent(EventData photonEvent)
+        {
+            switch (photonEvent.Code)
+            {
+                case EventCode.PropertiesChanged:
+                    _guard.OnPropertiesChanged(photonEvent);
+                    break;
+
+                case LoadSceneEvent:
+                    string scene = photonEvent.CustomData as string;
+                    if (photonEvent.Sender != _guard.TrustedMaster || System.Array.IndexOf(SharedScenes, scene) < 0)
+                    {
+                        Debug.LogWarning($"[{nameof(NetworkManager)}] 믿는 방장이 아닌 P{photonEvent.Sender} 의 씬 이동 「{scene}」 — 따르지 않는다");
+                        return;
+                    }
+
+                    PhotonNetwork.LoadLevel(scene);
+                    break;
+            }
+        }
 
         /// <summary>「혼자 하기」 — 봇 3 이 든 방 생성 (18-bot.md 10절). 입장은 OnJoinedRoom 으로 알린다.</summary>
         public void CreateSoloRoom() => _room.CreateSoloRoom();
@@ -179,9 +244,17 @@ namespace Chapchu.Network
 
         public override void OnCreateRoomFailed(short returnCode, string message) => _room.OnCreateRoomFailed(returnCode, message);
     
-        public override void OnJoinedRoom() => _room.OnJoinedRoom();
+        public override void OnJoinedRoom()
+        {
+            _guard.OnJoinedRoom();
+            _room.OnJoinedRoom();
+        }
     
-        public override void OnLeftRoom() => _room.OnLeftRoom();
+        public override void OnLeftRoom()
+        {
+            _guard.OnLeftRoom();
+            _room.OnLeftRoom();
+        }
     
         public override void OnJoinRoomFailed(short returnCode, string message) => _room.OnJoinRoomFailed(returnCode, message);
     
@@ -189,7 +262,11 @@ namespace Chapchu.Network
     
         public override void OnPlayerEnteredRoom(Player newPlayer) => _room.OnPlayerEntered(newPlayer);
     
-        public override void OnPlayerLeftRoom(Player otherPlayer) => _room.OnPlayerLeft(otherPlayer);
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            _guard.OnPlayerLeft(otherPlayer);
+            _room.OnPlayerLeft(otherPlayer);
+        }
 
         public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);
     

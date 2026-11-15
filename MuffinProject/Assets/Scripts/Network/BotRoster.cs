@@ -9,13 +9,14 @@ namespace Chapchu.Network
 {
     /// <summary>
     /// 방에 든 봇 목록 읽기 (18-bot.md 9절). 봇은 접속자가 아니라 방 속성(RoomProps.Bots)의 번호로만 있다.
-    /// 봇 식별자 = 1000 + 번호 — 게임 규칙 · 이벤트의 actorNumber 자리에 사람과 같이 쓰인다. 추가 · 제거는 NetworkManager.
+    /// 봇 식별자 = 1,000,000,000 + 번호 — 게임 규칙 · 이벤트의 actorNumber 자리에 사람과 같이 쓰인다. 추가 · 제거는 NetworkManager.
+    /// 사람 actorNumber 는 방에 들고 날 때마다 1씩 늘어 1000 쯤은 닿을 수 있다 — 봇 번호와 겹치지 않게 크게 둔다.
     /// </summary>
     public static class BotRoster
     {
         // 확정 (18-bot.md 4절 · 9절).
         public const int MaxBots = 3;
-        public const int ActorBase = 1000;
+        public const int ActorBase = 1_000_000_000;
 
         /// <summary>
         /// 지금 방의 봇 번호 (오름차순). 방 밖이면 빈 배열.

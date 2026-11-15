@@ -101,11 +101,14 @@ namespace Chapchu.Game
             trapCardIds = player.Traps.Select(c => c.CardId).ToArray();
         }
 
-        /// <summary>디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패[카드 ID]. 판정에 쓰지 않는다.</summary>
-        public string DebugState()
+        /// <summary>
+        /// 디버그 로그용 한 줄 요약 — 덱 · 버림, 사람마다 체력 · 손패[카드 ID]. 판정에 쓰지 않는다.
+        /// 손패 카드 ID 는 비공개 정보다 — 출시 빌드 로그(Player.log)에는 남기지 않는다 (CODE_CONVENTION 7절). showHands = false 면 장수만.
+        /// </summary>
+        public string DebugState(bool showHands = true)
         {
             string players = string.Join(" │ ", _players.Select(p =>
-                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]{(p.Value.Traps.Count > 0 ? $" 함정{p.Value.Traps.Count}" : "")}{(p.Value.IsChapchu ? " 찹츄" : "")}{(p.Value.HasLeft ? " 나감" : p.Value.Life == LifeState.Dead ? " 사망" : p.Value.Life == LifeState.DeathPending ? " 사망대기" : "")}"));
+                $"P{p.Key} ♥{p.Value.Hp} 손{p.Value.Hand.Count}{(showHands ? $"[{string.Join(" ", p.Value.Hand.Select(c => c.CardId))}]" : "")}{(p.Value.Traps.Count > 0 ? $" 함정{p.Value.Traps.Count}" : "")}{(p.Value.IsChapchu ? " 찹츄" : "")}{(p.Value.HasLeft ? " 나감" : p.Value.Life == LifeState.Dead ? " 사망" : p.Value.Life == LifeState.DeathPending ? " 사망대기" : "")}"));
 
             string chain = _chain.Count == 0 ? "" : $" · 체인 [{string.Join(" ← ", _chain.Select(e => $"P{e.User}:{e.Card.CardId}"))}]";
             if (IsResolvePaused)

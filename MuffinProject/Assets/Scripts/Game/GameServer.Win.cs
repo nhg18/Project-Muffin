@@ -35,6 +35,10 @@ namespace Chapchu.Game
             if (player.Hand.Count != ChapchuHandCount)
                 return Reject(requester, RejectCode.NotTenCards);
 
+            // 마감이 지난 요청 — 넘김은 다음 Tick 이 한다 (09-network.md 8절)
+            if (_declareWait ? _clock() >= _nextTurnAt : !_mainActionUsed && IsTurnTimeUp(_clock()))
+                return Reject(requester, RejectCode.NotYourTurn);
+
             SetChapchu(requester, true);
             if (_declareWait)
                 AdvanceTurn(); // 선언 대기 중 — 승인된 순간 턴 종료, 남은 시간을 기다리지 않는다 (03-turn.md 4절)

@@ -3,11 +3,9 @@
     /// <summary>
     /// 씬 이름 상수. 씬 전환은 이 형식(경로 없는 이름) 하나만 쓴다.
     ///   로컬 전환:     SceneManager.LoadScene(ScenePaths.Lobby)
-    ///   방 전원 전환:  PhotonNetwork.LoadLevel(ScenePaths.Game)
-    /// PUN 의 씬 동기화(AutomaticallySyncScene)는 마스터가 올린 룸 프로퍼티 값을
-    /// 클라이언트의 활성 씬 "이름" 과 비교한다. 경로 형태("Scenes/GameScene")를 넘기면
-    /// 이름이 영원히 일치하지 않아, 비마스터 클라이언트가 룸 프로퍼티가 바뀔 때마다
-    /// 씬을 다시 로드한다. (PhotonNetworkPart.cs LoadLevelIfSynced 참고)
+    ///   방 전원 전환:  NetworkManager.Instance.LoadSceneForAll(ScenePaths.Game) — 방장만
+    /// PUN 의 씬 동기화(AutomaticallySyncScene)는 쓰지 않는다 — 방 속성 「curScn」 을 누가 썼는지 보지 않아
+    /// 아무 클라나 방 전원의 씬을 바꿀 수 있다 (09-network.md 13절). 방 씬은 각자 로비가 연다.
     /// </summary>
     public static class ScenePaths
     {
@@ -37,8 +35,8 @@
         public static string GameSceneAfterRoom = ScenePaths.Game;
 
         /// <summary>
-        /// 로비가 10초 시간 초과로 포기한 방 요청이 있다 (14-lobby-ui 6절). 늦은 입장 응답이 PUN 씬 동기화로
-        /// 방 씬을 먼저 열면 로비는 이미 사라졌으므로, 방 화면이 이 값을 보고 바로 방을 나간다.
+        /// 로비가 10초 시간 초과로 포기한 방 요청이 있다 (14-lobby-ui 6절). 늦은 입장 응답이 로비가 사라진 뒤
+        /// 방 씬에서 오면, 방 화면이 이 값을 보고 바로 방을 나간다.
         /// 포기한 요청이 끝났을 때만 끈다 — 늦은 입장을 나갔을 때 · 늦은 실패 응답이 왔을 때 · 서버가 새 요청을 받을 수 있는 상태에서
         /// 새 방 요청을 보낼 때. 옛 요청이 처리 중일 때 누른 새 요청은 보내지지 않으므로 끄지 않는다.
         /// </summary>

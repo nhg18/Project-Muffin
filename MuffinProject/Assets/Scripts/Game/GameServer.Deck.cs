@@ -34,6 +34,9 @@ namespace Chapchu.Game
             if (IsPaused(_clock()))
                 return Reject(requester, RejectCode.Resolving);
 
+            if (IsTurnTimeUp(_clock()))
+                return Reject(requester, RejectCode.NotYourTurn);
+
             int count = _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount;
             for (int i = 0; i < count && _players[requester].Hp > 0; i++)
                 DrawOne(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
