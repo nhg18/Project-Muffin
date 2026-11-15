@@ -261,19 +261,7 @@ namespace Chapchu.DebugTools
                 CasterSeat = me,
                 TargetSeats = new[] { other },
                 Seats = new[] { me, other },
-                DrawRange = DrawRangeOf(data),
             };
-        }
-
-        // 카드 효과의 뽑기 장수 (최소, 최대) — 무작위 장수(116)면 count ~ randomMax. 뽑기가 없으면 (0, 0)
-        private static Vector2Int DrawRangeOf(CardData data)
-        {
-            foreach (CardEffect effect in data.effects)
-            {
-                if (effect is DrawEffect draw && !draw.useTriggerAmount)
-                    return new Vector2Int(draw.count, Mathf.Max(draw.count, draw.randomMax));
-            }
-            return Vector2Int.zero;
         }
 
         // 공통 결과 흉내 — 카드 효과의 피해 · 회복 값을 그 자리에 (시안 hit · heal). onlyAnchor 면 그 자리만. 자리마다 한 번만
