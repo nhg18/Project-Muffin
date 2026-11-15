@@ -321,12 +321,6 @@ namespace Chapchu.UI.Fx.Drool
             DrawWords(t);
         }
 
-        // 시안 ei — 느리게 시작해 빠르게 끝 (ease-in cubic)
-        private static float Ei(float k)
-        {
-            return Mathf.Pow(ComicKit.Cl(k), 3f);
-        }
-
         // 시안 sparkle(x, y, r, rot, a, col): 뾰족한 네 꼭짓점 별 (globalAlpha 를 a 로 둔다)
         private void Sparkle(ComicPen pen, float x, float y, float r, float rotation, float alpha, Color color)
         {
@@ -389,7 +383,7 @@ namespace Chapchu.UI.Fx.Drool
 
         private void PlaceFlying(ComicCard card, float sx, float sy, float q)
         {
-            float e = Ei(q);
+            float e = ComicKit.Ei(q);
             float x = ComicKit.Lerp(sx, _mouth.x, e), y = ComicKit.Lerp(sy, _mouth.y, e) - Mathf.Sin(q * Mathf.PI) * flyArc;
             PlaceCard(card, x, y, cardWidth * ComicKit.Lerp(1f, flyShrink, e), q * flySpin);
         }

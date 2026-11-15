@@ -195,10 +195,6 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private float labelLine = 5f;
         [Tooltip("쓴 쪽 자리 가운데에서 표 가운데까지 (시안 px, 위로 + — 시안 4 단계엔 표가 없어 「으악!」 말풍선(70) 위에 둔다).")]
         [SerializeField] private Vector2 recoilOffset = new Vector2(0f, 140f);
-        [Tooltip("표가 떠 있는 시간 (초) — 「으악!」 말풍선과 같은 1.4 초.")]
-        [SerializeField] private float recoilLife = 1.4f;
-        [Tooltip("끝에 흐려지는 시간 (초) — 「으악!」 말풍선과 같은 마지막 15 % (0.21 초).")]
-        [SerializeField] private float recoilFade = 0.21f;
 
         [Header("4 단계 (시안 FXA 드롭킥 s4 · FINISH 드롭킥)")]
         [Tooltip("맞은 쪽 줄 빛 수 (시안 streaks 14).")]
@@ -425,6 +421,8 @@ namespace Chapchu.UI.Fx.Dropkick
             label.localScale = Vector3.zero;
             CanvasGroup group = label.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
+            // 수명 · 흐려지는 시간은 「으악!」 말풍선(FxLayer)을 따른다
+            float recoilLife = layer.BubbleSeconds, recoilFade = recoilLife * (1f - layer.BubbleFadeFrom);
             DOVirtual.Float(0f, recoilLife, recoilLife, time =>
             {
                 float k = time / recoilPop, fade = 1f - ComicKit.Cl((time - (recoilLife - recoilFade)) / recoilFade);
