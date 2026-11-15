@@ -13,13 +13,14 @@ namespace Chapchu.Game.Bots
     /// </summary>
     public sealed class BotDriver
     {
-        // 18-bot.md 4절 「생각 시간」 — 수가 뻔하면 짧게, 비슷한 수가 있으면 길게
+        // 18-bot.md 4절 「생각 시간」 — 수가 뻔하면 짧게, 비슷한 수가 있으면 길게. 난이도의 배수 · 망설임을 더한다 (7-7). 반응은 난이도 값 그대로
         private const double QuickThinkMin = 1.5, QuickThinkMax = 2.5;
         private const double ThinkMin = 2, ThinkMax = 4;
         private const double LongThinkMin = 3, LongThinkMax = 5.5;
         private const double ClearGap = 40;  // 1등과 2등의 점수 차가 이 이상이면 뻔한 수
         private const double CloseGap = 10;  // 이 미만이면 고민되는 수
-        private const double ReactMin = 1, ReactMax = 3; // 반응 창(카운터 · 함정 · 사망 대기 · 고르기) · 선언 대기가 열린 뒤 (초)
+        private const double TrapStepMin = 0.6, TrapStepMax = 1.2; // 함정 1장을 놓고 다음 일까지 (초, × 생각 시간 배수)
+        private const double LatestAct = GameServer.TurnTimeLimit - 4; // 메인 행동은 턴 시작에서 이 초 안에 — 15초 제한에 여유를 둔다
         private const int MaxRequestsPerTurn = 3;          // 거절 포함
         private const int MaxDeclaresPerTurn = 2;          // 거절돼도 매 프레임 다시 내지 않게
 
@@ -47,6 +48,9 @@ namespace Chapchu.Game.Bots
             // 이번 턴
             public int Serial = -1;
             public double ActAt;
+            public double ActBy;       // 메인 행동을 이 시각까지는 한다 (턴 시작 + LatestAct)
+            public string ThinkNote;   // 생각 시간 — 로그용 (7-6)
+            public bool TrapsDone;     // 이번 턴의 함정 설치를 마쳤다
             public bool Done;
             public int Requests;
             public double DeclareAt = -1; // 선언 대기에서 선언할 시각. 아직 안 정했으면 음수
@@ -154,7 +158,7 @@ namespace Chapchu.Game.Bots
 
             DeclareIfReady(turn, mind, now, events);
             if (!mind.Done && now >= mind.ActAt && !_server.IsBusy && !_server.MainActionUsed)
-                TakeTurn(turn, mind, events);
+                TakeTurn(turn, mind, now, events);
 
             return events;
         }
@@ -165,6 +169,7 @@ namespace Chapchu.Game.Bots
         {
             mind.Serial = _server.TurnSerial;
             mind.Done = false;
+            mind.TrapsDone = false;
             mind.Requests = 0;
             mind.DeclareAt = -1;
             mind.Declares = 0;
@@ -181,15 +186,23 @@ namespace Chapchu.Game.Bots
                     mind.Noticed.Add(actor);
             }
 
-            // 생각 시간 — 지금 보이는 수들의 점수 차로 (4절). 둘 때는 다시 계산한다
+            // 생각 시간 — 지금 보이는 수들의 점수 차로 (4절) × 난이도 배수, 가끔 한 번 더 뜸을 들인다 (7-7). 둘 때는 다시 계산한다
             double[] scores = Moves(bot, mind).Select(move => move.Score).OrderByDescending(score => score).ToArray();
             double gap = scores.Length > 1 ? scores[0] - scores[1] : ClearGap;
             double min = gap >= ClearGap ? QuickThinkMin : gap < CloseGap ? LongThinkMin : ThinkMin;
             double max = gap >= ClearGap ? QuickThinkMax : gap < CloseGap ? LongThinkMax : ThinkMax;
-            mind.ActAt = now + min + _random.NextDouble() * (max - min);
+            BotLevelSpec spec = mind.Spec;
+            double think = (min + _random.NextDouble() * (max - min)) * spec.Pace;
+            bool hesitates = _random.NextDouble() < spec.HesitateRate;
+            if (hesitates)
+                think += spec.HesitateMin + _random.NextDouble() * (spec.HesitateMax - spec.HesitateMin);
+
+            mind.ActBy = now + LatestAct;
+            mind.ActAt = Math.Min(now + think, mind.ActBy);
+            mind.ThinkNote = $" · 생각 {mind.ActAt - now:0.0}초" + (hesitates ? " · 망설임" : "");
         }
 
-        // 7-5 — 내 턴에 손패가 정확히 10장이면 선언한다. 뽑아서 10장(선언 대기)이면 1 ~ 3초 뒤, 카드 효과로 10장이면 턴이 넘어가기 전에 바로.
+        // 7-5 — 내 턴에 손패가 정확히 10장이면 선언한다. 뽑아서 10장(선언 대기)이면 난이도의 반응 시간 뒤, 카드 효과로 10장이면 턴이 넘어가기 전에 바로.
         // 메인 행동 전에 이미 10장이면 7-1 이 「선언하고 기다림」 을 고를 때 한다 (TakeTurn).
         private void DeclareIfReady(int bot, BotMind mind, double now, List<GameEvent> events)
         {
@@ -200,7 +213,7 @@ namespace Chapchu.Game.Bots
             if (_server.IsDeclareWait)
             {
                 if (mind.DeclareAt < 0)
-                    mind.DeclareAt = now + ReactMin + _random.NextDouble() * (ReactMax - ReactMin);
+                    mind.DeclareAt = now + ReactDelay(mind.Spec);
                 if (now < mind.DeclareAt)
                     return;
             }
@@ -225,17 +238,27 @@ namespace Chapchu.Game.Bots
         }
 
         // 점수가 가장 높은 수 하나. 거절되면 그 수를 빼고 다음 수로 — 거절 포함 3회까지.
-        // 그 전에 손패의 함정을 빈 칸 수만큼 설치한다 (7-4, 메인 행동 아님 — 요청 횟수에 넣지 않는다).
-        private void TakeTurn(int bot, BotMind mind, List<GameEvent> events)
+        // 그 전에 손패의 함정을 빈 칸 수만큼 한 장씩, 사이에 잠깐 쉬며 설치한다 (7-4, 메인 행동 아님 — 요청 횟수에 넣지 않는다).
+        private void TakeTurn(int bot, BotMind mind, double now, List<GameEvent> events)
         {
-            SetTraps(bot, events);
+            if (!mind.TrapsDone)
+            {
+                if (SetOneTrap(bot, events))
+                {
+                    double step = (TrapStepMin + _random.NextDouble() * (TrapStepMax - TrapStepMin)) * mind.Spec.Pace;
+                    mind.ActAt = Math.Max(now, Math.Min(now + step, mind.ActBy));
+                    return;
+                }
+
+                mind.TrapsDone = true;
+            }
 
             List<Move> moves = Moves(bot, mind);
             while (mind.Requests < MaxRequestsPerTurn && moves.Count > 0)
             {
                 Move move = Pick(moves, mind.Spec, out string how);
                 Move next = moves.Where(other => other != move).OrderByDescending(other => other.Score).FirstOrDefault();
-                string line = $"7-1 {move.Text} · {move.Score:0}점{how}" + (next != null ? $" (다음 수: {next.Text} {next.Score:0}점)" : "");
+                string line = $"7-1 {move.Text} · {move.Score:0}점{how}" + (next != null ? $" (다음 수: {next.Text} {next.Score:0}점)" : "") + mind.ThinkNote;
 
                 if (move.Request == null)
                 {
@@ -497,28 +520,29 @@ namespace Chapchu.Game.Bots
 
         #region 함정 · 반응 (7-4)
 
-        // 7-4 — 손패 앞쪽부터 빈 함정 칸 수만큼. 손패가 10장(찹츄)이면 설치하지 않는다 — 설치하면 9장이 되어 찹츄가 깨진다
-        private void SetTraps(int bot, List<GameEvent> events)
+        // 7-4 — 손패 앞쪽 함정 1장을 빈 칸에 설치한다. 놓았으면 true — 빈 칸 · 함정이 남았으면 잠깐 쉬고 다시 부른다 (TakeTurn).
+        // 손패가 10장(찹츄)이면 설치하지 않는다 — 설치하면 9장이 되어 찹츄가 깨진다
+        private bool SetOneTrap(int bot, List<GameEvent> events)
         {
             PlayerState me = _server.StateOf(bot);
-            if (me.IsChapchu || me.Hand.Count == GameServer.ChapchuHandCount)
-                return;
+            if (me.IsChapchu || me.Hand.Count == GameServer.ChapchuHandCount || me.Traps.Count >= GameServer.TrapSlotCount)
+                return false;
 
-            foreach (Card card in me.Hand.Where(c => c.Type == CardType.Trap).ToArray())
-            {
-                if (me.Traps.Count >= GameServer.TrapSlotCount)
-                    return;
+            Card card = me.Hand.FirstOrDefault(c => c.Type == CardType.Trap);
+            if (card == null)
+                return false;
 
-                IReadOnlyList<GameEvent> result = _server.SetTrap(bot, card.InstanceId);
-                events.AddRange(result);
-                int code = RejectCodeOf(result, bot);
-                Log(bot, code == 0 ? $"7-4 함정 설치 → 카드 {card.CardId} (#{card.InstanceId}) · 함정 {me.Traps.Count}장" : $"7-4 함정 설치 거절 (코드 {code})");
-                if (code != 0)
-                    return;
-            }
+            IReadOnlyList<GameEvent> result = _server.SetTrap(bot, card.InstanceId);
+            events.AddRange(result);
+            int code = RejectCodeOf(result, bot);
+            Log(bot, code == 0 ? $"7-4 함정 설치 → 카드 {card.CardId} (#{card.InstanceId}) · 함정 {me.Traps.Count}장" : $"7-4 함정 설치 거절 (코드 {code})");
+            return code == 0;
         }
 
-        // 7-4 — 지금 반응할 거리가 있으면 그 창이 열리고 1 ~ 3초 뒤 한 번. 같은 창에서는 다시 내지 않는다.
+        // 반응 창이 열린 뒤 반응하기까지 — 난이도마다 (7-7)
+        private double ReactDelay(BotLevelSpec spec) => spec.ReactMin + _random.NextDouble() * (spec.ReactMax - spec.ReactMin);
+
+        // 7-4 — 지금 반응할 거리가 있으면 그 창이 열리고 난이도의 반응 시간 뒤 한 번. 같은 창에서는 다시 내지 않는다.
         private void ReactIfNeeded(int bot, double now, List<GameEvent> events)
         {
             BotMind mind = _minds[bot];
@@ -531,7 +555,7 @@ namespace Chapchu.Game.Bots
             if (mind.ReactKey != reaction.Key)
             {
                 mind.ReactKey = reaction.Key;
-                mind.ReactAt = Math.Max(now, reaction.OpensAt) + ReactMin + _random.NextDouble() * (ReactMax - ReactMin);
+                mind.ReactAt = Math.Max(now, reaction.OpensAt) + ReactDelay(mind.Spec);
                 mind.Reacted = false;
             }
 
@@ -550,7 +574,7 @@ namespace Chapchu.Game.Bots
         {
             if (_server.IsChoosing && _server.ChoiceActor == bot)
             {
-                // 119 목표 조준의 대상 — 반응처럼 1 ~ 3초 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
+                // 119 목표 조준의 대상 — 반응처럼 난이도의 반응 시간 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
                 int option = _server.BotChoiceOption(bot);
                 reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"7-4 고르기 → {(option == 0 ? "손패 전부 버리기" : "피해 받기")}", () => _server.Choose(bot, option));
                 return true;

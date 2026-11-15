@@ -86,6 +86,7 @@ public static class MultiTest
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
     private const double ReactionSeconds = 10, TurnSeconds = 30;
+    private const double BotTurnSeconds = 9; // 보통 봇이 수를 두는 가장 늦은 때 — 고민되는 수 5.5초 + 망설임 2.5초 = 8초에 여유 (18-bot.md 4절 · 7-7)
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
     private const string ActedTurnKey = "MultiTest.ActedTurnDeadline";
@@ -1539,7 +1540,7 @@ public static class MultiTest
             var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
             t.SetHandSize(t.O1, 10);
             var events = new List<GameEvent>();
-            for (now = 0; now < 6; now += 0.1)
+            for (now = 0; now < BotTurnSeconds; now += 0.1)
                 events.AddRange(driver.Tick());
             Check(events.Count == 0 && !t.State(t.O1).IsChapchu, "남의 턴에 손패 10장 → 선언하지 않는다 (요청도 없다)");
         }
@@ -1567,7 +1568,7 @@ public static class MultiTest
             var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
             t.SetHandSize(t.Turn, 10);
             var events = new List<GameEvent>();
-            for (now = 0; now < 8; now += 0.1)
+            for (now = 0; now < BotTurnSeconds; now += 0.1)
                 events.AddRange(t.Tick().Concat(driver.Tick()));
             Check(events.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu) && !events.OfType<CardDrawn>().Any() && !events.OfType<CardPlayed>().Any() && t.HandCount(t.Turn) == 10,
                 "턴 시작 때 이미 10장 → 선언하고 기다린다 (뽑지도 내지도 않는다)");
@@ -1845,7 +1846,7 @@ public static class MultiTest
                     t.SetHandSize(t.Turn, 6); // 낼 카드가 있어도 행동 카드 금지 턴이라 뽑기만 남는다
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 6; now += 0.1)
+                    for (now = 0; now < BotTurnSeconds; now += 0.1)
                         events.AddRange(driver.Tick());
                     Check(!events.OfType<RequestRejected>().Any() && !events.OfType<CardPlayed>().Any() && events.OfType<CardDrawn>().Any(),
                         "봇 — 행동 카드 금지 턴에는 뽑기만 (거절 없이)");
@@ -1990,23 +1991,27 @@ public static class MultiTest
                 {
                     double now = 0;
                     var t = new ChainTable(() => now);
-                    t.SetHandSize(t.Turn, 4);
+                    t.SetHandSize(t.Turn, 0);
+                    for (int i = 0; i < 4; i++)
+                        t.Give(t.Turn, Real(123)); // 지금은 쓸 까닭이 없는 카드 — 112 의 조건만 본다
                     t.Give(t.Turn, Real(112));
                     t.SetHp(t.Turn, 40);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 6; now += 0.1)
+                    for (now = 0; now < BotTurnSeconds; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 112);
 
                     double now2 = 0;
                     var t2 = new ChainTable(() => now2);
-                    t2.SetHandSize(t2.Turn, 4);
+                    t2.SetHandSize(t2.Turn, 0);
+                    for (int i = 0; i < 4; i++)
+                        t2.Give(t2.Turn, Real(123));
                     t2.Give(t2.Turn, Real(112));
                     t2.SetHp(t2.O1, 40);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 6; now2 += 0.1)
+                    for (now2 = 0; now2 < BotTurnSeconds; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 112), "봇 — 112 는 내 HP 가 꼴찌이거나 찹츄 상대가 있을 때만");
                 }
@@ -2062,7 +2067,7 @@ public static class MultiTest
                     t.SetHp(t.O1, 40);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 6; now += 0.1)
+                    for (now = 0; now < BotTurnSeconds; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool killFirst = events.OfType<CardPlayed>().Any(e => e.CardId == 105 && e.Targets.SequenceEqual(new[] { t.O1 }));
 
@@ -2073,7 +2078,7 @@ public static class MultiTest
                     t2.SetHp(t2.Turn, 49);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 6; now2 += 0.1)
+                    for (now2 = 0; now2 < BotTurnSeconds; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(killFirst && !events2.OfType<CardPlayed>().Any(e => e.CardId == 105), "봇 — 105 는 쓰러뜨릴 수 있으면 먼저 그 상대에게 · 못 쓰러뜨리는데 내 HP ≤ 49 면 안 씀");
                 }
@@ -2180,7 +2185,7 @@ public static class MultiTest
                     t.SetHp(t.O1, 70);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 6; now += 0.1)
+                    for (now = 0; now < BotTurnSeconds; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 121);
 
@@ -2193,7 +2198,7 @@ public static class MultiTest
                     t2.SetHp(t2.O1, 90);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 6; now2 += 0.1)
+                    for (now2 = 0; now2 < BotTurnSeconds; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 121), "봇 — 121 은 개판이 없고 HP 가 상대 최저보다 20 · 손패가 상대 최소보다 2장 이상 많을 때만");
                 }
@@ -2297,7 +2302,7 @@ public static class MultiTest
                     t.SetHp(t.O2, 50); // O1 3×3 = 9 · O2 2×3 + 40 = 46
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 6; now += 0.1)
+                    for (now = 0; now < BotTurnSeconds; now += 0.1)
                         events.AddRange(driver.Tick());
                     Check(events.OfType<CardPlayed>().Any(e => e.CardId == 119 && e.Targets.SequenceEqual(new[] { t.O2 })), "봇 — 119 대상은 손패 × 3 + (HP ≤ 80 이면 40) 가 가장 큰 상대");
                 }
@@ -2325,6 +2330,58 @@ public static class MultiTest
                         "봇 — 118 손패 최다가 동률이면 동률인 사람들의 평균 점수로 내고 대상은 방장이 고른다 (" + (logs.LastOrDefault(l => l.Contains("7-1")) ?? "로그 없음") + ")");
                 }
             }
+        }
+
+        // ⑥ 뜸 (4절 · 7-7) — 함정은 한 장씩 사이를 두고, 그 뒤에 메인 행동. 생각 시간은 쉬움 > 보통 > 어려움이고 메인 행동은 턴 시작 11초 안
+        {
+            double now = 0;
+            var t = new ChainTable(() => now);
+            t.GiveCard(t.Turn, ChainTable.TrapHit);
+            t.GiveCard(t.Turn, ChainTable.TrapHit);
+            var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+            var setAt = new List<double>();
+            double actedAt = -1;
+            for (now = 0; now < BotTurnSeconds + 3 && actedAt < 0; now += 0.1)
+            {
+                List<GameEvent> tick = driver.Tick().ToList();
+                setAt.AddRange(tick.OfType<TrapSet>().Select(_ => now));
+                if (tick.Any(e => e is CardDrawn || e is CardPlayed)) actedAt = now;
+            }
+            Check(setAt.Count == 2 && setAt[1] - setAt[0] >= 0.5 && actedAt - setAt[1] >= 0.5,
+                $"봇 — 함정은 한 장씩 사이를 두고 놓은 뒤 메인 행동 (설치 {string.Join(" · ", setAt.Select(s => $"{s:0.0}"))}초 · 행동 {actedAt:0.0}초)");
+        }
+        DeckData paceDeck = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
+        if (paceDeck != null)
+        {
+            var think = new Dictionary<BotLevel, List<double>>();
+            foreach (BotLevel level in new[] { BotLevel.Easy, BotLevel.Normal, BotLevel.Hard })
+            {
+                think[level] = new List<double>();
+                for (int game = 0; game < 10; game++)
+                {
+                    double now = 0;
+                    int[] actors = { 1001, 1002, 1003, 1004 };
+                    var server = new GameServer(new System.Random(game), () => now);
+                    server.StartGame(actors, paceDeck.CreateCards());
+                    var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, _ => level);
+                    while (!server.IsGameOver && now < 3600)
+                    {
+                        now += 0.1;
+                        driver.Observe(server.Tick());
+                        driver.Observe(driver.Tick());
+                        foreach (string log in driver.TakeLogs())
+                        {
+                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(log, @" 7-1 .* · 생각 ([0-9.]+)초");
+                            if (match.Success)
+                                think[level].Add(double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                    }
+                }
+            }
+            double easy = think[BotLevel.Easy].DefaultIfEmpty(0).Average(), normal = think[BotLevel.Normal].DefaultIfEmpty(0).Average(), hard = think[BotLevel.Hard].DefaultIfEmpty(0).Average();
+            double slowest = think.Values.SelectMany(v => v).DefaultIfEmpty(99).Max();
+            Check(think.Values.All(v => v.Count > 0) && easy > normal && normal > hard && slowest <= GameServer.TurnTimeLimit - 4,
+                $"봇 — 생각 시간 평균 쉬움 {easy:0.0} > 보통 {normal:0.0} > 어려움 {hard:0.0}초 · 가장 긴 {slowest:0.0}초 ≤ 11초 (10판씩)");
         }
 
         // ⑤ 난이도 (7-7) — 같은 보통 봇 한 자리가 쉬움 셋 사이에서는 더 자주, 어려움 셋 사이에서는 덜 이긴다. 시드가 고정이라 결과는 늘 같다

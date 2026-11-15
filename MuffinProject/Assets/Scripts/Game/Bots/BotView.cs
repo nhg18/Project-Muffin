@@ -18,7 +18,6 @@ namespace Chapchu.Game.Bots
         public const double ChapchuReady = 100;   // 내 손패가 정확히 10장 — 선언할 수 있다
         public const double StyleBonus = 1.25;    // 성향이 좋아하는 일의 배수
         private const double LostCardValue = 4;   // 상대가 카드 1장을 잃음
-        private const double WeakFocus = 0.1;     // 잃은 HP 1 마다 — 약한 상대를 먼저 노리는 정도
 
         // 18-bot.md 7-1 「내가 받는 피해」 · 「회복」, 7-3 「행동 카드 금지」 — HP 기준
         private const int LowHp = 30;             // 이 미만이면 위험 — 자해 −20 · 회복 × 1.5
@@ -104,8 +103,8 @@ namespace Chapchu.Game.Bots
             double score = dealt;
             if (Level.SeesKill)
             {
-                // 보통은 약한 상대부터, 어려움은 HP 가 가장 높은 1등부터 (7-7 「1등 견제」)
-                score += Level.LeaderFocus > 0 ? hp * Level.LeaderFocus : (GameServer.MaxHp - hp) * WeakFocus;
+                // 못 쓰러뜨릴 때는 HP 가 높은 상대부터 — 보통은 조금, 어려움은 더 (7-7 「누구부터」). 약한 상대부터 치면 한 번 맞은 사람에게 모두 몰린다
+                score += hp * Level.LeaderFocus;
                 if (hp <= amount)
                 {
                     Notes.Add("쓰러뜨림");
