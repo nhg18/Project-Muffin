@@ -1726,9 +1726,9 @@ MonoBehaviour:
   bottomBar: {fileID: 6300764154296876942}
   fadeInMs: 180
   barsMs: 260
-  titleMs: 13200
+  titleDelayMs: 0
   fadeOutMs: 260
-  lengthMs: 16400
+  tailMs: 200
   warmupSeconds:
   - 5
   - 10.8
@@ -2652,7 +2652,7 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.64285713
+        time: 0.642857
         value: 0.006
         inSlope: Infinity
         outSlope: 0

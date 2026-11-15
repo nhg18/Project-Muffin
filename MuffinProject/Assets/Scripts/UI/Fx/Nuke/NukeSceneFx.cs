@@ -190,6 +190,9 @@ namespace Chapchu.UI.Fx.Nuke
         private float _fog;
         private int _shot;
 
+        /// <summary>장면 시간표 — 큰 글자 · 컷인 길이가 따른다.</summary>
+        public NukeTimeline Timeline => timeline;
+
         private void Awake()
         {
             if (sceneCamera == null || post == null || city == null || dogs == null || particles == null || exclaims == null || skyMesh == null || skyMaterial == null || shadowMaterial == null)

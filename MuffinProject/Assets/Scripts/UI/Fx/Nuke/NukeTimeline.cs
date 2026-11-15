@@ -75,6 +75,16 @@ namespace Chapchu.UI.Fx.Nuke
             return real - (Hold - HoldScene);
         }
 
+        /// <summary>장면 시각 → 그 장면이 보이는 실제 시각 (<see cref="SceneTime"/> 의 거꾸로).</summary>
+        public float RealTime(float sceneTime)
+        {
+            if (sceneTime < SlowStart)
+                return sceneTime;
+            if (sceneTime < Hit)
+                return SlowStart + (sceneTime - SlowStart) * (Hold / HoldScene);
+            return sceneTime + (Hold - HoldScene);
+        }
+
         /// <summary>미사일이 길을 얼마나 왔나 (0~1).</summary>
         public float MissileProgress(float t) => Mathf.Pow(Mathf.Clamp01((t - MissileStart) / (Hit - MissileStart)), 1.35f);
 

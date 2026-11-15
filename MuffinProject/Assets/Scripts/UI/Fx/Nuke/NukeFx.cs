@@ -7,7 +7,7 @@ namespace Chapchu.UI.Fx.Nuke
     /// <summary>
     /// 「대소동」 연출의 시간표 — 시안 NUKE3D (16.4초).
     /// 3 단계: 컷인 판이 나타나고 위아래 검은 띠가 들어온 뒤, 3D 장면(<see cref="NukeSceneFx"/> — 네거리 · 강아지 · 미사일 · 폭발 · 버섯구름 · 낙진)을 화면에 얹고,
-    /// 13.2초에 큰 글자(<see cref="NukeTitleFx"/>)가 내려앉는다. 끝나기 0.26초 전부터 컷인이 사라진다.
+    /// 낙진 장면이 보이는 13.2초에 큰 글자(<see cref="NukeTitleFx"/>)가 내려앉는다. 끝나기 0.26초 전부터 컷인이 사라진다. 두 시각 모두 장면 시간표(<see cref="NukeSceneFx.Timeline"/>)를 따른다.
     /// 4 단계 장식: 쓴 사람 위 말풍선 「대소동!」 + 판 흔들기 (시안 FXA 대소동 s4 의 앞부분 — 손패 · 체력 · 피폭 표시는 공통 결과가 그린다).
     /// 연출 길이 16.4초 — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// 3 단계 = 시안 「카드 이펙트 v2」 게시본 1794734628-e725 의 NUKE3D — 11-card-list 의 「컷인 넣지 않음」은 PM 지시(2026-11-15: 확정 시안을 먼저 구현하고 기획 문서는 뒤에 고친다)로 따르지 않는다.
@@ -37,12 +37,12 @@ namespace Chapchu.UI.Fx.Nuke
         [SerializeField] private float fadeInMs = 180f;
         [Tooltip("검은 띠가 들어오는 시간.")]
         [SerializeField] private float barsMs = 260f;
-        [Tooltip("큰 글자가 시작하는 때 (시안 (T.fall + HOLD - .1) × 1000).")]
-        [SerializeField] private float titleMs = 13200f;
+        [Tooltip("낙진 장면(12)이 보이기 시작한 뒤 큰 글자가 시작하기까지 (시안 0 — 낙진 장면과 같이).")]
+        [SerializeField] private float titleDelayMs;
         [Tooltip("끝에 컷인 판이 사라지는 시간.")]
         [SerializeField] private float fadeOutMs = 260f;
-        [Tooltip("3 단계 길이 (시안 SPECIAL_MS 16400).")]
-        [SerializeField] private float lengthMs = 16400f;
+        [Tooltip("장면이 끝난 뒤 컷인을 더 두는 시간 — 3 단계 길이 = 장면 끝(실제 시각) + 이 값 (시안 SPECIAL_MS 16400 = 16200 + 200).")]
+        [SerializeField] private float tailMs = 200f;
 
         [Tooltip("시작 전 보이지 않는 첫 프레임에 미리 그려 둘 장면 시각 (실제 초) — 셰이더 · 메시 준비로 긴 프레임이 시간표 밖에서 지나가게 (시안은 장면을 미리 읽은 뒤 시작한다).")]
         [SerializeField] private float[] warmupSeconds = { 5f, 10.8f, 14f };
@@ -90,6 +90,11 @@ namespace Chapchu.UI.Fx.Nuke
             scene.Draw(0f);
             yield return null;
 
+            // 큰 글자 · 컷인 길이는 장면 시간표를 따른다 (시안 13.2초 · 16.4초)
+            NukeTimeline timeline = scene.Timeline;
+            float titleMs = timeline.RealTime(timeline.Fall) * 1000f + titleDelayMs;
+            float lengthMs = timeline.RealTime(timeline.End) * 1000f + tailMs;
+
             // 시안처럼 실제 흐른 시간으로 — Time.time 은 긴 프레임(셰이더 준비 · 에디터 멈춤)마다 0.33초에서 잘려 장면이 뒤로 밀린다
             double last = Time.realtimeSinceStartupAsDouble;
             float ms = 0f;
@@ -97,7 +102,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 float fadeOutAt = lengthMs - fadeOutMs;
                 cutIn.alpha = ms < fadeOutAt ? Mathf.Clamp01(ms / fadeInMs) : 1f - Mathf.Clamp01((ms - fadeOutAt) / fadeOutMs);
-                float slide = (1f - CssEase(0f, 0f, 0.58f, 1f, ms / barsMs)) * barHeight;
+                float slide = (1f - NukeMath.CssEase(0f, 0f, 0.58f, 1f, ms / barsMs)) * barHeight;
                 topBar.anchoredPosition = new Vector2(0f, slide);
                 bottomBar.anchoredPosition = new Vector2(0f, -slide);
                 cut.anchoredPosition = title.Tick(ms - titleMs);
