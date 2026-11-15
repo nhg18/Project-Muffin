@@ -38,7 +38,8 @@ namespace Chapchu.EditorTools
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
         private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
-        private const string CardBackSpritePath = "Assets/Sprites/Cards/Frames/CardBack.jpg";
+        internal const string CardFrameFolder = "Assets/Sprites/Cards/Frames";
+        internal const string CardBackSpritePath = CardFrameFolder + "/CardBack.jpg";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
 
         // TMP 동적 폰트 생성값 — Galmuri9 SDF 와 같은 방식(SDFAA · 여백 5), 아틀라스는 2048 로 시작해 필요하면 늘어난다.

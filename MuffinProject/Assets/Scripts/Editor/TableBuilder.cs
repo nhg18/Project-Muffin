@@ -35,7 +35,7 @@ namespace Chapchu.EditorTools
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
         private const string CardShaderName = "Unlit/Transparent Cutout"; // 덱 · 함정 칸 · 받침 카드 — 알파 컷아웃 + ZWrite, 뒷면 컬링 (카드 프리팹은 Chapchu/Card *)
-        private const string BackTexturePath = "Assets/Sprites/Cards/Frames/CardBack.jpg";
+        private const string BackTexturePath = GameScreenBuilder.CardBackSpritePath;
         private const float CardThickness = 0.02f; // 더미 장당 두께
         private const float LayerGap = 0.005f;     // 그림 · 글자를 틀 앞에 띄우는 간격 — 같은 면이면 z 싸움
 
@@ -487,7 +487,7 @@ namespace Chapchu.EditorTools
             Quaternion rotation = TableRotation * Quaternion.Euler(0f, 0f, row.angle);
 
             string emptyName = $"{TrapSlotTextureName}{Mathf.RoundToInt(row.widthPx)}";
-            Material emptyMaterial = EnsureAlphaMaterial(emptyName, EnsureRoundTexture($"Assets/Sprites/Cards/Frames/{emptyName}.png", CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
+            Material emptyMaterial = EnsureAlphaMaterial(emptyName, EnsureRoundTexture($"{GameScreenBuilder.CardFrameFolder}/{emptyName}.png", CardSize, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
             Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(CardSize));
             Material back = EnsureMaterial("CardBack", BackTexturePath);
 
@@ -539,9 +539,9 @@ namespace Chapchu.EditorTools
             return material;
         }
 
-        // 둥근 사각형 그림 — 안쪽 fill, 테두리 edge. 있으면 덮어쓰지 않는다. solidAlpha 가 1 이면 안쪽 알파를 1 로(컷아웃 셰이더용), 0 이면 색의 알파 그대로(알파 블렌드용). 크기 · 테 · 반지름은 유닛 · 캔버스 px.
+        // 둥근 사각형 그림 — 안쪽 fill, 테두리 edge. 있으면 덮어쓰지 않는다. 안쪽은 색의 알파 그대로(알파 블렌드용). 크기 · 테 · 반지름은 유닛 · 캔버스 px.
         // dashPx > 0 이면 테두리를 점선으로 — 틈에는 fill (CSS dashed 처럼 바탕이 테두리 밑까지 깔린다).
-        private static string EnsureRoundTexture(string path, Vector2 size, float solidAlpha, float borderPx, float radiusPx, Color fill, Color edge, float dashPx = 0f, float gapPx = 0f)
+        private static string EnsureRoundTexture(string path, Vector2 size, float borderPx, float radiusPx, Color fill, Color edge, float dashPx = 0f, float gapPx = 0f)
         {
             if (File.Exists(path))
                 return path;
@@ -573,8 +573,6 @@ namespace Chapchu.EditorTools
                     Color color = Color.Lerp(fill, inDash ? dashEdge : fill, Mathf.Clamp01(distance + border + 0.5f));
                     if (distance > 0f)
                         color.a = 0f;
-                    else if (solidAlpha > 0f)
-                        color.a = solidAlpha;
                     pixels[y * width + x] = color;
                 }
             }
