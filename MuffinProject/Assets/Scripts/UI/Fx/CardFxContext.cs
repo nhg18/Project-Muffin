@@ -52,6 +52,35 @@ namespace Chapchu.UI.Fx
         /// </summary>
         public event Action<CardFxSeat, int, int> OnHpChanged;
 
+        /// <summary>대상 중 첫 사람, 없으면 낸 사람이 아닌 첫 사람, 그것도 없으면 낸 사람 (시안 CI2 의 P.tg).</summary>
+        public CardFxSeat MainTarget
+        {
+            get
+            {
+                if (TargetSeats.Count > 0)
+                    return TargetSeats[0];
+                foreach (CardFxSeat seat in Seats)
+                {
+                    if (seat != CasterSeat)
+                        return seat;
+                }
+                return CasterSeat;
+            }
+        }
+
+        /// <summary>낸 사람이 아닌 사람들 (시안 CI2 의 P.others).</summary>
+        public IEnumerable<CardFxSeat> Others
+        {
+            get
+            {
+                foreach (CardFxSeat seat in Seats)
+                {
+                    if (seat != CasterSeat)
+                        yield return seat;
+                }
+            }
+        }
+
         /// <summary>부르는 쪽이 HP 결과를 그린 순간에 부른다.</summary>
         public void NotifyHpChanged(CardFxSeat seat, int before, int after) => OnHpChanged?.Invoke(seat, before, after);
     }
