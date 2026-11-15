@@ -30,8 +30,10 @@ namespace Chapchu.UI.Fx.Post
 
         private void Awake()
         {
-            if (arrow == null || shape == null)
-                Debug.LogError($"[{nameof(SpinArrowFx)}] 화살표 참조가 비어 있습니다.", this);
+            if (arrow == null)
+                Debug.LogError($"[{nameof(SpinArrowFx)}] 화살표 그룹(arrow) 참조가 비어 있습니다.", this);
+            if (shape == null)
+                Debug.LogError($"[{nameof(SpinArrowFx)}] 화살표 그림(shape) 참조가 비어 있습니다.", this);
             if (keys.Length < 2 || scales.Length != keys.Length || angles.Length != keys.Length || alphas.Length != keys.Length)
                 Debug.LogError($"[{nameof(SpinArrowFx)}] 키프레임 배열의 개수가 맞지 않습니다.", this);
         }
