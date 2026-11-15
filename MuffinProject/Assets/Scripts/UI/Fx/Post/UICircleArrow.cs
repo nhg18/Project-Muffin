@@ -59,7 +59,9 @@ namespace Chapchu.UI.Fx.Post
         protected override void OnEnable()
         {
             base.OnEnable();
-            Redraw();
+            // 실행 중에는 연출이 SetMaxScale 로 처음 그린다 — 여기서 배율 1 로 미리 그리면 곧바로 버려진다
+            if (!Application.isPlaying)
+                Redraw();
         }
 
         // 모양을 이 오브젝트 크기의 그림에 다시 그린다 — 텍셀마다 그림자 → 테두리 → 면을 겹친다

@@ -61,10 +61,10 @@ namespace Chapchu.UI.Fx.Post
         }
 #endif
 
-        /// <summary>화면에서 가장 클 때 이 오브젝트의 배율(부모 기준)을 정한다. 바뀌었으면 그 크기에 맞게 그림을 다시 그린다.</summary>
+        /// <summary>화면에서 가장 클 때 이 오브젝트의 배율(부모 기준)을 정한다. 바뀌었거나 아직 안 그렸으면 그 크기에 맞게 그림을 그린다.</summary>
         public void SetMaxScale(float scale)
         {
-            if (Mathf.Approximately(MaxScale, scale))
+            if (Mathf.Approximately(MaxScale, scale) && _texture != null)
                 return;
             MaxScale = scale;
             if (isActiveAndEnabled)
