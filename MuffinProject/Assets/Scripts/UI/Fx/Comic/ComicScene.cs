@@ -24,7 +24,8 @@ namespace Chapchu.UI.Fx.Comic
     /// <item>4 단계 장식(시안 FXA s4 — 말풍선 · 판 흔들기)은 <see cref="PostRoutine"/> 에서 <see cref="CardFxContext.Layer"/> 로.</item>
     /// </list>
     ///
-    /// <para><b>시안 → Unity</b>: P.from · tg · tk → <see cref="ComicContext"/> 의 From · Target · TargetKey (others · avs · hit 는 쓰는 장면이 생길 때 더한다).
+    /// <para><b>시안 → Unity</b>: P.from · tg · tk → <see cref="ComicContext"/> 의 From · Target · TargetKey, others.length → Others (avs · hit 는 쓰는 장면이 생길 때 더한다).
+    /// avatar 의 얼굴 그림 → <see cref="ComicKit.ShowFace"/>.
     /// focus → <see cref="ComicFocusLines"/>, tone/halftone → <see cref="ComicHalftone"/>, bgGrad → <see cref="ComicGradient"/>,
     /// burst → <see cref="ComicBurst"/>, sweat → <see cref="ComicSweat"/>,
     /// word + stamp → <see cref="ComicWord"/> + <see cref="ComicStamp"/>, stk → <see cref="ComicSticker"/>, dog · dogPt → <see cref="ComicDog"/> · <see cref="ComicDog.PointOf"/>,
