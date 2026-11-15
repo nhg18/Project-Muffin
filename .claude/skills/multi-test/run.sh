@@ -366,10 +366,23 @@ run_solo() {
     until_ok "$MAIN" ExpectBots "1,3" 2 False || return
     until_ok "$MAIN" AddBot || return
     until_ok "$MAIN" ExpectBots "1,2,3" 1 False || return   # 비어 있는 가장 작은 번호(2)를 다시 쓴다
+    # 난이도 — 기본은 보통, 방장이 봇 칸을 누를 때마다 보통 → 어려움 → 쉬움 (18-bot 8-1). 봇 1 은 어려움, 봇 3 은 쉬움으로 두고 시작한다
+    until_ok "$MAIN" ExpectBotLevel 1 Normal || return
+    until_ok "$MAIN" TapBotSlot 1 || return
+    until_ok "$MAIN" ExpectBotLevel 1 Hard || return
+    until_ok "$MAIN" TapBotSlot 3 || return
+    until_ok "$MAIN" TapBotSlot 3 || return
+    until_ok "$MAIN" ExpectBotLevel 3 Easy || return
     until_ok "$MAIN" StartGame 1 || return
     wait_scene GameScene || return
     sleep 2
     until_ok "$MAIN" SetAllHp "$hp" || return
+    # 콘솔은 끝 300줄만 읽는다 — 시작 줄은 판이 길어지기 전에 본다
+    if console_lines "$MAIN" | grep -q 'P1001 난이도 Hard' && console_lines "$MAIN" | grep -q 'P1002 난이도 Normal' && console_lines "$MAIN" | grep -q 'P1003 난이도 Easy'; then
+        log "  방에서 고른 난이도로 시작 (봇 1 어려움 · 봇 2 보통 · 봇 3 쉬움)"
+    else
+        fail "봇이 방에서 고른 난이도로 시작하지 않았다"
+    fi
 
     log "▶ 한 판 끝까지 — 봇은 방장 기기에서 스스로, 사람은 차례에 행동"
     for _ in $(seq 1 600); do
@@ -392,9 +405,10 @@ run_solo() {
     console_lines "$MAIN" | grep '\[BotDriver\]' | head -8 | sed -E 's/^[^\t]*\t/      /'
     [ -n "$line" ] || fail "게임 종료를 받지 못했다"
     [ "$bots" -ge 3 ] || fail "봇 행동 이유 로그가 적다 (${bots}줄)"
-    if console_lines "$MAIN" | grep '\[BotDriver\]' | grep -q '7-1 #[0-9]'; then log "  봇이 7-1 표로 행동"; else fail "봇의 7-1 행동 줄이 없다"; fi
+    if console_lines "$MAIN" | grep '\[BotDriver\]' | grep -q '7-1 .*점'; then log "  봇이 7-1 점수로 행동"; else fail "봇의 7-1 행동 줄이 없다"; fi
     wait_scene RoomScene && log "  결과 표시 뒤 방으로 돌아옴"
     until_ok "$MAIN" ExpectBots "1,2,3" 1 False && log "  봇 3 그대로 · 혼자 하기 방은 비공개 그대로"
+    until_ok "$MAIN" ExpectBotLevel 1 Hard && log "  난이도도 그대로"
     until_ok "$MAIN" ExpectHpReset   # 지난 판 HP 가 남지 않는다 — 다음 판 좌석 · 기록의 기준 값
     check_errors "$MAIN"
 }

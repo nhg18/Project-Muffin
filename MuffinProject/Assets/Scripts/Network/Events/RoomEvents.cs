@@ -20,7 +20,7 @@ namespace Chapchu.Network.Events
         public static event Action<List<RoomInfo>> OnRoomListUpdate;
         /// <summary>방장(마스터 클라이언트)이 바뀜. OnPlayerLeft 와의 호출 순서는 보장되지 않는다.</summary>
         public static event Action<Player> OnMasterClientSwitched;
-        /// <summary>방의 봇 목록이 바뀜 (18-bot.md 5절) — 봇 번호 (오름차순). 방 화면이 칸 · 로그 「봇 N 추가 · 제거」 를 갱신한다.</summary>
+        /// <summary>방의 봇 목록 또는 봇 난이도가 바뀜 (18-bot.md 5절) — 봇 번호 (오름차순). 난이도는 BotRoster.LevelOf 로 읽는다. 방 화면이 칸 · 로그를 갱신한다.</summary>
         public static event Action<int[]> OnBotsChanged;
     
         public static void RaiseCreatedRoom() => OnCreatedRoom?.Invoke();

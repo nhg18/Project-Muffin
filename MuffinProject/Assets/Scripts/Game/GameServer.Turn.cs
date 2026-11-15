@@ -8,10 +8,12 @@ namespace Chapchu.Game
     {
         // 확정 (03-turn.md 2절).
         private const double TurnTimeLimit = 30;
+        internal const double DeclareWaitSeconds = 5; // 뽑아서 손패가 정확히 10장이 된 뒤 선언을 기다리는 시간 (03-turn.md 2 · 4절)
 
         private double _turnDeadline;
         private bool _mainActionUsed;     // 이번 턴에 메인 행동을 했다 — 체인 처리 · 후처리 연출이 끝날 때까지 (03-turn.md 3 · 4절)
         private double _nextTurnAt = -1;  // 메인 행동의 체인을 처리했고, 이 시각에 다음 턴 (04-card.md 8절). 음수면 없음
+        private bool _declareWait;        // 선언 대기 중 — 뽑아서 10장이 됐다. _nextTurnAt 에 끝난다 (03-turn.md 4절)
         private double _resumeAt = -1;    // 메인 행동 전에 끼어든 체인(함정)의 후처리 연출이 끝나는 시각 — 그때까지 턴이 멈춰 있다
         private bool _turnPaused;         // 메인 행동 전인데 체인 · 함정 시간 · 사망 대기로 턴 제한 시간이 멈췄다
         private double _lastTickAt;
@@ -147,6 +149,7 @@ namespace Chapchu.Game
         // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 시간.
         private void AdvanceTurn()
         {
+            _declareWait = false; // 선언 대기는 턴을 넘기는 순간 끝난다 — 턴 끝 처리(피폭 · 개판)로 멈춰도 다시 열리지 않는다
             if (HoldTurnEnd())
                 return; // 대소동 → 새 판 · 피폭 피해의 사망 대기 · 함정 시간 (11-card-list 112)
 

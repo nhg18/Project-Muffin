@@ -80,6 +80,9 @@ public static class MultiTest
     private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 카드 가져오기)
 
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
+    private const string SlotNameField = "nameText";     // RoomSlotView — 이름표 글자
+    private const string SlotBotTagField = "botTagLabel"; // RoomSlotView — 봇 꼬리표 글자 「(봇 · 보통)」
+    private const string SlotButtonField = "slotButton"; // RoomSlotView — 칸 전체 버튼
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
     private const double ReactionSeconds = 10, TurnSeconds = 30;
@@ -606,6 +609,54 @@ public static class MultiTest
     public static string RemoveBot(string number) => NetworkManager.Instance.RemoveBot(int.Parse(number)) ? "OK 봇 " + number + " 제거 요청" : "FAIL 봇 제거 안 됨";
 
     public static string AddBot() => NetworkManager.Instance.AddBot() ? "OK 봇 추가 요청" : "FAIL 봇 추가 안 됨";
+
+    /// <summary>방 화면에서 봇 number 의 칸을 누른다 — 방장이면 난이도가 다음 것으로 바뀐다 (18-bot.md 8-1).</summary>
+    public static string TapBotSlot(string number)
+    {
+        foreach (RoomSlotView slot in Object.FindObjectsByType<RoomSlotView>(FindObjectsSortMode.None))
+        {
+            var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
+            var button = (UnityEngine.UI.Button)typeof(RoomSlotView).GetField(SlotButtonField, Private).GetValue(slot);
+            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+                continue;
+            if (!button.interactable)
+                return "FAIL 봇 " + number + " 칸이 눌리지 않는다";
+
+            button.onClick.Invoke();
+            var tag = (TMP_Text)typeof(RoomSlotView).GetField(SlotBotTagField, Private).GetValue(slot);
+            return "OK 봇 " + number + " 칸 누름 → 꼬리표 「" + tag.text + "」";
+        }
+
+        return "WAIT 봇 " + number + " 칸이 없다";
+    }
+
+    /// <summary>봇 number 의 난이도가 level(Easy · Normal · Hard) 인가 — 방장이 읽는 값 · 방 속성(서버 확인) · 칸의 꼬리표 셋 다. 이름표는 닉네임 그대로.</summary>
+    public static string ExpectBotLevel(string number, string level)
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        int index = int.Parse(number) - 1;
+        var want = (BotLevel)Enum.Parse(typeof(BotLevel), level);
+        int inRoom = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.BotLevels, out object value) && value is int[] levels && levels.Length > index
+            ? levels[index] : (int)BotLevel.Normal;
+        string wantTag = "(봇 · " + (want == BotLevel.Easy ? "쉬움" : want == BotLevel.Hard ? "어려움" : "보통") + ")";
+        bool shown = false;
+        foreach (RoomSlotView slot in Object.FindObjectsByType<RoomSlotView>(FindObjectsSortMode.None))
+        {
+            var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
+            var tag = (TMP_Text)typeof(RoomSlotView).GetField(SlotBotTagField, Private).GetValue(slot);
+            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+                continue;
+
+            // 꼬리표가 켜져 있고 · 글자가 맞고 · 글자가 꼬리표 밖으로 넘치지 않는다
+            float tagWidth = ((RectTransform)tag.transform.parent).rect.width;
+            shown = tag.gameObject.activeInHierarchy && tag.text == wantTag && tag.preferredWidth <= tagWidth;
+        }
+
+        string state = "봇 " + number + " 난이도 " + BotRoster.LevelOf(index + 1) + " · 방 속성 " + (BotLevel)inRoom + " · 꼬리표 " + (shown ? "「" + wantTag + "」" : "다름");
+        return (BotRoster.LevelOf(index + 1) == want && inRoom == (int)want && shown ? "OK " : "WAIT ") + state;
+    }
 
     /// <summary>
     /// 게임이 끝나 방으로 돌아온 뒤 — 모두(사람 = Player 속성, 봇 = 방 속성)의 공개 HP 가 시작 값으로 되돌려졌는가 (PunGameServer.ReturnToRoomRoutine).
@@ -1181,11 +1232,16 @@ public static class MultiTest
 
         // 1. 찹츄 선언 조건 → 다음 자기 턴 시작에 승리
         {
+            var own = new ChainTable();
+            Check(own.Code(own.Server.DeclareChapchu(own.Turn)) == RejectCode.NotTenCards, "손패 6장 선언 → 11");
+            own.SetHandSize(own.Turn, 10);
+            Check(own.Server.DeclareChapchu(own.Turn).OfType<ChapchuChanged>().Any(e => e.IsChapchu), "10장 · 내 턴에 선언 → 찹츄");
+            Check(own.Code(own.Server.DeclareChapchu(own.Turn)) == RejectCode.AlreadyChapchu, "다시 선언 → 12");
+
             var t = new ChainTable();
-            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.NotTenCards, "손패 5장 선언 → 11");
             t.SetHandSize(t.O1, 10);
-            Check(t.Server.DeclareChapchu(t.O1).OfType<ChapchuChanged>().Any(e => e.IsChapchu), "10장 · 남의 턴에 선언 → 찹츄");
-            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.AlreadyChapchu, "다시 선언 → 12");
+            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.NotYourTurn && !t.State(t.O1).IsChapchu, "10장 · 남의 턴에 선언 → 1 (내 턴에만, 07 4.1)");
+            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태
             t.Play(t.Turn, ChainTable.Hit, t.O2);
             t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();
@@ -1194,6 +1250,36 @@ public static class MultiTest
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(), "자기 턴이 오는 순간 찹츄 승리 (턴 시작 없음)");
             Check(t.Code(t.Server.Draw(t.O1)) == RejectCode.GameOver && t.Tick().Count == 0, "끝난 뒤 요청 → 13 · Tick 은 아무 일 없음");
+        }
+
+        // 1-2. 선언 대기 — 뽑아서 정확히 10장이면 턴이 바로 끝나지 않고 5초 (03-turn 4절)
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 9);
+            IReadOnlyList<GameEvent> drawn = t.Server.Draw(t.Turn);
+            Check(drawn.OfType<CardDrawn>().Count() == 1 && t.HandCount(t.Turn) == 10 && !drawn.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn,
+                "9장에서 1장 뽑아 10장 → 턴이 넘어가지 않는다 (선언 대기)");
+            Check(t.Code(t.Server.Draw(t.Turn)) == RejectCode.MainActionUsed && t.Code(t.Play(t.Turn, ChainTable.Hit, t.O1)) == RejectCode.MainActionUsed,
+                "대기 중 다시 뽑기 · 카드 → 7");
+            t.At(3);
+            Check(!t.Tick().OfType<TurnStarted>().Any(), "3초 — 아직 대기");
+            IReadOnlyList<GameEvent> declared = t.Server.DeclareChapchu(t.Turn);
+            Check(declared.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu) && declared.OfType<TurnStarted>().Any(e => e.Actor == t.O1),
+                "대기 중 선언 → 승인된 순간 턴 종료");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 9);
+            t.Server.Draw(t.Turn);
+            t.At(4.9);
+            bool waiting = !t.Tick().OfType<TurnStarted>().Any();
+            t.At(5);
+            Check(waiting && t.Tick().OfType<TurnStarted>().Any(e => e.Actor == t.O1) && !t.State(t.Turn).IsChapchu, "선언 없이 5초 → 턴 종료 (찹츄 아님)");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 7);
+            Check(t.Server.Draw(t.Turn).OfType<TurnStarted>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == 9, "7장에서 2장 뽑아 9장 → 대기 없이 바로 턴 종료");
         }
 
         // 2. 10장이 아니게 되면 즉시 해제 — 승리 없음
@@ -1392,7 +1478,7 @@ public static class MultiTest
     }
 
     /// <summary>
-    /// 규칙 계층의 봇 (18-bot.md 7절). ① 봇끼리 기본 덱으로 여러 판을 끝까지 ② 찹츄 즉시 선언 ③ 나를 노린 카드에 카운터 ④ 맞은 뒤 함정. (거절 3회 상한은 봇이 미리 걸러 거절을 일부러 만들 수 없어 시험하지 않는다)
+    /// 규칙 계층의 봇 (18-bot.md 7절). ① 봇끼리 기본 덱으로 여러 판을 끝까지 ② 찹츄 선언은 내 턴에만 ③ 나를 노린 카드에 카운터 ④ 맞은 뒤 함정 ⑤ 난이도 (거절 3회 상한은 봇이 미리 걸러 거절을 일부러 만들 수 없어 시험하지 않는다)
     /// 시계는 0.1초씩 직접 움직인다.
     /// </summary>
     public static string Bot()
@@ -1424,8 +1510,11 @@ public static class MultiTest
             while (!server.IsGameOver && now < 3000)
             {
                 now += 0.1;
-                turns += server.Tick().OfType<TurnStarted>().Count();
-                turns += driver.Tick().OfType<TurnStarted>().Count();
+                IReadOnlyList<GameEvent> ticked = server.Tick();
+                driver.Observe(ticked);
+                IReadOnlyList<GameEvent> acted = driver.Tick();
+                driver.Observe(acted);
+                turns += ticked.OfType<TurnStarted>().Count() + acted.OfType<TurnStarted>().Count();
                 foreach (string log in driver.TakeLogs())
                 {
                     lines++;
@@ -1443,12 +1532,45 @@ public static class MultiTest
         Check(lines > 0, $"행동 이유 로그 {lines}줄 · 카운터 {counters} · 함정 발동 {traps}");
         sb.Append(sample);
 
-        // ② 찹츄 — 손패가 10장이 되면 남의 턴에도 즉시 선언
+        // ② 찹츄 선언 — 내 턴에만 (7-5). 남의 턴에 10장이면 기다린다 · 뽑아서 10장이면 선언 대기 안에서 1 ~ 3초 뒤 · 턴 시작 때 이미 10장이면 선언하고 기다린다
         {
-            var t = new ChainTable();
-            var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => 0);
+            double now = 0;
+            var t = new ChainTable(() => now);
+            var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
             t.SetHandSize(t.O1, 10);
-            Check(driver.Tick().OfType<ChapchuChanged>().Any(e => e.Actor == t.O1 && e.IsChapchu), "손패 10장 → 즉시 찹츄 선언 (남의 턴)");
+            var events = new List<GameEvent>();
+            for (now = 0; now < 6; now += 0.1)
+                events.AddRange(driver.Tick());
+            Check(events.Count == 0 && !t.State(t.O1).IsChapchu, "남의 턴에 손패 10장 → 선언하지 않는다 (요청도 없다)");
+        }
+        {
+            double now = 0;
+            var t = new ChainTable(() => now);
+            var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+            t.SetHandSize(t.Turn, 9);
+            var events = new List<GameEvent>();
+            double drewAt = -1, declaredAt = -1;
+            for (now = 0; now < 12 && declaredAt < 0; now += 0.1)
+            {
+                List<GameEvent> tick = t.Tick().Concat(driver.Tick()).ToList();
+                events.AddRange(tick);
+                if (drewAt < 0 && tick.OfType<CardDrawn>().Any()) drewAt = now;
+                if (tick.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu)) declaredAt = now;
+            }
+            Check(drewAt >= 0 && declaredAt - drewAt >= 0.9 && declaredAt - drewAt <= 3.1 && !events.OfType<RequestRejected>().Any(),
+                $"내 턴 9장 → 뽑아 10장 → 선언 대기 1 ~ 3초 뒤 선언 ({declaredAt - drewAt:0.0}초)");
+            Check(events.OfType<TurnStarted>().Any(e => e.Actor == t.O1), "선언이 승인된 순간 턴 종료");
+        }
+        {
+            double now = 0;
+            var t = new ChainTable(() => now);
+            var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
+            t.SetHandSize(t.Turn, 10);
+            var events = new List<GameEvent>();
+            for (now = 0; now < 8; now += 0.1)
+                events.AddRange(t.Tick().Concat(driver.Tick()));
+            Check(events.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu) && !events.OfType<CardDrawn>().Any() && !events.OfType<CardPlayed>().Any() && t.HandCount(t.Turn) == 10,
+                "턴 시작 때 이미 10장 → 선언하고 기다린다 (뽑지도 내지도 않는다)");
         }
 
         // ③ 카운터 — 나를 노린 카드에 1 ~ 3초 뒤. 남끼리의 카드에는 내지 않는다
@@ -1720,7 +1842,7 @@ public static class MultiTest
                     double now = 0;
                     var t = new ChainTable(() => now);
                     t.State(t.Turn).ActionBlocked = true;
-                    t.SetHandSize(t.Turn, 8); // 손패 8장 — 뽑기 줄(#5 · #6)이 아니라 공격 줄(#7)이 먼저 맞는다
+                    t.SetHandSize(t.Turn, 6); // 낼 카드가 있어도 행동 카드 금지 턴이라 뽑기만 남는다
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
                     for (now = 0; now < 6; now += 0.1)
@@ -1868,23 +1990,23 @@ public static class MultiTest
                 {
                     double now = 0;
                     var t = new ChainTable(() => now);
-                    t.SetHandSize(t.Turn, 7);
+                    t.SetHandSize(t.Turn, 4);
                     t.Give(t.Turn, Real(112));
                     t.SetHp(t.Turn, 40);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 4; now += 0.1)
+                    for (now = 0; now < 6; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 112);
 
                     double now2 = 0;
                     var t2 = new ChainTable(() => now2);
-                    t2.SetHandSize(t2.Turn, 7);
+                    t2.SetHandSize(t2.Turn, 4);
                     t2.Give(t2.Turn, Real(112));
                     t2.SetHp(t2.O1, 40);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                    for (now2 = 0; now2 < 6; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 112), "봇 — 112 는 내 HP 가 꼴찌이거나 찹츄 상대가 있을 때만");
                 }
@@ -1934,24 +2056,24 @@ public static class MultiTest
                 {
                     double now = 0;
                     var t = new ChainTable(() => now);
-                    t.SetHandSize(t.Turn, 7);
-                    t.SetHandSize(t.O2, 9); // 7-2 순서로는 O2 가 먼저 — 쓰러뜨릴 수 있는 O1 을 노리는지
+                    t.SetHandSize(t.Turn, 4);
+                    t.SetHandSize(t.O2, 9); // 손패는 O2 가 많다 — 그래도 쓰러뜨릴 수 있는 O1 을 노리는지
                     t.Give(t.Turn, Real(105));
                     t.SetHp(t.O1, 40);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 4; now += 0.1)
+                    for (now = 0; now < 6; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool killFirst = events.OfType<CardPlayed>().Any(e => e.CardId == 105 && e.Targets.SequenceEqual(new[] { t.O1 }));
 
                     double now2 = 0;
                     var t2 = new ChainTable(() => now2);
-                    t2.SetHandSize(t2.Turn, 7);
+                    t2.SetHandSize(t2.Turn, 4);
                     t2.Give(t2.Turn, Real(105));
                     t2.SetHp(t2.Turn, 49);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                    for (now2 = 0; now2 < 6; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(killFirst && !events2.OfType<CardPlayed>().Any(e => e.CardId == 105), "봇 — 105 는 쓰러뜨릴 수 있으면 먼저 그 상대에게 · 못 쓰러뜨리는데 내 HP ≤ 49 면 안 씀");
                 }
@@ -2051,23 +2173,27 @@ public static class MultiTest
                 {
                     double now = 0;
                     var t = new ChainTable(() => now);
-                    t.SetHandSize(t.Turn, 7);
+                    t.SetHandSize(t.Turn, 0);
+                    for (int i = 0; i < 10; i++)
+                        t.Give(t.Turn, Real(123)); // 지금은 쓸 까닭이 없는 카드로 11장 — 뽑으면 10장에서 더 멀어지고, 한 장 내면 10장
                     t.Give(t.Turn, Real(121));
                     t.SetHp(t.O1, 70);
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 4; now += 0.1)
+                    for (now = 0; now < 6; now += 0.1)
                         events.AddRange(driver.Tick());
                     bool used = events.OfType<CardPlayed>().Any(e => e.CardId == 121);
 
                     double now2 = 0;
                     var t2 = new ChainTable(() => now2);
-                    t2.SetHandSize(t2.Turn, 7);
+                    t2.SetHandSize(t2.Turn, 0);
+                    for (int i = 0; i < 10; i++)
+                        t2.Give(t2.Turn, Real(123));
                     t2.Give(t2.Turn, Real(121));
                     t2.SetHp(t2.O1, 90);
                     var driver2 = new BotDriver(t2.Server, new[] { t2.Turn }, new System.Random(1), () => now2);
                     var events2 = new List<GameEvent>();
-                    for (now2 = 0; now2 < 4; now2 += 0.1)
+                    for (now2 = 0; now2 < 6; now2 += 0.1)
                         events2.AddRange(driver2.Tick());
                     Check(used && !events2.OfType<CardPlayed>().Any(e => e.CardId == 121), "봇 — 121 은 개판이 없고 HP 가 상대 최저보다 20 · 손패가 상대 최소보다 2장 이상 많을 때만");
                 }
@@ -2165,20 +2291,167 @@ public static class MultiTest
                     t.SetHandSize(t.Turn, 0);
                     t.Give(t.Turn, Real(119));
                     for (int i = 0; i < 6; i++)
-                        t.Give(t.Turn, Real(123)); // 봇이 쓰지 않는 카드로 손패 7장
+                        t.Give(t.Turn, Real(123)); // 지금은 쓸 까닭이 없는 카드로 손패 7장
                     t.SetHandSize(t.O1, 3);
                     t.SetHandSize(t.O2, 2);
                     t.SetHp(t.O2, 50); // O1 3×3 = 9 · O2 2×3 + 40 = 46
                     var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
                     var events = new List<GameEvent>();
-                    for (now = 0; now < 4; now += 0.1)
+                    for (now = 0; now < 6; now += 0.1)
                         events.AddRange(driver.Tick());
                     Check(events.OfType<CardPlayed>().Any(e => e.CardId == 119 && e.Targets.SequenceEqual(new[] { t.O2 })), "봇 — 119 대상은 손패 × 3 + (HP ≤ 80 이면 40) 가 가장 큰 상대");
+                }
+
+                // 자동 대상이 무작위로 갈리는 때 (7-2) — 118 무야호에서 상대끼리 손패 최다 동률이면 대상을 비워 내고, 로그에 「중 무작위」
+                {
+                    double now = 0;
+                    var t = new ChainTable(() => now);
+                    t.SetHandSize(t.Turn, 0);
+                    t.Give(t.Turn, Real(118));
+                    for (int i = 0; i < 4; i++)
+                        t.Give(t.Turn, Real(107));
+                    t.SetHandSize(t.O1, 10);
+                    t.SetHandSize(t.O2, 10);
+                    t.State(t.O1).IsChapchu = true;
+                    var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now, _ => BotLevel.Hard);
+                    var events = new List<GameEvent>();
+                    var logs = new List<string>();
+                    for (now = 0; now < 7; now += 0.1)
+                    {
+                        events.AddRange(driver.Tick());
+                        logs.AddRange(driver.TakeLogs());
+                    }
+                    Check(events.OfType<CardPlayed>().Any(e => e.CardId == 118) && !events.OfType<RequestRejected>().Any() && logs.Any(l => l.Contains("중 무작위")),
+                        "봇 — 118 손패 최다가 동률이면 동률인 사람들의 평균 점수로 내고 대상은 방장이 고른다 (" + (logs.LastOrDefault(l => l.Contains("7-1")) ?? "로그 없음") + ")");
                 }
             }
         }
 
+        // ⑤ 난이도 (7-7) — 같은 보통 봇 한 자리가 쉬움 셋 사이에서는 더 자주, 어려움 셋 사이에서는 덜 이긴다. 시드가 고정이라 결과는 늘 같다
+        DeckData arenaDeck = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
+        if (arenaDeck == null)
+            sb.AppendLine("  SKIP 난이도 — 게임 덱이 없다 (" + MainDeckPath + ")");
+        else
+        {
+            const int Games = 100;
+            BotLevel[] amongEasy = { BotLevel.Normal, BotLevel.Easy, BotLevel.Easy, BotLevel.Easy };
+            BotLevel[] amongHard = { BotLevel.Normal, BotLevel.Hard, BotLevel.Hard, BotLevel.Hard };
+            int vsEasy = 0, vsHard = 0;
+            for (int game = 0; game < Games; game++)
+            {
+                if (ArenaWinnerSeat(arenaDeck, amongEasy, game) == 0) vsEasy++;
+                if (ArenaWinnerSeat(arenaDeck, amongHard, game) == 0) vsHard++;
+            }
+            Check(vsEasy > vsHard, $"난이도 — 보통 한 자리의 승률: 쉬움 셋 사이 {100 * vsEasy / Games}% > 어려움 셋 사이 {100 * vsHard / Games}% ({Games}판씩)");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
+    // 봇끼리 game 번째 판(시드 고정)을 끝까지 — 이긴 자리(0 ~). 무승부 · 한 시간 안에 안 끝나면 −1
+    private static int ArenaWinnerSeat(DeckData deck, BotLevel[] seats, int game)
+    {
+        double now = 0;
+        int[] actors = Enumerable.Range(1001, seats.Length).ToArray();
+        var server = new GameServer(new System.Random(game), () => now);
+        server.StartGame(actors, deck.CreateCards());
+        var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, actor => seats[actor - 1001]);
+        while (now < 3600)
+        {
+            now += 0.1;
+            IReadOnlyList<GameEvent> ticked = server.Tick();
+            driver.Observe(ticked);
+            IReadOnlyList<GameEvent> acted = driver.Tick();
+            driver.Observe(acted);
+            driver.TakeLogs();
+            GameEnded ended = ticked.Concat(acted).OfType<GameEnded>().FirstOrDefault();
+            if (ended != null)
+                return ended.Winner >= 1001 ? ended.Winner - 1001 : -1;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// 봇끼리 게임 덱(Deck_Main)으로 여러 판 — 난이도별 승률 · 승리 방식 · 판 길이를 잰다 (18-bot.md 7-7 「난이도 확인」). 통과 · 실패를 가리지 않고 숫자만 낸다.
+    /// levels = 자리마다 난이도 (E 쉬움 · N 보통 · H 어려움, 예: "HHEE"). 턴 순서는 판마다 규칙이 섞는다.
+    /// </summary>
+    public static string BotArena(string levels = "HHEE", string gamesArg = "200")
+    {
+        DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
+        if (main == null)
+            return "FAIL 게임 덱이 없다 — " + MainDeckPath;
+
+        int games = int.Parse(gamesArg);
+        BotLevel[] seats = levels.Select(c => c == 'E' ? BotLevel.Easy : c == 'H' ? BotLevel.Hard : BotLevel.Normal).ToArray();
+        int[] actors = Enumerable.Range(1001, seats.Length).ToArray();
+        var wins = new Dictionary<BotLevel, int>();
+        var reasons = new Dictionary<GameEndReason, int>();
+        int unfinished = 0, turns = 0, declares = 0, broken = 0, plays = 0, draws = 0, idles = 0, mistakes = 0;
+        double seconds = 0;
+        var cardUse = new SortedDictionary<int, int>();
+
+        for (int game = 0; game < games; game++)
+        {
+            double now = 0;
+            var server = new GameServer(new System.Random(game), () => now);
+            server.StartGame(actors, main.CreateCards());
+            var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, actor => seats[actor - 1001]);
+            GameEnded ended = null;
+            while (ended == null && now < 3600)
+            {
+                now += 0.1;
+                IReadOnlyList<GameEvent> ticked = server.Tick();
+                driver.Observe(ticked);
+                IReadOnlyList<GameEvent> acted = driver.Tick();
+                driver.Observe(acted);
+                foreach (GameEvent gameEvent in ticked.Concat(acted))
+                {
+                    switch (gameEvent)
+                    {
+                        case TurnStarted _: turns++; break;
+                        case ChapchuChanged chapchu: if (chapchu.IsChapchu) declares++; else broken++; break;
+                        case CardPlayed played: plays++; cardUse[played.CardId] = cardUse.TryGetValue(played.CardId, out int used) ? used + 1 : 1; break;
+                        case GameEnded end: ended = end; break;
+                    }
+                }
+                foreach (string log in driver.TakeLogs())
+                {
+                    if (log.Contains("7-1 뽑기")) draws++;
+                    if (log.Contains("7-1 아무것도") || log.Contains("7-1 손패 10장") || log.Contains("7-1 찹츄 유지")) idles++; // 「(다음 수: …)」 는 세지 않는다
+                    if (log.Contains("실수")) mistakes++;
+                }
+            }
+
+            if (ended == null)
+            {
+                unfinished++;
+                continue;
+            }
+
+            seconds += now;
+            reasons[ended.Reason] = reasons.TryGetValue(ended.Reason, out int count) ? count + 1 : 1;
+            if (ended.Winner >= 1001)
+            {
+                BotLevel level = seats[ended.Winner - 1001];
+                wins[level] = wins.TryGetValue(level, out int won) ? won + 1 : 1;
+            }
+        }
+
+        int finished = games - unfinished;
+        var sb = new StringBuilder();
+        sb.AppendLine($"OK 자리 {levels} · {games}판 (끝까지 {finished})");
+        foreach (BotLevel level in seats.Distinct())
+        {
+            int seatCount = seats.Count(s => s == level);
+            wins.TryGetValue(level, out int won);
+            sb.AppendLine($"  {level} × {seatCount} — {won}승 ({100.0 * won / Math.Max(1, finished):0}% · 자리당 {100.0 * won / Math.Max(1, finished) / seatCount:0}%)");
+        }
+        sb.AppendLine("  승리 방식 — " + string.Join(" · ", reasons.Select(pair => $"{pair.Key} {pair.Value}")));
+        sb.AppendLine($"  한 판 평균 {seconds / Math.Max(1, finished):0}초 · {(double)turns / games:0.0}턴 · 카드 {(double)plays / games:0.0}장 · 뽑기 {(double)draws / games:0.0}번 · 기다림 {(double)idles / games:0.0}번 · 실수 {(double)mistakes / games:0.0}번");
+        sb.AppendLine($"  찹츄 선언 {(double)declares / games:0.00}번 / 판 · 해제 {(double)broken / games:0.00}번 / 판");
+        sb.Append("  카드별 사용 (판당) — " + string.Join(" ", cardUse.Select(pair => $"{pair.Key}:{(double)pair.Value / games:0.0}")));
+        return sb.ToString();
     }
 
     /// <summary>
@@ -2274,7 +2547,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O1, 10);
-            t.Server.DeclareChapchu(t.O1);
+            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
             t.SetHandSize(t.O2, 10);
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new MoveChapChuEffect())), t.O1, t.O2);
             Check(!t.State(t.O1).IsChapchu && t.State(t.O2).IsChapchu, "MoveChapChu 대상 1 → 대상 2");
@@ -2282,7 +2555,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O1, 10);
-            t.Server.DeclareChapchu(t.O1);
+            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.ChapchuPlayers, Dmg(20))));
             Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, "대상 ChapchuPlayers — 찹츄인 사람만");
         }
@@ -2418,7 +2691,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O2, 10);
-            t.Server.DeclareChapchu(t.O2);
+            t.State(t.O2).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
             t.SetHandSize(t.O1, 10);
             Card c15 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.GivesMeChapchu, new NegateEffect { selfOnly = true }));
             t.SetHandSize(t.O1, 11); // 카운터를 내면 10장

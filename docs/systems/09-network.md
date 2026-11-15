@@ -49,6 +49,7 @@
 | 강제 버림 · 함정 파괴 | 마스터 | 전체 공개 (버림 더미로 가므로) | RPC (카드 ID 포함) |
 | 함정 반환 · 빼앗기 | 마스터 | 개수는 전체, 종류는 관련된 사람만 (반환 = 주인, 빼앗기 = 두 사람) | RPC |
 | 봇 목록 (번호) | 방장 | 전체 공개 | Room CustomProperties (`18-bot` 9절) |
+| 봇 난이도 | 방장 | 전체 공개 | Room CustomProperties `botLv` — 숫자 3개, [봇 번호 − 1] 자리에 0 쉬움 · 1 보통 · 2 어려움. 봇 목록과 한 번에 쓴다 (`18-bot` 7-7 · 9절, 2026-11-14) |
 | 봇의 공개 값 (HP · 손패 장수 · 함정 개수 · 생존 · 찹츄) | 마스터 | 전체 공개 | Room CustomProperties — 사람과 같은 키 + `#봇 식별자` (`18-bot` 9절) |
 | 봇의 손패 · 함정 내용 | 마스터 | **아무에게도** | 전송 안 함 — 방장 화면에도 그리지 않는다 (`18-bot` 3절 #5) |
 | 카드 호버/드래그/연출 | 각 클라이언트 | 로컬 | 전송 안 함 |
@@ -169,6 +170,9 @@ public static class RoomProps
     public const string DiscardCount = "discardCount";
     public const string DiscardTop   = "discardTop"; // 맨 위 카드 종류 ID. 더미가 비면 키 없음 (2026-11-09)
     public const string TurnDirection = "turnDir";
+    public const string Bots         = "bots";     // 봇 번호 배열 (int[], 18-bot 9절)
+    public const string BotLevels    = "botLv";    // 봇 난이도 (int[3] — [봇 번호 − 1] 자리, 18-bot 7-7). 없으면 전부 보통 (2026-11-14)
+    public const string Solo         = "solo";     // 「혼자 하기」 방 (bool, 18-bot 10절)
     public const string WaitCasters  = "wait";     // 「기다려」 를 건 사람들 (int[], 123). 없으면 키 없음 (2026-11-13)
     public const string Gaepan       = "gaepan";   // 개판 오분전 [건 사람, 남은 바퀴] (int[], 121). 없으면 키 없음 (2026-11-13)
     public const string Fallout      = "fallout";  // 대소동 피폭 [n 대소동 횟수, k 지난 턴 수] (int[], 112). 없으면 키 없음 (2026-11-13)

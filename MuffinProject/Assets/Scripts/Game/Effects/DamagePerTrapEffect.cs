@@ -10,7 +10,8 @@ namespace Chapchu.Game.Effects
     {
         public int amount;
 
-        internal override Bots.BotRole BotRole => Bots.BotRole.Attack;
+        internal override double BotScore(Bots.BotView view, int[] receivers) =>
+            receivers.Sum(actor => view.DamageScore(actor, amount * view.Server.TrapCountOf(actor)));
         internal override EffectTag Tag => EffectTag.Damage;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry).Where(a => server.TrapCountOf(a) > 0);
         internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount * server.TrapCountOf(actor) : 0;
