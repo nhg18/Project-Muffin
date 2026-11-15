@@ -404,10 +404,17 @@ namespace Chapchu.UI.Fx.Muyaho
             target.localScale = new Vector3(scale, scale, 1f);
         }
 
+        // 표 크기 맞추기는 틀로 모을 후보 — 이 작업에서는 틀(ComicKit)을 고치지 않는다
         private void SetTag(Tag tag, string text)
         {
-            ComicKit.FitTag(tag.text, tag.shadow, tag.box, text, tagPadding, tagHeight, tagLine);
+            tag.text.text = text;
+            float width = tag.text.GetPreferredValues(text).x + tagPadding;
+            float height = tag.text.fontSize * tagHeight;
+            tag.shadow.sizeDelta = new Vector2(width, height);
+            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
+            tag.box.sizeDelta = new Vector2(width + tagLine, height + tagLine);
         }
+
         private void PaintGlow(ComicPen pen)
         {
             pen.FillRadial(glowCenter.x, glowCenter.y, glowRadius, glowColor, new Color(glowColor.r, glowColor.g, glowColor.b, 0f));

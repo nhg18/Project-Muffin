@@ -77,36 +77,26 @@ namespace Chapchu.UI.Fx.Comic
         }
 
         /// <summary>
-        /// 캐릭터 그림의 얼굴 칸을 RawImage 에 잘라 넣는다 (시안 avatar). faceArea = 그림 왼쪽 아래 기준 0 ~ 1.
-        /// 그림이 없으면 noFaceColor 로 칠한다.
+        /// 시안 avatar 의 그림 — 캐릭터 그림의 얼굴 칸(<paramref name="faceArea"/>, 그림 안 비율 · 왼쪽 아래 0)을 원 안에 채운다.
+        /// 그림이 없으면 <paramref name="missing"/> 색 면.
         /// </summary>
-        public static void ShowFace(UnityEngine.UI.RawImage target, Sprite character, Rect faceArea, Color noFaceColor)
+        public static void ShowFace(UnityEngine.UI.RawImage picture, Sprite art, Rect faceArea, Color missing)
         {
-            if (character == null)
+            if (art == null)
             {
-                target.texture = null;
-                target.color = noFaceColor;
+                picture.texture = null;
+                picture.color = missing;
                 return;
             }
-            Texture texture = character.texture;
-            Rect r = character.textureRect;
-            target.texture = texture;
-            target.color = Color.white;
-            target.uvRect = new Rect((r.x + faceArea.x * r.width) / texture.width, (r.y + faceArea.y * r.height) / texture.height,
-                faceArea.width * r.width / texture.width, faceArea.height * r.height / texture.height);
-        }
-
-        /// <summary>
-        /// 표(시안 label) 글자를 바꾸고 그림자 · 상자 크기를 맞춘다 — 너비 = 글자 폭 + padding, 높이 = 글자 크기 × heightScale.
-        /// </summary>
-        public static void FitTag(TMPro.TMP_Text text, RectTransform shadow, RectTransform box, string value, float padding, float heightScale, float line)
-        {
-            text.text = value;
-            float width = text.GetPreferredValues(value).x + padding;
-            float height = text.fontSize * heightScale;
-            shadow.sizeDelta = new Vector2(width, height);
-            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
-            box.sizeDelta = new Vector2(width + line, height + line);
+            Texture texture = art.texture;
+            Rect rect = art.rect;
+            picture.texture = texture;
+            picture.color = Color.white;
+            picture.uvRect = new Rect(
+                (rect.x + faceArea.x * rect.width) / texture.width,
+                (rect.y + faceArea.y * rect.height) / texture.height,
+                faceArea.width * rect.width / texture.width,
+                faceArea.height * rect.height / texture.height);
         }
     }
 

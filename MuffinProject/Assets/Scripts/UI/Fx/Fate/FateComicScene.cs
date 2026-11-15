@@ -296,7 +296,13 @@ namespace Chapchu.UI.Fx.Fate
                 chip.text.color = color;
             if (chip.text.text == text)
                 return;
-            ComicKit.FitTag(chip.text, chip.shadow, chip.box, text, chipPadding, chipHeight, chipLine);
+            // 표 크기 맞추기는 틀로 모을 후보 — 이 작업에서는 틀(ComicKit)을 고치지 않는다
+            chip.text.text = text;
+            float width = chip.text.GetPreferredValues(text).x + chipPadding;
+            float height = chip.text.fontSize * chipHeight;
+            chip.shadow.sizeDelta = new Vector2(width, height);
+            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
+            chip.box.sizeDelta = new Vector2(width + chipLine, height + chipLine);
         }
 
         private void PaintBackdrop(ComicPen pen)
