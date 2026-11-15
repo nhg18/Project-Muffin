@@ -117,7 +117,8 @@
         }
     }
 
-    /// <summary>체인의 카드 하나를 처리했다 — 효과 적용 (04-card.md 9절, 연출 4 단계). 카드는 버림 더미로 갔고, 효과는 뒤따르는 일(HpChanged 등)로 온다. Targets 는 본인 무효화를 뺀 대상.</summary>
+    /// <summary>체인의 카드(또는 발동한 함정) 하나를 처리했다 — 효과 적용 (04-card.md 9절, 연출 4 단계). 효과는 뒤따르는 일(HpChanged 등)로 온다. Targets 는 본인 무효화를 뺀 대상.
+    /// 카드는 아직 버림 더미에 없다 — 체인이 끝나면 ChainDiscarded 로 쓴 순서대로 쌓인다 (04 9.1). DiscardCount 는 지금 버림 더미 장수.</summary>
     public sealed class CardResolved : GameEvent
     {
         public int Actor { get; }
@@ -136,7 +137,7 @@
         }
     }
 
-    /// <summary>체인의 카드 하나가 무효화됐다 (04-card.md 9절). 효과 없이 버림 더미로 갔다 — 연출 4 단계 없음.</summary>
+    /// <summary>체인의 카드 하나가 무효화됐다 (04-card.md 9절). 효과 없음 — 연출 4 단계 없음. 버림 더미에는 체인이 끝날 때 쌓인다 (ChainDiscarded).</summary>
     public sealed class CardNegated : GameEvent
     {
         public int Actor { get; }
@@ -252,7 +253,7 @@
         }
     }
 
-    /// <summary>함정을 발동했다 — 공개되고 체인 맨 위에 올라갔다 (04-card.md 6절, 연출 1 단계는 함정 슬롯에서). 뒤에 ReactionStarted.</summary>
+    /// <summary>함정이 자동 발동했다 — 행동(체인)이 끝난 뒤, 설치한 순서대로 (04-card.md 6절 · 9.2, 연출 1 단계는 함정 슬롯에서). 반응 시간 없이 뒤에 CardResolved → ChainDiscarded.</summary>
     public sealed class TrapActivated : GameEvent
     {
         public int Actor { get; }
@@ -271,16 +272,18 @@
         }
     }
 
-    /// <summary>「피해 받은 후」 함정을 낼 수 있는 함정 시간 (04-card.md 6절). 조건이 맞는 함정을 가진 사람이 있을 때만 온다.</summary>
-    public sealed class TrapWindowStarted : GameEvent
+    /// <summary>처리가 끝난 카드들이 버림 더미에 쌓였다 — 체인은 쓴 순서대로(맨 위 = 마지막), 함정은 한 장씩 (04-card.md 9.1 · 9.2). DiscardCount 는 쌓은 뒤 장수.</summary>
+    public sealed class ChainDiscarded : GameEvent
     {
-        public double OpensAt { get; }
-        public double Deadline { get; }
+        public int[] CardInstanceIds { get; }
+        public int[] CardIds { get; }
+        public int DiscardCount { get; }
 
-        public TrapWindowStarted(double opensAt, double deadline)
+        public ChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
         {
-            OpensAt = opensAt;
-            Deadline = deadline;
+            CardInstanceIds = cardInstanceIds;
+            CardIds = cardIds;
+            DiscardCount = discardCount;
         }
     }
 

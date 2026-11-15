@@ -19,6 +19,7 @@ namespace Chapchu.Game
         public bool Negated;
         public int NegatedBy = -1;
         public bool ReturnToCaster; // C01
+        public bool Returned;       // 손패로 돌아갔다 — 버림 더미에 쌓지 않는다 (04 9.1)
 
         /// <summary>「본인에게만 무효화」 한 사람들 (C05 · C08 · C13 · C15). 효과를 받는 사람에서 뺀다.</summary>
         public readonly HashSet<int> Excluded = new HashSet<int>();
@@ -38,7 +39,7 @@ namespace Chapchu.Game
         /// <summary>체인에서 바로 아래 카드 (맨 아래면 null) — 체인에 오를 때 정한다. 카운터가 반응한 카드다 (04 7절).</summary>
         public ChainEntry Below;
 
-        /// <summary>처리 중 — 다음에 적용할 효과 번호. 0 이면 아직 처리 전. 피해 뒤 사망 대기 · 함정 시간으로 멈췄다 이어 갈 때 쓴다 (06 5절, 11-card-list 115).</summary>
+        /// <summary>처리 중 — 다음에 적용할 효과 번호. 0 이면 아직 처리 전. 대상의 고르기(119)로 멈췄다 이어 갈 때 쓴다 (04 9.3).</summary>
         public int NextEffect;
 
         public ChainEntry(Card card, int user, int[] targets)

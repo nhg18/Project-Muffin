@@ -4,7 +4,7 @@ using System.Linq;
 namespace Chapchu.Game
 {
     // GameServer.After.cs — 「~한 후」 함정의 조건이 되는 사건 기록 (04-card.md 6절 「발동 시점」).
-    // 체인을 처리하면서(턴 스킵은 스킵할 때) 쌓이고, 함정 시간이 열리지 않거나 끝나면 비운다. 사건 한 번에 함정 한 번 — 발동하면 그 기록은 쓴 것이 된다.
+    // 체인을 처리하면서(턴 스킵은 스킵할 때) 쌓이고, 그 뒤 함정을 발동하면(FireTraps) 비운다. 사건 한 번에 함정 한 번 — 발동하면 그 기록은 쓴 것이 된다.
     public partial class GameServer
     {
         internal enum AfterKind
@@ -13,7 +13,7 @@ namespace Chapchu.Game
             Stolen,        // Subject 의 손패를 Source 가 가져갔다
             Discarded,     // Source 의 효과로 Subject 의 손패 Amount 장이 버려졌다
             TrapDestroyed, // Source 가 Subject 의 함정을 파괴했다
-            MyTrapNegated, // Subject 가 낸 함정을 Source 의 카운터가 무효화했다
+            MyTrapNegated, // 쓰지 않는다 — 함정에는 카운터를 낼 수 없다 (04 6절, 2026-11-15). 순서를 지키려 남긴다
             CardReturned,  // Subject 가 낸 행동 카드가 Subject 손패로 반환됐다 (Source = 반환시킨 사람)
             DrewCards,     // Subject 가 카드 효과로 Amount 장을 뽑았다
             TurnSkipped,   // Subject 의 턴이 스킵됐다
@@ -79,29 +79,6 @@ namespace Chapchu.Game
         private static bool IsAfterTrigger(TrapTrigger trigger)
         {
             return trigger == TrapTrigger.AfterDamaged || trigger >= TrapTrigger.AfterStolen;
-        }
-
-        // 함정 시간을 열지 정한다 — 「~한 후」 조건이 맞는 함정을 가진 생존자가 있으면 opensAt 부터 5초 (04 6절). 없으면 기록을 비운다.
-        private void OpenTrapWindowIfNeeded(double opensAt)
-        {
-            bool anyone = _turnOrder.Any(actor => IsInGame(actor) && _players[actor].Life == LifeState.Alive
-                                                  && _players[actor].Traps.Any(t => IsAfterTrigger(t.Trigger) && FindAfterRecord(actor, t) != null));
-            if (!anyone)
-            {
-                _afterRecords.Clear();
-                return;
-            }
-
-            _trapWindowOpensAt = opensAt;
-            _trapWindowDeadline = opensAt + TrapWindowTime;
-            _events.Add(new TrapWindowStarted(_trapWindowOpensAt, _trapWindowDeadline));
-        }
-
-        // 아무도 내지 않고 함정 시간이 끝났다 — 그 기회는 사라진다.
-        private void CloseTrapWindow()
-        {
-            _trapWindowDeadline = -1;
-            _afterRecords.Clear();
         }
     }
 }
