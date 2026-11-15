@@ -41,7 +41,7 @@ namespace Chapchu.EditorTools
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
         private const string BackgroundPath = "Assets/Sprites/UI/Background/bg_ingame.png";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
-        private const string HellBladeArtPath = "Assets/Sprites/Cards/Images/A03.jpg";
+        private const string HellBladeArtPath = "Assets/Sprites/Cards/Art/117.png";
         private const string FxShaderName = "Chapchu/UI Fx Blend";
         private const string MaterialFolder = "Assets/Materials/CardFx";
         private const string AdditivePath = MaterialFolder + "/FxAdditive.mat";

@@ -7,6 +7,7 @@ namespace Chapchu.UI.Fx
     /// 부채꼴 (UI 도형) — 가운데에서 반지름만큼, 위(12시)에서 시계 방향으로 start 부터 sweep 도. 반지름은 RectTransform 의 짧은 변의 절반.
     /// 스프라이트로는 칸을 나눈 원(121 개판 오분전의 5칸 자명종)을 그릴 수 없어서 둔다.
     /// </summary>
+    [RequireComponent(typeof(CanvasRenderer))] // Graphic 은 CanvasRenderer 를 스스로 붙이지 않는다 — 없으면 아무것도 그려지지 않는다
     public class UIPie : MaskableGraphic
     {
         private const float DegreesPerStep = 5f;
