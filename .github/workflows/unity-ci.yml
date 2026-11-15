@@ -1,0 +1,99 @@
+# Unity 빌드 CI/CD — .github/workflows/unity-ci.yml 로 넣는다
+# CI : develop 으로 가는 PR · develop push → Android 빌드가 깨지지 않는지 확인
+# CD : v* 태그 push (예: v0.2.0) → 서명된 AAB 빌드 → 아티팩트 업로드 (+ 플레이 콘솔 업로드는 아래 주석 참고)
+name: Unity 빌드
+
+on:
+  pull_request:
+    branches: [develop]
+    paths-ignore: ["docs/**", "**/*.md"]
+  push:
+    branches: [develop]
+    tags: ["v*"]
+    paths-ignore: ["docs/**", "**/*.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: unity-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_PATH: MuffinProject
+
+jobs:
+  # 테스트 asmdef(EditMode/PlayMode) 를 만들면 주석을 풀어 쓴다
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: MuffinProject/Library
+  #         key: Library-test-${{ hashFiles('MuffinProject/Assets/**', 'MuffinProject/Packages/**', 'MuffinProject/ProjectSettings/**') }}
+  #         restore-keys: Library-test-
+  #     - uses: game-ci/unity-test-runner@v4
+  #       env:
+  #         UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  #         UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+  #         UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+  #       with:
+  #         projectPath: MuffinProject
+  #         testMode: editmode
+  #         githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      # Android 에디터 이미지가 커서 기본 러너 디스크가 모자란다
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: MuffinProject/Library
+          key: Library-android-${{ hashFiles('MuffinProject/Assets/**', 'MuffinProject/Packages/**', 'MuffinProject/ProjectSettings/**') }}
+          restore-keys: Library-android-
+
+      - name: 빌드
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: MuffinProject
+          targetPlatform: Android
+          # 태그 빌드만 스토어용 AAB + 서명, 나머지는 빠른 APK
+          androidExportType: ${{ startsWith(github.ref, 'refs/tags/v') && 'androidAppBundle' || 'androidPackage' }}
+          # 서명 값은 태그 빌드에만 넘긴다 — 이름만 넘어가도 Custom Keystore 가 켜져서 파일 없음 에러가 난다
+          androidKeystoreName: ${{ startsWith(github.ref, 'refs/tags/v') && 'chapchu.keystore' || '' }}
+          androidKeystoreBase64: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          androidKeystorePass: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYSTORE_PASS || '' }}
+          androidKeyaliasName: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYALIAS_NAME || '' }}
+          androidKeyaliasPass: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.ANDROID_KEYALIAS_PASS || '' }}
+          # 버전은 Player Settings 값 그대로 쓴다 (docs/versioning.md 규칙 유지)
+          versioning: None
+
+      - uses: actions/upload-artifact@v4
+        with:
+          # PR 이면 ref_name 이 "160/merge" 라 / 가 들어가서 쓸 수 없다 → pr160 으로
+          name: android-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.ref_name }}-${{ github.run_number }}
+          path: build/Android
+          retention-days: 14
+
+      # 플레이 콘솔 자동 업로드 — 첫 AAB 는 콘솔에서 손으로 올려야 하고,
+      # 패키지 ID 를 정한 뒤 서비스 계정 JSON 을 시크릿에 넣으면 주석을 푼다
+      # - if: startsWith(github.ref, 'refs/tags/v')
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: com.example.chapchu   # ← 확정된 패키지 ID
+      #     releaseFiles: build/Android/*.aab
+      #     track: internal
+      #     status: draft
