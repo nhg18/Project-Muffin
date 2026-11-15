@@ -9,6 +9,7 @@ namespace Chapchu.UI.Fx.Nuke
     /// 3 단계: 컷인 판이 나타나고 위아래 검은 띠가 들어온 뒤, 3D 장면(<see cref="NukeSceneFx"/> — 네거리 · 강아지 · 미사일 · 폭발 · 버섯구름 · 낙진)을 화면에 얹고,
     /// 13.2초에 큰 글자(<see cref="NukeTitleFx"/>)가 내려앉는다. 끝나기 0.26초 전부터 컷인이 사라진다.
     /// 4 단계 장식: 쓴 사람 위 말풍선 「대소동!」 + 판 흔들기 (시안 FXA 대소동 s4 의 앞부분 — 손패 · 체력 · 피폭 표시는 공통 결과가 그린다).
+    /// 연출 길이 16.4초 — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
     public class NukeFx : CardFx
     {
