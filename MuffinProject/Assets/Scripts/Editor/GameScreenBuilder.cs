@@ -38,7 +38,7 @@ namespace Chapchu.EditorTools
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string CharacterSpritePath = "Assets/Sprites/Characters/chara.png"; // 노션 「캐릭터 디자인」 기본 치와와 (10-ui 2-1 캐릭터별 데이터)
         internal const float CharacterAspect = 0.772f; // 그림 비율 = 보이는 부분 상자 폭 ÷ 키 (10-ui 2-1)
-        internal const float MyCharacterWidth = 216f;  // 키 280 × 그림 비율
+        internal static readonly float MyCharacterWidth = Mathf.Round(280f * CharacterAspect / 2f) * 2f; // 키 280 × 그림 비율 (SeatGeo 와 같은 반올림)
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
         private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
         internal const string CardFrameFolder = "Assets/Sprites/Cards/Frames";
@@ -91,7 +91,8 @@ namespace Chapchu.EditorTools
         internal static TMP_FontAsset RegularFont => _regularFont != null ? _regularFont : _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
         internal static TMP_FontAsset BoldFont => _boldFont != null ? _boldFont : _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
         private static Sprite Round => _round != null ? _round : _round = AssetDatabase.LoadAssetAtPath<Sprite>(RoundSpritePath);
-        private static Sprite CharacterSprite => AssetDatabase.LoadAssetAtPath<Sprite>(CharacterSpritePath);
+        private static Sprite _characterSprite;
+        private static Sprite CharacterSprite => _characterSprite != null ? _characterSprite : _characterSprite = AssetDatabase.LoadAssetAtPath<Sprite>(CharacterSpritePath);
 
         [MenuItem("Chapchu/Game Screen/Build UI")]
         public static void Build()
@@ -107,6 +108,8 @@ namespace Chapchu.EditorTools
             _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
             if (Round == null)
                 Debug.LogError($"[{nameof(GameScreenBuilder)}] 둥근 모서리 스프라이트가 없다: {RoundSpritePath}");
+            if (CharacterSprite == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 캐릭터 스프라이트가 없다: {CharacterSpritePath}");
 
             Camera camera = TableBuilder.SetupCamera();
             Transform table = TableBuilder.BuildTable();
@@ -528,7 +531,7 @@ namespace Chapchu.EditorTools
         private static MyPanelView BuildMyCharacterAndPanel(RectTransform parent)
         {
             RectTransform spot = BuildSpot("MyTurnSpot", parent);
-            Anchor(spot, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(EdgeX + 120f, EdgeBottom + 178f + 28f), spot.sizeDelta);
+            Anchor(spot, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(EdgeX + 40f + MyCharacterWidth / 2f, EdgeBottom + 178f + 28f), spot.sizeDelta);
 
             Image character = NewImage("MyCharacter", parent, Color.white, CharacterSprite);
             BottomLeft(character.rectTransform, EdgeX + 40f, EdgeBottom + 178f + 20f, MyCharacterWidth, 280f);
