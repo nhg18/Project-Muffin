@@ -141,6 +141,29 @@ namespace Chapchu.UI.Fx
             yield return new WaitForSeconds((step.DurationMs + StepTailMs) / 1000f);
         }
 
+        // 켜진 조각을 시작 시각 순으로 (같으면 계층 위부터 — OrderBy 는 순서를 지킨다)
+        private static List<CardFxStep> Collect(Transform root)
+        {
+            return root.GetComponentsInChildren<CardFxStep>().Where(step => step.enabled).OrderBy(step => step.StartMs).ToList();
+        }
+
+        // 시작부터 조각마다 제 시각에 재생하고, 가장 늦게 끝나는 조각까지 기다린다
+        private static IEnumerator TimelineRoutine(List<CardFxStep> steps, CardFxContext context, RectTransform target)
+        {
+            float start = Time.time;
+            float end = 0f;
+            foreach (CardFxStep step in steps)
+            {
+                while ((Time.time - start) * 1000f < step.StartMs)
+                    yield return null;
+                step.Play(context, target);
+                end = Mathf.Max(end, step.StartMs + step.DurationMs);
+            }
+
+            while ((Time.time - start) * 1000f < end)
+                yield return null;
+        }
+
         private IEnumerator ImpactRoutine(CardFxContext context, RectTransform target)
         {
             yield return new WaitForSeconds(impactMs / 1000f);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -291,6 +292,30 @@ namespace Chapchu.UI.Fx.Band
                 step.ResetState();
 
             yield return TimelineRoutine(_postSteps, context, null);
+        }
+
+        // 켜진 조각을 시작 시각 순으로 (꺼진 오브젝트 · 컴포넌트는 빠진다. 같으면 계층 위부터 — OrderBy 는 순서를 지킨다).
+        // HellBladeFx 와 같은 식 — CardFx 로 올리는 것은 같이 쓰는 코드라 공통 커밋에서 한다
+        private static List<CardFxStep> Collect(Transform root)
+        {
+            return root.GetComponentsInChildren<CardFxStep>().Where(step => step.enabled).OrderBy(step => step.StartMs).ToList();
+        }
+
+        // 시작부터 조각마다 제 시각에 재생하고, 가장 늦게 끝나는 조각까지 기다린다 (HellBladeFx 와 같은 식)
+        private static IEnumerator TimelineRoutine(List<CardFxStep> steps, CardFxContext context, RectTransform target)
+        {
+            float start = Time.time;
+            float end = 0f;
+            foreach (CardFxStep step in steps)
+            {
+                while ((Time.time - start) * 1000f < step.StartMs)
+                    yield return null;
+                step.Play(context, target);
+                end = Mathf.Max(end, step.StartMs + step.DurationMs);
+            }
+
+            while ((Time.time - start) * 1000f < end)
+                yield return null;
         }
 
         // 카드 값을 부품에 넣는다 — 글자 · 색 · 그림 · 칸 크기
