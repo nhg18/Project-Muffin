@@ -38,7 +38,7 @@ namespace Chapchu.EditorTools
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
         private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
-        private const string CardBackSpritePath = "Assets/Sprites/Cards/CardBack.jpg";
+        private const string CardBackSpritePath = "Assets/Sprites/Cards/Frames/CardBack.jpg";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
 
         // TMP 동적 폰트 생성값 — Galmuri9 SDF 와 같은 방식(SDFAA · 여백 5), 아틀라스는 2048 로 시작해 필요하면 늘어난다.
@@ -1645,9 +1645,9 @@ namespace Chapchu.EditorTools
         // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역. 드롭 영역은 그 위(28 + 336)부터 (10-ui.md 2-1 「손패」).
         private static readonly Vector2 HandCardSize = new Vector2(226f, 336f);
         private const float HandAreaBottom = 28f;
-        internal const string ActionCardFramePath = "Assets/Sprites/Cards/ActionCard.png";
-        internal const string CounterCardFramePath = "Assets/Sprites/Cards/CounterCard.png";
-        internal const string TrapCardFramePath = "Assets/Sprites/Cards/TrapCard.png";
+        internal const string ActionCardFramePath = "Assets/Sprites/Cards/Frames/ActionCard.png";
+        internal const string CounterCardFramePath = "Assets/Sprites/Cards/Frames/CounterCard.png";
+        internal const string TrapCardFramePath = "Assets/Sprites/Cards/Frames/TrapCard.png";
 
         // 손패 카드 프리팹 — Assets/Prefab/PlayerActionCard Dummy 와 같은 구성(틀 · 그림 · 이름 · 설명)을 UGUI 로.
         // 종류마다 틀 이미지만 다르다. 위치는 더미의 월드 좌표를 틀 크기 비율로 옮긴 값. 이미 있으면 덮어쓰지 않는다 (사람이 고친 것 보존) — overwrite 는 RebuildHandCardPrefabs 만.

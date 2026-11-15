@@ -35,7 +35,7 @@ namespace Chapchu.EditorTools
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
         private const string CardShaderName = "Unlit/Transparent Cutout"; // 덱 · 함정 칸 · 받침 카드 — 알파 컷아웃 + ZWrite, 뒷면 컬링 (카드 프리팹은 Chapchu/Card *)
-        private const string BackTexturePath = "Assets/Sprites/Cards/CardBack.jpg";
+        private const string BackTexturePath = "Assets/Sprites/Cards/Frames/CardBack.jpg";
         private const float CardThickness = 0.02f; // 더미 장당 두께
         private const float LayerGap = 0.005f;     // 그림 · 글자를 틀 앞에 띄우는 간격 — 같은 면이면 z 싸움
 
@@ -128,7 +128,7 @@ namespace Chapchu.EditorTools
         private const float DiscardTopAngle = -3f;
         private static readonly (Vector2 offsetPx, float angle)[] DiscardUnderCards = { (new Vector2(-20f, -8f), 7f), (new Vector2(-10f, -4f), 3f) };
         // 받침 흰 카드 그림 — 없으면 만든다. 카드 0.6배(136 × 202)의 2배 크기, 흰 바탕 · 잉크 테 4 · 반지름 14 (캔버스 px).
-        private const string BlankTexturePath = "Assets/Sprites/Cards/CardBlank.png";
+        private const string BlankTexturePath = "Assets/Sprites/Cards/Frames/CardBlank.png";
         private const int BlankTexturePixelsPerPx = 2;
         private const float BlankBorderPx = 4f, BlankRadiusPx = 14f;
 
@@ -487,7 +487,7 @@ namespace Chapchu.EditorTools
             Quaternion rotation = TableRotation * Quaternion.Euler(0f, 0f, row.angle);
 
             string emptyName = $"{TrapSlotTextureName}{Mathf.RoundToInt(row.widthPx)}";
-            Material emptyMaterial = EnsureAlphaMaterial(emptyName, EnsureRoundTexture($"Assets/Sprites/Cards/{emptyName}.png", CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
+            Material emptyMaterial = EnsureAlphaMaterial(emptyName, EnsureRoundTexture($"Assets/Sprites/Cards/Frames/{emptyName}.png", CardSize, 0f, 4f / scale, 10f / scale, TrapSlotFill, TrapSlotEdge, TrapSlotDashPx / scale, TrapSlotDashPx / scale));
             Material blank = EnsureMaterial("CardBlank", EnsureBlankTexture(CardSize));
             Material back = EnsureMaterial("CardBack", BackTexturePath);
 

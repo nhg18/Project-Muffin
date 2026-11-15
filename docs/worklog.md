@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-11-15 · 스프라이트 폴더 정리 (`feature/turn-15s`)
+
+### 한 것
+- 카드 틀 · 뒷면 · 빈 칸 7장을 `Sprites/Cards/Frames/` 로 옮김 (`.meta` 째, GUID 유지). 빌더 경로(`TableBuilder` · `GameScreenBuilder`) · `10-ui` · `CODE_CONVENTION` 10절(카드 그림 `Cards/Art/<카드 ID>.png`, 틀 · 뒷면 · 빈 칸 `Cards/Frames/`)을 맞춤.
+- 쓰지 않는 스프라이트 31장 삭제: `Cards/Images` 옛 그림 24장 · `Cards/card_notext@4x` · `Button/` 2 · `Hands/` 3 · `sample.png`.
+- 아직 쓰던 옛 그림 2장은 노션 원본으로 돌린 뒤 삭제: `Images/1.jpg` → `Art/101.png`(옛 `Cards/Card_A_001`), `Images/A03.jpg` → `Art/117.png`(`CardFxTestScene` 지옥참마도 · `CardFxTestBuilder`).
+- `Player/C05.png` 는 옛 `OtherPlayerHand` 프리팹이 써서 그대로 둠.
+
+### 결정 (사용자)
+- 안 쓰는 스프라이트는 보관하지 않고 지운다. 카드 디테일 · HUD 디테일 · 턴 15초는 `feature/turn-15s` 하나로 PR.
+
+### 확인
+- 지운 파일의 GUID 를 `Assets` · `ProjectSettings` 의 씬 · 프리팹 · 에셋 · 머티리얼 · 아틀라스에서 찾음 — 0건.
+
+---
+
 ## 2026-11-14 · 3D 카드 생김새 — 프로토타입 v2 C3D (`feature/card-detail`)
 
 ### 한 것
