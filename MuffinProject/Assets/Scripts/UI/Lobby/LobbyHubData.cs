@@ -114,9 +114,19 @@ namespace Chapchu.UI.Lobby
         public const string UnnamedItem = "이름 미정";
         public const string GachaName = "개판 상자";
         public const string GachaSeason = "시즌 1 · 기간 미정";
+        /// <summary>한 번에 여러 장 뽑기(10연)의 장수 — 10회는 희귀 이상 1개 보장 (24 0절 「등급 · 확률」, 시안 값)</summary>
+        public const int GachaTenCount = 10;
+
+        /// <summary>상자 1회 값 (츄르) — 24 0절 「상자 가격」, 시안 값</summary>
         public const int GachaCostOne = 3;
+
+        /// <summary>상자 10회 값 (츄르) — 24 0절 「상자 가격」, 시안 값</summary>
         public const int GachaCostTen = 27;
+
+        /// <summary>천장 — 이 회차는 개판 확정 (24 0절 「천장」, 시안 값)</summary>
         public const int GachaPityMax = 50;
+
+        /// <summary>일일 퀘스트를 전부 받으면 주는 보너스 츄르 (24 0절 「퀘스트」, 시안 값)</summary>
         public const int DailyBonusChuru = 5;
 
         /// <summary>높은 등급부터 — 확률 표 · 뽑기 판정 순서</summary>
@@ -357,8 +367,8 @@ namespace Chapchu.UI.Lobby
                 grades.Add(grade);
             }
 
-            if (count == 10 && !grades.Exists(grade => grade >= HubGrade.Rare))
-                grades[9] = HubGrade.Rare;
+            if (count == GachaTenCount && !grades.Exists(grade => grade >= HubGrade.Rare))
+                grades[GachaTenCount - 1] = HubGrade.Rare;
 
             var results = new List<HubGachaResult>();
             foreach (HubGrade grade in grades)

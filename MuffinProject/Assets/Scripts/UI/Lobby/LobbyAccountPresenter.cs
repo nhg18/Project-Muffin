@@ -24,9 +24,6 @@ namespace Chapchu.UI.Lobby
         private const string DeleteWordError = "'삭제' 와 똑같이 입력해야 지워져요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
-        // 앱이 뒤로 갔다 돌아온 프레임의 큰 시간은 세지 않는다 (TitlePresenter 와 같다)
-        private const float MaxCountedFrameSeconds = 0.1f;
-
         [SerializeField] private LobbyPresenter lobby;
         [SerializeField] private LobbyHomeView home;
         [SerializeField] private LobbyProfilePopupView profile;
@@ -94,7 +91,7 @@ namespace Chapchu.UI.Lobby
             float waited = 0f;
             while (!save.IsCompleted && waited < AccountService.RequestTimeoutSeconds)
             {
-                waited += Mathf.Min(Time.unscaledDeltaTime, MaxCountedFrameSeconds);
+                waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
                 yield return null;
             }
 

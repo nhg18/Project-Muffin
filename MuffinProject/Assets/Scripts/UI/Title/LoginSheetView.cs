@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.UI.Lobby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,9 +27,6 @@ namespace Chapchu.UI.Title
         private const string NicknameTitle = "닉네임 정하기";
         private const string LoginFailTitle = "로그인 실패";
         private const string ConnectionFailTitle = "연결 실패";
-
-        private static readonly Color BandColor = new Color32(0xCF, 0xEE, 0xDD, 0xFF);
-        private static readonly Color BadBandColor = new Color32(0xEC, 0x3B, 0x46, 0xFF);
 
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
@@ -151,7 +149,7 @@ namespace Chapchu.UI.Title
 
         public void ShowAgree()
         {
-            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, BandColor, closable: true, agreeTopAndWidth);
+            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, LobbyStyle.Band, closable: true, agreeTopAndWidth);
             agreeBody.HideNeed(); // 판이 켜진 뒤에 — 꺼져 있으면 버튼 · 판의 Awake 가 아직 안 돌았다
         }
 
@@ -159,26 +157,26 @@ namespace Chapchu.UI.Title
         public void ShowLogin(bool showApple)
         {
             appleButton.gameObject.SetActive(showApple);
-            Open(LoginSheetStep.Login, StartTitle, keyIcon, BandColor, closable: true, loginTopAndWidth);
+            Open(LoginSheetStep.Login, StartTitle, keyIcon, LobbyStyle.Band, closable: true, loginTopAndWidth);
         }
 
         public void ShowLoading(string message)
         {
             loadingText.text = message;
-            Switch(LoginSheetStep.Loading, StartTitle, keyIcon, BandColor, closable: false, otherTopAndWidth);
+            Switch(LoginSheetStep.Loading, StartTitle, keyIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
         }
 
         /// <summary>닉네임 단계를 새로 연다 — 추천 이름을 미리 넣는다</summary>
         public void ShowNickname(string suggestion)
         {
             nicknameField.SetText(suggestion);
-            Open(LoginSheetStep.Nickname, NicknameTitle, userIcon, BandColor, closable: false, otherTopAndWidth);
+            Open(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
         }
 
         /// <summary>닉네임 단계로 돌아와 에러를 보인다 — 입력값은 그대로 (저장 실패 · 금칙어 거절)</summary>
         public void ReturnToNickname(string error)
         {
-            Switch(LoginSheetStep.Nickname, NicknameTitle, userIcon, BandColor, closable: false, otherTopAndWidth);
+            Switch(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
             nicknameField.ShowError(error);
         }
 
@@ -195,7 +193,7 @@ namespace Chapchu.UI.Title
             failDescription.text = description;
             failCode.text = code;
             otherButton.gameObject.SetActive(loginFailure);
-            Switch(LoginSheetStep.Fail, loginFailure ? LoginFailTitle : ConnectionFailTitle, alertIcon, BadBandColor, closable: loginFailure, otherTopAndWidth);
+            Switch(LoginSheetStep.Fail, loginFailure ? LoginFailTitle : ConnectionFailTitle, alertIcon, LobbyStyle.Hp, closable: loginFailure, otherTopAndWidth);
         }
 
         public void Hide()

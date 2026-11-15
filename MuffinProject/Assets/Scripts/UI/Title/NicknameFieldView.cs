@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.UI.Lobby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,9 +12,6 @@ namespace Chapchu.UI.Title
     /// </summary>
     public class NicknameFieldView : MonoBehaviour
     {
-        private static readonly Color InkColor = new Color32(0x2A, 0x24, 0x20, 0xFF);
-        private static readonly Color BadColor = new Color32(0xEC, 0x3B, 0x46, 0xFF);
-
         [SerializeField] private TMP_InputField inputField;
         [SerializeField] private TMP_Text countText;
         [SerializeField] private Image border;
@@ -86,14 +84,14 @@ namespace Chapchu.UI.Title
         {
             errorText.text = message;
             errorChip.SetActive(true);
-            border.color = BadColor;
+            border.color = LobbyStyle.Hp;
             UIJuice.Shake((RectTransform)border.transform.parent, 10f, 0.3f);
         }
 
         public void ClearError()
         {
             errorChip.SetActive(false);
-            border.color = InkColor;
+            border.color = LobbyStyle.Ink;
         }
 
         // 입력이 바뀌면 에러가 바로 사라진다 (12-title-ui 3절 #3)
