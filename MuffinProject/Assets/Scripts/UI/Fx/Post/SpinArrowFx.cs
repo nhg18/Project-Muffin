@@ -13,7 +13,7 @@ namespace Chapchu.UI.Fx.Post
     {
         [Tooltip("돌아가는 화살표 — 판 가운데. 시작은 투명.")]
         [SerializeField] private CanvasGroup arrow;
-        [Tooltip("커져서 돌고 사라질 때까지 (ms, 시안 spinArrow 1100ms · ease-out).")]
+        [Tooltip("커져서 돌고 사라질 때까지 (ms, 시안 spinArrow 1100ms · 전체에 ease-out 한 번).")]
         [SerializeField] private float durationMs = 1100f;
         [Tooltip("키프레임 시점 (0 ~ 1). 아래 배율 · 각도 · 투명도와 개수가 같아야 한다.")]
         [SerializeField] private float[] keys = { 0f, 0.4f, 0.8f, 1f };
@@ -36,13 +36,14 @@ namespace Chapchu.UI.Fx.Post
         {
             float pixelScale = context.Layer.PixelScale;
             var rect = (RectTransform)arrow.transform;
-            Tween spin = DOVirtual.Float(0f, 1f, durationMs / 1000f, t =>
+            Tween spin = DOVirtual.Float(0f, 1f, durationMs / 1000f, time =>
             {
+                // 시안은 animate(..., {easing:"ease-out"}) — 옵션의 easing 은 구간마다가 아니라 전체 진행도에 한 번 걸린다
+                float t = CssEaseOut(time);
                 int i = 0;
                 while (i < keys.Length - 2 && t > keys[i + 1])
                     i++;
-                // CSS 처럼 ease-out 을 키프레임 구간마다 따로 건다
-                float f = CssEaseOut(Mathf.InverseLerp(keys[i], keys[i + 1], t));
+                float f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
                 rect.localScale = Vector3.one * (pixelScale * Mathf.Lerp(scales[i], scales[i + 1], f));
                 // 시안은 시계 방향 + — 유니티는 반시계 방향 +
                 rect.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(angles[i], angles[i + 1], f));
