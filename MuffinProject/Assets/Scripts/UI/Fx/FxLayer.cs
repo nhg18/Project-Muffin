@@ -372,16 +372,6 @@ namespace Chapchu.UI.Fx
                 .Append(stage.DOScale(1f, punchOutSeconds).SetEase(Ease.OutCubic));
         }
 
-        /// <summary>키프레임 시점 keys(오름차순, 2개 이상) 중 진행도 t 가 든 구간 i ~ i + 1 과 그 안의 비율 f (0 ~ 1).</summary>
-        public static int KeySpan(float[] keys, float t, out float f)
-        {
-            int i = 0;
-            while (i < keys.Length - 2 && t > keys[i + 1])
-                i++;
-            f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
-            return i;
-        }
-
         #region 4 단계 공통 — 맞음 · 회복 · 말풍선 · 자리 흔들기
 
         /// <summary>시안 hit — 터짐 숫자 「-n」 · 파편 · (큰 피해면) 번짐 + 판 흔들림 14, 아니면 6 · 자리 흔들림. 체력 바는 부르는 쪽이 바꾼다.</summary>
@@ -469,7 +459,10 @@ namespace Chapchu.UI.Fx
             root.localScale = Vector3.zero;
             DOVirtual.Float(0f, 1f, bubbleSeconds, t =>
             {
-                int i = KeySpan(bubbleKeys, t, out float f);
+                int i = 0;
+                while (i < bubbleKeys.Length - 2 && t > bubbleKeys[i + 1])
+                    i++;
+                float f = Mathf.InverseLerp(bubbleKeys[i], bubbleKeys[i + 1], t);
                 root.localScale = Vector3.one * Mathf.Lerp(bubbleScales[i], bubbleScales[i + 1], f);
                 group.alpha = Mathf.Lerp(bubbleAlphas[i], bubbleAlphas[i + 1], f);
             }).SetEase(Ease.Linear).SetLink(root.gameObject).OnComplete(() => Destroy(root.gameObject));
@@ -603,7 +596,10 @@ namespace Chapchu.UI.Fx
 
             DOVirtual.Float(0f, 1f, boomSeconds, t =>
             {
-                int i = KeySpan(boomKeys, t, out float f);
+                int i = 0;
+                while (i < boomKeys.Length - 2 && t > boomKeys[i + 1])
+                    i++;
+                float f = Mathf.InverseLerp(boomKeys[i], boomKeys[i + 1], t);
                 group.alpha = Mathf.Lerp(boomAlphas[i], boomAlphas[i + 1], f);
                 root.localScale = Vector3.one * Mathf.Lerp(boomScales[i], boomScales[i + 1], f);
                 root.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(boomAngles[i], boomAngles[i + 1], f));

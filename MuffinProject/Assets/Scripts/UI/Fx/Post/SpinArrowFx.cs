@@ -40,7 +40,10 @@ namespace Chapchu.UI.Fx.Post
             {
                 // 시안은 animate(..., {easing:"ease-out"}) — 옵션의 easing 은 구간마다가 아니라 전체 진행도에 한 번 걸린다
                 float t = CssEaseOut(time);
-                int i = FxLayer.KeySpan(keys, t, out float f);
+                int i = 0;
+                while (i < keys.Length - 2 && t > keys[i + 1])
+                    i++;
+                float f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
                 rect.localScale = Vector3.one * (pixelScale * Mathf.Lerp(scales[i], scales[i + 1], f));
                 // 시안은 시계 방향 + — 유니티는 반시계 방향 +
                 rect.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(angles[i], angles[i + 1], f));
