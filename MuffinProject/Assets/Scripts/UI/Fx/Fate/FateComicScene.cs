@@ -198,6 +198,8 @@ namespace Chapchu.UI.Fx.Fate
             ComicKit.ShowFace(targetFace, context.Fx.Character, faceArea, noFaceColor);
             _casterHp = context.From != null ? context.From.Hp : 0;
             _targetHp = context.Target != null ? context.Target.Hp : 0;
+            SetChip(casterChip, _casterHp);
+            SetChip(targetChip, _targetHp);
         }
 
         public override void Draw(float t, ComicContext context)
@@ -221,20 +223,20 @@ namespace Chapchu.UI.Fx.Fate
             float swap = Eio((t - swapAt) / swapTime);
             if (swap <= 0f)
             {
-                PlaceChip(casterChip, chipLeft.x, chipLeft.y, _casterHp, chipColor);
-                PlaceChip(targetChip, chipRight.x, chipRight.y, _targetHp, chipColor);
+                PlaceChip(casterChip, chipLeft.x, chipLeft.y, chipColor);
+                PlaceChip(targetChip, chipRight.x, chipRight.y, chipColor);
             }
             else if (swap >= 1f)
             {
                 float rise = (1f - ComicKit.Back((t - swapAt - swapTime) / settleTime, settleOvershoot)) * settleRise;
-                PlaceChip(targetChip, chipLeft.x, chipLeft.y - rise, _targetHp, ChangeColor(_targetHp, _casterHp));
-                PlaceChip(casterChip, chipRight.x, chipRight.y - rise, _casterHp, ChangeColor(_casterHp, _targetHp));
+                PlaceChip(targetChip, chipLeft.x, chipLeft.y - rise, ChangeColor(_targetHp, _casterHp));
+                PlaceChip(casterChip, chipRight.x, chipRight.y - rise, ChangeColor(_casterHp, _targetHp));
             }
             else
             {
                 float lift = Mathf.Sin(swap * Mathf.PI) * swapArc;
-                PlaceChip(casterChip, ComicKit.Lerp(chipLeft.x, chipRight.x, swap), chipLeft.y - lift, _casterHp, chipColor);
-                PlaceChip(targetChip, ComicKit.Lerp(chipRight.x, chipLeft.x, swap), chipRight.y + lift * swapDip, _targetHp, chipColor);
+                PlaceChip(casterChip, ComicKit.Lerp(chipLeft.x, chipRight.x, swap), chipLeft.y - lift, chipColor);
+                PlaceChip(targetChip, ComicKit.Lerp(chipRight.x, chipLeft.x, swap), chipRight.y + lift * swapDip, chipColor);
             }
 
             whoosh.Apply((t - whooshAt) / whooshTime);
@@ -288,21 +290,16 @@ namespace Chapchu.UI.Fx.Fate
             return now < old ? chipDownColor : chipColor;
         }
 
-        private void PlaceChip(HpChip chip, float x, float y, int hp, Color color)
+        private void SetChip(HpChip chip, int hp)
+        {
+            ComicKit.FitTag(chip.text, chip.shadow, chip.box, string.Format(HpFormat, hp), chipPadding, chipHeight, chipLine);
+        }
+
+        private static void PlaceChip(HpChip chip, float x, float y, Color color)
         {
             ComicKit.Place(chip.root, x, y);
-            string text = string.Format(HpFormat, hp);
             if (chip.text.color != color)
                 chip.text.color = color;
-            if (chip.text.text == text)
-                return;
-            // 표 크기 맞추기는 틀로 모을 후보 — 이 작업에서는 틀(ComicKit)을 고치지 않는다
-            chip.text.text = text;
-            float width = chip.text.GetPreferredValues(text).x + chipPadding;
-            float height = chip.text.fontSize * chipHeight;
-            chip.shadow.sizeDelta = new Vector2(width, height);
-            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
-            chip.box.sizeDelta = new Vector2(width + chipLine, height + chipLine);
         }
 
         private void PaintBackdrop(ComicPen pen)

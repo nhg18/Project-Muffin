@@ -264,6 +264,8 @@ namespace Chapchu.DebugTools
                 CasterSeat = me,
                 TargetSeats = new[] { other },
                 Seats = new[] { me, other },
+                // 받는 사람 흉내 (무야호) — 대상(상대)의 손패가 넉넉하다고 보고 쓴 사람부터 대상을 뺀 턴 순서
+                Receivers = new[] { me },
             };
         }
 

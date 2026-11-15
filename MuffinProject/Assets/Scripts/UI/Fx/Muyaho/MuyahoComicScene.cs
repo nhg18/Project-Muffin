@@ -10,9 +10,9 @@ namespace Chapchu.UI.Fx.Muyaho
     /// <summary>
     /// 무야호(카드 118) 만화 컷인 장면 — 손패가 제일 많은 사람이 나머지에게 한 장씩 준다 (시안 CI2.SC["무야호"]).
     /// 알래스카 하늘 · 겹겹 설산 · 햇살 · 눈발 위로 밈 사진이 튀어 올라 콩콩 뛰고, 0.32 초부터 「무~ 야~ 호~」 한 글자씩 찍힌 뒤 0.9 초 「!」.
-    /// 0.75 초부터 오른쪽 아래 손패 부자 얼굴 + 「-n」, 그 왼쪽 나머지 사람(최대 셋)에게 카드가 한 장씩 날아가 「+1」.
+    /// 0.75 초부터 오른쪽 아래 손패 부자 얼굴 + 「-n」, 그 왼쪽 받는 사람(최대 셋)에게 카드가 한 장씩 날아가 「+1」.
     /// 4 단계는 손패 이동(게임 화면 몫)뿐이라 장식이 없다 (시안 FXA 무야호 s4 = moveCards).
-    /// 손패 부자 = 카드의 대상 <see cref="ComicContext.Target"/> (손패가 가장 많은 1명, 낼 때 정해 공개 — 11-card-list 118). 받는 사람 = 대상을 뺀 모두.
+    /// 손패 부자 = 카드의 대상 <see cref="ComicContext.Target"/> (손패가 가장 많은 1명, 낼 때 정해 공개 — 11-card-list 118). 받는 사람 = 쓴 사람부터 턴 순서대로, 카드가 모자라면 떨어진 데까지 — 부르는 쪽이 <see cref="CardFxContext.Receivers"/> 로 정해 준다.
     /// 얼굴은 <see cref="CardFxContext.Character"/> 의 얼굴 칸을 동그랗게 잘라 쓴다 (사람마다 그림이 생기기 전까지 모두 같다).
     /// 연출 길이 2.56초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
@@ -308,14 +308,8 @@ namespace Chapchu.UI.Fx.Muyaho
                 tildes[i].Painter = pen => PaintTilde(pen, index);
             }
 
-            // 손패 부자 = 카드의 대상 (낼 때 정해 공개). 나머지는 턴 순서대로 셋까지
-            CardFxSeat rich = context.Target;
-            _receiverCount = 0;
-            foreach (CardFxSeat seat in context.Fx.Seats)
-            {
-                if (seat != null && seat != rich && _receiverCount < receivers.Length)
-                    _receiverCount++;
-            }
+            // 손패 부자 = 카드의 대상 (낼 때 정해 공개). 받는 사람은 부르는 쪽이 정한 순서대로 셋까지
+            _receiverCount = Mathf.Min(context.Fx.Receivers.Count, receivers.Length);
 
             Sprite character = context.Fx.Character;
             ComicKit.ShowFace(giver.face, character, faceArea, noFaceColor);
@@ -353,8 +347,11 @@ namespace Chapchu.UI.Fx.Muyaho
                 syllables[i].Apply(k, new Vector2(0f, wave));
                 _tildeAt[i] = syllables[i].RestPosition + new Vector2(0f, wave);
                 bool tail = i < syllables.Length - 1 || t > bangAt;
+                // 보이거나 막 사라진 프레임에만 다시 그린다
+                float lastAlpha = _tildeAlpha[i];
                 _tildeAlpha[i] = k > 0f && tail ? ComicKit.Cl(k * tildeFade) : 0f;
-                tildes[i].Redraw();
+                if (_tildeAlpha[i] > 0f || lastAlpha > 0f)
+                    tildes[i].Redraw();
             }
             bang.Apply((t - bangAt) / bangTime);
 
@@ -404,15 +401,9 @@ namespace Chapchu.UI.Fx.Muyaho
             target.localScale = new Vector3(scale, scale, 1f);
         }
 
-        // 표 크기 맞추기는 틀로 모을 후보 — 이 작업에서는 틀(ComicKit)을 고치지 않는다
         private void SetTag(Tag tag, string text)
         {
-            tag.text.text = text;
-            float width = tag.text.GetPreferredValues(text).x + tagPadding;
-            float height = tag.text.fontSize * tagHeight;
-            tag.shadow.sizeDelta = new Vector2(width, height);
-            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
-            tag.box.sizeDelta = new Vector2(width + tagLine, height + tagLine);
+            ComicKit.FitTag(tag.text, tag.shadow, tag.box, text, tagPadding, tagHeight, tagLine);
         }
 
         private void PaintGlow(ComicPen pen)
