@@ -17,12 +17,10 @@ namespace Chapchu.UI.Fx.Comic
         /// <summary>카드를 낸 사람 (시안 P.from).</summary>
         public CardFxSeat From { get; }
 
-        /// <summary>
-        /// 맞는 사람 (시안 P.tg) — 낸 사람이 아닌 첫 대상, 없으면 낸 사람이 아닌 첫 사람, 그것도 없으면 낸 사람.
-        /// </summary>
+        /// <summary>맞는 사람 (시안 P.tg) — <see cref="CardFxContext.MainTarget"/>.</summary>
         public CardFxSeat Target { get; }
 
-        /// <summary>낸 사람이 아닌 사람들, 턴 순서 (시안 P.others).</summary>
+        /// <summary>낸 사람이 아닌 사람들, 턴 순서 (시안 P.others) — <see cref="CardFxContext.Others"/>.</summary>
         public IReadOnlyList<CardFxSeat> Others => _others;
 
         /// <summary>낸 사람의 강아지 키 (시안 P.me).</summary>
@@ -39,21 +37,8 @@ namespace Chapchu.UI.Fx.Comic
         {
             Fx = fx;
             From = fx.CasterSeat;
-            foreach (CardFxSeat seat in fx.Seats)
-            {
-                if (seat != null && seat != From)
-                    _others.Add(seat);
-            }
-            foreach (CardFxSeat seat in fx.TargetSeats)
-            {
-                if (seat != null && seat != From)
-                {
-                    Target = seat;
-                    break;
-                }
-            }
-            if (Target == null)
-                Target = _others.Count > 0 ? _others[0] : From;
+            Target = fx.MainTarget;
+            _others.AddRange(fx.Others);
             if (hits != null)
                 _hits.AddRange(hits);
         }
@@ -75,7 +60,7 @@ namespace Chapchu.UI.Fx.Comic
                 if (other == seat)
                     break;
             }
-            return FxDog.Keys[Mathf.Clamp(order, 1, FxDog.Keys.Length - 1)];
+            return FxDog.Keys[Mathf.Clamp(order, 1, FxDog.Keys.Count - 1)];
         }
 
         /// <summary>자리의 얼굴 그림 (시안 P.avs · avOf) — 지금은 모두 <see cref="CardFxContext.Character"/>.</summary>

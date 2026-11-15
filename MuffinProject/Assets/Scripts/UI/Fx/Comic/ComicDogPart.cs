@@ -72,7 +72,7 @@ namespace Chapchu.UI.Fx.Comic
                     break;
                 }
                 case Layer.Legs:
-                    for (int i = 0; i < FxDog.Legs.Length; i++)
+                    for (int i = 0; i < FxDog.Legs.Count; i++)
                     {
                         Vector2 at = FxDog.Legs[i];
                         pen.Save();

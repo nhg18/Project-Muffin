@@ -173,7 +173,7 @@ namespace Chapchu.UI.Fx.Bark
                 target.Rotation = Lean + LeanWobble * Mathf.Exp(-hitT * LeanDamping) * Mathf.Cos(hitT * LeanFrequency);
                 target.ScaleX = HitWidth;
                 target.Skew = HitSkew * Mathf.Exp(-hitT * SkewDamping);
-                for (int i = 0; i < FxDog.Legs.Length; i++)
+                for (int i = 0; i < FxDog.Legs.Count; i++)
                     target.SetLeg(i, (FxDog.LegFront[i] ? FrontLegKick : BackLegKick) * Mathf.Exp(-hitT * LegDamping));
             }
             ComicKit.Place((RectTransform)target.transform, tx, TargetY);

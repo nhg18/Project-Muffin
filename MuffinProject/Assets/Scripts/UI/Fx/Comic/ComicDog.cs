@@ -53,7 +53,7 @@ namespace Chapchu.UI.Fx.Comic
         [Tooltip("강아지마다 부품 그림.")]
         [SerializeField] private Skin[] skins = Array.Empty<Skin>();
 
-        private readonly float[] _legs = new float[4];
+        private readonly float[] _legs = new float[FxDog.Legs.Count];
         private ComicDogPart[] _parts;
         private float _rotation;
         private float _scaleX = 1f;
