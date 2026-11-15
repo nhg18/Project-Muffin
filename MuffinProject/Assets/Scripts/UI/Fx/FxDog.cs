@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Chapchu.UI.Fx
 {
@@ -12,7 +14,7 @@ namespace Chapchu.UI.Fx
     public static class FxDog
     {
         /// <summary>강아지 키 — 시안 DOGPILE.KEYS (나 · 초코 · 콩이 · 보리).</summary>
-        public static readonly string[] Keys = { "na", "choco", "kongi", "bori" };
+        public static readonly IReadOnlyList<string> Keys = Array.AsReadOnly(new[] { "na", "choco", "kongi", "bori" });
 
         /// <summary>부품 그림 크기 / 원본 좌표 크기.</summary>
         public const float Scale = 0.5f;
@@ -42,19 +44,19 @@ namespace Chapchu.UI.Fx
         public static readonly Vector2 LegPivot = new Vector2(52f, 38f);
 
         /// <summary>다리 넷이 붙는 자리 (그리는 순서 — 먼 쪽 앞 · 뒤, 가까운 쪽 앞 · 뒤). 다리는 몸보다 먼저(뒤에) 그린다.</summary>
-        public static readonly Vector2[] Legs =
+        public static readonly IReadOnlyList<Vector2> Legs = Array.AsReadOnly(new[]
         {
             new Vector2(478f, 712f),
             new Vector2(760f, 708f),
             new Vector2(340f, 716f),
             new Vector2(846f, 712f),
-        };
+        });
 
         /// <summary>다리가 먼 쪽(화면 안쪽)인가 — Legs 와 같은 순서.</summary>
-        public static readonly bool[] LegFar = { true, true, false, false };
+        public static readonly IReadOnlyList<bool> LegFar = Array.AsReadOnly(new[] { true, true, false, false });
 
         /// <summary>앞다리인가 — Legs 와 같은 순서.</summary>
-        public static readonly bool[] LegFront = { true, false, true, false };
+        public static readonly IReadOnlyList<bool> LegFront = Array.AsReadOnly(new[] { true, false, true, false });
 
         /// <summary>얼굴 부위 자리 (원본 좌표) — 시안 CI2.DOGF. 땀 · 말풍선 꼬리 · 반짝임을 얼굴에 맞춰 붙일 때.</summary>
         public static readonly Vector2 EyeLeft = new Vector2(290f, 420f), EyeRight = new Vector2(560f, 420f), Nose = new Vector2(425f, 485f),

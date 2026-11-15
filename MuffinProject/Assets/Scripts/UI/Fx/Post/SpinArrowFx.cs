@@ -41,14 +41,31 @@ namespace Chapchu.UI.Fx.Post
                 int i = 0;
                 while (i < keys.Length - 2 && t > keys[i + 1])
                     i++;
-                float f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
+                // CSS 처럼 ease-out 을 키프레임 구간마다 따로 건다
+                float f = CssEaseOut(Mathf.InverseLerp(keys[i], keys[i + 1], t));
                 rect.localScale = Vector3.one * (pixelScale * Mathf.Lerp(scales[i], scales[i + 1], f));
                 // 시안은 시계 방향 + — 유니티는 반시계 방향 +
                 rect.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(angles[i], angles[i + 1], f));
                 arrow.alpha = Mathf.Lerp(alphas[i], alphas[i + 1], f);
-            }).SetEase(Ease.OutQuad).SetLink(arrow.gameObject);
+            }).SetEase(Ease.Linear).SetLink(arrow.gameObject);
 
             yield return spin.WaitForCompletion();
+        }
+
+        // CSS ease-out = cubic-bezier(0, 0, .58, 1) — 시간 x 에 맞는 곡선 위치 s 를 반씩 좁혀 찾고 진행도 y(s) 를 돌려준다
+        private static float CssEaseOut(float x)
+        {
+            float lo = 0f, hi = 1f, s = x;
+            for (int n = 0; n < 20; n++)
+            {
+                s = (lo + hi) * 0.5f;
+                float bx = 3f * (1f - s) * s * s * 0.58f + s * s * s;
+                if (bx < x)
+                    lo = s;
+                else
+                    hi = s;
+            }
+            return 3f * (1f - s) * s * s + s * s * s;
         }
     }
 }

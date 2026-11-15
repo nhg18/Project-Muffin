@@ -20,7 +20,9 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private float gap = 12f;
 
         [Header("파편 (시안 shatter 의 burst)")]
+        [Tooltip("파편 개수.")]
         [SerializeField] private int burstCount = 36;
+        [Tooltip("파편 색 — 파편마다 이 중 하나를 무작위로 고른다.")]
         [SerializeField] private Color[] burstColors = { new Color32(0x8a, 0x6b, 0x5a, 0xff), Color.white, new Color32(0xff, 0xd2, 0x3f, 0xff) };
         [Tooltip("파편 속도 범위 (시안 px/초, 최소 · 최대).")]
         [SerializeField] private Vector2 burstSpeed = new Vector2(200f, 560f);
@@ -28,7 +30,9 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private float burstGravity = 700f;
 
         [Header("터짐 글자")]
+        [Tooltip("함정 카드 자리에 터지는 글자.")]
         [SerializeField] private string boomText = "파괴!";
+        [Tooltip("터짐 글자 색.")]
         [SerializeField] private Color boomColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
 
         [Header("카드가 사라짐 (시안 300ms, 일정한 속도)")]

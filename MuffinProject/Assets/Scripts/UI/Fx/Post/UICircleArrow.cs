@@ -43,9 +43,11 @@ namespace Chapchu.UI.Fx.Post
         [Header("테두리 · 그림자")]
         [Tooltip("글자 바깥 테두리 두께 (시안 -webkit-text-stroke 7px 중 면 밖으로 보이는 절반).")]
         [SerializeField] private float strokeWidth = 3.5f;
+        [Tooltip("글자 바깥 테두리 색.")]
         [SerializeField] private Color strokeColor = Color.white;
         [Tooltip("그림자 위치 (시안 drop-shadow 0 6px — 아래로 6).")]
         [SerializeField] private Vector2 shadowOffset = new Vector2(0f, -6f);
+        [Tooltip("아래 그림자 색.")]
         [SerializeField] private Color shadowColor = new Color32(0x2b, 0x28, 0x56, 0xff);
 
         [Header("그림")]
