@@ -113,9 +113,6 @@ namespace Chapchu.UI.Fx.Comic
         private void Awake()
         {
             _group = GetComponent<CanvasGroup>();
-            _group.alpha = 0f;
-            _group.blocksRaycasts = false;
-            _group.interactable = false;
             if (background == null)
                 Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(background)} 가 비었다");
             if (titleBlock == null)

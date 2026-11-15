@@ -104,6 +104,19 @@ namespace Chapchu.UI.Fx.Comic
 
         private void Awake()
         {
+            if (band == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(band)} 가 비었다");
+            if (title == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(title)} 가 비었다");
+            if (tagBox == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagBox)} 가 비었다");
+            if (tagLabel == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagLabel)} 가 비었다");
+            if (tagGroup == null)
+            {
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagGroup)} 가 비었다");
+                return;
+            }
             var tagRect = (RectTransform)tagGroup.transform;
             _tagRestX = tagRect.anchoredPosition.x;
         }

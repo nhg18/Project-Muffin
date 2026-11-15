@@ -54,21 +54,6 @@ namespace Chapchu.UI.Fx.Comic
         /// <summary>테 · 그림자를 다 만들었거나, 만들 그림이 없거나, 만들지 못했으면(그림만 보인다) true.</summary>
         public bool IsReady => art == null || _built != null || _failed;
 
-        /// <summary>스티커로 만들 그림. 바꾸면 테를 다시 만들어야 한다 (<see cref="StartBuild"/>).</summary>
-        public Sprite Art
-        {
-            get => art;
-            set
-            {
-                if (art == value)
-                    return;
-                art = value;
-                _failed = false;
-                ReleaseBuilt();
-                SetAllDirty();
-            }
-        }
-
         public override Texture mainTexture
         {
             get
