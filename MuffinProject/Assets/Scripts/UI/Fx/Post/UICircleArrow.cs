@@ -1,19 +1,15 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.Post
 {
     /// <summary>
     /// 둥근 화살표 (UI 도형) — 시안 「뒤로 돌아」 의 ↺ 글자 (Windows 에서 보이는 Segoe UI Symbol 모양: 열린 고리 + 꺾쇠 화살촉, 10-ui 5-1 4 단계 장식).
     /// 프로젝트 글꼴에 이 글자가 없어서 코드로 그린다. 글자 테두리(-webkit-text-stroke)와 아래 그림자(drop-shadow)도 같이 — 면 색 = Graphic.color.
-    /// 켜질 때 모양(고리 · 화살대 · 꺾쇠 두 팔의 거리 함수)을 이 오브젝트 크기의 그림 한 장에 그린다. 메시 여러 겹으로 그리면 CanvasGroup 으로 흐리게 할 때
-    /// 그림자 · 테두리가 면 너머로 비치는데, 한 장이면 CSS opacity 처럼 통째로 흐려진다.
+    /// 켜질 때 모양(고리 · 화살대 · 꺾쇠 두 팔의 거리 함수)을 이 오브젝트 크기의 그림 한 장에 그린다 (<see cref="UIBakedGraphic"/>).
     /// 길이 값은 이 오브젝트 단위 (시안 px 로 넣고 오브젝트 배율로 키운다). 고리 가운데 = 오브젝트 기준점. 각도는 오른쪽이 0, 반시계 방향 +.
     /// </summary>
-    [RequireComponent(typeof(CanvasRenderer))] // Graphic 은 CanvasRenderer 를 스스로 붙이지 않는다 — 없으면 아무것도 그려지지 않는다
-    public class UICircleArrow : MaskableGraphic
+    public class UICircleArrow : UIBakedGraphic
     {
-        private const int MaxTexels = 1024;
         // 화살대 · 꺾쇠 두 팔 — 꼭짓점 넷인 볼록 다각형 셋
         private const int PolygonCount = 3;
         private const int PolygonSides = 4;
@@ -50,20 +46,8 @@ namespace Chapchu.UI.Fx.Post
         [Tooltip("아래 그림자 색.")]
         [SerializeField] private Color shadowColor = new Color32(0x2b, 0x28, 0x56, 0xff);
 
-        [Header("그림")]
-        [Tooltip("가장 클 때 화면 1 픽셀에 텍셀 몇 개. 그림 크기 = 이 오브젝트 크기 × 가장 큰 배율 × 실제 캔버스 배율 × 이 값 — 화면이 클수록 그림도 크고 그리는 시간도 늘어난다.")]
-        [SerializeField] private float texelsPerPixel = 1f;
-
         // 화살대 · 꺾쇠 두 팔의 변 — (바깥 법선 x, y, 법선 방향 위치). 점까지 거리 = 법선 · 점 − 위치
         private readonly Vector3[] _planes = new Vector3[PolygonCount * PolygonSides];
-        // 화면에서 가장 클 때 이 오브젝트의 배율 (부모 기준) — 키우는 쪽이 SetMaxScale 로 넘긴다
-        private float _maxScale = 1f;
-#if UNITY_EDITOR
-        // OnValidate 가 여러 번 불려도 다음 틱에 한 번만 다시 그린다
-        private bool _redrawQueued;
-#endif
-        private Texture2D _texture;
-        private Color32[] _pixels;
         private Vector2 _startOut;
         private Vector2 _endOut;
         private Vector2 _gapMiddle;
@@ -72,93 +56,23 @@ namespace Chapchu.UI.Fx.Post
         // 가장 좁은 모서리에서 넓힌 거리 1 당 꼭짓점 밖으로 뻗는 길이 (1 / sin(모서리 각 / 2)) — 변 거리의 최댓값으로 넓히면 모서리가 뾰족하게 뻗는다
         private float _headMiter;
 
-        public override Texture mainTexture => _texture != null ? _texture : s_WhiteTexture;
-
         protected override void OnEnable()
         {
             base.OnEnable();
             Redraw();
         }
 
-        protected override void OnDestroy()
-        {
-            if (_texture != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(_texture);
-                else
-                    DestroyImmediate(_texture);
-            }
-            base.OnDestroy();
-        }
-
-#if UNITY_EDITOR
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-            // 값을 읽는 중에는 그림을 만들 수 없다 — 다음 에디터 틱에 다시 그린다
-            if (_redrawQueued)
-                return;
-            _redrawQueued = true;
-            UnityEditor.EditorApplication.delayCall += () =>
-            {
-                _redrawQueued = false;
-                if (this != null && isActiveAndEnabled)
-                    Redraw();
-            };
-        }
-#endif
-
-        /// <summary>화면에서 가장 클 때 이 오브젝트의 배율(부모 기준)을 정한다. 바뀌었으면 그 크기에 맞게 그림을 다시 그린다.</summary>
-        public void SetMaxScale(float scale)
-        {
-            if (Mathf.Approximately(_maxScale, scale))
-                return;
-            _maxScale = scale;
-            if (isActiveAndEnabled)
-                Redraw();
-        }
-
-        protected override void OnPopulateMesh(VertexHelper vh)
-        {
-            // 그림 한 장을 이 오브젝트 크기 그대로. 색은 그림에 있다 — 꼭짓점 색은 투명도만
-            vh.Clear();
-            Rect rect = rectTransform.rect;
-            Color32 tint = new Color(1f, 1f, 1f, color.a);
-            vh.AddVert(new Vector3(rect.xMin, rect.yMin), tint, new Vector4(0f, 0f));
-            vh.AddVert(new Vector3(rect.xMin, rect.yMax), tint, new Vector4(0f, 1f));
-            vh.AddVert(new Vector3(rect.xMax, rect.yMax), tint, new Vector4(1f, 1f));
-            vh.AddVert(new Vector3(rect.xMax, rect.yMin), tint, new Vector4(1f, 0f));
-            vh.AddTriangle(0, 1, 2);
-            vh.AddTriangle(2, 3, 0);
-        }
-
         // 모양을 이 오브젝트 크기의 그림에 다시 그린다 — 텍셀마다 그림자 → 테두리 → 면을 겹친다
-        private void Redraw()
+        protected override void Redraw()
         {
-            Rect rect = rectTransform.rect;
-            float texelsPerUnit = texelsPerPixel * _maxScale * PixelsPerParentUnit();
-            int width = Mathf.Clamp(Mathf.CeilToInt(rect.width * texelsPerUnit), 1, MaxTexels);
-            int height = Mathf.Clamp(Mathf.CeilToInt(rect.height * texelsPerUnit), 1, MaxTexels);
-            if (_texture == null || _texture.width != width || _texture.height != height)
-            {
-                if (_texture != null)
-                    DestroyImmediate(_texture);
-                _texture = new Texture2D(width, height, TextureFormat.RGBA32, true)
-                {
-                    name = nameof(UICircleArrow),
-                    hideFlags = HideFlags.DontSave,
-                    wrapMode = TextureWrapMode.Clamp,
-                    filterMode = FilterMode.Bilinear
-                };
-                _pixels = new Color32[width * height];
-            }
-
+            Rect rect = DrawRect;
+            Color32[] pixels = BeginDraw(out int width, out int height);
             BuildShape();
             float texelX = rect.width / width;
             float texelY = rect.height / height;
             float edge = Mathf.Max(texelX, texelY);
-            Color fill = color;
+            // 투명도는 꼭짓점 색(color.a)이 곱한다 — 그림의 면은 불투명하게
+            var fill = new Color(color.r, color.g, color.b, 1f);
             for (int y = 0; y < height; y++)
             {
                 float pointY = rect.yMin + (y + 0.5f) * texelY;
@@ -169,50 +83,11 @@ namespace Chapchu.UI.Fx.Post
                     float shadow = Distance(pointX - shadowOffset.x, pointY - shadowOffset.y) - strokeWidth;
                     float stroke = body - strokeWidth;
 
-                    // 투명도를 곱해 둔 색으로 겹친다: 그림자 → 테두리 → 면
-                    float alpha = shadowColor.a * Coverage(shadow, edge);
-                    float red = shadowColor.r * alpha, green = shadowColor.g * alpha, blue = shadowColor.b * alpha;
-                    float top = strokeColor.a * Coverage(stroke, edge);
-                    red = strokeColor.r * top + red * (1f - top);
-                    green = strokeColor.g * top + green * (1f - top);
-                    blue = strokeColor.b * top + blue * (1f - top);
-                    alpha = top + alpha * (1f - top);
-                    top = Coverage(body, edge);
-                    red = fill.r * top + red * (1f - top);
-                    green = fill.g * top + green * (1f - top);
-                    blue = fill.b * top + blue * (1f - top);
-                    alpha = top + alpha * (1f - top);
-
-                    Color result;
-                    if (alpha > 0f)
-                    {
-                        result = new Color(red / alpha, green / alpha, blue / alpha, alpha);
-                    }
-                    else
-                    {
-                        // 빈 텍셀은 가까운 겹의 색으로 — 그림을 늘려 그릴 때 가장자리가 검게 번지지 않게
-                        result = shadow < stroke ? shadowColor : strokeColor;
-                        result.a = 0f;
-                    }
-                    _pixels[y * width + x] = result;
+                    pixels[y * width + x] = Layer(shadowColor, Coverage(shadow, edge), strokeColor, Coverage(stroke, edge), fill, Coverage(body, edge), shadow < stroke);
                 }
             }
 
-            _texture.SetPixels32(_pixels);
-            _texture.Apply(true);
-            SetMaterialDirty();
-            SetVerticesDirty();
-        }
-
-        // 부모 1 단위가 지금 화면 몇 픽셀인가 — 실제 캔버스 배율(CanvasScaler) × 캔버스에서 부모까지의 배율. 캔버스 밖(프리팹 편집 등)이면 1
-        private float PixelsPerParentUnit()
-        {
-            Canvas root = canvas != null ? canvas.rootCanvas : null;
-            Transform parent = rectTransform.parent;
-            if (root == null || parent == null)
-                return 1f;
-            float rootScale = root.transform.lossyScale.x;
-            return rootScale > 0f ? root.scaleFactor * parent.lossyScale.x / rootScale : 1f;
+            EndDraw();
         }
 
         // 고리 끝 방향과, 화살대 · 꺾쇠 두 팔(볼록 사각형)의 변을 미리 구한다
@@ -305,9 +180,6 @@ namespace Chapchu.UI.Fx.Post
         }
 
         private static float Cross(float ax, float ay, float bx, float by) => ax * by - ay * bx;
-
-        // 거리 → 덮는 정도 (가장자리 한 텍셀을 흐린다)
-        private static float Coverage(float distance, float edge) => Mathf.Clamp01(0.5f - distance / edge);
 
         private static Vector2[] Ccw(Vector2[] points)
         {

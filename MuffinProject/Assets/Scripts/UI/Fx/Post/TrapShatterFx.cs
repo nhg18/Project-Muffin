@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using DG.Tweening;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.Post
 {
@@ -12,12 +11,12 @@ namespace Chapchu.UI.Fx.Post
     /// </summary>
     public class TrapShatterFx : CardFx
     {
-        [Tooltip("깨질 함정 카드 (그림자 · 뒷면 · 테두리). 시작은 투명, 크기는 재생할 때 아래 크기로 맞춘다.")]
+        [Tooltip("깨질 함정 카드 — 흐리게 하는 그룹. 시작은 투명.")]
         [SerializeField] private CanvasGroup trap;
-        [Tooltip("함정 카드 크기 (시안 px — 시안 .vw-trap 62 × 92). 재생할 때 연출 레이어 배율(PixelScale)을 곱한다.")]
+        [Tooltip("함정 카드 그림 (그림자 · 테두리 · 뒷면 한 장) — trap 오브젝트의 UITrapCard. 재생할 때 카드 뒷면(CardFxContext.CardBack)으로 그린다.")]
+        [SerializeField] private UITrapCard shape;
+        [Tooltip("함정 카드 크기 (시안 px — 시안 .vw-trap 62 × 92). 오브젝트 배율로 연출 레이어 배율(PixelScale)을 곱한다.")]
         [SerializeField] private Vector2 trapSize = new Vector2(62f, 92f);
-        [Tooltip("함정 카드 뒷면 그림 — 재생할 때 카드 뒷면(CardFxContext.CardBack)을 넣는다.")]
-        [SerializeField] private Image back;
         [Tooltip("대상 자리 가장자리와 함정 카드 사이 (시안 px — 시안 .vw-trap 의 182px − 자리 너비 170px).")]
         [SerializeField] private float gap = 12f;
 
@@ -49,17 +48,24 @@ namespace Chapchu.UI.Fx.Post
 
         private void Awake()
         {
-            if (trap == null || back == null || burstColors == null || burstColors.Length == 0)
-                Debug.LogError($"[{nameof(TrapShatterFx)}] 참조 중 비어 있는 것이 있습니다.", this);
+            if (trap == null)
+                Debug.LogError($"[{nameof(TrapShatterFx)}] 함정 카드 그룹(trap) 참조가 비어 있습니다.", this);
+            if (shape == null)
+                Debug.LogError($"[{nameof(TrapShatterFx)}] 함정 카드 그림(shape) 참조가 비어 있습니다.", this);
+            if (burstColors == null || burstColors.Length == 0)
+                Debug.LogError($"[{nameof(TrapShatterFx)}] 파편 색(burstColors)이 비어 있습니다.", this);
         }
 
         public override IEnumerator PlayPostRoutine(CardFxContext context)
         {
             FxLayer layer = context.Layer;
+            float pixelScale = layer.PixelScale;
             var card = (RectTransform)trap.transform;
-            back.sprite = context.CardBack;
-            card.sizeDelta = trapSize * layer.PixelScale;
-            card.anchoredPosition = TrapSpot(context.MainTarget.Anchor, card.sizeDelta, gap * layer.PixelScale);
+            card.sizeDelta = trapSize;
+            card.localScale = Vector3.one * pixelScale;
+            card.anchoredPosition = TrapSpot(context.MainTarget.Anchor, trapSize * pixelScale, gap * pixelScale);
+            // 사라질 때 가장 크게 커지는 배율로 그린다
+            shape.Draw(context.CardBack, pixelScale * vanishScale);
             trap.alpha = 1f;
 
             Vector2 center = layer.CenterOf(card);
@@ -68,7 +74,7 @@ namespace Chapchu.UI.Fx.Post
 
             float seconds = vanishMs / 1000f;
             DOTween.Sequence().SetLink(card.gameObject)
-                .Join(card.DOScale(vanishScale, seconds).SetEase(Ease.Linear))
+                .Join(card.DOScale(pixelScale * vanishScale, seconds).SetEase(Ease.Linear))
                 // 시안은 시계 방향 + — 유니티는 반시계 방향 +
                 .Join(card.DOLocalRotate(new Vector3(0f, 0f, -vanishAngle), seconds).SetEase(Ease.Linear))
                 .Join(trap.DOFade(0f, seconds).SetEase(Ease.Linear));
