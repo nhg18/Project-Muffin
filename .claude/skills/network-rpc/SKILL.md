@@ -12,4 +12,9 @@ description: 찹츄 네트워크 권한 규칙. Photon RPC · CustomProperties �
 3. 체력 · 덱 · 손패 · 함정 · 턴 · 찹츄 상태의 원본은 방장 메모리에 하나만 있다. 클라이언트는 받은 결과만 반영한다.
 4. 비공개 정보(내 손패 내용, 남의 함정 종류)는 대상 지정 RPC 로 그 사람에게만 보낸다.
 5. `CustomProperties` 는 모두가 봐도 되는 작은 값(턴 주인, 손패 장수, 체력, 생존)에만 쓴다. 키는 상수 클래스에 모은다.
-6. 방장 전용 RPC 는 첫 줄에 `if (!PhotonNetwork.IsMasterClient) return;`.
+6. 방장 전용 RPC · 경로는 첫 줄에 `if (!IsTrustedMaster) return;` (`NetworkManager.TrustedMaster` 가 나 — `PhotonNetwork.IsMasterClient` 가 아니라). 요청 RPC 는 둘째 줄에 `if (!AllowRequest(info)) return;` (빈도 제한). 요청은 `RpcTarget.MasterClient` 가 아니라 믿는 방장 Player 에게 보낸다 (`SendRequest`).
+7. 아무 클라나 방 속성 · 남의 Player 속성 · 방 설정 · 방장 자리를 바꿀 수 있다 (`09-network` 13절). 그래서
+   * 방장의 속성 쓰기는 `NetworkManager.SetRoomProps` · `SetPlayerProps` · `UpdateRoomOptions` 로만 — 남이 바꾸면 되돌린다. `SetCustomProperties` 를 직접 부르지 않는다.
+   * 결과 RPC 는 `NetworkManager.TrustedMaster` 가 보낸 것만 받는다 (`PhotonNetwork.IsMasterClient` 가 아니라).
+   * 화면이 속성에서 읽는 값은 범위 · 길이를 확인한다 (남이 잠깐 바꿨을 수 있다).
+   * 방 전원 씬 이동은 `NetworkManager.LoadSceneForAll` (PUN 씬 동기화는 끈다).

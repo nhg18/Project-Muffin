@@ -60,12 +60,14 @@
 * 게임 규칙 판정은 방장만. 참가자는 `RPC_Request*` 로 요청하고, 방장이 판정해 결과를 모두에게 보낸다 → skill `network-rpc`.
 * RPC 이름은 `nameof(RPC_Xxx)`. 문자열로 쓰지 않는다 (hook 이 막는다).
 * 네트워크 콜백은 `Network/Events/` 의 static 이벤트로 바꿔 흘린다. UI 는 Photon 을 직접 구독하지 않는다.
+* 방장의 속성 쓰기는 `NetworkManager.SetRoomProps` · `SetPlayerProps` · `UpdateRoomOptions` 로만 한다. 방 전원 씬 이동은 `NetworkManager.LoadSceneForAll` (`09-network` 13절).
 
 ## 7. 시간과 로그
 
 * 지연 · 연출은 코루틴 또는 DOTween. `async void` 금지 (hook 이 막는다). `Invoke("Method")` · `SendMessage` 금지.
 * 로그는 `Debug.Log($"[{nameof(ClassName)}] ...")`. 어느 클라이언트인지 알아야 할 때는 닉네임을 넣는다. `Update` 안에서는 로그하지 않는다.
 * 예외를 빈 `catch` 로 삼키지 않는다.
+* 비공개 정보(손패 · 함정 내용, 덱 순서)는 개발 빌드에서만 로그한다 — `if (Debug.isDebugBuild)`. 출시 빌드의 로그 파일은 그 기기 주인이 읽을 수 있다 (`09-network` 13절 #13).
 
 ## 8. C# 버전
 
