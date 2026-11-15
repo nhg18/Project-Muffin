@@ -91,12 +91,7 @@ namespace Chapchu.Network
         /// 닉네임 설정 함수
         /// </summary>
         /// <param name="nickname">닉네임</param>
-        public void SetNickname(string nickname)
-        {
-            if (!string.IsNullOrEmpty(nickname))
-                _guard.RememberNickname(nickname); // 남이 내 이름 속성을 바꾸면 이것으로 되돌린다 (09-network.md 13절 #4)
-            _connection.SetNickname(nickname);
-        }
+        public void SetNickname(string nickname) => _connection.SetNickname(nickname);
 
         /// <summary>
         /// 플레이어 식별자 — UGS 플레이어 ID (23-login 3절 #10). 접속 전에 넣는다.

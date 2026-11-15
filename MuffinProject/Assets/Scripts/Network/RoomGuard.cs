@@ -27,7 +27,6 @@ namespace Chapchu.Network
         private int _maxPlayers;
         private int _playerTtl;
         private int _emptyRoomTtl;
-        private string _nickname;
 
         // 다음 프레임에 되돌릴 것 — 한 프레임에 여러 번 바뀌어도 한 번만 쓴다
         private readonly Hashtable _roomRestore = new Hashtable();
@@ -87,9 +86,6 @@ namespace Chapchu.Network
 
             room.MaxPlayers = _maxPlayers = maxPlayers;
         }
-
-        /// <summary>내 닉네임 — 남이 내 이름 속성을 바꾸면 이것으로 되돌린다 (방장이 아니어도).</summary>
-        public void RememberNickname(string nickname) => _nickname = nickname;
 
         private static void Remember(Hashtable intended, Hashtable props)
         {
@@ -213,7 +209,7 @@ namespace Chapchu.Network
 
             // 내 이름은 누구든 지킨다 — Photon 은 내 기기의 이름을 그대로 두고 남의 화면에서만 바꾼다
             if (target == PhotonNetwork.LocalPlayer.ActorNumber && props.ContainsKey(ActorProperties.PlayerName)
-                && _nickname != null && !Equals(props[ActorProperties.PlayerName], _nickname))
+                && !Equals(props[ActorProperties.PlayerName], PhotonNetwork.LocalPlayer.NickName))
                 _nicknameRestore = true;
 
             if (!IsTrustedMaster)

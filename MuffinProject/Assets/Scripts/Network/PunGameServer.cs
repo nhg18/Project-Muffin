@@ -20,11 +20,11 @@ namespace Chapchu.Network
     /// GameScene 에 하나 둔다. 모든 클라이언트에 있지만 규칙은 방장에서만 돈다.
     /// </summary>
     // ── 요청 하나 추가하는 법 (예: 함정 설치) ──
-    // 1. 보내기:  public void RequestSetTrap(int cardInstanceId) => photonView.RPC(nameof(RPC_RequestSetTrap), RpcTarget.MasterClient, cardInstanceId);
+    // 1. 보내기:  public void RequestSetTrap(int cardInstanceId) => SendRequest(nameof(RPC_RequestSetTrap), cardInstanceId);
     // 2. 받기 (방장). 요청자는 인자로 받지 말고 info.Sender 를 쓴다:
     //        [PunRPC] private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
     //        {
-    //            if (!PhotonNetwork.IsMasterClient) return;
+    //            if (!IsTrustedMaster) return;
     //            Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
     //        }
     // 3. 새 종류의 일이면 Send 의 switch 에 case 를 더한다 — 누구에게(전원 / 주인만) 보낼지는 여기서 정한다.
@@ -65,11 +65,11 @@ namespace Chapchu.Network
         // 한 프레임 뒤에 — 방장 자신에게는 알림이 그 자리에서 재생되므로, 화면들의 Start(좌석 대응 · 스냅샷 복구)가 먼저 끝나야 시작 알림이 덮어쓴다.
         private IEnumerator Start()
         {
-            if (!PhotonNetwork.IsMasterClient)
+            if (!IsTrustedMaster)
                 yield break;
 
             yield return null;
-            if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
+            if (!IsTrustedMaster)
                 yield break;
 
             // 봇도 플레이어다 — 사람 뒤에 봇 번호 순으로 넣고, 턴 순서는 규칙이 섞는다 (18-bot.md 3절 #6)
@@ -111,7 +111,7 @@ namespace Chapchu.Network
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
         private void Update()
         {
-            if (!PhotonNetwork.IsMasterClient)
+            if (!IsTrustedMaster)
                 return;
 
             Send(_server.Tick());
@@ -130,36 +130,52 @@ namespace Chapchu.Network
         #region 요청 (각 클라 → 방장)
 
         /// <summary>카드 1장 뽑기 (메인 행동). 결과는 GameEvents 로 온다.</summary>
-        public void RequestDraw() => photonView.RPC(nameof(RPC_RequestDraw), RpcTarget.MasterClient);
+        public void RequestDraw() => SendRequest(nameof(RPC_RequestDraw));
 
         /// <summary>행동 카드 사용. 대상은 고르는 카드일 때만 쓰인다 (자동 대상이면 방장이 무시).</summary>
-        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
+        public void RequestPlayCard(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestPlayCard), cardInstanceId, targetActorNumbers);
 
         /// <summary>함정 설치 — 내 턴 · 메인 행동 전 · 빈 슬롯 (04-card.md 6절). 메인 행동이 아니다.</summary>
-        public void RequestSetTrap(int cardInstanceId) => photonView.RPC(nameof(RPC_RequestSetTrap), RpcTarget.MasterClient, cardInstanceId);
+        public void RequestSetTrap(int cardInstanceId) => SendRequest(nameof(RPC_RequestSetTrap), cardInstanceId);
 
         /// <summary>설치한 함정 발동 — 조건 · 시점은 방장이 본다 (04-card.md 6절 「발동 시점」). 대상은 고르는 카드일 때만 쓰인다.</summary>
-        public void RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestActivateTrap), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
+        public void RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestActivateTrap), cardInstanceId, targetActorNumbers);
 
         /// <summary>
         /// 내 손패 · 설치 함정 내용을 다시 받는다 (09-network.md 10절) — 화면이 늦게 열렸거나 다시 그릴 때. 답은 GameEvents.OnMySync.
         /// 공개 값(체력 · 장수 · 턴)은 CustomProperties 스냅샷으로 읽는다.
         /// </summary>
-        public void RequestMySync() => photonView.RPC(nameof(RPC_RequestMySync), RpcTarget.MasterClient);
+        public void RequestMySync() => SendRequest(nameof(RPC_RequestMySync));
 
         /// <summary>찹츄 선언 — 내 턴 · 손패가 정확히 10장일 때 (07-win-condition.md 4.1).</summary>
-        public void RequestDeclareChapchu() => photonView.RPC(nameof(RPC_RequestDeclareChapchu), RpcTarget.MasterClient);
+        public void RequestDeclareChapchu() => SendRequest(nameof(RPC_RequestDeclareChapchu));
 
         /// <summary>내가 고르는 효과의 답 (119 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
-        public void RequestChoose(int option) => photonView.RPC(nameof(RPC_RequestChoose), RpcTarget.MasterClient, option);
+        public void RequestChoose(int option) => SendRequest(nameof(RPC_RequestChoose), option);
 
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
-        public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => photonView.RPC(nameof(RPC_RequestPlayCounter), RpcTarget.MasterClient, cardInstanceId, targetActorNumbers);
+        public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestPlayCounter), cardInstanceId, targetActorNumbers);
+
+        // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
+        private void SendRequest(string rpcName, params object[] parameters)
+        {
+            Player master = PhotonNetwork.CurrentRoom?.GetPlayer(NetworkManager.TrustedMaster);
+            if (master == null)
+            {
+                Debug.LogWarning($"[{nameof(PunGameServer)}] 믿는 방장이 없다 — {rpcName} 요청을 보내지 않는다");
+                return;
+            }
+
+            photonView.RPC(rpcName, master, parameters);
+        }
+
+        // 방장만 하는 일(요청 처리 · 진행)은 믿는 방장인지로 본다 — 방장 자리를 가져간 사람이 판을 돌리지 않게
+        private static bool IsTrustedMaster => PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == NetworkManager.TrustedMaster;
 
         [PunRPC]
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.Draw(info.Sender.ActorNumber));
         }
@@ -167,7 +183,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestPlayCard(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
@@ -175,7 +191,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
         }
@@ -183,7 +199,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.ActivateTrap(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
@@ -191,7 +207,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestMySync(PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
 
             // 지금까지 보낸 알림 뒤에 간다 — 받는 쪽은 이 번호 전의 묵은 알림을 버린다
@@ -203,7 +219,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.DeclareChapchu(info.Sender.ActorNumber));
         }
@@ -211,7 +227,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestChoose(int option, PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.Choose(info.Sender.ActorNumber, option));
         }
@@ -219,7 +235,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
@@ -566,7 +582,7 @@ namespace Chapchu.Network
         private IEnumerator ReturnToRoomRoutine()
         {
             yield return new WaitForSeconds(resultSeconds);
-            if (!PhotonNetwork.IsMasterClient || !PhotonNetwork.InRoom)
+            if (!IsTrustedMaster)
                 yield break;
 
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
