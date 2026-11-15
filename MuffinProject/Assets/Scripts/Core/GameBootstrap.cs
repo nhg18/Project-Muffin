@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using Chapchu.Network;
+using Chapchu.UI.Popups;
+using UnityEngine;
 
 namespace Chapchu.Core
 {
@@ -9,11 +11,11 @@ namespace Chapchu.Core
     /// </summary>
     public static class GameBootstrap
     {
-        /// <summary>생성 순서대로 나열한다. 먼저 필요한 매니저를 앞에 둔다.</summary>
+        /// <summary>생성 순서대로 나열한다. 먼저 필요한 매니저를 앞에 둔다. 프리팹 이름 = 매니저 클래스 이름 (ResourcePaths.Bootstrap 아래).</summary>
         private static readonly string[] ManagerPrefabs =
         {
-            "NetworkManager",
-            "PopupManager",
+            nameof(NetworkManager),
+            nameof(PopupManager),
         };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

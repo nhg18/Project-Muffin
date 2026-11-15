@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.UI.Lobby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,9 +26,6 @@ namespace Chapchu.UI.Title
         private const string MaintenanceTitle = "점검 중";
         private const string QuitTitle = "게임 종료";
         private const string QuitBody = "게임을 종료할까요?";
-
-        private static readonly Color BandColor = new Color32(0xCF, 0xEE, 0xDD, 0xFF);
-        private static readonly Color WarnBandColor = new Color32(0xFF, 0x9F, 0x1A, 0xFF);
 
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
@@ -81,12 +79,12 @@ namespace Chapchu.UI.Title
         }
 
         /// <summary>업데이트 필요 — 닫을 수 없다, 「스토어로」 (20 7-9)</summary>
-        public void ShowUpdate() => Show(TitlePopup.Update, UpdateTitle, UpdateBody, alertIcon, WarnBandColor);
+        public void ShowUpdate() => Show(TitlePopup.Update, UpdateTitle, UpdateBody, alertIcon, LobbyStyle.Warn);
 
         /// <summary>점검 중 — 닫을 수 없다, 본문은 Remote Config 안내 문구 그대로 (23 7-6)</summary>
-        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, clockIcon, WarnBandColor);
+        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, clockIcon, LobbyStyle.Warn);
 
-        public void ShowQuit() => Show(TitlePopup.Quit, QuitTitle, QuitBody, doorIcon, BandColor);
+        public void ShowQuit() => Show(TitlePopup.Quit, QuitTitle, QuitBody, doorIcon, LobbyStyle.Band);
 
         public void Hide()
         {

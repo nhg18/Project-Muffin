@@ -56,6 +56,6 @@ namespace Chapchu.UI.Lobby
 
         private void HandleOneClicked() => OnRollRequested?.Invoke(1);
 
-        private void HandleTenClicked() => OnRollRequested?.Invoke(10);
+        private void HandleTenClicked() => OnRollRequested?.Invoke(LobbyHubData.GachaTenCount);
     }
 }

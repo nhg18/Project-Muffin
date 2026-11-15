@@ -21,10 +21,13 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private Vector2 offsetY = new Vector2(30f, 60f);
 
         [Header("줄 빛")]
+        [Tooltip("사방으로 뻗는 줄 빛 개수.")]
         [SerializeField] private int streakCount = 34;
+        [Tooltip("줄 빛 색 — 하나씩 무작위로 고른다.")]
         [SerializeField] private Color[] streakColors = { Color.white, new Color32(0xff, 0x2a, 0x3a, 0xff), new Color32(0xff, 0x6a, 0x6a, 0xff) };
 
         [Header("번짐")]
+        [Tooltip("대상 위 번짐 색.")]
         [SerializeField] private Color bloomColor = new Color32(0xff, 0x1a, 0x2a, 0xff);
         [Tooltip("번짐 크기 (px).")]
         [SerializeField] private float bloomSize = 340f;
@@ -32,6 +35,7 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float bloomMs = 450f;
 
         [Header("고리")]
+        [Tooltip("퍼지는 고리 색.")]
         [SerializeField] private Color ringColor = Color.white;
         [Tooltip("고리가 퍼지는 반지름 (px).")]
         [SerializeField] private float ringRadius = 280f;

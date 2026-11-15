@@ -44,8 +44,23 @@ namespace Chapchu.UI.Title
         private const string MaintenanceToastText = "점검이 끝나면 저절로 이어져요.";
         private const string ExternalLoginFailedCode = "ExternalLoginFailed";
 
-        // 앱이 뒤로 갔다 돌아온 프레임의 큰 시간은 세지 않는다 — 시간 제한은 앱이 앞에 있는 동안만 센다 (20 10절)
-        private const float MaxCountedFrameSeconds = 0.1f;
+        // 로그인 실패 — 거절(만료) · 그 밖 · Google · Apple ({0} = 방법 이름)
+        private const string SignInRejectedTitle = "로그인 실패";
+        private const string SignInRejectedText = "로그인이 만료됐어요. 다시 시도해 주세요.";
+        private const string SignInUnavailableTitle = "로그인할 수 없음";
+        private const string SignInUnavailableText = "연결을 확인하고 다시 시도해 주세요.";
+        private const string ExternalLoginFailedTitleFormat = "{0} 로그인 실패";
+        private const string ExternalLoginFailedTextFormat = "{0} 계정으로 로그인하지 못했어요. 다른 방법으로 시작해 주세요.";
+
+        // 연결 실패 사유 (12-title-ui 10-5 — 문구는 시안의 해요체). {0} = 접속 제한 초 (PhotonConnection.ConnectTimeoutSeconds)
+        private const string NoInternetTitle = "인터넷 연결 없음";
+        private const string NoInternetText = "Wi-Fi 또는 데이터 연결을 확인해 주세요.";
+        private const string ConnectTimeoutTitle = "연결 시간 초과";
+        private const string ConnectTimeoutTextFormat = "서버가 {0}초 안에 응답하지 않았어요. 다시 시도해 주세요.";
+        private const string ServerBusyTitle = "서버 혼잡";
+        private const string ServerBusyText = "접속자가 많아요. 잠시 후 다시 시도해 주세요.";
+        private const string DisconnectedTitle = "연결 끊김";
+        private const string DisconnectedText = "연결이 끊어졌어요. 다시 시도해 주세요.";
 
         [SerializeField] private TitleBottomView bottom;
         [SerializeField] private LoginSheetView sheet;
@@ -601,8 +616,8 @@ namespace Chapchu.UI.Title
             Debug.LogWarning($"[{nameof(TitlePresenter)}] 로그인 실패: {exception?.Message ?? "시간 초과"}");
 
             (string title, string description) = AccountService.Classify(exception) == SignInFailure.Rejected
-                ? ("로그인 실패", "로그인이 만료됐어요. 다시 시도해 주세요.")
-                : ("로그인할 수 없음", "연결을 확인하고 다시 시도해 주세요.");
+                ? (SignInRejectedTitle, SignInRejectedText)
+                : (SignInUnavailableTitle, SignInUnavailableText);
             ShowFail(FailKind.Login, title, description, AccountService.GetErrorCodeName(exception));
         }
 
@@ -612,19 +627,19 @@ namespace Chapchu.UI.Title
             _autoSignIn = false;
             _method = method;
             Debug.LogWarning($"[{nameof(TitlePresenter)}] {method} 로그인은 아직 연결하지 않았다 (SDK 설정 전)");
-            ShowFail(FailKind.Login, $"{method} 로그인 실패", $"{method} 계정으로 로그인하지 못했어요. 다른 방법으로 시작해 주세요.", ExternalLoginFailedCode);
+            ShowFail(FailKind.Login, string.Format(ExternalLoginFailedTitleFormat, method), string.Format(ExternalLoginFailedTextFormat, method), ExternalLoginFailedCode);
         }
 
-        // 연결 실패 사유 (12-title-ui 10-5 — 문구는 시안의 해요체). 오류 코드 = DisconnectCause 이름 그대로
+        // 연결 실패 사유 (12-title-ui 10-5). 오류 코드 = DisconnectCause 이름 그대로
         private static (string title, string description) GetConnectionFailText(DisconnectCause cause) => cause switch
         {
             DisconnectCause.ExceptionOnConnect or
             DisconnectCause.DnsExceptionOnConnect or
-            DisconnectCause.ServerAddressInvalid => ("인터넷 연결 없음", "Wi-Fi 또는 데이터 연결을 확인해 주세요."),
+            DisconnectCause.ServerAddressInvalid => (NoInternetTitle, NoInternetText),
             DisconnectCause.ClientTimeout or
-            DisconnectCause.ServerTimeout => ("연결 시간 초과", "서버가 15초 안에 응답하지 않았어요. 다시 시도해 주세요."),
-            DisconnectCause.MaxCcuReached => ("서버 혼잡", "접속자가 많아요. 잠시 후 다시 시도해 주세요."),
-            _ => ("연결 끊김", "연결이 끊어졌어요. 다시 시도해 주세요."),
+            DisconnectCause.ServerTimeout => (ConnectTimeoutTitle, string.Format(ConnectTimeoutTextFormat, PhotonConnection.ConnectTimeoutSeconds)),
+            DisconnectCause.MaxCcuReached => (ServerBusyTitle, ServerBusyText),
+            _ => (DisconnectedTitle, DisconnectedText),
         };
 
         #endregion
@@ -663,7 +678,7 @@ namespace Chapchu.UI.Title
             float waited = 0f;
             while (!task.IsCompleted && waited < timeoutSeconds)
             {
-                waited += Mathf.Min(Time.unscaledDeltaTime, MaxCountedFrameSeconds);
+                waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
                 yield return null;
             }
 

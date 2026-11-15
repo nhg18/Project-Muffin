@@ -92,6 +92,7 @@ namespace Chapchu.UI.Fx.Common
         [Header("묵직한 칼선")]
         [Tooltip("이 번째마다 묵직한 칼선 (굵은 칼선을 더 굵고 길게 + 번쩍 + 판 튕김).")]
         [SerializeField] private int heavyEvery = 5;
+        [Tooltip("묵직한 칼선 굵기 — 굵은 칼선 굵기에 곱한다.")]
         [SerializeField] private float heavyWidthScale = 1.7f;
         [Tooltip("그대로 보이는 시간 (ms).")]
         [SerializeField] private float heavyDrawMs = 55f;
@@ -100,6 +101,7 @@ namespace Chapchu.UI.Fx.Common
         [Tooltip("흔들림 (px).")]
         [SerializeField] private float heavyShake = 22f;
         [Range(0f, 1f)]
+        [Tooltip("묵직한 칼선 때 번쩍이는 판의 투명도.")]
         [SerializeField] private float heavyFlashAlpha = 0.45f;
         [Tooltip("번쩍임이 사라지는 시간 (ms).")]
         [SerializeField] private float heavyFlashMs = 70f;

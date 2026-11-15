@@ -30,6 +30,12 @@ namespace Chapchu.Account
         /// <summary>닉네임 읽기 · 저장 요청 시간 제한 (20 4절)</summary>
         public const float RequestTimeoutSeconds = 15f;
 
+        /// <summary>
+        /// 요청 시간 제한을 셀 때 한 프레임에서 더하는 최대 초 — 앱이 뒤로 갔다 돌아온 프레임의 큰 시간은 세지 않는다.
+        /// 시간 제한은 앱이 앞에 있는 동안만 센다 (20 10절). 로그인 · 닉네임 저장 · 방 요청이 같이 쓴다.
+        /// </summary>
+        public const float MaxCountedFrameSeconds = 0.1f;
+
         public static bool IsInitialized => UnityServices.State == ServicesInitializationState.Initialized;
 
         public static bool IsSignedIn => IsInitialized && AuthenticationService.Instance.IsSignedIn;

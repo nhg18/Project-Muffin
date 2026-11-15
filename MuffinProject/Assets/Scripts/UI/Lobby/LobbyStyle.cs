@@ -4,13 +4,14 @@ using UnityEngine.UI;
 
 namespace Chapchu.UI.Lobby
 {
-    /// <summary>로비 뷰들이 실행 중에 바꾸는 색 · 모양 — 「통합 화면 UI v2」 키트 값.</summary>
+    /// <summary>로비 · 타이틀 · 룸 뷰들이 실행 중에 바꾸는 색 · 모양 — 「통합 화면 UI v2」 키트 값.</summary>
     public static class LobbyStyle
     {
         public static readonly Color Ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
         public static readonly Color Ink2 = new Color32(0x6E, 0x64, 0x5C, 0xFF);
         public static readonly Color Turn = new Color32(0xFF, 0xC1, 0x2E, 0xFF);
         public static readonly Color Hp = new Color32(0xEC, 0x3B, 0x46, 0xFF);
+        public static readonly Color HpFill = new Color32(0xFF, 0xF1, 0xEF, 0xFF);
         public static readonly Color Ok = new Color32(0x3C, 0xBF, 0x72, 0xFF);
         public static readonly Color Off = new Color32(0xB8, 0xAE, 0xA4, 0xFF);
         public static readonly Color Soft = new Color32(0xF6, 0xF0, 0xE7, 0xFF);

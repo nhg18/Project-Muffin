@@ -24,6 +24,7 @@ namespace Chapchu.UI.Fx.HellBlade
         [SerializeField] private float peekAtMs = 130f;
         [Tooltip("여기까지 칼 프레임을 넘긴다.")]
         [SerializeField] private int peekFrame = 2;
+        [Tooltip("칼날을 살짝 내미는 데 걸리는 시간 (ms).")]
         [SerializeField] private float peekMs = 110f;
 
         [Header("칼 뽑기 + 눈 뜨기 (같은 시각 · 시간 · 곡선)")]
@@ -33,8 +34,11 @@ namespace Chapchu.UI.Fx.HellBlade
         [SerializeField] private float drawMs = 50f;
         [Tooltip("끝으로 갈수록 느려지는 정도 (1 = 고르게). 칼 프레임과 눈 크기가 함께 쓴다.")]
         [SerializeField] private float easePower = 2.2f;
+        [Tooltip("감은 눈 크기 배율 (가로 · 세로) — 여기서 튀어 열린다.")]
         [SerializeField] private Vector2 eyeFrom = new Vector2(1.04f, 0.05f);
+        [Tooltip("튀어 열린 눈 크기 배율 (가로 · 세로).")]
         [SerializeField] private Vector2 eyePeak = new Vector2(1.08f, 1.3f);
+        [Tooltip("튀어 연 뒤 살짝 눌린 눈 크기 배율 (가로 · 세로).")]
         [SerializeField] private Vector2 eyeSquash = new Vector2(0.98f, 0.94f);
         [Tooltip("눈이 눌리는 시간 (ms).")]
         [SerializeField] private float squashMs = 55f;
@@ -50,9 +54,11 @@ namespace Chapchu.UI.Fx.HellBlade
         [SerializeField] private float tintMs = 100f;
         [Tooltip("튕길 때 카메라 크기.")]
         [SerializeField] private float zoomPeak = 1.13f;
+        [Tooltip("튕기는 크기까지 가는 시간 (ms).")]
         [SerializeField] private float zoomPeakMs = 110f;
         [Tooltip("튕긴 뒤 머무는 카메라 크기.")]
         [SerializeField] private float zoomSettle = 1.1f;
+        [Tooltip("튕긴 뒤 머무는 크기로 돌아오는 시간 (ms).")]
         [SerializeField] private float zoomSettleMs = 110f;
 
         protected override IEnumerator PlaySceneRoutine(float start, float offsetMs)

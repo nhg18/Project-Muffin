@@ -13,9 +13,11 @@ namespace Chapchu.Game.Effects
         internal override EffectTag Tag => EffectTag.DestroyTrap;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry);
 
-        // 함정 1장 = 카드 2장 남짓
+        // 함정 1장 = 카드 2장 남짓 (18-bot.md 7-3 「함정 파괴」)
+        private const double BotPerTrapScore = 20;
+
         internal override double BotScore(Bots.BotView view, int[] receivers) =>
-            receivers.Where(actor => actor != view.Bot).Sum(actor => Math.Min(count, view.Server.TrapCountOf(actor)) * 20.0);
+            receivers.Where(actor => actor != view.Bot).Sum(actor => Math.Min(count, view.Server.TrapCountOf(actor)) * BotPerTrapScore);
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {

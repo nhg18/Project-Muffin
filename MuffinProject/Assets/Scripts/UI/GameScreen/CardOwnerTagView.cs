@@ -19,8 +19,11 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private UIShape kindBox;
         [Tooltip("작은 카드에서 종류 색으로 칠하는 이미지 (띠).")]
         [SerializeField] private Image[] kindImages;
+        [Tooltip("행동 카드 종류 색.")]
         [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
+        [Tooltip("카운터 카드 종류 색.")]
         [SerializeField] private Color counterColor = new Color32(0x6f, 0xa4, 0x34, 0xFF);
+        [Tooltip("함정 카드 종류 색.")]
         [SerializeField] private Color trapColor = new Color32(0xf6, 0x46, 0x12, 0xFF);
 
         private void Awake()

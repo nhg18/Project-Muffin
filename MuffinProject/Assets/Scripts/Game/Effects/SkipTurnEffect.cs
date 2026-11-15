@@ -8,6 +8,12 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class SkipTurnEffect : CardEffect
     {
+        // 18-bot.md 7-3 「턴 건너뛰기」
+        private const double BotBaseScore = 10;
+        private const double BotChapchuScore = 120;   // 대상이 찹츄 상태
+        private const double BotNearChapchuWeight = 0.5; // 아니면 「찹츄 가까움」 × 이 값
+        private const double BotTwoLeftBonus = 20;    // 둘만 남았다
+
         public EffectSubject subject;
 
         internal override EffectTag Tag => EffectTag.SkipTurn;
@@ -25,9 +31,9 @@ namespace Chapchu.Game.Effects
                 if (actor == view.Bot || view.Server.WillSkipTurn(actor))
                     continue;
 
-                score += 10 + (view.SeesChapchu(actor) ? 120 : view.NearChapchu(view.Server.HandCountOf(actor)) * 0.5);
+                score += BotBaseScore + (view.SeesChapchu(actor) ? BotChapchuScore : view.NearChapchu(view.Server.HandCountOf(actor)) * BotNearChapchuWeight);
                 if (view.Opponents.Length == 1)
-                    score += 20;
+                    score += BotTwoLeftBonus;
             }
 
             return score;

@@ -7,6 +7,7 @@ namespace Chapchu.Core
     /// </summary>
     public static class RandomCode
     {
+        /// <summary>방 코드 자릿수 (08-room.md 2절 「room code」 · 5절 #3).</summary>
         public const int Length = 6;
 
         public static string GenerateRandomCode()

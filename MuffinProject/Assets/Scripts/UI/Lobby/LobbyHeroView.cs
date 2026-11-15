@@ -37,6 +37,15 @@ namespace Chapchu.UI.Lobby
         [Tooltip("사망 연출에서 캐릭터가 물드는 잿빛")]
         [SerializeField] private Color deathTint = new Color(0.55f, 0.55f, 0.55f, 1f);
 
+        [Tooltip("사망 연출 시간 비율 — 잿빛으로 물듦 · 머묾 · 돌아옴 (전체 길이에 곱한다, 합 1)")]
+        [SerializeField] private Vector3 deathPhaseRatios = new Vector3(0.33f, 0.47f, 0.2f);
+
+        [Tooltip("카드 연출 시간 비율 — 날아와 나타남 · 머묾 · 사라짐 (전체 길이에 곱한다, 합 1)")]
+        [SerializeField] private Vector3 cardPhaseRatios = new Vector3(0.35f, 0.5f, 0.15f);
+
+        [Tooltip("보유하지 않은 카드 뒷면 미리보기의 불투명도 (0 ~ 1) — 뒷면 그림이 없어 옅게 보인다")]
+        [SerializeField] private float unownedCardAlpha = 0.25f;
+
         private Vector2 _cardOrigin;
         private bool _isSilhouette;
         private Sequence _replay;
@@ -88,25 +97,25 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _replay = DOTween.Sequence().SetUpdate(true)
-                .Append(character.DOColor(deathTint, replaySeconds * 0.33f))
-                .AppendInterval(replaySeconds * 0.47f)
-                .Append(character.DOColor(Color.white, replaySeconds * 0.2f));
+                .Append(character.DOColor(deathTint, replaySeconds * deathPhaseRatios.x))
+                .AppendInterval(replaySeconds * deathPhaseRatios.y)
+                .Append(character.DOColor(Color.white, replaySeconds * deathPhaseRatios.z));
         }
 
         /// <summary>카드 뒷면 미리보기 — 오른쪽 아래에서 날아와 잠깐 보이고 사라진다. owned 가 아니면 뒷면 그림이 없어 옅게 보인다.</summary>
         public void PlayCard(bool owned)
         {
             StopReplay();
-            cardPreviewImage.color = owned ? Color.white : new Color(1f, 1f, 1f, 0.25f);
+            cardPreviewImage.color = owned ? Color.white : new Color(1f, 1f, 1f, unownedCardAlpha);
             cardPreview.anchoredPosition = _cardOrigin + cardFlyOffset;
             cardPreview.localEulerAngles = new Vector3(0f, 0f, cardFlyAngle);
             cardPreviewGroup.alpha = 0f;
             _replay = DOTween.Sequence().SetUpdate(true)
-                .Append(cardPreview.DOAnchorPos(_cardOrigin, replaySeconds * 0.35f).SetEase(Ease.OutQuad))
-                .Join(cardPreview.DOLocalRotate(new Vector3(0f, 0f, cardRestAngle), replaySeconds * 0.35f).SetEase(Ease.OutQuad))
-                .Join(cardPreviewGroup.DOFade(1f, replaySeconds * 0.35f))
-                .AppendInterval(replaySeconds * 0.5f)
-                .Append(cardPreviewGroup.DOFade(0f, replaySeconds * 0.15f));
+                .Append(cardPreview.DOAnchorPos(_cardOrigin, replaySeconds * cardPhaseRatios.x).SetEase(Ease.OutQuad))
+                .Join(cardPreview.DOLocalRotate(new Vector3(0f, 0f, cardRestAngle), replaySeconds * cardPhaseRatios.x).SetEase(Ease.OutQuad))
+                .Join(cardPreviewGroup.DOFade(1f, replaySeconds * cardPhaseRatios.x))
+                .AppendInterval(replaySeconds * cardPhaseRatios.y)
+                .Append(cardPreviewGroup.DOFade(0f, replaySeconds * cardPhaseRatios.z));
         }
 
         private Color BaseColor => _isSilhouette ? LobbyStyle.Silhouette : Color.white;

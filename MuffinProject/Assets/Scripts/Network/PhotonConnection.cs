@@ -11,7 +11,7 @@ namespace Chapchu.Network
     public class PhotonConnection
     {
         /// <summary>
-        /// 접속 시작부터 마스터 서버 접속 완료까지 기다리는 최대 시간 (초)
+        /// 접속 시작부터 마스터 서버 접속 완료까지 기다리는 최대 시간 (초) — 09-network.md 11절 「서버 접속 제한 시간」
         /// </summary>
         public const float ConnectTimeoutSeconds = 15f;
 

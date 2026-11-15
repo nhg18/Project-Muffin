@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Network;
+using Chapchu.UI.Lobby;
 using Photon.Pun;
 using Chapchu.UI.Title;
 using Photon.Realtime;
@@ -21,6 +22,9 @@ namespace Chapchu.UI.GameScreen
         public static readonly Color MeColor = new Color32(0x2f, 0x7c, 0xf6, 0xFF);
         /// <summary>흰 바탕 위 글자용 내 색 (시안 `P.me.ink`).</summary>
         public static readonly Color MeInk = new Color32(0x1f, 0x5f, 0xc9, 0xFF);
+
+        // 좌석이 없을 때(방 밖 · 나간 사람)의 잉크 회색 — LobbyStyle.Ink2 와 같은 값을 쓴다
+        private static readonly Color UnseatedColor = LobbyStyle.Ink2;
 
         /// <summary>좌석 1 · 2 · 3 의 목걸이 색 (시안 `P.s1~s3.col`).</summary>
         public static readonly Color[] SeatColors =
@@ -82,7 +86,7 @@ namespace Chapchu.UI.GameScreen
             List<int> ordered = OrderedActors();
             int index = ordered.IndexOf(actorNumber);
             if (index == 0) return me;
-            if (index < 0) return new Color32(0x6e, 0x64, 0x5c, 0xFF);
+            if (index < 0) return UnseatedColor;
 
             int[] seatIndices = OpponentSeatsPresenter.GetOpponentSeatIndices(ordered.Count - 1);
             int seatIndex = index - 1 < seatIndices.Length ? seatIndices[index - 1] : index;

@@ -16,7 +16,7 @@ namespace Chapchu.UI.GameScreen
     [RequireComponent(typeof(MyPanelView))]
     public class MyPanelPresenter : MonoBehaviour
     {
-        private const string NotTenCardsToastFormat = "손패가 정확히 10장일 때 외칠 수 있어요. 지금 {0}장"; // 10-ui.md 「찹츄 버튼 상태」
+        private const string NotTenCardsToastFormat = "손패가 정확히 {0}장일 때 외칠 수 있어요. 지금 {1}장"; // 10-ui.md 「찹츄 버튼 상태」. {0} = GameServer.ChapchuHandCount
 
         [SerializeField] private PunGameServer server;
         [Tooltip("우하단 찹츄 버튼 — 손패 수 · 내 턴 · 찹츄 상태에 따라 모양이 바뀐다.")]
@@ -119,7 +119,7 @@ namespace Chapchu.UI.GameScreen
 
             if (state != ChapchuButtonState.Unavailable || PopupManager.Instance == null) return;
 
-            PopupManager.Instance.ShowToast(string.Format(NotTenCardsToastFormat, _handCount));
+            PopupManager.Instance.ShowToast(string.Format(NotTenCardsToastFormat, GameServer.ChapchuHandCount, _handCount));
         }
     }
 }

@@ -57,6 +57,7 @@ namespace Chapchu.UI.Fx.Common
         [Tooltip("판 튕김 (1 에 더하는 값). 0 = 튕기지 않는다.")]
         [SerializeField] private float punch;
         [Range(0f, 1f)]
+        [Tooltip("그을 때 번쩍이는 판의 투명도.")]
         [SerializeField] private float flashAlpha = 0.9f;
         [Tooltip("번쩍임이 사라지는 시간 (ms).")]
         [SerializeField] private float flashMs = 120f;

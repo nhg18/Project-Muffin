@@ -40,7 +40,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private float toastPopSeconds = 0.25f;
 
         [Tooltip("나쁜 소식 알림의 바탕색")]
-        [SerializeField] private Color badToastFill = new Color32(0xFF, 0xF1, 0xEF, 0xFF);
+        [SerializeField] private Color badToastFill = LobbyStyle.HpFill;
 
         [Tooltip("터짐 그림이 커졌다 사라지기까지 (초)")]
         [SerializeField] private float burstSeconds = 0.7f;
@@ -51,8 +51,29 @@ namespace Chapchu.UI.Lobby
         [Tooltip("터짐 글자 크기 = 터짐 크기 × 이 값")]
         [SerializeField] private float burstFontScale = 0.3f;
 
+        [Tooltip("터짐 시간 비율 — 커짐 · 제 크기로 · 머묾 · 사라짐 (터짐 시간에 곱한다, 합 1)")]
+        [SerializeField] private Vector4 burstPhaseRatios = new Vector4(0.3f, 0.2f, 0.3f, 0.2f);
+
+        [Tooltip("터짐이 시작할 때의 크기 (배) · 기울기 (도)")]
+        [SerializeField] private Vector2 burstStartScaleAndAngle = new Vector2(0.2f, 14f);
+
+        [Tooltip("터짐이 가장 커질 때의 크기 (배) · 기울기 (도)")]
+        [SerializeField] private Vector2 burstPeakScaleAndAngle = new Vector2(1.14f, -4f);
+
+        [Tooltip("터짐이 머무는 동안 · 사라질 때 천천히 커지는 크기 (배)")]
+        [SerializeField] private Vector2 burstHoldAndEndScale = new Vector2(1.03f, 1.06f);
+
         [Tooltip("「+N」 이 떠올랐다 사라지기까지 (초)")]
         [SerializeField] private float gainSeconds = 1.1f;
+
+        [Tooltip("「+N」 시간 비율 — 나타남 · 머묾 · 사라짐 (「+N」 시간에 곱한다, 합 1)")]
+        [SerializeField] private Vector3 gainPhaseRatios = new Vector3(0.25f, 0.45f, 0.3f);
+
+        [Tooltip("「+N」 이 각 단계 끝에 처음 자리에서 내려가 있는 거리 — 나타남 · 머묾 · 사라짐 (캔버스 px)")]
+        [SerializeField] private Vector3 gainFallDistances = new Vector3(16f, 36f, 56f);
+
+        [Tooltip("「+N」 이 시작할 때 · 나타남 끝의 크기 (배) — 머무는 동안 1 로 돌아온다")]
+        [SerializeField] private Vector2 gainStartAndPeakScale = new Vector2(0.6f, 1.1f);
 
         private Coroutine[] _toastLives;
         private UnityAction[] _toastClicks; // 말풍선마다 「누르면 닫힘」 — 붙인 것을 그대로 떼려고 들고 있는다
@@ -130,17 +151,17 @@ namespace Chapchu.UI.Lobby
             burstText.text = text;
             burstText.fontSize = size * burstFontScale;
             burstGroup.alpha = 1f;
-            burst.localScale = Vector3.one * 0.2f;
-            burst.localEulerAngles = new Vector3(0f, 0f, 14f);
+            burst.localScale = Vector3.one * burstStartScaleAndAngle.x;
+            burst.localEulerAngles = new Vector3(0f, 0f, burstStartScaleAndAngle.y);
 
             DOTween.Sequence().SetTarget(burst).SetUpdate(true)
-                .Append(burst.DOScale(1.14f, burstSeconds * 0.3f).SetEase(Ease.OutCubic))
-                .Join(burst.DOLocalRotate(new Vector3(0f, 0f, -4f), burstSeconds * 0.3f).SetEase(Ease.OutCubic))
-                .Append(burst.DOScale(1f, burstSeconds * 0.2f))
-                .Join(burst.DOLocalRotate(Vector3.zero, burstSeconds * 0.2f))
-                .Append(burst.DOScale(1.03f, burstSeconds * 0.3f))
-                .Append(burst.DOScale(1.06f, burstSeconds * 0.2f))
-                .Join(burstGroup.DOFade(0f, burstSeconds * 0.2f))
+                .Append(burst.DOScale(burstPeakScaleAndAngle.x, burstSeconds * burstPhaseRatios.x).SetEase(Ease.OutCubic))
+                .Join(burst.DOLocalRotate(new Vector3(0f, 0f, burstPeakScaleAndAngle.y), burstSeconds * burstPhaseRatios.x).SetEase(Ease.OutCubic))
+                .Append(burst.DOScale(1f, burstSeconds * burstPhaseRatios.y))
+                .Join(burst.DOLocalRotate(Vector3.zero, burstSeconds * burstPhaseRatios.y))
+                .Append(burst.DOScale(burstHoldAndEndScale.x, burstSeconds * burstPhaseRatios.z))
+                .Append(burst.DOScale(burstHoldAndEndScale.y, burstSeconds * burstPhaseRatios.w))
+                .Join(burstGroup.DOFade(0f, burstSeconds * burstPhaseRatios.w))
                 .OnComplete(() => burst.gameObject.SetActive(false));
         }
 
@@ -172,16 +193,16 @@ namespace Chapchu.UI.Lobby
             rect.position = (corners[1] + corners[2]) * 0.5f;
             Vector2 start = rect.anchoredPosition + new Vector2(0f, -gainDrop);
             rect.anchoredPosition = start;
-            rect.localScale = Vector3.one * 0.6f;
+            rect.localScale = Vector3.one * gainStartAndPeakScale.x;
 
             DOTween.Sequence().SetTarget(rect).SetUpdate(true)
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -16f), gainSeconds * 0.25f).SetEase(Ease.OutQuad))
-                .Join(rect.DOScale(1.1f, gainSeconds * 0.25f))
-                .Join(gain.DOFade(1f, gainSeconds * 0.25f))
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -36f), gainSeconds * 0.45f))
-                .Join(rect.DOScale(1f, gainSeconds * 0.45f))
-                .Append(rect.DOAnchorPos(start + new Vector2(0f, -56f), gainSeconds * 0.3f))
-                .Join(gain.DOFade(0f, gainSeconds * 0.3f))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -gainFallDistances.x), gainSeconds * gainPhaseRatios.x).SetEase(Ease.OutQuad))
+                .Join(rect.DOScale(gainStartAndPeakScale.y, gainSeconds * gainPhaseRatios.x))
+                .Join(gain.DOFade(1f, gainSeconds * gainPhaseRatios.x))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -gainFallDistances.y), gainSeconds * gainPhaseRatios.y))
+                .Join(rect.DOScale(1f, gainSeconds * gainPhaseRatios.y))
+                .Append(rect.DOAnchorPos(start + new Vector2(0f, -gainFallDistances.z), gainSeconds * gainPhaseRatios.z))
+                .Join(gain.DOFade(0f, gainSeconds * gainPhaseRatios.z))
                 .OnComplete(() => gain.gameObject.SetActive(false));
 
             UIJuice.Pop(coin, 0.9f);

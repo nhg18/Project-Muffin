@@ -11,13 +11,15 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class TargetAskView : MonoBehaviour
     {
-        private const string QuestionFormat = "<color=#009dff>{0}</color> · 누구에게 쓸까요?";
+        private const string QuestionFormat = "<color=#{0}>{1}</color> · 누구에게 쓸까요?"; // {0} = 카드 이름 색(16진수), {1} = 카드 이름
 
         [Tooltip("배경을 어둡게 — 좌석보다 뒤에 둔다 (좌석은 어두워지지 않는다).")]
         [SerializeField] private GameObject dimmer;
         [SerializeField] private GameObject bar;
         [SerializeField] private TMP_Text questionText;
         [SerializeField] private Button cancelButton;
+        [Tooltip("안내 글 속 카드 이름 색 — 행동 카드 색 (시안 #009dff, FeedView · CardOwnerTagView 의 actionColor 와 같게).")]
+        [SerializeField] private Color cardNameColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
 
         /// <summary>「취소」를 눌렀다.</summary>
         public event Action CancelClicked;
@@ -40,7 +42,7 @@ namespace Chapchu.UI.GameScreen
 
         public void Show(string cardName)
         {
-            questionText.text = string.Format(QuestionFormat, cardName);
+            questionText.text = string.Format(QuestionFormat, ColorUtility.ToHtmlStringRGB(cardNameColor), cardName);
             dimmer.SetActive(true);
             bar.SetActive(true);
         }

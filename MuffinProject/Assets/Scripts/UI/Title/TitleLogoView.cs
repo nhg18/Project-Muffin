@@ -18,6 +18,8 @@ namespace Chapchu.UI.Title
         [SerializeField] private float hopDelay = 0.18f;
         [Tooltip("뛰는 높이 · 내려앉는 깊이 — 글자 높이 비율 (시안 −8% · +2%)")]
         [SerializeField] private Vector2 hopUpAndDown = new Vector2(0.08f, 0.02f);
+        [Tooltip("다 올라간 때 · 다 내려앉은 때 — 뛰기 한 번 안의 비율 (시안 keyframes 40% · 60%)")]
+        [SerializeField] private Vector2 hopKeyTimes = new Vector2(0.4f, 0.6f);
         [Tooltip("! 흔들기 한 번 (초)")]
         [SerializeField] private float wagSeconds = 0.6f;
         [Tooltip("! 기울기 범위 (도, 시계 방향) — 6 ↔ 16")]
@@ -45,17 +47,19 @@ namespace Chapchu.UI.Title
             bang.localEulerAngles = new Vector3(0f, 0f, -Mathf.Lerp(wagAngles.x, wagAngles.y, wag));
         }
 
-        // 0 → 40% 위로 → 60% 아래로 → 100% 제자리. 구간마다 ease-in-out (CSS keyframes 와 같다). 위쪽이 +.
+        // 0 → hopKeyTimes.x 위로 → hopKeyTimes.y 아래로 → 100% 제자리. 구간마다 ease-in-out (CSS keyframes 와 같다). 위쪽이 +.
         private float Hop(float time)
         {
             float t = Mathf.Repeat(time, hopSeconds) / hopSeconds;
-            if (t < 0.4f)
-                return Mathf.Lerp(0f, hopUpAndDown.x, Mathf.SmoothStep(0f, 1f, t / 0.4f));
+            float up = hopKeyTimes.x;
+            float down = hopKeyTimes.y;
+            if (t < up)
+                return Mathf.Lerp(0f, hopUpAndDown.x, Mathf.SmoothStep(0f, 1f, t / up));
 
-            if (t < 0.6f)
-                return Mathf.Lerp(hopUpAndDown.x, -hopUpAndDown.y, Mathf.SmoothStep(0f, 1f, (t - 0.4f) / 0.2f));
+            if (t < down)
+                return Mathf.Lerp(hopUpAndDown.x, -hopUpAndDown.y, Mathf.SmoothStep(0f, 1f, (t - up) / (down - up)));
 
-            return Mathf.Lerp(-hopUpAndDown.y, 0f, Mathf.SmoothStep(0f, 1f, (t - 0.6f) / 0.4f));
+            return Mathf.Lerp(-hopUpAndDown.y, 0f, Mathf.SmoothStep(0f, 1f, (t - down) / (1f - down)));
         }
     }
 }

@@ -14,7 +14,9 @@ namespace Chapchu.UI.Fx.Common
         [Tooltip("켜질 때 투명도.")]
         [Range(0f, 1f)]
         [SerializeField] private float alpha = 1f;
+        [Tooltip("켜지기 시작할 때 크기 배율.")]
         [SerializeField] private float fromScale = 0.3f;
+        [Tooltip("켜지는 동안 커지는 끝 크기 배율.")]
         [SerializeField] private float toScale = 1.2f;
 
         private CanvasGroup _glow;
