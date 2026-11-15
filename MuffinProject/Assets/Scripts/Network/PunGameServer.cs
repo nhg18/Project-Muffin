@@ -24,7 +24,7 @@ namespace Chapchu.Network
     // 2. 받기 (방장). 요청자는 인자로 받지 말고 info.Sender 를 쓴다:
     //        [PunRPC] private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
     //        {
-    //            if (!IsTrustedMaster) return;
+    //            if (!NetworkManager.IsTrustedMaster) return;
     //            Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
     //        }
     // 3. 새 종류의 일이면 Send 의 switch 에 case 를 더한다 — 누구에게(전원 / 주인만) 보낼지는 여기서 정한다.
@@ -46,6 +46,7 @@ namespace Chapchu.Network
         private const float RequestBurst = 10f;
         private const float RequestsPerSecond = 5f;
         private readonly Dictionary<int, (float tokens, float at)> _requestBudget = new Dictionary<int, (float tokens, float at)>();
+        private readonly HashSet<int> _requestThrottled = new HashSet<int>(); // 지금 막혀 있는 보낸 사람 — 경고를 한 번만
 
         // 방장이 바뀔 때 방 속성의 처리 번호를 이어받는 한도 — 남이 큰 값을 써서 새 방장의 알림을 모두 묵은 것으로 만들지 못하게
         private const int MaxSeqJump = 1000;
@@ -65,11 +66,11 @@ namespace Chapchu.Network
         // 한 프레임 뒤에 — 방장 자신에게는 알림이 그 자리에서 재생되므로, 화면들의 Start(좌석 대응 · 스냅샷 복구)가 먼저 끝나야 시작 알림이 덮어쓴다.
         private IEnumerator Start()
         {
-            if (!IsTrustedMaster)
+            if (!NetworkManager.IsTrustedMaster)
                 yield break;
 
             yield return null;
-            if (!IsTrustedMaster)
+            if (!NetworkManager.IsTrustedMaster)
                 yield break;
 
             // 봇도 플레이어다 — 사람 뒤에 봇 번호 순으로 넣고, 턴 순서는 규칙이 섞는다 (18-bot.md 3절 #6)
@@ -111,7 +112,7 @@ namespace Chapchu.Network
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
         private void Update()
         {
-            if (!IsTrustedMaster)
+            if (!NetworkManager.IsTrustedMaster)
                 return;
 
             Send(_server.Tick());
@@ -169,13 +170,10 @@ namespace Chapchu.Network
             photonView.RPC(rpcName, master, parameters);
         }
 
-        // 방장만 하는 일(요청 처리 · 진행)은 믿는 방장인지로 본다 — 방장 자리를 가져간 사람이 판을 돌리지 않게
-        private static bool IsTrustedMaster => PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == NetworkManager.TrustedMaster;
-
         [PunRPC]
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.Draw(info.Sender.ActorNumber));
         }
@@ -183,7 +181,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestPlayCard(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
@@ -191,7 +189,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
         }
@@ -199,7 +197,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.ActivateTrap(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
@@ -207,7 +205,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestMySync(PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
 
             // 지금까지 보낸 알림 뒤에 간다 — 받는 쪽은 이 번호 전의 묵은 알림을 버린다
@@ -219,7 +217,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.DeclareChapchu(info.Sender.ActorNumber));
         }
@@ -227,7 +225,7 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestChoose(int option, PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.Choose(info.Sender.ActorNumber, option));
         }
@@ -235,17 +233,27 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
-        // 새 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)
-        public override void OnMasterClientSwitched(Player newMasterClient)
+        public override void OnEnable()
         {
-            if (!PhotonNetwork.IsMasterClient)
-                return;
+            base.OnEnable();
+            NetworkManager.OnBecameTrustedMaster += InheritSeq;
+        }
 
+        public override void OnDisable()
+        {
+            base.OnDisable();
+            NetworkManager.OnBecameTrustedMaster -= InheritSeq;
+        }
+
+        // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)
+        // 방장 자리만 가져간 사람은 이어받지 않는다 — 믿는 방장이 될 때 이어받는다 (09-network.md 13절 #1)
+        private void InheritSeq()
+        {
             int known = System.Math.Max(_sentSeq, _receivedSeq);
             int fromRoom = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.EventSeq, out object value) && value is int seq ? seq : 0;
             if (fromRoom > known + MaxSeqJump)
@@ -270,15 +278,19 @@ namespace Chapchu.Network
 
             bool allowed = tokens >= 1f;
             _requestBudget[actor] = (allowed ? tokens - 1f : tokens, now);
-            if (!allowed)
-                Debug.LogWarning($"[{nameof(PunGameServer)}] P{actor} 요청이 너무 잦다 — 버린다");
+
+            // 경고는 막히기 시작할 때 한 번만 — 쏟아붓는 요청마다 로그를 쓰지 않게
+            if (allowed)
+                _requestThrottled.Remove(actor);
+            else if (_requestThrottled.Add(actor))
+                Debug.LogWarning($"[{nameof(PunGameServer)}] P{actor} 요청이 너무 잦다 — 다시 허용될 때까지 버린다");
             return allowed;
         }
 
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            if (!IsTrustedMaster) return;
+            if (!NetworkManager.IsTrustedMaster) return;
             Send(_server.RemovePlayer(otherPlayer.ActorNumber));
         }
 
@@ -582,7 +594,7 @@ namespace Chapchu.Network
         private IEnumerator ReturnToRoomRoutine()
         {
             yield return new WaitForSeconds(resultSeconds);
-            if (!IsTrustedMaster)
+            if (!NetworkManager.IsTrustedMaster)
                 yield break;
 
             // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다

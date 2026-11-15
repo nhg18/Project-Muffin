@@ -33,7 +33,7 @@ namespace Chapchu.Network
         public static bool IsConnected => PhotonNetwork.IsConnected;
         /// <summary>서버 접속이 완료되어 요청을 보낼 수 있는 상태인지</summary>
         public static bool IsReady => PhotonNetwork.IsConnectedAndReady;
-        /// <summary>방 입장 응답을 받았는지 — 입장 알림(RoomEvents.OnJoinedRoom) · 씬 동기화의 방 씬 로드보다 먼저 참이 되고, 방을 떠나면 거짓</summary>
+        /// <summary>방 입장 응답을 받았는지 — 입장 알림(RoomEvents.OnJoinedRoom)보다 먼저 참이 되고(로비는 그 뒤에 방 씬을 연다), 방을 떠나면 거짓</summary>
         public static bool HasEnteredRoom => PhotonNetwork.CurrentRoom != null;
 
         /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
@@ -46,12 +46,18 @@ namespace Chapchu.Network
         /// </summary>
         public static int TrustedMaster => Instance != null && Instance._guard != null ? Instance._guard.TrustedMaster : -1;
 
+        /// <summary>내가 믿는 방장인지 — 방장만 하는 일(요청 처리 · 진행 · 방장 원본 읽기)은 이것으로 본다 (09-network.md 13절 #1).</summary>
+        public static bool IsTrustedMaster => Instance != null && Instance._guard != null && Instance._guard.IsTrustedMaster;
+
+        /// <summary>내가 믿는 방장이 됨 — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 방에 들어올 때는 부르지 않는다.</summary>
+        internal static event System.Action OnBecameTrustedMaster;
+
         protected override void Awake()
         {
             base.Awake(); // 싱글톤 부모클래스 Awake
-        
+
             _connection = new PhotonConnection();
-            _guard = new RoomGuard();
+            _guard = new RoomGuard(() => OnBecameTrustedMaster?.Invoke());
             _room = new PhotonRoom(_guard);
             PunEventFilter.Install();
         }

@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+﻿using Chapchu.Game;
 
 namespace Chapchu.Core
 {
@@ -13,18 +13,11 @@ namespace Chapchu.Core
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             char[] code = new char[Length];
-            byte[] random = new byte[1];
 
-            // 암호 난수 — 만든 시각으로 코드를 맞추지 못하게. 26 의 배수(234) 이상은 버려 글자마다 확률을 같게
-            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-            {
-                for (int i = 0; i < Length; i++)
-                {
-                    do rng.GetBytes(random);
-                    while (random[0] >= 256 - 256 % chars.Length);
-                    code[i] = chars[random[0] % chars.Length];
-                }
-            }
+            // 암호 난수 — 만든 시각으로 코드를 맞추지 못하게. 글자마다 확률이 같다 (SecureRandom.Next 는 치우침 없이 뽑는다)
+            var random = new SecureRandom();
+            for (int i = 0; i < Length; i++)
+                code[i] = chars[random.Next(chars.Length)];
 
             return new string(code);
         }

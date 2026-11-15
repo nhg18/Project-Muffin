@@ -65,8 +65,8 @@ namespace Chapchu.UI.RoomScreen
         // 칸에 앉은 순서 — 사람(입장 순) 뒤에 봇(번호 순). slots 와 같은 순서다 (16-room-ui-full 3절 #6 · 18-bot 8-3)
         private readonly List<Seat> _seats = new List<Seat>();
 
-        // 방 입장 시 1회 초기화. 씬이 먼저 뜨고 OnJoinedRoom 이 나중에 오는 경우(AutomaticallySyncScene 으로 끌려온 참가자)와
-        // 이미 방에 있는 채로 씬이 뜨는 경우(방장) 둘 다 여기로 모은다.
+        // 방 입장 시 1회 초기화. 방 씬은 이미 방에 있는 채로 뜬다 — 로비가 입장 응답 뒤 방 씬을 열고, 게임이 끝나면 방장이 방 전원을 옮긴다.
+        // Start 에서 하고, OnJoinedRoom 도 같은 곳으로 모은다.
         private bool _initialized;
 
         // 방이 닫혔다 = 방장이 시작을 눌렀다. 전원 화면이 「게임을 시작합니다」 가 되고 입력이 잠긴다
@@ -203,7 +203,7 @@ namespace Chapchu.UI.RoomScreen
             if (_initialized) return;
             _initialized = true;
 
-            // 로비가 10초 시간 초과로 포기한 요청의 늦은 입장 — 씬 동기화로 끌려왔으므로 바로 나가 로비로 돌아간다 (14-lobby-ui 6절)
+            // 로비가 10초 시간 초과로 포기한 요청의 늦은 입장 — 로비가 그 전에 사라져 이 화면이 받았으면 바로 나가 로비로 돌아간다 (14-lobby-ui 6절)
             if (SceneFlow.IsRoomRequestAbandoned)
             {
                 SceneFlow.IsRoomRequestAbandoned = false;

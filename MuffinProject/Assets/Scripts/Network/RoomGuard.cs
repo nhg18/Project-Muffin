@@ -37,6 +37,11 @@ namespace Chapchu.Network
 
         private static readonly MethodInfo SetPlayerNameProperty = typeof(Player).GetMethod("SetPlayerNameProperty", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        // 방에 있는 동안 믿는 방장이 내게로 바뀌면 부른다 — 처리 번호 이어받기 (PunGameServer)
+        private readonly Action _becameTrustedMaster;
+
+        public RoomGuard(Action becameTrustedMaster) => _becameTrustedMaster = becameTrustedMaster;
+
         /// <summary>믿는 방장의 actorNumber — 방에 들어올 때의 방장, 그 뒤엔 방장이 나가서 바뀐 사람만. 방 밖이면 -1.</summary>
         public int TrustedMaster { get; private set; } = -1;
 
@@ -140,7 +145,10 @@ namespace Chapchu.Network
             TrustedMaster = newMaster.ActorNumber;
             Forget();
             if (IsTrustedMaster)
+            {
                 Adopt();
+                _becameTrustedMaster?.Invoke();
+            }
             return true;
         }
 
@@ -155,7 +163,10 @@ namespace Chapchu.Network
                 TrustedMaster = PhotonNetwork.CurrentRoom.MasterClientId;
                 Forget();
                 if (IsTrustedMaster)
+                {
                     Adopt();
+                    _becameTrustedMaster?.Invoke();
+                }
             }
         }
 
