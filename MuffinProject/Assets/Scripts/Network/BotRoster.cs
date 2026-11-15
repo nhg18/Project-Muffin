@@ -30,7 +30,7 @@ namespace Chapchu.Network
                 if (room == null)
                     return Array.Empty<int>();
 
-                int[] numbers = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBots : null) ?? RoomNumbers;
+                int[] numbers = (IsTrustedMaster && NetworkManager.Instance != null ? NetworkManager.Instance.HostBots : null) ?? RoomNumbers;
 
                 // 방 속성은 아무 클라나 쓸 수 있다 — 번호 1 ~ 3 · 중복 없이 · 사람 + 봇 ≤ 4 만 (18-bot.md 4절 · 08-room.md 2절). 넘치면 큰 번호를 뺀다
                 return numbers.Where(n => n >= 1 && n <= MaxBots).Distinct().OrderBy(n => n).Take(NetworkManager.MaxPlayers - room.PlayerCount).ToArray();
@@ -59,9 +59,12 @@ namespace Chapchu.Network
             if (number < 1 || number > MaxBots)
                 return BotLevel.Normal;
 
-            int[] levels = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBotLevels : null) ?? RoomLevels;
+            int[] levels = (IsTrustedMaster && NetworkManager.Instance != null ? NetworkManager.Instance.HostBotLevels : null) ?? RoomLevels;
             return (BotLevel)levels[number - 1];
         }
+
+        // 원본(방장 메모리)은 믿는 방장만 읽는다 — 방장 자리를 뺏긴 사이에도 아무 클라나 쓰는 방 속성을 원본으로 읽지 않게 (09-network.md 13절 #1)
+        private static bool IsTrustedMaster => PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == NetworkManager.TrustedMaster;
 
         // 방 속성에 적힌 난이도 — [봇 번호 − 1] 자리. 방 속성은 아무 클라나 쓸 수 있다 — 키가 없거나 모양 · 값이 틀리면 그 자리는 보통
         internal static int[] RoomLevels

@@ -278,7 +278,7 @@ namespace Chapchu.Network
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            if (!PhotonNetwork.IsMasterClient) return;
+            if (!IsTrustedMaster) return;
             Send(_server.RemovePlayer(otherPlayer.ActorNumber));
         }
 
