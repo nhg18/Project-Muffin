@@ -16,26 +16,39 @@ namespace Chapchu.UI.Fx.Nuke
 
         private readonly List<float> _stops = new List<float>();
 
+        /// <summary>그라데이션을 나눌 자리 — 0 · 1 · 색 키 · 알파 키 자리를 작은 순으로, 겹치는 자리는 하나로. <see cref="UIRadialGradient"/> 도 같이 쓴다.</summary>
+        public static void CollectStops(Gradient gradient, List<float> stops)
+        {
+            stops.Clear();
+            stops.Add(0f);
+            stops.Add(1f);
+            foreach (GradientColorKey key in gradient.colorKeys)
+                stops.Add(key.time);
+            foreach (GradientAlphaKey key in gradient.alphaKeys)
+                stops.Add(key.time);
+            stops.Sort();
+
+            int kept = 1;
+            for (int i = 1; i < stops.Count; i++)
+            {
+                if (stops[i] - stops[kept - 1] < 1e-4f)
+                    continue;
+                stops[kept] = stops[i];
+                kept++;
+            }
+
+            stops.RemoveRange(kept, stops.Count - kept);
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
             Rect r = GetPixelAdjustedRect();
-            _stops.Clear();
-            _stops.Add(0f);
-            _stops.Add(1f);
-            foreach (GradientColorKey key in gradient.colorKeys)
-                _stops.Add(key.time);
-            foreach (GradientAlphaKey key in gradient.alphaKeys)
-                _stops.Add(key.time);
-            _stops.Sort();
+            CollectStops(gradient, _stops);
 
-            float last = -1f;
             int count = 0;
             foreach (float stop in _stops)
             {
-                if (stop - last < 1e-4f)
-                    continue;
-                last = stop;
                 Color c = gradient.Evaluate(stop) * color;
                 float x = Mathf.Lerp(r.xMin, r.xMax, stop);
                 vh.AddVert(new Vector3(x, r.yMin), c, Vector2.zero);

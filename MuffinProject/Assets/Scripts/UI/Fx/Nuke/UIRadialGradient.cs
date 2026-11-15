@@ -25,26 +25,16 @@ namespace Chapchu.UI.Fx.Nuke
             if (r.width <= 0f || r.height <= 0f)
                 return;
 
-            // 고리 자리 = 색 · 알파 키 (가운데 · 가장자리 포함, 겹치는 자리는 하나로)
-            _stops.Clear();
-            _stops.Add(0f);
-            _stops.Add(1f);
-            foreach (GradientColorKey key in gradient.colorKeys)
-                _stops.Add(key.time);
-            foreach (GradientAlphaKey key in gradient.alphaKeys)
-                _stops.Add(key.time);
-            _stops.Sort();
+            // 고리 자리 = 색 · 알파 키 (가운데 0 은 한 점, 그 밖은 고리)
+            UIGradientBar.CollectStops(gradient, _stops);
 
             Vector2 center = r.center;
             Vector2 radius = r.size * 0.5f;
             vh.AddVert(center, gradient.Evaluate(0f) * color, Vector2.zero);
             int rings = 0;
-            float last = 0f;
-            foreach (float stop in _stops)
+            for (int s = 1; s < _stops.Count; s++)
             {
-                if (stop - last < 1e-4f)
-                    continue;
-                last = stop;
+                float stop = _stops[s];
                 Color c = gradient.Evaluate(stop) * color;
                 for (int i = 0; i < Segments; i++)
                 {
