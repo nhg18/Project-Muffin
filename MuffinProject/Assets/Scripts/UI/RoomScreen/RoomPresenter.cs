@@ -26,9 +26,9 @@ namespace Chapchu.UI.RoomScreen
     {
         // 16-room-ui-full.md 8절 문구
         private const string CountFormat = "{0} / {1}";
-        private const string EnteredLogFormat = "{0}님이 입장했습니다.";
-        private const string LeftLogFormat = "{0}님이 퇴장했습니다.";
-        private const string HostChangedLogFormat = "{0}님이 방장이 되었습니다.";
+        private const string EnteredLogFormat = "{0}님이 입장했어요.";
+        private const string LeftLogFormat = "{0}님이 퇴장했어요.";
+        private const string HostChangedLogFormat = "{0}님이 방장이 되었어요.";
         private const string PublicLog = "공개로 변경";
         private const string PrivateLog = "비공개로 변경";
         private const string BotAddedLogFormat = "봇 {0} 추가";
@@ -38,7 +38,7 @@ namespace Chapchu.UI.RoomScreen
         private const string BotTagFormat = "(봇 · {0})";
         private const string BotLevelLogFormat = "봇 {0} 난이도 {1}";
         private static readonly BotLevel[] BotLevelCycle = { BotLevel.Normal, BotLevel.Hard, BotLevel.Easy };
-        private const string BecameHostToastFormat = "방장이 되었습니다. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
+        private const string BecameHostToastFormat = "방장이 되었어요. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string FallbackNickname = "플레이어";
 
         [Header("위")]

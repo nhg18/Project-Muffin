@@ -284,9 +284,9 @@
 | 사유 (`DisconnectCause`) | 제목 | 설명 |
 | --- | --- | --- |
 | `ExceptionOnConnect` · `DnsExceptionOnConnect` · `ServerAddressInvalid` (인터넷 없음 포함) | 인터넷 연결 없음 | Wi-Fi 또는 데이터 연결을 확인해 주세요. |
-| `ClientTimeout` · `ServerTimeout` (접속 제한 15초 초과 포함) | 연결 시간 초과 | 서버가 15초 안에 응답하지 않았습니다. 다시 시도해 주세요. |
-| `MaxCcuReached` | 서버 혼잡 | 접속자가 많습니다. 잠시 후 다시 시도해 주세요. |
-| 그 외 | 연결 끊김 | 연결이 끊어졌습니다. 다시 시도해 주세요. |
+| `ClientTimeout` · `ServerTimeout` (접속 제한 15초 초과 포함) | 연결 시간 초과 | 서버가 15초 안에 응답하지 않았어요. 다시 시도해 주세요. |
+| `MaxCcuReached` | 서버 혼잡 | 접속자가 많아요. 잠시 후 다시 시도해 주세요. |
+| 그 외 | 연결 끊김 | 연결이 끊어졌어요. 다시 시도해 주세요. |
 
 - 오류 코드 자리에는 `DisconnectCause` 의 enum 이름을 그대로 쓴다 (예: `ExceptionOnConnect`). 문의 대응용이며 번역하지 않는다.
 - Photon 원문 메시지는 보여주지 않는다.

@@ -38,7 +38,7 @@ namespace Chapchu.UI.GameScreen
         private const string BannerLoserWord = "꼴찌는";
         private const string BannerLoserMark = "?!";
         private const string HpSide = "HP 꼴찌";
-        private const string CardSide = "카드 꼴찌";
+        private const string CardSide = "손패 꼴찌";
         private const string HpTagFormat = "<size=58%><alpha=#{1}>HP<alpha=#FF></size><space=0.18em>{0}";
         private const string CardTagFormat = "<size=58%><alpha=#{1}>카드<alpha=#FF></size><space=0.18em>{0}<size=58%><alpha=#{1}>장<alpha=#FF></size>";
 

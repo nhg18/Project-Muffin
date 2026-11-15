@@ -113,7 +113,7 @@ namespace Chapchu.UI.Title
             NicknameValidationResult.TooLong           => $"{MaxLength}자 이하로 입력해 주세요.",
             NicknameValidationResult.InvalidCharacters => "사용할 수 없는 문자가 포함되어 있어요.",
             NicknameValidationResult.BannedWord        => "사용할 수 없는 단어가 있어요.",
-            _                                          => "알 수 없는 오류입니다."
+            _                                          => "알 수 없는 오류가 났어요. 잠시 후 다시 시도해 주세요."
         };
 
         /// <summary>추천 닉네임 — 꾸밈말 + 이름 + 10 ~ 99.</summary>

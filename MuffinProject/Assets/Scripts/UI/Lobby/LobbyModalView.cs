@@ -25,7 +25,7 @@ namespace Chapchu.UI.Lobby
         private const string DeleteTitle = "계정 삭제";
         private const string DeletePlaceholder = "삭제";
         private const string DeleteSubmit = "삭제";
-        private const string DeleteMessage = "'삭제' 를 입력하면 계정이 지워져요.";
+        private const string DeleteMessage = "'삭제'를 입력하면 계정이 지워져요.";
         private const string CountFormat = "{0} / {1}";
         private const string DefaultOkText = "확인";
 

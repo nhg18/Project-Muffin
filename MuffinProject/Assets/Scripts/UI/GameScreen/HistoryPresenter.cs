@@ -26,13 +26,13 @@ namespace Chapchu.UI.GameScreen
         private const string SkippedText = "턴 건너뜀";
         private const string BlockNextText = "다음 턴 행동 카드 금지";
         private const string BlockThisText = "이번 턴 행동 카드 금지";
-        private const string WaitStartText = "기다려! — 다음 차례까지 찹츄 승리 없음";
+        private const string WaitStartText = "기다려! — 다음 턴까지 찹츄 승리 없음";
         private const string WaitEndText = "기다려 끝";
         private const string ChapchuHeldText = "찹츄 판정 미룸 (기다려)";
         private const string RestartFormat = "대소동! 게임을 새로 시작 ({0}번째)";
         private const string NewRoundFormat = "새 판: {0} 순서, {1}부터";
         private const string OrderSeparator = " → ";
-        private const string FalloutFormat = "피폭 데미지: 모두 {0} ({1}턴째)";
+        private const string FalloutFormat = "피폭 피해: 모두 {0} ({1}턴째)";
         private const string GaepanStartFormat = "개판 오분전! {0}바퀴 뒤 반반 확률로 HP 꼴찌 또는 손패 꼴찌가 즉시 사망 (동점이면 무작위 1명)";
         private const string GaepanAgainText = "개판 오분전 다시 처음부터!";
         private const string GaepanLeftFormat = "개판 오분전: {0}바퀴 남음";

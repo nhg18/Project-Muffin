@@ -17,7 +17,7 @@ namespace Chapchu.UI.Lobby
         private const string EquippedText = "장착 중";
         private const string GetText = "얻으러 가기";
         private const string ShopNoteText = "상점 ·";
-        private const string GachaOnlyNoteText = "뽑기에서만 나와요";
+        private const string GachaOnlyNoteText = "뽑기에서만 나와요.";
         private const string BuyText = "구매";
         private const string BuyPriceFormat = "구매 ·";
         private const string WearText = "꾸미기에서 장착";

@@ -18,17 +18,17 @@ namespace Chapchu.UI.Lobby
         private enum RoomRequest { Random, Create, Solo, Join }
 
         // 08-room 7절 · 22-popup-ui 3절 — 확정 문구
-        private const string SearchingText = "방을 찾고 있어요";
-        private const string CreatingText = "방을 만들고 있어요";
-        private const string JoiningText = "방에 들어가고 있어요";
+        private const string SearchingText = "방을 찾는 중…";
+        private const string CreatingText = "방을 만드는 중…";
+        private const string JoiningText = "방에 들어가는 중…";
         private const string CreateFailedTitle = "방 생성 실패";
         private const string JoinFailedTitle = "방 참가 실패";
         private const string RandomMatchFailedTitle = "랜덤 매칭 실패";
-        private const string RoomNotFoundText = "방을 찾을 수 없습니다.";
-        private const string RoomFullText = "방이 가득 찼습니다.";
-        private const string RoomClosedText = "이미 시작된 방입니다.";
-        private const string NoRandomRoomText = "참가할 수 있는 방이 없습니다.";
-        private const string NoRoomCodeText = "방 코드가 없습니다.";
+        private const string RoomNotFoundText = "방을 찾을 수 없어요.";
+        private const string RoomFullText = "방이 가득 찼어요.";
+        private const string RoomClosedText = "이미 시작된 방이에요.";
+        private const string NoRandomRoomText = "참가할 수 있는 방이 없어요.";
+        private const string NoRoomCodeText = "방 코드를 입력해 주세요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
         private const float RoomRequestTimeoutSeconds = 10f; // 14-lobby-ui 6절
