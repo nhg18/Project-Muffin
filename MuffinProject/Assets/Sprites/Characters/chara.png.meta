@@ -153,11 +153,33 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: chara_face
+      rect:
+        serializedVersion: 2
+        x: 435
+        y: 725
+        width: 1150
+        height: 1150
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f22895816a68ef49b76a901b061d7a3
+      internalID: -697021933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 6012acfef4328b941bbab230f60010ea
     internalID: 0
     vertices: []
     indices: 
@@ -168,8 +190,7 @@ TextureImporter:
       entries: []
     nameFileIdTable:
       chara: -7354470638215815053
-      chara_0: -6930432791568582698
-      chara_1: -7130844508404820948
+      chara_face: -697021933
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
