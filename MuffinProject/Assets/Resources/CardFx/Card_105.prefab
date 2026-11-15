@@ -539,6 +539,7 @@ MonoBehaviour:
   hits:
   - {x: 0.44, y: 18}
   - {x: 0.86, y: 5}
+  card: {fileID: 11400000, guid: e2cb7420b994fa74bb48f98f15ed9a8d, type: 2}
   runUp: {fileID: 3274450843929959752}
   speedLines: {fileID: 6240923379504437135}
   target: {fileID: 9021011537249647984}
@@ -560,8 +561,8 @@ MonoBehaviour:
   burst: {fileID: 5493296109251742109}
   pow: {fileID: 763972715379234081}
   damage: {fileID: 1151935808556825774}
+  damageText: {fileID: 7551619894913314338}
   recoilLabel: {fileID: 2826405999969166473}
-  recoilBox: {fileID: 3409759285810930958}
   recoilText: {fileID: 1926304279427520513}
   recoilSweat: {fileID: 8358484386013965340}
   impactAt: 0.44
@@ -611,13 +612,16 @@ MonoBehaviour:
   burstTo: {x: 190, y: 140}
   powTime: 0.16
   damageAt: {x: 0.6, y: 0.16}
-  recoilAt: {x: 0.86, y: 0.16}
+  recoilPop: 0.16
   recoilOvershoot: 2.2
   labelPadding: 34
   labelHeightRatio: 1.35
   labelShadowOffset: {x: 5, y: 6}
   labelShadow: {r: 0, g: 0, b: 0, a: 0.3}
   labelLine: 5
+  recoilOffset: {x: 0, y: 140}
+  recoilLife: 1.4
+  recoilFade: 0.21
   finishStreaks: 14
   finishColors:
   - {r: 1, g: 0.5411765, b: 0.12156863, a: 1}
@@ -1047,7 +1051,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2826405999969166473
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1990,6 +1994,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 8243168320745975794, guid: e6a814644f215734089d984dc7f6c3ab, type: 3}
   m_PrefabInstance: {fileID: 4183647719147787792}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7551619894913314338 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5963877682649888818, guid: e6a814644f215734089d984dc7f6c3ab, type: 3}
+  m_PrefabInstance: {fileID: 4183647719147787792}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae9b1630f05716b43b31a35aaeec3d4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Comic.ComicWord
 --- !u!1001 &4569218273186201503
 PrefabInstance:
   m_ObjectHideFlags: 0

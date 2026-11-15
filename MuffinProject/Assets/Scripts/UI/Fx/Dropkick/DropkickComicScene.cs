@@ -1,5 +1,8 @@
 ﻿using System.Collections;
+using Chapchu.Cards;
+using Chapchu.Game.Effects;
 using Chapchu.UI.Fx.Comic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,9 +12,11 @@ namespace Chapchu.UI.Fx.Dropkick
     /// <summary>
     /// 드롭킥(카드 105) 만화 컷인 장면 — 도움닫기 → 날아차기 → 퍽!! (시안 CI2.SC["드롭킥"]).
     /// 0 ~ 0.44 초 옆에서 본 컷: 맞는 쪽이 「!?」 하고 땀을 흘리는 사이, 쓴 쪽이 오른쪽에서 달려와 0.26 초에 뛰어올라 잔상을 남기며 두 발부터 날아든다.
-    /// 0.44 초 맞는 순간: 햇살 무늬 · 집중선 위로 카드 그림(스티커)이 크게 들이받고 「퍽!!」 → 0.6 초 「-25」 → 0.86 초 「반동 -10」 표 + 땀.
+    /// 0.44 초 맞는 순간: 햇살 무늬 · 집중선 위로 카드 그림(스티커)이 크게 들이받고 「퍽!!」 → 0.6 초 「-N」 (N = 카드 데이터 DamageEffect 양, 시안은 -25).
     /// 맞는 순간 마무리(시안 FINISH 드롭킥 — 맞은 쪽 자리에서 주황 · 흰 줄 빛 14)는 3 단계가 끝난 그 순간(시안 s3 의 fin)이라 4 단계 첫 줄에서 튼다.
-    /// 4 단계 = 맞은 쪽이 쓰러지지 않았으면 0.55 초 뒤 쓴 쪽에 「으악!」 말풍선 (시안 FXA 드롭킥 s4 — 피해 숫자 · 「쓰러짐」 상태 글자는 부르는 쪽 몫).
+    /// 4 단계 = 맞은 쪽이 쓰러지지 않았으면 0.55 초 뒤 쓴 쪽에 「으악!」 말풍선 (시안 FXA 드롭킥 s4 — 피해 숫자 · 「쓰러짐」 상태 글자는 부르는 쪽 몫)과
+    /// 「반동 -N」 표 + 땀 (N = 카드 데이터 RecoilDamageEffect 양). 시안은 이 표를 3 단계 0.86 초에 늘 보였지만, 반동은 못 쓰러뜨렸을 때만이라
+    /// 결과를 아는 4 단계로 옮겼다 (PM 결정 2026-11-15) — 모양 · 튀어나오기는 시안 그대로, 자리는 쓴 쪽 자리 위.
     /// 쓰러졌는지는 4 단계 결과 알림(<see cref="CardFxContext.OnHpChanged"/>)으로 안다 — 알림이 없으면 못 쓰러뜨린 것으로 본다 (시안 기본값).
     /// 연출 길이 3.26초 (3 단계 2.36초 + 4 단계 0.9초) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
@@ -19,6 +24,13 @@ namespace Chapchu.UI.Fx.Dropkick
     {
         // 시안 FXA 드롭킥 s4: vbubble(u, "으악!")
         private const string OuchText = "으악!";
+        // 시안 「-25」 · 「반동 -10」 꼴 — 숫자는 카드 데이터
+        private const string DamageFormat = "-{0}";
+        private const string RecoilFormat = "반동 -{0}";
+
+        [Header("카드")]
+        [Tooltip("이 카드 데이터 — 「-N」 은 DamageEffect 양, 「반동 -N」 은 RecoilDamageEffect 양.")]
+        [SerializeField] private CardData card;
 
         [Header("그림 — 달려오기 (맞기 전, 그리는 순서)")]
         [Tooltip("달려오기 묶음 — 맞는 순간에 감춘다 (바탕 · 속도선 · 망점 · 두 강아지).")]
@@ -51,15 +63,15 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private ComicBurst burst;
         [Tooltip("「퍽!!」 글자 (찍히기).")]
         [SerializeField] private ComicStamp pow;
-        [Tooltip("「-25」 글자 (찍히기).")]
+        [Tooltip("「-N」 찍히기.")]
         [SerializeField] private ComicStamp damage;
-        [Tooltip("「반동 -10」 표 — 자리 · 기울기 · 크기 (시안 label).")]
+        [Tooltip("「-N」 글자 — 카드 데이터 피해 양을 넣는다.")]
+        [SerializeField] private ComicWord damageText;
+        [Tooltip("「반동 -N」 표 본 — 장면 안에서는 늘 꺼 두고, 4 단계에 게임 화면 위로 복제한다 (기울기 · 상자 · 글자, 시안 label). 상자는 자식 ComicSketch 하나 (장면이 그린다).")]
         [SerializeField] private RectTransform recoilLabel;
-        [Tooltip("「반동 -10」 표 상자 (장면이 그린다).")]
-        [SerializeField] private ComicSketch recoilBox;
-        [Tooltip("「반동 -10」 표 글자 — 상자 너비가 이 글자 폭을 따른다.")]
+        [Tooltip("「반동 -N」 표 글자 — 상자 너비가 이 글자 폭을 따른다.")]
         [SerializeField] private TMP_Text recoilText;
-        [Tooltip("「반동 -10」 옆 땀.")]
+        [Tooltip("「반동 -N」 옆 땀 본 — 표와 함께 4 단계에 복제한다 (표와의 거리는 장면 안 자리 그대로).")]
         [SerializeField] private ComicSweat recoilSweat;
 
         [Header("때 (초)")]
@@ -163,12 +175,12 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private Vector2 burstTo = new Vector2(190f, 140f);
         [Tooltip("「퍽!!」 이 찍히는 시간 (초, 시안 0.16).")]
         [SerializeField] private float powTime = 0.16f;
-        [Tooltip("「-25」 가 찍히기 시작하는 때 · 찍히는 시간 (초, 시안 0.6 · 0.16).")]
+        [Tooltip("「-N」 이 찍히기 시작하는 때 · 찍히는 시간 (초, 시안 0.6 · 0.16).")]
         [SerializeField] private Vector2 damageAt = new Vector2(0.6f, 0.16f);
 
-        [Header("「반동 -10」 표 (시안 label(1070, 440, {size 44, rot 0.08, sc back(rk, 2.2)}) + 땀)")]
-        [Tooltip("표가 튀어나오기 시작하는 때 · 걸리는 시간 (초, 시안 0.86 · 0.16).")]
-        [SerializeField] private Vector2 recoilAt = new Vector2(0.86f, 0.16f);
+        [Header("「반동 -N」 표 (시안 label(1070, 440, {size 44, rot 0.08, sc back(rk, 2.2)}) + 땀 — 4 단계에 쓴 쪽 자리 위)")]
+        [Tooltip("표가 튀어나오는 시간 — 땀도 이 시간에 진해진다 (초, 시안 rk = (t − 0.86) / 0.16 의 0.16).")]
+        [SerializeField] private float recoilPop = 0.16f;
         [Tooltip("튀어나올 때 지나치는 정도 (시안 back 2.2).")]
         [SerializeField] private float recoilOvershoot = 2.2f;
         [Tooltip("상자 너비 = 글자 폭 + 이만큼 (설계 px, 시안 34).")]
@@ -181,6 +193,12 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private Color labelShadow = new Color(0f, 0f, 0f, 0.3f);
         [Tooltip("상자 테 두께 (설계 px, 시안 5).")]
         [SerializeField] private float labelLine = 5f;
+        [Tooltip("쓴 쪽 자리 가운데에서 표 가운데까지 (시안 px, 위로 + — 시안 4 단계엔 표가 없어 「으악!」 말풍선(70) 위에 둔다).")]
+        [SerializeField] private Vector2 recoilOffset = new Vector2(0f, 140f);
+        [Tooltip("표가 떠 있는 시간 (초) — 「으악!」 말풍선과 같은 1.4 초.")]
+        [SerializeField] private float recoilLife = 1.4f;
+        [Tooltip("끝에 흐려지는 시간 (초) — 「으악!」 말풍선과 같은 마지막 15 % (0.21 초).")]
+        [SerializeField] private float recoilFade = 0.21f;
 
         [Header("4 단계 (시안 FXA 드롭킥 s4 · FINISH 드롭킥)")]
         [Tooltip("맞은 쪽 줄 빛 수 (시안 streaks 14).")]
@@ -194,6 +212,7 @@ namespace Chapchu.UI.Fx.Dropkick
 
         private float _time;
         private float _labelWidth;
+        private int _recoilAmount;
         private CardFxSeat _hitSeat;
         private bool _knockedOut;
 
@@ -223,12 +242,16 @@ namespace Chapchu.UI.Fx.Dropkick
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(burst)} 가 비었다");
             if (pow == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(pow)} 가 비었다");
+            if (card == null)
+                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(card)} 가 비었다");
             if (damage == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(damage)} 가 비었다");
+            if (damageText == null)
+                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(damageText)} 가 비었다");
             if (recoilLabel == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(recoilLabel)} 가 비었다");
-            if (recoilBox == null)
-                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(recoilBox)} 가 비었다");
+            else if (recoilLabel.GetComponentInChildren<ComicSketch>(true) == null)
+                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(recoilLabel)} 아래에 상자(ComicSketch)가 없다");
             if (recoilText == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(recoilText)} 가 비었다");
             if (recoilSweat == null)
@@ -256,10 +279,24 @@ namespace Chapchu.UI.Fx.Dropkick
             target.Key = context.TargetKey;
             speedLines.Painter = PaintSpeedLines;
             sunburst.Painter = PaintSunburst;
-            recoilBox.Painter = PaintRecoilBox;
+
+            int damageAmount = 0;
+            _recoilAmount = 0;
+            foreach (CardEffect effect in card.effects)
+            {
+                if (effect is DamageEffect hit)
+                    damageAmount = hit.amount;
+                else if (effect is RecoilDamageEffect recoil)
+                    _recoilAmount = recoil.amount;
+            }
+            if (card.id != context.Fx.CardId)
+                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(card)} 는 카드 {card.id} 인데 낸 카드는 {context.Fx.CardId} 다");
+            damageText.Text = string.Format(DamageFormat, damageAmount);
+            recoilText.text = string.Format(RecoilFormat, _recoilAmount);
             _labelWidth = recoilText.GetPreferredValues(recoilText.text).x;
+            recoilLabel.gameObject.SetActive(false);
+            ComicKit.SetAlpha(recoilSweat, 0f);
             sunburst.Redraw();
-            recoilBox.Redraw();
         }
 
         public override void Draw(float t, ComicContext context)
@@ -289,7 +326,11 @@ namespace Chapchu.UI.Fx.Dropkick
                 for (float time = 0f; time < ouchDelay; time += Time.deltaTime)
                     yield return null;
                 if (!_knockedOut && fx.Layer != null && context.From != null && context.From.Anchor != null)
+                {
                     fx.Layer.Bubble(context.From.Anchor, OuchText);
+                    if (_recoilAmount > 0)
+                        ShowRecoil(fx.Layer, context.From.Anchor);
+                }
                 for (float time = 0f; time < postTail; time += Time.deltaTime)
                     yield return null;
             }
@@ -365,15 +406,47 @@ namespace Chapchu.UI.Fx.Dropkick
 
             pow.Apply(imp / powTime);
             damage.Apply((t - damageAt.x) / damageAt.y);
+        }
 
-            float rk = (t - recoilAt.x) / recoilAt.y;
-            recoilLabel.gameObject.SetActive(rk > 0f);
-            if (rk > 0f)
+        // 「반동 -N」 표 + 땀을 게임 화면(FxLayer) 쓴 쪽 자리 위에 복제해 시안 label 처럼 튀어나오게 — 「으악!」 말풍선과 같이 떠 있다 사라진다
+        private void ShowRecoil(FxLayer layer, RectTransform seat)
+        {
+            float scale = layer.PixelScale;
+            Vector2 at = layer.CenterOf(seat) + recoilOffset * scale;
+            Vector2 labelAt = ComicKit.PositionOf(recoilLabel), sweatAt = ComicKit.PositionOf(recoilSweat.rectTransform);
+            RectTransform label = Spawn(recoilLabel, layer, at);
+            RectTransform sweat = Spawn(recoilSweat.rectTransform, layer, at + new Vector2(sweatAt.x - labelAt.x, labelAt.y - sweatAt.y) * scale);
+            sweat.localScale = recoilSweat.rectTransform.localScale * scale;
+            ComicSketch box = label.GetComponentInChildren<ComicSketch>();
+            box.Painter = PaintRecoilBox;
+            box.Redraw();
+            ComicSweat drop = sweat.GetComponent<ComicSweat>();
+            ComicKit.SetAlpha(drop, 0f);
+            label.localScale = Vector3.zero;
+            CanvasGroup group = label.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            DOVirtual.Float(0f, recoilLife, recoilLife, time =>
             {
-                float pop = ComicKit.Back(rk, recoilOvershoot);
-                recoilLabel.localScale = new Vector3(pop, pop, 1f);
-            }
-            ComicKit.SetAlpha(recoilSweat, rk > 0f ? ComicKit.Cl(rk) : 0f);
+                float k = time / recoilPop, fade = 1f - ComicKit.Cl((time - (recoilLife - recoilFade)) / recoilFade);
+                float pop = ComicKit.Back(k, recoilOvershoot) * scale;
+                label.localScale = new Vector3(pop, pop, 1f);
+                group.alpha = fade;
+                ComicKit.SetAlpha(drop, ComicKit.Cl(k) * fade);
+            }).SetEase(Ease.Linear).SetLink(label.gameObject).OnComplete(() =>
+            {
+                Destroy(label.gameObject);
+                Destroy(sweat.gameObject);
+            });
+        }
+
+        // 장면 안의 본을 게임 화면 위에 복제한다 — 자리 = 레이어 좌표 (가운데 기준)
+        private static RectTransform Spawn(RectTransform source, FxLayer layer, Vector2 position)
+        {
+            RectTransform copy = Instantiate(source, layer.transform, false);
+            copy.anchorMin = copy.anchorMax = new Vector2(0.5f, 0.5f);
+            copy.anchoredPosition = position;
+            copy.gameObject.SetActive(true);
+            return copy;
         }
 
         private void PoseKicker(ComicDog dog, float t, float jump, float lean)
