@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -53,8 +54,15 @@ namespace Chapchu.UI.Fx.Band
 
         private void Awake()
         {
-            if (bubble == null || bubbleGroup == null || label == null)
-                Debug.LogError($"[{nameof(RollNumberFx)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            if (bubble == null)
+                missing.Add(nameof(bubble));
+            if (bubbleGroup == null)
+                missing.Add(nameof(bubbleGroup));
+            if (label == null)
+                missing.Add(nameof(label));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(RollNumberFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
 
         public override void ResetState()

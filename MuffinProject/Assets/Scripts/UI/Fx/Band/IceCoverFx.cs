@@ -1,4 +1,5 @@
-﻿using DG.Tweening;
+﻿using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 namespace Chapchu.UI.Fx.Band
@@ -30,8 +31,13 @@ namespace Chapchu.UI.Fx.Band
 
         private void Awake()
         {
-            if (cover == null || coverGroup == null)
-                Debug.LogError($"[{nameof(IceCoverFx)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            if (cover == null)
+                missing.Add(nameof(cover));
+            if (coverGroup == null)
+                missing.Add(nameof(coverGroup));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(IceCoverFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
 
         public override void ResetState()

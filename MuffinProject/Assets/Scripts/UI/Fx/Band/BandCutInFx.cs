@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -210,14 +209,49 @@ namespace Chapchu.UI.Fx.Band
 
         private void Awake()
         {
-            if (cutIn == null || backdrop == null || band == null || character == null || characterGroup == null || art == null || artPicture == null
-                || avatar == null || avatarPicture == null || iconBadge == null || iconFill == null || iconLabel == null || titleGroup == null
-                || titleGroupAlpha == null || whoBox == null || whoLabel == null || titleLabel == null || titleGlow == null || effectTag == null
-                || effectTagGroup == null || effectLabel == null || bubble == null || bubbleGroup == null || bubbleLabel == null || ring == null
-                || ringGroup == null || glowFills == null || glowBorders == null || post == null)
-                Debug.LogError($"[{nameof(BandCutInFx)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(object value, string name)
+            {
+                if (value == null || (value is UnityEngine.Object unityObject && unityObject == null))
+                    missing.Add(name);
+            }
 
-            _postSteps = post.GetComponentsInChildren<CardFxStep>(true).Where(step => step.enabled).OrderBy(step => step.StartMs).ToList();
+            Check(cutIn, nameof(cutIn));
+            Check(backdrop, nameof(backdrop));
+            Check(band, nameof(band));
+            Check(character, nameof(character));
+            Check(characterGroup, nameof(characterGroup));
+            Check(art, nameof(art));
+            Check(artPicture, nameof(artPicture));
+            Check(avatar, nameof(avatar));
+            Check(avatarPicture, nameof(avatarPicture));
+            Check(iconBadge, nameof(iconBadge));
+            Check(iconFill, nameof(iconFill));
+            Check(iconLabel, nameof(iconLabel));
+            Check(titleGroup, nameof(titleGroup));
+            Check(titleGroupAlpha, nameof(titleGroupAlpha));
+            Check(whoBox, nameof(whoBox));
+            Check(whoLabel, nameof(whoLabel));
+            Check(titleLabel, nameof(titleLabel));
+            Check(titleGlow, nameof(titleGlow));
+            Check(effectTag, nameof(effectTag));
+            Check(effectTagGroup, nameof(effectTagGroup));
+            Check(effectLabel, nameof(effectLabel));
+            Check(bubble, nameof(bubble));
+            Check(bubbleGroup, nameof(bubbleGroup));
+            Check(bubbleLabel, nameof(bubbleLabel));
+            Check(ring, nameof(ring));
+            Check(ringGroup, nameof(ringGroup));
+            Check(glowFills, nameof(glowFills));
+            Check(glowBorders, nameof(glowBorders));
+            Check(post, nameof(post));
+            if (missing.Count > 0)
+            {
+                Debug.LogError($"[{nameof(BandCutInFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
+                return;
+            }
+
+            _postSteps = Collect(post);
             _characterOrigin = character.anchoredPosition;
             _artOrigin = art.anchoredPosition;
             _avatarOrigin = avatar.anchoredPosition;
@@ -256,17 +290,7 @@ namespace Chapchu.UI.Fx.Band
             foreach (CardFxStep step in _postSteps)
                 step.ResetState();
 
-            float start = Time.time;
-            float end = 0f;
-            foreach (CardFxStep step in _postSteps)
-            {
-                while ((Time.time - start) * 1000f < step.StartMs)
-                    yield return null;
-                step.Play(context, null);
-                end = Mathf.Max(end, step.StartMs + step.DurationMs);
-            }
-            while ((Time.time - start) * 1000f < end)
-                yield return null;
+            yield return TimelineRoutine(_postSteps, context, null);
         }
 
         // 카드 값을 부품에 넣는다 — 글자 · 색 · 그림 · 칸 크기
