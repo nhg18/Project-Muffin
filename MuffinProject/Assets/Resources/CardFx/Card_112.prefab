@@ -2990,6 +2990,16 @@ MonoBehaviour:
   busCarScale: {x: 3.2, y: 1.3}
   missileScale: 7.5
   wideShotClear: 175
+  crushTime: 0.55
+  shakeSpeed: 95
+  leanRadius: 150
+  leanFalloff: 90
+  treeClear: 30
+  lampSignalClear: 26
+  propClear: 40
+  carClear: 26
+  carPowerMax: 1.4
+  carPowerFalloff: 90
 --- !u!114 &1671403387594166121
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3007,6 +3017,9 @@ MonoBehaviour:
   heightPerSize: 1.05
   slideDrop: 70
   tiltToCamera: 0.4
+  runDustColor:
+    serializedVersion: 2
+    rgba: 4288066244
 --- !u!114 &6606376949905005573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3020,7 +3033,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Nuke.NukeParticlesFx
   particleMaterial: {fileID: 2100000, guid: 82741940fb3ec194188269ee6bfbfe58, type: 2}
-  data: {fileID: 11400000, guid: 2607a1daaa678894895281d9cb6dae5d, type: 2}
+  groundDustColor:
+    serializedVersion: 2
+    rgba: 4282798176
 --- !u!1 &8105265857176546619
 GameObject:
   m_ObjectHideFlags: 0
