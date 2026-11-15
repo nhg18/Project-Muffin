@@ -415,7 +415,7 @@ namespace Chapchu.UI.Fx
                 float f = k - i;
                 seat.anchoredPosition = start + new Vector2(Mathf.Lerp(seatShakeXs[i], seatShakeXs[i + 1], f) * pixelScale, 0f);
                 seat.localRotation = rotation * Quaternion.Euler(0f, 0f, -Mathf.Lerp(seatShakeAngles[i], seatShakeAngles[i + 1], f));
-            }).SetId(id).SetLink(seat.gameObject).OnKill(() =>
+            }).SetEase(Ease.Linear).SetId(id).SetLink(seat.gameObject).OnKill(() =>
             {
                 seat.anchoredPosition = start;
                 seat.localRotation = rotation;
@@ -465,7 +465,7 @@ namespace Chapchu.UI.Fx
                 float f = Mathf.InverseLerp(bubbleKeys[i], bubbleKeys[i + 1], t);
                 root.localScale = Vector3.one * Mathf.Lerp(bubbleScales[i], bubbleScales[i + 1], f);
                 group.alpha = Mathf.Lerp(bubbleAlphas[i], bubbleAlphas[i + 1], f);
-            }).SetLink(root.gameObject).OnComplete(() => Destroy(root.gameObject));
+            }).SetEase(Ease.Linear).SetLink(root.gameObject).OnComplete(() => Destroy(root.gameObject));
         }
 
         #endregion
