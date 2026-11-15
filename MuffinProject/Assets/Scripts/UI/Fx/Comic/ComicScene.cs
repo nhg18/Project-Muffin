@@ -15,7 +15,7 @@ namespace Chapchu.UI.Fx.Comic
     /// <item>코드: <c>Scripts/UI/Fx/&lt;기능&gt;/&lt;이름&gt;ComicScene.cs</c> — 이 클래스를 상속하고, 자식 도구를 [SerializeField] 로 들고,
     /// <see cref="Draw"/> 에 시안 draw(t, P) 를 줄 단위로 옮긴다 (시안 c.translate(x, y) → <see cref="ComicKit.Place"/>, c.rotate → <see cref="ComicKit.Turn"/>,
     /// stamp(…, k) → <see cref="ComicStamp.Apply"/>, 도구 값 → 도구의 속성 · SetTime). 장면에만 있는 자유 모양(c.arc · c.fill 등)은 <see cref="ComicSketch"/>.
-    /// 시안 값(시각 · 자리 · 크기)은 상수나 [SerializeField] 로 이름을 붙인다.</item>
+    /// 시안 값(시각 · 자리 · 크기 · 색)은 [SerializeField] + [Tooltip](시안 값 표기)으로 이름을 붙인다 — 연출 시험장 Inspector 에서 바꿀 수 있게.</item>
     /// <item>프리팹: <c>Prefab/UI/CardFx/Comic/ComicCutIn.prefab</c> 의 프리팹 변형을 <c>Resources/CardFx/Card_&lt;카드 ID&gt;.prefab</c> 으로 만들고,
     /// Stage 아래에 장면 오브젝트(화면 전체로 늘인 RectTransform + 이 컴포넌트)를 하나 둔다. 장면 자식은 앵커 · 피벗을 왼쪽 위(0, 1)에 둬서
     /// anchoredPosition = (시안 x, −시안 y) 가 되게 한다. 시안 그리는 순서 = 자식 순서. 되풀이되는 것은 프리팹(ComicCard · ComicDog · ComicWord)을 복제한다.
@@ -24,7 +24,7 @@ namespace Chapchu.UI.Fx.Comic
     /// <item>4 단계 장식(시안 FXA s4 — 말풍선 · 판 흔들기)은 <see cref="PostRoutine"/> 에서 <see cref="CardFxContext.Layer"/> 로.</item>
     /// </list>
     ///
-    /// <para><b>시안 → Unity</b>: P.from · tg · tk · others · avs · hit → <see cref="ComicContext"/> 의 From · Target · TargetKey · Others · AvatarOf · Hit.
+    /// <para><b>시안 → Unity</b>: P.from · tg · tk → <see cref="ComicContext"/> 의 From · Target · TargetKey (others · avs · hit 는 쓰는 장면이 생길 때 더한다).
     /// focus → <see cref="ComicFocusLines"/>, speed → <see cref="ComicSpeedLines"/>, tone/halftone → <see cref="ComicHalftone"/>, bgGrad → <see cref="ComicGradient"/>,
     /// burst → <see cref="ComicBurst"/>, bubble → <see cref="ComicBubble"/>, glow → <see cref="ComicGlow"/>, sparkle → <see cref="ComicSparkle"/>, sweat → <see cref="ComicSweat"/>,
     /// word + stamp → <see cref="ComicWord"/> + <see cref="ComicStamp"/>, stk → <see cref="ComicSticker"/>, dog · dogPt → <see cref="ComicDog"/> · <see cref="ComicDog.PointOf"/>,
@@ -50,7 +50,7 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private string tagline;
         [Tooltip("제목이 나오는 때 (초, 시안 titleAt).")]
         [SerializeField] private float titleAt = 1f;
-        [Tooltip("판 흔들림 (x = 시각 초, y = 세기 — 시안 hits). 장면이 Draw 에서 더할 때는 ComicContext.Hit.")]
+        [Tooltip("판 흔들림 (x = 시각 초, y = 세기 — 시안 hits).")]
         [SerializeField] private Vector2[] hits = Array.Empty<Vector2>();
 
         /// <summary>장면 길이 (초, 시안 len).</summary>

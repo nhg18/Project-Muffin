@@ -156,12 +156,6 @@ namespace Chapchu.UI.Fx.Comic
             _matrix = _matrix.Then(new Affine { A = a, B = b, C = c, D = d, E = e, F = f });
         }
 
-        /// <summary>변환을 처음으로 (시안 setTransform(1, 0, 0, 1, 0, 0)).</summary>
-        public void ResetTransform()
-        {
-            _matrix = Affine.Identity;
-        }
-
         #endregion
 
         #region 경로
@@ -187,24 +181,6 @@ namespace Chapchu.UI.Fx.Comic
                 return;
             }
             path.Points.Add(_matrix.Apply(x, y));
-        }
-
-        public void QuadraticCurveTo(float cx, float cy, float x, float y)
-        {
-            Subpath path = OpenSubpath();
-            if (path == null)
-            {
-                MoveTo(cx, cy);
-                path = OpenSubpath();
-            }
-            Vector2 p0 = path.Points[path.Points.Count - 1];
-            Vector2 p1 = _matrix.Apply(cx, cy), p2 = _matrix.Apply(x, y);
-            int n = Segments(Vector2.Distance(p0, p1) + Vector2.Distance(p1, p2));
-            for (int i = 1; i <= n; i++)
-            {
-                float t = (float)i / n, u = 1f - t;
-                path.Points.Add(u * u * p0 + 2f * u * t * p1 + t * t * p2);
-            }
         }
 
         public void BezierCurveTo(float c1x, float c1y, float c2x, float c2y, float x, float y)

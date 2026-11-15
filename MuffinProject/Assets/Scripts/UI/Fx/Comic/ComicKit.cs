@@ -6,7 +6,7 @@ namespace Chapchu.UI.Fx.Comic
     /// 만화 컷인(시안 CI2) 공용 값 · 셈 — 설계 화면 크기, 먹 · 종이 색, 시안과 같은 이징, 설계 좌표 ↔ RectTransform.
     /// 설계 좌표는 시안 그대로: 1280×720, 왼쪽 위가 (0, 0), 아래로 +, 각도는 라디안 · 시계 방향 +.
     /// 장면 오브젝트는 앵커 · 피벗 기준점을 설계 판 왼쪽 위(앵커 (0, 1))에 두므로 anchoredPosition = (x, −y) 다 — <see cref="Place"/> 로 옮긴다.
-    /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 CI2 (cl · lerp · sm · eo · ei · eio · back · spring · wob).
+    /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 CI2 (cl · lerp · eo · back · wob — 나머지 이징은 쓰는 장면이 생길 때 더한다).
     /// </summary>
     public static class ComicKit
     {
@@ -31,37 +31,14 @@ namespace Chapchu.UI.Fx.Comic
         /// <summary>자르지 않는 보간 (시안 lerp).</summary>
         public static float Lerp(float a, float b, float k) => a + (b - a) * k;
 
-        /// <summary>부드러운 0 → 1 (시안 sm).</summary>
-        public static float Sm(float k)
-        {
-            k = Cl(k);
-            return k * k * (3f - 2f * k);
-        }
-
         /// <summary>빠르게 시작해 느리게 끝 (시안 eo — ease-out cubic).</summary>
         public static float Eo(float k) => 1f - Mathf.Pow(1f - Cl(k), 3f);
-
-        /// <summary>느리게 시작해 빠르게 끝 (시안 ei — ease-in cubic).</summary>
-        public static float Ei(float k) => Mathf.Pow(Cl(k), 3f);
-
-        /// <summary>느리게 → 빠르게 → 느리게 (시안 eio).</summary>
-        public static float Eio(float k)
-        {
-            k = Cl(k);
-            return k < 0.5f ? 4f * k * k * k : 1f - Mathf.Pow(-2f * k + 2f, 3f) / 2f;
-        }
 
         /// <summary>목표를 지나쳤다 돌아온다 (시안 back — a 가 클수록 많이 지나친다).</summary>
         public static float Back(float k, float a = 2.2f)
         {
             k = Cl(k);
             return 1f + (a + 1f) * Mathf.Pow(k - 1f, 3f) + a * Mathf.Pow(k - 1f, 2f);
-        }
-
-        /// <summary>용수철 — 0 에서 1 로 출렁이며 간다 (시안 spring).</summary>
-        public static float Spring(float k, float frequency = 18f, float damping = 7f)
-        {
-            return k <= 0f ? 0f : 1f - Mathf.Exp(-k * damping) * Mathf.Cos(k * frequency);
         }
 
         /// <summary>떨림 — 0 둘레로 출렁이다 멎는다 (시안 wob).</summary>
@@ -87,12 +64,6 @@ namespace Chapchu.UI.Fx.Comic
         public static void Turn(RectTransform target, float radians)
         {
             target.localRotation = Quaternion.Euler(0f, 0f, -radians * Mathf.Rad2Deg);
-        }
-
-        /// <summary>오브젝트의 시안 각도 (라디안, 시계 방향 +, −π ~ π).</summary>
-        public static float AngleOf(RectTransform target)
-        {
-            return -Mathf.DeltaAngle(0f, target.localEulerAngles.z) * Mathf.Deg2Rad;
         }
 
         /// <summary>Graphic 색의 투명도만 바꾼다 (바뀔 때만 다시 그린다).</summary>

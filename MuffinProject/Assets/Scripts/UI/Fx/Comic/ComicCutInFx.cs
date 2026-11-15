@@ -66,9 +66,6 @@ namespace Chapchu.UI.Fx.Comic
         private ComicSticker[] _stickers;
         private ComicContext _context;
 
-        /// <summary>이 컷인의 장면 (Stage 아래 첫 ComicScene).</summary>
-        public ComicScene Scene => _scene;
-
         public override IEnumerator PlayRoutine(CardFxContext context)
         {
             if (_scene == null)
@@ -119,6 +116,22 @@ namespace Chapchu.UI.Fx.Comic
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
             _group.interactable = false;
+            if (background == null)
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(background)} 가 비었다");
+            if (titleBlock == null)
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(titleBlock)} 가 비었다");
+            if (grain == null)
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(grain)} 가 비었다");
+            if (wipeSpace == null)
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(wipeSpace)} 가 비었다");
+            if (wipe == null)
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(wipe)} 가 비었다");
+            if (stage == null)
+            {
+                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(stage)} 가 비었다");
+                _stickers = System.Array.Empty<ComicSticker>();
+                return;
+            }
             _scene = stage.GetComponentInChildren<ComicScene>(true);
             _stickers = stage.GetComponentsInChildren<ComicSticker>(true);
         }
