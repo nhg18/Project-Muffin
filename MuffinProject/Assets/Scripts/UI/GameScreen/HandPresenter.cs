@@ -347,6 +347,7 @@ namespace Chapchu.UI.GameScreen
                 Transform t = card.transform;
                 t.SetParent(transform.parent, true); // 손패 올리기 · 내리기에 끌려가지 않게
                 card.SetRaycastBlocking(false);
+                card.SetGradeVisible(false); // 닿으면 바꿔 끼우는 더미의 맨 위 카드와 같게
 
                 t.DOKill();
                 t.DOMove(discardSpot.position, discardDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);
