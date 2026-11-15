@@ -38,37 +38,5 @@ namespace Chapchu.UI.Fx
 
         /// <summary>조각 하나만 재생한다. showScenery 면 이펙트 뒤에 그 시각의 장면을 깐다. 조각이 없는 연출은 전체를 재생한다. 끝나면 부른 쪽이 지운다.</summary>
         public virtual IEnumerator PlayStepRoutine(CardFxStep step, CardFxContext context, bool showScenery) => PlayRoutine(context);
-
-        /// <summary>CSS cubic-bezier(x1, y1, x2, y2) 이징 — 시간 비율 x(0~1) 의 진행 비율. 시안의 CSS 곡선을 연출 · 시험장이 같이 쓴다.</summary>
-        public static float CssEase(float x1, float y1, float x2, float y2, float x)
-        {
-            x = Mathf.Clamp01(x);
-            float t = x;
-            for (int i = 0; i < 8; i++)
-            {
-                float error = BezierAt(x1, x2, t) - x;
-                if (Mathf.Abs(error) < 1e-5f)
-                    break;
-                float slope = BezierSlope(x1, x2, t);
-                if (Mathf.Abs(slope) < 1e-6f)
-                    break;
-                t = Mathf.Clamp01(t - error / slope);
-            }
-
-            return BezierAt(y1, y2, t);
-        }
-
-        // 0 · p1 · p2 · 1 을 잇는 3차 베지어의 한 축
-        private static float BezierAt(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
-        }
-
-        private static float BezierSlope(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * p1 + 6f * u * t * (p2 - p1) + 3f * t * t * (1f - p2);
-        }
     }
 }
