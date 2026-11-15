@@ -12,6 +12,13 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class LogSheetView : MonoBehaviour
     {
+        /// <summary>턴 머리글 템플릿 안 점선 부품 이름 — GameScreenBuilder 가 같은 이름으로 만들고, 줄을 복제할 때 이 이름으로 찾는다.</summary>
+        public const string HeaderLineChild = "Line";
+        /// <summary>턴 머리글 · 항목 템플릿 안 글자 부품 이름.</summary>
+        public const string TextChild = "Text";
+        /// <summary>항목 템플릿 안 빨간 수치 부품 이름.</summary>
+        public const string EntryValueChild = "Value";
+
         private const string EntryFormat = "{0} · {1}";
 
         [SerializeField] private Button closeButton;
@@ -87,8 +94,8 @@ namespace Chapchu.UI.GameScreen
         {
             RectTransform row = Instantiate(headerTemplate, content);
             row.gameObject.SetActive(true);
-            row.Find("Line").gameObject.SetActive(!first);
-            row.Find("Text").GetComponent<TMP_Text>().text = header;
+            row.Find(HeaderLineChild).gameObject.SetActive(!first);
+            row.Find(TextChild).GetComponent<TMP_Text>().text = header;
             _rows.Add(row.gameObject);
         }
 
@@ -98,9 +105,9 @@ namespace Chapchu.UI.GameScreen
             row.gameObject.SetActive(true);
 
             string ink = ColorUtility.ToHtmlStringRGB(inkOf(entry.Actor));
-            row.Find("Text").GetComponent<TMP_Text>().text = string.Format(EntryFormat, $"<color=#{ink}>{nameOf(entry.Actor)}</color>", entry.Text);
+            row.Find(TextChild).GetComponent<TMP_Text>().text = string.Format(EntryFormat, $"<color=#{ink}>{nameOf(entry.Actor)}</color>", entry.Text);
 
-            TMP_Text value = row.Find("Value").GetComponent<TMP_Text>();
+            TMP_Text value = row.Find(EntryValueChild).GetComponent<TMP_Text>();
             value.text = entry.Value;
             value.gameObject.SetActive(!string.IsNullOrEmpty(entry.Value));
             _rows.Add(row.gameObject);

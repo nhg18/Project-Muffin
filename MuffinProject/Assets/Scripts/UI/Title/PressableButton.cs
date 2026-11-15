@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Chapchu.UI.Lobby;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -11,8 +12,6 @@ namespace Chapchu.UI.Title
     [RequireComponent(typeof(Button))]
     public class PressableButton : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
-        private static readonly Color OffColor = new Color32(0xB8, 0xAE, 0xA4, 0xFF);
-
         [SerializeField] private RectTransform body;
 
         [Tooltip("누를 때 몸체가 내려가는 거리 (캔버스 px). 시안 .btn 2 × 2 · 큰 버튼 3 × 2")]
@@ -110,10 +109,10 @@ namespace Chapchu.UI.Title
                 fill.color = dimmed ? Color.white : _fillColor;
 
             if (_box != null)
-                _box.BorderColor = dimmed ? OffColor : _borderColor;
+                _box.BorderColor = dimmed ? LobbyStyle.Off : _borderColor;
 
             for (int i = 0; i < _inkColors.Length; i++)
-                inkParts[i].color = dimmed ? OffColor : _inkColors[i];
+                inkParts[i].color = dimmed ? LobbyStyle.Off : _inkColors[i];
         }
 
         // 비활성(interactable 꺼짐) 버튼은 호버 · 누름에 반응하지 않는다

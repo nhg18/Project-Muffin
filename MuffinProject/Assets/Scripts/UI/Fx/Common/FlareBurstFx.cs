@@ -17,9 +17,11 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float durationMs = 520f;
 
         [Header("고리")]
+        [Tooltip("고리의 처음 크기 배율 (가로 · 세로).")]
         [SerializeField] private Vector2 ringStart = new Vector2(0.2f, 0.09f);
         [Tooltip("이 크기까지 빠르게 커진 뒤 사라지며 끝 크기로.")]
         [SerializeField] private Vector2 ringPeak = new Vector2(1f, 0.45f);
+        [Tooltip("사라질 때 고리의 끝 크기 배율 (가로 · 세로).")]
         [SerializeField] private Vector2 ringEnd = new Vector2(1.5f, 0.68f);
         [Tooltip("최대 크기에 닿는 때 (전체 시간 대비 0~1).")]
         [Range(0f, 1f)]
@@ -30,6 +32,7 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float streakTime = 0.85f;
         [Tooltip("처음 가로 배율. 세로는 1 에서 시작.")]
         [SerializeField] private float streakStart = 0.05f;
+        [Tooltip("사라질 때 줄 빛의 끝 크기 배율 (가로 · 세로).")]
         [SerializeField] private Vector2 streakEnd = new Vector2(1.4f, 0.15f);
         [Tooltip("다 뻗는 때 (줄 빛 시간 대비 0~1).")]
         [Range(0f, 1f)]
@@ -38,6 +41,7 @@ namespace Chapchu.UI.Fx.Common
         [Header("별")]
         [Tooltip("별 시간 = 고리 시간 × 이 값.")]
         [SerializeField] private float sparkTime = 0.8f;
+        [Tooltip("별이 가장 커질 때 배율 — 0 에서 커졌다가 다시 0 으로.")]
         [SerializeField] private float sparkPeak = 1.3f;
         [Tooltip("사라질 때까지 도는 각도 (시계 방향 -).")]
         [SerializeField] private float sparkSpin = -90f;

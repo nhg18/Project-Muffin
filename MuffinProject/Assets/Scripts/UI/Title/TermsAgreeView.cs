@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.UI.Lobby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,10 +13,6 @@ namespace Chapchu.UI.Title
     public class TermsAgreeView : MonoBehaviour
     {
         private const int TermCount = 2;
-        private static readonly Color CheckedColor = new Color32(0x3C, 0xBF, 0x72, 0xFF);
-        private static readonly Color ColumnColor = new Color32(0xF6, 0xF0, 0xE7, 0xFF);
-        private static readonly Color NeedColor = new Color32(0xFF, 0xF1, 0xEF, 0xFF);
-        private static readonly Color NeedEdgeColor = new Color32(0xEC, 0x3B, 0x46, 0xFF);
 
         [SerializeField] private Button allButton;
         [SerializeField] private Image allBox;
@@ -145,8 +142,8 @@ namespace Chapchu.UI.Title
             {
                 SetBox(termBoxes[i], termChecks[i], _checked[i]);
                 bool need = _showNeed && !_checked[i];
-                columnEdges[i].color = need ? NeedEdgeColor : ColumnColor;
-                columnFills[i].color = need ? NeedColor : ColumnColor;
+                columnEdges[i].color = need ? LobbyStyle.Hp : LobbyStyle.Soft;
+                columnFills[i].color = need ? LobbyStyle.HpFill : LobbyStyle.Soft;
             }
 
             needMessage.SetActive(_showNeed);
@@ -155,7 +152,7 @@ namespace Chapchu.UI.Title
 
         private static void SetBox(Image box, GameObject check, bool on)
         {
-            box.color = on ? CheckedColor : Color.white;
+            box.color = on ? LobbyStyle.Ok : Color.white;
             check.SetActive(on);
         }
     }

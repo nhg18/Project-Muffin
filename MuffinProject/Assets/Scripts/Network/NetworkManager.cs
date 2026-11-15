@@ -17,7 +17,9 @@ namespace Chapchu.Network
     /// </summary>
     public class NetworkManager : SingletonPersistentPun<NetworkManager>, IOnEventCallback
     {
+        /// <summary>시작할 수 있는 최소 인원 — 봇 포함 (08-room.md 2절 「최소 인원」).</summary>
         public const int MinPlayers = 2;
+        /// <summary>방 정원 — 봇 포함 (08-room.md 2절 「최대 인원」).</summary>
         public const int MaxPlayers = 4;
 
         // 방장이 방 전원의 씬을 바꾼다 (09-network.md 13절) — PUN 씬 동기화는 누가 쓴 값인지 보지 않아 쓰지 않는다

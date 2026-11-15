@@ -23,6 +23,7 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float holdMs = 200f;
         [Tooltip("사라지는 시간 (ms).")]
         [SerializeField] private float fadeMs = 140f;
+        [Tooltip("칼선 판 바탕색.")]
         [SerializeField] private Color background = Color.black;
         [Tooltip("칼선 판을 걷는 때 (ms). 다음 장면이 시작하는 시각에 맞춘다.")]
         [SerializeField] private float endMs = 260f;
@@ -30,7 +31,9 @@ namespace Chapchu.UI.Fx.Common
         [Header("잔상 (히트스톱)")]
         [Tooltip("잔상이 좌우로 어긋난 거리 (px).")]
         [SerializeField] private float ghostOffset = 7f;
+        [Tooltip("왼쪽으로 어긋난 잔상 색.")]
         [SerializeField] private Color leftGhost = new Color32(0xff, 0x6a, 0x8a, 0xff);
+        [Tooltip("오른쪽으로 어긋난 잔상 색.")]
         [SerializeField] private Color rightGhost = new Color32(0x7a, 0xd8, 0xff, 0xff);
         [Tooltip("잔상이 나타나는 때 (ms).")]
         [SerializeField] private float ghostDelayMs = 60f;
@@ -41,6 +44,7 @@ namespace Chapchu.UI.Fx.Common
         [Tooltip("번쩍이는 때 (ms).")]
         [SerializeField] private float flashDelayMs = 60f;
         [Range(0f, 1f)]
+        [Tooltip("번쩍일 때 판의 투명도.")]
         [SerializeField] private float flashAlpha = 1f;
         [Tooltip("번쩍임이 사라지는 시간 (ms).")]
         [SerializeField] private float flashMs = 180f;

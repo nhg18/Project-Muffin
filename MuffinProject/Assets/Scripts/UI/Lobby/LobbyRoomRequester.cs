@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Chapchu.Account;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
@@ -31,8 +32,6 @@ namespace Chapchu.UI.Lobby
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
         private const float RoomRequestTimeoutSeconds = 10f; // 14-lobby-ui 6절
-        // 앱이 뒤로 갔다 돌아온 프레임의 큰 시간은 세지 않는다 (TitlePresenter 와 같다)
-        private const float MaxCountedFrameSeconds = 0.1f;
 
         [SerializeField] private LobbyHomeView home;
         [SerializeField] private LobbyModalView modal;
@@ -209,7 +208,7 @@ namespace Chapchu.UI.Lobby
             float waited = 0f;
             while (waited < RoomRequestTimeoutSeconds)
             {
-                waited += Mathf.Min(Time.unscaledDeltaTime, MaxCountedFrameSeconds);
+                waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
                 yield return null;
             }
 

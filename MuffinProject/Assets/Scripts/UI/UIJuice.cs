@@ -9,10 +9,17 @@ namespace Chapchu.UI
     /// </summary>
     public static class UIJuice
     {
+        // 정적 도우미라 Inspector 가 없다 — 값을 바꾸면 이 키트를 쓰는 모든 화면이 같이 바뀐다 (시안 v2 키트 값).
+        /// <summary>튀어나오기 전체 초 (시안 fxPop 0.24초).</summary>
         private const float PopSeconds = 0.24f;
+        /// <summary>튀어나오기 가장 큰 배율.</summary>
         private const float PopPeak = 1.08f;
+        /// <summary>가장 큰 배율에 닿는 때 — 전체 시간 대비.</summary>
         private const float PopPeakAt = 0.55f;
+        /// <summary>흔들기 단계 수 — 시작 자리 포함 ShakeSteps + 1 자리를 거친다.</summary>
         private const int ShakeSteps = 8;
+        /// <summary>흔들기 위아래 폭 — 좌우 폭 대비.</summary>
+        private const float ShakeVerticalRatio = 0.3f;
 
         /// <summary>from 배율에서 1.08 로 커졌다가 1 로 (0.24초, ease-out).</summary>
         public static void Pop(RectTransform target, float from = 0.88f)
@@ -35,7 +42,7 @@ namespace Chapchu.UI
             for (int i = 0; i <= ShakeSteps; i++)
             {
                 float d = amplitude * (1f - (float)i / ShakeSteps);
-                var offset = new Vector2(i % 2 == 1 ? -d : d, -((i % 3) - 1) * d * 0.3f);
+                var offset = new Vector2(i % 2 == 1 ? -d : d, -((i % 3) - 1) * d * ShakeVerticalRatio);
                 if (i == ShakeSteps)
                     offset = Vector2.zero;
 

@@ -18,12 +18,19 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text secondsText;
         [Tooltip("남은 초가 이 값 이하면 빨강 (시안: 5).")]
         [SerializeField] private int urgentSeconds = 5;
+        [Tooltip("남은 초 글자 크기.")]
         [SerializeField] private float normalFontSize = 30f;
+        [Tooltip("멈춤(‖) 글자 크기.")]
         [SerializeField] private float pausedFontSize = 24f;
+        [Tooltip("평소 링 색.")]
         [SerializeField] private Color ringColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        [Tooltip("평소 남은 초 글자색.")]
         [SerializeField] private Color ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("남은 초가 적을 때(urgentSeconds 이하) 링 · 글자색.")]
         [SerializeField] private Color urgentColor = new Color32(0xec, 0x3b, 0x46, 0xFF);
+        [Tooltip("멈춤일 때 링 색.")]
         [SerializeField] private Color pausedRingColor = new Color32(0xb8, 0xae, 0xa4, 0xFF);
+        [Tooltip("멈춤일 때 글자색.")]
         [SerializeField] private Color pausedInk = new Color32(0x8a, 0x81, 0x7a, 0xFF);
 
         private void Awake()

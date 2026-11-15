@@ -20,26 +20,36 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class StickerWordView : MonoBehaviour
     {
-        private const float PopSeconds = 0.5f;
-        private const float PopStagger = 0.075f;
-        private const float BobDelay = 0.7f;
-        private const float BobStagger = 0.11f;
-        private const float BobSeconds = 0.9f;
-        private const float SpaceWidthEm = 0.28f;
-
         [Tooltip("글자 칸 템플릿 (비활성) — 레이아웃 칸. 첫 자식이 스티커 글꼴 · 머티리얼의 글자(움직이는 쪽).")]
         [SerializeField] private RectTransform charTemplate;
         [Tooltip("글자 기울기 순서 (도, 시안 RT) — 글자마다 돌아가며 쓴다.")]
         [SerializeField] private float[] tilts = { -7f, 5f, -4f, 6f, -5f, 8f };
-        [Tooltip("털색 — 위 · 아래.")]
+        [Tooltip("털색 — 위.")]
         [SerializeField] private Color furTop = new Color32(0xFF, 0xFC, 0xF6, 0xFF);
+        [Tooltip("털색 — 아래.")]
         [SerializeField] private Color furBottom = new Color32(0xF5, 0xD6, 0xAA, 0xFF);
-        [Tooltip("분홍 — 위 · 아래.")]
+        [Tooltip("분홍 — 위.")]
         [SerializeField] private Color pinkTop = new Color32(0xFF, 0x9D, 0xBB, 0xFF);
+        [Tooltip("분홍 — 아래.")]
         [SerializeField] private Color pinkBottom = new Color32(0xFF, 0x5C, 0x8A, 0xFF);
-        [Tooltip("노랑 — 위 · 아래.")]
+        [Tooltip("노랑(「!」 「?」) — 위.")]
         [SerializeField] private Color bangTop = new Color32(0xFF, 0xE2, 0x7A, 0xFF);
+        [Tooltip("노랑(「!」 「?」) — 아래.")]
         [SerializeField] private Color bangBottom = new Color32(0xFF, 0xC2, 0x3F, 0xFF);
+
+        [Header("움직임 (시안 gpPop · gpBob)")]
+        [Tooltip("글자 하나가 튀어나오는 초 (시안 gpPop 0.5초).")]
+        [SerializeField] private float popSeconds = 0.5f;
+        [Tooltip("글자 사이 튀어나오는 간격 초.")]
+        [SerializeField] private float popStagger = 0.075f;
+        [Tooltip("시작(delay)부터 첫 글자가 살랑이기 시작할 때까지 초.")]
+        [SerializeField] private float bobDelay = 0.7f;
+        [Tooltip("글자 사이 살랑임 시작 간격 초.")]
+        [SerializeField] private float bobStagger = 0.11f;
+        [Tooltip("살랑임 편도 초 (시안 gpBob 0.9초 왕복을 Yoyo 로).")]
+        [SerializeField] private float bobSeconds = 0.9f;
+        [Tooltip("빈칸 너비 — 글자 크기의 배율(em).")]
+        [SerializeField] private float spaceWidthEm = 0.28f;
 
         private readonly List<RectTransform> _chars = new List<RectTransform>();
         private readonly List<float> _charTilts = new List<float>();
@@ -68,7 +78,7 @@ namespace Chapchu.UI.GameScreen
                 {
                     if (ch == ' ')
                     {
-                        AddSpace(size * SpaceWidthEm);
+                        AddSpace(size * spaceWidthEm);
                         continue;
                     }
                     StickerTone charTone = ch == '!' || ch == '?' ? StickerTone.Bang : tone;
@@ -128,7 +138,7 @@ namespace Chapchu.UI.GameScreen
             if (delay < 0f)
                 return;
 
-            float start = delay + i * PopStagger;
+            float start = delay + i * popStagger;
             Vector2 home = Vector2.zero;
             group.alpha = 0f;
             rect.localScale = Vector3.one * 0.2f;
@@ -136,18 +146,18 @@ namespace Chapchu.UI.GameScreen
             rect.anchoredPosition = home + new Vector2(0f, -0.45f * size);
 
             Sequence pop = DOTween.Sequence().SetTarget(rect).SetDelay(start);
-            pop.Append(group.DOFade(1f, PopSeconds * 0.65f));
-            pop.Join(rect.DOScale(1.16f, PopSeconds * 0.65f).SetEase(Ease.OutQuad));
-            pop.Join(rect.DOLocalRotate(new Vector3(0f, 0f, -(tilt + 6f)), PopSeconds * 0.65f).SetEase(Ease.OutQuad));
-            pop.Join(rect.DOAnchorPos(home + new Vector2(0f, 0.06f * size), PopSeconds * 0.65f).SetEase(Ease.OutQuad));
-            pop.Append(rect.DOScale(1f, PopSeconds * 0.35f).SetEase(Ease.InOutQuad));
-            pop.Join(rect.DOLocalRotate(new Vector3(0f, 0f, -tilt), PopSeconds * 0.35f).SetEase(Ease.InOutQuad));
-            pop.Join(rect.DOAnchorPos(home, PopSeconds * 0.35f).SetEase(Ease.InOutQuad));
+            pop.Append(group.DOFade(1f, popSeconds * 0.65f));
+            pop.Join(rect.DOScale(1.16f, popSeconds * 0.65f).SetEase(Ease.OutQuad));
+            pop.Join(rect.DOLocalRotate(new Vector3(0f, 0f, -(tilt + 6f)), popSeconds * 0.65f).SetEase(Ease.OutQuad));
+            pop.Join(rect.DOAnchorPos(home + new Vector2(0f, 0.06f * size), popSeconds * 0.65f).SetEase(Ease.OutQuad));
+            pop.Append(rect.DOScale(1f, popSeconds * 0.35f).SetEase(Ease.InOutQuad));
+            pop.Join(rect.DOLocalRotate(new Vector3(0f, 0f, -tilt), popSeconds * 0.35f).SetEase(Ease.InOutQuad));
+            pop.Join(rect.DOAnchorPos(home, popSeconds * 0.35f).SetEase(Ease.InOutQuad));
 
-            float bobStart = delay + BobDelay + i * BobStagger - (start + PopSeconds);
+            float bobStart = delay + bobDelay + i * bobStagger - (start + popSeconds);
             Sequence bob = DOTween.Sequence().SetTarget(rect);
-            bob.Append(rect.DOAnchorPos(home + new Vector2(0f, 0.045f * size), BobSeconds).SetEase(Ease.InOutSine));
-            bob.Join(rect.DOLocalRotate(new Vector3(0f, 0f, tilt * 0.6f), BobSeconds).SetEase(Ease.InOutSine));
+            bob.Append(rect.DOAnchorPos(home + new Vector2(0f, 0.045f * size), bobSeconds).SetEase(Ease.InOutSine));
+            bob.Join(rect.DOLocalRotate(new Vector3(0f, 0f, tilt * 0.6f), bobSeconds).SetEase(Ease.InOutSine));
             bob.SetLoops(-1, LoopType.Yoyo);
             pop.AppendInterval(Mathf.Max(0f, bobStart));
             pop.OnComplete(() => bob.Play());

@@ -10,6 +10,11 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class StartGaepanEffect : CardEffect
     {
+        // 18-bot.md 7-3 「개판 시작」
+        private const int BotMinHpLead = 20;   // 내 HP − 상대 최저 HP 가 이 이상
+        private const int BotMinHandLead = 2;  // 내 손패 − 상대 최소 손패가 이 이상
+        private const double BotGaepanScore = 45;
+
         // 18-bot 7-3 ㅂ (사용자 2026-11-13 · 프로토타입 v2): 개판이 없고, 내 HP 가 상대 최저보다 20 이상 · 내 손패가 상대 최소보다 2장 이상 많을 때만
         internal override bool BotWants(GameServer server, int bot, int[] receivers)
         {
@@ -18,12 +23,12 @@ namespace Chapchu.Game.Effects
             int[] others = server.ActorsInGame.Where(actor => actor != bot && server.StateOf(actor).Life == LifeState.Alive).ToArray();
             if (others.Length == 0)
                 return false;
-            return server.PlayerHp(bot) - others.Min(server.PlayerHp) >= 20
-                && server.HandCountOf(bot) - others.Min(server.HandCountOf) >= 2;
+            return server.PlayerHp(bot) - others.Min(server.PlayerHp) >= BotMinHpLead
+                && server.HandCountOf(bot) - others.Min(server.HandCountOf) >= BotMinHandLead;
         }
 
         // 조건이 맞으면 5바퀴 뒤 꼴찌 한 명이 빠진다 — 쓰러뜨림에 조금 못 미치는 값
-        internal override double BotScore(Bots.BotView view, int[] receivers) => 45;
+        internal override double BotScore(Bots.BotView view, int[] receivers) => BotGaepanScore;
 
         internal override void Apply(GameServer server, ChainEntry entry) => server.StartGaepan(entry.User);
     }

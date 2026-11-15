@@ -23,7 +23,8 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class OpponentSeatsPresenter : MonoBehaviour
     {
-        private const int SeatCount = 3; // 좌석 인덱스 1 · 2 · 3 (02-player.md 3절)
+        /// <summary>상대 좌석 수 = 정원 - 나 (02-player.md 3절). 좌석 인덱스 1 · 2 · 3. GameScreenView 도 이 값을 쓴다.</summary>
+        public const int SeatCount = NetworkManager.MaxPlayers - 1;
         private const string BotNicknameFormat = "{0} (봇)"; // 봇 좌석은 닉네임 옆에 「(봇)」 (18-bot.md 8-2)
 
         [Tooltip("좌석 인덱스 1 · 2 · 3 순서 (02-player.md 3절). 빈 좌석은 숨긴다.")]

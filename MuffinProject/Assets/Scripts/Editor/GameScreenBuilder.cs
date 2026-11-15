@@ -137,7 +137,7 @@ namespace Chapchu.EditorTools
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
             RectTransform center = NewRect("Center", canvasRect);
-            Anchor(center, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1920f, 1080f));
+            Anchor(center, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(HandView.ReferenceWidth, HandView.ReferenceHeight));
             Image dimmer = BuildDimmer(center);
             OpponentSeatsPresenter seats = BuildOpponentSeats(center, deck);
             TargetAskView targetAsk = BuildTargetAsk(center, dimmer);
@@ -252,7 +252,7 @@ namespace Chapchu.EditorTools
         private static void SetupScaler(CanvasScaler scaler)
         {
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(HandView.ReferenceWidth, HandView.ReferenceHeight);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         }
 
@@ -394,15 +394,15 @@ namespace Chapchu.EditorTools
             RoundBox(pill, Ink, 4f, 16f, White);
             HorizontalLayout(pill, new RectOffset(8, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
 
-            RectTransform label = NewRect("Label", pill);
+            RectTransform label = NewRect(BoardEffectsView.LabelChild, pill);
             label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
             Image labelFill = RoundImage("Fill", label, Hex(0xff9f1a), 10f);
             Stretch(labelFill.rectTransform);
             labelFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             HorizontalLayout(label, new RectOffset(12, 12, 0, 0), 0f, TextAnchor.MiddleCenter, true, true);
-            NewText("Text", label, "피폭", 26f, Ink, true);
+            NewText(BoardEffectsView.TextChild, label, "피폭", 26f, Ink, true);
 
-            NewText("Text", pill, "턴이 끝날 때마다 모두 −1", 25f, Ink, false);
+            NewText(BoardEffectsView.TextChild, pill, "턴이 끝날 때마다 모두 −1", 25f, Ink, false);
             pill.gameObject.SetActive(false);
 
             var view = root.gameObject.AddComponent<BoardEffectsView>();
@@ -417,23 +417,23 @@ namespace Chapchu.EditorTools
             chip.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
             HorizontalLayout(chip, new RectOffset(14, 14, 0, 0), 8f, TextAnchor.MiddleLeft, true, false);
 
-            Image chapchu = RoundImage("Chapchu", chip, Chu, 19f);
+            Image chapchu = RoundImage(TurnStripView.ChapchuChild, chip, Chu, 19f);
             Stretch(chapchu.rectTransform, -5f, -5f, -5f, -5f);
             chapchu.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             chapchu.gameObject.SetActive(false);
 
-            Image border = RoundImage("Border", chip, Ink, 14f);
+            Image border = RoundImage(TurnStripView.BorderChild, chip, Ink, 14f);
             Stretch(border.rectTransform);
             border.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             border.enabled = false;
 
-            Image fill = RoundImage("Fill", chip, Turn, 10f);
+            Image fill = RoundImage(TurnStripView.FillChild, chip, Turn, 10f);
             Stretch(fill.rectTransform, 4f, 4f, 4f, 4f);
             fill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             fill.gameObject.SetActive(false);
 
             Dot(chip, 16f, 3f, Act);
-            NewText("Name", chip, "이름", 28f, Ink, true);
+            NewText(TurnStripView.NameChild, chip, "이름", 28f, Ink, true);
 
             chip.gameObject.SetActive(false);
             return chip;
@@ -481,7 +481,7 @@ namespace Chapchu.EditorTools
                 chipSize.preferredHeight = 48f;
                 HorizontalLayout(chip, new RectOffset(12, 18, 0, 0), 10f, TextAnchor.MiddleLeft, true, true);
 
-                Image icon = Icon("Icon", chip, Hud("icon_card"), 28f, Ink);
+                Image icon = Icon(FeedView.IconChild, chip, Hud("icon_card"), 28f, Ink);
                 LayoutElement iconSize = icon.gameObject.AddComponent<LayoutElement>();
                 iconSize.preferredWidth = 24f;
                 iconSize.preferredHeight = 28f;
@@ -489,16 +489,16 @@ namespace Chapchu.EditorTools
                 RectTransform miniCard = BuildMiniCard(chip, Act);
                 miniCard.gameObject.SetActive(false);
 
-                Image crown = Icon("Crown", chip, Hud("icon_crown"), 32f, White);
+                Image crown = Icon(FeedView.CrownChild, chip, Hud("icon_crown"), 32f, White);
                 LayoutElement crownSize = crown.gameObject.AddComponent<LayoutElement>();
                 crownSize.preferredWidth = 32f;
                 crownSize.preferredHeight = 26f;
                 crown.gameObject.SetActive(false);
 
-                NewText("Name", chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
-                TMP_Text text = NewText("Text", chip, "카드 1장 뽑기", 26f, Ink, true);
+                NewText(FeedView.NameChild, chip, "이름", 26f, Ink, true).gameObject.AddComponent<LayoutElement>(); // minWidth 는 FeedView 가 글에 맞춰 넣는다
+                TMP_Text text = NewText(FeedView.TextChild, chip, "카드 1장 뽑기", 26f, Ink, true);
                 text.overflowMode = TextOverflowModes.Ellipsis;
-                NewText("Value", chip, "−20", 26f, Hp, true);
+                NewText(FeedView.ValueChild, chip, "−20", 26f, Hp, true);
 
                 EnsureHandCardPrefabFolder();
                 chipPrefab = PrefabUtility.SaveAsPrefabAsset(chip.gameObject, chipPath);
@@ -510,15 +510,15 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 종류 색 테 · 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38). 테 · 면은 UIShape 한 장(Box) — 흐려져도 테가 면 너머로 비치지 않게
+        // 종류 색 테 · 띠가 있는 작은 카드 (시안 .mc 14 × 19 → 28 × 38). 테 · 면은 UIShape 한 장(Box) — 흐려져도 테가 면 너머로 비치지 않게. 이름은 FeedView 가 칩에서 찾는 이름과 같게.
         private static RectTransform BuildMiniCard(Transform parent, Color kind)
         {
-            RectTransform root = NewRect("MiniCard", parent);
+            RectTransform root = NewRect(FeedView.MiniCardChild, parent);
             LayoutElement size = root.gameObject.AddComponent<LayoutElement>();
             size.preferredWidth = 28f;
             size.preferredHeight = 38f;
             ShapeBox(root, kind, 3f, 6f, White);
-            Image band = NewImage("Band", root, kind);
+            Image band = NewImage(FeedView.MiniBandChild, root, kind);
             band.rectTransform.anchorMin = new Vector2(0f, 1f);
             band.rectTransform.anchorMax = new Vector2(1f, 1f);
             band.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -621,7 +621,7 @@ namespace Chapchu.EditorTools
 
             RectTransform pipsRow = NewRect("Pips", content);
             HorizontalLayout(pipsRow, new RectOffset(), 8f, TextAnchor.MiddleCenter, true, true);
-            var pips = new Image[10];
+            var pips = new Image[Chapchu.Game.GameServer.ChapchuHandCount];
             for (int i = 0; i < pips.Length; i++)
             {
                 RectTransform pip = NewRect($"Pip{i}", pipsRow);
@@ -1091,7 +1091,7 @@ namespace Chapchu.EditorTools
 
             var view = root.gameObject.AddComponent<CardOwnerTagView>();
             Wire(view, ("body", body.gameObject), ("ownerText", owner), ("kindBox", miniCard.Find("Box").GetComponent<UIShape>()));
-            WireArray(view, "kindImages", new Object[] { miniCard.Find("Band").GetComponent<Image>() });
+            WireArray(view, "kindImages", new Object[] { miniCard.Find(FeedView.MiniBandChild).GetComponent<Image>() });
             body.gameObject.SetActive(false);
             return view;
         }
@@ -1223,18 +1223,18 @@ namespace Chapchu.EditorTools
             headerLayout.childControlHeight = true;
             headerLayout.childForceExpandWidth = true;
             headerLayout.childForceExpandHeight = false;
-            Image line = NewImage("Line", header, Line);
+            Image line = NewImage(LogSheetView.HeaderLineChild, header, Line);
             line.gameObject.AddComponent<LayoutElement>().preferredHeight = 4f;
-            NewText("Text", header, "나의 턴", 28f, Ink2, true, TextAlignmentOptions.Left);
+            NewText(LogSheetView.TextChild, header, "나의 턴", 28f, Ink2, true, TextAlignmentOptions.Left);
             header.gameObject.SetActive(false);
 
             // 항목 — 「이름 · 무엇을」 28 + 빨간 수치 30
             RectTransform entry = NewRect("EntryTemplate", content);
             HorizontalLayout(entry, new RectOffset(), 14f, TextAnchor.MiddleLeft, true, true);
-            TMP_Text entryText = NewText("Text", entry, "이름 · 카드 1장 뽑기", 28f, Ink, false, TextAlignmentOptions.Left);
+            TMP_Text entryText = NewText(LogSheetView.TextChild, entry, "이름 · 카드 1장 뽑기", 28f, Ink, false, TextAlignmentOptions.Left);
             entryText.textWrappingMode = TextWrappingModes.Normal;
             entryText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            NewText("Value", entry, "−20", 30f, Hp, true, TextAlignmentOptions.Right);
+            NewText(LogSheetView.EntryValueChild, entry, "−20", 30f, Hp, true, TextAlignmentOptions.Right);
             entry.gameObject.SetActive(false);
 
             var view = frame.Root.gameObject.AddComponent<LogSheetView>();
@@ -1561,19 +1561,19 @@ namespace Chapchu.EditorTools
             return button;
         }
 
-        // 목걸이 색 점 — 잉크 고리(ring) 안에 색 원. 구조: Dot(잉크) → Fill(색). 돌려주는 Image 는 Fill.
+        // 목걸이 색 점 — 잉크 고리(ring) 안에 색 원. 구조: Dot(잉크) → Fill(색). 돌려주는 Image 는 Fill. 이름은 TurnStripView 가 칩에서 찾는 이름과 같게.
         // 높이를 맡기지 않는 가로 레이아웃(머리 띠 · 턴 칩) 안에서도 원이 되게 Rect 크기도 지름으로 둔다 — 안 그러면 새 Rect 기본 높이 100 으로 늘어난 알약이 된다.
         private static Image Dot(Transform parent, float size, float ring, Color color)
         {
             float diameter = size + ring * 2f;
-            RectTransform root = NewRect("Dot", parent);
+            RectTransform root = NewRect(TurnStripView.DotChild, parent);
             root.sizeDelta = new Vector2(diameter, diameter);
             LayoutElement layout = root.gameObject.AddComponent<LayoutElement>();
             layout.preferredWidth = diameter;
             layout.preferredHeight = diameter;
             Image ink = RoundImage("Ink", root, Ink, diameter / 2f);
             Stretch(ink.rectTransform);
-            Image fill = RoundImage("Fill", root, color, size / 2f);
+            Image fill = RoundImage(TurnStripView.DotFillChild, root, color, size / 2f);
             Stretch(fill.rectTransform, ring, ring, ring, ring);
             return fill;
         }

@@ -60,6 +60,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float stackZ = -0.05f;
         [Tooltip("3 단계 동안 3D 층을 덮는 어둠의 알파 (시안 C3D.dim .42).")]
         [SerializeField] private float dimAlpha = 0.42f;
+        [Tooltip("어둠이 켜지고 꺼지는 초.")]
         [SerializeField] private float dimFadeDuration = 0.2f;
 
         [Header("체인 배치 (10-ui.md 2-1 「카드 연출 자리」 — 프로토타입 v2 DOCK · HANDUP_LAY. 길이는 테이블 면 유닛 = 캔버스 px ÷ 100)")]
@@ -94,8 +95,8 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("체인 전체가 올라가는 높이 — 시안 40 × 2 = 캔버스 80.")]
         [SerializeField] private float handUpRaise = 0.8f;
 
-        private const float HalfCanvasWidth = 9.6f; // 기준 화면 1920 의 절반
-        private const float CanvasPerUnit = 100f;
+        private const float HalfCanvasWidth = HandView.ReferenceWidth / 2f / HandView.CanvasPerUnit; // 기준 화면 1920 의 절반 = 9.6 유닛
+        private const float CanvasPerUnit = HandView.CanvasPerUnit;
 
         // 체인의 카드 한 장. 처리돼 떠난 카드도 체인이 다 끝날 때까지 자리를 남긴다 (Card = null) — 처리 도중 남은 카드가 다시 줄 서지 않게.
         private sealed class Entry

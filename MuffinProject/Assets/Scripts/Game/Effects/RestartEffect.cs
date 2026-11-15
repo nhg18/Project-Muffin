@@ -10,11 +10,13 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class RestartEffect : CardEffect
     {
+        private const double BotChapchuScore = 250; // 18-bot.md 7-3 「새 판」 — 찹츄 상대가 보이면
+
         // 찹츄 상대(알아챈 상대만, 7-7)가 있으면 판을 엎을 값이 크다. 아니면 내 HP 가 꼴찌일 때만, 내가 뒤진 HP 만큼 — 모두 같은 HP 면 0 이라 쓰지 않는다
         internal override double BotScore(Bots.BotView view, int[] receivers)
         {
             if (view.SeesAnyChapchu)
-                return 250;
+                return BotChapchuScore;
 
             int myHp = view.MyHp;
             if (!view.Server.ActorsInGame.Where(a => a != view.Bot).All(a => view.Server.StateOf(a).Hp >= myHp))

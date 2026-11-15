@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Chapchu.Game;
+using Chapchu.Network;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -24,7 +26,10 @@ namespace Chapchu.UI.GameScreen
         private const float TagStart = 2.38f;    // GP_TAG0 = 0.52 + 1.6 + 0.26
         private const float TagStagger = 0.19f;
         private const float TagSeconds = 0.3f;
+        private const float RevealMinSeconds = 0.6f;  // 표가 적어도 꼴찌 공개까지 이만큼은 기다린다
+        private const float RevealTailSeconds = 0.38f; // 마지막 표가 뜬 뒤 꼴찌 공개까지
         private const float RevealAfter = 0.65f; // GP_PRE — 꼴찌가 보인 뒤 사라지기까지
+        private const float JudgeSecondsTolerance = 0.01f; // 정원 기준 시간표와 GameServer.GaepanJudgeSeconds 의 허용 차
         private const float FadeSeconds = 0.25f;
         private const float TagRaise = 20f;      // 시안 c.y − 10 (× 2) — 캐릭터 가운데보다 조금 위
         private const float TagEdge = 140f;      // 시안 innerWidth − 70 · 70 (× 2)
@@ -68,6 +73,11 @@ namespace Chapchu.UI.GameScreen
         {
             if (group == null || dim == null || banner == null || bannerWord == null || roll == null || rollGroup == null || rollFill == null || rollText == null || heartIcon == null || cardIcon == null || tagTemplate == null)
                 Debug.LogError($"[{nameof(GaepanJudgeView)}] 참조가 비어 있습니다.", this);
+
+            // 방장은 GaepanJudgeSeconds 뒤 꼴찌의 HP 를 0 으로 한다 — 정원(가장 긴 경우)의 「꼴찌는?!」 까지가 그 길이와 같아야 한다
+            float judgeSeconds = RevealDelay(NetworkManager.MaxPlayers) + RevealAfter;
+            if (Mathf.Abs(judgeSeconds - (float)GameServer.GaepanJudgeSeconds) > JudgeSecondsTolerance)
+                Debug.LogError($"[{nameof(GaepanJudgeView)}] 판정 시간표 {judgeSeconds:0.00}초가 GameServer.GaepanJudgeSeconds {GameServer.GaepanJudgeSeconds:0.00}초와 다릅니다.", this);
         }
 
         /// <summary>
@@ -114,8 +124,7 @@ namespace Chapchu.UI.GameScreen
                     .Append(body.DOScale(1f, TagSeconds * 0.4f).SetEase(Ease.OutQuad));
             }
 
-            float reveal = TagStart + Mathf.Max(0.6f, values.Count * TagStagger + 0.38f);
-            yield return new WaitForSeconds(reveal);
+            yield return new WaitForSeconds(RevealDelay(values.Count));
 
             // 꼴찌 — 그 표만 분홍 「꼴찌」(1.6 → 1배), 나머지는 흐리게. 띠는 「꼴찌는?!」
             for (int i = 0; i < tags.Count; i++)
@@ -140,6 +149,9 @@ namespace Chapchu.UI.GameScreen
             Clear();
             gameObject.SetActive(false);
         }
+
+        // 시작부터 꼴찌 공개까지 — 표가 tagCount 개 하나씩 뜬 뒤
+        private static float RevealDelay(int tagCount) => TagStart + Mathf.Max(RevealMinSeconds, tagCount * TagStagger + RevealTailSeconds);
 
         // 기준 룰렛 — 0.07초부터 1.17배씩 느려지며 HP / 카드가 번갈아 뒤집히고, 마지막 면이 정해진 기준이 되게 앞쪽 뒤집기를 덜어 낸다 (시안 그대로)
         private void ScheduleRoll(bool byHp)
