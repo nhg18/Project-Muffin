@@ -65,8 +65,10 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (anchor == null || clouds == null)
-                Debug.LogError($"[{nameof(GaepanSky)}] 참조 중 비어 있는 것이 있습니다.", this);
+            if (anchor == null)
+                Debug.LogError($"[{nameof(GaepanSky)}] {nameof(anchor)} 참조가 비어 있습니다.", this);
+            if (clouds == null)
+                Debug.LogError($"[{nameof(GaepanSky)}] {nameof(clouds)} 참조가 비어 있습니다.", this);
         }
 
         private void OnDestroy()

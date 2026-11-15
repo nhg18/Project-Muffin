@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -61,8 +62,17 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (frame == null || words == null || fillMaterial == null || tones == null)
-                Debug.LogError($"[{nameof(GaepanTitle)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            if (frame == null)
+                missing.Add(nameof(frame));
+            if (words == null)
+                missing.Add(nameof(words));
+            if (fillMaterial == null)
+                missing.Add(nameof(fillMaterial));
+            if (tones == null)
+                missing.Add(nameof(tones));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(GaepanTitle)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
             _rect = (RectTransform)transform;
             PaintTones();
         }

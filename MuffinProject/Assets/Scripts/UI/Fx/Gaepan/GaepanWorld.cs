@@ -46,9 +46,6 @@ namespace Chapchu.UI.Fx.Gaepan
         [SerializeField] private MeshFilter treePrefab;
         [Tooltip("전나무 넷 (시안 tree0 ~ tree3).")]
         [SerializeField] private Mesh[] treeMeshes;
-        [SerializeField] private int dogCount = 13;
-        [SerializeField] private int puffCount = 70;
-        [SerializeField] private int treeCount = 44;
 
         [Header("마을")]
         [Tooltip("나무를 심지 않는 자리 (x, z, 반지름) — 개집 · 가로등 · 눈사람 (시안 OCC).")]
@@ -86,6 +83,9 @@ namespace Chapchu.UI.Fx.Gaepan
         /// <summary>카메라 방위 (시안 C.yaw, 라디안).</summary>
         public float CameraYaw { get; private set; }
 
+        /// <summary>시안이 화면을 맞추는 가로세로비 범위 — 앞 눈송이 칸도 이 범위로 묶는다.</summary>
+        public Vector2 AspectRange => aspectRange;
+
         public Vector3 CameraRight => worldCamera.transform.right;
 
         public Vector3 CameraUp => worldCamera.transform.up;
@@ -95,9 +95,25 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (worldCamera == null || overlayCamera == null || view == null || sky == null || actors == null || dogPrefab == null || puffPrefab == null
-                || treePrefab == null || treeMeshes == null || treeMeshes.Length == 0)
-                Debug.LogError($"[{nameof(GaepanWorld)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(Object value, string name)
+            {
+                if (value == null)
+                    missing.Add(name);
+            }
+
+            Check(worldCamera, nameof(worldCamera));
+            Check(overlayCamera, nameof(overlayCamera));
+            Check(view, nameof(view));
+            Check(sky, nameof(sky));
+            Check(actors, nameof(actors));
+            Check(dogPrefab, nameof(dogPrefab));
+            Check(puffPrefab, nameof(puffPrefab));
+            Check(treePrefab, nameof(treePrefab));
+            if (treeMeshes == null || treeMeshes.Length == 0)
+                missing.Add(nameof(treeMeshes));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(GaepanWorld)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
             LightDirection = lightDirection.normalized;
             // 캔버스 아래에서는 크기가 캔버스 배율을 따라가고 게임 화면 카메라에 걸릴 수 있다 — 장면 맨 위, 먼 곳으로
             transform.SetParent(null, false);
@@ -112,8 +128,8 @@ namespace Chapchu.UI.Fx.Gaepan
             ReleaseTexture();
         }
 
-        /// <summary>재생 준비 — 렌더 텍스처를 만들어 카메라 · 화면에 잇고, 풀을 채우고, 구름을 새로 만든다.</summary>
-        public void Begin()
+        /// <summary>재생 준비 — 렌더 텍스처를 만들어 카메라 · 화면에 잇고, 한 프레임에 그릴 수만큼 풀을 채우고, 구름을 새로 만든다.</summary>
+        public void Begin(int dogCount, int puffCount, int treeCount)
         {
             int width = Mathf.Max(Screen.width, 2), height = Mathf.Max(Screen.height, 2);
             if (_texture == null || _texture.width != width || _texture.height != height)

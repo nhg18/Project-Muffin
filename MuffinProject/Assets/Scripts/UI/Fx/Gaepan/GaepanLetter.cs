@@ -61,8 +61,12 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (white == null || dark == null || fill == null)
-                Debug.LogError($"[{nameof(GaepanLetter)}] 참조 중 비어 있는 것이 있습니다.", this);
+            if (white == null)
+                Debug.LogError($"[{nameof(GaepanLetter)}] {nameof(white)} 참조가 비어 있습니다.", this);
+            if (dark == null)
+                Debug.LogError($"[{nameof(GaepanLetter)}] {nameof(dark)} 참조가 비어 있습니다.", this);
+            if (fill == null)
+                Debug.LogError($"[{nameof(GaepanLetter)}] {nameof(fill)} 참조가 비어 있습니다.", this);
             _fade = GetComponent<CanvasGroup>();
             _rect = (RectTransform)transform;
             _center = _rect.anchoredPosition;

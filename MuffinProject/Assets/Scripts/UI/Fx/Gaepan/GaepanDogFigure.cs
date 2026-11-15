@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Chapchu.UI.Fx.Gaepan
 {
@@ -27,9 +28,24 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (pose == null || origin == null || tailPivot == null || body == null || tail == null
-                || legPivots == null || legPivots.Length != FxDog.Legs.Count || legs == null || legs.Length != FxDog.Legs.Count)
-                Debug.LogError($"[{nameof(GaepanDogFigure)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(Object value, string name)
+            {
+                if (value == null)
+                    missing.Add(name);
+            }
+
+            Check(pose, nameof(pose));
+            Check(origin, nameof(origin));
+            Check(tailPivot, nameof(tailPivot));
+            Check(body, nameof(body));
+            Check(tail, nameof(tail));
+            if (legPivots == null || legPivots.Length != FxDog.Legs.Count)
+                missing.Add(nameof(legPivots));
+            if (legs == null || legs.Length != FxDog.Legs.Count)
+                missing.Add(nameof(legs));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(GaepanDogFigure)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
 
         /// <summary>강아지 종류(나 · 초코 · 콩이 · 보리)의 그림으로 바꾼다.</summary>

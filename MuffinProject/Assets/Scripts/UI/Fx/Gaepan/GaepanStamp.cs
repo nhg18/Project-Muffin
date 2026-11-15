@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 namespace Chapchu.UI.Fx.Gaepan
@@ -68,8 +69,22 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (frame == null || paw == null || number == null || badge == null || badgeText == null || badgeBox == null || badgeShadow == null)
-                Debug.LogError($"[{nameof(GaepanStamp)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(Object value, string name)
+            {
+                if (value == null)
+                    missing.Add(name);
+            }
+
+            Check(frame, nameof(frame));
+            Check(paw, nameof(paw));
+            Check(number, nameof(number));
+            Check(badge, nameof(badge));
+            Check(badgeText, nameof(badgeText));
+            Check(badgeBox, nameof(badgeBox));
+            Check(badgeShadow, nameof(badgeShadow));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(GaepanStamp)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
             _fade = GetComponent<CanvasGroup>();
             _rect = (RectTransform)transform;
         }

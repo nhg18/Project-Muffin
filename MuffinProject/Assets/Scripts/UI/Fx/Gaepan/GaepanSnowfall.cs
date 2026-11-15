@@ -22,8 +22,6 @@ namespace Chapchu.UI.Fx.Gaepan
         [SerializeField] private Vector2 radius = new Vector2(1.2f, 3.8f);
         [Tooltip("진하기 범위.")]
         [SerializeField] private Vector2 opacity = new Vector2(0.5f, 1f);
-        [Tooltip("시안이 화면을 맞추는 가로세로비 범위.")]
-        [SerializeField] private Vector2 aspectRange = new Vector2(0.75f, 1.9f);
         [Tooltip("카메라가 돌면 눈송이가 이만큼 옆으로 (칸 너비 / 라디안).")]
         [SerializeField] private float yawShift = 0.15f;
 
@@ -32,6 +30,7 @@ namespace Chapchu.UI.Fx.Gaepan
         private float _alpha;
         private float _speed = 1f;
         private float _yaw;
+        private Vector2 _aspectRange = Vector2.one;
 
         // 시안 mk().snow 의 점 하나 (x · y = 처음 자리 비율, fall · drift = 빠르기, radius · opacity)
         private struct Flake
@@ -39,9 +38,10 @@ namespace Chapchu.UI.Fx.Gaepan
             public float X, Y, Fall, Drift, Radius, Opacity;
         }
 
-        /// <summary>점 자리를 무작위로 다시 정하고 감춘다 (재생마다).</summary>
-        public void Scatter()
+        /// <summary>점 자리를 무작위로 다시 정하고 감춘다 (재생마다). aspectRange = 칸을 묶는 가로세로비 범위 (<see cref="GaepanWorld.AspectRange"/>).</summary>
+        public void Scatter(Vector2 aspectRange)
         {
+            _aspectRange = aspectRange;
             _flakes = new Flake[count];
             for (int i = 0; i < count; i++)
             {
@@ -74,7 +74,7 @@ namespace Chapchu.UI.Fx.Gaepan
             Rect rect = rectTransform.rect;
             if (_alpha <= 0f || rect.width <= 0f || rect.height <= 0f)
                 return;
-            float aspect = Mathf.Clamp(rect.width / rect.height, aspectRange.x, aspectRange.y);
+            float aspect = Mathf.Clamp(rect.width / rect.height, _aspectRange.x, _aspectRange.y);
             float boxWidth = Mathf.Min(rect.width, rect.height * aspect);
             float boxHeight = boxWidth / aspect;
             float left = rect.center.x - boxWidth / 2f, top = rect.center.y + boxHeight / 2f;

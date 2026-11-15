@@ -36,8 +36,10 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (filter == null || meshRenderer == null)
-                Debug.LogError($"[{nameof(GaepanWarp)}] 참조 중 비어 있는 것이 있습니다.", this);
+            if (filter == null)
+                Debug.LogError($"[{nameof(GaepanWarp)}] {nameof(filter)} 참조가 비어 있습니다.", this);
+            if (meshRenderer == null)
+                Debug.LogError($"[{nameof(GaepanWarp)}] {nameof(meshRenderer)} 참조가 비어 있습니다.", this);
             _mesh = new Mesh { name = "GaepanWarp" };
             _mesh.MarkDynamic();
             filter.sharedMesh = _mesh;

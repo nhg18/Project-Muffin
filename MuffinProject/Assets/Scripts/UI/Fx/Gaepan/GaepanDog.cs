@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Chapchu.UI.Fx.Gaepan
@@ -84,8 +85,21 @@ namespace Chapchu.UI.Fx.Gaepan
 
         private void Awake()
         {
-            if (figure == null || shadow == null || blob == null || blobRenderer == null || looks == null || looks.Length == 0)
-                Debug.LogError($"[{nameof(GaepanDog)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(UnityEngine.Object value, string name)
+            {
+                if (value == null)
+                    missing.Add(name);
+            }
+
+            Check(figure, nameof(figure));
+            Check(shadow, nameof(shadow));
+            Check(blob, nameof(blob));
+            Check(blobRenderer, nameof(blobRenderer));
+            if (looks == null || looks.Length == 0)
+                missing.Add(nameof(looks));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(GaepanDog)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
             _block = new MaterialPropertyBlock();
         }
 
