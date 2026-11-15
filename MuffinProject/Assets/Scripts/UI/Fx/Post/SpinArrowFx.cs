@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx.Post
 {
     /// <summary>
-    /// 「뒤로 돌아」 4 단계 장식 — 판 가운데에 둥근 화살표(↺)가 커지며 반시계 방향으로 한 바퀴 돌고 사라진다 (시안 spinArrow, 1.1초). 3 단계는 없다.
+    /// 「뒤로 돌아」 4 단계 장식 — 판 가운데에 둥근 화살표(↺)가 커지며 반시계 방향으로 한 바퀴 돌고 사라진다 (시안 spinArrow, 1.1초). 3 단계는 없다 (10-ui 5-1).
     /// 화살표 모양은 <see cref="UICircleArrow"/> (시안 px 크기) — 연출 레이어 배율(PixelScale)을 곱해 키운다. 플레이어 판의 「방향 반대」 글자는 게임 화면 몫이다.
     /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 FXA 뒤로 돌아 · spinArrow · .vw-spin.
     /// </summary>
@@ -40,10 +40,7 @@ namespace Chapchu.UI.Fx.Post
             {
                 // 시안은 animate(..., {easing:"ease-out"}) — 옵션의 easing 은 구간마다가 아니라 전체 진행도에 한 번 걸린다
                 float t = CssEaseOut(time);
-                int i = 0;
-                while (i < keys.Length - 2 && t > keys[i + 1])
-                    i++;
-                float f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
+                int i = FxLayer.KeySpan(keys, t, out float f);
                 rect.localScale = Vector3.one * (pixelScale * Mathf.Lerp(scales[i], scales[i + 1], f));
                 // 시안은 시계 방향 + — 유니티는 반시계 방향 +
                 rect.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Lerp(angles[i], angles[i + 1], f));

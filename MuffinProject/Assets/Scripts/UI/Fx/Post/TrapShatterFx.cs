@@ -6,14 +6,16 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Post
 {
     /// <summary>
-    /// 「파헤치기」 4 단계 장식 — 대상의 함정 카드가 깨진다 (시안 shatter): 파편 · 「파괴!」 · 카드가 커지고 기울며 사라진다. 3 단계는 없다.
+    /// 「파헤치기」 4 단계 장식 — 대상의 함정 카드가 깨진다 (시안 shatter): 파편 · 「파괴!」 · 카드가 커지고 기울며 사라진다. 3 단계는 없다 (10-ui 5-1).
     /// 연출은 함정 카드가 놓인 자리를 모른다 — 대상 자리 옆(시안 .vw-trap 자리)에 카드 뒷면을 직접 놓고 깨뜨린다.
     /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 FXA 파헤치기 · shatter · setTrap.
     /// </summary>
     public class TrapShatterFx : CardFx
     {
-        [Tooltip("깨질 함정 카드 (그림자 · 뒷면 · 테두리). 시작은 투명, 크기는 시안 .vw-trap 62 × 92 px.")]
+        [Tooltip("깨질 함정 카드 (그림자 · 뒷면 · 테두리). 시작은 투명, 크기는 재생할 때 아래 크기로 맞춘다.")]
         [SerializeField] private CanvasGroup trap;
+        [Tooltip("함정 카드 크기 (시안 px — 시안 .vw-trap 62 × 92). 재생할 때 연출 레이어 배율(PixelScale)을 곱한다.")]
+        [SerializeField] private Vector2 trapSize = new Vector2(62f, 92f);
         [Tooltip("함정 카드 뒷면 그림 — 재생할 때 카드 뒷면(CardFxContext.CardBack)을 넣는다.")]
         [SerializeField] private Image back;
         [Tooltip("대상 자리 가장자리와 함정 카드 사이 (시안 px — 시안 .vw-trap 의 182px − 자리 너비 170px).")]
@@ -36,6 +38,7 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private Color boomColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
 
         [Header("카드가 사라짐 (시안 300ms, 일정한 속도)")]
+        [Tooltip("깨지기 시작해서 카드가 다 사라질 때까지 (ms, 시안 300ms).")]
         [SerializeField] private float vanishMs = 300f;
         [Tooltip("사라질 때까지 커지는 배율.")]
         [SerializeField] private float vanishScale = 1.3f;
@@ -55,7 +58,8 @@ namespace Chapchu.UI.Fx.Post
             FxLayer layer = context.Layer;
             var card = (RectTransform)trap.transform;
             back.sprite = context.CardBack;
-            card.anchoredPosition = TrapSpot(context.MainTarget.Anchor, card.rect.size, gap * layer.PixelScale);
+            card.sizeDelta = trapSize * layer.PixelScale;
+            card.anchoredPosition = TrapSpot(context.MainTarget.Anchor, card.sizeDelta, gap * layer.PixelScale);
             trap.alpha = 1f;
 
             Vector2 center = layer.CenterOf(card);

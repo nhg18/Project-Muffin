@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Post
 {
     /// <summary>
-    /// 둥근 화살표 (UI 도형) — 시안 「뒤로 돌아」 의 ↺ 글자 (Windows 에서 보이는 Segoe UI Symbol 모양: 열린 고리 + 꺾쇠 화살촉).
+    /// 둥근 화살표 (UI 도형) — 시안 「뒤로 돌아」 의 ↺ 글자 (Windows 에서 보이는 Segoe UI Symbol 모양: 열린 고리 + 꺾쇠 화살촉, 10-ui 5-1 4 단계 장식).
     /// 프로젝트 글꼴에 이 글자가 없어서 코드로 그린다. 글자 테두리(-webkit-text-stroke)와 아래 그림자(drop-shadow)도 같이 — 면 색 = Graphic.color.
     /// 켜질 때 모양(고리 · 화살대 · 꺾쇠 두 팔의 거리 함수)을 이 오브젝트 크기의 그림 한 장에 그린다. 메시 여러 겹으로 그리면 CanvasGroup 으로 흐리게 할 때
     /// 그림자 · 테두리가 면 너머로 비치는데, 한 장이면 CSS opacity 처럼 통째로 흐려진다.
@@ -51,8 +51,8 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private Color shadowColor = new Color32(0x2b, 0x28, 0x56, 0xff);
 
         [Header("그림")]
-        [Tooltip("그림 해상도 — 이 오브젝트 1 단위에 텍셀 몇 개. 화면에서 가장 클 때 화면 1 픽셀에 1 텍셀 이상이면 된다. 그림 크기 = 이 오브젝트 크기 × 이 값.")]
-        [SerializeField] private float resolution = 1.5f;
+        [Tooltip("그림 해상도 — 이 오브젝트 1 단위에 텍셀 몇 개. 화면에서 가장 클 때 화면 1 픽셀에 1 텍셀 이상이면 된다. 그림 크기 = 이 오브젝트 크기 × 이 값. 기본값 3.5 = 레이어 배율 1.5 × 「뒤로 돌아」 최대 1.1 배 × 캔버스 배율 2 (가로 3840) 보다 조금 크게.")]
+        [SerializeField] private float resolution = 3.5f;
 
         // 화살대 · 꺾쇠 두 팔의 변 — (바깥 법선 x, y, 법선 방향 위치). 점까지 거리 = 법선 · 점 − 위치
         private readonly Vector3[] _planes = new Vector3[PolygonCount * PolygonSides];
@@ -63,6 +63,8 @@ namespace Chapchu.UI.Fx.Post
         private Vector2 _gapMiddle;
         private Vector2 _headCenter;
         private float _headRadius;
+        // 가장 좁은 모서리에서 넓힌 거리 1 당 꼭짓점 밖으로 뻗는 길이 (1 / sin(모서리 각 / 2)) — 변 거리의 최댓값으로 넓히면 모서리가 뾰족하게 뻗는다
+        private float _headMiter;
 
         public override Texture mainTexture => _texture != null ? _texture : s_WhiteTexture;
 
@@ -209,6 +211,7 @@ namespace Chapchu.UI.Fx.Post
             // 텍셀마다 화살촉까지 재지 않게 — 화살촉을 감싸는 원
             _headCenter = apex;
             _headRadius = 0f;
+            _headMiter = 1f;
             for (int i = 0; i < PolygonCount; i++)
             {
                 Vector2[] polygon = Ccw(polygons[i]);
@@ -219,6 +222,9 @@ namespace Chapchu.UI.Fx.Post
                     var outward = new Vector2(along.y, -along.x);
                     _planes[i * PolygonSides + k] = new Vector3(outward.x, outward.y, Vector2.Dot(outward, from));
                     _headRadius = Mathf.Max(_headRadius, (from - apex).magnitude);
+                    Vector2 back = polygon[(k + PolygonSides - 1) % PolygonSides] - from;
+                    float corner = Vector2.Angle(along, back) * Mathf.Deg2Rad;
+                    _headMiter = Mathf.Max(_headMiter, 1f / Mathf.Max(Mathf.Sin(corner / 2f), 0.01f));
                 }
             }
         }
@@ -227,8 +233,8 @@ namespace Chapchu.UI.Fx.Post
         private float Distance(float x, float y)
         {
             float distance = RingDistance(x, y);
-            // 화살촉에서 테두리 + 흐린 가장자리보다 멀면 덮는 정도가 0 이라 재지 않아도 결과가 같다
-            float reach = _headRadius + strokeWidth + HeadMargin;
+            // 화살촉에서 테두리 + 흐린 가장자리(뾰족한 모서리에서 뻗는 만큼까지)보다 멀면 덮는 정도가 0 이라 재지 않아도 결과가 같다
+            float reach = _headRadius + (strokeWidth + HeadMargin) * _headMiter;
             float dx = x - _headCenter.x;
             float dy = y - _headCenter.y;
             if (dx * dx + dy * dy > reach * reach)

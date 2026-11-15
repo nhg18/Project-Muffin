@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx.Post
 {
     /// <summary>
-    /// 4 단계 장식이 말풍선 하나뿐인 카드의 연출 (시안 vbubble). 카드마다 클래스를 만들지 않고 프리팹마다 값만 바꿔 쓴다 — 핥아주기 「할짝」 · 아 맞다! 「아 맞다!」.
+    /// 4 단계 장식이 말풍선 하나뿐인 카드의 연출 (시안 vbubble, 10-ui 5-1). 카드마다 클래스를 만들지 않고 프리팹마다 값만 바꿔 쓴다 — 핥아주기 「할짝」 · 아 맞다! 「아 맞다!」.
     /// 3 단계는 없다. 말풍선은 연출 레이어(<see cref="FxLayer.Bubble(RectTransform, string, float)"/>)에 그려서, 장식이 끝나 이 오브젝트가 지워져도 혼자 사라진다.
     /// 시안: 아티팩트 「찹츄 카드 이펙트 v2」 FXA 의 s4.
     /// </summary>
