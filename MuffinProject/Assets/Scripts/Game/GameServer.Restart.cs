@@ -7,6 +7,11 @@ namespace Chapchu.Game
     // GameServer.Restart.cs — 112 대소동: 게임 새로 시작 · 피폭 피해 (11-card-list 112)
     public partial class GameServer
     {
+        // _turnEndStage 값 — 턴 끝 처리를 어디까지 했나 (프로토타입 v2 turnEnd2 순서)
+        private const int TurnEndStageNone = 0;    // 아직
+        private const int TurnEndStageFallout = 1; // 피폭까지
+        private const int TurnEndStageGaepan = 2;  // 개판 세기까지
+
         private readonly List<Card> _allCards = new List<Card>(); // 이 게임의 덱 전체 — 새로 시작할 때 다시 섞는다 (대소동 자신도 들어간다)
         private int _restartCount;      // 이 판에서 대소동을 쓴 횟수 n — 새로 시작해도 남는다
         private int _falloutTurns;      // 새로 시작한 뒤 피폭이 들어간 턴 수 k. _restartCount 가 0 이면 피폭 없음
@@ -37,9 +42,9 @@ namespace Chapchu.Game
             if (CurrentTurnActor < 0)
                 return false;
 
-            if (_turnEndStage == 0)
+            if (_turnEndStage == TurnEndStageNone)
             {
-                _turnEndStage = 1;
+                _turnEndStage = TurnEndStageFallout;
                 if (_restartCount > 0)
                 {
                     _falloutTurns++;
@@ -56,9 +61,9 @@ namespace Chapchu.Game
                 }
             }
 
-            if (_turnEndStage == 1)
+            if (_turnEndStage == TurnEndStageFallout)
             {
-                _turnEndStage = 2;
+                _turnEndStage = TurnEndStageGaepan;
                 TickGaepan();
                 if (HoldForTurnEnd())
                     return true;

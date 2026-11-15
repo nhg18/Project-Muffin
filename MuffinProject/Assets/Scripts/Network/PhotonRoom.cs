@@ -225,7 +225,7 @@ namespace Chapchu.Network
             switch (returnCode)
             {
                 // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
-                case 32766:
+                case ErrorCode.GameIdAlreadyExists:
                     if (_creatingSolo)
                         CreateSoloRoom();
                     else

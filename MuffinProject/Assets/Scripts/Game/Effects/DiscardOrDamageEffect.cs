@@ -23,6 +23,10 @@ namespace Chapchu.Game.Effects
         // 18-bot 7-3 (사용자 2026-11-13 · 프로토타입 v2): 대상은 손패 × 3 + (HP ≤ amount 면 40) 이 가장 큰 상대 — 그 식이 그대로 점수다.
         // HP ≤ amount 인 찹츄 상대는 버리기를 고를 수밖에 없어 찹츄가 깨진다. 어느 쪽을 골라도 큰 손해라 바탕 점수가 있다
         private const double BotBaseScore = 40;
+        private const double BotPerHandCard = 3;       // 대상 손패 1장마다
+        private const double BotMustDiscardBonus = 40; // 대상 HP ≤ amount — 버릴 수밖에 없다
+        // 18-bot.md 7-4 「카드 효과의 대상으로 고르는 중이다 (119 목표 조준)」 — 봇이 대상일 때 손패가 이 이상이면 피해를 받는다
+        private const int BotTakeDamageHand = 5;
 
         internal override double BotScore(Bots.BotView view, int[] receivers)
         {
@@ -33,7 +37,7 @@ namespace Chapchu.Game.Effects
             bool mustDiscard = view.Server.PlayerHp(target) <= amount;
             if (mustDiscard && view.SeesChapchu(target))
                 view.Notes.Add("찹츄 깨기");
-            return BotBaseScore + view.Server.HandCountOf(target) * 3 + (mustDiscard ? 40 : 0) + (mustDiscard && view.SeesChapchu(target) ? Bots.BotView.BreakChapchu : 0);
+            return BotBaseScore + view.Server.HandCountOf(target) * BotPerHandCard + (mustDiscard ? BotMustDiscardBonus : 0) + (mustDiscard && view.SeesChapchu(target) ? Bots.BotView.BreakChapchu : 0);
         }
 
         /// <summary>봇이 대상일 때 (프로토타입 v2): HP ≤ amount 면 버리기, 아니면 손패 5장 이상이거나 찹츄면 피해, 그 밖은 버리기.</summary>
@@ -41,7 +45,7 @@ namespace Chapchu.Game.Effects
         {
             if (server.PlayerHp(bot) <= amount)
                 return DiscardAll;
-            return server.HandCountOf(bot) >= 5 || server.StateOf(bot).IsChapchu ? TakeDamage : DiscardAll;
+            return server.HandCountOf(bot) >= BotTakeDamageHand || server.StateOf(bot).IsChapchu ? TakeDamage : DiscardAll;
         }
 
         internal override void Apply(GameServer server, ChainEntry entry)

@@ -10,14 +10,18 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class StartWaitEffect : CardEffect
     {
+        // 18-bot.md 7-3 「찹츄 승리 미루기」
+        private const double BotChapchuScore = 110;
+        private const double BotNearChapchuWeight = 0.3; // 가장 가까운 상대의 「찹츄 가까움」 × 이 값
+
         // 찹츄 상대가 있으면 내 다음 턴까지 승리를 미룬다 (깨는 것보다는 낮다). 없으면 찹츄가 가까운 상대가 있을 때만 조금
         internal override double BotScore(Bots.BotView view, int[] receivers)
         {
             if (view.SeesAnyChapchu)
-                return 110;
+                return BotChapchuScore;
 
             int[] opponents = view.Opponents;
-            return opponents.Length == 0 ? 0 : opponents.Max(actor => view.NearChapchu(view.Server.HandCountOf(actor))) * 0.3;
+            return opponents.Length == 0 ? 0 : opponents.Max(actor => view.NearChapchu(view.Server.HandCountOf(actor))) * BotNearChapchuWeight;
         }
 
         internal override void Apply(GameServer server, ChainEntry entry) => server.StartWait(entry.User);
