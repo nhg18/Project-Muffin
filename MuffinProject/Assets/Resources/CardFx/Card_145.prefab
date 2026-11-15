@@ -161,4 +161,4 @@ MonoBehaviour:
   strokeColor: {r: 1, g: 1, b: 1, a: 1}
   shadowOffset: {x: 0, y: -6}
   shadowColor: {r: 0.16862746, g: 0.15686275, b: 0.3372549, a: 1}
-  resolution: 2
+  resolution: 1.5

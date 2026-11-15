@@ -14,6 +14,11 @@ namespace Chapchu.UI.Fx.Post
     public class UICircleArrow : MaskableGraphic
     {
         private const int MaxTexels = 1024;
+        // 화살대 · 꺾쇠 두 팔 — 꼭짓점 넷인 볼록 다각형 셋
+        private const int PolygonCount = 3;
+        private const int PolygonSides = 4;
+        // 화살촉을 감싸는 원 밖으로 흐린 가장자리까지 넉넉히 (이 오브젝트 단위)
+        private const float HeadMargin = 2f;
 
         [Header("고리")]
         [Tooltip("고리 가운데 반지름 (두께의 가운데).")]
@@ -45,11 +50,17 @@ namespace Chapchu.UI.Fx.Post
 
         [Header("그림")]
         [Tooltip("그림 해상도 — 이 오브젝트 1 단위에 텍셀 몇 개. 화면에서 가장 클 때 화면 1 픽셀에 1 텍셀 이상이면 된다. 그림 크기 = 이 오브젝트 크기 × 이 값.")]
-        [SerializeField] private float resolution = 2f;
+        [SerializeField] private float resolution = 1.5f;
 
+        // 화살대 · 꺾쇠 두 팔의 변 — (바깥 법선 x, y, 법선 방향 위치). 점까지 거리 = 법선 · 점 − 위치
+        private readonly Vector3[] _planes = new Vector3[PolygonCount * PolygonSides];
         private Texture2D _texture;
         private Color32[] _pixels;
-        private Vector2[][] _polygons;
+        private Vector2 _startOut;
+        private Vector2 _endOut;
+        private Vector2 _gapMiddle;
+        private Vector2 _headCenter;
+        private float _headRadius;
 
         public override Texture mainTexture => _texture != null ? _texture : s_WhiteTexture;
 
@@ -118,25 +129,44 @@ namespace Chapchu.UI.Fx.Post
                 _pixels = new Color32[width * height];
             }
 
-            BuildPolygons();
-            Vector2 texel = new Vector2(rect.width / width, rect.height / height);
-            float edge = Mathf.Max(texel.x, texel.y);
+            BuildShape();
+            float texelX = rect.width / width;
+            float texelY = rect.height / height;
+            float edge = Mathf.Max(texelX, texelY);
             Color fill = color;
             for (int y = 0; y < height; y++)
             {
+                float pointY = rect.yMin + (y + 0.5f) * texelY;
                 for (int x = 0; x < width; x++)
                 {
-                    var point = new Vector2(rect.xMin + (x + 0.5f) * texel.x, rect.yMin + (y + 0.5f) * texel.y);
-                    float body = Distance(point);
-                    float shadow = Distance(point - shadowOffset) - strokeWidth;
+                    float pointX = rect.xMin + (x + 0.5f) * texelX;
+                    float body = Distance(pointX, pointY);
+                    float shadow = Distance(pointX - shadowOffset.x, pointY - shadowOffset.y) - strokeWidth;
+                    float stroke = body - strokeWidth;
 
-                    Color result = Over(new Color(shadowColor.r, shadowColor.g, shadowColor.b, shadowColor.a * Coverage(shadow, edge)), Color.clear);
-                    result = Over(new Color(strokeColor.r, strokeColor.g, strokeColor.b, strokeColor.a * Coverage(body - strokeWidth, edge)), result);
-                    result = Over(new Color(fill.r, fill.g, fill.b, Coverage(body, edge)), result);
-                    // 빈 텍셀은 가까운 겹의 색으로 — 그림을 늘려 그릴 때 가장자리가 검게 번지지 않게
-                    if (result.a <= 0f)
+                    // 투명도를 곱해 둔 색으로 겹친다: 그림자 → 테두리 → 면
+                    float alpha = shadowColor.a * Coverage(shadow, edge);
+                    float red = shadowColor.r * alpha, green = shadowColor.g * alpha, blue = shadowColor.b * alpha;
+                    float top = strokeColor.a * Coverage(stroke, edge);
+                    red = strokeColor.r * top + red * (1f - top);
+                    green = strokeColor.g * top + green * (1f - top);
+                    blue = strokeColor.b * top + blue * (1f - top);
+                    alpha = top + alpha * (1f - top);
+                    top = Coverage(body, edge);
+                    red = fill.r * top + red * (1f - top);
+                    green = fill.g * top + green * (1f - top);
+                    blue = fill.b * top + blue * (1f - top);
+                    alpha = top + alpha * (1f - top);
+
+                    Color result;
+                    if (alpha > 0f)
                     {
-                        result = shadow < body - strokeWidth ? shadowColor : strokeColor;
+                        result = new Color(red / alpha, green / alpha, blue / alpha, alpha);
+                    }
+                    else
+                    {
+                        // 빈 텍셀은 가까운 겹의 색으로 — 그림을 늘려 그릴 때 가장자리가 검게 번지지 않게
+                        result = shadow < stroke ? shadowColor : strokeColor;
                         result.a = 0f;
                     }
                     _pixels[y * width + x] = result;
@@ -149,11 +179,15 @@ namespace Chapchu.UI.Fx.Post
             SetVerticesDirty();
         }
 
-        // 화살대 · 꺾쇠 두 팔 — 볼록 다각형 (반시계 방향 꼭짓점)
-        private void BuildPolygons()
+        // 고리 끝 방향과, 화살대 · 꺾쇠 두 팔(볼록 사각형)의 변을 미리 구한다
+        private void BuildShape()
         {
             float end = startAngle + sweep;
-            Vector2 tip = Polar(end, radius);
+            _startOut = Polar(startAngle, 1f);
+            _endOut = Polar(end, 1f);
+            _gapMiddle = Polar(end + (360f - sweep) / 2f, 1f);
+
+            Vector2 tip = _endOut * radius;
             Vector2 forward = Polar(end + 90f, 1f);
             Vector2 apex = tip + forward * headReach;
             Vector2 armA = Rotate(forward, -headSpread);
@@ -162,67 +196,78 @@ namespace Chapchu.UI.Fx.Post
             Vector2 shaftEnd = apex + (armA + armB) * (headWidth / 2f);
             Vector2 side = new Vector2(forward.y, -forward.x) * (thickness / 2f);
 
-            _polygons = new[]
+            Vector2[][] polygons =
             {
-                Ccw(new[] { tip + side, shaftEnd + side, shaftEnd - side, tip - side }),
+                new[] { tip + side, shaftEnd + side, shaftEnd - side, tip - side },
                 // 바깥 모서리가 꼭짓점, 끝은 45도로 자른다 (Segoe UI Symbol ↺)
-                Ccw(new[] { apex, apex + armA * headArm, apex + armA * (headArm - headWidth) + armB * headWidth, apex + armB * headWidth }),
-                Ccw(new[] { apex, apex + armB * headArm, apex + armB * (headArm - headWidth) + armA * headWidth, apex + armA * headWidth })
+                new[] { apex, apex + armA * headArm, apex + armA * (headArm - headWidth) + armB * headWidth, apex + armB * headWidth },
+                new[] { apex, apex + armB * headArm, apex + armB * (headArm - headWidth) + armA * headWidth, apex + armA * headWidth }
             };
+
+            // 텍셀마다 화살촉까지 재지 않게 — 화살촉을 감싸는 원
+            _headCenter = apex;
+            _headRadius = 0f;
+            for (int i = 0; i < PolygonCount; i++)
+            {
+                Vector2[] polygon = Ccw(polygons[i]);
+                for (int k = 0; k < PolygonSides; k++)
+                {
+                    Vector2 from = polygon[k];
+                    Vector2 along = (polygon[(k + 1) % PolygonSides] - from).normalized;
+                    var outward = new Vector2(along.y, -along.x);
+                    _planes[i * PolygonSides + k] = new Vector3(outward.x, outward.y, Vector2.Dot(outward, from));
+                    _headRadius = Mathf.Max(_headRadius, (from - apex).magnitude);
+                }
+            }
         }
 
         // 모양까지의 거리 (안 −, 밖 +). 조각마다 거리의 최솟값 = 합친 모양. 볼록 조각은 변 거리의 최댓값이라 넓히면 모서리가 뾰족하다 (CSS 테두리와 같게)
-        private float Distance(Vector2 point)
+        private float Distance(float x, float y)
         {
-            float distance = RingDistance(point);
-            foreach (Vector2[] polygon in _polygons)
-                distance = Mathf.Min(distance, PolygonDistance(polygon, point));
-            return distance;
-        }
+            float distance = RingDistance(x, y);
+            // 화살촉에서 테두리 + 흐린 가장자리보다 멀면 덮는 정도가 0 이라 재지 않아도 결과가 같다
+            float reach = _headRadius + strokeWidth + HeadMargin;
+            float dx = x - _headCenter.x;
+            float dy = y - _headCenter.y;
+            if (dx * dx + dy * dy > reach * reach)
+                return distance;
 
-        // 고리 띠 — 각도 안이면 반지름 방향 거리, 밖이면 가까운 끝을 네모나게 자른 거리
-        private float RingDistance(Vector2 point)
-        {
-            float half = thickness / 2f;
-            float relative = Mathf.Repeat(Mathf.Atan2(point.y, point.x) * Mathf.Rad2Deg - startAngle, 360f);
-            if (relative <= sweep)
-                return Mathf.Abs(point.magnitude - radius) - half;
-
-            bool nearStart = relative > sweep + (360f - sweep) / 2f;
-            float edgeAngle = nearStart ? startAngle : startAngle + sweep;
-            Vector2 outward = Polar(edgeAngle, 1f);
-            Vector2 forward = Polar(edgeAngle + 90f, 1f);
-            float beyond = Vector2.Dot(point, nearStart ? -forward : forward);
-            float across = Mathf.Abs(Vector2.Dot(point, outward) - radius) - half;
-            return Mathf.Max(beyond, across);
-        }
-
-        private static float PolygonDistance(Vector2[] polygon, Vector2 point)
-        {
-            float distance = float.MinValue;
-            for (int i = 0; i < polygon.Length; i++)
+            for (int i = 0; i < PolygonCount; i++)
             {
-                Vector2 from = polygon[i];
-                Vector2 edge = (polygon[(i + 1) % polygon.Length] - from).normalized;
-                var outward = new Vector2(edge.y, -edge.x);
-                distance = Mathf.Max(distance, Vector2.Dot(outward, point - from));
+                float inside = float.MinValue;
+                for (int k = 0; k < PolygonSides; k++)
+                {
+                    Vector3 plane = _planes[i * PolygonSides + k];
+                    inside = Mathf.Max(inside, plane.x * x + plane.y * y - plane.z);
+                }
+                distance = Mathf.Min(distance, inside);
             }
             return distance;
         }
 
+        // 고리 띠 — 각도 안이면 반지름 방향 거리, 밖(끝 → 시작 사이)이면 가까운 끝을 네모나게 자른 거리
+        private float RingDistance(float x, float y)
+        {
+            float half = thickness / 2f;
+            bool inGap = sweep >= 180f
+                ? Cross(_endOut.x, _endOut.y, x, y) > 0f && Cross(x, y, _startOut.x, _startOut.y) > 0f
+                : !(Cross(_startOut.x, _startOut.y, x, y) >= 0f && Cross(x, y, _endOut.x, _endOut.y) >= 0f);
+            if (!inGap)
+                return Mathf.Abs(Mathf.Sqrt(x * x + y * y) - radius) - half;
+
+            // 빈 각도의 가운데보다 반시계 방향이면 시작 끝 쪽
+            bool nearStart = Cross(_gapMiddle.x, _gapMiddle.y, x, y) > 0f;
+            Vector2 outward = nearStart ? _startOut : _endOut;
+            // 끝 선 너머로 간 거리 — 시작 끝은 시계 방향, 고리 끝은 반시계 방향이 바깥
+            float beyond = Cross(outward.x, outward.y, x, y) * (nearStart ? -1f : 1f);
+            float across = Mathf.Abs(outward.x * x + outward.y * y - radius) - half;
+            return Mathf.Max(beyond, across);
+        }
+
+        private static float Cross(float ax, float ay, float bx, float by) => ax * by - ay * bx;
+
         // 거리 → 덮는 정도 (가장자리 한 텍셀을 흐린다)
         private static float Coverage(float distance, float edge) => Mathf.Clamp01(0.5f - distance / edge);
-
-        // 투명도가 따로인 색끼리 위에 겹치기
-        private static Color Over(Color top, Color bottom)
-        {
-            float alpha = top.a + bottom.a * (1f - top.a);
-            if (alpha <= 0f)
-                return Color.clear;
-            Color mixed = (top * top.a + bottom * (bottom.a * (1f - top.a))) / alpha;
-            mixed.a = alpha;
-            return mixed;
-        }
 
         private static Vector2[] Ccw(Vector2[] points)
         {
