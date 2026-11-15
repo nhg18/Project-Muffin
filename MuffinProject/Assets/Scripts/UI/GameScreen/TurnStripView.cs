@@ -36,7 +36,7 @@ namespace Chapchu.UI.GameScreen
 
         private const string DotFillPath = DotChild + "/" + DotFillChild;
         private const string MyTurnText = "나의 턴";
-        private const string OtherTurnFormat = "{0} 차례";
+        private const string OtherTurnFormat = "{0}의 턴";
 
         [Header("플레이어 칩")]
         [SerializeField] private RectTransform rail;

@@ -12,7 +12,7 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyInviteBannerView : MonoBehaviour
     {
-        private const string TitleFormat = "{0}님이 초대했어요";
+        private const string TitleFormat = "{0}님이 초대했어요.";
         private const string SecondsFormat = "{0}초";
 
         [SerializeField] private GameObject content;

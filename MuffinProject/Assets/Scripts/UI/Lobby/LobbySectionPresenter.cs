@@ -22,8 +22,8 @@ namespace Chapchu.UI.Lobby
         private const string EquippedText = "장착 중";
         private const string LockedText = "잠김";
         private const string OnlyGachaText = "뽑기 전용";
-        private const string NoPickHint = "아직 고른 상품이 없어요";
-        private const string ChargeHint = "츄르는 뽑기에 쓰는 재화예요";
+        private const string NoPickHint = "아직 고른 상품이 없어요.";
+        private const string ChargeHint = "츄르는 뽑기에 쓰는 재화예요.";
         private const string PackSubText = "뽑기에 써요 · 스토어 결제 · ₩ 미정";
         private const string GachaSubFormat = "{0}% · {1}회 안에 1개 보장";
         private const string EquippedToast = "장착했어요.";
@@ -36,12 +36,12 @@ namespace Chapchu.UI.Lobby
         private const string CancelText = "취소";
         private const string CloseText = "닫기";
         private const string BuyTitle = "구매";
-        private const string BuyMessageFormat = "'{0}' ({1} · {2}) 을 {3} {4}으로 살까요?";
-        private const string ShortTitleFormat = "{0}가 모자라요";
+        private const string BuyMessageFormat = "'{0}'({1} · {2}) — {3} {4}에 살까요?";
+        private const string ShortTitleFormat = "{0} 부족";
         private const string ShortMessageFormat = "필요한 {0} {1} · 지금 {2}";
         private const string GachaShortMessageFormat = "{0}회 뽑기에 필요한 츄르 {1} · 지금 {2}";
         private const string ChargeTitle = "츄르 충전";
-        private const string ChargeMessageFormat = "츄르 {0}을 받아요. 실제 결제는 스토어 결제창에서 해요 — 시안이라 바로 들어와요.";
+        private const string ChargeMessageFormat = "츄르를 {0} 받아요. 실제 결제는 스토어 결제창에서 해요 — 시안이라 바로 들어와요.";
         private const string ChargeBonusFormat = "{0} + 보너스 {1}";
         private const string ChargeOkText = "충전";
         private const string ToQuestsText = "퀘스트 보기";

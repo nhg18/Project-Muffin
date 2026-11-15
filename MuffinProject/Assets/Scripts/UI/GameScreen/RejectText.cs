@@ -9,13 +9,13 @@ namespace Chapchu.UI.GameScreen
         {
             switch (code)
             {
-                case RejectCode.NotYourTurn:   return "내 턴이 아닙니다.";
-                case RejectCode.NotInHand:     return "손패에 없는 카드입니다.";
-                case RejectCode.NoCardToDraw:  return "뽑을 카드가 없습니다.";
-                case RejectCode.NotActionCard: return "행동 카드만 낼 수 있습니다.";
-                case RejectCode.InvalidTarget: return "대상이 올바르지 않습니다.";
-                case RejectCode.ActionBlocked: return "이번 턴에는 행동 카드를 쓸 수 없습니다.";
-                case RejectCode.NotChoosing:   return "고르는 시간이 끝났습니다.";
+                case RejectCode.NotYourTurn:   return "내 턴이 아니에요.";
+                case RejectCode.NotInHand:     return "손패에 없는 카드예요.";
+                case RejectCode.NoCardToDraw:  return "뽑을 카드가 없어요.";
+                case RejectCode.NotActionCard: return "행동 카드만 낼 수 있어요.";
+                case RejectCode.InvalidTarget: return "그 대상에게는 쓸 수 없어요.";
+                case RejectCode.ActionBlocked: return "이번 턴에는 행동 카드를 쓸 수 없어요.";
+                case RejectCode.NotChoosing:   return "고르는 시간이 끝났어요.";
                 default:                       return $"거절 (코드 {code})";
             }
         }

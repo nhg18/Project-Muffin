@@ -14,7 +14,7 @@ namespace Chapchu.UI.GameScreen
     public class ChoicePopupPresenter : MonoBehaviour
     {
         private const string AimTitle = "목표 조준!";
-        private const string AimDescFormat = "{0}: 둘 중 하나를 고르세요. {1}초 안에 안 고르면 무작위";
+        private const string AimDescFormat = "{0}: 둘 중 하나를 골라 주세요. {1}초 안에 안 고르면 무작위로 정해요.";
         private const string DiscardFormat = "손패 전부 버리기 ({0}장)";
         private const string DamageFormat = "{0} 피해 받기";
 

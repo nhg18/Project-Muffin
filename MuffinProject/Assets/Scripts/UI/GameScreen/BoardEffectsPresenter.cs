@@ -17,7 +17,7 @@ namespace Chapchu.UI.GameScreen
     public class BoardEffectsPresenter : MonoBehaviour
     {
         private const string WaitLabel = "기다려!";
-        private const string WaitFormat = "{0} 차례까지 승리 없음";
+        private const string WaitFormat = "{0}의 턴까지 승리 없음";
         private const string FalloutLabel = "피폭";
         private const string FalloutFormat = "턴이 끝날 때마다 모두 −{0}";
 

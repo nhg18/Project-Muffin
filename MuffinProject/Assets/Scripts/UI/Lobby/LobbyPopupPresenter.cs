@@ -14,14 +14,14 @@ namespace Chapchu.UI.Lobby
         private const string OkText = "확인";
         private const string CancelText = "취소";
         private const string UnfriendTitle = "친구 삭제";
-        private const string UnfriendMessageFormat = "{0} 님을 친구에서 삭제할까요?";
+        private const string UnfriendMessageFormat = "{0}님을 친구에서 삭제할까요?";
         private const string BlockTitle = "차단";
-        private const string BlockMessageFormat = "{0} 님을 차단할까요? 요청 · 초대가 막히고 목록에서 사라져요.";
+        private const string BlockMessageFormat = "{0}님을 차단할까요? 요청 · 초대가 막히고 목록에서 사라져요.";
         private const string UnblockTitle = "차단 해제";
         private const string UnblockMessage = "차단을 해제할까요? 친구로 돌아오지는 않아요.";
         private const string GuestText = "게스트";
         private const string AccountText = "계정";
-        private const string LoginNoteFormat = "{0} 로 로그인";
+        private const string LoginNoteFormat = "{0} 계정으로 로그인";
         private const string LoginNameFormat = "{0} 로그인";
         private const string CopiedToast = "친구 코드를 복사했어요.";
         private const string ClaimedAllToast = "보상을 모두 받았어요.";

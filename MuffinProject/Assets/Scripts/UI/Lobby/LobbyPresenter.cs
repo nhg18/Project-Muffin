@@ -14,7 +14,7 @@ namespace Chapchu.UI.Lobby
     public class LobbyPresenter : MonoBehaviour
     {
         private const int InviteSeconds = 30; // 초대 만료 (17 4-4 · 13-friend 4절)
-        private const string RequestToastFormat = "{0} 님이 친구 요청을 보냈어요.";
+        private const string RequestToastFormat = "{0}님이 친구 요청을 보냈어요.";
 
         [Header("화면")]
         [SerializeField] private LobbyHomeView home;

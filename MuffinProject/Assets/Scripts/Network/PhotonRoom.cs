@@ -15,7 +15,7 @@ namespace Chapchu.Network
     {
         // 연결이 없어 요청을 보내지 못함 — 실패로 알려 화면이 대기 표시를 닫고 「그 밖의 실패」 안내를 띄우게 (08-room.md 7절)
         private const short NotConnectedCode = ErrorCode.OperationNotAllowedInCurrentState;
-        private const string NotConnectedMessage = "서버에 연결되어 있지 않습니다.";
+        private const string NotConnectedMessage = "서버에 연결되어 있지 않아요.";
 
         private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
 
@@ -46,7 +46,7 @@ namespace Chapchu.Network
 
             if (string.IsNullOrEmpty(roomName))
             {
-                RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
+                RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드를 입력해 주세요.");
                 return;
             }
             PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
