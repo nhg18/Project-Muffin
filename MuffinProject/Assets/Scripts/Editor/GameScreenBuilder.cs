@@ -38,7 +38,7 @@ namespace Chapchu.EditorTools
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string CharacterSpritePath = "Assets/Sprites/Characters/chara.png"; // 노션 「캐릭터 디자인」 기본 치와와 (10-ui 2-1 캐릭터별 데이터)
         private const float CharacterAspect = 0.772f; // 그림 비율 = 보이는 부분 상자 폭 ÷ 키 (10-ui 2-1)
-        private static readonly float MyCharacterWidth =Mathf.Round(280f * CharacterAspect / 2f) * 2f; // 키 280 × 그림 비율 (SeatGeo 와 같은 반올림)
+        private static readonly float MyCharacterWidth = Mathf.Round(280f * CharacterAspect / 2f) * 2f; // 키 280 × 그림 비율 (SeatGeo 와 같은 반올림)
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
         private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
         internal const string CardFrameFolder = "Assets/Sprites/Cards/Frames";
@@ -785,8 +785,8 @@ namespace Chapchu.EditorTools
             }
         }
 
-        private static readonly Vector2 HandRight =new Vector2(0.68f, 0.78f); // 그림 안 오른쪽 앞발 (10-ui 2-1 캐릭터별 데이터)
-        private static readonly Vector2 HandLeft =new Vector2(0.24f, 0.78f);  // 그림 안 왼쪽 앞발
+        private static readonly Vector2 HandRight = new Vector2(0.68f, 0.78f); // 그림 안 오른쪽 앞발 (10-ui 2-1 캐릭터별 데이터)
+        private static readonly Vector2 HandLeft = new Vector2(0.24f, 0.78f);  // 그림 안 왼쪽 앞발
         private static readonly SeatGeo[] Seats =
         {
             new SeatGeo(260f, 300f, 300f, 104f, 168f, HandRight, false),
