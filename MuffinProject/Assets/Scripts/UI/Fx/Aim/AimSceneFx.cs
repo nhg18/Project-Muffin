@@ -94,9 +94,19 @@ namespace Chapchu.UI.Fx.Aim
 
         [Header("필름 마무리")]
         [SerializeField] private Image flash;
+        [Tooltip("총알 컷이 시작할 때 화면 번쩍 길이 (초).")]
+        [SerializeField] private float flashSeconds = 0.16f;
+        [Tooltip("화면 번쩍 처음 세기 (알파).")]
+        [SerializeField] private float flashStrength = 0.3f;
+        [Tooltip("화면 번쩍 색 (알파는 세기로 정한다).")]
+        [SerializeField] private Color flashColor = new Color(255f / 255f, 246f / 255f, 226f / 255f, 1f);
         [Tooltip("곱하기로 살짝 푸르게 (#eef3fb).")]
         [SerializeField] private Image tint;
         [SerializeField] private AimPainter vignette;
+        [Tooltip("가장자리 어둡게: 안 반지름(장면 높이 비율) · 바깥 반지름(장면 너비 비율).")]
+        [SerializeField] private Vector2 vignetteRadii = new Vector2(0.3f, 0.68f);
+        [Tooltip("가장자리 어둡게 — 바깥 끝 색 · 알파 (안쪽은 같은 색 투명).")]
+        [SerializeField] private Color vignetteColor = new Color(5f / 255f, 9f / 255f, 22f / 255f, 0.5f);
         [Tooltip("알갱이 — 2배 곱하기 머티리얼.")]
         [SerializeField] private RawImage grain;
         [Tooltip("알갱이가 바뀌는 빠르기 (장/초).")]
@@ -567,10 +577,14 @@ namespace Chapchu.UI.Fx.Aim
         private void DrawFilm(float t)
         {
             float sinceCut = t - bulletAt;
-            float flashAlpha = sinceCut >= 0f && sinceCut < 0.16f ? (1f - sinceCut / 0.16f) * 0.3f : 0f;
-            flash.color = Rgba(255, 246, 226, flashAlpha);
+            float flashAlpha = sinceCut >= 0f && sinceCut < flashSeconds ? (1f - sinceCut / flashSeconds) * flashStrength : 0f;
+            Color flashTint = flashColor;
+            flashTint.a = flashAlpha;
+            flash.color = flashTint;
             Show(flash, flashAlpha > 0f);
-            vignette.Radial(new Vector2(StageWidth / 2f, StageHeight / 2f), StageHeight * 0.3f, StageWidth * 0.68f, Rgba(5, 9, 22, 0f), Rgba(5, 9, 22, 0.5f), 0f);
+            Color vignetteClear = vignetteColor;
+            vignetteClear.a = 0f;
+            vignette.Radial(new Vector2(StageWidth / 2f, StageHeight / 2f), StageHeight * vignetteRadii.x, StageWidth * vignetteRadii.y, vignetteClear, vignetteColor, 0f);
 
             if (_grain == null || _grain.Length == 0)
                 return;
