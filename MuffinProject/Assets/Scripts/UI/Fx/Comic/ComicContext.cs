@@ -22,6 +22,21 @@ namespace Chapchu.UI.Fx.Comic
         /// <summary>맞는 사람의 강아지 키 (시안 P.tk).</summary>
         public string TargetKey => DogKeyOf(Target);
 
+        /// <summary>낸 사람이 아닌 사람 수 (시안 P.others.length).</summary>
+        public int Others
+        {
+            get
+            {
+                int others = 0;
+                foreach (CardFxSeat seat in Fx.Seats)
+                {
+                    if (seat != null && seat != From)
+                        others++;
+                }
+                return others;
+            }
+        }
+
         /// <summary>장면 값의 흔들림 (시각, 세기).</summary>
         public IReadOnlyList<Vector2> Hits => _hits;
 
