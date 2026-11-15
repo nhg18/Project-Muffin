@@ -13,6 +13,7 @@ namespace Chapchu.UI.Fx.MemoryErase
     /// 4 단계 장식은 없다 (시안 FXA 기억 삭제 s4 = 손패 옮기기뿐 — 게임 화면 몫).
     /// 연출 길이 2.56초 (3 단계) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// 얼굴 그림은 모두 <see cref="CardFxContext.Character"/> 의 얼굴 칸 — 자리마다 얼굴 그림이 생기면 그것으로 바꾼다.
+    /// 기준 문서: docs/systems/11-card-list.md 113 기억 삭제 · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
     /// </summary>
     public class MemoryEraseComicScene : ComicScene
     {
@@ -280,12 +281,7 @@ namespace Chapchu.UI.Fx.MemoryErase
         public override void Begin(ComicContext context)
         {
             // 시안: max(1, min(3, others.length || 3)) — 낸 사람이 아닌 사람 수
-            int others = 0;
-            foreach (CardFxSeat seat in context.Fx.Seats)
-            {
-                if (seat != null && seat != context.From)
-                    others++;
-            }
+            int others = context.Others;
             _count = others == 0 ? people.Length : Mathf.Clamp(others, 1, people.Length);
             Sprite art = context.Fx.Character;
             for (int i = 0; i < people.Length; i++)
@@ -297,7 +293,7 @@ namespace Chapchu.UI.Fx.MemoryErase
                 foreach (CanvasGroup card in person.oldHand)
                     card.gameObject.SetActive(shown);
                 if (shown)
-                    ShowFace(person.picture, art);
+                    ComicKit.ShowFace(person.picture, art, faceArea, missingFace);
             }
             backgroundLights.Redraw();
         }
@@ -369,26 +365,6 @@ namespace Chapchu.UI.Fx.MemoryErase
                 if (person.newHand[j] == null)
                     Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(people)}[{i}].{nameof(Person.newHand)}[{j}] 가 비었다");
             }
-        }
-
-        // 시안 avatar 의 그림 — 얼굴 칸을 원 안에 채운다 (그림이 없으면 회색 면)
-        private void ShowFace(RawImage picture, Sprite art)
-        {
-            if (art == null)
-            {
-                picture.texture = null;
-                picture.color = missingFace;
-                return;
-            }
-            Texture texture = art.texture;
-            Rect rect = art.rect;
-            picture.texture = texture;
-            picture.color = Color.white;
-            picture.uvRect = new Rect(
-                (rect.x + faceArea.x * rect.width) / texture.width,
-                (rect.y + faceArea.y * rect.height) / texture.height,
-                faceArea.width * rect.width / texture.width,
-                faceArea.height * rect.height / texture.height);
         }
 
         private void DrawPerson(Person person, int index)

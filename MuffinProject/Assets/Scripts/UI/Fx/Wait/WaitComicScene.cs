@@ -15,6 +15,7 @@ namespace Chapchu.UI.Fx.Wait
     /// 4 단계 = 쓴 사람에게 「기다려!」 말풍선 + 0.5 초 (시안 FXA 기다려! s4, 「승리 불가」 상태 글자는 게임 화면 몫이라 뺐다).
     /// 연출 길이 2.86초 (3 단계 2.36초 + 4 단계 0.5초) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// 얼굴 그림은 모두 <see cref="CardFxContext.Character"/> 의 얼굴 칸 — 자리마다 얼굴 그림이 생기면 그것으로 바꾼다.
+    /// 기준 문서: docs/systems/11-card-list.md 123 기다려! · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
     /// </summary>
     public class WaitComicScene : ComicScene
     {
@@ -278,7 +279,7 @@ namespace Chapchu.UI.Fx.Wait
         [Tooltip("「기다려!」 말풍선이 오르는 높이 (설계 px, 시안 vbubble −70).")]
         [SerializeField] private float bubbleRise = 70f;
 
-        private readonly List<bool> _hushed = new List<bool>();
+        private bool[] _hushed;
         private int _count;
         private float _time;
         private float _tagWidth;
@@ -313,10 +314,10 @@ namespace Chapchu.UI.Fx.Wait
             confetti.Painter = PaintConfetti;
             sunburst.Painter = PaintSunburst;
             paw.Painter = PaintPaw;
+            _hushed = new bool[people.Length];
             for (int i = 0; i < people.Length; i++)
             {
                 int index = i;
-                _hushed.Add(false);
                 people[i].bubbleShape.Painter = pen => PaintBubble(pen, index);
                 people[i].tagBox.Painter = PaintTag;
             }
@@ -325,12 +326,7 @@ namespace Chapchu.UI.Fx.Wait
         public override void Begin(ComicContext context)
         {
             // 시안: max(1, min(3, others.length || 3)) — 낸 사람이 아닌 사람 수
-            int others = 0;
-            foreach (CardFxSeat seat in context.Fx.Seats)
-            {
-                if (seat != null && seat != context.From)
-                    others++;
-            }
+            int others = context.Others;
             _count = others == 0 ? people.Length : Mathf.Clamp(others, 1, people.Length);
             Sprite art = context.Fx.Character;
             for (int i = 0; i < people.Length; i++)
@@ -341,7 +337,7 @@ namespace Chapchu.UI.Fx.Wait
                 person.bubble.gameObject.SetActive(shown);
                 person.tag.gameObject.SetActive(shown);
                 if (shown)
-                    ShowFace(person.picture, art);
+                    ComicKit.ShowFace(person.picture, art, faceArea, missingFace);
             }
 
             // 시안 label: 상자 너비 = 글자 폭 + 34 (글자는 모두 같다)
@@ -422,26 +418,6 @@ namespace Chapchu.UI.Fx.Wait
                 yield return null;
         }
 
-        // 시안 avatar 의 그림 — 얼굴 칸을 원 안에 채운다 (그림이 없으면 회색 면)
-        private void ShowFace(RawImage picture, Sprite art)
-        {
-            if (art == null)
-            {
-                picture.texture = null;
-                picture.color = missingFace;
-                return;
-            }
-            Texture texture = art.texture;
-            Rect rect = art.rect;
-            picture.texture = texture;
-            picture.color = Color.white;
-            picture.uvRect = new Rect(
-                (rect.x + faceArea.x * rect.width) / texture.width,
-                (rect.y + faceArea.y * rect.height) / texture.height,
-                faceArea.width * rect.width / texture.width,
-                faceArea.height * rect.height / texture.height);
-        }
-
         private void DrawPerson(Person person, int index, float t, float hit)
         {
             bool ok = hit > 0f;
@@ -454,7 +430,7 @@ namespace Chapchu.UI.Fx.Wait
             float bk = (t - bubbleAt - index * bubbleGap) / bubbleTime;
             if (bk > 0f)
             {
-                float s = Mathf.Max(0f, ComicKit.Back(Mathf.Min(1f, bk), bubbleOvershoot));
+                float s = ComicKit.Back(bk, bubbleOvershoot);
                 ComicKit.Place(person.bubble, x + bubbleOffset.x, y + bubbleOffset.y);
                 person.bubble.localScale = new Vector3(s, s, 1f);
                 bool hushed = ok && hit > hushAt + index * bubbleGap;
@@ -473,7 +449,7 @@ namespace Chapchu.UI.Fx.Wait
 
             // 「승리 불가」 표
             float sk = (hit - tagAt - index * bubbleGap) / tagTime;
-            float tagScale = sk > 0f ? Mathf.Max(0f, ComicKit.Back(Mathf.Min(1f, sk), tagOvershoot)) : 0f;
+            float tagScale = sk > 0f ? ComicKit.Back(sk, tagOvershoot) : 0f;
             ComicKit.Place(person.tag, x + tagOffset.x, y + tagOffset.y);
             ComicKit.Turn(person.tag, tagTilt.x + index * tagTilt.y);
             person.tag.localScale = new Vector3(tagScale, tagScale, 1f);

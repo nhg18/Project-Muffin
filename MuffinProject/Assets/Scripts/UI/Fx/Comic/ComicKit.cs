@@ -75,6 +75,29 @@ namespace Chapchu.UI.Fx.Comic
             c.a = alpha;
             graphic.color = c;
         }
+
+        /// <summary>
+        /// 시안 avatar 의 그림 — 캐릭터 그림의 얼굴 칸(<paramref name="faceArea"/>, 그림 안 비율 · 왼쪽 아래 0)을 원 안에 채운다.
+        /// 그림이 없으면 <paramref name="missing"/> 색 면.
+        /// </summary>
+        public static void ShowFace(UnityEngine.UI.RawImage picture, Sprite art, Rect faceArea, Color missing)
+        {
+            if (art == null)
+            {
+                picture.texture = null;
+                picture.color = missing;
+                return;
+            }
+            Texture texture = art.texture;
+            Rect rect = art.rect;
+            picture.texture = texture;
+            picture.color = Color.white;
+            picture.uvRect = new Rect(
+                (rect.x + faceArea.x * rect.width) / texture.width,
+                (rect.y + faceArea.y * rect.height) / texture.height,
+                faceArea.width * rect.width / texture.width,
+                faceArea.height * rect.height / texture.height);
+        }
     }
 
     /// <summary>시안 rng(seed) — 같은 씨앗이면 시안과 같은 수열 (mulberry32). 값 형식이라 복사하면 그 자리부터 따로 간다.</summary>
