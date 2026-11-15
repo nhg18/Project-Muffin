@@ -176,6 +176,12 @@ namespace Chapchu.UI.Fx
         /// <summary>시안 1px 이 이 화면에서 몇 단위인지.</summary>
         public float PixelScale => pixelScale;
 
+        /// <summary>말풍선이 떠 있는 초.</summary>
+        public float BubbleSeconds => bubbleSeconds;
+
+        /// <summary>말풍선 마지막 구간(흐려지는 구간)이 시작되는 비율 (0 ~ 1).</summary>
+        public float BubbleFadeFrom => bubbleKeys[bubbleKeys.Length - 2];
+
         private enum Shape { Star, Circle, Glow, Streak, Ring }
 
         private class Particle
