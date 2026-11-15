@@ -59,8 +59,12 @@ namespace Chapchu.UI.Fx.Post
         protected override void OnEnable()
         {
             base.OnEnable();
-            // 실행 중에는 연출이 SetMaxScale 로 처음 그린다 — 여기서 배율 1 로 미리 그리면 곧바로 버려진다
-            if (!Application.isPlaying)
+            // 실행 중에는 연출이 SetMaxScale 로 처음 그린다 — 여기서 배율 1 로 미리 그리면 곧바로 버려진다. 프리팹 편집 화면은 연출이 부르지 않으니 그린다
+            bool drawnByFx = Application.isPlaying;
+#if UNITY_EDITOR
+            drawnByFx &= !UnityEditor.SceneManagement.EditorSceneManager.IsPreviewScene(gameObject.scene);
+#endif
+            if (!drawnByFx)
                 Redraw();
         }
 
