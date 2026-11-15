@@ -254,7 +254,7 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | --- | --- |
 | 메서드명 | `RPC_` 접두사 |
 | 이름 전달 | `nameof()` 사용, 문자열 리터럴 금지 |
-| 마스터 전용 RPC | 첫 줄에 `if (!IsTrustedMaster) return;` — 내가 **믿는 방장**(13절 #1)일 때만 (`PhotonNetwork.IsMasterClient` 가 아니라). 요청 RPC 는 둘째 줄에 보낸 사람별 빈도 제한 (13절 #6) |
+| 마스터 전용 RPC | 첫 줄에 `if (!NetworkManager.IsTrustedMaster) return;` — 내가 **믿는 방장**(13절 #1)일 때만 (`PhotonNetwork.IsMasterClient` 가 아니라). 요청 RPC 는 둘째 줄에 보낸 사람별 빈도 제한 (13절 #6) |
 | 요청 보내기 | 믿는 방장 Player 에게 대상 지정으로 보낸다 (`RpcTarget.MasterClient` 가 아니라, 13절 #1) |
 | 결과 RPC 받기 | **믿는 방장**(13절 #1)이 보낸 것만 반영한다. 짝 배열(인스턴스 ID · 카드 ID 등)은 길이가 같아야 받는다 (13절 #7) |
 | 요청자 식별 | `PhotonMessageInfo.Sender` 사용. 클라이언트가 보낸 actorNumber를 신뢰하지 않는다 |
