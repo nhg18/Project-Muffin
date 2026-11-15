@@ -36,6 +36,9 @@ namespace Chapchu.EditorTools
         private const string RegularFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11 SDF.asset";
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
+        private const string CharacterSpritePath = "Assets/Sprites/Characters/chara.png"; // 노션 「캐릭터 디자인」 기본 치와와 (10-ui 2-1 캐릭터별 데이터)
+        internal const float CharacterAspect = 0.772f; // 그림 비율 = 보이는 부분 상자 폭 ÷ 키 (10-ui 2-1)
+        internal const float MyCharacterWidth = 216f;  // 키 280 × 그림 비율
         private const string HudSpriteFolder = "Assets/Sprites/UI/Hud";
         private const string CommonSpriteFolder = "Assets/Sprites/UI/Common";
         internal const string CardFrameFolder = "Assets/Sprites/Cards/Frames";
@@ -58,7 +61,6 @@ namespace Chapchu.EditorTools
         private static readonly Color Hp = Hex(0xec3b46);
         private static readonly Color Tgt = Hex(0xec3b46);
         private static readonly Color Act = Hex(0x009dff);
-        private static readonly Color Fur2 = Hex(0xd6c4a6);
         private static readonly Color Fur3 = Hex(0xbea983);
         private static readonly Color HpBg = Hex(0xffe6e3);
         private static readonly Color Line = Hex(0xe7ded2);
@@ -89,6 +91,7 @@ namespace Chapchu.EditorTools
         internal static TMP_FontAsset RegularFont => _regularFont != null ? _regularFont : _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
         internal static TMP_FontAsset BoldFont => _boldFont != null ? _boldFont : _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
         private static Sprite Round => _round != null ? _round : _round = AssetDatabase.LoadAssetAtPath<Sprite>(RoundSpritePath);
+        private static Sprite CharacterSprite => AssetDatabase.LoadAssetAtPath<Sprite>(CharacterSpritePath);
 
         [MenuItem("Chapchu/Game Screen/Build UI")]
         public static void Build()
@@ -521,20 +524,20 @@ namespace Chapchu.EditorTools
             return root;
         }
 
-        // 내 캐릭터 자리(160 × 280, 좌 72 · 아래 218) + 발밑 턴 타원 + 내 패널(472 × 178, 좌하 32 · 20) (시안 .mine2)
+        // 내 캐릭터(216 × 280, 좌 72 · 아래 218) + 발밑 턴 타원 + 내 패널(472 × 178, 좌하 32 · 20) (시안 .mine2)
         private static MyPanelView BuildMyCharacterAndPanel(RectTransform parent)
         {
             RectTransform spot = BuildSpot("MyTurnSpot", parent);
             Anchor(spot, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(EdgeX + 120f, EdgeBottom + 178f + 28f), spot.sizeDelta);
 
-            Image character = RoundImage("MyCharacter", parent, new Color(Fur2.r, Fur2.g, Fur2.b, 0.5f), 40f);
-            BottomLeft(character.rectTransform, EdgeX + 40f, EdgeBottom + 178f + 20f, 160f, 280f);
+            Image character = NewImage("MyCharacter", parent, Color.white, CharacterSprite);
+            BottomLeft(character.rectTransform, EdgeX + 40f, EdgeBottom + 178f + 20f, MyCharacterWidth, 280f);
             character.preserveAspect = true;
 
             // 스톱워치 — 내 캐릭터 오른쪽 (시안: left = 캐릭터 왼쪽 + 폭 × 0.98 + 6 + 23, top = 머리 + 키 × 0.3). 캐릭터처럼 아래 기준
             TurnTimerView timer = BuildStopwatch("TurnTimer", parent);
             Anchor((RectTransform)timer.transform, Vector2.zero, new Vector2(0.5f, 0.5f),
-                new Vector2(EdgeX + 40f + 160f * 0.98f + StopwatchGap + StopwatchSize / 2f, EdgeBottom + 178f + 20f + 280f * (1f - StopwatchHeadRatio)), new Vector2(StopwatchSize, StopwatchSize));
+                new Vector2(EdgeX + 40f + MyCharacterWidth * 0.98f + StopwatchGap + StopwatchSize / 2f, EdgeBottom + 178f + 20f + 280f * (1f - StopwatchHeadRatio)), new Vector2(StopwatchSize, StopwatchSize));
             timer.gameObject.SetActive(false);
 
             Frame frame = BuildFrame("MyPanel", parent, 6f, 28f, Band, 68f, 5f);
@@ -765,7 +768,7 @@ namespace Chapchu.EditorTools
             return dimmer;
         }
 
-        // 좌석 자리 (시안 GEO × 2): 캐릭터 가운데 x · 머리 y · 키 · 폭(키 × 0.569) · 이름표 좌상 · 손 위치(그림 안 비율) · 말풍선 방향
+        // 좌석 자리 (시안 GEO × 2): 캐릭터 가운데 x · 머리 y · 키 · 폭(키 × 그림 비율) · 이름표 좌상 · 손 위치(그림 안 비율) · 말풍선 방향
         private readonly struct SeatGeo
         {
             public readonly float Cx, Top, Height, Width, PlateX, PlateY;
@@ -774,13 +777,13 @@ namespace Chapchu.EditorTools
 
             public SeatGeo(float cx, float top, float height, float plateX, float plateY, Vector2 handRatio, bool sayLeft)
             {
-                Cx = cx; Top = top; Height = height; Width = Mathf.Round(height * 0.569f / 2f) * 2f;
+                Cx = cx; Top = top; Height = height; Width = Mathf.Round(height * CharacterAspect / 2f) * 2f;
                 PlateX = plateX; PlateY = plateY; HandRatio = handRatio; SayLeft = sayLeft;
             }
         }
 
-        private static readonly Vector2 HandRight = new Vector2(0.83f, 0.75f); // 시안 CHAR_HAND R
-        private static readonly Vector2 HandLeft = new Vector2(0.26f, 0.74f);  // 시안 CHAR_HAND L
+        internal static readonly Vector2 HandRight = new Vector2(0.68f, 0.78f); // 그림 안 오른쪽 앞발 (10-ui 2-1 캐릭터별 데이터)
+        internal static readonly Vector2 HandLeft = new Vector2(0.24f, 0.78f);  // 그림 안 왼쪽 앞발
         private static readonly SeatGeo[] Seats =
         {
             new SeatGeo(260f, 300f, 300f, 104f, 168f, HandRight, false),
@@ -817,7 +820,7 @@ namespace Chapchu.EditorTools
             CenterAt(spot, g.Cx, feetY, spot.sizeDelta.x, spot.sizeDelta.y);
             spot.gameObject.SetActive(false);
 
-            Image character = RoundImage("Character", root, new Color(Fur2.r, Fur2.g, Fur2.b, 0.5f), 40f);
+            Image character = NewImage("Character", root, Color.white, CharacterSprite);
             TopLeft(character.rectTransform, g.Cx - g.Width / 2f, g.Top, g.Width, g.Height);
             character.preserveAspect = true;
 
