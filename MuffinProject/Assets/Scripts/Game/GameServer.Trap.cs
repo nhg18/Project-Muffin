@@ -30,6 +30,13 @@ namespace Chapchu.Game
             if (_mainActionUsed)
                 return Reject(requester, RejectCode.MainActionUsed);
 
+            // 처리 중(체인 · 함정 시간 · 사망 대기 · 고르기 · 개판 판정 · 후처리)에는 설치하지 않는다 (04-card.md 6절 조건 5, 2026-11-15)
+            if (IsPaused(_clock()))
+                return Reject(requester, RejectCode.Resolving);
+
+            if (IsTurnTimeUp(_clock()))
+                return Reject(requester, RejectCode.NotYourTurn);
+
             PlayerState player = _players[requester];
             int index = player.Hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)

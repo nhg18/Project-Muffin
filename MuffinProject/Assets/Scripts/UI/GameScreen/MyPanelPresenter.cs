@@ -56,7 +56,7 @@ namespace Chapchu.UI.GameScreen
 
             // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다.
             if (me.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
-                ShowHp(hpValue);
+                ShowHp(Mathf.Clamp(hpValue, 0, GameServer.MaxHp)); // Player 속성은 남이 쓸 수 있다
 
             if (me.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                 ShowHandCount(handCountValue);

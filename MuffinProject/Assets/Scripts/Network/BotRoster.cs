@@ -9,13 +9,14 @@ namespace Chapchu.Network
 {
     /// <summary>
     /// 방에 든 봇 목록 읽기 (18-bot.md 9절). 봇은 접속자가 아니라 방 속성(RoomProps.Bots)의 번호로만 있다.
-    /// 봇 식별자 = 1000 + 번호 — 게임 규칙 · 이벤트의 actorNumber 자리에 사람과 같이 쓰인다. 추가 · 제거는 NetworkManager.
+    /// 봇 식별자 = 1,000,000,000 + 번호 — 게임 규칙 · 이벤트의 actorNumber 자리에 사람과 같이 쓰인다. 추가 · 제거는 NetworkManager.
+    /// 사람 actorNumber 는 방에 들고 날 때마다 1씩 늘어 1000 쯤은 닿을 수 있다 — 봇 번호와 겹치지 않게 크게 둔다.
     /// </summary>
     public static class BotRoster
     {
         // 확정 (18-bot.md 4절 · 9절).
         public const int MaxBots = 3;
-        public const int ActorBase = 1000;
+        public const int ActorBase = 1_000_000_000;
 
         /// <summary>
         /// 지금 방의 봇 번호 (오름차순). 방 밖이면 빈 배열.
@@ -29,7 +30,8 @@ namespace Chapchu.Network
                 if (room == null)
                     return Array.Empty<int>();
 
-                int[] numbers = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBots : null) ?? RoomNumbers;
+                // 원본(방장 메모리)은 믿는 방장만 읽는다 — 방장 자리를 뺏긴 사이에도 아무 클라나 쓰는 방 속성을 원본으로 읽지 않게 (09-network.md 13절 #1)
+                int[] numbers = (NetworkManager.IsTrustedMaster ? NetworkManager.Instance.HostBots : null) ?? RoomNumbers;
 
                 // 방 속성은 아무 클라나 쓸 수 있다 — 번호 1 ~ 3 · 중복 없이 · 사람 + 봇 ≤ 4 만 (18-bot.md 4절 · 08-room.md 2절). 넘치면 큰 번호를 뺀다
                 return numbers.Where(n => n >= 1 && n <= MaxBots).Distinct().OrderBy(n => n).Take(NetworkManager.MaxPlayers - room.PlayerCount).ToArray();
@@ -58,7 +60,7 @@ namespace Chapchu.Network
             if (number < 1 || number > MaxBots)
                 return BotLevel.Normal;
 
-            int[] levels = (PhotonNetwork.IsMasterClient && NetworkManager.Instance != null ? NetworkManager.Instance.HostBotLevels : null) ?? RoomLevels;
+            int[] levels = (NetworkManager.IsTrustedMaster ? NetworkManager.Instance.HostBotLevels : null) ?? RoomLevels;
             return (BotLevel)levels[number - 1];
         }
 

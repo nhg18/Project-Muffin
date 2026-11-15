@@ -37,6 +37,10 @@ namespace Chapchu.Game
             if (!IsChoosing || requester != _choiceActor || option < 0 || option > 1)
                 return Reject(requester, RejectCode.NotChoosing);
 
+            // 고를 시간이 지났다 — 방장이 무작위로 고른다 (Advance, 09-network.md 8절)
+            if (_clock() >= _choiceDeadline)
+                return Reject(requester, RejectCode.NotChoosing);
+
             FinishChoice(option, false);
             return TakeEvents();
         }

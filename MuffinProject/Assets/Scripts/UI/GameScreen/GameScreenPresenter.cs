@@ -665,16 +665,58 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 앞에서부터 하나씩. 연출이 있는 단계는 끝날 때까지 다음을 꺼내지 않는다.
+        // 한 단계가 예외를 내면 그 단계만 버리고 다음으로 — 아니면 코루틴이 죽어 그 뒤 알림이 화면에 영영 나오지 않는다
         private IEnumerator PlayRoutine()
         {
             while (_steps.Count > 0)
             {
-                IEnumerator step = _steps.Dequeue()();
+                IEnumerator step = null;
+                try
+                {
+                    step = _steps.Dequeue()();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception, this);
+                }
+
                 if (step != null)
-                    yield return step;
+                    yield return Guarded(step);
             }
 
             _playing = null;
+        }
+
+        // 연출 코루틴을 직접 돌린다 — 안쪽 코루틴(yield return IEnumerator)까지 MoveNext 를 감싸, 예외가 나면 그 단계를 끝낸다
+        private IEnumerator Guarded(IEnumerator step)
+        {
+            var stack = new Stack<IEnumerator>();
+            stack.Push(step);
+            while (stack.Count > 0)
+            {
+                IEnumerator top = stack.Peek();
+                bool moved;
+                try
+                {
+                    moved = top.MoveNext();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception, this);
+                    yield break;
+                }
+
+                if (!moved)
+                {
+                    stack.Pop();
+                    continue;
+                }
+
+                if (top.Current is IEnumerator inner)
+                    stack.Push(inner);
+                else
+                    yield return top.Current; // WaitForSeconds · Tween 대기 등은 Unity 가 기다린다
+            }
         }
 
         private static bool IsMe(int actorNumber) => PhotonNetwork.LocalPlayer.ActorNumber == actorNumber;
