@@ -18,9 +18,9 @@ namespace Chapchu.UI.Fx
 
         /// <summary>
         /// 연출 프리팹을 비동기로 불러와 parent 아래에 만들고 created 로 넘긴다 (그림을 읽는 동안 화면이 멈추지 않게).
-        /// 프리팹이 없으면 null 을 넘긴다 — required 면 오류로 남기고 (시험장), 아니면 조용히 넘긴다 (게임 화면: 연출이 없는 카드).
+        /// 프리팹이 없으면 null 을 넘긴다 — required 면 오류로 남기고, 아니면 조용히 넘긴다 (시험장 · 게임 화면: 연출이 없는 카드).
         /// </summary>
-        public static IEnumerator CreateRoutine(string fxName, Transform parent, Action<CardFx> created, bool required = true)
+        public static IEnumerator CreateRoutine(string fxName, Transform parent, Action<CardFx> created, bool required)
         {
             ResourceRequest request = Resources.LoadAsync<GameObject>(ResourcePaths.CardFx + fxName);
             yield return request;

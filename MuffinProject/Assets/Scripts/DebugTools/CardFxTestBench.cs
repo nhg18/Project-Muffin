@@ -34,8 +34,8 @@ namespace Chapchu.DebugTools
         [SerializeField] private Sprite cardBack;
         [Tooltip("캐릭터 그림 — 컷인에 나오는 강아지.")]
         [SerializeField] private Sprite character;
-        [Tooltip("한 번에 이만큼 이상 줄면 큰 피해 연출 (시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
-        [Min(1)] [SerializeField] private int bigHitDamage = 40;
+        [Tooltip("한 번에 이만큼 이상 줄면 큰 피해 연출 (10-ui 5-2 「큰 피해(30 이상)」, 시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
+        [Min(1)] [SerializeField] private int bigHitDamage = 30;
 
         [Header("재생 속도")]
         [Tooltip("모든 카드 연출의 배속 (Time.timeScale). 1 = 원래 속도. 플레이 중에 바꿔도 바로 적용된다.")]
@@ -72,7 +72,7 @@ namespace Chapchu.DebugTools
         private readonly List<HandCardView> _handCards = new List<HandCardView>();
         private int _lastIndex = -1;
         private bool _busy;
-        private bool _posting;
+        private bool _ready;
 
         /// <summary>3 단계를 재생 중인 카드 ID — 없으면 0. 자동 확인(스크린샷 시각 맞추기)용.</summary>
         public int PlayingCardId { get; private set; }
@@ -87,10 +87,32 @@ namespace Chapchu.DebugTools
 
         private void Awake()
         {
-            if (cardDeck == null || cardBack == null || character == null || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null
-                || handArea == null || playSpot == null || discardPile == null || fxLayer == null || caster == null || target == null
-                || captionText == null || replayButton == null || resetButton == null || playedGlow == null)
-                Debug.LogError($"[{nameof(CardFxTestBench)}] 참조 중 비어 있는 것이 있습니다.", this);
+            var missing = new List<string>();
+            void Check(Object value, string name)
+            {
+                if (value == null)
+                    missing.Add(name);
+            }
+
+            Check(cardDeck, nameof(cardDeck));
+            Check(cardBack, nameof(cardBack));
+            Check(character, nameof(character));
+            Check(actionCardPrefab, nameof(actionCardPrefab));
+            Check(counterCardPrefab, nameof(counterCardPrefab));
+            Check(trapCardPrefab, nameof(trapCardPrefab));
+            Check(handArea, nameof(handArea));
+            Check(playSpot, nameof(playSpot));
+            Check(discardPile, nameof(discardPile));
+            Check(fxLayer, nameof(fxLayer));
+            Check(caster, nameof(caster));
+            Check(target, nameof(target));
+            Check(captionText, nameof(captionText));
+            Check(replayButton, nameof(replayButton));
+            Check(resetButton, nameof(resetButton));
+            Check(playedGlow, nameof(playedGlow));
+            _ready = missing.Count == 0;
+            if (!_ready)
+                Debug.LogError($"[{nameof(CardFxTestBench)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
 
         private void OnEnable()
@@ -121,6 +143,8 @@ namespace Chapchu.DebugTools
         private void Start()
         {
             Time.timeScale = speed;
+            if (!_ready)
+                return;
             // 마우스로 누른 버튼이 선택돼 남으면 Space 가 Submit 으로도 들어간다 — 시험장 버튼은 선택되지 않게
             replayButton.navigation = new Navigation { mode = Navigation.Mode.None };
             resetButton.navigation = new Navigation { mode = Navigation.Mode.None };
@@ -169,6 +193,12 @@ namespace Chapchu.DebugTools
             CardData data = _cards[index];
             captionText.text = $"{data.id} {data.cardName} — {data.description}";
             HandleResetClicked();
+            // 체력이 가득 차 있으면 회복이 보이지 않는다 — 회복 카드는 회복량만큼 먼저 깎아 둔다
+            foreach (CardEffect effect in data.effects)
+            {
+                if (effect is HealEffect heal)
+                    (heal.subject == EffectSubject.Self ? caster : target).ResetHp(GameServer.MaxHp - heal.amount);
+            }
 
             yield return new WaitForSeconds(0.25f);
             RectTransform played = CreateFlyingCard(data, index);
@@ -182,6 +212,7 @@ namespace Chapchu.DebugTools
             // 3 단계가 결과를 보여 줄 순간을 정하면(Impact) 그때, 아니면 3 단계 뒤에 (게임에서는 결과가 3 단계 뒤에 온다)
             var shown = new HashSet<CardFxSeat>();
             context.Impact = seat => ShowResults(data, context, shown, seat);
+            Coroutine post = null;
 
             if (fx != null)
             {
@@ -191,8 +222,8 @@ namespace Chapchu.DebugTools
                 yield return fx.PlayRoutine(context);
                 Debug.Log($"[{nameof(CardFxTestBench)}] 카드 {data.id} {data.cardName} 3 단계 {Time.time - PlayingSince:0.00}초");
                 PlayingCardId = 0;
-                StartCoroutine(PostRoutine(fx, context));
-                yield return null; // 장식이 먼저 시작해야 결과 알림을 받는다
+                // StartCoroutine 은 첫 yield 까지 바로 돈다 — 장식이 결과 알림을 구독한 뒤에 결과를 보여 준다
+                post = StartCoroutine(fx.PlayPostRoutine(context));
             }
             else
             {
@@ -200,8 +231,8 @@ namespace Chapchu.DebugTools
             }
 
             ShowResults(data, context, shown, null);
-            while (_posting)
-                yield return null;
+            if (post != null)
+                yield return post;
             yield return new WaitForSeconds(0.9f);
             yield return ClearRoutine(played);
             if (fx != null)
@@ -211,13 +242,6 @@ namespace Chapchu.DebugTools
             }
 
             _busy = false;
-        }
-
-        private IEnumerator PostRoutine(CardFx fx, CardFxContext context)
-        {
-            _posting = true;
-            yield return fx.PlayPostRoutine(context);
-            _posting = false;
         }
 
         private CardFxContext CreateContext(CardData data)
@@ -264,10 +288,14 @@ namespace Chapchu.DebugTools
                 FxDummySeat dummy = seat.Anchor.GetComponent<FxDummySeat>();
                 int before = dummy.Hp;
                 dummy.ShowHp(before + delta);
-                if (delta < 0)
-                    fxLayer.Hit(seat.Anchor, -delta, -delta >= bigHitDamage);
+                // 10-ui 5-2: 양 = 실제로 바뀐 HP (0 ~ MaxHp 로 잘린 뒤). 바뀌지 않았으면 그리지 않는다
+                int change = dummy.Hp - before;
+                if (change == 0)
+                    continue;
+                if (change < 0)
+                    fxLayer.Hit(seat.Anchor, -change, -change >= bigHitDamage);
                 else
-                    fxLayer.Heal(seat.Anchor, delta);
+                    fxLayer.Heal(seat.Anchor, change);
                 context.NotifyHpChanged(seat, before, dummy.Hp);
             }
         }
