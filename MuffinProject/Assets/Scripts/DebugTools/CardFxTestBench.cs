@@ -197,7 +197,7 @@ namespace Chapchu.DebugTools
             foreach (CardEffect effect in data.effects)
             {
                 if (effect is HealEffect heal)
-                    (heal.subject == EffectSubject.Self ? caster : target).ShowHp(GameServer.MaxHp - heal.amount);
+                    (heal.subject == EffectSubject.Self ? caster : target).ResetHp(GameServer.MaxHp - heal.amount);
             }
 
             yield return new WaitForSeconds(0.25f);

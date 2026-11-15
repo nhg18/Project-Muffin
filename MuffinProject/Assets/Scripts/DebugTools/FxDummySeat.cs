@@ -42,10 +42,10 @@ namespace Chapchu.DebugTools
             SetHp(Mathf.Clamp(hp, 0, GameServer.MaxHp), true);
         }
 
-        /// <summary>체력을 처음 값(GameServer.MaxHp, 06-health 2절)으로 되돌린다.</summary>
-        public void ResetHp()
+        /// <summary>체력을 처음 값(기본 GameServer.MaxHp, 06-health 2절)으로 애니메이션 없이 되돌린다.</summary>
+        public void ResetHp(int hp = GameServer.MaxHp)
         {
-            SetHp(GameServer.MaxHp, false);
+            SetHp(Mathf.Clamp(hp, 0, GameServer.MaxHp), false);
         }
 
         private void SetHp(int hp, bool animate)
