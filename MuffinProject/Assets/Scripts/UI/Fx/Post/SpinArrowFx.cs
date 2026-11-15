@@ -15,6 +15,8 @@ namespace Chapchu.UI.Fx.Post
     {
         [Tooltip("돌아가는 화살표 — 판 가운데. 시작은 투명.")]
         [SerializeField] private CanvasGroup arrow;
+        [Tooltip("화살표 그림 — arrow 오브젝트의 UICircleArrow. 가장 클 때 배율로 해상도를 정한다.")]
+        [SerializeField] private UICircleArrow shape;
         [Tooltip("커져서 돌고 사라질 때까지 (ms, 시안 spinArrow 1100ms · 전체에 ease-out 한 번).")]
         [SerializeField] private float durationMs = 1100f;
         [Tooltip("키프레임 시점 (0 ~ 1). 아래 배율 · 각도 · 투명도와 개수가 같아야 한다.")]
@@ -28,7 +30,7 @@ namespace Chapchu.UI.Fx.Post
 
         private void Awake()
         {
-            if (arrow == null)
+            if (arrow == null || shape == null)
                 Debug.LogError($"[{nameof(SpinArrowFx)}] 화살표 참조가 비어 있습니다.", this);
             if (keys.Length < 2 || scales.Length != keys.Length || angles.Length != keys.Length || alphas.Length != keys.Length)
                 Debug.LogError($"[{nameof(SpinArrowFx)}] 키프레임 배열의 개수가 맞지 않습니다.", this);
@@ -39,9 +41,7 @@ namespace Chapchu.UI.Fx.Post
             float pixelScale = context.Layer.PixelScale;
             var rect = (RectTransform)arrow.transform;
             // 가장 클 때 배율에 맞춰 화살표 그림 해상도를 정한다
-            UICircleArrow shape = arrow.GetComponent<UICircleArrow>();
-            if (shape != null)
-                shape.SetMaxScale(pixelScale * Mathf.Max(scales));
+            shape.SetMaxScale(pixelScale * Mathf.Max(scales));
             Tween spin = DOVirtual.Float(0f, 1f, durationMs / 1000f, time =>
             {
                 // 시안은 animate(..., {easing:"ease-out"}) — 옵션의 easing 은 구간마다가 아니라 전체 진행도에 한 번 걸린다
