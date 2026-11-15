@@ -14,7 +14,7 @@
     },
     {
       "id": 105, "name": "드롭킥", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 3,
-      "text": "대상에게 49 피해를 입힌다. 못 쓰러뜨리면 나도 49 피해를 받는다",
+      "text": "대상에게 49 피해를 준다. 못 쓰러뜨리면 나도 49 피해를 받는다",
       "art": "Assets/Sprites/Cards/Art/105.png",
       "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=49" }, { "type": "RecoilDamageEffect", "args": "amount=49" } ]
     },

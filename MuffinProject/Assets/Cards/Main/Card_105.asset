@@ -19,7 +19,7 @@ MonoBehaviour:
   targetType: 1
   targetCondition: 0
   grade: 2
-  description: "\uB300\uC0C1\uC5D0\uAC8C 49 \uD53C\uD574\uB97C \uC785\uD78C\uB2E4.
+  description: "\uB300\uC0C1\uC5D0\uAC8C 49 \uD53C\uD574\uB97C \uC900\uB2E4.
     \uBABB \uC4F0\uB7EC\uB728\uB9AC\uBA74 \uB098\uB3C4 49 \uD53C\uD574\uB97C \uBC1B\uB294\uB2E4"
   reactsTo: 
   trapTrigger: 0

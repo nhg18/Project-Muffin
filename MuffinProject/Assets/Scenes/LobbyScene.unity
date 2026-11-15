@@ -10448,7 +10448,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC544\uC9C1 \uACE0\uB978 \uC0C1\uD488\uC774 \uC5C6\uC5B4\uC694"
+  m_text: "\uC544\uC9C1 \uACE0\uB978 \uC0C1\uD488\uC774 \uC5C6\uC5B4\uC694."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
   m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
@@ -23217,7 +23217,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "<u>\uAC1C\uC778\uC815\uBCF4\uCC98\uB9AC\uBC29\uCE68</u>"
+  m_text: "<u>\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC\uBC29\uCE68</u>"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
   m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
@@ -25115,7 +25115,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "'\uC0AD\uC81C' \uB97C \uC785\uB825\uD558\uBA74 \uACC4\uC815\uC774 \uC9C0\uC6CC\uC838\uC694."
+  m_text: "'\uC0AD\uC81C'\uB97C \uC785\uB825\uD558\uBA74 \uACC4\uC815\uC774 \uC9C0\uC6CC\uC838\uC694."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
   m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
@@ -41477,7 +41477,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uBF51\uAE30\uC5D0\uC11C\uB9CC \uB098\uC640\uC694"
+  m_text: "\uBF51\uAE30\uC5D0\uC11C\uB9CC \uB098\uC640\uC694."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
   m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
@@ -48350,7 +48350,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uCE5C\uAD6C \uB2D8\uC758 \uCD08\uB300"
+  m_text: "\uCE5C\uAD6C\uB2D8\uC774 \uCD08\uB300\uD588\uC5B4\uC694."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
   m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}

@@ -1273,7 +1273,7 @@ namespace Chapchu.EditorTools
             body.childControlHeight = true;
             body.childForceExpandWidth = true;
             body.childForceExpandHeight = false;
-            TMP_Text desc = NewText("Desc", pop.Body, "누구: 둘 중 하나를 고르세요. 5초 안에 안 고르면 무작위", 30f, Ink, false, TextAlignmentOptions.Left);
+            TMP_Text desc = NewText("Desc", pop.Body, "누구: 둘 중 하나를 골라 주세요. 5초 안에 안 고르면 무작위로 정해요.", 30f, Ink, false, TextAlignmentOptions.Left);
             desc.textWrappingMode = TextWrappingModes.Normal;
 
             RectTransform row = NewRect("Buttons", pop.Body);
