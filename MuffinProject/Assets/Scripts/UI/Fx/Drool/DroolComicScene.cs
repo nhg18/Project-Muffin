@@ -199,6 +199,8 @@ namespace Chapchu.UI.Fx.Drool
         [SerializeField] private float crumbLife = 0.45f;
         [Tooltip("조각 수 (시안 10).")]
         [SerializeField] private int crumbCount = 10;
+        [Tooltip("부스러기 씨앗 — 카드 i 의 씨앗은 시작값 + i × 간격 (시안 i·7 + 1 → 시작 1 · 간격 7).")]
+        [SerializeField] private Vector2Int crumbSeed = new Vector2Int(1, 7);
         [Tooltip("튀는 빠르기 — 최소 · 더하는 범위 (설계 px/초, 시안 140 + 0 ~ 220).")]
         [SerializeField] private Vector2 crumbSpeed = new Vector2(140f, 220f);
         [Tooltip("떨어지는 세기 (시안 420τ²).")]
@@ -300,7 +302,7 @@ namespace Chapchu.UI.Fx.Drool
                 if (q > 0f && q < chompWindow)
                     _chomp = Mathf.Max(_chomp, Mathf.Exp(-q * chompDamping));
             }
-            _droolGrowth = Sm((t - droolGrow.x) / droolGrow.y);
+            _droolGrowth = ComicKit.Sm((t - droolGrow.x) / droolGrow.y);
 
             focusLines.SetTime(t);
             sparkles.Redraw();
@@ -317,13 +319,6 @@ namespace Chapchu.UI.Fx.Drool
 
             crumbs.Redraw();
             DrawWords(t);
-        }
-
-        // 시안 sm — 부드럽게 시작해 부드럽게 끝 (smoothstep)
-        private static float Sm(float k)
-        {
-            k = ComicKit.Cl(k);
-            return k * k * (3f - 2f * k);
         }
 
         // 시안 ei — 느리게 시작해 빠르게 끝 (ease-in cubic)
@@ -508,7 +503,7 @@ namespace Chapchu.UI.Fx.Drool
                 float z = _time - chompAt[i];
                 if (z <= 0f || z > crumbLife)
                     continue;
-                var random = new ComicRandom(i * 7 + 1);
+                var random = new ComicRandom(crumbSeed.x + i * crumbSeed.y);
                 for (int j = 0; j < crumbCount; j++)
                 {
                     float angle = -Mathf.PI * random.Next(), speed = crumbSpeed.x + random.Next() * crumbSpeed.y;

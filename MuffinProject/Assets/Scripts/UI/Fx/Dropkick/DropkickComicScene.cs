@@ -299,13 +299,6 @@ namespace Chapchu.UI.Fx.Dropkick
             }
         }
 
-        // 시안 sm — 부드럽게 시작해 부드럽게 끝 (smoothstep)
-        private static float Sm(float k)
-        {
-            k = ComicKit.Cl(k);
-            return k * k * (3f - 2f * k);
-        }
-
         private void HandleHpChanged(CardFxSeat seat, int before, int after)
         {
             if (seat == _hitSeat && after <= 0)
@@ -318,7 +311,7 @@ namespace Chapchu.UI.Fx.Dropkick
             speedLines.Redraw();
 
             target.SetTime(t);
-            float brace = Sm(t / braceTime);
+            float brace = ComicKit.Sm(t / braceTime);
             for (int i = 0; i < FxDog.Legs.Count; i++)
                 target.SetLeg(i, (FxDog.LegFront[i] ? braceFront : braceBack) * brace);
 
@@ -406,8 +399,6 @@ namespace Chapchu.UI.Fx.Dropkick
                 float velocity = (speedVelocity.x + random.Next() * speedVelocity.y) * speedDirection;
                 float phase = random.Next() * speedPhase;
                 float x = ((phase + _time * velocity) % span + span) % span - speedWrap / 2f;
-                if (speedDirection < 0f)
-                    x = ComicKit.Width - x;
                 pen.MoveTo(x, y - thickness / 2f);
                 pen.LineTo(x - length * speedDirection, y);
                 pen.LineTo(x, y + thickness / 2f);
