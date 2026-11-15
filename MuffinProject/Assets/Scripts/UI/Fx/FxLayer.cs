@@ -372,6 +372,16 @@ namespace Chapchu.UI.Fx
                 .Append(stage.DOScale(1f, punchOutSeconds).SetEase(Ease.OutCubic));
         }
 
+        /// <summary>키프레임 시점 keys(오름차순, 2개 이상) 중 진행도 t 가 든 구간 i ~ i + 1 과 그 안의 비율 f (0 ~ 1).</summary>
+        public static int KeySpan(float[] keys, float t, out float f)
+        {
+            int i = 0;
+            while (i < keys.Length - 2 && t > keys[i + 1])
+                i++;
+            f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
+            return i;
+        }
+
         #region 4 단계 공통 — 맞음 · 회복 · 말풍선 · 자리 흔들기
 
         /// <summary>시안 hit — 터짐 숫자 「-n」 · 파편 · (큰 피해면) 번짐 + 판 흔들림 14, 아니면 6 · 자리 흔들림. 체력 바는 부르는 쪽이 바꾼다.</summary>
@@ -602,16 +612,6 @@ namespace Chapchu.UI.Fx
         }
 
         #endregion
-
-        /// <summary>키프레임 시점 keys(오름차순, 2개 이상) 중 진행도 t 가 든 구간 i ~ i + 1 과 그 안의 비율 f (0 ~ 1).</summary>
-        public static int KeySpan(float[] keys, float t, out float f)
-        {
-            int i = 0;
-            while (i < keys.Length - 2 && t > keys[i + 1])
-                i++;
-            f = Mathf.InverseLerp(keys[i], keys[i + 1], t);
-            return i;
-        }
 
         #region 만들기
 
