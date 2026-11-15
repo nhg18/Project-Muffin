@@ -16,14 +16,13 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class HandView : MonoBehaviour
     {
-        // 자리의 z 간격 — 오른쪽 카드가 카메라 쪽. 겹친 곳은 깊이로 정렬된다.
-        private const float CardZStep = 0.02f;
-        // 다른 카드보다 앞에 그릴 카드를 카메라 쪽으로 당기는 거리 — 손패 15장(0.3)까지 순서가 지켜진다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.
-        private const float UsableLift = 0.3f;
-        private const float SelectedLift = 0.34f;
-        private const float HoverLift = 0.38f;
-        private const float DragLift = 0.42f;
-        private const float ShowLift = 1f; // 크게 보여 주는 카드 — 올라온 손패 · 끄는 카드보다 앞
+        /// <summary>캔버스 기준 해상도 가로 (15-screen 3절 — GameScreenBuilder 의 CanvasScaler referenceResolution 과 같다).</summary>
+        public const float ReferenceWidth = 1920f;
+        /// <summary>캔버스 기준 해상도 세로 (15-screen 3절).</summary>
+        public const float ReferenceHeight = 1080f;
+        /// <summary>3D 층 1 유닛이 캔버스 몇 px 인지 (10-ui.md 2-1 「3D 층 구현」 — 캔버스 100px = 1 유닛).</summary>
+        public const float CanvasPerUnit = 100f;
+
         // 시안의 무대 px(960 × 540) 을 유닛으로 — 무대 1px = 캔버스 2px = 0.02 유닛.
         private const float UnitsPerStagePixel = 0.02f;
         private const float TiltReferenceFps = 60f; // 시안의 「매 프레임 0.86배」 기준 주사율
@@ -45,12 +44,15 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float loweredSpacing = 0.5f;
         [Tooltip("맨 끝 카드의 기울기 — 한 장 늘 때마다 이만큼(도), 상한까지.")]
         [SerializeField] private float loweredAnglePerCard = 1.4f;
+        [Tooltip("맨 끝 카드 기울기의 상한 (도).")]
         [SerializeField] private float loweredAngleMax = 9f;
 
         [Header("올라온 손패 — 화면 가운데 기준")]
         [Tooltip("카드 사이 간격의 상한 (카드 폭 대비).")]
         [SerializeField] private float raisedSpacing = 0.92f;
+        [Tooltip("맨 끝 카드의 기울기 — 한 장 늘 때마다 이만큼(도), 상한까지.")]
         [SerializeField] private float raisedAnglePerCard = 2.2f;
+        [Tooltip("맨 끝 카드 기울기의 상한 (도).")]
         [SerializeField] private float raisedAngleMax = 15f;
         [Tooltip("첫 카드와 끝 카드 가운데 사이 거리의 상한 (유닛) — 시안 750 × 2.")]
         [SerializeField] private float raisedMaxSpan = 15f;
@@ -90,18 +92,21 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float showBottomGap = 0.28f;
         [Tooltip("카드 아래에 남은 시간 막대 · 안내 글을 둘 높이 (유닛).")]
         [SerializeField] private float showBarSpace = 0.8f;
-        [Tooltip("카드 사이 가로 · 세로 틈 (유닛).")]
+        [Tooltip("카드 사이 가로 틈 (유닛).")]
         [SerializeField] private float showGapX = 0.44f;
+        [Tooltip("카드 사이 세로 틈 (유닛).")]
         [SerializeField] private float showGapY = 0.28f;
-        [Tooltip("한 줄의 최대 폭 (유닛) 과 화면 좌우 끝에서 남기는 여백.")]
+        [Tooltip("한 줄의 최대 폭 (유닛).")]
         [SerializeField] private float showMaxWidth = 13.6f;
+        [Tooltip("화면 좌우 끝에서 남기는 여백 (유닛).")]
         [SerializeField] private float showEdgeMargin = 0.8f;
         [Tooltip("배율 상한 — 한두 장일 때 너무 커지지 않게. 하한은 없다 (많으면 작아진다).")]
         [SerializeField] private float showMaxScale = 2.2f;
         [Tooltip("줄 수 상한 — 1 줄부터 이 줄 수까지 가운데 카드가 가장 커지는 줄 수를 고른다.")]
         [SerializeField] private int showMaxRows = 3;
-        [Tooltip("보여 주는 자리로 가는 초 · 카드마다 늦추는 초.")]
+        [Tooltip("보여 주는 자리로 가는 초.")]
         [SerializeField] private float showEnterDuration = 0.45f;
+        [Tooltip("새 카드마다 늦추는 초.")]
         [SerializeField] private float showStagger = 0.09f;
         [Tooltip("보여 준 뒤 손패 자리로 내려가는 초.")]
         [SerializeField] private float showReturnDuration = 0.4f;
@@ -119,6 +124,20 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float playLineGap = 0.48f;
         [Tooltip("손패 영역의 위쪽 여유 (유닛) — 포인터가 이 안에 있으면 카드 사이 틈에서도 손패가 올라온 채로. 시안 25 × 2.")]
         [SerializeField] private float handZoneGap = 0.5f;
+
+        [Header("그리는 순서 — 카메라 쪽으로 당기는 거리 (유닛)")]
+        [Tooltip("자리마다 z 간격 — 오른쪽 카드가 카메라 쪽. 겹친 곳은 깊이로 정렬된다.")]
+        [SerializeField] private float cardDepthStep = 0.02f;
+        [Tooltip("반응 시간에 낼 수 있는 카운터를 앞에 그리는 거리 — 손패 15장(자리 간격 × 15 = 0.3)까지 순서가 지켜진다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.")]
+        [SerializeField] private float usableDepth = 0.3f;
+        [Tooltip("고른 카드를 앞에 그리는 거리 — 낼 수 있는 카운터보다 커야 한다.")]
+        [SerializeField] private float selectedDepth = 0.34f;
+        [Tooltip("포인터 아래 카드를 앞에 그리는 거리 — 고른 카드보다 커야 한다.")]
+        [SerializeField] private float hoverDepth = 0.38f;
+        [Tooltip("끄는 카드를 앞에 그리는 거리 — 포인터 아래 카드보다 커야 한다.")]
+        [SerializeField] private float dragDepth = 0.42f;
+        [Tooltip("크게 보여 주는 새 카드를 앞에 그리는 거리 — 올라온 손패 · 끄는 카드보다 앞.")]
+        [SerializeField] private float showDepth = 1f;
 
         private readonly List<CardView> _cards = new List<CardView>();
         private readonly List<CardView> _laidOut = new List<CardView>();                        // 자리를 받은 카드 — _cards 에서 따로 둔 카드를 뺀 것
@@ -264,7 +283,7 @@ namespace Chapchu.UI.GameScreen
                     cameraPosition.x - rowWidth / 2f + cardWidth * scale / 2f + column * (cardWidth * scale + showGapX),
                     top - cardHeight * scale / 2f - row * (cardHeight * scale + showGapY));
 
-                var pose = new Pose { Center = center, Angle = 0f, Scale = scale, Lift = ShowLift + i * CardZStep, TiltX = 0f };
+                var pose = new Pose { Center = center, Angle = 0f, Scale = scale, Lift = showDepth + i * cardDepthStep, TiltX = 0f };
                 ToTransform(pose, out Vector3 position, out Quaternion rotation, out float size);
                 float delay = i >= firstNew ? (i - firstNew) * showStagger : 0f;
                 Transform t = cards[i].transform;
@@ -278,7 +297,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>손패 평면 위 월드 y → 캔버스 좌표 y (화면 가운데가 0, 위가 +) — 캔버스 100px = 1 유닛 (10-ui.md 2-1 「3D 층 구현」).</summary>
-        public float WorldToCanvasY(float worldY) => (worldY - _camera.transform.position.y) * 100f;
+        public float WorldToCanvasY(float worldY) => (worldY - _camera.transform.position.y) * CanvasPerUnit;
 
         /// <summary>보여 주는 자리로 가는 데 걸리는 초 — 새 카드 newCount 장 (마지막 카드의 늦춤 포함).</summary>
         public float ShowEnterSeconds(int newCount) => showEnterDuration + showStagger * Mathf.Max(0, newCount - 1);
@@ -566,7 +585,7 @@ namespace Chapchu.UI.GameScreen
                 if (dragging) continue;
 
                 Vector3 slot = _slots[i];
-                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = 1f, Lift = i * CardZStep, TiltX = restTilt };
+                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = 1f, Lift = i * cardDepthStep, TiltX = restTilt };
                 if (raised)
                     pose.Center.y += cardHeight / 2f + raisedBottomGap;
 
@@ -574,14 +593,14 @@ namespace Chapchu.UI.GameScreen
                 if (card == _selected)
                 {
                     pose.Center.y += pickLift;
-                    pose.Lift += SelectedLift;
+                    pose.Lift += selectedDepth;
                 }
 
                 if (card == _hovered && card != _selected)
                 {
                     pose.Center.y += cardHeight * hoverLift;
                     pose.Scale *= hoverScale;
-                    pose.Lift += HoverLift;
+                    pose.Lift += hoverDepth;
                 }
                 else if (usable && card != _selected)
                 {
@@ -589,7 +608,7 @@ namespace Chapchu.UI.GameScreen
                     pose.Center.y += pickLift;
                     pose.Scale *= usableScale;
                     if (!raised)
-                        pose.Lift += UsableLift;
+                        pose.Lift += usableDepth;
                 }
 
                 MoveTo(card, pose);
@@ -684,7 +703,7 @@ namespace Chapchu.UI.GameScreen
         // 끄는 카드는 트윈 없이 바로 — 포인터를 따라 똑바로 선 채 좌우로만 기운다.
         private void PlaceDragged()
         {
-            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = 1f, Lift = DragLift, TiltX = 0f };
+            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = 1f, Lift = dragDepth, TiltX = 0f };
             ToTransform(pose, out Vector3 position, out Quaternion rotation, out float scale);
             Transform t = _dragging.transform;
             t.localPosition = position;

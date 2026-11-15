@@ -58,7 +58,9 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HandRevealView revealView;
         [Tooltip("보여 주는 초 — 기본 + 장마다 더하는 초, 상한까지.")]
         [SerializeField] private float showHoldBase = 2.6f;
+        [Tooltip("둘째 장부터 한 장마다 더하는 초.")]
         [SerializeField] private float showHoldPerCard = 0.7f;
+        [Tooltip("보여 주는 초의 상한.")]
         [SerializeField] private float showHoldMax = 8f;
         [Tooltip("앞 카드가 온 뒤 이 초 안에 온 카드는 같은 묶음으로 함께 보여 준다. 그 뒤에 오면 앞 묶음을 먼저 손패로 내린다.")]
         [SerializeField] private float showJoinWindow = 0.6f;

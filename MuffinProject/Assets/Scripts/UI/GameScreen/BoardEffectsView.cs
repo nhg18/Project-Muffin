@@ -10,6 +10,13 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class BoardEffectsView : MonoBehaviour
     {
+        /// <summary>알약 템플릿 안 부품 이름 — GameScreenBuilder 가 같은 이름으로 만들고, 알약을 복제할 때 이 이름으로 찾는다. 주황 이름표.</summary>
+        public const string LabelChild = "Label";
+        /// <summary>이름표 안 글자 · 알약의 설명 글자 부품 이름.</summary>
+        public const string TextChild = "Text";
+
+        private const string LabelTextPath = LabelChild + "/" + TextChild;
+
         [Tooltip("복제할 알약 — 비활성으로 둔다. 구조: 루트 → Label(주황 이름표) → Text · Text(설명).")]
         [SerializeField] private RectTransform pillTemplate;
 
@@ -32,8 +39,8 @@ namespace Chapchu.UI.GameScreen
             {
                 RectTransform pill = Instantiate(pillTemplate, pillTemplate.parent);
                 pill.gameObject.SetActive(true);
-                pill.Find("Label/Text").GetComponent<TMP_Text>().text = label;
-                pill.Find("Text").GetComponent<TMP_Text>().text = text;
+                pill.Find(LabelTextPath).GetComponent<TMP_Text>().text = label;
+                pill.Find(TextChild).GetComponent<TMP_Text>().text = text;
                 _pills.Add(pill.gameObject);
             }
         }

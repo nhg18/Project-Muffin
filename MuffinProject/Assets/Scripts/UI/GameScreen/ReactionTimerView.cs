@@ -41,11 +41,17 @@ namespace Chapchu.UI.GameScreen
         private string _cardName;
 
         [Header("색 (시안 .rt2 · .low · .soon)")]
+        [Tooltip("진행 중 · 처리 중 테두리와 글자색.")]
         [SerializeField] private Color ink = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("남은 시간 막대 색.")]
         [SerializeField] private Color fillColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        [Tooltip("남은 시간이 적을 때 막대 색.")]
         [SerializeField] private Color lowFillColor = new Color32(0xec, 0x3b, 0x46, 0xFF);
+        [Tooltip("남은 시간이 적을 때 남은 초 글자색.")]
         [SerializeField] private Color lowInk = new Color32(0xc8, 0x1e, 0x2b, 0xFF);
+        [Tooltip("반응 시간이 열리기 전(「곧」) 테두리 색.")]
         [SerializeField] private Color soonBorder = new Color32(0xb8, 0xae, 0xa4, 0xFF);
+        [Tooltip("반응 시간이 열리기 전(「곧」) 글자색.")]
         [SerializeField] private Color soonInk = new Color32(0x8a, 0x81, 0x7a, 0xFF);
 
         private void Awake()

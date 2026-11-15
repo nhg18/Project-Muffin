@@ -24,10 +24,15 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text hpText;
         [Tooltip("HP 가 이 값 이하면 수치를 진한 빨강으로 (시안: 20).")]
         [SerializeField] private int lowHpThreshold = 20;
+        [Tooltip("평소 HP 수치 글자색.")]
         [SerializeField] private Color hpInk = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("HP 가 낮을 때(lowHpThreshold 이하) HP 수치 글자색.")]
         [SerializeField] private Color lowHpInk = new Color32(0xb5, 0x12, 0x1f, 0xFF);
+        [Tooltip("평소 이름표 띠 색.")]
         [SerializeField] private Color normalBandColor = new Color32(0xcf, 0xee, 0xdd, 0xFF);
+        [Tooltip("이 상대의 턴일 때 이름표 띠 색 — 찹츄 색보다 먼저.")]
         [SerializeField] private Color turnBandColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        [Tooltip("찹츄를 선언했을 때 이름표 띠 색.")]
         [SerializeField] private Color chapchuBandColor = new Color32(0xff, 0x4f, 0x8b, 0xFF);
         [SerializeField] private HandCountBadgeView handBadge;
 

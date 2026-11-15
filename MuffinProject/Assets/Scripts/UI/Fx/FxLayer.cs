@@ -19,6 +19,14 @@ namespace Chapchu.UI.Fx
         private const float DragFps = 60f;
         private const float MaxDeltaTime = 0.05f;
 
+        // 시안 boomAt 키프레임 (950ms, ease-out) — 정적 함수 AnimateBoom 이 쓴다
+        private const float BoomSeconds = 0.95f;
+        private const float BoomRiseRatio = 0.2f; // 마지막에 떠오르는 높이 — 터짐 글자 높이 대비
+        private static readonly float[] BoomKeys = { 0f, 0.18f, 0.35f, 0.75f, 1f };
+        private static readonly float[] BoomAlphas = { 0f, 1f, 1f, 1f, 0f };
+        private static readonly float[] BoomScales = { 0.2f, 1.25f, 1f, 1f, 1.1f };
+        private static readonly float[] BoomAngles = { -25f, 8f, -4f, -4f, -4f }; // 시안 rotate(+) = 시계 방향
+
         [Tooltip("흔들고 확대할 판. 이 레이어는 판 밖에 있어야 같이 흔들리지 않는다.")]
         [SerializeField] private RectTransform stage;
         [Tooltip("시안의 1px 이 이 화면에서 몇 단위인지.")]
@@ -36,6 +44,92 @@ namespace Chapchu.UI.Fx
         [SerializeField] private TMP_FontAsset boomFont;
         [Tooltip("잉크(외곽선) 색.")]
         [SerializeField] private Color ink = new Color32(0x2b, 0x28, 0x56, 0xff);
+
+        [Header("파편 (시안 burst) — 길이는 시안 px")]
+        [Tooltip("파편 크기 범위 (시안 px, 최소 · 최대) — 부르는 쪽이 정하지 않았을 때.")]
+        [SerializeField] private Vector2 burstSize = new Vector2(4f, 10f);
+        [Tooltip("파편 수명 범위 (초, 최소 · 최대) — 부르는 쪽이 정하지 않았을 때.")]
+        [SerializeField] private Vector2 burstLife = new Vector2(0.6f, 1.1f);
+        [Tooltip("파편이 사라지기 시작하는 남은 초.")]
+        [SerializeField] private float burstFade = 0.35f;
+        [Tooltip("파편이 별일 확률 (나머지는 동그라미).")]
+        [SerializeField] private float burstStarChance = 0.5f;
+        [Tooltip("파편의 한 프레임(60fps) 감속 — 속도에 곱한다.")]
+        [SerializeField] private float burstDrag = 0.94f;
+        [Tooltip("파편의 처음 회전 상한 (라디안).")]
+        [SerializeField] private float burstMaxRotation = 6f;
+        [Tooltip("파편의 회전 속도 상한 (라디안/초) — −값 ~ +값에서 고른다.")]
+        [SerializeField] private float burstMaxSpin = 8f;
+        [Tooltip("별 · 동그라미 뒤 빛의 크기 — 파편 크기 대비.")]
+        [SerializeField] private float sparkHaloScale = 6.4f;
+
+        [Header("번짐 (시안 bloom)")]
+        [Tooltip("처음 크기 — 정한 크기 대비.")]
+        [SerializeField] private float bloomStartRatio = 0.25f;
+        [Tooltip("수명 동안 커지는 크기 — 정한 크기 대비.")]
+        [SerializeField] private float bloomGrowRatio = 1.6f;
+        [Tooltip("가운데 흰 빛의 크기 — 번짐 크기 대비.")]
+        [SerializeField] private float bloomCoreScale = 0.5f;
+        [Tooltip("가운데 흰 빛의 투명도 — 번짐 투명도 대비.")]
+        [SerializeField] private float bloomCoreAlpha = 0.9f;
+
+        [Header("고리 (시안 ring)")]
+        [Tooltip("고리의 처음 반지름 (시안 px).")]
+        [SerializeField] private float ringStartRadius = 8f;
+        [Tooltip("사라질 때 남는 선 두께의 하한 — 처음 두께 대비.")]
+        [SerializeField] private float ringMinWidthRatio = 0.2f;
+        [Tooltip("안쪽 흰 선 두께 — 바깥 선 대비.")]
+        [SerializeField] private float ringInnerWidthRatio = 0.35f;
+
+        [Header("줄 빛 (시안 streaks)")]
+        [Tooltip("줄 빛 수명 범위 (초, 최소 · 최대).")]
+        [SerializeField] private Vector2 streakLife = new Vector2(0.25f, 0.45f);
+        [Tooltip("줄 빛이 사라지기 시작하는 남은 초.")]
+        [SerializeField] private float streakFade = 0.25f;
+        [Tooltip("줄 빛의 한 프레임(60fps) 감속 — 속도에 곱한다.")]
+        [SerializeField] private float streakDrag = 0.88f;
+        [Tooltip("줄 빛 두께 범위 (시안 px, 최소 · 최대).")]
+        [SerializeField] private Vector2 streakWidth = new Vector2(3f, 6f);
+        [Tooltip("줄 빛 길이 상한 (시안 px).")]
+        [SerializeField] private float streakMaxLength = 160f;
+        [Tooltip("줄 빛 길이 — 속도에 곱한다 (상한까지).")]
+        [SerializeField] private float streakLengthPerSpeed = 0.12f;
+        [Tooltip("흰 머리의 길이 — 줄 빛 길이 대비.")]
+        [SerializeField] private float streakHeadLength = 0.3f;
+        [Tooltip("흰 머리의 두께 — 줄 빛 두께 대비.")]
+        [SerializeField] private float streakHeadWidth = 0.7f;
+
+        [Header("터짐 글자 (시안 boomAt · .boom)")]
+        [Tooltip("글자 크기 (시안 px). 그림을 쓸 때는 그림 칸 크기.")]
+        [SerializeField] private float boomFontSize = 44f;
+        [Tooltip("글자 외곽선 두께 (TMP outlineWidth).")]
+        [SerializeField] private float boomOutlineWidth = 0.3f;
+        [Tooltip("글자 둘레 안쪽 여백 (시안 px, 가로 · 세로) — 양쪽에 같이.")]
+        [SerializeField] private Vector2 boomPadding = new Vector2(24f, 16f);
+        [Tooltip("뒤 빛이 별 모양 밖으로 퍼지는 거리 (시안 px, 시안 drop-shadow 18px).")]
+        [SerializeField] private float boomHaloSpread = 36f;
+        [Tooltip("뒤 빛 투명도.")]
+        [SerializeField] private float boomHaloAlpha = 0.8f;
+
+        [Header("판 흔들기 (시안 arenaShake · shakeStage)")]
+        [Tooltip("회전 없이 흔드는 초 (시안 arenaShake 420ms).")]
+        [SerializeField] private float shakeSeconds = 0.42f;
+        [Tooltip("회전하며 흔드는 초 (시안 shakeStage 440ms).")]
+        [SerializeField] private float shakeRotateSeconds = 0.44f;
+        [Tooltip("좌우 자리 순서 — 흔들 양 대비.")]
+        [SerializeField] private float[] shakeXRatios = { 0f, -1f, 1f, -0.6f, 0.6f, -0.3f, 0f };
+        [Tooltip("홀수 단계에서 내려가는 양 — 흔들 양 대비.")]
+        [SerializeField] private float shakeDownRatio = 0.4f;
+        [Tooltip("짝수 단계에서 올라가는 양 — 흔들 양 대비.")]
+        [SerializeField] private float shakeUpRatio = 0.3f;
+        [Tooltip("회전하며 흔들 때 좌우로 기우는 각도 (도).")]
+        [SerializeField] private float shakeAngle = 0.25f;
+
+        [Header("판 확대 (시안 zoomPunch 300ms)")]
+        [Tooltip("커지는 초.")]
+        [SerializeField] private float punchInSeconds = 0.075f;
+        [Tooltip("돌아오는 초.")]
+        [SerializeField] private float punchOutSeconds = 0.225f;
 
         private readonly List<Particle> _particles = new List<Particle>();
         private readonly object _shakeId = new object();
@@ -118,19 +212,19 @@ namespace Chapchu.UI.Fx
         /// <summary>시안 burst — 별 · 동그라미 파편이 튀고 떨어진다. 값은 시안 px 기준.</summary>
         public void Burst(Vector2 position, int count, Color[] colors, Vector2 speed, float gravity, Vector2? size = null, Vector2? life = null)
         {
-            Vector2 sizeRange = size ?? new Vector2(4f, 10f);
-            Vector2 lifeRange = life ?? new Vector2(0.6f, 1.1f);
+            Vector2 sizeRange = size ?? burstSize;
+            Vector2 lifeRange = life ?? burstLife;
             for (int i = 0; i < count; i++)
             {
                 float angle = Random.value * Mathf.PI * 2f;
                 float velocity = Random.Range(speed.x, speed.y) * pixelScale;
-                Shape shape = Random.value < 0.5f ? Shape.Star : Shape.Circle;
-                Particle p = NewParticle(shape, position, Pick(colors), Random.Range(lifeRange.x, lifeRange.y), 0.35f);
+                Shape shape = Random.value < burstStarChance ? Shape.Star : Shape.Circle;
+                Particle p = NewParticle(shape, position, Pick(colors), Random.Range(lifeRange.x, lifeRange.y), burstFade);
                 p.Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * velocity;
                 p.Gravity = -gravity * pixelScale;
-                p.Drag = 0.94f;
-                p.Rotation = Random.value * 6f;
-                p.Spin = Random.Range(-8f, 8f);
+                p.Drag = burstDrag;
+                p.Rotation = Random.value * burstMaxRotation;
+                p.Spin = Random.Range(-burstMaxSpin, burstMaxSpin);
                 p.Size = Random.Range(sizeRange.x, sizeRange.y) * pixelScale;
             }
         }
@@ -139,15 +233,15 @@ namespace Chapchu.UI.Fx
         public void Bloom(Vector2 position, Color color, float size = 200f, float life = 0.42f)
         {
             Particle p = NewParticle(Shape.Glow, position, color, life, life);
-            p.Size = size * 0.25f * pixelScale;
-            p.SizeGrow = size * 1.6f / life * pixelScale;
+            p.Size = size * bloomStartRatio * pixelScale;
+            p.SizeGrow = size * bloomGrowRatio / life * pixelScale;
         }
 
         /// <summary>시안 ring — 고리가 커지면서 가늘어진다.</summary>
         public void Ring(Vector2 position, Color color, float maxRadius = 140f, float life = 0.5f, float lineWidth = 10f)
         {
             Particle p = NewParticle(Shape.Ring, position, color, life, life);
-            p.Radius = 8f * pixelScale;
+            p.Radius = ringStartRadius * pixelScale;
             p.RadiusGrow = maxRadius / life * pixelScale;
             p.LineWidth = lineWidth * pixelScale;
         }
@@ -158,10 +252,10 @@ namespace Chapchu.UI.Fx
             for (int i = 0; i < count; i++)
             {
                 float angle = Random.value * Mathf.PI * 2f;
-                Particle p = NewParticle(Shape.Streak, position, Pick(colors), Random.Range(0.25f, 0.45f), 0.25f);
+                Particle p = NewParticle(Shape.Streak, position, Pick(colors), Random.Range(streakLife.x, streakLife.y), streakFade);
                 p.Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(minSpeed, maxSpeed) * pixelScale;
-                p.Drag = 0.88f;
-                p.Size = Random.Range(3f, 6f) * pixelScale;
+                p.Drag = streakDrag;
+                p.Size = Random.Range(streakWidth.x, streakWidth.y) * pixelScale;
             }
         }
 
@@ -172,18 +266,18 @@ namespace Chapchu.UI.Fx
             TextMeshProUGUI label = NewRect("Text", body).gameObject.AddComponent<TextMeshProUGUI>();
             label.font = boomFont;
             label.text = text;
-            label.fontSize = 44f * pixelScale;
+            label.fontSize = boomFontSize * pixelScale;
             label.color = Color.white;
             label.alignment = TextAlignmentOptions.Center;
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.raycastTarget = false;
-            label.outlineWidth = 0.3f;
+            label.outlineWidth = boomOutlineWidth;
             label.outlineColor = ink;
             Stretch(label.rectTransform);
 
             // 시안 .boom: 글자 크기 + 안쪽 여백 16 · 24
             Vector2 textSize = label.GetPreferredValues(text);
-            root.sizeDelta = new Vector2(textSize.x + 48f * pixelScale, 44f * pixelScale + 32f * pixelScale);
+            root.sizeDelta = new Vector2(textSize.x + boomPadding.x * 2f * pixelScale, boomFontSize * pixelScale + boomPadding.y * 2f * pixelScale);
             AnimateBoom(root, position);
         }
 
@@ -192,8 +286,8 @@ namespace Chapchu.UI.Fx
         {
             RectTransform root = NewBoomRoot(position, color, out RectTransform body);
             Image image = NewImage("Glyph", body, glyph, Color.white, false);
-            Stretch(image.rectTransform, 24f * pixelScale, 16f * pixelScale);
-            root.sizeDelta = new Vector2((44f + 48f) * pixelScale, (44f + 32f) * pixelScale);
+            Stretch(image.rectTransform, boomPadding.x * pixelScale, boomPadding.y * pixelScale);
+            root.sizeDelta = new Vector2((boomFontSize + boomPadding.x * 2f) * pixelScale, (boomFontSize + boomPadding.y * 2f) * pixelScale);
             AnimateBoom(root, position);
         }
 
@@ -204,21 +298,23 @@ namespace Chapchu.UI.Fx
                 return;
 
             float a = amount * pixelScale;
-            float[] xs = { 0f, -a, a, -a * 0.6f, a * 0.6f, -a * 0.3f, 0f };
+            float[] xs = new float[shakeXRatios.Length];
+            for (int n = 0; n < xs.Length; n++)
+                xs[n] = a * shakeXRatios[n];
             DOTween.Kill(_shakeId);
             stage.anchoredPosition = _stageBase;
             stage.localRotation = Quaternion.identity;
-            DOVirtual.Float(0f, 1f, rotate ? 0.44f : 0.42f, t =>
+            DOVirtual.Float(0f, 1f, rotate ? shakeRotateSeconds : shakeSeconds, t =>
             {
                 float k = t * (xs.Length - 1);
                 int i = Mathf.Min(xs.Length - 2, Mathf.FloorToInt(k));
                 float f = k - i;
                 // 시안은 y 가 아래로 + — 위로 + 인 유니티에서는 부호를 뒤집는다
-                float y0 = i % 2 == 1 ? -a * 0.4f : a * 0.3f;
-                float y1 = (i + 1) % 2 == 1 ? -a * 0.4f : a * 0.3f;
+                float y0 = i % 2 == 1 ? -a * shakeDownRatio : a * shakeUpRatio;
+                float y1 = (i + 1) % 2 == 1 ? -a * shakeDownRatio : a * shakeUpRatio;
                 stage.anchoredPosition = _stageBase + new Vector2(Mathf.Lerp(xs[i], xs[i + 1], f), Mathf.Lerp(y0, y1, f));
                 if (rotate)
-                    stage.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(i % 2 == 1 ? -0.25f : 0.25f, (i + 1) % 2 == 1 ? -0.25f : 0.25f, f));
+                    stage.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(i % 2 == 1 ? -shakeAngle : shakeAngle, (i + 1) % 2 == 1 ? -shakeAngle : shakeAngle, f));
             }).SetEase(Ease.OutQuad).SetId(_shakeId).SetLink(stage.gameObject).OnComplete(() =>
             {
                 stage.anchoredPosition = _stageBase;
@@ -235,8 +331,8 @@ namespace Chapchu.UI.Fx
             DOTween.Kill(_punchId, true);
             stage.localScale = Vector3.one;
             DOTween.Sequence().SetId(_punchId).SetLink(stage.gameObject)
-                .Append(stage.DOScale(1f + amount, 0.075f).SetEase(Ease.OutCubic))
-                .Append(stage.DOScale(1f, 0.225f).SetEase(Ease.OutCubic));
+                .Append(stage.DOScale(1f + amount, punchInSeconds).SetEase(Ease.OutCubic))
+                .Append(stage.DOScale(1f, punchOutSeconds).SetEase(Ease.OutCubic));
         }
 
         #region 파티클
@@ -300,33 +396,33 @@ namespace Chapchu.UI.Fx
             {
                 case Shape.Star:
                 case Shape.Circle:
-                    SetSize(p.Halo, p.Size * 6.4f, alpha);
+                    SetSize(p.Halo, p.Size * sparkHaloScale, alpha);
                     SetSize(p.Main, p.Size * 2f, alpha);
                     // 시안은 라디안, 시계 방향 + — 유니티는 반시계 방향 +
                     p.Main.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -p.Rotation * Mathf.Rad2Deg);
                     break;
                 case Shape.Glow:
                     SetSize(p.Halo, p.Size * 2f, alpha);
-                    SetSize(p.Main, p.Size * 0.5f, alpha * 0.9f);
+                    SetSize(p.Main, p.Size * bloomCoreScale, alpha * bloomCoreAlpha);
                     break;
                 case Shape.Streak:
                 {
                     // 시안: 진행 방향 뒤로 min(160, 속도 × 0.12) 길이, 머리는 흰색
-                    float length = Mathf.Min(160f * pixelScale, p.Velocity.magnitude * 0.12f);
+                    float length = Mathf.Min(streakMaxLength * pixelScale, p.Velocity.magnitude * streakLengthPerSpeed);
                     Quaternion rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(p.Velocity.y, p.Velocity.x) * Mathf.Rad2Deg);
                     p.Main.rectTransform.localRotation = rotation;
                     p.Main.rectTransform.sizeDelta = new Vector2(length, p.Size);
                     SetAlpha(p.Main, alpha);
                     p.Inner.rectTransform.localRotation = rotation;
-                    p.Inner.rectTransform.sizeDelta = new Vector2(length * 0.3f, p.Size * 0.7f);
+                    p.Inner.rectTransform.sizeDelta = new Vector2(length * streakHeadLength, p.Size * streakHeadWidth);
                     SetAlpha(p.Inner, alpha);
                     break;
                 }
                 case Shape.Ring:
                 {
-                    float width = p.LineWidth * Mathf.Max(0.2f, p.Life / p.MaxLife);
+                    float width = p.LineWidth * Mathf.Max(ringMinWidthRatio, p.Life / p.MaxLife);
                     ((UIRing)p.Main).Set(p.Radius, width);
-                    ((UIRing)p.Inner).Set(p.Radius, Mathf.Max(pixelScale, width * 0.35f));
+                    ((UIRing)p.Inner).Set(p.Radius, Mathf.Max(pixelScale, width * ringInnerWidthRatio));
                     SetAlpha(p.Main, alpha);
                     SetAlpha(p.Inner, alpha);
                     break;
@@ -345,8 +441,8 @@ namespace Chapchu.UI.Fx
 
             // 시안 .boom 의 drop-shadow(0 0 18px 색)
             Image halo = NewImage("Halo", root, glow, color, true);
-            Stretch(halo.rectTransform, -36f * pixelScale, -36f * pixelScale);
-            SetAlpha(halo, 0.8f);
+            Stretch(halo.rectTransform, -boomHaloSpread * pixelScale, -boomHaloSpread * pixelScale);
+            SetAlpha(halo, boomHaloAlpha);
             Image burst = NewImage("Starburst", root, starburst, color, false);
             Stretch(burst.rectTransform);
 
@@ -354,19 +450,19 @@ namespace Chapchu.UI.Fx
             return root;
         }
 
-        // 시안 boomAt 키프레임 (950ms, ease-out): 0 → .18 → .35 → .75 → 1
+        // 시안 boomAt 키프레임 (950ms, ease-out): 0 → .18 → .35 → .75 → 1 — 값은 위 Boom* 상수
         private static void AnimateBoom(RectTransform root, Vector2 position)
         {
             CanvasGroup group = root.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
-            float rise = root.sizeDelta.y * 0.2f;
-            float[] keys = { 0f, 0.18f, 0.35f, 0.75f, 1f };
-            float[] alphas = { 0f, 1f, 1f, 1f, 0f };
-            float[] scales = { 0.2f, 1.25f, 1f, 1f, 1.1f };
-            float[] angles = { -25f, 8f, -4f, -4f, -4f };
+            float rise = root.sizeDelta.y * BoomRiseRatio;
+            float[] keys = BoomKeys;
+            float[] alphas = BoomAlphas;
+            float[] scales = BoomScales;
+            float[] angles = BoomAngles;
             float[] rises = { 0f, 0f, 0f, 0f, rise };
 
-            DOVirtual.Float(0f, 1f, 0.95f, t =>
+            DOVirtual.Float(0f, 1f, BoomSeconds, t =>
             {
                 int i = 0;
                 while (i < keys.Length - 2 && t > keys[i + 1])

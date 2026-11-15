@@ -16,7 +16,7 @@ namespace Chapchu.UI.GameScreen
     {
         private const int LeftButton = 0;
         private const int RightButton = 1;
-        private const float ReferenceHeight = 1080f; // 캔버스 기준 높이 (15-screen 3절) — 거리 값을 화면 px 로 바꾼다
+        private const float ReferenceHeight = HandView.ReferenceHeight; // 캔버스 기준 높이 (15-screen 3절) — 거리 값을 화면 px 로 바꾼다
 
         [Tooltip("누른 채 이만큼(캔버스 px) 넘게 움직이면 끌기 — 시안 6 × 2.")]
         [SerializeField] private float dragThreshold = 12f;

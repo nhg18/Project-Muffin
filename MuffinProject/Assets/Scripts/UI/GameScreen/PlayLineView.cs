@@ -11,7 +11,9 @@ namespace Chapchu.UI.GameScreen
     {
         [SerializeField] private Graphic line;
         [SerializeField] private GameObject label;
+        [Tooltip("평소 사용 기준선 색.")]
         [SerializeField] private Color normalColor = new Color(42f / 255f, 36f / 255f, 32f / 255f, 0.32f);
+        [Tooltip("끄는 카드가 선을 넘었을 때(놓으면 사용) 기준선 색.")]
         [SerializeField] private Color armedColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
 
         private void Awake()

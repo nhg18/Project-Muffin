@@ -21,9 +21,13 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private int highThreshold = 50;
         [Tooltip("HP 가 이 값보다 크면 주황, 이하면 빨강.")]
         [SerializeField] private int lowThreshold = 20;
+        [Tooltip("HP 가 많을 때 채움 색 (초록).")]
         [SerializeField] private Color highColor = new Color32(0x3c, 0xbf, 0x72, 0xFF);
+        [Tooltip("HP 가 중간일 때 채움 색 (주황).")]
         [SerializeField] private Color midColor = new Color32(0xff, 0x9f, 0x1a, 0xFF);
+        [Tooltip("HP 가 적을 때 채움 색 (빨강).")]
         [SerializeField] private Color lowColor = new Color32(0xec, 0x3b, 0x46, 0xFF);
+        [Tooltip("색이 들지 않은 끝 마디 색.")]
         [SerializeField] private Color emptyColor = new Color32(0xff, 0xe6, 0xe3, 0xFF);
 
         private void Awake()
