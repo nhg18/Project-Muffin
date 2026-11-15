@@ -89,6 +89,13 @@ namespace Chapchu.UI.GameScreen
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때 — 좌석 없음
 
             int[] opponents = PlayerLook.OrderedActors().Skip(1).ToArray(); // 나를 뺀 좌석 순서 — 사람 뒤에 봇 (18-bot.md 8-3)
+            if (opponents.Length > SeatCount)
+            {
+                // 정원은 남이 바꿀 수 있다 — 방장이 시작하지 않지만(PunGameServer), 화면은 앉힐 수 있는 만큼만 앉힌다
+                Debug.LogWarning($"[{nameof(OpponentSeatsPresenter)}] 상대 {opponents.Length}명 — 앞의 {SeatCount}명만 앉힌다", this);
+                opponents = opponents.Take(SeatCount).ToArray();
+            }
+
             int[] seatIndices = GetOpponentSeatIndices(opponents.Length);
             if (seatIndices.Length != opponents.Length)
             {
@@ -117,7 +124,7 @@ namespace Chapchu.UI.GameScreen
 
                 // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    seat.SetHp(hpValue, GameServer.MaxHp);
+                    seat.SetHp(Mathf.Clamp(hpValue, 0, GameServer.MaxHp), GameServer.MaxHp); // 방 속성은 남이 쓸 수 있다
 
                 if (BotRoster.TryGetPublic(actor, PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                     seat.SetHandCount(handCountValue);

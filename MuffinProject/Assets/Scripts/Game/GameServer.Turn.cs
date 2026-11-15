@@ -252,6 +252,10 @@ namespace Chapchu.Game
             _lastTickAt = now;
         }
 
+        // 턴 제한 시간이 지났다 — 넘김은 다음 Tick 이 한다. 그 사이에 온 행동 요청은 방장이 거절한다 (09-network.md 8절).
+        // 멈춤이 막 풀린 프레임에는 마감이 아직 안 늘어났으므로 보지 않는다 (UpdateTurnClock).
+        private bool IsTurnTimeUp(double now) => CurrentTurnActor != -1 && !_turnPaused && _nextTurnAt < 0 && now >= _turnDeadline;
+
         // 턴 순서에서 진행 방향으로 다음에 게임에 남은 사람(나감 · 최종 사망 제외). 지금 사람이 빠졌어도 그 자리를 기준으로 찾는다.
         private int GetNextActor(int currentActor)
         {
@@ -284,6 +288,7 @@ namespace Chapchu.Game
         }
 
         // 게임에 남은 사람 = 나가지 않았고 최종 사망하지 않았다. 사망 대기는 아직 남아 있다 (06 12절).
-        private bool IsInGame(int actor) => !_players[actor].HasLeft && _players[actor].Life != LifeState.Dead;
+        // 참가자가 아닌 번호(요청자 · 대상)는 게임에 없는 것으로 — 검사 순서가 바뀌어도 예외가 나지 않게
+        private bool IsInGame(int actor) => _players.TryGetValue(actor, out PlayerState player) && !player.HasLeft && player.Life != LifeState.Dead;
     }
 }

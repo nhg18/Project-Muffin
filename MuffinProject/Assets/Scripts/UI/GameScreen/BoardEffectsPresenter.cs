@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Chapchu.Game;
 using Chapchu.Network;
 using Photon.Pun;
@@ -36,7 +37,7 @@ namespace Chapchu.UI.GameScreen
             {
                 Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
                 if (room.TryGetValue(RoomProps.WaitCasters, out object wait) && wait is int[] casters)
-                    _waitCasters = casters;
+                    _waitCasters = Known(casters);
                 if (room.TryGetValue(RoomProps.Fallout, out object fallout) && fallout is int[] values && values.Length == 2)
                 {
                     _falloutN = values[0];
@@ -50,8 +51,18 @@ namespace Chapchu.UI.GameScreen
         /// <summary>「기다려」 를 건 사람들 (OnWaitChanged, 123).</summary>
         public void ShowWait(int[] casters)
         {
-            _waitCasters = casters ?? System.Array.Empty<int>();
+            _waitCasters = Known(casters);
             Refresh();
+        }
+
+        // 판에 있는 사람만 · 겹치지 않게 — 방 속성은 남이 쓸 수 있어 알약이 끝없이 늘지 않게 (09-network.md 13절)
+        private static int[] Known(int[] casters)
+        {
+            if (casters == null)
+                return System.Array.Empty<int>();
+
+            List<int> actors = PlayerLook.OrderedActors();
+            return casters.Where(actors.Contains).Distinct().ToArray();
         }
 
         /// <summary>피폭 (OnFalloutChanged, 112) — n 이 0 이면 없음.</summary>

@@ -17,23 +17,24 @@ namespace Chapchu.Network
         private const short NotConnectedCode = ErrorCode.OperationNotAllowedInCurrentState;
         private const string NotConnectedMessage = "서버에 연결되어 있지 않습니다.";
 
+        private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
+
         private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
 
-        // 방장이 써 놓고 서버 확인을 아직 못 받은 봇 목록. PUN 은 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾼다
-        private int[] _pendingBots;
-
-        // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 방 속성은 아무 클라나 쓸 수 있어 이것과 다르면 되돌린다
+        // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
+        // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
         private int[] _hostBots;
 
         /// <summary>방장이 정한 봇 목록 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _hostBots;
 
         // 봇 난이도 ([봇 번호 − 1] 자리) — 봇 목록과 같은 방식이고 늘 함께 쓴다 (18-bot.md 9절)
-        private int[] _pendingBotLevels;
         private int[] _hostBotLevels;
 
         /// <summary>방장이 정한 봇 난이도 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.LevelOf 로.</summary>
         internal int[] HostBotLevels => _hostBotLevels;
+
+        internal PhotonRoom(RoomGuard guard) => _guard = guard;
 
         public void JoinRoom(string roomName)
         {
@@ -156,8 +157,8 @@ namespace Chapchu.Network
             return true;
         }
 
-        // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절)
-        private static bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.IsOpen;
+        // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절). 열림은 방장이 정한 값 — 방에 보이는 값은 남이 바꿀 수 있다
+        private bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && _guard.IsTrustedMaster && _guard.IsOpen;
 
         // 방장이 정한 원본 — 서버 확인 전이어도 방금 쓴 목록이라 「제거」 직후 「추가」 가 지운 봇을 되살리지 않는다
         private int[] CurrentBots => _hostBots ?? BotRoster.Numbers;
@@ -165,13 +166,12 @@ namespace Chapchu.Network
 
         private void SetBots(int[] numbers, int[] levels)
         {
-            Room room = PhotonNetwork.CurrentRoom;
-            room.MaxPlayers = NetworkManager.MaxPlayers - numbers.Length;
-            if (!room.SetCustomProperties(BotRoster.BotsTable(numbers, levels)))
+            _guard.SetMaxPlayers(NetworkManager.MaxPlayers - numbers.Length);
+            if (!_guard.SetRoomProps(BotRoster.BotsTable(numbers, levels)))
                 return;
 
-            _pendingBots = _hostBots = numbers;
-            _pendingBotLevels = _hostBotLevels = levels;
+            _hostBots = numbers;
+            _hostBotLevels = levels;
         }
 
         // 방장이 되면 지금 방의 봇 목록 · 난이도(거른 사본)를 원본으로 이어받는다 (18-bot.md 9절 「방장 교체 (방 대기 중)」)
@@ -196,15 +196,14 @@ namespace Chapchu.Network
             };
         }
     
-        public void UpdateRoomOptions(bool isVisible, bool isOpen)
+        public void UpdateRoomOptions(bool? isVisible, bool? isOpen)
         {
             if (!PhotonNetwork.InRoom)
             {
                 Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 안에서만 방 설정을 바꿀 수 있다");
                 return;
             }
-            PhotonNetwork.CurrentRoom.IsVisible = isVisible;
-            PhotonNetwork.CurrentRoom.IsOpen = isOpen;
+            _guard.SetOptions(isVisible, isOpen);
         }
     
     
@@ -254,9 +253,7 @@ namespace Chapchu.Network
             // 지난 판의 내 상태(체력 · 손패 장수)를 지운다. PUN 은 방에 들어갈 때 내 CustomProperties 를 같이 보내서,
             // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
             PhotonNetwork.LocalPlayer.CustomProperties.Clear();
-            _pendingBots = null;
             _hostBots = null;
-            _pendingBotLevels = null;
             _hostBotLevels = null;
 
             RoomEvents.RaiseLeftRoom();
@@ -304,19 +301,7 @@ namespace Chapchu.Network
             if (!changed.ContainsKey(RoomProps.Bots) && !changed.ContainsKey(RoomProps.BotLevels))
                 return;
 
-            // 마지막으로 쓴 목록 · 난이도까지 서버가 확인해 주면 대기를 푼다
-            int[] inRoom = BotRoster.RoomNumbers;
-            int[] levelsInRoom = BotRoster.RoomLevels;
-            if (_pendingBots != null && inRoom.SequenceEqual(_pendingBots) && levelsInRoom.SequenceEqual(_pendingBotLevels))
-                _pendingBots = _pendingBotLevels = null;
-
-            // 확인 대기가 없는데 원본과 다르면 방장이 쓴 값이 아니다 — 원본과 정원으로 다시 쓴다 (09-network.md 2절 #3 · 18-bot.md 3절 #7)
-            if (PhotonNetwork.IsMasterClient && _pendingBots == null && _hostBots != null
-                && (!inRoom.SequenceEqual(_hostBots) || !levelsInRoom.SequenceEqual(_hostBotLevels)))
-            {
-                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장이 쓰지 않은 봇 목록 [{string.Join(",", inRoom)}] · 난이도 [{string.Join(",", levelsInRoom)}] — 원본 [{string.Join(",", _hostBots)}] · [{string.Join(",", _hostBotLevels)}] 으로 되돌린다");
-                SetBots(_hostBots, _hostBotLevels);
-            }
+            // 방장이 쓰지 않은 봇 목록 · 난이도는 RoomGuard 가 되돌린다 (09-network.md 13절 · 18-bot.md 3절 #7)
             RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
         }
 
@@ -331,6 +316,10 @@ namespace Chapchu.Network
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {
+            // 앞 방장이 아직 방에 있으면 누가 방장 자리를 가져간 것 — 받아들이지 않는다 (RoomGuard 가 되찾는다)
+            if (!_guard.AcceptMasterSwitch(newMasterClient))
+                return;
+
             Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
             AdoptBots();
             RoomEvents.RaiseMasterClientSwitched(newMasterClient);

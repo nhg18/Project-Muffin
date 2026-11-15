@@ -83,9 +83,7 @@ namespace Chapchu.UI.Lobby
 
         private void Start()
         {
-            // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다. 입장 콜백(OnJoinedRoom)에서 정하면 안 된다 —
-            // 이미 있는 방에 들어가면 PUN 씬 동기화(AutomaticallySyncScene)가 콜백보다 먼저 RoomScene 을 불러
-            // 이 오브젝트가 사라지고, 값이 기본값(Lobby)으로 남는다.
+            // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다.
             SceneFlow.ReturnSceneAfterRoom = ScenePaths.Lobby;
             SceneFlow.GameSceneAfterRoom = ScenePaths.Game;
         }
@@ -215,12 +213,12 @@ namespace Chapchu.UI.Lobby
                 yield return null;
             }
 
-            // 입장 응답은 이미 왔고 방 씬이 열리는 중이다 (씬 동기화 입장은 HandleJoinedRoom 을 거치지 않는다) — 포기로 찍지 않고 기다린다
+            // 입장 응답은 이미 왔고 방 씬이 열리는 중이다 — 포기로 찍지 않고 기다린다
             while (NetworkManager.HasEnteredRoom)
                 yield return null;
 
             _roomTimeout = null;
-            // 이미 있는 방의 늦은 입장은 씬 동기화가 먼저 방 씬을 열어 HandleJoinedRoom 이 불리지 않는다 — 방 화면이 보고 나간다
+            // 늦은 입장 응답은 HandleJoinedRoom 이 받아 나간다. 로비가 그 전에 사라졌으면 방 화면이 보고 나간다
             SceneFlow.IsRoomRequestAbandoned = true;
             modal.HideLoading();
             modal.ShowWarn(_request switch
