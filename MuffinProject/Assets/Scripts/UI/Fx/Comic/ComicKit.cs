@@ -108,6 +108,20 @@ namespace Chapchu.UI.Fx.Comic
                 faceArea.width * rect.width / texture.width,
                 faceArea.height * rect.height / texture.height);
         }
+
+        /// <summary>
+        /// 시안 label 의 표 — 글자를 쓰고 그림자 · 상자를 글자에 맞춘다.
+        /// 너비 = 글자 폭 + <paramref name="padding"/>, 높이 = 글자 크기 × <paramref name="heightRatio"/>, 상자는 테 <paramref name="line"/> 만큼 더 크다.
+        /// </summary>
+        public static void FitTag(TMPro.TMP_Text text, RectTransform shadow, RectTransform box, string value, float padding, float heightRatio, float line)
+        {
+            text.text = value;
+            float width = text.GetPreferredValues(value).x + padding;
+            float height = text.fontSize * heightRatio;
+            shadow.sizeDelta = new Vector2(width, height);
+            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
+            box.sizeDelta = new Vector2(width + line, height + line);
+        }
     }
 
     /// <summary>시안 rng(seed) — 같은 씨앗이면 시안과 같은 수열 (mulberry32). 값 형식이라 복사하면 그 자리부터 따로 간다.</summary>
