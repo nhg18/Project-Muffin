@@ -157,7 +157,7 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 처리되는 시점의 버림 더미 맨 위 1장을 손패로 (109 아 맞다!). 처리 중인 이 카드 자신은 이미 더미에 있지만 가져올 수 없다 — 그 아래 장.
+        /// 버림 더미 맨 위 1장을 손패로 (109 아 맞다!). 체인의 카드는 체인이 끝난 뒤 쌓이므로 체인이 시작되기 전의 맨 위다 (04-card.md 9.1).
         /// 가져올 카드가 없으면 불발.
         /// </summary>
         internal void TakeDiscardTop(int actor, ChainEntry entry)
@@ -166,8 +166,6 @@ namespace Chapchu.Game
                 return;
 
             int index = _discardPile.Count - 1;
-            if (index >= 0 && _discardPile[index] == entry.Card)
-                index--;
             if (index < 0)
                 return;
 

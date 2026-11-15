@@ -49,16 +49,6 @@ namespace Chapchu.Game
                     return; // 체인 중에 나가 1명만 남았다 — 처리 뒤 바로 끝, 턴을 넘기지 않는다 (07 3 · 6절)
             }
 
-            if (IsTrapWindowOpen)
-            {
-                if (now < _trapWindowDeadline)
-                    return;
-                CloseTrapWindow();
-                CheckElimination(); // 함정 시간 중에 나가 1명만 남았을 수 있다 (07 3절)
-                if (_gameOver)
-                    return;
-            }
-
             if (IsDeathPending)
             {
                 if (now < _deathDeadline)
@@ -87,8 +77,8 @@ namespace Chapchu.Game
 
             if (IsResolvePaused)
             {
-                ContinueResolve(now + _resolving[0].Card.ResolveSeconds); // 피해의 사망 · 함정 처리 · 고르기가 끝났다 — 남은 효과로 (11-card-list 115 · 119)
-                if (_gameOver || IsResolvePaused || IsTrapWindowOpen || IsDeathPending)
+                ContinueResolve(now + _resolving[0].Card.ResolveSeconds); // 고르기가 끝났다 — 남은 효과로 (11-card-list 119)
+                if (_gameOver || IsResolvePaused || IsDeathPending)
                     return;
             }
 
@@ -127,7 +117,7 @@ namespace Chapchu.Game
             if (_gameOver)
                 return TakeEvents();
 
-            CheckElimination(); // 체인 · 함정 시간 · 사망 대기가 없으면 바로 (07 3절). 있으면 그것이 끝난 뒤
+            CheckElimination(); // 체인 · 사망 대기가 없으면 바로 (07 3절). 있으면 그것이 끝난 뒤
             if (!_gameOver && actor == CurrentTurnActor && !_mainActionUsed && !IsPaused(_clock()))
                 AdvanceTurn();
 
@@ -146,7 +136,7 @@ namespace Chapchu.Game
 
         // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다.
         // 다음 사람이 찹츄 상태면 그 턴이 시작되는 순간 승리 (07 4.3 · 5절 — 가장 먼저 자기 턴이 돌아온 사람).
-        // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 시간.
+        // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 (04 6절).
         private void AdvanceTurn()
         {
             _declareWait = false; // 선언 대기는 턴을 넘기는 순간 끝난다 — 턴 끝 처리(피폭 · 개판)로 멈춰도 다시 열리지 않는다
@@ -179,7 +169,7 @@ namespace Chapchu.Game
                 next = GetNextActor(next);
             }
 
-            if (HoldForTurnEnd())
+            if (HoldForTurnEnd(_clock()))
             {
                 _heldNext = next; // 스킵된 턴 끝에 개판 판정이 열렸다 — 마친 뒤 이 사람부터
                 return;
@@ -199,7 +189,12 @@ namespace Chapchu.Game
 
             SetTurn(next);
             if (skipped)
-                OpenTrapWindowIfNeeded(_clock());
+            {
+                // 스킵 직후 함정 — 새 턴은 그 연출 뒤에 이어진다 (메인 행동 전이라 턴 시간이 멈춘다)
+                double settled = FireTraps(_clock());
+                DelayTurnUntil(settled);
+                CheckDeathPending(settled);
+            }
         }
 
         private void SetTurn(int actor)
@@ -226,8 +221,8 @@ namespace Chapchu.Game
             CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
-        // 체인 · 함정 시간 · 사망 대기 · 개판 판정 공개 · 대상의 고르기 · 끼어든 체인의 후처리 연출 — 턴이 진행되지 않는다.
-        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsTrapWindowOpen || IsDeathPending || IsGaepanJudging || IsChoosing || now < _resumeAt;
+        // 체인 · 사망 대기 · 개판 판정 공개 · 대상의 고르기 · 체인 · 함정의 후처리 연출 — 턴이 진행되지 않는다.
+        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsDeathPending || IsGaepanJudging || IsChoosing || now < _resumeAt;
 
         // 메인 행동 전에 멈춘 동안은 턴 마감을 미룬다. 풀리는 순간 남은 시간으로 다시 알린다 (03-turn.md 4절).
         private void UpdateTurnClock(double now)

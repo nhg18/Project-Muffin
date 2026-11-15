@@ -176,6 +176,12 @@ namespace Chapchu.UI.Fx
         /// <summary>시안 1px 이 이 화면에서 몇 단위인지.</summary>
         public float PixelScale => pixelScale;
 
+        /// <summary>말풍선이 떠 있는 초.</summary>
+        public float BubbleSeconds => bubbleSeconds;
+
+        /// <summary>말풍선 마지막 구간(흐려지는 구간)이 시작되는 비율 (0 ~ 1).</summary>
+        public float BubbleFadeFrom => bubbleKeys[bubbleKeys.Length - 2];
+
         private enum Shape { Star, Circle, Glow, Streak, Ring }
 
         private class Particle
@@ -244,6 +250,27 @@ namespace Chapchu.UI.Fx
         public Vector2 CenterOf(RectTransform target)
         {
             return transform.InverseTransformPoint(target.TransformPoint(target.rect.center));
+        }
+
+        /// <summary>CSS cubic-bezier(x1, y1, x2, y2) — curve = (x1, y1, x2, y2), 진행률 x 에 대한 y. 시안의 이징을 옮길 때 쓴다.</summary>
+        public static float CubicBezier(Vector4 curve, float x)
+        {
+            float t = x;
+            for (int i = 0; i < 8; i++)
+            {
+                float current = Bezier(curve.x, curve.z, t) - x;
+                float slope = 3f * (1f - t) * (1f - t) * curve.x + 6f * (1f - t) * t * (curve.z - curve.x) + 3f * t * t * (1f - curve.z);
+                if (Mathf.Abs(slope) < 1e-5f)
+                    break;
+                t = Mathf.Clamp01(t - current / slope);
+            }
+            return Bezier(curve.y, curve.w, t);
+        }
+
+        private static float Bezier(float p1, float p2, float t)
+        {
+            float u = 1f - t;
+            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
         }
 
         /// <summary>시안 burst — 별 · 동그라미 파편이 튀고 떨어진다. 값은 시안 px 기준.</summary>

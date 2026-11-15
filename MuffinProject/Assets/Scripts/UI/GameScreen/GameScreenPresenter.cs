@@ -82,6 +82,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnMyCardsLost += HandleMyCardsLost;
             GameEvents.OnCardResolved += HandleCardResolved;
             GameEvents.OnCardNegated += HandleCardNegated;
+            GameEvents.OnChainDiscarded += HandleChainDiscarded;
             GameEvents.OnCardReturnedToHand += HandleCardReturnedToHand;
             GameEvents.OnDiscardTaken += HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
@@ -125,6 +126,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnMyCardsLost -= HandleMyCardsLost;
             GameEvents.OnCardResolved -= HandleCardResolved;
             GameEvents.OnCardNegated -= HandleCardNegated;
+            GameEvents.OnChainDiscarded -= HandleChainDiscarded;
             GameEvents.OnCardReturnedToHand -= HandleCardReturnedToHand;
             GameEvents.OnDiscardTaken -= HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
@@ -426,7 +428,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 효과 적용 · 무효화 — 어느 쪽이든 카드는 버림 더미로 간다 (04-card.md 4절). 4 · 5 단계 · 도장 연출이 생기면 버림 더미로 보내기 전에 넣는다 (10-ui.md 5-1).
+        // 효과 적용 · 무효화 — 카드는 그 자리에 남고, 체인이 끝나면 쓴 순서대로 버림 더미로 간다 (HandleChainDiscarded, 04-card.md 9.1). 4 · 5 단계 · 도장 연출은 여기에 넣는다 (10-ui.md 5-1).
         // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (113).
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
             => Enqueue(() =>
@@ -434,18 +436,29 @@ namespace Chapchu.UI.GameScreen
                 CardData data = cardDeck.GetCard(cardId);
                 if (data != null)
                     screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
-                return ChainCardToDiscardRoutine(cardInstanceId, cardId, discardCount);
+                LeaveChain();
+                return null;
             });
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
-            => Enqueue(() => ChainCardToDiscardRoutine(cardInstanceId, cardId, discardCount));
+            => Enqueue(() =>
+            {
+                LeaveChain();
+                return null;
+            });
 
-        // 체인의 카드를 버림 더미로 보낸 뒤, 그 카드를 더미의 맨 위로. 함정 칸에서 나온 카드는 아직 그리지 않아 더미만 바뀐다.
-        private IEnumerator ChainCardToDiscardRoutine(int cardInstanceId, int cardId, int discardCount)
+        // 체인(또는 함정)의 카드들이 버림 더미에 쌓였다 — 쓴 순서대로 한 장씩 날아가, 마지막에 쓴 카드가 맨 위에 보인다 (04-card.md 9.1).
+        private void HandleChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
+            => Enqueue(() => ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount));
+
+        private IEnumerator ChainCardsToDiscardRoutine(int[] cardInstanceIds, int[] cardIds, int discardCount)
         {
-            LeaveChain();
-            yield return chainCards.DiscardRoutine(cardInstanceId);
-            discardPile.Show(cardId, discardCount);
+            int before = discardCount - cardIds.Length;
+            for (int i = 0; i < cardInstanceIds.Length; i++)
+            {
+                yield return chainCards.DiscardRoutine(cardInstanceIds[i]);
+                discardPile.Show(cardIds[i], before + i + 1);
+            }
         }
 
         // 버림 더미 맨 위 카드를 손패로 (109 아 맞다!) — 내 것은 더미 자리에서 꺼내 손패에 붙이고, 남의 것은 장수만. 더미는 그 뒤의 맨 위 · 장수로.

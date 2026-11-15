@@ -32,13 +32,6 @@ namespace Chapchu.Game
 
         internal bool IsReactionOpen(double now) => _chain.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
 
-        internal bool IsTrapWindowOpenAt(double now) => IsTrapWindowOpen && now >= _trapWindowOpensAt;
-
-        internal double TrapWindowOpensAt => _trapWindowOpensAt;
-
-        /// <summary>actor 의 「~한 후」 함정 trap 을 지금 쓸 사건이 있다 (04 6절).</summary>
-        internal bool HasAfterTrigger(int actor, Card trap) => IsAfterTrigger(trap.Trigger) && FindAfterRecord(actor, trap) != null;
-
         internal double DeathDeadline => _deathDeadline;
 
         /// <summary>선언 대기 중 — 턴 주인이 뽑아서 10장이 됐고 아직 턴이 넘어가지 않았다 (03-turn.md 4절).</summary>

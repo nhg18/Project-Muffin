@@ -22,6 +22,7 @@ import urllib.request
 CARD_DS = "3d26dad6-6abe-800c-8b9f-000be2f2c4fa"     # 카드 목록 (기획 원본)
 PATCH_DS = "4196dad6-6abe-81c3-8859-000b52a6bab4"    # 📝 패치 노트
 OLD_DS = "4196dad6-6abe-8179-9515-000bb16b186e"      # 🗄️ 카드 옛 버전
+LOG_DS = "4196dad6-6abe-8196-beae-000b44e282e3"      # 🧾 카드 변경 기록 (봇 페이지 안)
 I18N_DS = "4196dad6-6abe-813a-963e-000bf3a619fe"     # 🌐 다국어 문구
 BOT_PAGE = "4196dad6-6abe-81d2-8970-c9e1863fe31b"    # 🤖 카드 정리 봇 (스위치 · 마지막 실행)
 
@@ -233,6 +234,13 @@ def summary(card, kind, old):
     return f"{card['name']} — {label}"
 
 
+# 변경 기록에 남기는 칸 — 카드 하나 · 하루 한 줄 (출시 전후 · 상태 가리지 않음)
+LOG_FIELDS = (("name", "이름"), ("state", "상태"), ("type", "종류"), ("target", "대상"), ("grade", "등급"),
+              ("count", "장수"), ("text", "문구"), ("rules", "본문 규칙"))
+KST = datetime.timezone(datetime.timedelta(hours=9))
+NL = chr(10)
+
+
 def describe(c):
     s = c["text"]
     if c.get("count") is not None:
@@ -392,6 +400,12 @@ class Bot:
         self.fill_ids(cards)
 
         for c in cards.values():
+            self.record(prev.get(c["page"]), c)
+        for page_id, old in prev.items():
+            if page_id not in cards:
+                self.record(old, None)
+
+        for c in cards.values():
             old = prev.get(c["page"])
             if not old:
                 self.on_new(c, released, in_json)
@@ -412,6 +426,33 @@ class Bot:
         # 저장소와 같아진 카드는 경고에서 뺀다 (PR 이 머지됨)
         pending = {int(l.split()[1]) for l in changed}
         return {"cards": cards, "reworked": sorted(self.reworked & pending)}, released, changed
+
+    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후로
+    def record(self, old, new):
+        if old is None:
+            kind, labels = "추가", []
+            before, after = "", NL.join(f"{label}: {new[k]}" for k, label in LOG_FIELDS if new.get(k) not in (None, ""))
+        elif new is None:
+            kind, labels = "삭제", []
+            before, after = f"이름: {old['name']}{NL}문구: {old['text']}", "(노션에서 페이지가 사라짐 — 휴지통 확인)"
+        else:
+            diff = [(k, label) for k, label in LOG_FIELDS if old.get(k) != new.get(k)]
+            if not diff:
+                return
+            labels = [label for _, label in diff]
+            kind = "삭제" if new["state"] == "삭제" else ("상태" if labels == ["상태"] else "수정")
+            before = NL.join(f"{label}: {old.get(k)}" for k, label in diff)
+            after = NL.join(f"{label}: {new.get(k)}" for k, label in diff)
+        card = new or old
+        title = f"{card['name'] or '(이름 없음)'} — {kind}" + (f" ({' · '.join(labels)})" if kind == "수정" else "")
+        props = {"변경": {"title": rt(title)}, "종류": {"select": {"name": kind}},
+                 "날짜": {"date": {"start": datetime.datetime.now(KST).date().isoformat()}},
+                 "바뀐 칸": {"multi_select": [{"name": x} for x in labels]},
+                 "이전": {"rich_text": rt(before)[:100]}, "이후": {"rich_text": rt(after)[:100]}}
+        if new is not None:
+            props["카드"] = {"relation": [{"id": new["page"]}]}
+        self.n.create_page(LOG_DS, props)
+        self.say(f"기록: {title}")
 
     def fill_ids(self, cards):
         for c in cards.values():
