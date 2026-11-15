@@ -62,7 +62,7 @@
 
 ```
 [클라이언트] 의도 전송 (Request)
-      ↓ RpcTarget.MasterClient
+      ↓ 믿는 방장에게 (13절 #1)
 [마스터]     검증 (Validate)
       ↓ 실패 → 요청자에게만 거절 코드 전송 (4.3), 상태 변경 없음
       ↓ 성공
@@ -240,8 +240,8 @@ public static class RoomProps
 ## 10. RPC 규약
 
 ```csharp
-// 클라이언트 → 마스터
-photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId, targets);
+// 클라이언트 → 믿는 방장 (13절 #1 — RpcTarget.MasterClient 는 방장 자리를 가져간 사람에게 간다)
+SendRequest(nameof(RPC_RequestPlayCard), cardInstanceId, targets); // = photonView.RPC(이름, 믿는 방장 Player, 인자…)
 
 // 마스터 → 전체
 photonView.RPC(nameof(RPC_OnCardPlayed), RpcTarget.All, resolveId, actorNumber, cardId, targets);
@@ -254,7 +254,8 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | --- | --- |
 | 메서드명 | `RPC_` 접두사 |
 | 이름 전달 | `nameof()` 사용, 문자열 리터럴 금지 |
-| 마스터 전용 RPC | 첫 줄에 `if (!PhotonNetwork.IsMasterClient) return;`. 요청 RPC 는 둘째 줄에 보낸 사람별 빈도 제한 (13절 #6) |
+| 마스터 전용 RPC | 첫 줄에 `if (!IsTrustedMaster) return;` — 내가 **믿는 방장**(13절 #1)일 때만 (`PhotonNetwork.IsMasterClient` 가 아니라). 요청 RPC 는 둘째 줄에 보낸 사람별 빈도 제한 (13절 #6) |
+| 요청 보내기 | 믿는 방장 Player 에게 대상 지정으로 보낸다 (`RpcTarget.MasterClient` 가 아니라, 13절 #1) |
 | 결과 RPC 받기 | **믿는 방장**(13절 #1)이 보낸 것만 반영한다. 짝 배열(인스턴스 ID · 카드 ID 등)은 길이가 같아야 받는다 (13절 #7) |
 | 요청자 식별 | `PhotonMessageInfo.Sender` 사용. 클라이언트가 보낸 actorNumber를 신뢰하지 않는다 |
 | 명명 | 요청은 `RPC_Request*`, 결과 전파는 `RPC_On*`, 개별 응답은 `RPC_Reject*` |
@@ -333,7 +334,7 @@ Photon 은 **아무 클라나** 방 속성 · 남의 Player 속성 · 방 설정
 
 | # | 규칙 | 구분 |
 | --- | --- | --- |
-| 1 | **믿는 방장** — 방에 들어올 때의 방장. 그 뒤엔 **방장이 나가서(또는 끊겨서)** 바뀐 사람만 믿는다. 앞 방장이 방에 그대로 있는데 방장이 바뀌면 누가 가져간 것이다 → 믿지 않고, 앞 방장 기기는 방장 자리를 되찾는다 (`SetMasterClient`). 결과 RPC · 씬 이동은 믿는 방장이 보낸 것만 따른다 | 확정 (2026-11-15) |
+| 1 | **믿는 방장** — 방에 들어올 때의 방장. 그 뒤엔 **방장이 나가서(또는 끊겨서)** 바뀐 사람만 믿는다. 앞 방장이 방에 그대로 있는데 방장이 바뀌면 누가 가져간 것이다 → 믿지 않고, 앞 방장 기기는 방장 자리를 되찾는다 (`SetMasterClient`). 요청은 믿는 방장에게 보내고, 방장 전용 경로(요청 받기 · 게임 진행 · 방장 원본 읽기)는 내가 믿는 방장인지로 판단한다 (`PhotonNetwork.IsMasterClient` 는 가져간 사람에게도 참). 결과 RPC · 씬 이동은 믿는 방장이 보낸 것만 따른다 | 확정 (2026-11-15) |
 | 2 | **방장이 쓴 값 지키기** — 방장은 방 속성 · Player 속성 · 열림 · 공개 · 정원 · TTL 을 쓸 때 그 값을 기억한다. 남이 바꾸면 다음 프레임에 기억한 값으로 되돌린다 (방장이 쓴 적 없는 키는 지운다). 한 프레임에 여러 번 바뀌어도 한 번만 쓴다. 자리 예약(ExpectedUsers)은 쓰지 않으므로 생기면 지운다 | 확정 (2026-11-15) |
 | 3 | 방장이 되면(정상 이주) 그때 방의 값을 원본으로 이어받는다. 봇 목록도 이것으로 지킨다 (`18-bot` 3절 #7) | 확정 (2026-11-15) |
 | 4 | **내 이름** — 남이 내 닉네임 속성을 바꾸면 각자 자기 이름을 되돌린다 (방장이 아니어도) | 확정 (2026-11-15) |
