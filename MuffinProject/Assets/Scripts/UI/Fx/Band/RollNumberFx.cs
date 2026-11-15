@@ -40,6 +40,7 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private float tickGrowMs = 14f;
         [Tooltip("멈춘 숫자가 커졌다(배율) 돌아오는 시간.")]
         [SerializeField] private float landMs = 260f;
+        [Tooltip("멈춘 숫자가 커지는 배율 — 여기서 1 로 돌아온다 (시안 scale(1.5)).")]
         [SerializeField] private float landScale = 1.5f;
         [Tooltip("멈춘 뒤 말풍선이 남아 있는 시간 (시안 450 + 900).")]
         [SerializeField] private float holdMs = 1350f;

@@ -414,12 +414,15 @@ namespace Chapchu.UI.Fx.Band
             Vector2 moveUnit = _moving.rect.size;
             Vector2 moveOrigin = _moving == art ? _artOrigin : _avatarOrigin;
             Pose[] moveKeys = Moves.TryGetValue(move, out Pose[] keys) ? keys : Moves[BandMove.Nod];
+            // 동그라미에는 기본 기울기가 없다 (시안) — 키의 각도에서 B(rotate(-3deg))를 뺀다
+            float moveAngle = _moving == avatar ? -RestAngle : 0f;
 
             _timeline = DOTween.Sequence().SetLink(gameObject);
             _timeline.Insert(0f, Progress(backdropInMs, Linear, p => backdrop.alpha = p));
             _timeline.Insert(Seconds(bandTime.x), Progress(bandTime.y, Snap, p => band.Slide = Mathf.LerpUnclamped(bandFrom, 0f, p)));
             _timeline.Insert(Seconds(characterTime.x), Animate(characterTime.y, Snap, CharacterIn, pose => Apply(character, characterGroup, pose, new Vector2(screen, 0f), _characterOrigin)));
-            _timeline.Insert(Seconds(moveTime.x), Animate(moveTime.y, EaseInOut, moveKeys, pose => Apply(_moving, null, pose, moveUnit, moveOrigin)));
+            _timeline.Insert(Seconds(moveTime.x), Animate(moveTime.y, EaseInOut, moveKeys, pose => Apply(_moving, null,
+                new Pose(pose.At, pose.X, pose.Y, pose.ScaleX, pose.ScaleY, pose.Angle + moveAngle, pose.Alpha), moveUnit, moveOrigin)));
             _timeline.Insert(Seconds(bubbleTime.x), Animate(bubbleTime.y, Linear, BubbleIn, pose => Apply(bubble, bubbleGroup, pose, Vector2.zero, _bubbleOrigin)));
             _timeline.Insert(Seconds(titleTime.x), Animate(titleTime.y, Snap, TitleIn, pose =>
             {
@@ -429,9 +432,6 @@ namespace Chapchu.UI.Fx.Band
             _timeline.Insert(Seconds(ringTime.x), Animate(ringTime.y, EaseOut, RingOut, pose => Apply(ring, ringGroup, pose, Vector2.zero, _ringOrigin)));
             _timeline.Insert(Seconds(tagTime.x), Animate(tagTime.y, Linear, TagIn, pose => Apply(effectTag, effectTagGroup, pose, Vector2.one * _pixelScale, _effectTagOrigin)));
             _timeline.Insert(Seconds(lengthMs - fadeOutMs), Progress(fadeOutMs, Linear, p => cutIn.alpha = 1f - p));
-            // 그림 움직임이 끝나면 동그라미는 기울지 않은 처음으로 (시안: 동그라미에는 기본 기울기가 없다)
-            if (_moving == avatar)
-                _timeline.InsertCallback(Seconds(moveTime.x + moveTime.y), () => avatar.localRotation = Quaternion.identity);
 
             if (!stillLines && stripeLoopMs > 0f)
                 _stripes = DOVirtual.Float(0f, band.StripePeriod, Seconds(stripeLoopMs), value => band.StripeShift = value)

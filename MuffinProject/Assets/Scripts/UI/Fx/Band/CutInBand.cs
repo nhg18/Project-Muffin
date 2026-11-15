@@ -28,6 +28,7 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private float middleFrom = 0.22f;
 
         [Header("테 · 빛 (시안 box-shadow: 0 0 0 4px #000, 0 0 0 7px glow, 0 0 60px glow)")]
+        [Tooltip("띠 바로 바깥 테 색 (시안 #000).")]
         [SerializeField] private Color inkColor = Color.black;
         [Tooltip("검은 테 두께.")]
         [SerializeField] private float inkWidth = 6f;
@@ -45,10 +46,16 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private float stripeOrigin = -0.5f;
         [Tooltip("밝은 줄 — 주기 안에서 시작 · 너비 (시안 60px · 4px).")]
         [SerializeField] private Vector2 lightStripe = new Vector2(90f, 6f);
+        [Tooltip("밝은 줄 색 (시안 rgba(255,255,255,.22)).")]
         [SerializeField] private Color lightStripeColor = new Color(1f, 1f, 1f, 0.22f);
         [Tooltip("어두운 줄 — 주기 안에서 시작 · 너비 (시안 150px · 6px).")]
         [SerializeField] private Vector2 darkStripe = new Vector2(225f, 9f);
+        [Tooltip("어두운 줄 색 (시안 rgba(0,0,0,.25)).")]
         [SerializeField] private Color darkStripeColor = new Color(0f, 0f, 0f, 0.25f);
+
+        // 고리 꼭짓점 버퍼 — 줄무늬가 흐르는 동안 매 프레임 메시를 다시 만들어 배열을 새로 만들지 않는다
+        private readonly Vector2[] _innerCorners = new Vector2[4];
+        private readonly Vector2[] _outerCorners = new Vector2[4];
 
         private float _slide;
         private float _stripeShift;
@@ -137,12 +144,12 @@ namespace Chapchu.UI.Fx.Band
         private void Ring(VertexHelper vh, Rect rect, float from, float to, Color inner, Color outer)
         {
             int start = vh.currentVertCount;
-            Vector2[] innerCorners = Corners(rect, from);
-            Vector2[] outerCorners = Corners(rect, to);
+            Corners(rect, from, _innerCorners);
+            Corners(rect, to, _outerCorners);
             for (int i = 0; i < 4; i++)
             {
-                AddVert(vh, rect, innerCorners[i], inner);
-                AddVert(vh, rect, outerCorners[i], outer);
+                AddVert(vh, rect, _innerCorners[i], inner);
+                AddVert(vh, rect, _outerCorners[i], outer);
             }
             for (int i = 0; i < 4; i++)
             {
@@ -173,13 +180,12 @@ namespace Chapchu.UI.Fx.Band
             vh.AddVert(new Vector3(x, y), vertexColor * color, Vector4.zero);
         }
 
-        private static Vector2[] Corners(Rect rect, float grow)
+        private static void Corners(Rect rect, float grow, Vector2[] corners)
         {
-            return new[]
-            {
-                new Vector2(rect.xMin - grow, rect.yMin - grow), new Vector2(rect.xMin - grow, rect.yMax + grow),
-                new Vector2(rect.xMax + grow, rect.yMax + grow), new Vector2(rect.xMax + grow, rect.yMin - grow),
-            };
+            corners[0] = new Vector2(rect.xMin - grow, rect.yMin - grow);
+            corners[1] = new Vector2(rect.xMin - grow, rect.yMax + grow);
+            corners[2] = new Vector2(rect.xMax + grow, rect.yMax + grow);
+            corners[3] = new Vector2(rect.xMax + grow, rect.yMin - grow);
         }
 
         // 가장자리에서 d 만큼 떨어진 곳의 CSS 번짐 그림자 투명도 — ½·erfc(d / (σ√2))
