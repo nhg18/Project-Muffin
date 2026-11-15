@@ -223,7 +223,7 @@ namespace Chapchu.UI.Fx.Nuke
             int state = seed != 0 ? seed : Random.Range(1, 0xffff);
             dogs.Setup(ref state, timeline);
             city.Setup(ref state, timeline);
-            particles.Setup(timeline, city.MissileTailLength);
+            particles.Setup(timeline, city.MissileTailLength, city.Buildings);
             BuildCuts();
             BuildBeats();
 

@@ -38,6 +38,8 @@ namespace Chapchu.UI.Fx.Nuke
         [SerializeField] private float slideDrop = 70f;
         [Tooltip("판을 카메라 위쪽으로 이만큼 기울인다 (0 = 똑바로 세움, 1 = 화면과 나란히).")]
         [SerializeField] private float tiltToCamera = 0.4f;
+        [Tooltip("달리는 강아지 발에서 이는 먼지 색.")]
+        [SerializeField] private Color32 runDustColor = new Color32(196, 178, 150, 255);
 
         private NukeTimeline _timeline;
         private Dog[] _dogs;
@@ -185,7 +187,7 @@ namespace Chapchu.UI.Fx.Nuke
                 float k = t - d.NoticeAt;
                 if (k < 0f || t > d.RunAt || k > 1.5f)
                     continue;
-                float x = d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f;
+                float x = RunFromX(d);
                 heads.Add(new Vector4(x, d.Size * 1.25f, d.Z, k));
             }
         }
@@ -211,7 +213,7 @@ namespace Chapchu.UI.Fx.Nuke
                     float k = t - d.NoticeAt;
                     float hop = Mathf.Sin(Mathf.Clamp01(k / 0.22f) * Mathf.PI) * 0.35f;
                     float fear = NukeMath.Smooth((t - _timeline.Sky) / 1.2f);
-                    float x = d.X + Mathf.Sin(d.NoticeAt * 0.8f + d.Phase) * d.Wander * 0.8f + Mathf.Sin(t * 38f) * 0.02f * fear;
+                    float x = RunFromX(d) + Mathf.Sin(t * 38f) * 0.02f * fear;
                     Add(d, view, new Vector3(x, hop, d.Z), Mathf.PI + Mathf.Sin(d.Phase) * 0.4f, fear > 0.3f ? Pose.Shake : Pose.Stand, t * 14f,
                         -0.12f * NukeMath.Smooth(k / 0.3f), Mathf.Sin(t * 40f) * 0.03f * fear, 1f + hop * 0.1f - 0.05f * fear);
                 }
@@ -236,7 +238,7 @@ namespace Chapchu.UI.Fx.Nuke
                         {
                             float k = (t * 2.6f + NukeMath.Rn(i, j)) % 1f;
                             particles.Add(new Vector3(sx + (NukeMath.Rn(i, j + 3) - 0.5f) * 0.5f, 0.12f + k * 0.5f, sz + 0.5f + k * 1.5f), 0.3f + k * 0.55f, NukeMath.Rn(i, j + 5) * 6f,
-                                new Color32(196, 178, 150, 255), 0.26f * (1f - k) * NukeMath.Smooth(k / 0.2f), 0f, NukeMath.Rn(i, j + 7));
+                                runDustColor, 0.26f * (1f - k) * NukeMath.Smooth(k / 0.2f), 0f, NukeMath.Rn(i, j + 7));
                         }
                     }
                     else

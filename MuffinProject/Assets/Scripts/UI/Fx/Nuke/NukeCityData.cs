@@ -21,12 +21,6 @@ namespace Chapchu.UI.Fx.Nuke
             public float Yaw;
             [Tooltip("바닥 폭 (m) — 무너질 때 잔해 크기.")]
             public float Width;
-            [Tooltip("착탄점까지 거리 (m).")]
-            public float Dist;
-            [Tooltip("먼지 벽이 닿는 때 (착탄 뒤 초).")]
-            public float Arrive;
-            [Tooltip("착탄점에서 이 건물 쪽 방향 (라디안).")]
-            public float Away;
             public float R1;
             public float R2;
             [Tooltip("도심 밖 건물 — 무너지지 않고 그림자를 드리우지 않는다.")]

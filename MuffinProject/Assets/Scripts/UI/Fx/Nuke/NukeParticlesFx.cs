@@ -24,8 +24,8 @@ namespace Chapchu.UI.Fx.Nuke
 
         [Tooltip("입자 머티리얼 (Chapchu/Nuke/Particle).")]
         [SerializeField] private Material particleMaterial;
-        [Tooltip("도시 배치 — 무너지는 건물의 먼지 자리.")]
-        [SerializeField] private NukeCityData data;
+        [Tooltip("착탄점 둘레에 낮게 깔리는 먼지 색.")]
+        [SerializeField] private Color32 groundDustColor = new Color32(96, 80, 70, 255);
 
         private readonly Vector3[] _position = new Vector3[MaxParticles];
         private readonly Vector4[] _shape = new Vector4[MaxParticles];
@@ -41,11 +41,12 @@ namespace Chapchu.UI.Fx.Nuke
         private readonly List<int> _indices = new List<int>(MaxParticles * 6);
         private Mesh _mesh;
         private NukeTimeline _timeline;
+        private NukeCityData.Building[] _buildings;
         private int _count;
 
         private void Awake()
         {
-            if (particleMaterial == null || data == null)
+            if (particleMaterial == null)
                 Debug.LogError($"[{nameof(NukeParticlesFx)}] 참조 중 비어 있는 것이 있습니다.", this);
             _mesh = new Mesh { name = "Nuke Particles" };
             _mesh.MarkDynamic();
@@ -56,10 +57,11 @@ namespace Chapchu.UI.Fx.Nuke
             Destroy(_mesh);
         }
 
-        /// <summary>시간표를 받고, 비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다. missileTail = 미사일 몸 가운데에서 꽁무니까지 (m).</summary>
-        public void Setup(in NukeTimeline timeline, float missileTail)
+        /// <summary>시간표를 받고, 비행운이 남는 자리(미사일 꽁무니가 지나간 길)를 미리 잰다. missileTail = 미사일 몸 가운데에서 꽁무니까지 (m), buildings = 무너지는 건물의 먼지 자리.</summary>
+        public void Setup(in NukeTimeline timeline, float missileTail, NukeCityData.Building[] buildings)
         {
             _timeline = timeline;
+            _buildings = buildings;
             float step = (timeline.Hit - timeline.MissileStart) / ContrailCount;
             for (int i = 0; i < ContrailCount; i++)
                 _contrail[i] = timeline.MissileTail(timeline.MissileStart + i * step, missileTail);
@@ -195,18 +197,18 @@ namespace Chapchu.UI.Fx.Nuke
                 float a = Rn(i, 37) * Tau;
                 float r = 10f + Rn(i, 38) * 26f * NukeMath.EaseOut(p / 2.2f);
                 Add(new Vector3(impact.x + Mathf.Cos(a) * r, 1.5f + Rn(i, 39) * 6f, impact.z + Mathf.Sin(a) * r), 8f + 4f * Rn(i, 40), Rn(i, 41) * 6f,
-                    new Color32(96, 80, 70, 255), 0.7f * NukeMath.Smooth(p / 0.4f), heatFade * 0.5f, Rn(i, 42));
+                    groundDustColor, 0.7f * NukeMath.Smooth(p / 0.4f), heatFade * 0.5f, Rn(i, 42));
             }
 
             // 무너지는 건물의 먼지
-            NukeCityData.Building[] buildings = data.buildings;
-            for (int n = 0; n < buildings.Length; n++)
+            for (int n = 0; n < _buildings.Length; n++)
             {
-                NukeCityData.Building b = buildings[n];
+                NukeCityData.Building b = _buildings[n];
                 int bi = n + 1;
-                if (b.Dist < NukeMath.CrushRadius || b.Dist >= NukeMath.CollapseRadius)
+                float dist = NukeMath.Flat(b.X - impact.x, b.Z - impact.z);
+                if (dist < NukeMath.CrushRadius || dist >= NukeMath.CollapseRadius)
                     continue;
-                float k = p - b.Arrive;
+                float k = p - dist / NukeMath.DustSpeed;
                 if (k <= 0f || k > 4f)
                     continue;
                 for (int j = 0; j < 6; j++)

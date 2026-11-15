@@ -36,6 +36,26 @@ namespace Chapchu.UI.Fx.Nuke
         [SerializeField] private float missileScale = 7.5f;
         [Tooltip("10번 장면(도시 전경)에서 카메라와 이 거리(m) 안의 건물은 그리지 않는다 — 전경을 가리지 않게.")]
         [SerializeField] private float wideShotClear = 175f;
+        [Tooltip("착탄점 바로 옆 건물이 주저앉는 데 걸리는 시간 (착탄 뒤 초).")]
+        [SerializeField] private float crushTime = 0.55f;
+        [Tooltip("무너질 건물이 흔들리기 시작하는 떨림이 퍼지는 속도 (m/s).")]
+        [SerializeField] private float shakeSpeed = 95f;
+        [Tooltip("이 거리(m) 안의 건물은 무너지지 않아도 기운다.")]
+        [SerializeField] private float leanRadius = 150f;
+        [Tooltip("기우는 정도가 무너짐 반경에서 0 까지 줄어드는 거리 (m).")]
+        [SerializeField] private float leanFalloff = 90f;
+        [Tooltip("착탄 뒤 이 거리(m) 안의 나무는 사라진다.")]
+        [SerializeField] private float treeClear = 30f;
+        [Tooltip("착탄 뒤 이 거리(m) 안의 가로등 · 신호등은 사라진다.")]
+        [SerializeField] private float lampSignalClear = 26f;
+        [Tooltip("착탄 뒤 이 거리(m) 안의 소품은 사라진다.")]
+        [SerializeField] private float propClear = 40f;
+        [Tooltip("먼지 벽이 닿은 뒤 이 거리(m) 안의 차는 사라진다.")]
+        [SerializeField] private float carClear = 26f;
+        [Tooltip("차가 날아가는 힘 = 이 값 − 거리 / carPowerFalloff (0.12 ~ 1).")]
+        [SerializeField] private float carPowerMax = 1.4f;
+        [Tooltip("차가 날아가는 힘이 거리에 따라 줄어드는 정도 (m).")]
+        [SerializeField] private float carPowerFalloff = 90f;
 
         private MaterialPropertyBlock _block;
         private NukeTimeline _timeline;
@@ -46,6 +66,9 @@ namespace Chapchu.UI.Fx.Nuke
 
         /// <summary>미사일 몸 가운데에서 꽁무니(불꽃 · 비행운이 나오는 곳)까지 (m) — 미사일 크기를 따른다.</summary>
         public float MissileTailLength => missileScale * MissileTailRatio;
+
+        /// <summary>도시 건물 배치 — 무너지는 건물의 먼지 자리.</summary>
+        public NukeCityData.Building[] Buildings => data.buildings;
 
         private struct Chunk
         {
@@ -146,20 +169,23 @@ namespace Chapchu.UI.Fx.Nuke
                 if (_view.Shot == 10 && NukeMath.Flat(b.X - _view.Eye.x, b.Z - _view.Eye.z) < wideShotClear)
                     continue;
 
+                float dist = NukeMath.Flat(b.X - NukeMath.Impact.x, b.Z - NukeMath.Impact.z);
+                float arrive = dist / NukeMath.DustSpeed;
+                float away = Mathf.Atan2(b.X - NukeMath.Impact.x, b.Z - NukeMath.Impact.z);
                 if (p > 0f && !b.Far)
                 {
-                    float k = p - b.Arrive;
-                    float lean = b.Away - b.Yaw;
-                    float fast = p - b.Dist / 95f;
-                    if (b.Dist < NukeMath.CrushRadius)
+                    float k = p - arrive;
+                    float lean = away - b.Yaw;
+                    float fast = p - dist / shakeSpeed;
+                    if (dist < NukeMath.CrushRadius)
                     {
-                        float v = NukeMath.Smooth(p / 0.55f);
+                        float v = NukeMath.Smooth(p / crushTime);
                         if (v >= 1f)
                             continue;
                         sy = 1f - v * 0.96f;
                         x += Mathf.Sin(real * 70f + b.X) * 0.3f * (1f - v);
                     }
-                    else if (b.Dist < NukeMath.CollapseRadius)
+                    else if (dist < NukeMath.CollapseRadius)
                     {
                         if (k > 0f)
                         {
@@ -176,10 +202,10 @@ namespace Chapchu.UI.Fx.Nuke
                             x += Mathf.Sin(real * 64f + b.Z) * 0.07f;
                         }
                     }
-                    else if (b.Dist < 150f && k > 0f)
+                    else if (dist < leanRadius && k > 0f)
                     {
                         float u = NukeMath.EaseOut(k / 1.6f);
-                        float tip = u * (0.03f + b.R2 * 0.13f) * (1f - (b.Dist - NukeMath.CollapseRadius) / 90f);
+                        float tip = u * (0.03f + b.R2 * 0.13f) * (1f - (dist - NukeMath.CollapseRadius) / leanFalloff);
                         pitch = Mathf.Cos(lean) * tip;
                         roll = -Mathf.Sin(lean) * tip;
                         y = -u * 0.5f;
@@ -197,8 +223,8 @@ namespace Chapchu.UI.Fx.Nuke
                     _shadow.DrawMesh(data.buildingMeshes[b.Variant], matrix, _shadowMaterial, 0, 0);
 
                 // 무너진 자리의 잔해 더미
-                if (p > 0f && b.Dist >= NukeMath.CrushRadius && b.Dist < NukeMath.CollapseRadius && p - b.Arrive > 0.5f)
-                    Put(data.rubble, objectMaterial, new Vector3(b.X + Mathf.Sin(b.Away) * 3f, 0f, b.Z + Mathf.Cos(b.Away) * 3f), b.R1 * 6f, 0f, 0f, b.Width * 0.55f * NukeMath.EaseOut((p - b.Arrive - 0.5f) / 1.2f), 1f, false);
+                if (p > 0f && dist >= NukeMath.CrushRadius && dist < NukeMath.CollapseRadius && p - arrive > 0.5f)
+                    Put(data.rubble, objectMaterial, new Vector3(b.X + Mathf.Sin(away) * 3f, 0f, b.Z + Mathf.Cos(away) * 3f), b.R1 * 6f, 0f, 0f, b.Width * 0.55f * NukeMath.EaseOut((p - arrive - 0.5f) / 1.2f), 1f, false);
             }
         }
 
@@ -208,7 +234,7 @@ namespace Chapchu.UI.Fx.Nuke
             foreach (NukeCityData.Prop tree in data.trees)
             {
                 Bend(p, tree.X, tree.Z, out float k, out float a, out float d);
-                if (d < 30f && p > 0.2f)
+                if (d < treeClear && p > 0.2f)
                     continue;
                 float sway = Mathf.Sin(real * 1.7f + tree.X + tree.Z) * 0.02f;
                 Put(data.treeMeshes[tree.Mesh], objectMaterial, new Vector3(tree.X, 0.2f, tree.Z), tree.Yaw, Mathf.Cos(a - tree.Yaw) * k * 1.25f + sway, -Mathf.Sin(a - tree.Yaw) * k * 1.25f + sway * 0.6f, tree.Scale * 2.2f, 1f, true);
@@ -217,7 +243,7 @@ namespace Chapchu.UI.Fx.Nuke
             foreach (NukeCityData.Prop lamp in data.lamps)
             {
                 Bend(p, lamp.X, lamp.Z, out float k, out float a, out float d);
-                if (d < 26f && p > 0.2f)
+                if (d < lampSignalClear && p > 0.2f)
                     continue;
                 float lean = a - lamp.Yaw;
                 Put(data.lamp, objectMaterial, new Vector3(lamp.X, 0.2f, lamp.Z), lamp.Yaw, Mathf.Cos(lean) * k * 1.1f, -Mathf.Sin(lean) * k * 1.1f, lampSignalScale.x, 1f, true);
@@ -226,7 +252,7 @@ namespace Chapchu.UI.Fx.Nuke
             foreach (NukeCityData.Prop signal in data.signals)
             {
                 Bend(p, signal.X, signal.Z, out float k, out float a, out float d);
-                if (d < 26f && p > 0.2f)
+                if (d < lampSignalClear && p > 0.2f)
                     continue;
                 float lean = a - signal.Yaw;
                 Put(data.signal, objectMaterial, new Vector3(signal.X, 0.2f, signal.Z), signal.Yaw, Mathf.Cos(lean) * k, -Mathf.Sin(lean) * k, lampSignalScale.y, 1f, true);
@@ -235,7 +261,7 @@ namespace Chapchu.UI.Fx.Nuke
             foreach (NukeCityData.Prop prop in data.props)
             {
                 Bend(p, prop.X, prop.Z, out float k, out float a, out float d);
-                if (d < 40f && p > 0.2f)
+                if (d < propClear && p > 0.2f)
                     continue;
                 float lean = a - prop.Yaw;
                 Put(data.propMeshes[prop.Mesh], objectMaterial, new Vector3(prop.X + Mathf.Sin(a) * k * 6f, 0.2f, prop.Z + Mathf.Cos(a) * k * 6f), prop.Yaw, Mathf.Cos(lean) * k * 1.5f, -Mathf.Sin(lean) * k * 1.5f, propScales[prop.Mesh], 1f, true);
@@ -269,9 +295,9 @@ namespace Chapchu.UI.Fx.Nuke
                 return;
             }
 
-            if (d < 26f)
+            if (d < carClear)
                 return;
-            float power = Mathf.Clamp(1.4f - d / 90f, 0.12f, 1f);
+            float power = Mathf.Clamp(carPowerMax - d / carPowerFalloff, 0.12f, 1f);
             float a = Mathf.Atan2(x - NukeMath.Impact.x, z - NukeMath.Impact.z);
             float vy = (7f + car.Rand.x * 9f) * power;
             float flight = vy / 5.5f;
