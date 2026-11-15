@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Chapchu.UI.Fx.Comic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,7 +9,7 @@ namespace Chapchu.UI.Fx.Drool
     /// 군침이 싹 도노(카드 114) 만화 컷인 장면 — 남의 카드가 더 커 보이는 법 (시안 CI2.SC["군침이 싹 도노"]).
     /// 쓴 쪽 강아지가 눈을 반짝이며 군침을 흘리고, 왼쪽 위 상대 얼굴 창들 아래 카드가 0.72 · 0.88 · 1.04 초에 하나씩 입으로 날아들어 「냠!」 · 부스러기 ·
     /// 오른쪽 위 「+N」. 카드를 뺏긴 쪽 창엔 「-1」 표와 땀.
-    /// 상대는 나를 뺀 판 위 사람들(턴 순서, 많아야 셋 — 시안은 늘 셋을 그린다), 얼굴은 <see cref="CardFxContext.Character"/> (사람마다 그림이 생기기 전까지 모두 같다).
+    /// 상대 창 수 = 낸 사람이 아닌 사람 수(<see cref="ComicContext.Others"/>, 많아야 셋 · 모르면 셋 — 시안은 늘 셋을 그린다), 얼굴은 <see cref="CardFxContext.Character"/> (사람마다 그림이 생기기 전까지 모두 같다).
     /// 4 단계 장식은 없다 (시안 FXA 군침이 싹 도노 s4 = 카드 옮기기뿐 — 게임 화면 몫).
     /// 연출 길이 2.46초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
@@ -55,10 +54,8 @@ namespace Chapchu.UI.Fx.Drool
             public GameObject root;
             [Tooltip("얼굴 창 — 자리 = 창 가운데, 크기 = 튀어나오기 (시안 back).")]
             public RectTransform badge;
-            [Tooltip("얼굴을 동그랗게 자르는 판 (Mask) — 얼굴 그림이 없으면 판 색(회색)을 보인다.")]
-            public Mask faceMask;
-            [Tooltip("얼굴 그림.")]
-            public Image face;
+            [Tooltip("얼굴 그림 — 동그란 Mask 아래, 창을 꽉 채운다.")]
+            public RawImage face;
             [Tooltip("「-1」 표 (상자 + 글자) — 카드가 날아가기 시작하면 켠다.")]
             public GameObject lostTag;
             [Tooltip("땀.")]
@@ -170,8 +167,10 @@ namespace Chapchu.UI.Fx.Drool
         [SerializeField] private Vector3 badgePop = new Vector3(0.08f, 0.06f, 0.25f);
         [Tooltip("튀어나올 때 지나치는 정도 (시안 back 1.8).")]
         [SerializeField] private float badgeOvershoot = 1.8f;
-        [Tooltip("얼굴 그림에서 창에 들어갈 칸 — 그림 너비 · 높이에 대한 비율, 왼쪽 위 기준 (기본 = 캐릭터 그림 chara 의 chara_face 칸).")]
-        [SerializeField] private Rect faceArea = new Rect(0.0187f, 0.015f, 0.825f, 0.637f);
+        [Tooltip("얼굴 칸 — 캐릭터 그림 안 비율 (왼쪽 아래 0, 그림 chara 의 chara_face 칸). 자리별 얼굴 그림이 생기기 전까지.")]
+        [SerializeField] private Rect faceArea = new Rect(0.0187f, 0.3479f, 0.825f, 0.6371f);
+        [Tooltip("얼굴 그림이 없을 때 색 (시안 #bbb).")]
+        [SerializeField] private Color missingFace = new Color32(0xbb, 0xbb, 0xbb, 0xff);
         [Tooltip("땀이 나는 때 — 그 상대 카드를 삼키기 이만큼 전 (초, 시안 0.05). 시안 sweat 가 진하기를 1 로 덮어써 바로 다 보인다.")]
         [SerializeField] private float sweatLead = 0.05f;
 
@@ -223,7 +222,6 @@ namespace Chapchu.UI.Fx.Drool
         [Tooltip("「+N」 이 찍히는 시간 (초, 시안 0.18).")]
         [SerializeField] private float countTime = 0.18f;
 
-        private readonly List<CardFxSeat> _others = new List<CardFxSeat>();
         private int _rivalCount;
         private float _time;
         private float _chomp;
@@ -255,7 +253,7 @@ namespace Chapchu.UI.Fx.Drool
             for (int i = 0; i < rivals.Length; i++)
             {
                 Rival rival = rivals[i];
-                if (rival == null || rival.root == null || rival.badge == null || rival.faceMask == null || rival.face == null
+                if (rival == null || rival.root == null || rival.badge == null || rival.face == null
                     || rival.lostTag == null || rival.sweat == null || rival.card == null)
                 {
                     Debug.LogError($"[{nameof(DroolComicScene)}] {name} 의 {nameof(rivals)}[{i}] 에 빈 참조가 있다");
@@ -278,23 +276,17 @@ namespace Chapchu.UI.Fx.Drool
             crumbs.Painter = PaintCrumbs;
             glow.Redraw();
 
-            _others.Clear();
-            foreach (CardFxSeat seat in context.Fx.Seats)
-            {
-                if (seat != null && seat != context.From)
-                    _others.Add(seat);
-            }
-            _rivalCount = Mathf.Min(_others.Count, Mathf.Min(rivals.Length, chompAt.Length));
+            // 시안은 늘 셋 — 낸 사람이 아닌 사람 수만큼 (모르면 셋)
+            int most = Mathf.Min(rivals.Length, chompAt.Length), others = context.Others;
+            _rivalCount = others == 0 ? most : Mathf.Min(others, most);
             Sprite character = context.Fx.Character;
             for (int i = 0; i < rivals.Length; i++)
             {
                 Rival rival = rivals[i];
-                rival.root.SetActive(i < _rivalCount);
-                rival.face.sprite = character;
-                rival.face.enabled = character != null;
-                rival.faceMask.showMaskGraphic = character == null;
-                if (character != null)
-                    FitFace(rival);
+                bool shown = i < _rivalCount;
+                rival.root.SetActive(shown);
+                if (shown)
+                    ComicKit.ShowFace(rival.face, character, faceArea, missingFace);
             }
         }
 
@@ -358,19 +350,6 @@ namespace Chapchu.UI.Fx.Drool
             pen.ClosePath();
             pen.Fill(color);
             pen.Restore();
-        }
-
-        // 얼굴 그림의 faceArea 칸이 창(마스크)에 꽉 차게 — 그림 비율은 그대로, 칸 가운데 = 창 가운데
-        private void FitFace(Rival rival)
-        {
-            float window = ((RectTransform)rival.faceMask.transform).rect.width;
-            Rect source = rival.face.sprite.rect;
-            float width = window / faceArea.width;
-            RectTransform rect = rival.face.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(width, width * source.height / source.width);
-            rect.pivot = new Vector2(faceArea.x + faceArea.width / 2f, 1f - (faceArea.y + faceArea.height / 2f));
-            rect.anchoredPosition = Vector2.zero;
         }
 
         private void DrawRival(int i, float t)
