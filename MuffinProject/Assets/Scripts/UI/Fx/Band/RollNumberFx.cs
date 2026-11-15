@@ -12,7 +12,7 @@ namespace Chapchu.UI.Fx.Band
 {
     /// <summary>
     /// 4 단계 장식 「몇 장?」 — 쓴 사람 위 말풍선에서 숫자가 굴러가다 뽑은 장수에서 멈춘다 (시안 rollNum — 상상도 못한 정체).
-    /// 장수는 부르는 쪽의 뽑기 알림(<see cref="CardFxContext.OnCardsDrawn"/>)으로 받는다. 다 구를 때까지 알림이 없으면 시안처럼 범위 안에서 아무 수나.
+    /// 장수는 부르는 쪽의 뽑기 알림(<see cref="CardFxContext.OnCardsDrawn"/>)으로 받는다. 다 구를 때까지 알림이 없으면 시안처럼 범위 안에서 아무 수나 — 그 뒤에 알림이 오면 멈춘 숫자를 그 수로 바꾼다.
     /// 범위는 카드 데이터의 뽑기 효과(최소 count ~ 최대 randomMax)에서 읽는다 — 규칙 수치를 연출 값으로 따로 두지 않는다.
     /// 카드가 손패로 날아가는 것은 게임 화면 몫이라 여기에는 없다.
     /// </summary>
@@ -89,16 +89,21 @@ namespace Chapchu.UI.Fx.Band
         private IEnumerator RollRoutine(CardFxContext context)
         {
             CardFxSeat seat = context.CasterSeat;
-            int drawn = 0;
+            float pixelScale = context.Layer != null ? context.Layer.PixelScale : 1f;
+            // 받은 장수 — 0 장도 결과다. 멈춘 뒤에 온 알림은 멈춘 숫자를 바꾼다
+            int? drawn = null;
+            bool landed = false;
             Action<CardFxSeat, int> handleCardsDrawn = (who, count) =>
             {
-                if (who == seat)
-                    drawn = count;
+                if (who != seat)
+                    return;
+                drawn = count;
+                if (landed)
+                    Show(LandedFormat, count, pixelScale);
             };
             context.OnCardsDrawn += handleCardsDrawn;
             try
             {
-                float pixelScale = context.Layer != null ? context.Layer.PixelScale : 1f;
                 if (seat != null && seat.Anchor != null)
                     bubble.anchoredPosition = PositionOf(seat.Anchor) + new Vector2(0f, rise * pixelScale);
                 bubbleGroup.alpha = 1f;
@@ -112,7 +117,8 @@ namespace Chapchu.UI.Fx.Band
                     yield return WaitUntilMs(start, at);
                 }
 
-                Show(LandedFormat, drawn > 0 ? drawn : Random.Range(_range.x, _range.y + 1), pixelScale);
+                Show(LandedFormat, drawn ?? Random.Range(_range.x, _range.y + 1), pixelScale);
+                landed = true;
                 bubble.localScale = Vector3.one * landScale;
                 bubble.DOScale(1f, Seconds(landMs)).SetEase(Ease.Linear).SetLink(gameObject);
                 yield return WaitUntilMs(start, at + holdMs);
