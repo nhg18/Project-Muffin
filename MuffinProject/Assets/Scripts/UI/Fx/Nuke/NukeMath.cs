@@ -48,7 +48,7 @@ namespace Chapchu.UI.Fx.Nuke
         /// <summary>해가 있는 쪽 (빛이 나아가는 방향의 반대).</summary>
         public static readonly Vector3 SunDir = new Vector3(-0.09f, 0.4f, 0.9f).normalized;
 
-        private static float[] _rnd;
+        private static readonly float[] Rnd = BuildTable();
 
         /// <summary>실제 흐른 시간 → 장면 시간 (착탄 직전 0.9초 동안 0.1초만 흐른다).</summary>
         public static float SceneTime(float real)
@@ -114,11 +114,7 @@ namespace Chapchu.UI.Fx.Nuke
 
         /// <summary>시안 rn(i, k) — 고정 난수 표 (0~1).</summary>
         public static float Rn(int i, int k)
-        {
-            if (_rnd == null)
-                _rnd = BuildTable();
-            return _rnd[(i * 37 + k * 1013) & 4095];
-        }
+            => Rnd[(i * 37 + k * 1013) & 4095];
 
         /// <summary>시안 R() — 씨앗에서 이어지는 0~1 난수 (mulberry32).</summary>
         public static float Next(ref int seed)
@@ -132,6 +128,12 @@ namespace Chapchu.UI.Fx.Nuke
                 return (uint)(t ^ (int)((uint)t >> 14)) / 4294967296f;
             }
         }
+
+        /// <summary>씨앗에서 이어지는 min~max 난수.</summary>
+        public static float Range(ref int seed, float min, float max) => min + Next(ref seed) * (max - min);
+
+        /// <summary>바닥(XZ) 위 거리.</summary>
+        public static float Flat(float dx, float dz) => Mathf.Sqrt(dx * dx + dz * dz);
 
         /// <summary>미사일이 길을 얼마나 왔나 (0~1).</summary>
         public static float MissileProgress(float t) => Mathf.Pow(Clamp01((t - MissileStart) / (Hit - MissileStart)), 1.35f);

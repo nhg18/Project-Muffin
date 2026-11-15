@@ -169,23 +169,17 @@ namespace Chapchu.UI.Fx.Nuke
             }
 
             // 빛줄기 (4분의 1 해상도)
-            RenderTexture rays = RenderTexture.GetTemporary(Mathf.Max(2, width >> 2), Mathf.Max(2, height >> 2), 0, format);
+            RenderTexture rays = null;
             if (_settings.RayK > 0.005f)
             {
+                rays = RenderTexture.GetTemporary(Mathf.Max(2, width >> 2), Mathf.Max(2, height >> 2), 0, format);
                 _material.SetVector(SunId, _settings.SunUV);
                 _material.SetFloat(KId, _settings.RayK);
                 Graphics.Blit(source, rays, _material, RayPass);
             }
-            else
-            {
-                RenderTexture previous = RenderTexture.active;
-                RenderTexture.active = rays;
-                GL.Clear(false, true, Color.black);
-                RenderTexture.active = previous;
-            }
 
             _material.SetTexture(BloomTexId, _bloom[0]);
-            _material.SetTexture(RayTexId, rays);
+            _material.SetTexture(RayTexId, rays != null ? rays : (Texture)Texture2D.blackTexture);
             _material.SetTexture(HalfTexId, half != null ? half : (Texture)Texture2D.blackTexture);
             _material.SetTexture(QuarterTexId, quarter != null ? quarter : (Texture)Texture2D.blackTexture);
             _material.SetFloat(ExpoId, _settings.Expo);
@@ -214,7 +208,8 @@ namespace Chapchu.UI.Fx.Nuke
                 _bloom[i] = null;
             }
 
-            RenderTexture.ReleaseTemporary(rays);
+            if (rays != null)
+                RenderTexture.ReleaseTemporary(rays);
             if (ao != null)
                 RenderTexture.ReleaseTemporary(ao);
             if (half != null)

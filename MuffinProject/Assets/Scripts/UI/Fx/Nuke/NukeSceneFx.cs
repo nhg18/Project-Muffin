@@ -286,17 +286,17 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 // 1 하늘에서 네거리로 내려오는 크레인
                 float e = NukeMath.EaseInOut(t / NukeMath.Siren);
-                Look(new Vector3(Lerp(-3.6f, -2.8f, e), Lerp(46f, 5.2f, e), Lerp(-74f, -8f, e)), new Vector3(Lerp(1f, 0f, e), Lerp(12f, 3.2f, e), Lerp(40f, 27f, e)));
+                Look(new Vector3(NukeMath.Lerp(-3.6f, -2.8f, e), NukeMath.Lerp(46f, 5.2f, e), NukeMath.Lerp(-74f, -8f, e)), new Vector3(NukeMath.Lerp(1f, 0f, e), NukeMath.Lerp(12f, 3.2f, e), NukeMath.Lerp(40f, 27f, e)));
                 fz = 0.9f;
                 _lightExtent = 85f;
-                SetLightFocus(0f, Lerp(-20f, 16f, e));
+                SetLightFocus(0f, NukeMath.Lerp(-20f, 16f, e));
                 _shot = 1;
             }
             else if (t < NukeMath.Sky)
             {
                 // 2 강아지 눈높이 — 사이렌에 멈칫
                 float u = (t - NukeMath.Siren) / (NukeMath.Sky - NukeMath.Siren);
-                Look(new Vector3(Lerp(3.5f, 2.5f, u), 0.82f, Lerp(8.4f, 9.8f, u)), new Vector3(-0.4f, 1.45f, 20f));
+                Look(new Vector3(NukeMath.Lerp(3.5f, 2.5f, u), 0.82f, NukeMath.Lerp(8.4f, 9.8f, u)), new Vector3(-0.4f, 1.45f, 20f));
                 fz = 1.32f;
                 _roll = -3.5f;
                 shake = 0.002f;
@@ -310,9 +310,9 @@ namespace Chapchu.UI.Fx.Nuke
                 float u = (t - NukeMath.Sky) / (NukeMath.Hero - NukeMath.Sky);
                 Vector3 m = NukeMath.MissileBase(t);
                 float k = NukeMath.EaseInOut(u);
-                Look(new Vector3(0.7f, 1.05f, 8.5f), new Vector3(Lerp(0f, m.x, k), Lerp(1.8f, m.y, k), Lerp(22f, m.z, k)));
-                fz = Lerp(1f, 1.9f, k);
-                _roll = Lerp(0f, 4f, k);
+                Look(new Vector3(0.7f, 1.05f, 8.5f), new Vector3(NukeMath.Lerp(0f, m.x, k), NukeMath.Lerp(1.8f, m.y, k), NukeMath.Lerp(22f, m.z, k)));
+                fz = NukeMath.Lerp(1f, 1.9f, k);
+                _roll = NukeMath.Lerp(0f, 4f, k);
                 _shot = 3;
             }
             else if (t < NukeMath.Run)
@@ -326,7 +326,7 @@ namespace Chapchu.UI.Fx.Nuke
                 float sa = 8f + Mathf.Sin(a) * 3f;
                 Look(m - tn * 21f + e1 * ca + e2 * sa, m + tn * 9f);
                 fz = 1.05f;
-                _roll = Lerp(-7f, 5f, u);
+                _roll = NukeMath.Lerp(-7f, 5f, u);
                 shake = 0.002f;
                 SetLightFocus(0f, 30f);
                 _lightExtent = 120f;
@@ -337,7 +337,7 @@ namespace Chapchu.UI.Fx.Nuke
                 // 5 달아나는 강아지들을 앞에서 뒷걸음으로
                 float u = (t - NukeMath.Run) / (NukeMath.Side - NukeMath.Run);
                 float bob = Mathf.Abs(Mathf.Sin(t * 13f)) * 0.05f;
-                Look(new Vector3(Mathf.Sin(t * 1.1f) * 0.7f, 1.02f + bob, Lerp(4f, -12.5f, u)), new Vector3(0f, Lerp(3.4f, 8.5f, u), 30f));
+                Look(new Vector3(Mathf.Sin(t * 1.1f) * 0.7f, 1.02f + bob, NukeMath.Lerp(4f, -12.5f, u)), new Vector3(0f, NukeMath.Lerp(3.4f, 8.5f, u), 30f));
                 shake = 0.0025f + u * 0.0045f;
                 _roll = Mathf.Sin(t * 2.3f) * 1.5f * u;
                 fz = 0.95f;
@@ -349,7 +349,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 // 6 옆에서 나란히 달리기
                 float u = (t - NukeMath.Side) / (NukeMath.Up - NukeMath.Side);
-                float zc = Lerp(7.2f, -2.4f, u);
+                float zc = NukeMath.Lerp(7.2f, -2.4f, u);
                 Look(new Vector3(-5.5f, 1.25f + Mathf.Abs(Mathf.Sin(t * 12f)) * 0.03f, zc - 3.6f), new Vector3(0f, 0.95f, zc + 1.2f));
                 fz = 1.05f;
                 shake = 0.003f;
@@ -363,8 +363,8 @@ namespace Chapchu.UI.Fx.Nuke
                 // 7 네거리 바닥에서 올려다본 미사일
                 float u = (t - NukeMath.Up) / (NukeMath.Dive - NukeMath.Up);
                 Look(new Vector3(0.6f, 0.55f, 14f), NukeMath.MissileBase(t));
-                fz = Lerp(3.3f, 2.2f, u);
-                _roll = Lerp(-9f, 7f, u);
+                fz = NukeMath.Lerp(3.3f, 2.2f, u);
+                _roll = NukeMath.Lerp(-9f, 7f, u);
                 shake = 0.003f + u * 0.004f;
                 _chroma = 0.004f;
                 _shot = 7;
@@ -378,7 +378,7 @@ namespace Chapchu.UI.Fx.Nuke
                 Look(m - tn * 19f + e2 * 8f + e1 * 3.5f, m + tn * 26f + e2 * 2f);
                 shake = 0.004f + u * 0.008f;
                 _roll = -4f + u * 16f;
-                fz = Lerp(0.92f, 0.68f, u);
+                fz = NukeMath.Lerp(0.92f, 0.68f, u);
                 _radialBlur = 0.04f + u * 0.1f;
                 _chroma = 0.004f + u * 0.01f;
                 SetLightFocus(0f, 30f);
@@ -398,7 +398,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 // 10 번쩍 — 멀리서 본 도시 전경
                 float u = p / (NukeMath.Street - NukeMath.Hit);
-                Look(new Vector3(Lerp(-196f, -184f, u), Lerp(86f, 80f, u), Lerp(-232f, -218f, u)), new Vector3(0f, Lerp(22f, 44f, NukeMath.EaseOut(u)), 30f));
+                Look(new Vector3(NukeMath.Lerp(-196f, -184f, u), NukeMath.Lerp(86f, 80f, u), NukeMath.Lerp(-232f, -218f, u)), new Vector3(0f, NukeMath.Lerp(22f, 44f, NukeMath.EaseOut(u)), 30f));
                 fz = 1.95f;
                 SetLightFocus(0f, 30f);
                 _lightExtent = 170f;
@@ -410,7 +410,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 // 11 큰길로 밀려오는 먼지 벽
                 float u = (t - NukeMath.Street) / (NukeMath.Fall - NukeMath.Street);
-                Look(new Vector3(1.6f, 1.25f, -64f), new Vector3(0f, Lerp(5f, 10f, u), 30f));
+                Look(new Vector3(1.6f, 1.25f, -64f), new Vector3(0f, NukeMath.Lerp(5f, 10f, u), 30f));
                 fz = 1.12f;
                 shake = 0.004f + u * u * 0.05f;
                 _chroma = u * 0.01f;
@@ -420,8 +420,8 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 // 12 낙진 — 폐허 위로 크레인 업
                 float e = NukeMath.EaseOut((t - NukeMath.Fall) / (NukeMath.End - NukeMath.Fall));
-                Look(new Vector3(Lerp(2.2f, -1.4f, e), Lerp(1.7f, 3.4f, e), Lerp(-64f, -86f, e)), new Vector3(0f, Lerp(9f, 35f, e), 30f));
-                fz = Lerp(1f, 0.7f, e);
+                Look(new Vector3(NukeMath.Lerp(2.2f, -1.4f, e), NukeMath.Lerp(1.7f, 3.4f, e), NukeMath.Lerp(-64f, -86f, e)), new Vector3(0f, NukeMath.Lerp(9f, 35f, e), 30f));
+                fz = NukeMath.Lerp(1f, 0.7f, e);
                 shake = 0.002f;
                 _lightExtent = 70f;
                 SetLightFocus(0f, -36f);
@@ -465,18 +465,18 @@ namespace Chapchu.UI.Fx.Nuke
             Vector3 amb = Mix3(new Vector3(0.5f, 0.56f, 0.76f), new Vector3(0.46f, 0.31f, 0.25f), new Vector3(0.33f, 0.42f, 0.26f), dk, gk);
             Vector3 gnd = Mix3(new Vector3(0.52f, 0.42f, 0.34f), new Vector3(0.42f, 0.24f, 0.14f), new Vector3(0.2f, 0.26f, 0.13f), dk, gk);
             Vector3 fog = Mix3(new Vector3(0.98f, 0.74f, 0.52f), new Vector3(0.62f, 0.33f, 0.16f), new Vector3(0.36f, 0.43f, 0.2f), dk, gk);
-            Vector2 fogK = new Vector2(view.Shot == 10 ? 0.0015f : Lerp(Lerp(0.0028f, 0.0055f, dk), 0.0042f, gk), Lerp(0.9f, 0.96f, dk));
+            Vector2 fogK = new Vector2(view.Shot == 10 ? 0.0015f : NukeMath.Lerp(NukeMath.Lerp(0.0028f, 0.0055f, dk), 0.0042f, gk), NukeMath.Lerp(0.9f, 0.96f, dk));
             Vector3 zen = Mix3(new Vector3(0.2f, 0.36f, 0.72f), new Vector3(0.26f, 0.13f, 0.1f), new Vector3(0.22f, 0.28f, 0.13f), dk, gk);
             Vector3 hor = Mix3(new Vector3(1.02f, 0.76f, 0.52f), new Vector3(0.9f, 0.42f, 0.16f), new Vector3(0.66f, 0.7f, 0.32f), dk, gk);
             Vector3 cloudC = Mix3(new Vector3(1.25f, 1.02f, 0.84f), new Vector3(1.1f, 0.6f, 0.3f), new Vector3(0.5f, 0.58f, 0.3f), dk, gk);
             Vector3 cloudS = Mix3(new Vector3(0.5f, 0.48f, 0.62f), new Vector3(0.3f, 0.17f, 0.13f), new Vector3(0.16f, 0.2f, 0.1f), dk, gk);
-            float cover = Lerp(0.5f, 0.68f, dk);
+            float cover = NukeMath.Lerp(0.5f, 0.68f, dk);
             float hole = p > 0f ? p * 120f : 0f;
             float rimK = p > 0f ? 1f - NukeMath.Smooth((p - 0.4f) / 2.2f) : 0f;
             Vector3 glowC = new Vector3(1.5f, 0.6f, 0.18f);
             float glow = hot * 0.4f;
             Vector4 pointLight = p > 0f
-                ? new Vector4(NukeMath.Impact.x, Lerp(8f, 50f, NukeMath.Smooth(p / 3f)), NukeMath.Impact.z, Lerp(55f, 90f, NukeMath.Smooth(p / 2f)))
+                ? new Vector4(NukeMath.Impact.x, NukeMath.Lerp(8f, 50f, NukeMath.Smooth(p / 3f)), NukeMath.Impact.z, NukeMath.Lerp(55f, 90f, NukeMath.Smooth(p / 2f)))
                 : Vector4.zero;
             Vector3 pointColor = p > 0f ? new Vector3(3.4f, 1.5f, 0.5f) * (hot * (0.8f + 0.2f * Mathf.Sin(real * 31f)) + 0.05f * gk) : Vector3.zero;
             float emi = p > 0f ? (p < 0.25f && Mathf.Sin(real * 90f) > 0f ? 0.8f : 0f) : 0.95f;
@@ -515,7 +515,7 @@ namespace Chapchu.UI.Fx.Nuke
             {
                 Expo = 1f + (p > 0f ? 9f * Mathf.Exp(-p * 5.5f) + 0.5f * Mathf.Exp(-p * 1.2f) : 0f) - hold * 0.12f,
                 Bloom = 0.5f + hot * 0.5f,
-                Saturation = Lerp(1.08f, 0.92f, near) - hold * 0.45f - gk * 0.12f,
+                Saturation = NukeMath.Lerp(1.08f, 0.92f, near) - hold * 0.45f - gk * 0.12f,
                 Contrast = 1.07f + near * 0.06f,
                 Tint = Mix3(new Vector3(1.03f, 1f, 0.96f), new Vector3(1.08f, 0.93f, 0.82f), new Vector3(0.92f, 1.03f, 0.82f), dk, gk),
                 Grain = 0.03f + gk * 0.02f,
@@ -551,7 +551,7 @@ namespace Chapchu.UI.Fx.Nuke
 
             if (view.Shot == 11)
             {
-                float toWall = Mathf.Sqrt((view.Eye.x - NukeMath.Impact.x) * (view.Eye.x - NukeMath.Impact.x) + (view.Eye.z - NukeMath.Impact.z) * (view.Eye.z - NukeMath.Impact.z)) - NukeMath.DustSpeed * p;
+                float toWall = NukeMath.Flat(view.Eye.x - NukeMath.Impact.x, view.Eye.z - NukeMath.Impact.z) - NukeMath.DustSpeed * p;
                 settings.Fade = NukeMath.Smooth((16f - toWall) / 16f) * 0.97f;
             }
 
@@ -719,8 +719,6 @@ namespace Chapchu.UI.Fx.Nuke
                 _shadowBuffer = null;
             }
         }
-
-        private static float Lerp(float a, float b, float k) => a + (b - a) * k;
 
         // 시안 mix3(mix3(맑음, 착탄, dk), 낙진, gk)
         private static Vector3 Mix3(Vector3 clear, Vector3 blast, Vector3 fallout, float dk, float gk) => NukeMath.Mix(NukeMath.Mix(clear, blast, dk), fallout, gk);

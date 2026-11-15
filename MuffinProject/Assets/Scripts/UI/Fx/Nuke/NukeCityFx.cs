@@ -65,17 +65,17 @@ namespace Chapchu.UI.Fx.Nuke
             _chunks = new Chunk[ChunkCount];
             for (int i = 0; i < ChunkCount; i++)
             {
-                float a = Range(ref seed, 0f, Mathf.PI * 2f);
-                float e = Range(ref seed, 0.25f, 1.25f);
+                float a = NukeMath.Range(ref seed, 0f, Mathf.PI * 2f);
+                float e = NukeMath.Range(ref seed, 0.25f, 1.25f);
                 bool far = i > NearChunks;
                 _chunks[i] = new Chunk
                 {
                     Mesh = i & 1,
                     Dir = new Vector3(Mathf.Cos(a) * Mathf.Cos(e), Mathf.Sin(e), Mathf.Sin(a) * Mathf.Cos(e)),
-                    Speed = far ? Range(ref seed, 30f, 58f) : Range(ref seed, 14f, 34f),
-                    Scale = Range(ref seed, 0.5f, far ? 1.6f : 3.2f),
-                    Spin = Range(ref seed, 0f, 6f),
-                    SpinSpeed = Range(ref seed, -7f, 7f),
+                    Speed = far ? NukeMath.Range(ref seed, 30f, 58f) : NukeMath.Range(ref seed, 14f, 34f),
+                    Scale = NukeMath.Range(ref seed, 0.5f, far ? 1.6f : 3.2f),
+                    Spin = NukeMath.Range(ref seed, 0f, 6f),
+                    SpinSpeed = NukeMath.Range(ref seed, -7f, 7f),
                 };
             }
         }
@@ -137,7 +137,7 @@ namespace Chapchu.UI.Fx.Nuke
                 float pitch = 0f;
                 float roll = 0f;
                 float sy = 1f;
-                if (_view.Shot == 10 && Flat(b.X - _view.Eye.x, b.Z - _view.Eye.z) < wideShotClear)
+                if (_view.Shot == 10 && NukeMath.Flat(b.X - _view.Eye.x, b.Z - _view.Eye.z) < wideShotClear)
                     continue;
 
                 if (p > 0f && !b.Far)
@@ -255,7 +255,7 @@ namespace Chapchu.UI.Fx.Nuke
             Mesh mesh = data.carMeshes[car.Mesh];
             bool bus = car.Mesh == data.carMeshes.Length - 1;
             float scale = bus ? busCarScale.x : busCarScale.y;
-            float d = Flat(x - NukeMath.Impact.x, z - NukeMath.Impact.z);
+            float d = NukeMath.Flat(x -NukeMath.Impact.x, z - NukeMath.Impact.z);
             float k = p - d / NukeMath.DustSpeed;
             if (k <= 0f || p <= 0f)
             {
@@ -291,7 +291,7 @@ namespace Chapchu.UI.Fx.Nuke
                 return;
             }
 
-            d = Flat(x - NukeMath.Impact.x, z - NukeMath.Impact.z);
+            d = NukeMath.Flat(x -NukeMath.Impact.x, z - NukeMath.Impact.z);
             k = NukeMath.EaseOut((p - d / NukeMath.DustSpeed) / 0.4f) * Mathf.Clamp01(1.5f - d / 120f);
             a = Mathf.Atan2(x - NukeMath.Impact.x, z - NukeMath.Impact.z);
         }
@@ -317,9 +317,5 @@ namespace Chapchu.UI.Fx.Nuke
             Quaternion rotation = Quaternion.Euler(pitch * Mathf.Rad2Deg, yaw * Mathf.Rad2Deg, roll * Mathf.Rad2Deg);
             return Matrix4x4.TRS(_view.Origin + position, rotation, new Vector3(scale, scale * stretchY, scale));
         }
-
-        private static float Flat(float dx, float dz) => Mathf.Sqrt(dx * dx + dz * dz);
-
-        private static float Range(ref int seed, float min, float max) => min + NukeMath.Next(ref seed) * (max - min);
     }
 }

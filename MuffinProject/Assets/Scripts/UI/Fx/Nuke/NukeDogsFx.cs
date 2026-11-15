@@ -103,24 +103,24 @@ namespace Chapchu.UI.Fx.Nuke
             _dogs = new Dog[DogCount];
             for (int i = 0; i < DogCount; i++)
             {
-                float x = Range(ref seed, -3.2f, 3.2f);
-                float z = Range(ref seed, 13f, 27f);
+                float x = NukeMath.Range(ref seed, -3.2f, 3.2f);
+                float z = NukeMath.Range(ref seed, 13f, 27f);
                 var dog = new Dog { Key = i % FxDog.Keys.Count, X = x, Z = z };
-                dog.Size = Range(ref seed, 1.15f, 1.5f);
-                dog.Phase = Range(ref seed, 0f, 6f);
+                dog.Size = NukeMath.Range(ref seed, 1.15f, 1.5f);
+                dog.Phase = NukeMath.Range(ref seed, 0f, 6f);
                 NukeMath.Next(ref seed); // 시안 hd (쓰지 않는 값)
-                dog.Wander = Range(ref seed, 0.3f, 0.7f);
+                dog.Wander = NukeMath.Range(ref seed, 0.3f, 0.7f);
                 dog.Wander *= NukeMath.Next(ref seed) < 0.5f ? 1f : -1f;
-                dog.NoticeAt = NukeMath.Notice + Range(ref seed, 0f, 0.5f);
-                dog.RunAt = NukeMath.Run + Range(ref seed, 0f, 0.45f) + (27f - z) * 0.012f;
-                dog.VelocityX = x * 0.02f + Range(ref seed, -0.12f, 0.12f);
-                dog.VelocityZ = -Range(ref seed, 6.6f, 9f);
-                dog.Cadence = Range(ref seed, 11.5f, 14.5f);
-                float tossX = Range(ref seed, -1f, 1f);
-                float tossY = Range(ref seed, 7f, 12f);
-                float tossZ = Range(ref seed, 4f, 8f);
+                dog.NoticeAt = NukeMath.Notice + NukeMath.Range(ref seed, 0f, 0.5f);
+                dog.RunAt = NukeMath.Run + NukeMath.Range(ref seed, 0f, 0.45f) + (27f - z) * 0.012f;
+                dog.VelocityX = x * 0.02f + NukeMath.Range(ref seed, -0.12f, 0.12f);
+                dog.VelocityZ = -NukeMath.Range(ref seed, 6.6f, 9f);
+                dog.Cadence = NukeMath.Range(ref seed, 11.5f, 14.5f);
+                float tossX = NukeMath.Range(ref seed, -1f, 1f);
+                float tossY = NukeMath.Range(ref seed, 7f, 12f);
+                float tossZ = NukeMath.Range(ref seed, 4f, 8f);
                 dog.Toss = new Vector3(tossX, tossY, tossZ);
-                dog.Turn = Range(ref seed, -6f, 6f);
+                dog.Turn = NukeMath.Range(ref seed, -6f, 6f);
                 _dogs[i] = dog;
             }
         }
@@ -218,7 +218,7 @@ namespace Chapchu.UI.Fx.Nuke
                     float run = tt - 0.18f * (1f - Mathf.Exp(-tt * 6f));
                     float sx = x0 + d.VelocityX * run;
                     float sz = d.Z + d.VelocityZ * run;
-                    float struck = NukeMath.Hit + Mathf.Sqrt((sx - NukeMath.Impact.x) * (sx - NukeMath.Impact.x) + (sz - NukeMath.Impact.z) * (sz - NukeMath.Impact.z)) / NukeMath.DustSpeed;
+                    float struck = NukeMath.Hit + NukeMath.Flat(sx - NukeMath.Impact.x, sz - NukeMath.Impact.z) / NukeMath.DustSpeed;
                     if (t < struck)
                     {
                         // 달아나기 + 발에서 이는 먼지
@@ -421,8 +421,6 @@ namespace Chapchu.UI.Fx.Nuke
             mesh.MarkDynamic();
             return mesh;
         }
-
-        private static float Range(ref int seed, float min, float max) => min + NukeMath.Next(ref seed) * (max - min);
 
         // 시안 2D 행렬 [a b c d e f] — x' = a·x + c·y + e, y' = b·x + d·y + f (원본 그림 좌표, 아래로 +)
         private readonly struct Matrix2D
