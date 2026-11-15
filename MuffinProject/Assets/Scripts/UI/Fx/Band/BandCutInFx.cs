@@ -194,7 +194,7 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private RectTransform post;
 
         private readonly List<Material> _materials = new List<Material>();
-        private List<CardFxStep> _postSteps;
+        private readonly List<CardFxStep> _postSteps = new List<CardFxStep>();
         private Vector2 _characterOrigin;
         private Vector2 _artOrigin;
         private Vector2 _avatarOrigin;
@@ -253,7 +253,12 @@ namespace Chapchu.UI.Fx.Band
                 return;
             }
 
-            _postSteps = Collect(post);
+            // 켜진 4 단계 조각 (꺼진 오브젝트 · 컴포넌트는 빠진다)
+            foreach (CardFxStep step in post.GetComponentsInChildren<CardFxStep>())
+            {
+                if (step.enabled)
+                    _postSteps.Add(step);
+            }
             _characterOrigin = character.anchoredPosition;
             _artOrigin = art.anchoredPosition;
             _avatarOrigin = avatar.anchoredPosition;
@@ -289,10 +294,23 @@ namespace Chapchu.UI.Fx.Band
             if (_postSteps.Count == 0)
                 yield break;
 
+            // 조각마다 제 시각에 따로 시작하고, 가장 늦게 끝나는 조각까지 기다린다
+            float endMs = 0f;
             foreach (CardFxStep step in _postSteps)
+            {
                 step.ResetState();
+                StartCoroutine(PlayAt(step, context));
+                endMs = Mathf.Max(endMs, step.StartMs + step.DurationMs);
+            }
+            yield return new WaitForSeconds(Seconds(endMs));
+        }
 
-            yield return TimelineRoutine(_postSteps, context, null);
+        // 조각 하나를 제 시작 시각에 재생한다. 0 이면 바로 — 결과 알림을 받는 조각이 부르는 쪽의 알림보다 먼저 구독한다
+        private static IEnumerator PlayAt(CardFxStep step, CardFxContext context)
+        {
+            if (step.StartMs > 0f)
+                yield return new WaitForSeconds(Seconds(step.StartMs));
+            step.Play(context, null);
         }
 
         // 카드 값을 부품에 넣는다 — 글자 · 색 · 그림 · 칸 크기

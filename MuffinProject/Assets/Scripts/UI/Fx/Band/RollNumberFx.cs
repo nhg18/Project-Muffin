@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using Chapchu.Cards;
+using Chapchu.Game.Effects;
 using TMPro;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -10,7 +12,8 @@ namespace Chapchu.UI.Fx.Band
 {
     /// <summary>
     /// 4 단계 장식 「몇 장?」 — 쓴 사람 위 말풍선에서 숫자가 굴러가다 뽑은 장수에서 멈춘다 (시안 rollNum — 상상도 못한 정체).
-    /// 장수는 부르는 쪽의 뽑기 알림(<see cref="CardFxContext.OnCardsDrawn"/>)으로 받는다. 다 구를 때까지 알림이 없으면 시안처럼 범위(<see cref="CardFxContext.DrawRange"/>) 안에서 아무 수나.
+    /// 장수는 부르는 쪽의 뽑기 알림(<see cref="CardFxContext.OnCardsDrawn"/>)으로 받는다. 다 구를 때까지 알림이 없으면 시안처럼 범위 안에서 아무 수나.
+    /// 범위는 카드 데이터의 뽑기 효과(최소 count ~ 최대 randomMax)에서 읽는다 — 규칙 수치를 연출 값으로 따로 두지 않는다.
     /// 카드가 손패로 날아가는 것은 게임 화면 몫이라 여기에는 없다.
     /// </summary>
     public class RollNumberFx : CardFxStep
@@ -45,6 +48,12 @@ namespace Chapchu.UI.Fx.Band
         [Tooltip("멈춘 뒤 말풍선이 남아 있는 시간 (시안 450 + 900).")]
         [SerializeField] private float holdMs = 1350f;
 
+        [Header("숫자")]
+        [Tooltip("뽑을 장수를 읽을 카드 데이터 (상상도 못한 정체) — 구를 때 · 알림이 없을 때 고르는 범위는 이 카드 뽑기 효과의 최소 ~ 최대 장수.")]
+        [SerializeField] private CardData card;
+
+        private Vector2Int _range;
+
         public override float DurationMs => ticks * tickMs + tickGrowMs * ticks * (ticks - 1) / 2f + holdMs;
 
         public override RectTransform Visual => bubble;
@@ -58,6 +67,8 @@ namespace Chapchu.UI.Fx.Band
                 missing.Add(nameof(bubbleGroup));
             if (label == null)
                 missing.Add(nameof(label));
+            if (!TryReadRange(out _range))
+                missing.Add(nameof(card) + " (뽑기 효과)");
             if (missing.Count > 0)
                 Debug.LogError($"[{nameof(RollNumberFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
@@ -78,7 +89,6 @@ namespace Chapchu.UI.Fx.Band
         private IEnumerator RollRoutine(CardFxContext context)
         {
             CardFxSeat seat = context.CasterSeat;
-            Vector2Int range = context.DrawRange;
             int drawn = 0;
             Action<CardFxSeat, int> handleCardsDrawn = (who, count) =>
             {
@@ -97,12 +107,12 @@ namespace Chapchu.UI.Fx.Band
                 float at = 0f;
                 for (int i = 0; i < ticks; i++)
                 {
-                    Show(RollingFormat, Random.Range(range.x, range.y + 1), pixelScale);
+                    Show(RollingFormat, Random.Range(_range.x, _range.y + 1), pixelScale);
                     at += tickMs + i * tickGrowMs;
                     yield return WaitUntilMs(start, at);
                 }
 
-                Show(LandedFormat, drawn > 0 ? drawn : Random.Range(range.x, range.y + 1), pixelScale);
+                Show(LandedFormat, drawn > 0 ? drawn : Random.Range(_range.x, _range.y + 1), pixelScale);
                 bubble.localScale = Vector3.one * landScale;
                 bubble.DOScale(1f, Seconds(landMs)).SetEase(Ease.Linear).SetLink(gameObject);
                 yield return WaitUntilMs(start, at + holdMs);
@@ -112,6 +122,23 @@ namespace Chapchu.UI.Fx.Band
             {
                 context.OnCardsDrawn -= handleCardsDrawn;
             }
+        }
+
+        // 카드 뽑기 효과의 장수 범위 (최소, 최대). 무작위 장수가 아니면 최소 = 최대
+        private bool TryReadRange(out Vector2Int range)
+        {
+            range = Vector2Int.zero;
+            if (card == null)
+                return false;
+            foreach (CardEffect effect in card.effects)
+            {
+                if (effect is DrawEffect draw && !draw.useTriggerAmount)
+                {
+                    range = new Vector2Int(draw.count, Mathf.Max(draw.count, draw.randomMax));
+                    return true;
+                }
+            }
+            return false;
         }
 
         // 글자를 바꾸고 말풍선을 글자에 맞춘다

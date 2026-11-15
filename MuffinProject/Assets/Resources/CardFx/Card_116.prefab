@@ -321,7 +321,7 @@ MonoBehaviour:
   landMs: 260
   landScale: 1.5
   holdMs: 1350
-  range: {x: 1, y: 10}
+  card: {fileID: 11400000, guid: ab687a006e5ba2e4699efb049bf1f7be, type: 2}
 --- !u!1 &7567813553250778577
 GameObject:
   m_ObjectHideFlags: 0
