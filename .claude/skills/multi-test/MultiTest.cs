@@ -62,9 +62,6 @@ public static class MultiTest
     private const string MyHandInstancesField = "_myHandInstances";        // GameDebugInput — 인스턴스 ID
     private const string GameEndedField = "_gameEnded";                    // GameDebugInput — 게임 종료를 받았다
     private const string MyTrapsField = "_myTraps";                        // GameDebugInput — 설치한 함정 인스턴스 ID
-    private const string TrapWindowOpensField = "_trapWindowOpensAt";      // GameDebugInput — 함정 시간
-    private const string TrapWindowDeadlineField = "_trapWindowDeadline";
-    private const string HitByField = "_hitBy";                            // GameDebugInput — 마지막으로 나를 맞힌 사람
     private const string GaepanHudNumberField = "numberText";              // GaepanHudView — 남은 바퀴 숫자 (121)
     private const string ChoiceSecondButtonField = "secondButton";         // ChoicePopupView — 「80 피해 받기」 (119)
     private const string ChoiceFirstButtonField = "firstButton";           // ChoicePopupView — 「손패 전부 버리기」
@@ -75,6 +72,8 @@ public static class MultiTest
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
     private const string ServerTurnOrderField = "_turnOrder";              // GameServer — 턴 순서
     private const string ServerDiscardField = "_discardPile";              // GameServer — 버림 더미
+    private const string ServerTrapSetOrderField = "_trapSetOrder";        // GameServer — 함정 설치 순서
+    private const string ServerNextTrapSetOrderField = "_nextTrapSetOrder";
     private const string ServerDeckListField = "_deck";                    // GameServer — 덱
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
     private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 카드 가져오기)
@@ -516,31 +515,6 @@ public static class MultiTest
         return wrong.Count > 0 ? "FAIL 화면 ≠ 방장: " + string.Join(" · ", wrong) : "OK 화면 = 방장 —" + log;
     }
 
-    /// <summary>
-    /// 함정 시간에, 다른 사람에게 맞았고 설치한 함정이 있으면 발동한다 (04-card.md 6절 「피해 받은 후」). 아니면 SKIP.
-    /// 덱의 테스트 함정(Card_T_005)이 「피해 받은 후 → 피해를 준 사람에게」 라 대상은 방장이 정한다.
-    /// </summary>
-    public static string TrapProbe()
-    {
-        GameDebugInput input = Object.FindFirstObjectByType<GameDebugInput>();
-        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
-        if (input == null || server == null)
-            return "SKIP 게임 화면 아님";
-
-        int me = PhotonNetwork.LocalPlayer.ActorNumber;
-        double opensAt = (double)typeof(GameDebugInput).GetField(TrapWindowOpensField, Private).GetValue(input);
-        double deadline = (double)typeof(GameDebugInput).GetField(TrapWindowDeadlineField, Private).GetValue(input);
-        FieldInfo hitByField = typeof(GameDebugInput).GetField(HitByField, Private);
-        var traps = (List<int>)typeof(GameDebugInput).GetField(MyTrapsField, Private).GetValue(input);
-        double now = PhotonNetwork.Time;
-        if (now < opensAt || now >= deadline - 0.5 || (int)hitByField.GetValue(input) < 0 || traps.Count == 0)
-            return "SKIP P" + me;
-
-        hitByField.SetValue(input, -1);
-        server.RequestActivateTrap(traps[0], new int[0]);
-        return "OK P" + me + " 함정 시간에 함정 발동";
-    }
-
     /// <summary>내 카드 다시 받기 (09-network.md 10절) — 방장이 보낸 지금 내 카드가 알림으로 따라온 기록과 같은지 GameDebugInput 이 로그로 남긴다.</summary>
     public static string SyncProbe()
     {
@@ -971,10 +945,10 @@ public static class MultiTest
         var notStarted = new GameServer(new System.Random(1), () => now);
         var requests = new List<Func<IReadOnlyList<GameEvent>>>
         {
-            () => notStarted.DeclareChapchu(actors[0]), () => notStarted.PlayCounter(actors[0], 1, null), () => notStarted.ActivateTrap(actors[0], 1, null)
+            () => notStarted.DeclareChapchu(actors[0]), () => notStarted.PlayCounter(actors[0], 1, null)
         };
         if (!server.IsGameOver)
-            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.DeclareChapchu(stranger), () => server.PlayCounter(stranger, 1, null), () => server.ActivateTrap(stranger, 1, null) });
+            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.DeclareChapchu(stranger), () => server.PlayCounter(stranger, 1, null) });
 
         bool strangerOk;
         try
@@ -1051,6 +1025,7 @@ public static class MultiTest
             int negatedAt = events.FindIndex(e => e is CardNegated);
             Check(resolvedAt >= 0 && negatedAt > resolvedAt && t.Hp(t.O1) == 100, "위에서부터 — 카운터 처리 → 행동 카드 무효 · 피해 없음");
             Check(t.DiscardCount == 2, "무효된 카드도 버림 더미로");
+            Check(t.Discard[0].CardId == ChainTable.Hit && t.Discard[1].CardId == ChainTable.Negate, "쓴 순서대로 쌓인다 — 맨 위 = 마지막에 낸 카운터");
         }
 
         // 3. 카운터의 카운터 — C 가 B 를 무효 → A 정상 (04 9.1)
@@ -1343,7 +1318,7 @@ public static class MultiTest
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
-    /// <summary>규칙 계층의 함정 설치 · 발동 · 함정 시간 (04-card.md 6절, 기능 6). ChainTable 을 같이 쓴다.</summary>
+    /// <summary>규칙 계층의 함정 설치 · 자동 발동 (04-card.md 6절 · 9.2, 기능 6). ChainTable 을 같이 쓴다.</summary>
     public static string Trap()
     {
         var sb = new StringBuilder();
@@ -1371,83 +1346,57 @@ public static class MultiTest
             Check(t.Code(t.SetTrap(t.Turn, ChainTable.TrapHit)) == RejectCode.MainActionUsed, "메인 행동 뒤 설치 → 7");
         }
 
-        // 2. 피해 받은 후 — 조건 맞는 함정이 있으면 후처리 뒤 5초 함정 시간, 발동 → 피해를 준 사람에게
+        // 2. 피해 받은 후 — 체인이 끝나면 자동 발동 (반응 시간 · 함정 시간 없음), 대상 = 피해를 준 사람
         {
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.GiveTrap(t.O2, ChainTable.TrapHit);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            TrapWindowStarted window = t.Tick().OfType<TrapWindowStarted>().FirstOrDefault();
-            double opensAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
-            Check(window != null && Math.Abs(window.OpensAt - opensAt) < 1e-6 && Math.Abs(window.Deadline - (opensAt + 5)) < 1e-6, "피해 → 함정 시간 (후처리 뒤 5초)");
-            t.At(opensAt - 0.5);
-            Check(t.Code(t.Activate(t.O1, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "열리기 전 → 17");
-            t.At(opensAt + 1);
-            Check(!t.Tick().OfType<TurnStarted>().Any(), "함정 시간 중엔 다음 턴 없음");
-            Check(t.Code(t.Activate(t.O2, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "피해 안 받은 사람 → 17");
-            TrapActivated trap = t.Activate(t.O1, ChainTable.TrapHit).OfType<TrapActivated>().FirstOrDefault();
-            Check(trap != null && trap.Targets.SequenceEqual(new[] { t.Turn }) && trap.TrapCount == 0, "발동 → 공개 · 대상 = 피해를 준 사람");
-            t.At(opensAt + 1 + ChainTable.Reveal + ReactionSeconds);
+            List<GameEvent> events = t.Tick().ToList();
+            List<TrapActivated> traps = events.OfType<TrapActivated>().ToList();
+            Check(traps.Count == 1 && traps[0].Actor == t.O1 && traps[0].Targets.SequenceEqual(new[] { t.Turn }) && traps[0].TrapCount == 0, "체인 끝 → 맞은 O1 의 함정만 자동 발동 · 대상 = 피해를 준 사람");
+            Check(t.Hp(t.Turn) == 90 && t.TrapCount(t.O2) == 1, "반격 피해 (♥90) · 안 맞은 O2 의 함정은 남음");
+            int resolvedAt = events.FindIndex(e => e is CardResolved), discardAt = events.FindIndex(e => e is ChainDiscarded), trapAt = events.FindIndex(e => e is TrapActivated);
+            Check(resolvedAt >= 0 && discardAt > resolvedAt && trapAt > discardAt && !events.OfType<ReactionStarted>().Any(), $"행동 카드 처리 → 버림 더미 → 함정, 반응 시간 없음 ({resolvedAt} · {discardAt} · {trapAt})");
+            Check(t.Discard[t.Discard.Count - 1].CardId == ChainTable.TrapHit, "발동한 함정도 버림 더미 맨 위로");
+            double next = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve + ChainTable.Reveal + ChainTable.Resolve;
+            t.At(next - 0.1);
+            Check(!t.Tick().OfType<TurnStarted>().Any(), "함정 연출 중엔 다음 턴 없음");
+            t.At(next + 0.1);
             t.Tick();
-            Check(t.Hp(t.Turn) == 90, "반격 피해 (♥90)");
-            t.At(100);
-            t.Tick();
-            Check(t.Server.CurrentTurnActor == t.O1, "끝나고 다음 턴");
+            Check(t.Server.CurrentTurnActor == t.O1, "함정 연출이 끝나면 다음 턴");
         }
 
-        // 3. 함정 시간에 아무도 안 냄 → 닫히고 기회 사라짐 / 조건 맞는 함정이 없으면 열지 않음
+        // 3. 함정의 효과는 다른 함정을 부르지 않는다 · 함정에는 카운터 못 함 · 지난 사건으로는 발동하지 않음
         {
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.Turn, ChainTable.TrapHit);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            t.Tick();
-            t.At(100);
-            Check(t.Tick().OfType<TurnStarted>().Any(), "함정 시간 끝 → 다음 턴");
-            Check(t.Code(t.Activate(t.O1, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "지난 피해로는 발동 못 함 → 17");
-        }
-        {
-            var t = new ChainTable();
-            t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(ChainTable.Reveal + ReactionSeconds);
-            Check(!t.Tick().OfType<TrapWindowStarted>().Any(), "함정이 없으면 함정 시간 없음");
-        }
-
-        // 4. 카드 반응 함정 — 반응 시간에, 체인 맨 위에서 먼저 처리
-        {
-            var t = new ChainTable();
-            t.GiveTrap(t.O1, ChainTable.TrapReact);
-            t.Play(t.Turn, ChainTable.Hit, t.O1);
-            t.At(0.5);
-            Check(t.Code(t.Activate(t.O1, ChainTable.TrapReact)) == RejectCode.NotReactionTime, "연출 중 → 6");
-            t.At(2);
-            Check(t.Activate(t.O1, ChainTable.TrapReact).OfType<TrapActivated>().Any(), "반응 시간에 발동");
-            t.At(100);
             List<GameEvent> events = t.Tick().ToList();
-            Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 80 && events.OfType<CardResolved>().Count() == 2, "함정 → 행동 카드 순으로 처리");
+            Check(events.OfType<TrapActivated>().Count() == 1 && t.TrapCount(t.Turn) == 1 && t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 80, "함정에 맞은 사람의 함정은 발동하지 않는다");
+            int code = t.Code(t.Counter(t.Turn, ChainTable.Negate));
+            Check(code != 0, "함정에 카운터 → 거절 " + code);
+            t.RunUntilTurn(t.O1, 60);
+            t.Play(t.O1, ChainTable.Hit, t.O2);
+            events = t.Run(t.Now + ChainTable.Reveal + ReactionSeconds + 1);
+            Check(events.OfType<CardResolved>().Any() && !events.OfType<TrapActivated>().Any() && t.TrapCount(t.Turn) == 1, "지난 피해로는 다음 체인에서도 발동하지 않음");
         }
 
-        // 5. HP 이하 함정 — 남의 메인 행동 전에 발동하면 그 턴이 멈췄다가 남은 시간으로 이어진다
+        // 4. 여러 함정 — 방 전체에서 설치한 순서대로
         {
             var t = new ChainTable();
-            t.SetHp(t.O1, 15);
-            t.GiveTrap(t.O1, ChainTable.TrapLowHp);
-            t.At(5);
-            Check(t.Activate(t.O1, ChainTable.TrapLowHp).OfType<TrapActivated>().Any(), "HP 15 ≤ 20 → 언제든 발동 (새 체인)");
-            Check(t.Code(t.Play(t.Turn, ChainTable.Hit, t.O2)) == RejectCode.Resolving, "끼어든 체인 중 메인 행동 → 18");
-            t.At(5 + ChainTable.Reveal + ReactionSeconds);
-            t.Tick();
-            double resumeAt = 5 + ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
-            t.At(resumeAt + 0.01);
-            TurnResumed resumed = t.Tick().OfType<TurnResumed>().FirstOrDefault();
-            Check(resumed != null && resumed.Actor == t.Turn && Math.Abs(resumed.Deadline - (TurnSeconds + (resumeAt - 5))) < 0.05, "턴 이어짐 — 멈춘 만큼 마감이 밀림 (" + (resumed?.Deadline.ToString("0.00") ?? "-") + ")");
-            Check(!(t.Play(t.Turn, ChainTable.Hit, t.O2)[0] is RequestRejected), "이어진 턴에 메인 행동 가능");
-            t.SetHp(t.O2, 50);
-            Check(t.Code(t.Activate(t.O2, ChainTable.TrapLowHp)) != 0, "HP 50 → 발동 못 함");
+            t.GiveTrap(t.O2, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.Play(t.Turn, ChainTable.Wave, null);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
+            Check(traps.Select(e => e.Actor).SequenceEqual(new[] { t.O2, t.O1 }) && t.Hp(t.Turn) == 80, "먼저 설치한 O2 → O1 순으로 발동 (♥80)");
         }
 
-        // 6. 사망 대기 — 사망 관련 함정만, 체인이 끝날 때까지 최종 사망을 미룬다
+        // 5. HP 0 — 「본인 사망 대기」 함정만, 다른 함정은 남고 사망 대기 → 최종 사망
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
@@ -1455,14 +1404,11 @@ public static class MultiTest
             t.GiveTrap(t.O1, ChainTable.TrapDying);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            DeathPending pending = t.Tick().OfType<DeathPending>().FirstOrDefault();
-            t.At(pending.StartsAt + 1);
-            Check(t.Code(t.Activate(t.O1, ChainTable.TrapHit)) == RejectCode.TrapConditionNotMet, "사망 대기 중 다른 함정 → 17");
-            Check(t.Activate(t.O1, ChainTable.TrapDying).OfType<TrapActivated>().Any(), "본인 사망 대기 함정 발동");
-            t.At(pending.Deadline + 0.1);
-            Check(!t.Tick().OfType<PlayerDied>().Any(), "체인 중엔 최종 사망 보류");
-            t.At(pending.StartsAt + 1 + ChainTable.Reveal + ReactionSeconds);
-            Check(t.Tick().OfType<PlayerDied>().Any(), "체인 처리 뒤 최종 사망");
+            List<GameEvent> events = t.Tick().ToList();
+            List<TrapActivated> traps = events.OfType<TrapActivated>().ToList();
+            Check(traps.Count == 1 && traps[0].CardId == ChainTable.TrapDying && t.TrapCount(t.O1) == 1 && t.Hp(t.Turn) == 100, "HP 0 → 본인 사망 대기 함정만 발동 · 피해 받은 후 함정은 남음");
+            Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1), "함정 뒤 사망 대기");
+            Check(t.Run(60).OfType<PlayerDied>().Any(e => e.Actor == t.O1), "사망 대기가 끝나면 최종 사망");
         }
 
         // 7. 나감 → 설치한 함정도 버림 더미로
@@ -1479,7 +1425,7 @@ public static class MultiTest
     }
 
     /// <summary>
-    /// 규칙 계층의 봇 (18-bot.md 7절). ① 봇끼리 기본 덱으로 여러 판을 끝까지 ② 찹츄 선언은 내 턴에만 ③ 나를 노린 카드에 카운터 ④ 맞은 뒤 함정 ⑤ 난이도 (거절 3회 상한은 봇이 미리 걸러 거절을 일부러 만들 수 없어 시험하지 않는다)
+    /// 규칙 계층의 봇 (18-bot.md 7절). ① 봇끼리 기본 덱으로 여러 판을 끝까지 ② 찹츄 선언은 내 턴에만 ③ 나를 노린 카드에 카운터 ④ 맞은 뒤 함정 (자동) ⑤ 난이도 (거절 3회 상한은 봇이 미리 걸러 거절을 일부러 만들 수 없어 시험하지 않는다)
     /// 시계는 0.1초씩 직접 움직인다.
     /// </summary>
     public static string Bot()
@@ -1588,7 +1534,7 @@ public static class MultiTest
             Check(counter != null && events.OfType<CardPlayed>().Count() == 1, "남(O2)은 끼지 않는다 · 한 창에 한 번");
         }
 
-        // ④ 함정 — 맞은 뒤 함정 시간에 발동
+        // ④ 함정 — 맞은 뒤 자동 발동 (봇은 고르지 않는다)
         {
             double now = 0;
             var t = new ChainTable(() => now);
@@ -1597,13 +1543,16 @@ public static class MultiTest
             var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             var events = new List<GameEvent>();
-            for (now = 0; now < 30; now += 0.1)
+            int turnHp = -1;
+            for (now = 0; now < 30 && turnHp < 0; now += 0.1) // 함정이 나오면 멈춘다 — 그 뒤 O1 의 턴에 봇이 또 때릴 수 있다
             {
                 events.AddRange(t.Tick());
+                if (events.OfType<TrapActivated>().Any())
+                    turnHp = t.Hp(t.Turn);
                 events.AddRange(driver.Tick());
             }
             TrapActivated trap = events.OfType<TrapActivated>().FirstOrDefault();
-            Check(trap != null && trap.Actor == t.O1 && trap.Targets.SequenceEqual(new[] { t.Turn }) && t.Hp(t.Turn) == 90, "맞은 뒤 함정 시간에 반격 (♥90)");
+            Check(trap != null && trap.Actor == t.O1 && trap.Targets.SequenceEqual(new[] { t.Turn }) && turnHp == 90, $"맞은 뒤 함정 자동 반격 (♥{turnHp}, 봇은 고르지 않는다)");
         }
 
         // ── 카드 묶음 1 (11-card-list 1-2) — Deck_Main 의 실제 에셋 값(대상 · 대상 후보 조건 · 효과). 시간만 시험용 ──
@@ -1685,8 +1634,8 @@ public static class MultiTest
                     int hand = t.HandCount(t.Turn);
                     var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(109)));
                     Check(t.Hand(t.Turn).Contains(old) && t.HandCount(t.Turn) == hand + 1 && t.Discard.Count == 1 && t.Discard[0].CardId == 109
-                          && events.OfType<DiscardTaken>().Any(e => e.CardInstanceId == old.InstanceId && e.TopCardId == 109),
-                        "109 아 맞다! 버림 더미 맨 위(이 카드 아래 장)를 손패로");
+                          && events.OfType<DiscardTaken>().Any(e => e.CardInstanceId == old.InstanceId && e.TopCardId == 0),
+                        "109 아 맞다! 체인 전 버림 더미 맨 위를 손패로 · 이 카드는 체인이 끝난 뒤 쌓인다");
                 }
                 {
                     var t = new ChainTable();
@@ -1867,39 +1816,32 @@ public static class MultiTest
                     t.SetHp(t.O1, 10);
                     int mine = t.HandCount(t.Turn);
                     var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
-                    bool held = events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && t.HandCount(t.O1) > 0;
+                    bool together = t.HandCount(t.Turn) == mine + 1 && events.OfType<DeathPending>().Any(e => e.Actor == t.O1);
                     events = t.Run(t.Now + 10);
-                    Check(held && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == mine && events.OfType<TurnStarted>().Any(),
-                        "115 대상이 사망 대기 — 강탈은 기다린다 · 최종 사망하면 강탈 불발 · 다음 턴으로");
+                    Check(together && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
+                        "115 대상이 HP 0 이 돼도 — 피해와 강탈이 함께 (멈추지 않는다) → 사망 대기 → 최종 사망 · 다음 턴");
                 }
                 {
                     var t = new ChainTable();
                     t.SetHp(t.O1, 10);
-                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
                     int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
                     t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
-                    DeathPending pending = t.RunUntil<DeathPending>(40);
-                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
-                    t.Run(t.Now + 3);
-                    bool held = t.HandCount(t.Turn) == mine; // 함정 체인 반응 시간 — 사망 대기가 남아 아직 강탈 전
-                    var events = t.Run(t.Now + 20);
-                    Check(fired && held && t.Hp(t.O1) == 10 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && !events.OfType<PlayerDied>().Any(),
-                        "115 사망 대기에서 살아나면 — 사망 처리를 마친 뒤 강탈");
+                    var events = t.Run(t.Now + 30);
+                    Check(events.OfType<TrapActivated>().Any(e => e.Actor == t.O1) && t.Hp(t.O1) == 10 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && !events.OfType<PlayerDied>().Any(),
+                        "115 HP 0 → 체인 끝에 「본인 사망 대기」 함정 자동 발동 · HP 10 생존 · 강탈은 그대로");
                 }
                 {
                     var t = new ChainTable();
-                    Card back = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged, 0));
+                    t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged, 0));
                     int mine = t.HandCount(t.Turn), theirs = t.HandCount(t.O1);
                     t.PlayCard(t.Turn, t.Give(t.Turn, Real(115)), t.O1);
-                    TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
-                    bool held = window != null && t.HandCount(t.Turn) == mine;
-                    t.At(window != null ? window.OpensAt + 0.5 : t.Now);
-                    bool fired = window != null && t.Fire(t.O1, back).OfType<TrapActivated>().Any();
-                    var events = t.Run(t.Now + 20);
+                    var events = t.Run(t.Now + 30);
+                    bool fired = events.OfType<TrapActivated>().Any(e => e.Actor == t.O1);
                     int hitAt = events.FindIndex(e => e is HpChanged h && h.Actor == t.Turn);
                     int stealAt = events.FindIndex(e => e is HandCardsMoved m && m.From == t.O1 && m.To == t.Turn);
-                    Check(held && fired && t.Hp(t.Turn) == 90 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && hitAt >= 0 && stealAt > hitAt,
-                        $"115 「피해 받은 후」 함정 — 함정 처리를 마친 뒤 강탈 (반격 {hitAt} · 강탈 {stealAt})");
+                    Check(fired && t.Hp(t.Turn) == 90 && t.HandCount(t.Turn) == mine + 1 && t.HandCount(t.O1) == theirs - 1 && stealAt >= 0 && hitAt > stealAt,
+                        $"115 「피해 받은 후」 함정 — 강탈까지 끝난 뒤 자동 반격 (강탈 {stealAt} · 반격 {hitAt})");
                 }
                 {
                     var t = new ChainTable();
@@ -2033,12 +1975,10 @@ public static class MultiTest
                 {
                     var t = new ChainTable();
                     t.SetHp(t.O1, 40);
-                    Card save = t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
+                    t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 10, now = true } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
                     t.PlayCard(t.Turn, t.Give(t.Turn, Real(105)), t.O1);
-                    DeathPending pending = t.RunUntil<DeathPending>(40);
-                    bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, save);
-                    var events = t.Run(t.Now + 25);
-                    Check(fired && t.Hp(t.O1) == 10 && t.Hp(t.Turn) == 100 && !events.OfType<PlayerDied>().Any(), "105 사망 대기에서 살아나도 — 쓰러뜨린 것, 반동 없음");
+                    var events = t.Run(t.Now + 30);
+                    Check(events.OfType<TrapActivated>().Any(e => e.Actor == t.O1) && t.Hp(t.O1) == 10 && t.Hp(t.Turn) == 100 && !events.OfType<PlayerDied>().Any(), "105 HP 0 뒤 함정으로 살아나도 — 쓰러뜨린 것, 반동 없음");
                 }
                 {
                     var t = new ChainTable();
@@ -2758,18 +2698,6 @@ public static class MultiTest
             t.Run(20);
             Check(!t.State(t.O1).IsChapchu, "C15 나에게 오는 찹츄 무효");
         }
-        {
-            var t = new ChainTable();
-            Func<int, Card> t05 = id => new Card(id, 905, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new NegateEffect(), new SkipTurnEffect { subject = EffectSubject.Target } }, action, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.ReactToCard, 0, ReactCondition.TargetsMe);
-            Card mine = t.SetTrapCard(t.O1, t05), other = t.SetTrapCard(t.O2, t05);
-            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
-            t.At(2);
-            Check(t.Code(t.Fire(t.O2, other)) == RejectCode.CannotReact, "T05 조건 「나를 대상으로」 — 대상 아닌 사람 → 9");
-            t.Fire(t.O1, mine);
-            t.Run(20);
-            Check(t.Hp(t.O1) == 100 && t.State(t.Turn).SkipNextTurn, "T05 행동 카드 무효 + 시전자 턴 스킵");
-        }
-
         // ── 「~한 후」 함정 ──
         void After(string name, Action<ChainTable> setup, Func<ChainTable, Card> trap, Action<ChainTable> act, Func<ChainTable, bool> result)
         {
@@ -2777,17 +2705,8 @@ public static class MultiTest
             setup?.Invoke(t);
             Card card = trap(t);
             act(t);
-            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
-            if (window == null)
-            {
-                Check(false, name + " — 함정 시간이 열리지 않았다");
-                return;
-            }
-
-            t.At(window.OpensAt + 0.5);
-            bool fired = t.Fire(t.O1, card).OfType<TrapActivated>().Any();
-            t.Run(window.OpensAt + 20);
-            Check(fired && result(t), name);
+            bool fired = t.Run(t.Now + 40).OfType<TrapActivated>().Any(e => e.Actor == t.O1 && e.CardInstanceId == card.InstanceId);
+            Check(fired && result(t), name + (fired ? "" : " — 함정이 발동하지 않았다"));
         }
 
         After("T08 훔쳐진 후 → 되훔침", null,
@@ -2801,7 +2720,7 @@ public static class MultiTest
         After("T10 함정 파괴된 후 → 반격", t => t.GiveTrap(t.O1, ChainTable.TrapReact),
             t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterTrapDestroyed, 0, Dmg(10))),
             t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DestroyTrapEffect { count = 1 })), t.O1),
-            t => t.Hp(t.Turn) == 90 || t.TrapCount(t.O1) == 0); // 무작위로 반격 함정 자신이 파괴되면 열리지 않는다 — 열렸다면 반격
+            t => t.Hp(t.Turn) == 90 || t.TrapCount(t.O1) == 0); // 무작위로 반격 함정 자신이 파괴되면 발동하지 않는다 — 발동했다면 반격
         After("T13 카드 반환된 후 → 시전자 피해",
             t => t.SetHp(t.O2, 100),
             t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterCardReturned, 0, Dmg(10))),
@@ -2822,29 +2741,12 @@ public static class MultiTest
             t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1),
             t => t.State(t.O1).IsChapchu && t.State(t.Turn).IsChapchu);
         {
-            // T12 — 내 함정이 카운터로 무효된 뒤
-            var t = new ChainTable();
-            Card react = t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.ReactToCard, 0, Dmg(10)));
-            Card t12 = t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterMyTrapNegated, 0, new DiscardEffect { subject = EffectSubject.Target, count = 1 }));
-            Card negate = t.Give(t.Turn, Ctr(TargetType.None, trapOnly, ReactCondition.Any, new NegateEffect()));
-            t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
-            t.At(2);
-            t.Fire(t.O1, react);
-            t.At(4);
-            t.Counter(t.Turn, negate);
-            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
-            int hand = t.HandCount(t.Turn);
-            bool fired = window != null && t.FireAt(window.OpensAt + 0.5, t.O1, t12);
-            t.Run(80);
-            Check(fired && t.HandCount(t.Turn) == hand - 1, "T12 내 함정 무효된 후 → 무효시킨 사람 손패 버림");
-        }
-        {
             // T15 — 턴 스킵된 뒤 → 다음 실제 턴에 추가 드로우
             var t = new ChainTable();
-            Card t15 = t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.AfterTurnSkipped, 0, new DrawAtTurnStartEffect { subject = EffectSubject.Self, count = 2 }));
+            t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.AfterTurnSkipped, 0, new DrawAtTurnStartEffect { subject = EffectSubject.Self, count = 2 }));
             t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SkipTurnEffect { subject = EffectSubject.Target })), t.O1);
-            TrapWindowStarted window = t.RunUntil<TrapWindowStarted>(40);
-            bool fired = window != null && t.FireAt(window.OpensAt + 0.5, t.O1, t15);
+            TrapActivated trap = t.RunUntil<TrapActivated>(80);
+            bool fired = trap != null && trap.Actor == t.O1;
             int hand = t.HandCount(t.O1);
             t.RunUntilTurn(t.O1, 200);
             Check(fired && t.HandCount(t.O1) == hand + 2, "T15 턴 스킵된 후 → 다음 실제 턴 시작에 +2장");
@@ -2856,11 +2758,10 @@ public static class MultiTest
             Card t17 = t.SetTrapCard(t.O1, Trp(TargetType.Self, TrapTrigger.SelfDeathPending, 0, new SurviveAtEffect { hp = 10, now = true, discardHandAndTraps = true }));
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.PlayCard(t.Turn, t.Give(t.Turn, hit), t.O1);
-            DeathPending pending = t.RunUntil<DeathPending>(40);
-            bool fired = pending != null && t.FireAt(pending.StartsAt + 0.5, t.O1, t17);
             var events = t.Run(80);
-            Check(fired && t.Hp(t.O1) == 10 && t.HandCount(t.O1) == 0 && t.TrapCount(t.O1) == 0 && events.OfType<DeathAvoided>().Any() && !events.OfType<PlayerDied>().Any(),
-                "T17 사망 대기 → HP 10 생존 · 손패 · 함정 버림 · 사망 없음");
+            bool fired = events.OfType<TrapActivated>().Any(e => e.CardInstanceId == t17.InstanceId);
+            Check(fired && t.Hp(t.O1) == 10 && t.HandCount(t.O1) == 0 && t.TrapCount(t.O1) == 0 && !events.OfType<PlayerDied>().Any(),
+                "T17 HP 0 → 체인 끝에 자동 발동 · HP 10 생존 · 손패 · 다른 함정 버림 · 사망 없음");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -2920,16 +2821,14 @@ public static class MultiTest
 
         // 시험용 카드 (make = 인스턴스 ID → 카드)
         public Card Give(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Hand.Add(c); return c; }
-        public Card SetTrapCard(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Traps.Add(c); return c; }
+        public Card SetTrapCard(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Traps.Add(c); RecordSetOrder(c); return c; }
         public PlayerState State(int actor) => (PlayerState)_players[actor];
         public List<Card> Hand(int actor) => State(actor).Hand;
         public int TrapCount(int actor) => State(actor).Traps.Count;
 
         public IReadOnlyList<GameEvent> PlayCard(int actor, Card card, params int[] targets) => Server.PlayCard(actor, card.InstanceId, targets);
         public IReadOnlyList<GameEvent> Counter(int actor, Card card, params int[] targets) => Server.PlayCounter(actor, card.InstanceId, targets);
-        public IReadOnlyList<GameEvent> Fire(int actor, Card trap, params int[] targets) => Server.ActivateTrap(actor, trap.InstanceId, targets);
         public double Now => _now;
-        public bool FireAt(double at, int actor, Card trap) { _now = at; return Fire(actor, trap).OfType<TrapActivated>().Any(); }
 
         // 내고 반응 없이 끝까지 (체인 처리까지)
         public List<GameEvent> PlayAndResolve(int actor, Card card, params int[] targets)
@@ -2965,15 +2864,24 @@ public static class MultiTest
                 Server.Tick();
             Server.Tick();
         }
-        public void GiveTrap(int actor, int kind) => ((PlayerState)_players[actor]).Traps.Add(MakeCard(_nextInstance++, kind));
+        public void GiveTrap(int actor, int kind)
+        {
+            Card c = MakeCard(_nextInstance++, kind);
+            ((PlayerState)_players[actor]).Traps.Add(c);
+            RecordSetOrder(c);
+        }
+
+        // SetTrap 처럼 설치 순서를 남긴다 — 여러 함정은 설치한 순서대로 발동 (04 6절)
+        private void RecordSetOrder(Card c)
+        {
+            var order = (Dictionary<int, int>)typeof(GameServer).GetField(ServerTrapSetOrderField, Private).GetValue(Server);
+            FieldInfo next = typeof(GameServer).GetField(ServerNextTrapSetOrderField, Private);
+            int n = (int)next.GetValue(Server);
+            order[c.InstanceId] = n;
+            next.SetValue(Server, n + 1);
+        }
 
         public IReadOnlyList<GameEvent> SetTrap(int actor, int kind) => Server.SetTrap(actor, Find(actor, kind));
-
-        public IReadOnlyList<GameEvent> Activate(int actor, int kind)
-        {
-            Card trap = ((PlayerState)_players[actor]).Traps.Find(c => c.CardId == kind);
-            return Server.ActivateTrap(actor, trap != null ? trap.InstanceId : -1, new int[0]);
-        }
 
         // 손패를 n 장으로 — 모자라면 Hit 을 더한다 (찹츄 시험)
         public List<Card> Discard => (List<Card>)typeof(GameServer).GetField(ServerDiscardField, Private).GetValue(Server);

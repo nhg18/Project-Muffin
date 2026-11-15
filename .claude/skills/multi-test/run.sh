@@ -328,11 +328,6 @@ run_full() {
             esac
         done
         [ $ended -eq 1 ] && break
-        # 함정 시간이면 맞은 사람이 함정을 낸다
-        for project in "${EDITORS[@]}"; do
-            out=$(call "$project" TrapProbe)
-            case "$out" in OK*) log "  $(name_of "$project"): $out" ;; esac
-        done
         sleep 1
     done
     [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
@@ -394,8 +389,6 @@ run_solo() {
             FAIL*) fail "$out"; return ;;
             *"게임 끝"*) ended=1; break ;;
         esac
-        out=$(call "$MAIN" TrapProbe)
-        case "$out" in OK*) log "  $out" ;; esac
         sleep 1
     done
     [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }

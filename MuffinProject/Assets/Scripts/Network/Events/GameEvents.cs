@@ -27,7 +27,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
         public static event Action<int, int, int> OnTrapSet;                 // actorNumber, handCount, trapCount — 함정 설치 (종류는 OnMyTrapSet)
         public static event Action<int, int, int, int[], int> OnTrapActivated; // actorNumber, cardInstanceId, cardId, targets, trapCount — 공개 · 체인에 올라감
-        public static event Action<double, double> OnTrapWindowStarted;      // opensAt, deadline — 「~한 후」 함정 시간
+        public static event Action<int[], int[], int> OnChainDiscarded;      // cardInstanceIds, cardIds, discardCount — 체인 · 함정 카드가 쓴 순서대로 버림 더미로 (04 9.1)
         public static event Action<int, int, int, int, int> OnHandCardsMoved; // from, to, count, fromHandCount, toHandCount — 훔치기 · 교환 (어떤 카드인지는 OnMyCardsGained · Lost)
         public static event Action<int, int[], int[], int, int> OnCardsDiscarded; // actorNumber, cardInstanceIds, cardIds, handCount, discardCount — 강제 버림 (공개)
         public static event Action<int, int, int, int, int> OnTrapDestroyed;  // owner, cardInstanceId, cardId, trapCount, discardCount — 함정 파괴 (공개)
@@ -77,7 +77,7 @@ namespace Chapchu.Network.Events
         public static void RaiseTurnResumed(int actorNumber, double deadline) => OnTurnResumed?.Invoke(actorNumber, deadline);
         public static void RaiseTrapSet(int actorNumber, int handCount, int trapCount) => OnTrapSet?.Invoke(actorNumber, handCount, trapCount);
         public static void RaiseTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount) => OnTrapActivated?.Invoke(actorNumber, cardInstanceId, cardId, targets, trapCount);
-        public static void RaiseTrapWindowStarted(double opensAt, double deadline) => OnTrapWindowStarted?.Invoke(opensAt, deadline);
+        public static void RaiseChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount) => OnChainDiscarded?.Invoke(cardInstanceIds, cardIds, discardCount);
         public static void RaiseMyTrapSet(int cardInstanceId, int cardId) => OnMyTrapSet?.Invoke(cardInstanceId, cardId);
         public static void RaiseHandCardsMoved(int from, int to, int count, int fromHandCount, int toHandCount) => OnHandCardsMoved?.Invoke(from, to, count, fromHandCount, toHandCount);
         public static void RaiseCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount) => OnCardsDiscarded?.Invoke(actorNumber, cardInstanceIds, cardIds, handCount, discardCount);

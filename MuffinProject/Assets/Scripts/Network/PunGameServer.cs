@@ -139,9 +139,6 @@ namespace Chapchu.Network
         /// <summary>함정 설치 — 내 턴 · 메인 행동 전 · 빈 슬롯 (04-card.md 6절). 메인 행동이 아니다.</summary>
         public void RequestSetTrap(int cardInstanceId) => SendRequest(nameof(RPC_RequestSetTrap), cardInstanceId);
 
-        /// <summary>설치한 함정 발동 — 조건 · 시점은 방장이 본다 (04-card.md 6절 「발동 시점」). 대상은 고르는 카드일 때만 쓰인다.</summary>
-        public void RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestActivateTrap), cardInstanceId, targetActorNumbers);
-
         /// <summary>
         /// 내 손패 · 설치 함정 내용을 다시 받는다 (09-network.md 10절) — 화면이 늦게 열렸거나 다시 그릴 때. 답은 GameEvents.OnMySync.
         /// 공개 값(체력 · 장수 · 턴)은 CustomProperties 스냅샷으로 읽는다.
@@ -192,14 +189,6 @@ namespace Chapchu.Network
             if (!NetworkManager.IsTrustedMaster) return;
             if (!AllowRequest(info)) return;
             Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
-        }
-
-        [PunRPC]
-        private void RPC_RequestActivateTrap(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
-        {
-            if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
-            Send(_server.ActivateTrap(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
         [PunRPC]
@@ -357,14 +346,10 @@ namespace Chapchu.Network
 
                     case CardResolved resolved:
                         Broadcast(nameof(RPC_OnCardResolved), resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
-                        roomProps[RoomProps.DiscardCount] = resolved.DiscardCount;
-                        roomProps[RoomProps.DiscardTop] = resolved.CardId;
                         break;
 
                     case CardNegated negated:
                         Broadcast(nameof(RPC_OnCardNegated), negated.Actor, negated.CardInstanceId, negated.CardId, negated.DiscardCount);
-                        roomProps[RoomProps.DiscardCount] = negated.DiscardCount;
-                        roomProps[RoomProps.DiscardTop] = negated.CardId;
                         break;
 
                     case EmptyDeckDamaged empty:
@@ -408,8 +393,10 @@ namespace Chapchu.Network
                         PlayerPropsOf(playerProps, trap.Actor)[PlayerProps.TrapCount] = trap.TrapCount;
                         break;
 
-                    case TrapWindowStarted window:
-                        Broadcast(nameof(RPC_OnTrapWindowStarted), window.OpensAt, window.Deadline);
+                    case ChainDiscarded chainDiscarded:
+                        Broadcast(nameof(RPC_OnChainDiscarded), chainDiscarded.CardInstanceIds, chainDiscarded.CardIds, chainDiscarded.DiscardCount);
+                        roomProps[RoomProps.DiscardCount] = chainDiscarded.DiscardCount;
+                        SetDiscardTop(roomProps, chainDiscarded.CardIds);
                         break;
 
                     case HandCardsMoved moved:
@@ -811,10 +798,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnTrapWindowStarted(int seq, double opensAt, double deadline, PhotonMessageInfo info)
+        private void RPC_OnChainDiscarded(int seq, int[] cardInstanceIds, int[] cardIds, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq, info))
-                GameEvents.RaiseTrapWindowStarted(opensAt, deadline);
+            if (Paired(cardInstanceIds, cardIds) && Accept(seq, info))
+                GameEvents.RaiseChainDiscarded(cardInstanceIds, cardIds, discardCount);
         }
 
         [PunRPC]

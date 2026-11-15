@@ -587,29 +587,15 @@ namespace Chapchu.Game.Bots
             PlayerState me = _server.StateOf(bot);
             ChainEntry top = _server.ChainTop;
             bool reactionOpen = _server.IsReactionOpen(now);
-            bool inReveal = top != null && !reactionOpen;
 
-            // ① 내가 사망 대기 — 사망 관련 함정 (설치 순서). 06 3절: 사망 대기 중엔 이것만
-            if (me.Life == LifeState.DeathPending)
-            {
-                Card dying = me.Traps.FirstOrDefault(c => c.Trigger == TrapTrigger.SelfDeathPending);
-                if (dying != null && !inReveal)
-                {
-                    reaction = TrapReaction(bot, dying, $"death:{_server.DeathDeadline}", now, "7-4 사망 대기 → 사망 관련 함정");
-                    return true;
-                }
-
-                reaction = default;
-                return false;
-            }
-
+            // 함정은 자동 발동이라 봇이 고르지 않는다 (04-card.md 6절 · 18-bot 7-4, 2026-11-15)
             if (me.Life != LifeState.Alive)
             {
                 reaction = default;
                 return false;
             }
 
-            // ② 나를 대상으로 한 남의 카드가 체인 맨 위 — 카운터, 없으면 「카드 반응」 함정. 남끼리의 카드에는 끼지 않는다
+            // 나를 대상으로 한 남의 카드가 체인 맨 위 — 카운터. 남끼리의 카드에는 끼지 않는다
             if (reactionOpen && top.User != bot && top.Targets.Contains(bot))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
@@ -622,51 +608,13 @@ namespace Chapchu.Game.Bots
                         () => _server.PlayCounter(bot, instanceId, targets));
                     return true;
                 }
-
-                Card react = me.Traps.FirstOrDefault(c => c.Trigger == TrapTrigger.ReactToCard && _server.CanReactTo(c, bot, top));
-                if (react != null)
-                {
-                    reaction = TrapReaction(bot, react, key, _server.ReactionOpensAt, $"7-4 나를 노린 카드 {top.Card.CardId} 에 함정");
-                    return true;
-                }
-            }
-
-            // ③ 함정 시간 — 「~한 후」 조건(맞음 · 훔쳐짐 · 버려짐 · 파괴 · 스킵 …)이 맞는 함정, 설치 순서
-            if (_server.IsTrapWindowOpenAt(now))
-            {
-                Card after = me.Traps.FirstOrDefault(c => _server.HasAfterTrigger(bot, c));
-                if (after != null)
-                {
-                    reaction = TrapReaction(bot, after, $"trapwin:{_server.TrapWindowOpensAt}", _server.TrapWindowOpensAt, $"7-4 함정 시간 ({after.Trigger}) → 함정");
-                    return true;
-                }
-            }
-
-            // ④ 조건이 맞는 상태 함정 (HP 이하 · 찹츄 존재) — 연출 중이 아닐 때
-            if (!inReveal)
-            {
-                Card state = me.Traps.FirstOrDefault(c =>
-                    (c.Trigger == TrapTrigger.HpAtMost && me.Hp <= c.TriggerValue) ||
-                    (c.Trigger == TrapTrigger.ChapchuExists && _server.ActorsInGame.Any(a => a != bot && _server.StateOf(a).IsChapchu)));
-                if (state != null)
-                {
-                    reaction = TrapReaction(bot, state, $"state:{state.InstanceId}", now, "7-4 함정 조건 충족 → 함정");
-                    return true;
-                }
             }
 
             reaction = default;
             return false;
         }
 
-        private Reaction TrapReaction(int bot, Card trap, string key, double opensAt, string reason)
-        {
-            int instanceId = trap.InstanceId;
-            int[] targets = trap.Target == TargetType.OneOther ? SortedOpponents(bot).Take(1).ToArray() : Array.Empty<int>();
-            return new Reaction(key, opensAt, $"{reason} → 카드 {trap.CardId} (#{instanceId})", () => _server.ActivateTrap(bot, instanceId, targets));
-        }
-
-        // 7-4 — 대상을 고르는 카운터 · 함정의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
+        // 7-4 — 대상을 고르는 카운터의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
         private int[] SortedOpponents(int bot)
         {
             return _server.ActorsInGame
