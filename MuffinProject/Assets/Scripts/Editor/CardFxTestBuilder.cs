@@ -434,7 +434,6 @@ namespace Chapchu.EditorTools
             return material;
         }
 
-        // 목록에 지옥참마도 줄이 없으면 더하고, 연출 프리팹 연결을 맞춘다. 다른 줄은 건드리지 않는다
         private static FxDummySeat EnsureSeat(RectTransform stage, string name, string label, Vector2 anchor, Vector2 pivot, Sprite round)
         {
             RectTransform existing = Child(stage, name);
