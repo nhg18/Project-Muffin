@@ -393,7 +393,7 @@ namespace Chapchu.UI.Fx.Band
             cutIn.gameObject.SetActive(true);
             cutIn.alpha = 1f;
             backdrop.alpha = 0f;
-            band.Slide = BandFrom * band.rectTransform.rect.width;
+            band.Slide = BandFrom * band.Width;
             band.StripeShift = 0f;
             Apply(character, characterGroup, CharacterIn[0], new Vector2(ScreenWidth, 0f), _characterOrigin);
             Apply(_moving, null, Rest(0f), _moving.rect.size, _moving == art ? _artOrigin : _avatarOrigin);
@@ -410,7 +410,7 @@ namespace Chapchu.UI.Fx.Band
         private void PlayTimeline()
         {
             float screen = ScreenWidth;
-            float bandFrom = BandFrom * band.rectTransform.rect.width;
+            float bandFrom = BandFrom * band.Width;
             Vector2 moveUnit = _moving.rect.size;
             Vector2 moveOrigin = _moving == art ? _artOrigin : _avatarOrigin;
             Pose[] moveKeys = Moves.TryGetValue(move, out Pose[] keys) ? keys : Moves[BandMove.Nod];

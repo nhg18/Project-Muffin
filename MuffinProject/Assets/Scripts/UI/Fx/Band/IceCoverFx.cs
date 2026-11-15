@@ -7,6 +7,8 @@ namespace Chapchu.UI.Fx.Band
     /// <summary>
     /// 4 단계 장식 「꽁꽁」 — 대상 자리에 얼음 덮개가 크게 나타나며 내려앉는다 (시안 ice · .vw-ice — 얼음!).
     /// 시안에서는 덮개가 자리에 남지만, 남는 상태 표시(턴 건너뜀)는 게임 화면 몫이라 이 덮개는 연출이 지워질 때 같이 사라진다.
+    /// 면의 그라데이션(시안 linear-gradient(135deg, 시작 색 .85, 끝 색 .55))은 끝 색 판(면, 마스크) 위에 Common ui_fade 를 45° 돌린 빛(<see cref="shine"/>)을 겹쳐 그린다 —
+    /// 빛의 색 · 투명도(2/3 → 0)는 둘을 겹친 결과가 시안 그라데이션과 같아지는 값이다. 빛은 면의 대각선 방향 길이에 맞춰야 모서리에서 시작 · 끝 색이 된다.
     /// </summary>
     public class IceCoverFx : CardFxStep
     {
@@ -14,6 +16,8 @@ namespace Chapchu.UI.Fx.Band
         [Tooltip("얼음 덮개 — 대상 자리 크기에 맞춘다. 가운데가 기준점.")]
         [SerializeField] private RectTransform cover;
         [SerializeField] private CanvasGroup coverGroup;
+        [Tooltip("면 위 그라데이션 빛 — 45° 돌린 정사각형. 덮개를 맞출 때 면의 (너비 + 높이) / √2 로 크기를 맞춘다 (CSS 135deg 그라데이션 길이).")]
+        [SerializeField] private RectTransform shine;
 
         [Header("모양 · 시간")]
         [Tooltip("자리 둘레 밖으로 나오는 거리 (시안 px — .vw-ice inset -6px 은 판 테 3px 안쪽 기준).")]
@@ -36,6 +40,8 @@ namespace Chapchu.UI.Fx.Band
                 missing.Add(nameof(cover));
             if (coverGroup == null)
                 missing.Add(nameof(coverGroup));
+            if (shine == null)
+                missing.Add(nameof(shine));
             if (missing.Count > 0)
                 Debug.LogError($"[{nameof(IceCoverFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
         }
@@ -80,6 +86,8 @@ namespace Chapchu.UI.Fx.Band
 
             cover.sizeDelta = max - min + Vector2.one * grow * 2f;
             cover.anchoredPosition = (min + max) / 2f - Rect.NormalizedToPoint(parent.rect, cover.anchorMin);
+            Rect face = ((RectTransform)shine.parent).rect;
+            shine.sizeDelta = Vector2.one * (face.width + face.height) / Mathf.Sqrt(2f);
         }
     }
 }

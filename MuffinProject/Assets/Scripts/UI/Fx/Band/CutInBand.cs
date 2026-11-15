@@ -1,64 +1,51 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.Band
 {
     /// <summary>
-    /// 띠 컷인의 띠 한 장 — 기운 평행사변형을 한 메시로 그린다 (시안 .ci-band · .ci-lines).
-    /// 면은 위아래 가장자리 색 → 가운데 색 → 가장자리 색, 바깥에 검은 테 · 빛 테 · 번지는 빛, 안에 흐르는 세로 줄무늬.
-    /// CSS skewY 처럼 위아래 변만 기울고 옆 변 · 줄무늬는 세로 그대로다. 밀기(<see cref="Slide"/>)는 기울이기 전에 더해 띠가 제 결을 따라 들어온다.
-    /// 길이는 모두 화면 단위 (시안 px × 1.5).
+    /// 띠 컷인의 띠 (시안 .ci-band · .ci-lines) — 카드 색 넣기 · 밀기 · 줄무늬 흐르기를 맡는다. 그림은 아래 조각이 그린다 (뒤에서 앞으로):
+    /// 번지는 빛(<see cref="UIShape"/> 번짐, 시안 0 0 60px glow) → 빛 테(시안 0 0 0 7px glow) → 검은 테(시안 0 0 0 4px #000) → 면(c1, 마스크)
+    /// → 면 안에 위아래 가장자리 그라데이션(Common ui_fade + c2) · 세로 줄무늬(BandStripe 프리팹).
+    /// 테 · 빛은 면 밖 고리라 판째 흐려질 때(CanvasGroup) 면 너머로 비치지 않는다. 면이 마스크라 테를 면과 한 도형으로 그리면 줄무늬가 테를 덮는다.
+    /// 번지는 빛은 그 바깥 절반만 그린다 — 테 두께 · 번짐 = blur (blur × 2 번짐의 면 밖 절반과 같다).
+    /// 기울기(CSS skewY)는 조각마다 붙은 <see cref="BandSkew"/> 가 <see cref="Slope"/> 로 민다. 줄무늬는 세로 그대로라 기울이지 않고 면 마스크가 자른다.
+    /// 줄무늬 판은 띠 왼쪽 끝에서 16 주기 — 띠 너비 약 3500(화면 너비 약 2900, 21:9 까지)을 덮는다.
     /// </summary>
-    [RequireComponent(typeof(CanvasRenderer))] // Graphic 은 CanvasRenderer 를 스스로 붙이지 않는다
-    public class CutInBand : MaskableGraphic
+    public class CutInBand : MonoBehaviour
     {
-        // 번지는 빛을 나누는 띠 수 — 가우스 번짐을 이만큼의 곧은 띠로 근사한다
-        private const int BlurSteps = 6;
-
         [Tooltip("기울기 (도) — 오른쪽이 올라간다 (시안 skewY(-8deg)).")]
         [SerializeField] private float skew = 8f;
-
-        [Header("면 (시안 linear-gradient(180deg, c2, c1 22%, c1 78%, c2))")]
-        [Tooltip("위아래 가장자리 색 (시안 c2).")]
-        [SerializeField] private Color edgeColor = new Color32(0x5a, 0x00, 0x10, 0xff);
-        [Tooltip("가운데 색 (시안 c1).")]
-        [SerializeField] private Color middleColor = new Color32(0xe0, 0x11, 0x2b, 0xff);
-        [Tooltip("가장자리 색이 가운데 색이 되는 곳 — 높이 대비 (위아래 같이).")]
-        [Range(0f, 0.5f)]
-        [SerializeField] private float middleFrom = 0.22f;
-
-        [Header("테 · 빛 (시안 box-shadow: 0 0 0 4px #000, 0 0 0 7px glow, 0 0 60px glow)")]
-        [Tooltip("띠 바로 바깥 테 색 (시안 #000).")]
-        [SerializeField] private Color inkColor = Color.black;
-        [Tooltip("검은 테 두께.")]
-        [SerializeField] private float inkWidth = 6f;
-        [Tooltip("빛 색 (시안 glow).")]
-        [SerializeField] private Color glowColor = new Color32(0xff, 0x2a, 0x3a, 0xff);
-        [Tooltip("검은 테 바깥 빛 테 두께.")]
-        [SerializeField] private float glowLineWidth = 4.5f;
-        [Tooltip("번지는 빛 길이 (시안 blur 값 — 가우스 σ 는 그 절반).")]
-        [SerializeField] private float glowBlur = 90f;
-
-        [Header("줄무늬 (시안 .ci-lines repeating-linear-gradient)")]
-        [Tooltip("무늬 한 주기 (시안 156px).")]
+        [Tooltip("무늬 한 주기 — 줄무늬 프리팹 한 칸 너비 (시안 156px).")]
         [SerializeField] private float stripePeriod = 234f;
-        [Tooltip("무늬가 시작하는 곳 — 띠 왼쪽 끝에서 띠 너비 대비 (시안 inset -50%).")]
-        [SerializeField] private float stripeOrigin = -0.5f;
-        [Tooltip("밝은 줄 — 주기 안에서 시작 · 너비 (시안 60px · 4px).")]
-        [SerializeField] private Vector2 lightStripe = new Vector2(90f, 6f);
-        [Tooltip("밝은 줄 색 (시안 rgba(255,255,255,.22)).")]
-        [SerializeField] private Color lightStripeColor = new Color(1f, 1f, 1f, 0.22f);
-        [Tooltip("어두운 줄 — 주기 안에서 시작 · 너비 (시안 150px · 6px).")]
-        [SerializeField] private Vector2 darkStripe = new Vector2(225f, 9f);
-        [Tooltip("어두운 줄 색 (시안 rgba(0,0,0,.25)).")]
-        [SerializeField] private Color darkStripeColor = new Color(0f, 0f, 0f, 0.25f);
 
-        // 고리 꼭짓점 버퍼 — 줄무늬가 흐르는 동안 매 프레임 메시를 다시 만들어 배열을 새로 만들지 않는다
-        private readonly Vector2[] _innerCorners = new Vector2[4];
-        private readonly Vector2[] _outerCorners = new Vector2[4];
+        [Header("조각")]
+        [Tooltip("면 (시안 c1) — 가장자리 그라데이션 · 줄무늬를 자르는 마스크.")]
+        [SerializeField] private UIShape face;
+        [Tooltip("위아래 가장자리 그라데이션 (시안 c2 → c1 22%) — 색만 바꾼다.")]
+        [SerializeField] private Image[] edges;
+        [Tooltip("빛 테 · 번지는 빛 (시안 glow) — 테 색만 바꾸고 투명도는 그림 값 그대로.")]
+        [SerializeField] private UIShape[] glows;
+        [Tooltip("줄무늬 판 (시안 .ci-lines) — 왼쪽으로 밀어 흐르게 한다.")]
+        [SerializeField] private RectTransform lines;
 
+        private RectTransform _rect;
+        private Vector2 _origin;
+        private Vector2 _linesOrigin;
+        private bool _hasOrigin;
         private float _slide;
         private float _stripeShift;
+
+        /// <summary>기울기 — 가로 1 에 세로로 오르는 양 (tan).</summary>
+        public float Slope => Mathf.Tan(skew * Mathf.Deg2Rad);
+
+        /// <summary>띠 너비 (화면 단위).</summary>
+        public float Width => Rect.rect.width;
+
+        /// <summary>무늬 한 주기 (화면 단위).</summary>
+        public float StripePeriod => stripePeriod;
 
         /// <summary>기울이기 전 가로로 민 거리 (화면 단위, 왼쪽 −). 시안 translateX — 띠가 제 기울기를 따라 움직인다.</summary>
         public float Slide
@@ -66,8 +53,9 @@ namespace Chapchu.UI.Fx.Band
             get => _slide;
             set
             {
+                KeepOrigin();
                 _slide = value;
-                SetVerticesDirty();
+                Rect.anchoredPosition = _origin + new Vector2(value, Slope * value);
             }
         }
 
@@ -77,135 +65,56 @@ namespace Chapchu.UI.Fx.Band
             get => _stripeShift;
             set
             {
+                KeepOrigin();
                 _stripeShift = value;
-                SetVerticesDirty();
+                lines.anchoredPosition = _linesOrigin + Vector2.left * value;
             }
         }
 
-        /// <summary>무늬 한 주기 (화면 단위).</summary>
-        public float StripePeriod => stripePeriod;
+        private RectTransform Rect => _rect != null ? _rect : _rect = (RectTransform)transform;
+
+        private void Awake()
+        {
+            var missing = new List<string>();
+            if (face == null)
+                missing.Add(nameof(face));
+            if (edges == null || edges.Length == 0 || Array.IndexOf(edges, null) >= 0)
+                missing.Add(nameof(edges));
+            if (glows == null || glows.Length == 0 || Array.IndexOf(glows, null) >= 0)
+                missing.Add(nameof(glows));
+            if (lines == null)
+                missing.Add(nameof(lines));
+            if (missing.Count > 0)
+                Debug.LogError($"[{nameof(CutInBand)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
+        }
 
         /// <summary>카드 색을 넣는다 — 가운데(c1) · 가장자리(c2) · 빛(glow).</summary>
         public void SetColors(Color middle, Color edge, Color glow)
         {
-            middleColor = middle;
-            edgeColor = edge;
-            glowColor = glow;
-            SetVerticesDirty();
+            face.color = middle;
+            foreach (Image image in edges)
+                image.color = edge;
+            foreach (UIShape shape in glows)
+                shape.BorderColor = new Color(glow.r, glow.g, glow.b, shape.BorderColor.a);
         }
 
-        protected override void OnPopulateMesh(VertexHelper vh)
+        // 프리팹에 저장된 제자리 — 처음 밀 때 한 번 기억한다 (Awake 순서와 상관없이)
+        private void KeepOrigin()
         {
-            vh.Clear();
-            Rect rect = rectTransform.rect;
-            if (rect.width <= 0f || rect.height <= 0f)
+            if (_hasOrigin)
                 return;
-
-            // 번지는 빛 → 빛 테 → 검은 테 → 면 → 줄무늬 (뒤에서 앞으로)
-            float lines = inkWidth + glowLineWidth;
-            float sigma = Mathf.Max(glowBlur / 2f, 0.01f);
-            for (int i = 0; i < BlurSteps; i++)
-            {
-                float from = Mathf.Lerp(lines, glowBlur, (float)i / BlurSteps);
-                float to = Mathf.Lerp(lines, glowBlur, (float)(i + 1) / BlurSteps);
-                float last = i == BlurSteps - 1 ? 0f : 1f;
-                Ring(vh, rect, from, to, WithAlpha(glowColor, BlurAlpha(from, sigma)), WithAlpha(glowColor, BlurAlpha(to, sigma) * last));
-            }
-            Ring(vh, rect, inkWidth, lines, glowColor, glowColor);
-            Ring(vh, rect, 0f, inkWidth, inkColor, inkColor);
-
-            float edge = rect.height * middleFrom;
-            Quad(vh, rect.xMin, rect.xMax, rect.yMin, rect.yMin + edge, edgeColor, middleColor);
-            Quad(vh, rect.xMin, rect.xMax, rect.yMin + edge, rect.yMax - edge, middleColor, middleColor);
-            Quad(vh, rect.xMin, rect.xMax, rect.yMax - edge, rect.yMax, middleColor, edgeColor);
-
-            Stripes(vh, rect, lightStripe, lightStripeColor);
-            Stripes(vh, rect, darkStripe, darkStripeColor);
+            _origin = Rect.anchoredPosition;
+            _linesOrigin = lines.anchoredPosition;
+            _hasOrigin = true;
         }
 
-        // 띠 안에서 주기마다 세로 줄 하나 — 띠 밖은 잘라 낸다 (시안 overflow:hidden)
-        private void Stripes(VertexHelper vh, Rect rect, Vector2 stripe, Color stripeColor)
+#if UNITY_EDITOR
+        // Inspector 에서 기울기를 바꾸면 조각을 다시 그린다
+        private void OnValidate()
         {
-            if (stripePeriod <= 0f || stripe.y <= 0f)
-                return;
-
-            float origin = rect.xMin + rect.width * stripeOrigin - _stripeShift;
-            float first = Mathf.Floor((rect.xMin - origin - stripe.x - stripe.y) / stripePeriod);
-            for (float k = first; origin + k * stripePeriod + stripe.x < rect.xMax; k++)
-            {
-                float x0 = Mathf.Max(rect.xMin, origin + k * stripePeriod + stripe.x);
-                float x1 = Mathf.Min(rect.xMax, origin + k * stripePeriod + stripe.x + stripe.y);
-                if (x1 > x0)
-                    Quad(vh, x0, x1, rect.yMin, rect.yMax, stripeColor, stripeColor);
-            }
+            foreach (BandSkew piece in GetComponentsInChildren<BandSkew>(true))
+                piece.GetComponent<Graphic>().SetVerticesDirty();
         }
-
-        // 띠 둘레 from ~ to 거리의 고리 (네 변 사다리꼴). 안쪽 색 → 바깥 색
-        private void Ring(VertexHelper vh, Rect rect, float from, float to, Color inner, Color outer)
-        {
-            int start = vh.currentVertCount;
-            Corners(rect, from, _innerCorners);
-            Corners(rect, to, _outerCorners);
-            for (int i = 0; i < 4; i++)
-            {
-                AddVert(vh, rect, _innerCorners[i], inner);
-                AddVert(vh, rect, _outerCorners[i], outer);
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                int a = start + i * 2;
-                int b = start + (i + 1) % 4 * 2;
-                vh.AddTriangle(a, a + 1, b + 1);
-                vh.AddTriangle(a, b + 1, b);
-            }
-        }
-
-        // 가로 띠 하나 — 아래 색 → 위 색
-        private void Quad(VertexHelper vh, float x0, float x1, float y0, float y1, Color bottom, Color top)
-        {
-            int start = vh.currentVertCount;
-            AddVert(vh, rectTransform.rect, new Vector2(x0, y0), bottom);
-            AddVert(vh, rectTransform.rect, new Vector2(x0, y1), top);
-            AddVert(vh, rectTransform.rect, new Vector2(x1, y1), top);
-            AddVert(vh, rectTransform.rect, new Vector2(x1, y0), bottom);
-            vh.AddTriangle(start, start + 1, start + 2);
-            vh.AddTriangle(start, start + 2, start + 3);
-        }
-
-        // 기울이기 전 좌표 → 밀고(translateX) 가운데를 기준으로 기울인다(skewY)
-        private void AddVert(VertexHelper vh, Rect rect, Vector2 local, Color vertexColor)
-        {
-            float x = local.x + _slide;
-            float y = local.y + Mathf.Tan(skew * Mathf.Deg2Rad) * (x - rect.center.x);
-            vh.AddVert(new Vector3(x, y), vertexColor * color, Vector4.zero);
-        }
-
-        private static void Corners(Rect rect, float grow, Vector2[] corners)
-        {
-            corners[0] = new Vector2(rect.xMin - grow, rect.yMin - grow);
-            corners[1] = new Vector2(rect.xMin - grow, rect.yMax + grow);
-            corners[2] = new Vector2(rect.xMax + grow, rect.yMax + grow);
-            corners[3] = new Vector2(rect.xMax + grow, rect.yMin - grow);
-        }
-
-        // 가장자리에서 d 만큼 떨어진 곳의 CSS 번짐 그림자 투명도 — ½·erfc(d / (σ√2))
-        private static float BlurAlpha(float distance, float sigma)
-        {
-            return 0.5f * Erfc(distance / (sigma * Mathf.Sqrt(2f)));
-        }
-
-        // Abramowitz · Stegun 7.1.26 (x ≥ 0)
-        private static float Erfc(float x)
-        {
-            float t = 1f / (1f + 0.3275911f * x);
-            float poly = t * (0.254829592f + t * (-0.284496736f + t * (1.421413741f + t * (-1.453152027f + t * 1.061405429f))));
-            return poly * Mathf.Exp(-x * x);
-        }
-
-        private static Color WithAlpha(Color c, float alpha)
-        {
-            c.a *= alpha;
-            return c;
-        }
+#endif
     }
 }
