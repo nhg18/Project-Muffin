@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -151,13 +152,13 @@ namespace Chapchu.UI.Fx.Gaepan
         // 시안 mk: 재생마다 새로 뽑는 무리 · 썰매 · 나무 · 눈송이
         private void Scatter()
         {
-            string[] keys = FxDog.Keys;
+            IReadOnlyList<string> keys = FxDog.Keys;
             _herd = new Runner[dogCounts.x];
             for (int i = 0; i < _herd.Length; i++)
             {
                 _herd[i] = new Runner
                 {
-                    Key = keys[i % keys.Length],
+                    Key = keys[i % keys.Count],
                     Offset = (i % 2 == 1 ? 1f : -1f) * Random.Range(herdSpread.x, herdSpread.y),
                     Depth = Random.Range(herdDepth.x, herdDepth.y),
                     Phase = Random.Range(0f, phaseRange),
@@ -170,7 +171,7 @@ namespace Chapchu.UI.Fx.Gaepan
             {
                 _sliders[i] = new Runner
                 {
-                    Key = keys[(i + 1) % keys.Length],
+                    Key = keys[(i + 1) % keys.Count],
                     Offset = Random.Range(sliderOffset.x, sliderOffset.y),
                     Depth = Random.Range(sliderDepth.x, sliderDepth.y),
                     Phase = Random.Range(0f, phaseRange),

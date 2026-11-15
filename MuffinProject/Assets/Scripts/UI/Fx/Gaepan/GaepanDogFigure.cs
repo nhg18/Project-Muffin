@@ -28,7 +28,7 @@ namespace Chapchu.UI.Fx.Gaepan
         private void Awake()
         {
             if (pose == null || origin == null || tailPivot == null || body == null || tail == null
-                || legPivots == null || legPivots.Length != FxDog.Legs.Length || legs == null || legs.Length != FxDog.Legs.Length)
+                || legPivots == null || legPivots.Length != FxDog.Legs.Count || legs == null || legs.Length != FxDog.Legs.Count)
                 Debug.LogError($"[{nameof(GaepanDogFigure)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
