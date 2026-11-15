@@ -38,6 +38,10 @@ namespace Chapchu.UI.Fx.Post
         {
             float pixelScale = context.Layer.PixelScale;
             var rect = (RectTransform)arrow.transform;
+            // 가장 클 때 배율에 맞춰 화살표 그림 해상도를 정한다
+            UICircleArrow shape = arrow.GetComponent<UICircleArrow>();
+            if (shape != null)
+                shape.SetMaxScale(pixelScale * Mathf.Max(scales));
             Tween spin = DOVirtual.Float(0f, 1f, durationMs / 1000f, time =>
             {
                 // 시안은 animate(..., {easing:"ease-out"}) — 옵션의 easing 은 구간마다가 아니라 전체 진행도에 한 번 걸린다

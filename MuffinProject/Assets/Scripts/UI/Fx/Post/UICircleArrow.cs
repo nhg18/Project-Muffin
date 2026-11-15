@@ -51,13 +51,17 @@ namespace Chapchu.UI.Fx.Post
         [SerializeField] private Color shadowColor = new Color32(0x2b, 0x28, 0x56, 0xff);
 
         [Header("그림")]
-        [Tooltip("화면에서 가장 클 때 이 오브젝트의 배율 (부모 기준). 「뒤로 돌아」 = 레이어 배율 1.5 × 최대 1.1 배 = 1.65.")]
-        [SerializeField] private float maxScale = 1f;
         [Tooltip("가장 클 때 화면 1 픽셀에 텍셀 몇 개. 그림 크기 = 이 오브젝트 크기 × 가장 큰 배율 × 실제 캔버스 배율 × 이 값 — 화면이 클수록 그림도 크고 그리는 시간도 늘어난다.")]
         [SerializeField] private float texelsPerPixel = 1f;
 
         // 화살대 · 꺾쇠 두 팔의 변 — (바깥 법선 x, y, 법선 방향 위치). 점까지 거리 = 법선 · 점 − 위치
         private readonly Vector3[] _planes = new Vector3[PolygonCount * PolygonSides];
+        // 화면에서 가장 클 때 이 오브젝트의 배율 (부모 기준) — 키우는 쪽이 SetMaxScale 로 넘긴다
+        private float _maxScale = 1f;
+#if UNITY_EDITOR
+        // OnValidate 가 여러 번 불려도 다음 틱에 한 번만 다시 그린다
+        private bool _redrawQueued;
+#endif
         private Texture2D _texture;
         private Color32[] _pixels;
         private Vector2 _startOut;
@@ -93,13 +97,27 @@ namespace Chapchu.UI.Fx.Post
         {
             base.OnValidate();
             // 값을 읽는 중에는 그림을 만들 수 없다 — 다음 에디터 틱에 다시 그린다
+            if (_redrawQueued)
+                return;
+            _redrawQueued = true;
             UnityEditor.EditorApplication.delayCall += () =>
             {
+                _redrawQueued = false;
                 if (this != null && isActiveAndEnabled)
                     Redraw();
             };
         }
 #endif
+
+        /// <summary>화면에서 가장 클 때 이 오브젝트의 배율(부모 기준)을 정한다. 바뀌었으면 그 크기에 맞게 그림을 다시 그린다.</summary>
+        public void SetMaxScale(float scale)
+        {
+            if (Mathf.Approximately(_maxScale, scale))
+                return;
+            _maxScale = scale;
+            if (isActiveAndEnabled)
+                Redraw();
+        }
 
         protected override void OnPopulateMesh(VertexHelper vh)
         {
@@ -119,7 +137,7 @@ namespace Chapchu.UI.Fx.Post
         private void Redraw()
         {
             Rect rect = rectTransform.rect;
-            float texelsPerUnit = texelsPerPixel * maxScale * PixelsPerParentUnit();
+            float texelsPerUnit = texelsPerPixel * _maxScale * PixelsPerParentUnit();
             int width = Mathf.Clamp(Mathf.CeilToInt(rect.width * texelsPerUnit), 1, MaxTexels);
             int height = Mathf.Clamp(Mathf.CeilToInt(rect.height * texelsPerUnit), 1, MaxTexels);
             if (_texture == null || _texture.width != width || _texture.height != height)
