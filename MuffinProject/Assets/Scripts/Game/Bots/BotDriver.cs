@@ -48,9 +48,9 @@ namespace Chapchu.Game.Bots
             // 이번 턴
             public int Serial = -1;
             public double ActAt;
-            public double ActBy;       // 메인 행동을 이 시각까지는 한다 (턴 시작 + LatestAct)
+            public double ActBy;       // 메인 행동을 이 시각까지는 한다 (턴 시작 + LatestAct, 멈춘 시간만큼 뒤로)
+            public double LastTickAt;  // 지난 Tick 시각 — 턴이 멈춘 시간을 재는 데
             public string ThinkNote;   // 생각 시간 — 로그용 (7-6)
-            public bool TrapsDone;     // 이번 턴의 함정 설치를 마쳤다
             public bool Done;
             public int Requests;
             public double DeclareAt = -1; // 선언 대기에서 선언할 시각. 아직 안 정했으면 음수
@@ -156,6 +156,15 @@ namespace Chapchu.Game.Bots
             if (mind.Serial != _server.TurnSerial)
                 StartTurn(turn, mind, now);
 
+            // 메인 행동 전에 턴이 멈춘 동안은 봇의 시계도 멈춘다 — 방장이 턴 마감을 미루는 것과 같이 (03-turn 4절)
+            if (_server.IsBusy && !_server.MainActionUsed)
+            {
+                double paused = now - mind.LastTickAt;
+                mind.ActAt += paused;
+                mind.ActBy += paused;
+            }
+            mind.LastTickAt = now;
+
             DeclareIfReady(turn, mind, now, events);
             if (!mind.Done && now >= mind.ActAt && !_server.IsBusy && !_server.MainActionUsed)
                 TakeTurn(turn, mind, now, events);
@@ -169,7 +178,7 @@ namespace Chapchu.Game.Bots
         {
             mind.Serial = _server.TurnSerial;
             mind.Done = false;
-            mind.TrapsDone = false;
+            mind.LastTickAt = now;
             mind.Requests = 0;
             mind.DeclareAt = -1;
             mind.Declares = 0;
@@ -241,16 +250,11 @@ namespace Chapchu.Game.Bots
         // 그 전에 손패의 함정을 빈 칸 수만큼 한 장씩, 사이에 잠깐 쉬며 설치한다 (7-4, 메인 행동 아님 — 요청 횟수에 넣지 않는다).
         private void TakeTurn(int bot, BotMind mind, double now, List<GameEvent> events)
         {
-            if (!mind.TrapsDone)
+            if (SetOneTrap(bot, events))
             {
-                if (SetOneTrap(bot, events))
-                {
-                    double step = (TrapStepMin + _random.NextDouble() * (TrapStepMax - TrapStepMin)) * mind.Spec.Pace;
-                    mind.ActAt = Math.Max(now, Math.Min(now + step, mind.ActBy));
-                    return;
-                }
-
-                mind.TrapsDone = true;
+                double step = (TrapStepMin + _random.NextDouble() * (TrapStepMax - TrapStepMin)) * mind.Spec.Pace;
+                mind.ActAt = Math.Max(now, Math.Min(now + step, mind.ActBy));
+                return;
             }
 
             List<Move> moves = Moves(bot, mind);
