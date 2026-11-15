@@ -82,6 +82,7 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private float darkenMs = 1500f;
         [Tooltip("어둠 — 안쪽 · 바깥 알파 (다 찼을 때).")]
         [SerializeField] private Vector2 darkAlpha = new Vector2(0.12f, 0.8f);
+        [Tooltip("어둠 색.")]
         [SerializeField] private Color darkColor = new Color32(5, 7, 15, 255);
         [Tooltip("어둠 가운데 (화면 비율, 위에서) · 안 반지름(높이 비율) · 바깥 반지름(대각선 비율).")]
         [SerializeField] private Vector4 darkShape = new Vector4(0.5f, 0.6f, 0.1f, 0.55f);
@@ -90,6 +91,7 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private Vector3 barTiming = new Vector3(450f, 1050f, 2.2f);
         [Tooltip("가운데 가로 빛: 시작 · 길이 · 끝 (ms).")]
         [SerializeField] private Vector3 lineTiming = new Vector3(1380f, 120f, 1750f);
+        [Tooltip("가운데 가로 빛 색.")]
         [SerializeField] private Color lineColor = new Color(200f / 255f, 215f / 255f, 1f, 0.8f);
         [Tooltip("가운데 가로 빛 두께 (시안 px).")]
         [SerializeField] private float lineHeight = 2f;
@@ -107,6 +109,7 @@ namespace Chapchu.UI.Fx.Aim
         private RenderTexture _texture;
         private float _pixelScale = 1f;
         private bool _videoStarted;
+        private bool _videoSkipped;
 
         private void Awake()
         {
@@ -186,6 +189,7 @@ namespace Chapchu.UI.Fx.Aim
         {
             video.enabled = false;
             _videoStarted = false;
+            _videoSkipped = false;
             if (player.clip == null)
                 yield break;
             _texture = new RenderTexture((int)player.clip.width, (int)player.clip.height, 0) { name = "AimShotVideo" };
@@ -194,6 +198,8 @@ namespace Chapchu.UI.Fx.Aim
             player.Prepare();
             for (float waited = 0f; !player.isPrepared && waited < videoTimeout; waited += Time.deltaTime)
                 yield return null;
+            // 시간 안에 준비되지 않으면 이번에는 영상 없이 간다 — 늦게 준비된 영상이 장면보다 뒤처진 채 틀어지지 않게
+            _videoSkipped = !player.isPrepared;
         }
 
         // 시안 frame — 총알 전까지 영상을 틀고, 총알부터는 숨긴다. 돌려주는 값은 영상에 맞춘 장면 시간.
@@ -201,7 +207,7 @@ namespace Chapchu.UI.Fx.Aim
         // 대신 영상이 앞서면(멈칫한 뒤 따라잡을 때) 장면 시계를 영상에 맞춘다 (시안이 소리에 맞추는 방식).
         private float SyncVideo(float time)
         {
-            if (!player.isPrepared)
+            if (_videoSkipped || !player.isPrepared)
                 return time;
             bool filmed = time >= scene.BulletAt;
             bool holding = !scene.IsBuilt && time >= scene.BulletAt - HoldEpsilon * 2f;
@@ -223,6 +229,9 @@ namespace Chapchu.UI.Fx.Aim
                 return time;
             video.enabled = true;
             float clock = (float)player.time;
+            // 미리 그리는 판이 아직이면 영상을 따라가도 총알 직전에서 멈춘다 (텍스처 없는 총알 컷이 그려지지 않게)
+            if (!scene.IsBuilt)
+                clock = Mathf.Min(clock, scene.BulletAt - HoldEpsilon);
             return player.isPlaying && clock - time > videoFollow ? clock : time;
         }
 

@@ -48,6 +48,16 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private float landSeconds = 0.6f;
         [Tooltip("옆으로 번진 설원이 흘러가는 빠르기 (시안 px/초).")]
         [SerializeField] private float streakSpeed = 5200f;
+        [Tooltip("총알 뒤 컷 처음의 화면 번쩍 길이 (컷 진행 비율).")]
+        [SerializeField] private float behindFlash = 0.2f;
+        [Tooltip("맞은 직후 그대로 멈추는 시간 (초).")]
+        [SerializeField] private float hitFreeze = 0.06f;
+        [Tooltip("명중 뒤 카메라 물러남: 시작 · 길이 (명중부터 초).")]
+        [SerializeField] private Vector2 hitPull = new Vector2(0.72f, 1.55f);
+        [Tooltip("명중 뒤 카메라 줌: 처음 · 물러난 뒤.")]
+        [SerializeField] private Vector2 hitZoom = new Vector2(2.95f, 1.42f);
+        [Tooltip("맞은 자리 별 · 빛 길이 (초).")]
+        [SerializeField] private float hitSparkSeconds = 0.2f;
 
         [Header("판")]
         [Tooltip("1280×720 장면 — 화면을 덮게 늘린다.")]
@@ -381,8 +391,8 @@ namespace Chapchu.UI.Fx.Aim
                 Circle(front, center, br * 0.5f, br * 0.07f, rifling);
                 frontGlow.Glow(center, br * 0.9f, Rgba(255, 214, 160, 0.8f));
             }
-            if (u < 0.2f)
-                top.Rect(0f, 0f, StageWidth, StageHeight, Rgba(236, 240, 255, (1f - u / 0.2f) * 0.55f));
+            if (u < behindFlash)
+                top.Rect(0f, 0f, StageWidth, StageHeight, Rgba(236, 240, 255, (1f - u / behindFlash) * 0.55f));
         }
 
         // 시안 shotHit — 명중 → 뒤로 넘어가 풀썩 → 카메라가 천천히 물러남 (한 컷)
@@ -390,11 +400,11 @@ namespace Chapchu.UI.Fx.Aim
         {
             float lt = t - hitAt;
             float lp = lt - landSeconds;
-            float hs = Mathf.Max(0f, lt - 0.06f);   // 맞은 직후 두세 장은 그대로 멈춤
+            float hs = Mathf.Max(0f, lt - hitFreeze);   // 맞은 직후 두세 장은 그대로 멈춤
 
             // 카메라: 맞는 순간 살짝 당겨졌다가, 내려앉고 나면 천천히 뒤로 물러남
-            float pull = AimEase.Smooth((lt - 0.72f) / 1.55f);
-            float z = Mathf.Lerp(2.95f, 1.42f, pull) * (1f + 0.045f * Mathf.Exp(-lt * 10f));
+            float pull = AimEase.Smooth((lt - hitPull.x) / hitPull.y);
+            float z = Mathf.Lerp(hitZoom.x, hitZoom.y, pull) * (1f + 0.045f * Mathf.Exp(-lt * 10f));
             float cx = 850f - pull * 16f;
             float cy = 392f + (lp > 0f ? Mathf.Exp(-lp * 9f) * Mathf.Sin(lp * 34f) * 1.8f : 0f);
             PlaceField(cx, cy, z);
@@ -405,14 +415,14 @@ namespace Chapchu.UI.Fx.Aim
             float gy = GroundSpot.y;
             const float h = DogHeight;
             const float fallAngle = 2.62f;
-            float p = Mathf.Clamp01(hs / (landSeconds - 0.06f));
+            float p = Mathf.Clamp01(hs / (landSeconds - hitFreeze));
             float hop = 4f * p * (1f - p) * 26f;
-            float th = lt < 0.06f ? 0f : p < 1f ? fallAngle * (1f - Mathf.Pow(1f - p, 1.5f)) : fallAngle + 0.16f * Mathf.Exp(-lp * 5.5f) * Mathf.Sin(lp * 15f);
+            float th = lt < hitFreeze ? 0f : p < 1f ? fallAngle * (1f - Mathf.Pow(1f - p, 1.5f)) : fallAngle + 0.16f * Mathf.Exp(-lp * 5.5f) * Mathf.Sin(lp * 15f);
             float bodyX = gx + 26f * (1f - Square(1f - p));
             float bodyY = Mathf.Lerp(gy - 0.45f * h, gy - 0.31f * h, p) - hop;
             float fx = bodyX - Mathf.Sin(th) * 0.45f * h;
             float fy = bodyY + Mathf.Cos(th) * 0.45f * h;
-            float sy = lt < 0.06f ? 0.9f
+            float sy = lt < hitFreeze ? 0.9f
                 : lp < 0f ? 1f + 0.05f * Mathf.Sin(p * Pi)
                 : 1f - 0.16f * Mathf.Exp(-lp * 9f) * Mathf.Cos(lp * 17f) + Mathf.Sin(t * 1.6f) * 0.006f * Mathf.Clamp01(lp);
             float twitch = lp > 0.5f && lp < 1.2f ? Mathf.Sin((lp - 0.5f) / 0.7f * Pi * 4f) * 0.3f * (1f - (lp - 0.5f) / 0.7f) : 0f;   // 누운 뒤 다리가 한 번 파르르
@@ -437,9 +447,9 @@ namespace Chapchu.UI.Fx.Aim
             middle.Restore();
 
             // 맞은 자리: 작게 터지는 별 + 번지는 빛 (화면을 덮지 않는다)
-            if (lt < 0.2f)
+            if (lt < hitSparkSeconds)
             {
-                float q = lt / 0.2f;
+                float q = lt / hitSparkSeconds;
                 float e = AimEase.Out(q);
                 glow.Save();
                 ApplyCamera(glow, cx, cy, z);

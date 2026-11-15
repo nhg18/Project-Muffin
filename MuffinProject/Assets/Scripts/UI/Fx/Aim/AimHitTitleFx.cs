@@ -56,48 +56,59 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private float bandSkew = 22f;
         [Tooltip("띠 색 멈춤 — 위치 · 색 (시안 linear-gradient 90deg).")]
         [SerializeField] private float[] bandStops = { 0f, 0.09f, 0.62f, 1f };
+        [Tooltip("띠 색 멈춤마다의 색 (bandStops 와 같은 수).")]
         [SerializeField] private Color[] bandColors =
         {
             new Color(214f / 255f, 30f / 255f, 52f / 255f, 0f), new Color32(0xd6, 0x1e, 0x34, 0xff), new Color32(0xff, 0x46, 0x54, 0xff), new Color(1f, 70f / 255f, 84f / 255f, 0f),
         };
         [Tooltip("띠 그림자 — 아래로 밀기 · 번짐 (em, 시안 box-shadow 0 .03em .2em).")]
         [SerializeField] private Vector2 bandShadow = new Vector2(0.03f, 0.2f);
+        [Tooltip("띠 그림자 색.")]
         [SerializeField] private Color bandShadowColor = new Color(5f / 255f, 8f / 255f, 20f / 255f, 0.5f);
         [Tooltip("띠 위 흰 줄 — 왼쪽 · 오른쪽 비율, 띠 위로 떨어진 거리 · 두께 (em).")]
         [SerializeField] private Vector4 bandShine = new Vector4(0.06f, 0.9f, 0.09f, 0.022f);
+        [Tooltip("띠 위 흰 줄 색.")]
         [SerializeField] private Color bandShineColor = new Color(1f, 1f, 1f, 0.75f);
         [Tooltip("글자 둘레 어두운 번짐 — 반지름(em) · 색.")]
         [SerializeField] private float haloRadius = 0.8f;
+        [Tooltip("글자 둘레 어두운 번짐 색.")]
         [SerializeField] private Color haloColor = new Color(5f / 255f, 8f / 255f, 20f / 255f, 0.45f);
         [Tooltip("조준경 표시 둘레 어두운 빛 (시안 drop-shadow .05em).")]
         [SerializeField] private Color reticleShadow = new Color(5f / 255f, 8f / 255f, 20f / 255f, 0.35f);
         [Tooltip("아래 줄: 양옆 선 길이 · 글자와 사이 (화면 단위).")]
         [SerializeField] private Vector2 subLine = new Vector2(172.8f, 17f);
+        [Tooltip("아래 줄 양옆 선 두께 (화면 단위).")]
         [SerializeField] private float subLineWidth = 1.5f;
+        [Tooltip("아래 줄 양옆 선 색 (바깥으로 갈수록 투명).")]
         [SerializeField] private Color subLineColor = new Color(223f / 255f, 230f / 255f, 1f, 0.9f);
 
         [Header("시간 (초, 시작부터)")]
         [Tooltip("조준경 표시: 길이 · 가운데 키 지점, 시작 배율 · 회전(도) · 가운데 배율.")]
         [SerializeField] private Vector2 reticleTime = new Vector2(0.23f, 0.7f);
         [SerializeField] private Vector3 reticleFrom = new Vector3(2.4f, -120f, 0.92f);
+        [Tooltip("조준경 표시 굽음 (cubic-bezier).")]
         [SerializeField] private Vector4 reticleEase = new Vector4(0.3f, 0f, 0.3f, 1f);
         [Tooltip("띠가 뻗기: 늦춤 · 길이.")]
         [SerializeField] private Vector2 bandIn = new Vector2(0.09f, 0.21f);
+        [Tooltip("띠가 뻗기 · 아래 줄 나타남 굽음 (cubic-bezier).")]
         [SerializeField] private Vector4 inEase = new Vector4(0.2f, 0.8f, 0.2f, 1f);
         [Tooltip("글자: 첫 늦춤 · 글자마다 늦춤 · 길이 · 가운데 키 지점.")]
         [SerializeField] private Vector4 glyphTime = new Vector4(0.19f, 0.095f, 0.2f, 0.62f);
         [Tooltip("글자: 시작 배율 · 시작 높이(em, 위로 −) · 가운데 배율 · 가운데 높이(em).")]
         [SerializeField] private Vector4 glyphFrom = new Vector4(1.9f, -0.12f, 0.94f, 0.02f);
+        [Tooltip("글자 내려찍기 굽음 (cubic-bezier).")]
         [SerializeField] private Vector4 glyphEase = new Vector4(0.3f, 0f, 0.6f, 1f);
         [Tooltip("아래 줄: 늦춤 · 길이, 자간 처음 · 끝 (em/100).")]
         [SerializeField] private Vector4 subTime = new Vector4(0.43f, 0.42f, 90f, 42f);
         [Tooltip("빠지기: 시작 · 띠 길이 · 지우기 길이 · 지우기가 끝나는 진행 지점.")]
         [SerializeField] private Vector4 exitTime = new Vector4(1.33f, 0.26f, 0.32f, 0.85f);
+        [Tooltip("빠지기 굽음 (cubic-bezier).")]
         [SerializeField] private Vector4 exitEase = new Vector4(0.6f, 0f, 0.8f, 0.4f);
 
         private readonly List<Vector2> _points = new List<Vector2>();
         private float _em;
         private float _spacing = -1f;
+        private Vector2[] _glyphHomes;
 
         private void Awake()
         {
@@ -152,7 +163,7 @@ namespace Chapchu.UI.Fx.Aim
                 float lift = g < mid ? Mathf.Lerp(glyphFrom.y, glyphFrom.w, g / mid) : Mathf.Lerp(glyphFrom.w, 0f, (g - mid) / (1f - mid));
                 glyphGroups[i].alpha = g < mid ? g / mid : 1f;
                 glyphs[i].localScale = new Vector3(scale, scale, 1f);
-                Vector2 home = GlyphHome(i);
+                Vector2 home = _glyphHomes[i];
                 glyphs[i].anchoredPosition = new Vector2(home.x, home.y - lift * _em);
             }
 
@@ -188,26 +199,21 @@ namespace Chapchu.UI.Fx.Aim
             reticle.sizeDelta = new Vector2(side, side);
             reticle.anchoredPosition = new Vector2(x + side / 2f, -_em / 2f);
             x += side + reticleGap * _em;
+            if (_glyphHomes == null || _glyphHomes.Length != glyphs.Length)
+                _glyphHomes = new Vector2[glyphs.Length];
             for (int i = 0; i < glyphs.Length; i++)
             {
                 glyphTexts[i].ForceMeshUpdate();
                 float w = glyphTexts[i].preferredWidth;
                 glyphs[i].sizeDelta = new Vector2(w, _em);
-                glyphs[i].anchoredPosition = new Vector2(x + w / 2f, -_em / 2f);
+                _glyphHomes[i] = new Vector2(x + w / 2f, -_em / 2f);
+                glyphs[i].anchoredPosition = _glyphHomes[i];
                 x += w + (i < glyphs.Length - 1 ? glyphGap * _em : 0f);
             }
             x += rowPadding.y * _em;
             row.sizeDelta = new Vector2(x, _em);
             var column = (RectTransform)row.parent;
             column.sizeDelta = new Vector2(x, column.sizeDelta.y);
-        }
-
-        private Vector2 GlyphHome(int index)
-        {
-            float x = rowPadding.x * _em + (reticleSize + reticleGap) * _em;
-            for (int i = 0; i < index; i++)
-                x += glyphs[i].sizeDelta.x + glyphGap * _em;
-            return new Vector2(x + glyphs[index].sizeDelta.x / 2f, -_em / 2f);
         }
 
         // 자간이 바뀌면 양옆 줄을 글자 끝에 다시 붙인다
