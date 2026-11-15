@@ -22,7 +22,9 @@ namespace Chapchu.Network.Events
         public static event Action<Player> OnMasterClientSwitched;
         /// <summary>방의 봇 목록 또는 봇 난이도가 바뀜 (18-bot.md 5절) — 봇 번호 (오름차순). 난이도는 BotRoster.LevelOf 로 읽는다. 방 화면이 칸 · 로그를 갱신한다.</summary>
         public static event Action<int[]> OnBotsChanged;
-    
+        /// <summary>내가 믿는 방장이 됨 (09-network.md 13절) — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 방에 들어올 때는 부르지 않는다.</summary>
+        public static event Action OnBecameTrustedMaster;
+
         public static void RaiseCreatedRoom() => OnCreatedRoom?.Invoke();
         public static void RaiseCreateRoomFailed(short returnCode, string message) => OnCreateRoomFailed?.Invoke(returnCode, message);
         public static void RaiseJoinedRoom() => OnJoinedRoom?.Invoke();
@@ -34,5 +36,6 @@ namespace Chapchu.Network.Events
         public static void RaiseRoomListUpdate(List<RoomInfo> roomList) => OnRoomListUpdate?.Invoke(roomList);
         public static void RaiseMasterClientSwitched(Player newMasterClient) => OnMasterClientSwitched?.Invoke(newMasterClient);
         public static void RaiseBotsChanged(int[] botNumbers) => OnBotsChanged?.Invoke(botNumbers);
+        public static void RaiseBecameTrustedMaster() => OnBecameTrustedMaster?.Invoke();
     }
 }

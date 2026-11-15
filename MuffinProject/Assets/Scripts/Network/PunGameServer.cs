@@ -241,13 +241,13 @@ namespace Chapchu.Network
         public override void OnEnable()
         {
             base.OnEnable();
-            NetworkManager.OnBecameTrustedMaster += InheritSeq;
+            RoomEvents.OnBecameTrustedMaster += InheritSeq;
         }
 
         public override void OnDisable()
         {
             base.OnDisable();
-            NetworkManager.OnBecameTrustedMaster -= InheritSeq;
+            RoomEvents.OnBecameTrustedMaster -= InheritSeq;
         }
 
         // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)

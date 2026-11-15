@@ -49,15 +49,12 @@ namespace Chapchu.Network
         /// <summary>내가 믿는 방장인지 — 방장만 하는 일(요청 처리 · 진행 · 방장 원본 읽기)은 이것으로 본다 (09-network.md 13절 #1).</summary>
         public static bool IsTrustedMaster => Instance != null && Instance._guard != null && Instance._guard.IsTrustedMaster;
 
-        /// <summary>내가 믿는 방장이 됨 — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 방에 들어올 때는 부르지 않는다.</summary>
-        internal static event System.Action OnBecameTrustedMaster;
-
         protected override void Awake()
         {
             base.Awake(); // 싱글톤 부모클래스 Awake
 
             _connection = new PhotonConnection();
-            _guard = new RoomGuard(() => OnBecameTrustedMaster?.Invoke());
+            _guard = new RoomGuard(RoomEvents.RaiseBecameTrustedMaster);
             _room = new PhotonRoom(_guard);
             PunEventFilter.Install();
         }
@@ -247,12 +244,14 @@ namespace Chapchu.Network
     
         public override void OnJoinedRoom()
         {
+            PunEventFilter.ResetLog();
             _guard.OnJoinedRoom();
             _room.OnJoinedRoom();
         }
     
         public override void OnLeftRoom()
         {
+            PunEventFilter.ResetLog();
             _guard.OnLeftRoom();
             _room.OnLeftRoom();
         }

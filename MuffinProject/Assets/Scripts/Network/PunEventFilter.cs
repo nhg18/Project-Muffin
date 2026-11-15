@@ -41,6 +41,9 @@ namespace Chapchu.Network
             _installedOn = PhotonNetwork.NetworkingClient;
         }
 
+        /// <summary>방을 들어오거나 나갈 때 — actorNumber 는 방마다 다시 매겨지므로 경고 기록을 비운다.</summary>
+        public static void ResetLog() => _loggedSenders.Clear();
+
         private static void Filter(EventData photonEvent)
         {
             if (Array.IndexOf(Blocked, photonEvent.Code) >= 0)
