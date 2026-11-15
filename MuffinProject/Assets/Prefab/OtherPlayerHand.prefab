@@ -32,6 +32,7 @@ Transform:
   - {fileID: 7053938712295723127}
   - {fileID: 5449460033687246680}
   - {fileID: 8541768643367033805}
+  - {fileID: 1652542492939714174}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4561584943745576480
@@ -127,6 +128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d5d5001988d3404497b6e6ff58362e7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  OtherPlayerNumber: 0
   handView: {fileID: 4397579261477188224}
 --- !u!1 &7353160117356529911
 GameObject:
@@ -189,59 +191,59 @@ MonoBehaviour:
   - m_EditModeType: 1
     m_Knots:
     - Position:
-        x: -8
+        x: -3
         y: 0
         z: 0
       TangentIn:
         x: -0
         y: -0
-        z: -0.82
+        z: -0.307684
       TangentOut:
         x: 0
         y: 0
-        z: 0.82
+        z: 0.307684
       Rotation:
         value:
-          x: -0.55215764
-          y: 0.44172612
-          z: -0.44172612
-          w: 0.55215764
+          x: -0.5527407
+          y: 0.4409963
+          z: -0.44099617
+          w: 0.55274075
     - Position:
         x: 0
-        y: 1.8
+        y: 0.68333334
         z: 0
       TangentIn:
         x: 0
         y: 0
-        z: -5.46
+        z: -2.3250003
       TangentOut:
         x: 0
         y: 0
-        z: 5.46
+        z: 2.3250003
       Rotation:
         value:
-          x: 0.50000083
-          y: -0.4999991
-          z: 0.5000009
-          w: -0.49999917
+          x: 0.5000024
+          y: -0.49999762
+          z: 0.5000024
+          w: -0.49999762
     - Position:
-        x: 8
+        x: 3
         y: 0
         z: 0
       TangentIn:
         x: -0
         y: -0
-        z: -0.82
+        z: -0.307684
       TangentOut:
         x: 0
         y: 0
-        z: 0.82
+        z: 0.307684
       Rotation:
         value:
-          x: -0.44172612
-          y: 0.55215764
-          z: -0.55215764
-          w: 0.44172612
+          x: 0.4409964
+          y: -0.55274063
+          z: 0.5527409
+          w: -0.44099608
     m_MetaData:
     - Mode: 0
       Tension: 0.5
@@ -260,6 +262,90 @@ MonoBehaviour:
       m_Data: []
   m_Knots:
     m_KnotsLink: []
+--- !u!1 &7626702431145064687
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1652542492939714174}
+  - component: {fileID: 1803153622537650277}
+  m_Layer: 0
+  m_Name: Body
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1652542492939714174
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7626702431145064687}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 254179968675684481}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &1803153622537650277
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7626702431145064687}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: 82f2a9d66487c2e42ba208e887dfca46, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
 --- !u!1 &8833287354150768080
 GameObject:
   m_ObjectHideFlags: 0
@@ -285,7 +371,7 @@ Transform:
   m_GameObject: {fileID: 8833287354150768080}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.79, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

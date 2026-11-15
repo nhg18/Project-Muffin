@@ -19,5 +19,18 @@ MonoBehaviour:
   targetType: 0
   description: "\uD589\uB3D9 \uCE74\uB4DC\uAC00 \uB098\uC654\uC744 \uB54C, \uADF8
     \uCE74\uB4DC\uC758 \uD6A8\uACFC\uB97C \uCDE8\uC18C\uD569\uB2C8\uB2E4."
-  conditions: []
-  effects: []
+  reactsTo: 00000000
+  trapTrigger: 0
+  triggerValue: 0
+  reactCondition: 0
+  revealSeconds: 1
+  resolveSeconds: 1.28
+  effects:
+  - rid: 5046878355598344259
+  references:
+    version: 2
+    RefIds:
+    - rid: 5046878355598344259
+      type: {class: NegateEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        selfOnly: 0

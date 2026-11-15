@@ -1,0 +1,72 @@
+# 카드 정리 봇 — scripts/card-sync/README.md
+name: 카드 정리 봇
+
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 매일 06:00 (한국 시간)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "노션 · 저장소에 쓰지 않고 할 일만 보기"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency: card-sync
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          sparse-checkout: |
+            scripts/card-sync
+            MuffinProject/Assets/Cards/Main
+            docs/systems
+
+      # 어제 상태 — 매일 돌면 캐시가 지워지지 않는다. 없으면 오늘을 기준으로만 저장한다
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/card-snapshot.json
+          key: card-snapshot-${{ github.run_id }}
+          restore-keys: card-snapshot-
+
+      - name: 카드 DB 정리
+        id: sync
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          python3 scripts/card-sync/card_sync.py --snapshot "$RUNNER_TEMP/card-snapshot.json" \
+            --repo . --pr-body "$RUNNER_TEMP/pr.md" ${{ inputs.dry_run && '--dry-run' || '' }}
+          if [ -f "$RUNNER_TEMP/pr.md" ]; then echo "pr=1" >> "$GITHUB_OUTPUT"; fi
+
+      - if: ${{ !inputs.dry_run }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/card-snapshot.json
+          key: card-snapshot-${{ github.run_id }}
+
+      # 저장소가 바뀌었으면 bot/card-sync → develop PR (열려 있으면 내용만 바꾼다)
+      - name: 저장소 PR
+        if: ${{ steps.sync.outputs.pr == '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C bot/card-sync
+          git add MuffinProject/Assets/Cards/Main/cards.json docs/systems/11-card-list.md
+          git commit -m "chore(card): 노션 카드 DB 의 확정 카드에 맞춤 (카드 정리 봇)"
+          git push -f origin bot/card-sync
+          pr=$(gh pr list --head bot/card-sync --state open --json number -q '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --body-file "$RUNNER_TEMP/pr.md"
+          else
+            gh pr create --base develop --head bot/card-sync \
+              --title "chore(card): 노션 카드 DB 와 맞춤 (카드 정리 봇)" --body-file "$RUNNER_TEMP/pr.md"
+          fi

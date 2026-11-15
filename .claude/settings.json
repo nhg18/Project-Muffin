@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push --no-verify *)",
+      "Bash(SKIP_REVIEW=1 *)",
+      "Bash(bash scripts/review/prepush.sh --accept *)",
+      "Bash(bash scripts/review/prepush.sh --accept)",
+      "Edit(.review/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-paths.sh\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-cs.sh\"" }
+        ]
+      }
+    ]
+  }
+}

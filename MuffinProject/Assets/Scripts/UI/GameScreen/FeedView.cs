@@ -1,0 +1,146 @@
+﻿using System;
+using System.Collections.Generic;
+using Chapchu.Game;
+using Chapchu.UI.Fx;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace Chapchu.UI.GameScreen
+{
+    /// <summary>
+    /// 오른쪽 위 「방금 일어난 일」 칩 (10-ui.md 2-1 HUD v2 「기록」). 최신 2개만 — 둘째는 조금 흐리고, 4초 지나면 더 흐려진다.
+    /// 전체를 누르면 기록 서랍이 열린다 (Clicked). 칩은 프리팹(`Prefab/UI/GameScreen/FeedChip`)을 이 아래에 만든다 — 구조: 루트 → Icon · MiniCard(→ Box · Band) · Crown · Name · Text · Value.
+    /// </summary>
+    public class FeedView : MonoBehaviour, IPointerClickHandler
+    {
+        /// <summary>칩 프리팹 안 부품 이름 — GameScreenBuilder 가 같은 이름으로 만들고, 칩을 복제할 때 이 이름으로 찾는다.</summary>
+        public const string IconChild = "Icon";
+        /// <summary>작은 카드 부품 이름 (GameScreenBuilder.BuildMiniCard).</summary>
+        public const string MiniCardChild = "MiniCard";
+        /// <summary>작은 카드 안 종류 색 띠 이름 (GameScreenBuilder.BuildMiniCard).</summary>
+        public const string MiniBandChild = "Band";
+        /// <summary>왕관 아이콘 부품 이름.</summary>
+        public const string CrownChild = "Crown";
+        /// <summary>한 사람(행동한 플레이어) 이름 글자 부품 이름.</summary>
+        public const string NameChild = "Name";
+        /// <summary>내용 글자 부품 이름.</summary>
+        public const string TextChild = "Text";
+        /// <summary>빨간 수치 글자 부품 이름.</summary>
+        public const string ValueChild = "Value";
+
+        private const string MiniBandPath = MiniCardChild + "/" + MiniBandChild;
+        private const string MiniBoxPath = MiniCardChild + "/Box"; // 테 · 면 한 장 (GameScreenBuilder.ShapeBox 가 만드는 이름)
+        private const int MaxChips = 2;
+
+        [Tooltip("칩 프리팹 (Prefab/UI/GameScreen/FeedChip).")]
+        [SerializeField] private RectTransform chipPrefab;
+        [Tooltip("둘째 칩의 투명도 (시안 .old 0.8).")]
+        [SerializeField] private float oldAlpha = 0.8f;
+        [Tooltip("이 초가 지난 칩의 투명도 (시안 .stale 0.55).")]
+        [SerializeField] private float staleAlpha = 0.55f;
+        [Tooltip("칩이 나온 뒤 이 초가 지나면 더 흐려진다 (staleAlpha).")]
+        [SerializeField] private float staleAfter = 4f;
+        [Tooltip("카드 종류 색 — 행동 · 카운터 · 함정 (시안 KC).")]
+        [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
+        [Tooltip("카운터 카드 종류 색.")]
+        [SerializeField] private Color counterColor = new Color32(0x6f, 0xa4, 0x34, 0xFF);
+        [Tooltip("함정 카드 종류 색.")]
+        [SerializeField] private Color trapColor = new Color32(0xf6, 0x46, 0x12, 0xFF);
+
+        private readonly List<Chip> _chips = new List<Chip>();
+
+        /// <summary>칩 영역을 눌렀다 — 전체 기록 열기.</summary>
+        public event Action Clicked;
+
+        private void Awake()
+        {
+            if (chipPrefab == null)
+                Debug.LogError($"[{nameof(FeedView)}] {nameof(chipPrefab)} 참조가 비어 있습니다.", this);
+        }
+
+        private void Update()
+        {
+            for (int i = 0; i < _chips.Count; i++)
+            {
+                Chip chip = _chips[i];
+                bool stale = Time.unscaledTime - chip.ShownAt >= staleAfter;
+                chip.Group.alpha = stale ? staleAlpha : i == 0 ? 1f : oldAlpha;
+            }
+        }
+
+        /// <summary>새 항목을 맨 위에 넣는다. 2개를 넘으면 가장 오래된 것을 지운다.</summary>
+        public void Push(HistoryEntry entry, string actorName, Color actorInk)
+        {
+            var chip = new Chip(Instantiate(chipPrefab, transform), Time.unscaledTime);
+            chip.Root.SetAsFirstSibling();
+            chip.Fill(entry, actorName, actorInk, CardColor(entry.CardType));
+            _chips.Insert(0, chip);
+
+            while (_chips.Count > MaxChips)
+            {
+                Destroy(_chips[_chips.Count - 1].Root.gameObject);
+                _chips.RemoveAt(_chips.Count - 1);
+            }
+        }
+
+        /// <summary>기록 서랍이 열려 있는 동안 숨긴다.</summary>
+        public void SetVisible(bool visible) => gameObject.SetActive(visible);
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+                Clicked?.Invoke();
+        }
+
+        private Color CardColor(CardType type) => type == CardType.Counter ? counterColor : type == CardType.Trap ? trapColor : actionColor;
+
+        private class Chip
+        {
+            public readonly RectTransform Root;
+            public readonly CanvasGroup Group;
+            public readonly float ShownAt;
+            private readonly GameObject _icon;
+            private readonly GameObject _miniCard;
+            private readonly UIShape _miniBox;
+            private readonly Image _miniBand;
+            private readonly GameObject _crown;
+            private readonly TMP_Text _name;
+            private readonly LayoutElement _nameLayout;
+            private readonly TMP_Text _text;
+            private readonly TMP_Text _value;
+
+            public Chip(RectTransform root, float shownAt)
+            {
+                Root = root;
+                ShownAt = shownAt;
+                Group = root.GetComponent<CanvasGroup>();
+                _icon = root.Find(IconChild).gameObject;
+                _miniCard = root.Find(MiniCardChild).gameObject;
+                _miniBox = root.Find(MiniBoxPath).GetComponent<UIShape>();
+                _miniBand = root.Find(MiniBandPath).GetComponent<Image>();
+                _crown = root.Find(CrownChild).gameObject;
+                _name = root.Find(NameChild).GetComponent<TMP_Text>();
+                _nameLayout = _name.GetComponent<LayoutElement>();
+                _text = root.Find(TextChild).GetComponent<TMP_Text>();
+                _value = root.Find(ValueChild).GetComponent<TMP_Text>();
+            }
+
+            public void Fill(HistoryEntry entry, string actorName, Color actorInk, Color cardColor)
+            {
+                _icon.SetActive(entry.Icon == HistoryIcon.Card);
+                _miniCard.SetActive(entry.Icon == HistoryIcon.MiniCard);
+                _crown.SetActive(entry.Icon == HistoryIcon.Crown);
+                _miniBox.BorderColor = cardColor; // 작은 카드는 테 · 띠 모두 종류 색 (시안 키트 .mc)
+                _miniBand.color = cardColor;
+                _name.text = actorName;
+                _nameLayout.minWidth = _name.GetPreferredValues(actorName).x; // 칩이 넘치면 이름은 그대로, 내용(Text)만 … 로 줄인다
+                _name.color = actorInk;
+                _text.text = entry.Text;
+                _value.text = entry.Value;
+                _value.gameObject.SetActive(!string.IsNullOrEmpty(entry.Value));
+            }
+        }
+    }
+}

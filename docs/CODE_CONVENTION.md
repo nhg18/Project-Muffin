@@ -1,187 +1,119 @@
-# 코드 컨벤션 (Code Convention)
+# 코드 컨벤션
 
-> 출처: 노션 「코드 컨벤션(Code Convention)」 페이지를 저장소로 이관한 문서.
-> 이후 변경은 **이 파일**을 기준으로 한다.
+목표: 누가 이어받아도 읽고 · 값을 바꾸고 · 조합해서 새 기능을 만들 수 있는 코드.
+이 문서가 기준이다. 코드가 다르면 코드를 고친다. 새 규칙은 여기에만 적는다.
 
----
+## 1. 이름
 
-## 1. 명명 규칙
-
-### 필드 변수
-
-| 접근 지정자 | 규칙 | 예시 |
+| 대상 | 규칙 | 예 |
 | --- | --- | --- |
-| `private` | `_` + camelCase | `_health`, `_player` |
-| `[SerializeField] private` | camelCase | `health`, `player` |
-| `public` | PascalCase | `Health`, `Player` |
-| `const` | PascalCase | `MaxHp`, `DefaultSpeed` |
-| `static readonly` | PascalCase | `DefaultColor` |
+| 클래스 · 메서드 · 프로퍼티 · enum · `const` · `static readonly` | PascalCase. 메서드는 동사로 시작 | `CreateRoom()` · `MaxHp` |
+| `private` 필드 | `_` + camelCase | `_health` |
+| `[SerializeField] private` 필드 | camelCase (Inspector 에 그대로 보인다) | `health` |
+| 지역 변수 · 매개변수 | camelCase | `player` |
+| 인터페이스 | `I` 접두사 | `IDamageable` |
+| 이벤트 | `On` + 일어난 일(과거형) 또는 `On` + 요청 + `Requested` | `OnJoinedRoom` · `OnStartRequested` |
+| 이벤트 구독 함수 | `Handle` + 이벤트 이름에서 `On` 을 뺀 것 | `HandleJoinedRoom` |
+| 이벤트 발생 함수 (다른 클래스가 발생시킬 때만) | `Raise` + 이벤트 이름에서 `On` 을 뺀 것 | `RaiseJoinedRoom()` |
+| RPC 메서드 | `RPC_` + 동사. 방장에게 보내는 요청은 `RPC_Request` + 동사 | `RPC_RequestPlayCard` · `RPC_ApplyDamage` |
+| 코루틴 | 동사 + `Routine` | `CountdownRoutine()` |
+| 카드 연출 이펙트 컴포넌트 (화면 연출) | 종류 + `Fx` — 카드 규칙 효과(`…Effect`)와 구분 | `FlashFx` · `SlashFlurryFx` |
+| 파일 | 클래스 이름과 같게, 영문. 작은 enum · struct 는 쓰는 클래스 파일에 둬도 된다 | `RoomPresenter.cs` |
 
-### 프로퍼티
+* `var` 는 오른쪽에서 타입이 바로 보일 때만 (`new X()` · `Load<X>()`). 메서드 반환값은 타입을 쓴다.
+* 축약하지 않는다 (`mgr` ✗ → `manager`). 약어는 두 글자까지만 대문자 (`UI` · `Rpc` · `Hp`).
 
-PascalCase.
+## 2. 파일 구조
 
-```csharp
-public int Hp { get; set; }
-public string Nickname { get; }
-```
-
-### 함수 내 지역 변수
-
-camelCase.
-
-### var 사용
-
-타입이 명확할 때만 사용한다.
-
-```csharp
-var player = new Player();                          // OK
-Dictionary<string, Player> players = new();         // 타입 불명확 → 명시
-```
-
-### 메서드
-
-PascalCase. 영어 동사로 시작하고 기능을 명확히 표현한다. 하나의 역할만 수행한다. 필요 이상으로 분리하지 않는다.
-
-```csharp
-public void Connect()
-public void CreateRoom()
-private void Initialize()
-```
-
-### 클래스 / Enum
-
-PascalCase.
-
-### 인터페이스
-
-`I` 접두사. `INetwork`, `ISaveSystem`, `IDamageable`
-
-### 이벤트
-
-`On` + 과거완료형. `event` 키워드 필수.
-
-```csharp
-public event Action OnConnected;
-public event Action<int> OnHealthChanged;
-```
-
-필요 시 `Invoke`를 감싸는 public 함수는 `Raise` + On을 뺀 형태.
-
-```csharp
-public void RaiseConnected() => OnConnected?.Invoke();
-public void RaiseHealthChanged(int health) => OnHealthChanged?.Invoke(health);
-```
-
----
-
-## 2. 선언 순서
-
-접근 지정자: `public` → `protected` → `private`
-
-클래스 멤버 순서:
-
-```
-Const
-Static Field
-[SerializeField] private
-Private Field
-Property
-Event
-
-Unity LifeCycle
-Public Method
-Protected Method
-Private Method
-```
-
----
+* 네임스페이스 루트는 `Chapchu`, 하위는 `Assets/Scripts/` 아래 폴더 경로. 흔한 타입을 가리는 폴더 이름 금지 (`Debug` → `DebugTools`, `UI/Room` → `UI/RoomScreen`).
+* 에디터 전용 스크립트는 `Scripts/Editor/` (Unity 특수 폴더라 이름을 바꿀 수 없다). 네임스페이스는 `Chapchu.EditorTools` — `UnityEditor.Editor` 를 가리지 않게.
+* 선언 순서: `const` → `static` → `[SerializeField]` → private 필드 → 프로퍼티 → 이벤트 → Unity 생명주기(실행 순서대로) → public → protected → private 메서드.
+* 중괄호는 줄을 바꿔 연다(Allman). 들여쓰기 4칸. 한 줄에 한 문장. 조건이 하나면 early return.
+* `.cs` 는 UTF-8 BOM (hook 이 붙인다).
 
 ## 3. 주석
 
-* **Public API**: XML 주석 작성.
-* **Private 함수**: 특별한 이유가 없으면 작성하지 않는다.
-* **구현 설명**: 복잡한 알고리즘이나 의도를 설명할 때만. "무엇을 하는지"보다 **"왜 이렇게 구현했는지"** 를 쓴다.
+* 클래스 요약(`/// <summary>`)에 하는 일 한 줄과 기준 문서(`docs/systems/NN 절`)를 적는다.
+* public 멤버는 XML 주석. 그 밖에는 "왜 이렇게 했는지"가 필요할 때만. 무엇을 하는지는 코드가 말한다.
+* 주석과 로그는 한국어.
 
-```csharp
-// Photon의 콜백은 비동기로 호출되므로
-// 연결 완료는 ConnectionCallback에서 처리한다.
-```
+## 4. 컴포넌트
 
----
+* 기능 하나 = 컴포넌트 하나. 씬이나 프리팹에 붙여서 쓸 수 있는 단위로 만든다.
+* 다른 컴포넌트는 `[SerializeField]` 로 받는다. 같은 오브젝트면 `[RequireComponent]` + `GetComponent`(Awake 에서 1회). `Find` 계열은 초기화 때 1회만, 매 프레임 금지.
+* 필수 참조가 비어 있으면 `Awake` 에서 `Debug.LogError` 로 어느 참조인지 알린다. 조용히 넘어가지 않는다.
+* 생명주기: `Awake` 자기 초기화 · `OnEnable`/`OnDisable` 이벤트 구독/해제(`+=` 와 `-=` 는 항상 짝) · `Start` 다른 오브젝트 참조. `OnEnable` 에서 다른 `Instance` 에 접근하지 않는다.
+* 필드는 private, 밖에 보일 것은 읽기 전용 프로퍼티나 메서드로 연다. 순수 데이터(ScriptableObject · struct) 는 public 필드로 둬도 된다.
+* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다.
+* UI 는 화면 영역 하나에 컴포넌트 하나. 한 파일이 길어지면 화면을 그리는 코드와 네트워크 · 규칙을 아는 코드로 나눈다.
 
-## 4. 이 프로젝트 추가 규칙
+## 5. 수치와 문자열
 
-### 4.1 인코딩
+* 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
+* 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
+* 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
+* 카드별 연출 프리팹은 `Resources/CardFx/{연출 컴포넌트 이름}.prefab` 에 두고 `CardFxLoader` 로 이름으로 불러온다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
+* 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
-모든 `.cs` 파일은 **UTF-8 with BOM**. 한글 주석/문자열이 `��` 로 보이면 인코딩이 CP949로 저장된 것이다.
+## 6. 네트워크
 
-### 4.2 네임스페이스
+* 게임 규칙 판정은 방장만. 참가자는 `RPC_Request*` 로 요청하고, 방장이 판정해 결과를 모두에게 보낸다 → skill `network-rpc`.
+* RPC 이름은 `nameof(RPC_Xxx)`. 문자열로 쓰지 않는다 (hook 이 막는다).
+* 네트워크 콜백은 `Network/Events/` 의 static 이벤트로 바꿔 흘린다. UI 는 Photon 을 직접 구독하지 않는다.
+* 방장의 속성 쓰기는 `NetworkManager.SetRoomProps` · `SetPlayerProps` · `UpdateRoomOptions` 로만 한다. 방 전원 씬 이동은 `NetworkManager.LoadSceneForAll` (`09-network` 13절).
 
-모든 스크립트는 네임스페이스를 갖는다. 루트는 `Muffin`.
+## 7. 시간과 로그
 
-```
-Muffin.Core         공통 인프라 (싱글톤, 부트스트랩, 씬 경로, 상수)
-Muffin.Network      Photon 연결 / 룸 / 네트워크 이벤트
-Muffin.Game         인게임 규칙 (턴, 덱, 손패, 체력, 승리)
-Muffin.Game.Cards   카드 데이터 / 효과 / 조건
-Muffin.Presentation 인게임 표시 (좌석, 손패·카드 뷰, 입력)
-Muffin.UI           로비 / 방 / 팝업 UI
-Muffin.DebugTools   디버그 전용
-```
+* 지연 · 연출은 코루틴 또는 DOTween. `async void` 금지 (hook 이 막는다). `Invoke("Method")` · `SendMessage` 금지.
+* 로그는 `Debug.Log($"[{nameof(ClassName)}] ...")`. 어느 클라이언트인지 알아야 할 때는 닉네임을 넣는다. `Update` 안에서는 로그하지 않는다.
+* 예외를 빈 `catch` 로 삼키지 않는다.
+* 비공개 정보(손패 · 함정 내용, 덱 순서)는 개발 빌드에서만 로그한다 — `if (Debug.isDebugBuild)`. 출시 빌드의 로그 파일은 그 기기 주인이 읽을 수 있다 (`09-network` 13절 #13).
 
-네임스페이스는 `Assets/Scripts/` 아래 폴더 경로를 그대로 따른다.
+## 8. C# 버전
 
-`Type`, `Deck`, `Card` 처럼 일반적인 이름을 전역 네임스페이스에 두지 않는다.
-(`public enum Type`은 `System.Type`을 가려서 버그를 만든다. `CardType`으로 쓴다.)
+C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 10+ 문법은 hook 이 막는다.
 
-**폴더 이름에도 같은 규칙이 적용된다.** 폴더명이 곧 네임스페이스가 되므로,
-자주 쓰는 타입과 이름이 같은 폴더를 만들면 그 타입이 가려진다.
+## 9. 게임 규칙 계층
 
-| 금지 | 이유 |
+게임 규칙(검증 · 상태 변경)은 Unity · Photon 을 모르는 순수 C# 으로 만들고, 방장만 실행한다.
+
+* 위치는 `Scripts/Game/`. 어셈블리를 따로 둔다 (`Chapchu.Game.asmdef`, `noEngineReferences: true`, 참조 없음). UnityEngine · Photon · UI 를 쓰면 컴파일이 안 된다.
+* 게임 상태(덱 · 손패 · 버림 더미 · HP · 처리 체인 · 처리 ID)는 객체 하나에 모은다. 방장 이주(`09-network` 9절)를 나중에 붙일 수 있게 하기 위해서다.
+* 규칙은 요청을 검증하고, 상태를 바꾸고, **일어난 일 목록**을 돌려준다. 누구에게 무엇을 보낼지(전체 · 소유자만)는 네트워크 계층이 정한다.
+* 난수와 시간은 밖에서 받는다. 반응 · 턴 타이머는 네트워크 계층이 재고 만료를 규칙에 알린다.
+* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다.
+  * 효과 클래스는 `Scripts/Game/Effects/` 에 `종류 + Effect` 이름으로 (`DamageEffect`). 에셋에 클래스 이름 · 네임스페이스로 저장되므로 만든 뒤에는 바꾸지 않는다 — 바꾸면 그 효과가 에셋에서 빈다.
+  * 효과는 같은 종류의 카드 여러 장이 한 인스턴스를 같이 쓴다. 실행 중에 필드를 바꾸지 않는다.
+* 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
+* 클라이언트는 받은 일을 연출 큐에 넣고 하나씩 재생한다. 화면 값은 재생하면서 이벤트에 담긴 값으로 바꾼다.
+  * 큐는 화면마다 하나(`GameScreenPresenter`). 큐만 `GameEvents` 를 구독하고, 영역 프레젠터는 큐가 부르는 함수(`Show*` 즉시 · `*Routine` 연출)만 둔다. 받은 순서가 곧 일어난 순서라 큐는 순서를 바꾸지 않는다.
+  * 큐를 타지 않는 것: 내 요청의 거절(바로 토스트) · 매 프레임 계산하는 값(남은 초) · 늦게 열렸을 때 CustomProperties 로 복구하는 초기값(각 프레젠터 `Start`).
+
+## 10. 화면 그리기 (HTML 시안 → uGUI)
+
+시안을 찍어서 이미지로 만들지 않는다. 사람이 그린 그림만 이미지로 쓰고, 나머지는 Unity 에서 그린다.
+
+| 시안 | Unity |
 | --- | --- |
-| `Scripts/Debug/` | `Muffin.Debug` 가 `UnityEngine.Debug` 를 가린다 → `DebugTools/` 를 쓴다 |
-| `Scripts/UI/Room/` | `Muffin.UI.Room` 이 `Photon.Realtime.Room` 을 가린다 (CS0118) |
+| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. 카드 그림은 `Sprites/Cards/Art/<카드 ID>.png`, 카드 틀 · 뒷면 · 빈 칸은 `Sprites/Cards/Frames/`, 캐릭터 그림은 `Sprites/Characters/`(노션 원본 그대로, 잘라 쓸 곳은 스프라이트 영역으로), 그 밖에는 `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
+| 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `UI/Fx/UIShape` 한 컴포넌트(면 + 테두리를 한 메시, 빌더 `ShapeBox`)로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다. 둘로 나누면 판을 흐리게 할 때(`CanvasGroup`) 테두리가 면 너머로 비친다. 빌더의 `RoundBox`(테두리 · 채움 두 오브젝트)는 옛 방식 — 그 상자를 고칠 때 `ShapeBox` 로 바꾼다. 타원 · 점선 테(`border-style: dashed`)도 `UIShape` |
+| 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다. 반투명 판은 한 장으로 — 같은 판을 두 장 겹치면 알파가 짙어진다 (85% 두 장 = 약 98%) |
+| 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. 모양을 따라 번지는 그림자(타원 판의 바닥 그림자 등)는 `UIShape` 의 번짐(`feather`). 시안 · 문서의 「번짐」(CSS blur)은 `feather` 에 **× 2** 로 넣는다 — blur 는 가장자리 안팎으로 그만큼 번지는 가우스, `feather` 는 투명해지는 전체 폭(안팎 절반씩). uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
+| 그라데이션 | `Common` 의 흰 → 투명 띠 스프라이트 + 색 |
+| 글자 | TMP. 글자를 이미지에 넣지 않는다 |
 
-### 4.3 RPC
+그리는 횟수(batches)를 늘리지 않게:
 
-```csharp
-photonView.RPC(nameof(RPC_RequestPlayCard), RpcTarget.MasterClient, cardInstanceId);
-```
+* 머티리얼은 기본 UI 머티리얼 하나. 요소마다 다른 머티리얼 · 셰이더를 쓰지 않는다. 연출용은 연출 Canvas 안에서만 쓴다.
+* 스프라이트는 화면마다 아틀라스 하나, `Common` 은 공용 아틀라스 하나.
+* 겹치는 요소는 같은 아틀라스끼리, TMP 끼리 형제 순서를 묶는다. 이미지 · 글자 · 이미지가 번갈아 겹치면 그때마다 배치가 끊긴다. `UIShape` 는 텍스처 없이(흰 텍스처) 그려 아틀라스 이미지와 배치가 나뉜다 — `UIShape` 끼리 묶는다.
+* 잘라내기는 `RectMask2D`. `Mask` 는 사각형이 아닌 모양으로 잘라야 할 때만 쓴다.
+* 자주 바뀌는 영역(타이머 · 손패 · 카드 연출)은 Canvas 를 따로 둔다.
+* 누를 수 없는 Graphic 은 `raycastTarget` 을 끈다.
+* 화면을 붙이면 Frame Debugger 로 batches 를 재서 worklog 에 남긴다.
 
-* 문자열 리터럴 금지.
-* RPC 메서드명은 `RPC_` 접두사.
-* 마스터 전용 RPC는 **첫 줄에 반드시 가드**를 넣는다.
+씬과 프리팹은 사람이 열어서 고친다:
 
-```csharp
-[PunRPC]
-private void RPC_RequestPlayCard(int cardInstanceId, PhotonMessageInfo info)
-{
-    if (!PhotonNetwork.IsMasterClient) return;
-    ...
-}
-```
-
-### 4.4 문자열 키
-
-Photon CustomProperties 키는 리터럴로 쓰지 않고 상수 클래스에 모은다.
-
-```csharp
-public static class PlayerProps
-{
-    public const string Hp = "hp";
-    public const string HandCount = "handCount";
-}
-```
-
-### 4.5 금지
-
-* `async void` (이벤트 핸들러 포함)
-* `[SerializeField] static`
-* `Invoke("MethodName", ...)` / `SendMessage`
-* 클래스별 자체 싱글톤 구현 (`Core/Singleton.cs` 사용)
-* `GameObject.Find` 계열의 매 프레임 호출
-
-### 4.6 수치 타입
-
-HP와 카드 장수 등 게임 규칙 수치는 **`int`** 로 통일한다. `float` HP 금지.
+* 씬 · 프리팹에는 시작할 때의 모습 그대로 저장한다 — 닫힌 판은 화면 밖에, 숨은 것은 투명하게(또는 꺼서). `Awake` · `Start` 에서 자리 · 알파 · 활성을 고쳐 놓지 않는다.
+* 되풀이되는 것(칸 · 줄 · 카드 · 알림)은 프리팹(`Prefab/UI/<화면>/`). 씬 안에 복사본이나 숨긴 템플릿을 두지 않는다.
+* 씬과 프리팹이 화면의 원본이다. 씬을 통째로 지우고 다시 조립하는 에디터 코드를 새로 만들지 않는다.

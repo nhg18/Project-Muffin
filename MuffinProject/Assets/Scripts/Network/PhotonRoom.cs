@@ -1,21 +1,52 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Muffin.Core;
+using Chapchu.Core;
+using Chapchu.Game.Bots;
+using Chapchu.Network.Events;
 
-namespace Muffin.Network
+namespace Chapchu.Network
 {
+    /// <summary>방 만들기 · 입장 · 나가기 요청과 그 콜백 (08-room.md). NetworkManager 가 갖고 있고, 결과는 RoomEvents 로 알린다.</summary>
     public class PhotonRoom
     {
+        // 연결이 없어 요청을 보내지 못함 — 실패로 알려 화면이 대기 표시를 닫고 「그 밖의 실패」 안내를 띄우게 (08-room.md 7절)
+        private const short NotConnectedCode = ErrorCode.OperationNotAllowedInCurrentState;
+        private const string NotConnectedMessage = "서버에 연결되어 있지 않아요.";
+
+        private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
+
+        private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+
+        // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
+        // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
+        private int[] _hostBots;
+
+        /// <summary>방장이 정한 봇 목록 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.Numbers 로.</summary>
+        internal int[] HostBots => _hostBots;
+
+        // 봇 난이도 ([봇 번호 − 1] 자리) — 봇 목록과 같은 방식이고 늘 함께 쓴다 (18-bot.md 9절)
+        private int[] _hostBotLevels;
+
+        /// <summary>방장이 정한 봇 난이도 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.LevelOf 로.</summary>
+        internal int[] HostBotLevels => _hostBotLevels;
+
+        internal PhotonRoom(RoomGuard guard) => _guard = guard;
+
         public void JoinRoom(string roomName)
         {
-            if (!PhotonConnection.ValidConnect) return;
-            
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseJoinRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
             if (string.IsNullOrEmpty(roomName))
             {
-                RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드가 없습니다.");
+                RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, "방 코드를 입력해 주세요.");
                 return;
             }
             PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
@@ -23,7 +54,11 @@ namespace Muffin.Network
     
         public void JoinRandomRoom()
         {
-            if (!PhotonConnection.ValidConnect) return;
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
             PhotonNetwork.JoinRandomRoom();
         }
     
@@ -34,12 +69,121 @@ namespace Muffin.Network
     
         public void CreateRoom()
         {
-            if (!PhotonConnection.ValidConnect) return;
-            
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
+            _creatingSolo = false;
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             string code = RandomCode.GenerateRandomCode();
-        
+
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 「혼자 하기」 (18-bot.md 10절) — 봇 3 이 든 방을 만든다. 랜덤 매칭에서 빠지고(비공개) 코드 입장은 된다.
+        /// 봇 3 이면 정원이 1 이라 가득 찬다. 자동 시작하지 않는다.
+        /// </summary>
+        public void CreateSoloRoom()
+        {
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
+            _creatingSolo = true;
+            int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers - bots.Length, false, true);
+            options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.Bots] = bots, [RoomProps.Solo] = true };
+            string code = RandomCode.GenerateRandomCode();
+
+            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 봇 추가 (18-bot.md 5절). 방장 · 게임 시작 전 · 봇 3 미만 · 빈 칸이 있을 때. 번호는 비어 있는 가장 작은 번호.
+        /// 봇 1 당 사람 정원을 1 줄여 봇 자리에 사람이 들어오지 못하게 한다 (3절 #8). 결과는 RoomEvents.OnBotsChanged.
+        /// </summary>
+        public bool AddBot()
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = CurrentBots;
+            if (numbers.Length >= BotRoster.MaxBots || PhotonNetwork.CurrentRoom.PlayerCount + numbers.Length >= NetworkManager.MaxPlayers)
+                return false;
+
+            int number = 1;
+            while (numbers.Contains(number))
+                number++;
+
+            // 새로 든 봇은 보통부터 — 지난번에 그 번호였던 봇의 난이도를 물려받지 않는다 (18-bot.md 5절)
+            int[] levels = (int[])CurrentBotLevels.Clone();
+            levels[number - 1] = (int)BotLevel.Normal;
+            SetBots(numbers.Append(number).OrderBy(n => n).ToArray(), levels);
+            return true;
+        }
+
+        /// <summary>봇 제거 (18-bot.md 5절). 방장 · 게임 시작 전. 자리가 다시 열린다.</summary>
+        public bool RemoveBot(int number)
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = CurrentBots;
+            if (!numbers.Contains(number))
+                return false;
+
+            SetBots(numbers.Where(n => n != number).ToArray(), CurrentBotLevels);
+            return true;
+        }
+
+        /// <summary>봇 난이도 바꾸기 (18-bot.md 5절 · 7-7). 방장 · 게임 시작 전 · 방에 있는 봇만. 결과는 RoomEvents.OnBotsChanged.</summary>
+        public bool SetBotLevel(int number, BotLevel level)
+        {
+            if (!CanEditBots())
+                return false;
+
+            int[] numbers = CurrentBots;
+            int[] levels = (int[])CurrentBotLevels.Clone();
+            if (!numbers.Contains(number) || levels[number - 1] == (int)level)
+                return false;
+
+            levels[number - 1] = (int)level;
+            SetBots(numbers, levels);
+            return true;
+        }
+
+        // 방장만 · 게임 시작 전만 (시작하면 방을 닫는다 — 08-room.md 4절). 열림은 방장이 정한 값 — 방에 보이는 값은 남이 바꿀 수 있다
+        private bool CanEditBots() => PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && _guard.IsTrustedMaster && _guard.IsOpen;
+
+        // 방장이 정한 원본 — 서버 확인 전이어도 방금 쓴 목록이라 「제거」 직후 「추가」 가 지운 봇을 되살리지 않는다
+        private int[] CurrentBots => _hostBots ?? BotRoster.Numbers;
+        private int[] CurrentBotLevels => _hostBotLevels ?? BotRoster.RoomLevels;
+
+        private void SetBots(int[] numbers, int[] levels)
+        {
+            _guard.SetMaxPlayers(NetworkManager.MaxPlayers - numbers.Length);
+            if (!_guard.SetRoomProps(BotRoster.BotsTable(numbers, levels)))
+                return;
+
+            _hostBots = numbers;
+            _hostBotLevels = levels;
+        }
+
+        // 방장이 되면 지금 방의 봇 목록 · 난이도(거른 사본)를 원본으로 이어받는다 (18-bot.md 9절 「방장 교체 (방 대기 중)」)
+        private void AdoptBots()
+        {
+            _hostBots = null;
+            _hostBotLevels = null;
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+
+            _hostBots = BotRoster.Numbers;
+            _hostBotLevels = BotRoster.RoomLevels;
         }
     
         public RoomOptions CreateRoomOptions(int maxPlayers, bool isVisible, bool isOpen)
@@ -52,15 +196,14 @@ namespace Muffin.Network
             };
         }
     
-        public void UpdateRoomOptions(bool isVisible, bool isOpen)
+        public void UpdateRoomOptions(bool? isVisible, bool? isOpen)
         {
             if (!PhotonNetwork.InRoom)
             {
-                Debug.LogWarning("Must be in room");
+                Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 안에서만 방 설정을 바꿀 수 있다");
                 return;
             }
-            PhotonNetwork.CurrentRoom.IsVisible = isVisible;
-            PhotonNetwork.CurrentRoom.IsOpen = isOpen;
+            _guard.SetOptions(isVisible, isOpen);
         }
     
     
@@ -69,7 +212,6 @@ namespace Muffin.Network
         /// </summary>
         public void OnCreatedRoom()
         {
-            Debug.Log("On Created Room" + PhotonNetwork.CurrentRoom.Name);
             RoomEvents.RaiseCreatedRoom();
         }
 
@@ -78,13 +220,16 @@ namespace Muffin.Network
         /// </summary>
         public void OnCreateRoomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Create Room Failed [{returnCode}]: {message}");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 만들기 실패 [{returnCode}]: {message}");
 
             switch (returnCode)
             {
                 // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
-                case 32766:
-                    CreateRoom();
+                case ErrorCode.GameIdAlreadyExists:
+                    if (_creatingSolo)
+                        CreateSoloRoom();
+                    else
+                        CreateRoom();
                     return;
             }
             RoomEvents.RaiseCreateRoomFailed(returnCode, message);
@@ -96,17 +241,21 @@ namespace Muffin.Network
         /// </summary>
         public void OnJoinedRoom()
         {
-            Debug.Log("On Joined Room");
+            AdoptBots();
             RoomEvents.RaiseJoinedRoom();
         }
     
         /// <summary>
         /// 룸 나가기시 호출되는 콜백 함수
-        /// 타이틀 씬 로드
         /// </summary>
         public void OnLeftRoom()
         {
-            Debug.Log("On Left Room");
+            // 지난 판의 내 상태(체력 · 손패 장수)를 지운다. PUN 은 방에 들어갈 때 내 CustomProperties 를 같이 보내서,
+            // 지우지 않으면 다음 판 시작 때 지난 판 값이 그대로 보인다.
+            PhotonNetwork.LocalPlayer.CustomProperties.Clear();
+            _hostBots = null;
+            _hostBotLevels = null;
+
             RoomEvents.RaiseLeftRoom();
         }
     
@@ -115,7 +264,7 @@ namespace Muffin.Network
         /// </summary>
         public void OnJoinRoomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Join Room Failed: {message}");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방 입장 실패: {message}");
             RoomEvents.RaiseJoinRoomFailed(returnCode, message);
         }
 
@@ -124,13 +273,21 @@ namespace Muffin.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.Log($"On Join Random Room Failed: {message}");
-            Debug.Log("No Empty Room -> Create New Room");
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 방을 만든다: {message}");
             CreateRoom();
         }
 
         public void OnPlayerEntered(Player player)
         {
+            // 봇 추가와 사람 입장이 서버에서 엇갈리면 사람 + 봇이 정원을 넘는다 — 넘친 봇을 뺀다 (08-room.md 2절 · 18-bot.md 3절 #8)
+            if (CanEditBots())
+            {
+                int[] numbers = CurrentBots;
+                int seats = NetworkManager.MaxPlayers - PhotonNetwork.CurrentRoom.PlayerCount;
+                if (numbers.Length > seats)
+                    SetBots(numbers.Take(seats).ToArray(), CurrentBotLevels);
+            }
+
             RoomEvents.RaisePlayerEntered(player);
         }
 
@@ -139,9 +296,33 @@ namespace Muffin.Network
             RoomEvents.RaisePlayerLeft(player);
         }
 
+        public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changed)
+        {
+            if (!changed.ContainsKey(RoomProps.Bots) && !changed.ContainsKey(RoomProps.BotLevels))
+                return;
+
+            // 방장이 쓰지 않은 봇 목록 · 난이도는 RoomGuard 가 되돌린다 (09-network.md 13절 · 18-bot.md 3절 #7)
+            RoomEvents.RaiseBotsChanged(BotRoster.Numbers);
+        }
+
         public void OnRoomListUpdate(List<RoomInfo> roomList)
         {
             RoomEvents.RaiseRoomListUpdate(roomList);
+        }
+
+        /// <summary>
+        /// 방장 전환시 호출되는 콜백 함수
+        /// 방장 이탈 시 처리(08-room.md 5절 #5)는 미정이라 통지만 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
+        /// </summary>
+        public void OnMasterClientSwitched(Player newMasterClient)
+        {
+            // 앞 방장이 아직 방에 있으면 누가 방장 자리를 가져간 것 — 받아들이지 않는다 (RoomGuard 가 되찾는다)
+            if (!_guard.AcceptMasterSwitch(newMasterClient))
+                return;
+
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
+            AdoptBots();
+            RoomEvents.RaiseMasterClientSwitched(newMasterClient);
         }
     }
 }

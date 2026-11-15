@@ -4,12 +4,9 @@ using System.Collections.Generic;
 using Photon.Realtime;
 using UnityEngine;
 
-/// <summary>
-/// Room에서 외부로 노출되는 Event Bus
-/// </summary>
-
-namespace Muffin.Network
+namespace Chapchu.Network.Events
 {
+    /// <summary>방 만들기 · 입장 · 나가기 · 인원 변화 통지 (08-room.md). UI 는 Photon 콜백 대신 이것을 구독한다 (CODE_CONVENTION 6절).</summary>
     public static class RoomEvents
     {
         public static event Action OnCreatedRoom;
@@ -21,7 +18,13 @@ namespace Muffin.Network
         public static event Action<Player> OnPlayerEntered;
         public static event Action<Player> OnPlayerLeft;
         public static event Action<List<RoomInfo>> OnRoomListUpdate;
-    
+        /// <summary>방장(마스터 클라이언트)이 바뀜. OnPlayerLeft 와의 호출 순서는 보장되지 않는다.</summary>
+        public static event Action<Player> OnMasterClientSwitched;
+        /// <summary>방의 봇 목록 또는 봇 난이도가 바뀜 (18-bot.md 5절) — 봇 번호 (오름차순). 난이도는 BotRoster.LevelOf 로 읽는다. 방 화면이 칸 · 로그를 갱신한다.</summary>
+        public static event Action<int[]> OnBotsChanged;
+        /// <summary>내가 믿는 방장이 됨 (09-network.md 13절) — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 방에 들어올 때는 부르지 않는다.</summary>
+        public static event Action OnBecameTrustedMaster;
+
         public static void RaiseCreatedRoom() => OnCreatedRoom?.Invoke();
         public static void RaiseCreateRoomFailed(short returnCode, string message) => OnCreateRoomFailed?.Invoke(returnCode, message);
         public static void RaiseJoinedRoom() => OnJoinedRoom?.Invoke();
@@ -31,5 +34,8 @@ namespace Muffin.Network
         public static void RaisePlayerEntered(Player newPlayer) => OnPlayerEntered?.Invoke(newPlayer);
         public static void RaisePlayerLeft(Player newPlayer) => OnPlayerLeft?.Invoke(newPlayer);
         public static void RaiseRoomListUpdate(List<RoomInfo> roomList) => OnRoomListUpdate?.Invoke(roomList);
+        public static void RaiseMasterClientSwitched(Player newMasterClient) => OnMasterClientSwitched?.Invoke(newMasterClient);
+        public static void RaiseBotsChanged(int[] botNumbers) => OnBotsChanged?.Invoke(botNumbers);
+        public static void RaiseBecameTrustedMaster() => OnBecameTrustedMaster?.Invoke();
     }
 }
