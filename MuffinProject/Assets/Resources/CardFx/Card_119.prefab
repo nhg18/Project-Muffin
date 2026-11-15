@@ -2470,6 +2470,11 @@ MonoBehaviour:
   hitAt: 5.09
   landSeconds: 0.6
   streakSpeed: 5200
+  behindFlash: 0.2
+  hitFreeze: 0.06
+  hitPull: {x: 0.72, y: 1.55}
+  hitZoom: {x: 2.95, y: 1.42}
+  hitSparkSeconds: 0.2
   space: {fileID: 3657764183640186827}
   streak: {fileID: 96365334450113659}
   sky: {fileID: 6895995699105708237}
