@@ -13,7 +13,7 @@ namespace Chapchu.UI.Fx.Fate
     /// 위쪽 두 사람의 「HP n」 표가 0.62 초부터 서로 자리를 바꾼다 → 0.78 초 「휘릭!」.
     /// 4 단계 = HP 를 바꾼 뒤 쓴 사람 자리에 초록 · 대상 자리에 빨강 「HP n」 터짐 글자 (시안 FXA 운명 뒤집기 s4).
     /// n 은 <see cref="CardFxContext.OnHpChanged"/> 로 받는다 — 정한 시간 안에 알림이 오지 않으면 그리지 않는다.
-    /// 자리의 지금 HP 는 뼈대에 아직 없다 — 그때까지 3 단계 표는 <see cref="unknownHp"/>(시안 hp() 기본 100)로 그린다.
+    /// 3 단계 표는 자리의 지금 HP(<see cref="CardFxSeat.Hp"/>)로 그린다.
     /// 얼굴은 <see cref="CardFxContext.Character"/> 의 얼굴 칸을 동그랗게 잘라 쓴다 (사람마다 그림이 생기기 전까지 모두 같다).
     /// 연출 길이 2.96초 (3 단계 2.46초 + 4 단계 0.5초) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
@@ -103,8 +103,6 @@ namespace Chapchu.UI.Fx.Fate
         [SerializeField] private Color noFaceColor = new Color32(0xbb, 0xbb, 0xbb, 0xff);
 
         [Header("HP 표 (시안: 0.62 초부터 0.42 초 동안 맞바꾼다 — 위로 170 · 아래로 102 휘어 건너가고, 1.04 초에 20 위에서 내려앉는다)")]
-        [Tooltip("자리 HP 를 모를 때 쓰는 값 (시안 hp() 기본 100). 뼈대 자리에 HP 가 생기면 그것을 쓴다.")]
-        [SerializeField] private int unknownHp = 100;
         [Tooltip("쓴 사람 표 자리 (설계 px, 시안 230, 170 + 92).")]
         [SerializeField] private Vector2 chipLeft = new Vector2(230f, 262f);
         [Tooltip("대상 표 자리 (설계 px, 시안 1050, 170 + 92).")]
@@ -196,10 +194,10 @@ namespace Chapchu.UI.Fx.Fate
             backdrop.Painter = PaintBackdrop;
             backdrop.Redraw();
             swoosh.Painter = PaintSwoosh;
-            ShowFace(casterFace, context.Fx.Character);
-            ShowFace(targetFace, context.Fx.Character);
-            _casterHp = unknownHp;
-            _targetHp = unknownHp;
+            ComicKit.ShowFace(casterFace, context.Fx.Character, faceArea, noFaceColor);
+            ComicKit.ShowFace(targetFace, context.Fx.Character, faceArea, noFaceColor);
+            _casterHp = context.From != null ? context.From.Hp : 0;
+            _targetHp = context.Target != null ? context.Target.Hp : 0;
         }
 
         public override void Draw(float t, ComicContext context)
@@ -298,28 +296,7 @@ namespace Chapchu.UI.Fx.Fate
                 chip.text.color = color;
             if (chip.text.text == text)
                 return;
-            chip.text.text = text;
-            float width = chip.text.GetPreferredValues(text).x + chipPadding;
-            float height = chip.text.fontSize * chipHeight;
-            chip.shadow.sizeDelta = new Vector2(width, height);
-            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
-            chip.box.sizeDelta = new Vector2(width + chipLine, height + chipLine);
-        }
-
-        private void ShowFace(RawImage target, Sprite character)
-        {
-            if (character == null)
-            {
-                target.texture = null;
-                target.color = noFaceColor;
-                return;
-            }
-            Texture texture = character.texture;
-            Rect r = character.textureRect;
-            target.texture = texture;
-            target.color = Color.white;
-            target.uvRect = new Rect((r.x + faceArea.x * r.width) / texture.width, (r.y + faceArea.y * r.height) / texture.height,
-                faceArea.width * r.width / texture.width, faceArea.height * r.height / texture.height);
+            ComicKit.FitTag(chip.text, chip.shadow, chip.box, text, chipPadding, chipHeight, chipLine);
         }
 
         private void PaintBackdrop(ComicPen pen)

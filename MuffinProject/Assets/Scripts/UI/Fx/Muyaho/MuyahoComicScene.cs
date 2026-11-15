@@ -12,7 +12,7 @@ namespace Chapchu.UI.Fx.Muyaho
     /// 알래스카 하늘 · 겹겹 설산 · 햇살 · 눈발 위로 밈 사진이 튀어 올라 콩콩 뛰고, 0.32 초부터 「무~ 야~ 호~」 한 글자씩 찍힌 뒤 0.9 초 「!」.
     /// 0.75 초부터 오른쪽 아래 손패 부자 얼굴 + 「-n」, 그 왼쪽 나머지 사람(최대 셋)에게 카드가 한 장씩 날아가 「+1」.
     /// 4 단계는 손패 이동(게임 화면 몫)뿐이라 장식이 없다 (시안 FXA 무야호 s4 = moveCards).
-    /// 손패 수는 뼈대 자리에 아직 없다 — 그때까지 시안 handN 기본값(모두 같음)처럼 쓴 사람을 손패 부자로 본다.
+    /// 손패 부자 = 카드의 대상 <see cref="ComicContext.Target"/> (손패가 가장 많은 1명, 낼 때 정해 공개 — 11-card-list 118). 받는 사람 = 대상을 뺀 모두.
     /// 얼굴은 <see cref="CardFxContext.Character"/> 의 얼굴 칸을 동그랗게 잘라 쓴다 (사람마다 그림이 생기기 전까지 모두 같다).
     /// 연출 길이 2.56초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// </summary>
@@ -308,8 +308,8 @@ namespace Chapchu.UI.Fx.Muyaho
                 tildes[i].Painter = pen => PaintTilde(pen, index);
             }
 
-            // 손패 부자 — 손패 수가 뼈대에 없어 시안 handN 기본값(모두 같음)처럼 쓴 사람. 나머지는 턴 순서대로 셋까지
-            CardFxSeat rich = context.From;
+            // 손패 부자 = 카드의 대상 (낼 때 정해 공개). 나머지는 턴 순서대로 셋까지
+            CardFxSeat rich = context.Target;
             _receiverCount = 0;
             foreach (CardFxSeat seat in context.Fx.Seats)
             {
@@ -318,7 +318,7 @@ namespace Chapchu.UI.Fx.Muyaho
             }
 
             Sprite character = context.Fx.Character;
-            ShowFace(giver.face, character);
+            ComicKit.ShowFace(giver.face, character, faceArea, noFaceColor);
             _giverAt = ComicKit.PositionOf(giver.root);
             SetTag(loss, string.Format(LossFormat, _receiverCount));
             for (int i = 0; i < receivers.Length; i++)
@@ -329,7 +329,7 @@ namespace Chapchu.UI.Fx.Muyaho
                 receivers[i].gain.root.gameObject.SetActive(used);
                 if (!used)
                     continue;
-                ShowFace(receivers[i].portrait.face, character);
+                ComicKit.ShowFace(receivers[i].portrait.face, character, faceArea, noFaceColor);
                 SetTag(receivers[i].gain, GainText);
             }
         }
@@ -406,30 +406,8 @@ namespace Chapchu.UI.Fx.Muyaho
 
         private void SetTag(Tag tag, string text)
         {
-            tag.text.text = text;
-            float width = tag.text.GetPreferredValues(text).x + tagPadding;
-            float height = tag.text.fontSize * tagHeight;
-            tag.shadow.sizeDelta = new Vector2(width, height);
-            // 시안 strokeRect 는 테 가운데가 상자 가장자리 — 테 반만큼 밖으로
-            tag.box.sizeDelta = new Vector2(width + tagLine, height + tagLine);
+            ComicKit.FitTag(tag.text, tag.shadow, tag.box, text, tagPadding, tagHeight, tagLine);
         }
-
-        private void ShowFace(RawImage target, Sprite character)
-        {
-            if (character == null)
-            {
-                target.texture = null;
-                target.color = noFaceColor;
-                return;
-            }
-            Texture texture = character.texture;
-            Rect r = character.textureRect;
-            target.texture = texture;
-            target.color = Color.white;
-            target.uvRect = new Rect((r.x + faceArea.x * r.width) / texture.width, (r.y + faceArea.y * r.height) / texture.height,
-                faceArea.width * r.width / texture.width, faceArea.height * r.height / texture.height);
-        }
-
         private void PaintGlow(ComicPen pen)
         {
             pen.FillRadial(glowCenter.x, glowCenter.y, glowRadius, glowColor, new Color(glowColor.r, glowColor.g, glowColor.b, 0f));
@@ -445,7 +423,8 @@ namespace Chapchu.UI.Fx.Muyaho
                 for (float x = -ridgeMargin; x < ComicKit.Width + ridgeMargin;)
                 {
                     _ridgePoints.Add(new Vector2(x, ridge.baseY - random.Next() * ridge.height));
-                    x += ridgeStep.x + random.Next() * ridgeStep.y;
+                    // 인스펙터에서 0 이하로 바꿔도 끝나게 — 적어도 1 설계 px 씩 나아간다
+                    x += Mathf.Max(1f, ridgeStep.x + random.Next() * ridgeStep.y);
                 }
                 int peaks = _ridgePoints.Count;
                 // 오른쪽 아래 모서리까지가 산 윗줄 — 눈 덮개를 자를 때도 쓴다

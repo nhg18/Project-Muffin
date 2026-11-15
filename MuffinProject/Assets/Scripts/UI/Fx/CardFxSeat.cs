@@ -17,6 +17,9 @@ namespace Chapchu.UI.Fx
         /// <summary>자리 색 (PlayerLook.ColorOf).</summary>
         public Color Color;
 
+        /// <summary>연출을 시작할 때의 HP (결과가 적용되기 전).</summary>
+        public int Hp;
+
         /// <summary>이 화면의 주인이면 true.</summary>
         public bool IsMe;
     }

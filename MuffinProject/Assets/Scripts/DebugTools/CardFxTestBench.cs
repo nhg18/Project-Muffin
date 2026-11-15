@@ -16,7 +16,7 @@ namespace Chapchu.DebugTools
     /// (Resources/CardFx/Card_{카드 ID})을 게임과 같은 순서로 튼다 (10-ui 5-1):
     /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임 → 3 단계(<see cref="CardFx.PlayRoutine"/>) →
     /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(맞음 · 회복) → 장식이 끝나고 900ms → 버림 더미로.
-    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값으로 흉내 낸다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
+    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값과 HP 맞바꾸기(SwapHpEffect)로 흉내 낸다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
     /// 자리는 둘 — 나(낸 사람) · 상대(대상). 연출 프리팹이 없는 카드는 3 단계 없이 결과만.
     /// 키: Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>. 자동 확인(run.sh fx)은 <see cref="PlayCard"/> 로 튼다.
     /// </summary>
@@ -198,6 +198,9 @@ namespace Chapchu.DebugTools
             {
                 if (effect is HealEffect heal)
                     (heal.subject == EffectSubject.Self ? caster : target).ResetHp(GameServer.MaxHp - heal.amount);
+                // HP 가 같으면 맞바꿔도 달라지지 않는다 — 맞바꾸기 카드는 내 HP 를 반으로 깎아 둔다
+                else if (effect is SwapHpEffect)
+                    caster.ResetHp(GameServer.MaxHp / 2);
             }
 
             yield return new WaitForSeconds(0.25f);
@@ -246,8 +249,8 @@ namespace Chapchu.DebugTools
 
         private CardFxContext CreateContext(CardData data)
         {
-            var me = new CardFxSeat { Actor = MeActor, Anchor = (RectTransform)caster.transform, Name = "나", Color = PlayerLook.MeColor, IsMe = true };
-            var other = new CardFxSeat { Actor = OtherActor, Anchor = (RectTransform)target.transform, Name = "상대", Color = PlayerLook.SeatColors[0], IsMe = false };
+            var me = new CardFxSeat { Actor = MeActor, Anchor = (RectTransform)caster.transform, Name = "나", Color = PlayerLook.MeColor, Hp = caster.Hp, IsMe = true };
+            var other = new CardFxSeat { Actor = OtherActor, Anchor = (RectTransform)target.transform, Name = "상대", Color = PlayerLook.SeatColors[0], Hp = target.Hp, IsMe = false };
             return new CardFxContext
             {
                 Layer = fxLayer,
@@ -273,7 +276,26 @@ namespace Chapchu.DebugTools
                     Apply(context, shown, onlyAnchor, damage.subject, -damage.amount);
                 else if (effect is HealEffect heal)
                     Apply(context, shown, onlyAnchor, heal.subject, heal.amount);
+                else if (effect is SwapHpEffect)
+                    SwapHp(context, shown, onlyAnchor);
             }
+        }
+
+        // 맞바꾸기 흉내 — 낸 사람과 대상의 HP 를 바꾼다. 피해 · 회복이 아니라 맞음 · 회복 연출은 없고 두 자리에 알림만 (11-card-list 1-2)
+        private void SwapHp(CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor)
+        {
+            CardFxSeat me = context.CasterSeat, other = context.MainTarget;
+            if (onlyAnchor != null || me == null || other == null || me == other || shown.Contains(me) || shown.Contains(other))
+                return;
+            shown.Add(me);
+            shown.Add(other);
+            FxDummySeat meDummy = me.Anchor.GetComponent<FxDummySeat>();
+            FxDummySeat otherDummy = other.Anchor.GetComponent<FxDummySeat>();
+            int meBefore = meDummy.Hp, otherBefore = otherDummy.Hp;
+            meDummy.ShowHp(otherBefore);
+            otherDummy.ShowHp(meBefore);
+            context.NotifyHpChanged(me, meBefore, meDummy.Hp);
+            context.NotifyHpChanged(other, otherBefore, otherDummy.Hp);
         }
 
         private void Apply(CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor, EffectSubject subject, int delta)
