@@ -450,7 +450,7 @@ namespace Chapchu.UI.Fx.Band
 
         private static Tween Progress(float ms, Vector4 ease, Action<float> apply)
         {
-            return DOVirtual.Float(0f, 1f, Seconds(ms), p => apply(CubicBezier(ease, p))).SetEase(Ease.Linear);
+            return DOVirtual.Float(0f, 1f, Seconds(ms), p => apply(FxLayer.CubicBezier(ease, p))).SetEase(Ease.Linear);
         }
 
         private static Tween Animate(float ms, Vector4 ease, Pose[] poses, Action<Pose> apply)
@@ -496,27 +496,6 @@ namespace Chapchu.UI.Fx.Band
             float x = (1f - width) * Mathf.Clamp01(focus.x);
             float y = (1f - height) * (1f - Mathf.Clamp01(focus.y));
             return new Rect(full.x + x * full.width, full.y + y * full.height, width * full.width, height * full.height);
-        }
-
-        // CSS cubic-bezier(x1, y1, x2, y2) — 진행률 x 에 대한 y
-        private static float CubicBezier(Vector4 curve, float x)
-        {
-            float t = x;
-            for (int i = 0; i < 8; i++)
-            {
-                float current = Bezier(curve.x, curve.z, t) - x;
-                float slope = 3f * (1f - t) * (1f - t) * curve.x + 6f * (1f - t) * t * (curve.z - curve.x) + 3f * t * t * (1f - curve.z);
-                if (Mathf.Abs(slope) < 1e-5f)
-                    break;
-                t = Mathf.Clamp01(t - current / slope);
-            }
-            return Bezier(curve.y, curve.w, t);
-        }
-
-        private static float Bezier(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
         }
 
         private static Pose Rest(float at) => new Pose(at, 0f, 0f, 1f, RestAngle, 1f);

@@ -16,7 +16,7 @@ namespace Chapchu.DebugTools
     /// (Resources/CardFx/Card_{카드 ID})을 게임과 같은 순서로 튼다 (10-ui 5-1):
     /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임 → 3 단계(<see cref="CardFx.PlayRoutine"/>) →
     /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(맞음 · 회복) → 장식이 끝나고 900ms → 버림 더미로.
-    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값으로 흉내 낸다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
+    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값으로 흉내 내고, 뽑기(DrawEffect)는 장수만 알린다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
     /// 자리는 둘 — 나(낸 사람) · 상대(대상). 연출 프리팹이 없는 카드는 3 단계 없이 결과만.
     /// 키: Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>. 자동 확인(run.sh fx)은 <see cref="PlayCard"/> 로 튼다.
     /// </summary>
@@ -273,7 +273,20 @@ namespace Chapchu.DebugTools
                     Apply(context, shown, onlyAnchor, damage.subject, -damage.amount);
                 else if (effect is HealEffect heal)
                     Apply(context, shown, onlyAnchor, heal.subject, heal.amount);
+                else if (effect is DrawEffect draw && onlyAnchor == null)
+                    NotifyDrawn(context, draw);
             }
+        }
+
+        // 뽑기 결과 흉내 — DrawEffect.Prepare 처럼 무작위 장수면 count ~ randomMax 에서 정하고 받는 사람마다 알린다. 함정 사건 값(useTriggerAmount)은 없어서 건너뛴다
+        private static void NotifyDrawn(CardFxContext context, DrawEffect draw)
+        {
+            if (draw.useTriggerAmount)
+                return;
+            int count = draw.randomMax > draw.count ? Random.Range(draw.count, draw.randomMax + 1) : draw.count;
+            IReadOnlyList<CardFxSeat> seats = draw.subject == EffectSubject.Self ? new[] { context.CasterSeat } : context.TargetSeats;
+            foreach (CardFxSeat seat in seats)
+                context.NotifyCardsDrawn(seat, count);
         }
 
         private void Apply(CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor, EffectSubject subject, int delta)
@@ -326,7 +339,7 @@ namespace Chapchu.DebugTools
 
             for (float time = 0f; time < duration; time += Time.deltaTime)
             {
-                float t = CubicBezier(0.3f, 0.6f, 0.25f, 1f, time / duration);
+                float t = FxLayer.CubicBezier(new Vector4(0.3f, 0.6f, 0.25f, 1f), time / duration);
                 bool first = t < 0.5f;
                 float f = first ? t / 0.5f : (t - 0.5f) / 0.5f;
                 card.anchoredPosition = first ? Vector2.Lerp(from, middle, f) : Vector2.Lerp(middle, to, f);
@@ -420,27 +433,6 @@ namespace Chapchu.DebugTools
                 case CardType.Trap: return trapCardPrefab;
                 default: return actionCardPrefab;
             }
-        }
-
-        // CSS cubic-bezier(x1, y1, x2, y2) — 진행률 x 에 대한 y
-        private static float CubicBezier(float x1, float y1, float x2, float y2, float x)
-        {
-            float t = x;
-            for (int i = 0; i < 8; i++)
-            {
-                float current = Bezier(x1, x2, t) - x;
-                float slope = 3f * (1f - t) * (1f - t) * x1 + 6f * (1f - t) * t * (x2 - x1) + 3f * t * t * (1f - x2);
-                if (Mathf.Abs(slope) < 1e-5f)
-                    break;
-                t = Mathf.Clamp01(t - current / slope);
-            }
-            return Bezier(y1, y2, t);
-        }
-
-        private static float Bezier(float p1, float p2, float t)
-        {
-            float u = 1f - t;
-            return 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t;
         }
 
         private static void Stretch(RectTransform rect)
