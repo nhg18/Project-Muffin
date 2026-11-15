@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Chapchu.UI.Fx
@@ -38,5 +39,28 @@ namespace Chapchu.UI.Fx
 
         /// <summary>조각 하나만 재생한다. showScenery 면 이펙트 뒤에 그 시각의 장면을 깐다. 조각이 없는 연출은 전체를 재생한다. 끝나면 부른 쪽이 지운다.</summary>
         public virtual IEnumerator PlayStepRoutine(CardFxStep step, CardFxContext context, bool showScenery) => PlayRoutine(context);
+
+        /// <summary>root 아래 켜진 조각을 시작 시각 순으로 (꺼진 오브젝트 · 컴포넌트는 빠진다. 같으면 계층 위부터 — OrderBy 는 순서를 지킨다).</summary>
+        protected static List<CardFxStep> Collect(Transform root)
+        {
+            return root.GetComponentsInChildren<CardFxStep>().Where(step => step.enabled).OrderBy(step => step.StartMs).ToList();
+        }
+
+        /// <summary>시작부터 조각마다 제 시각에 재생하고, 가장 늦게 끝나는 조각까지 기다린다.</summary>
+        protected static IEnumerator TimelineRoutine(List<CardFxStep> steps, CardFxContext context, RectTransform target)
+        {
+            float start = Time.time;
+            float end = 0f;
+            foreach (CardFxStep step in steps)
+            {
+                while ((Time.time - start) * 1000f < step.StartMs)
+                    yield return null;
+                step.Play(context, target);
+                end = Mathf.Max(end, step.StartMs + step.DurationMs);
+            }
+
+            while ((Time.time - start) * 1000f < end)
+                yield return null;
+        }
     }
 }

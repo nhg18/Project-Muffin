@@ -46,6 +46,9 @@ namespace Chapchu.UI.Fx
         /// <summary>판에 남아 있는 모든 사람 (낸 사람 포함), 턴 순서.</summary>
         public IReadOnlyList<CardFxSeat> Seats = Array.Empty<CardFxSeat>();
 
+        /// <summary>이 카드로 뽑을 수 있는 장수 (최소, 최대) — 카드 데이터의 뽑기 효과에서 (예: 상상도 못한 정체 1 ~ 10). 뽑기가 없는 카드는 (0, 0).</summary>
+        public Vector2Int DrawRange;
+
         /// <summary>
         /// 4 단계: 누군가의 HP 가 화면에 바뀌었다 (자리, 전, 후). 공통 피해 · 회복 연출과 같은 순간에 온다.
         /// 장식이 숫자를 써야 할 때 받는다 (예: 운명 뒤집기의 「HP n」).
