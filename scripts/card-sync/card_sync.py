@@ -9,6 +9,7 @@
 """
 import argparse
 import datetime
+import difflib
 import json
 import os
 import re
@@ -240,6 +241,55 @@ LOG_FIELDS = (("name", "이름"), ("state", "상태"), ("type", "종류"), ("tar
 KST = datetime.timezone(datetime.timedelta(hours=9))
 NL = chr(10)
 
+# 변경 기록 diff — 글을 숫자 · 띄어쓰기 · 나머지로 쪼개 비교한다 (「2장을」 → 「1장을」 에서 숫자만 칠함)
+WORD = re.compile(r"\d+|\s+|[^\d\s]+")
+CUT = {"strikethrough": True, "color": "red"}
+ADD = {"bold": True, "color": "green"}
+
+
+def field(c, k):
+    return "" if c.get(k) is None else str(c[k])
+
+
+def word_diff(a, b):
+    """(종류, 글) 조각 — '=' 같음 · '-' 빠짐 · '+' 들어감."""
+    a, b = WORD.findall(a), WORD.findall(b)
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op == "equal":
+            out.append(("=", "".join(a[i1:i2])))
+            continue
+        if i1 < i2:
+            out.append(("-", "".join(a[i1:i2])))
+        if j1 < j2:
+            out.append(("+", "".join(b[j1:j2])))
+    return out
+
+
+def marked(old, new, diff, ctx=8):
+    """「바뀐 부분」 칸 — 빠진 글 빨강 취소선, 들어간 글 초록 굵게, 같은 글은 바뀐 곳 앞뒤 ctx 자만."""
+    out = []
+    for k, label in diff:
+        out.append({"type": "text", "text": {"content": (NL if out else "") + label + ": "}})
+        parts = word_diff(field(old, k).replace(NL, " / "), field(new, k).replace(NL, " / "))
+        for i, (op, t) in enumerate(parts):
+            if op == "=" and len(t) > ctx * 2:
+                t = ("…" + t[-ctx:]) if i == 0 else (t[:ctx] + "…") if i == len(parts) - 1 else (t[:ctx] + "…" + t[-ctx:])
+            item = {"type": "text", "text": {"content": t[:2000]}}
+            if op != "=":
+                item["annotations"] = CUT if op == "-" else ADD
+            out.append(item)
+    return out[:100]   # 노션 한 칸 조각 제한
+
+
+def git_diff(old, new, diff):
+    """행 본문 코드 블록 — git diff 꼴 (바뀐 줄 앞뒤 1줄, 떨어진 곳은 …)."""
+    lines = []
+    for k, label in diff:
+        body = list(difflib.unified_diff(field(old, k).split(NL), field(new, k).split(NL), n=1, lineterm=""))[3:]
+        lines += [f"@@ {label} @@"] + [" …" if l.startswith("@@") else l for l in body]
+    return {"type": "code", "code": {"language": "diff", "rich_text": rt(NL.join(lines))}}
+
 
 def describe(c):
     s = c["text"]
@@ -427,8 +477,9 @@ class Bot:
         pending = {int(l.split()[1]) for l in changed}
         return {"cards": cards, "reworked": sorted(self.reworked & pending)}, released, changed
 
-    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후로
+    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후(전체) · 바뀐 부분(단어 diff) · 본문(git diff)
     def record(self, old, new):
+        extra, blocks = {}, []
         if old is None:
             kind, labels = "추가", []
             before, after = "", NL.join(f"{label}: {new[k]}" for k, label in LOG_FIELDS if new.get(k) not in (None, ""))
@@ -443,6 +494,8 @@ class Bot:
             kind = "삭제" if new["state"] == "삭제" else ("상태" if labels == ["상태"] else "수정")
             before = NL.join(f"{label}: {old.get(k)}" for k, label in diff)
             after = NL.join(f"{label}: {new.get(k)}" for k, label in diff)
+            extra = {"바뀐 부분": {"rich_text": marked(old, new, diff)}}
+            blocks = [git_diff(old, new, diff)]
         card = new or old
         title = f"{card['name'] or '(이름 없음)'} — {kind}" + (f" ({' · '.join(labels)})" if kind == "수정" else "")
         props = {"변경": {"title": rt(title)}, "종류": {"select": {"name": kind}},
@@ -451,7 +504,8 @@ class Bot:
                  "이전": {"rich_text": rt(before)[:100]}, "이후": {"rich_text": rt(after)[:100]}}
         if new is not None:
             props["카드"] = {"relation": [{"id": new["page"]}]}
-        self.n.create_page(LOG_DS, props)
+        props.update(extra)
+        self.n.create_page(LOG_DS, props, blocks)
         self.say(f"기록: {title}")
 
     def fill_ids(self, cards):
