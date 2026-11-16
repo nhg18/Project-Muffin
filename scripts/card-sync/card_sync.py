@@ -22,7 +22,7 @@ import urllib.request
 CARD_DS = "3d26dad6-6abe-800c-8b9f-000be2f2c4fa"     # 카드 목록 (기획 원본)
 PATCH_DS = "4196dad6-6abe-81c3-8859-000b52a6bab4"    # 📝 패치 노트
 OLD_DS = "4196dad6-6abe-8179-9515-000bb16b186e"      # 🗄️ 카드 옛 버전
-LOG_DS = "4196dad6-6abe-8196-beae-000b44e282e3"      # 🧾 카드 변경 기록 (봇 페이지 안)
+LOG_DS = "4196dad6-6abe-8196-beae-000b44e282e3"      # 🧾 카드 변경 기록 (🃏 카드 칸)
 I18N_DS = "4196dad6-6abe-813a-963e-000bf3a619fe"     # 🌐 다국어 문구
 BOT_PAGE = "4196dad6-6abe-81d2-8970-c9e1863fe31b"    # 🤖 카드 정리 봇 (스위치 · 마지막 실행)
 

@@ -1615,7 +1615,7 @@ public static class MultiTest
                 {
                     var t = new ChainTable();
                     t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(117)));
-                    Check(t.Hp(t.O1) == 60 && t.Hp(t.O2) == 60 && t.Hp(t.Turn) == 100, "117 지옥참마도 나를 뺀 모두에게 40 피해");
+                    Check(t.Hp(t.O1) == 60 && t.Hp(t.O2) == 60 && t.Hp(t.Turn) == 100, "117 지옥참마도 상대 모두에게 40 피해");
                 }
 
                 // ── 묶음 2 ──
