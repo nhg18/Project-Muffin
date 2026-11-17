@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-11-17 · 결과 화면 — 새 씬 `ResultScene` · 5초 자동 방 복귀 제거 (`feature/result-screen`)
+
+### 계기 (PM)
+- 「1. 5초뒤 자동 복귀는 제거해줘, 2. 결과화면은 아티팩트 결과화면 UI v3를 참고해서 새로운 씬에다가 결과화면을 만들자.」 → 플랜 승인.
+
+### 결정 (PM, 2026-11-17)
+- 버튼 · 흐름은 시안대로: 「한 판 더!」(준비 토글 → 전원 준비 → 카운트다운 → 새 판) + 「로비로」(방을 나가 로비 — 방 화면으로 돌아가는 길 없음) + 열린 뒤 45초면 자동으로 로비.
+- 누가 나가면 남은 사람끼리 계속 (사람 + 봇 2명 이상이면 그들만 전원 준비로 새 판, 1명이면 「한 판 더」 꺼짐).
+- 통계는 순위만 먼저 (승자 · 순위 · 최종 HP · 탈락 턴 · 「누구에게 당함」). 업적 배지 · 「판 기록」 · 이모트는 다음 작업. 게임 종료 → 결과 씬 2초 (제안 값, 인스펙터).
+- 이 결정으로 2026-11-07 의 「결과 화면 = 방의 한 상태 · 방으로 · 자동 복귀 없음 · 시작 버튼 없음 · 지난 판 결과 · 결과 보는 중」 은 폐기 → 문서에 적음.
+
+### 한 것
+- **규칙** (`Scripts/Game`): `PlayerState.OutTurn` · `DownedBy`, `SetHp` 에 피해 주인, `GameEnded` 가 순위 순 요약(접속 번호 · 순위 · HP · 빠진 턴 · 당한 사람 · 나감)을 싣는다 (`GameServer.Win.EndGame` — 승자 → 남은 사람 HP 순 → 늦게 빠진 순, 공동 순위, 무승부 전원 1위). `StartGame` 이 `TurnSerial` 을 0 으로.
+- **전송** (`Scripts/Network`): `PunGameServer.ReturnToRoomRoutine` 삭제 → `RPC_OnGameEnded` 가 요약을 싣고, 2초 뒤 공개 값을 시작 값으로 되돌린 다음(`ResetPublicProps` — 빠져 있던 `TurnActor` · `TurnDeadline` · `DeckCount` · `EventSeq` · `ActionBlock` · `LifeState` 도) 전원을 `ResultScene` 으로. 방은 다시 열지 않는다. 받은 요약은 `GameResult.Last`. 새 `PunResultServer`(씬 뷰 ID 2): `RPC_ResultRequestSetReady` · 봇 자동 준비(2.9초 + 0.7초 간격) · 전원 준비 → 3.5초 카운트다운 → 새 판 · 방 속성 `resReady` · `resDeadline` · `resStartAt`. `RequestLimiter`(빈도 제한을 두 서버가 함께 씀) · `NetworkManager.RoomProp`(방장은 기억한 원본에서 읽음) · `RoomEvents.OnRoomPropsChanged` · `SharedScenes` 에 결과 씬.
+- **화면** (`Scripts/UI/ResultScreen`): `ResultPresenter` + `ResultTitleView` · `ResultPodiumView` · `ResultButtonsView` · `ResultReadyDotView` · `ResultCountdownView`. 씬 `Scenes/ResultScene.unity` · 프리팹 `Prefab/UI/Result/ResultPodium` · `ResultReadyDot` · 글자 외곽선 프리셋 `Fonts/Jua/Jua SDF - ResultOutline · ResultTitle · ResultBig.mat`. 씬 · 프리팹은 에디터에서 일회용 스크립트로 한 번 조립해 저장했다 (스크립트는 저장소에 두지 않음). `PlayerLook.ColorOf(actor, 시작 명단)` — 누가 나가도 색이 밀리지 않게. 쓰는 곳 없던 `VictoryOverlayView` 삭제. `EditorBuildSettings` 에 씬 추가 · `GameScene` 의 `resultSeconds: 5` → `resultDelaySeconds: 2`. `PhotonServerSettings` RpcList 에 `RPC_ResultRequestSetReady` (`PhotonEditor.UpdateRpcList`).
+- **시험 도구**: `run.sh` full · solo · chapchu 가 결과 화면까지 (`check_result` · 한 판 더 · 로비로), `MultiTest` 에 `ResultSummary` · `ResultState` · `ResultTap` · `ExpectRoomClosed` · `Batches`, `rules` 에 요약 확인 5개. `ActIfMyTurn` 이 대상에게 함정이 없으면 104 파헤치기를 건너뛴다 — 거절돼 턴이 시간 초과까지 멈추던 것 (full 이 104 를 서로 30번 내며 멈춰 있었다). `chapchu` 는 「뽑아서 10장 → 5초 선언 대기」 규칙 뒤로 깨져 있었다(버튼을 5초 넘겨 눌러 거절 코드 1 — 2026-11-14 기록의 「확인 못 한 것」) → 9장에서 뽑은 클라이언트를 쉬지 않고 바로 다시 부르고, 둘째 선언 직후 게임이 끝나면 표시 확인을 멈춘다.
+- **문서**: `07` 9 · 10 · 11-1 · 11-2 · 11-3 · 11-4 · 11-5(폐기) · 12절, `10-ui` 10절(시안 v3 수치) · 2-1, `08` 4절 「게임 종료」, `01` 2 · 4절, `15` 9절, `09` 3 · 6.3 · 10 · 12 · 13절, `16-room-ui-full` · `22` (지난 판 결과 · 결과 보는 중 폐기 표시), `18` · `06`, `development-plan` 기능 8.
+
+### 시안에 없어 제안으로 넣은 것 (PM 확인)
+- 처치 승리 알약 「마지막까지 살아남았어요!」 (시안은 「최후의 1인」 — `07` 11-2 가 폐기한 라벨) · 무승부 「무승부!」 + 「모두 쓰러졌어요」 · 나간 사람 「이탈 · N턴」 + 「나감」 · 빠진 캐릭터는 회색 색조 + 7° 기울임(진짜 흑백은 셰이더가 필요) · 결과 씬까지 2초 · 자동 이동 마감을 「열린 시각 + 45초」 에서 10초 앞까지만 받아들임.
+- 시안과 다른 것: 플레이어 색은 게임에서 보던 색(`PlayerLook`) · 찹츄 승리 마크의 별 그림 없음 · 시상대 아래 모서리 반지름 14(시안 6) · 배경 빛줄기 · 발바닥 무늬 없음 · 전원 같은 캐릭터 · 색종이 없음 · 화면 전환 연출 없음.
+
+### 확인
+- `run.sh rules` — 요약 5개 ✓ (같은 턴 함께 탈락 1 · 2 · 2 / 무승부 전원 1위 · 자기 피해는 「당함」 아님 / 나감 / 죽은 뒤 나가도 순위 그대로 / 찹츄 승자는 HP 가 낮아도 1위). 실패 4건(체인 2 · 사망 1 · 봇 1)은 2026-11-15 기록에 적힌 기존 것(시험의 턴 30초 상수) 그대로 — 이번 변경 뒤에도 같은 4건.
+- `run.sh solo` 통과 (2회 — 둘째는 RPC 목록 갱신 뒤) — 결과 화면(4명 시상대) · 공개 HP 100 · 방 닫힘 · 봇 3 자동 준비 → 「한 판 더」 → 카운트다운 → 새 판(봇 3 · 난이도 · 비공개 그대로) → 끝 → 「로비로」 → 디버그 로비 · 콘솔 에러 0.
+- `run.sh full 2` 통과 — 두 화면의 결과 줄 같음 → 둘 다 준비 → 새 판 → 끝 → 클론이 「로비로」 → 메인 화면 「나감」 · 「한 판 더」 꺼짐 · 「로비에서 새로 모집」 → 45초 마감에 스스로 로비 · 콘솔 에러 0.
+- `run.sh chapchu 2` 통과 — 두 화면 「Player#2 승리!」 · 알약 「찹츄 승리 · 손패 10장으로 찹츄를 외쳤어요!」 · 승자 칸 왕관 + 「찹츄 승리!」 마크 · 2위 `HP 100` · 콘솔 에러 0.
+- batches (게임 뷰 1920 × 1080, `UnityStats`): 2명 결과 화면 16 · setPass 10. 찹츄 승리 화면 17 · 11. 4명(봇 3) 14 · 10 — 시상대가 늘어도 늘지 않는다.
+- 스크린샷으로 시안 CSS 값과 대조 (4명 · 4명 공동 2위 셋 · 2명 · 찹츄 승리 · 혼자 남음). 제목이 위로 10px 치우쳐 내렸고, 빠진 캐릭터 색조를 밝혔다.
+- **확인 못 함**: 3명 배치 · 무승부 화면(규칙 계층 값만 확인) · 긴 닉네임 · 결과 화면에서 방장이 나가 방장이 바뀌는 경우 · 게임 종료 뒤 2초 사이 방장 교체 · 준비 취소로 카운트다운이 끊기는 것 · 카운트다운 덮개 모습(스크린샷 없음) · 끊김으로 결과 화면에서 빠지는 경우 · 모바일 · 안전 영역 · 로비(`LobbyScene`) 경로로 들어온 판의 「로비로」 (디버그 로비로만 봤다).
+
+### 다음 할 일
+- [ ] PM 확인: 위 「제안」 값들 · `PhotonServerSettings` RpcList(전부터 있던 `RPC_OnChainDiscarded` + 이번 `RPC_ResultRequestSetReady`)를 커밋할지 · 테스트가 남긴 글꼴 아틀라스 · `ProjectSettings.asset` 변경.
+- [ ] 업적 배지 · 「판 기록」(`07` 11-4 지표 집계 — 시안 8개 vs 문서 9개) · 보상 줄 자리 · 이모트 · 색종이.
+- [ ] 자동찹츄(2026-11-14 규칙)는 코드가 아직 옛 규칙 — 별도 작업. `rules` 기존 실패 4건(시험의 `TurnSeconds = 30`).
+- [ ] 노션 동기화 안 함 (`docs/systems` 만 고쳤다).
+
+---
+
 ## 2026-11-17 · 대소동 뒤 가운데 카드가 남는 버그 (`feature/game-screen`)
 
 ### 계기 (PM)
