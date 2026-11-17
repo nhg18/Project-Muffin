@@ -1565,8 +1565,8 @@ public static class MultiTest
             t.Server.RemovePlayer(t.O1); // 죽은 사람이 나중에 나감
             GameEnded ended = t.Server.RemovePlayer(t.O2).OfType<GameEnded>().FirstOrDefault();
             Check(second && ended != null && ended.Actors.SequenceEqual(new[] { t.Turn, t.O2, t.O1 }) && ended.Ranks.SequenceEqual(new[] { 1, 2, 3 })
-                  && ended.OutTurns.SequenceEqual(new[] { 0, 2, 1 }) && ended.DownedBy.SequenceEqual(new[] { -1, -1, t.Turn }) && ended.Left.SequenceEqual(new[] { false, true, true }),
-                "요약 — 2턴에 나간 사람 2위 · 1턴에 죽은 사람 3위 (죽은 뒤 나가도 그대로) · 당한 사람 (" + Summary(ended) + ")");
+                  && ended.OutTurns.SequenceEqual(new[] { 0, 2, 1 }) && ended.DownedBy.SequenceEqual(new[] { -1, -1, t.Turn }) && ended.Left.SequenceEqual(new[] { false, true, false }), // 죽은 뒤 나간 사람은 사망으로 빠진 것 — 「이탈」 이 아니다 (07 11-2)
+                "요약 — 2턴에 나간 사람 2위 · 1턴에 죽은 사람 3위 (죽은 뒤 나가도 그대로 · 이탈 아님) · 당한 사람 (" + Summary(ended) + ")");
         }
 
         // 7. 요약의 순위 — 찹츄 승리: 남은 사람은 HP 높은 순, 같으면 공동 (07 11-3)
