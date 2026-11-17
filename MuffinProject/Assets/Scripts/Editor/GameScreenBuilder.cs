@@ -169,7 +169,7 @@ namespace Chapchu.EditorTools
             // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
             var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
             HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, handReveal, coveredHud);
-            ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck);
+            ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck, topLayer);
             MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
             EnsureEventSystem();
@@ -219,6 +219,29 @@ namespace Chapchu.EditorTools
                 EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
             }
             Debug.Log($"[{nameof(GameScreenBuilder)}] TopCards {views.Length}개에 앞 층 합성 재질을 넣음 — 씬을 저장할 것.");
+        }
+
+        /// <summary>
+        /// 열린 씬의 앞 층에 체인 카메라를 더한다 — 낸 카드는 HUD 위 · 손패 뒤 (사용자 2026-11-17). 앞 층 카메라는 깊이만 지우게 바꾼다.
+        /// 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 값만 맞춘다.
+        /// </summary>
+        [MenuItem("Chapchu/Game Screen/Add Top Chain Camera")]
+        public static void AddTopChainCamera()
+        {
+            TopCardLayerView[] views = Object.FindObjectsByType<TopCardLayerView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Camera main = Camera.main;
+            if (views.Length == 0 || main == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 TopCardLayerView 또는 메인 카메라가 없다.");
+                return;
+            }
+
+            Camera top = TableBuilder.SetupTopCamera(main);
+            Camera chain = TableBuilder.SetupTopChainCamera(main);
+            foreach (TopCardLayerView view in views)
+                Wire(view, ("topCamera", top), ("chainCamera", chain));
+            EditorSceneManager.MarkSceneDirty(main.gameObject.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 체인 카메라를 더함 — 씬을 저장할 것.");
         }
 
         /// <summary>uGUI 손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지). CardFxTestBench 가 쓴다 — 인게임 손패는 3D 카드(TableBuilder). 사람이 프리팹을 손봤다면 지워진다.</summary>
@@ -720,7 +743,7 @@ namespace Chapchu.EditorTools
             image.enabled = false;
 
             var view = go.AddComponent<TopCardLayerView>();
-            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)));
+            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)), ("chainCamera", TableBuilder.SetupTopChainCamera(mainCamera)));
             return view;
         }
 

@@ -654,6 +654,17 @@ public static class MultiTest
         return (all ? "OK 공개 HP 시작 값 —" : "WAIT 공개 HP 가 시작 값이 아님 —") + log;
     }
 
+    /// <summary>가운데 체인 자리에 남은 카드 수 — 112 대소동의 새 판 뒤에는 0 이어야 한다 (ChainCardsPresenter 아래의 CardView).</summary>
+    public static string ChainCardsEmpty()
+    {
+        ChainCardsPresenter chain = Object.FindFirstObjectByType<ChainCardsPresenter>();
+        if (chain == null)
+            return "WAIT 게임 화면 아님";
+
+        int count = chain.GetComponentsInChildren<CardView>(true).Length;
+        return count == 0 ? "OK 가운데 카드 없음" : "FAIL 가운데에 카드 " + count + "장이 남았다";
+    }
+
     /// <summary>방장의 규칙 원본에서 모두의 체력을 hp 로 — 한 판을 빨리 끝내 보는 full 시나리오용. 화면 값은 다음 HpChanged 부터 맞는다.</summary>
     public static string SetAllHp(string hp)
     {
