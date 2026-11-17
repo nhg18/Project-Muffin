@@ -97,7 +97,7 @@ namespace Chapchu.Game
                 actors.Select(actor => _players[actor].Hp).ToArray(),
                 actors.Select(actor => _players[actor].OutTurn).ToArray(),
                 actors.Select(actor => _players[actor].DownedBy).ToArray(),
-                actors.Select(actor => _players[actor].HasLeft).ToArray(),
+                actors.Select(actor => _players[actor].OutByLeaving).ToArray(),
                 actors.SelectMany(actor => _stats[actor]).ToArray(),
                 TurnSerial));
         }

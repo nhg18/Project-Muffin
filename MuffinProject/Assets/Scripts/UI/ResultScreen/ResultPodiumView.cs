@@ -134,6 +134,56 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private TMP_Text bubbleText;
         [Tooltip("말풍선이 떠 있는 시간 (초, 시안 2.4).")]
         [SerializeField] private float bubbleSeconds = 2.4f;
+        [Tooltip("말풍선이 튀어나오고 들어가는 시간 (초, 시안 0.25).")]
+        [SerializeField] private float bubblePopSeconds = 0.25f;
+        [Tooltip("말풍선이 나타나고 사라지며 투명도가 바뀌는 시간 (초, 시안 0.2).")]
+        [SerializeField] private float bubbleFadeSeconds = 0.2f;
+
+        [Header("등장 연출 (시안 .stage.intro)")]
+        [Tooltip("시상대가 아래에서 솟는 시간 (초).")]
+        [SerializeField] private float podiumRiseSeconds = 0.55f;
+        [Tooltip("시상대가 솟기 시작한 뒤 캐릭터 · 이름표가 떨어지기까지 (초).")]
+        [SerializeField] private float dropDelay = 0.35f;
+        [Tooltip("캐릭터 · 이름표가 떨어지기 시작하는 높이 (시안 drop 180).")]
+        [SerializeField] private float dropHeight = 180f;
+        [Tooltip("캐릭터 · 이름표가 떨어지는 시간 (초).")]
+        [SerializeField] private float dropSeconds = 0.5f;
+        [Tooltip("캐릭터 · 이름표가 떨어지며 나타나는 시간 (초).")]
+        [SerializeField] private float dropFadeSeconds = 0.25f;
+        [Tooltip("시상대가 솟기 시작한 뒤 HP 판이 떠오르기까지 (초).")]
+        [SerializeField] private float hpRiseDelay = 0.75f;
+        [Tooltip("HP 판이 떠오르는 시간 (초).")]
+        [SerializeField] private float hpRiseSeconds = 0.35f;
+        [Tooltip("HP 판이 떠오르기 시작하는 깊이 — 제자리보다 이만큼 아래 (시안 fadeup 20).")]
+        [SerializeField] private float riseDistance = 20f;
+        [Tooltip("시상대가 솟기 시작한 뒤 첫 배지가 튀어나오기까지 (초).")]
+        [SerializeField] private float badgeDelay = 0.7f;
+        [Tooltip("배지가 하나씩 튀어나오는 간격 (초).")]
+        [SerializeField] private float badgeStep = 0.14f;
+        [Tooltip("왕관이 떨어지기 시작하는 높이.")]
+        [SerializeField] private float crownDropHeight = 140f;
+        [Tooltip("왕관이 떨어지기 시작할 때의 기울기 (도).")]
+        [SerializeField] private float crownTilt = 30f;
+        [Tooltip("왕관이 떨어져 자리 잡는 시간 (초).")]
+        [SerializeField] private float crownSeconds = 0.6f;
+        [Tooltip("왕관이 나타나는 시간 (초).")]
+        [SerializeField] private float crownFadeSeconds = 0.3f;
+        [Tooltip("찹츄 승리 마크가 줄어들기 시작하는 크기 (배).")]
+        [SerializeField] private float winMarkStartScale = 2.2f;
+        [Tooltip("찹츄 승리 마크가 제 크기로 줄어드는 시간 (초).")]
+        [SerializeField] private float winMarkSeconds = 0.45f;
+        [Tooltip("찹츄 승리 마크가 나타나는 시간 (초).")]
+        [SerializeField] private float winMarkFadeSeconds = 0.2f;
+        [Tooltip("승자가 깡충 뛰기 전에 쉬는 시간 (초, 시안 hop 1.6초 주기의 70%).")]
+        [SerializeField] private float hopRestSeconds = 1.12f;
+        [Tooltip("승자가 깡충 뛰는 높이.")]
+        [SerializeField] private float hopHeight = 16f;
+        [Tooltip("깡충의 한 마디 — 오르기 · 내리기 · 내린 뒤 쉬기 각각 (초, 시안 hop 1.6초 주기의 10%).")]
+        [SerializeField] private float hopStepSeconds = 0.16f;
+        [Tooltip("「나」 화살표가 위아래로 움직이는 거리.")]
+        [SerializeField] private float mePointerDistance = 8f;
+        [Tooltip("「나」 화살표가 한쪽으로 가는 시간 (초) — 주기의 절반.")]
+        [SerializeField] private float mePointerSeconds = 0.55f;
 
         [Header("배지가 들어갈 자리 계산 (시안 fitPodium)")]
         [Tooltip("시상대 위 끝에서 순위 줄까지 (테두리 6 + 안쪽 여백 18).")]
@@ -329,11 +379,11 @@ namespace Chapchu.UI.ResultScreen
             bubbleText.text = text;
             _bubbleTween?.Kill();
             _bubbleTween = DOTween.Sequence().SetLink(bubble.gameObject)
-                .Append(bubble.DOScale(1f, 0.25f).SetEase(Ease.OutBack, 2f))
-                .Join(bubbleGroup.DOFade(1f, 0.2f))
-                .AppendInterval(bubbleSeconds - 0.25f)
-                .Append(bubble.DOScale(0f, 0.25f).SetEase(Ease.InQuad))
-                .Join(bubbleGroup.DOFade(0f, 0.2f));
+                .Append(bubble.DOScale(1f, bubblePopSeconds).SetEase(Ease.OutBack, 2f))
+                .Join(bubbleGroup.DOFade(1f, bubbleFadeSeconds))
+                .AppendInterval(bubbleSeconds - bubblePopSeconds)
+                .Append(bubble.DOScale(0f, bubblePopSeconds).SetEase(Ease.InQuad))
+                .Join(bubbleGroup.DOFade(0f, bubbleFadeSeconds));
         }
 
         /// <summary>「한 판 더」 를 눌렀는지 — 이름표의 「준비」 꼬리표.</summary>
@@ -363,31 +413,31 @@ namespace Chapchu.UI.ResultScreen
         public void PlayIntro(float delay, float crownAt, float markAt, float hopAt)
         {
             podium.localScale = new Vector3(1f, 0f, 1f);
-            podium.DOScaleY(1f, 0.55f).SetDelay(delay).SetEase(Ease.OutBack, 1.2f).SetLink(gameObject);
+            podium.DOScaleY(1f, podiumRiseSeconds).SetDelay(delay).SetEase(Ease.OutBack, 1.2f).SetLink(gameObject);
 
-            Drop(character, characterGroup, delay + 0.35f);
-            Drop(nameTag, nameTagGroup, delay + 0.35f);
-            Rise(hpBar, hpBarGroup, delay + 0.75f, 0.35f);
+            Drop(character, characterGroup, delay + dropDelay);
+            Drop(nameTag, nameTagGroup, delay + dropDelay);
+            Rise(hpBar, hpBarGroup, delay + hpRiseDelay, hpRiseSeconds, riseDistance);
             for (int i = 0; i < _badges.Count; i++)
-                _badges[i].PlayIntro(delay + 0.7f + i * 0.14f);
+                _badges[i].PlayIntro(delay + badgeDelay + i * badgeStep);
 
             if (crown.gameObject.activeSelf)
             {
                 Vector2 crownHome = crown.anchoredPosition;
-                crown.anchoredPosition = crownHome + new Vector2(0f, 140f);
-                crown.localRotation = Quaternion.Euler(0f, 0f, 30f);
+                crown.anchoredPosition = crownHome + new Vector2(0f, crownDropHeight);
+                crown.localRotation = Quaternion.Euler(0f, 0f, crownTilt);
                 crownGroup.alpha = 0f;
-                crown.DOAnchorPos(crownHome, 0.6f).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
-                crown.DOLocalRotate(Vector3.zero, 0.6f).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
-                crownGroup.DOFade(1f, 0.3f).SetDelay(crownAt).SetLink(gameObject);
+                crown.DOAnchorPos(crownHome, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+                crown.DOLocalRotate(Vector3.zero, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+                crownGroup.DOFade(1f, crownFadeSeconds).SetDelay(crownAt).SetLink(gameObject);
             }
 
             if (winMark.gameObject.activeSelf)
             {
-                winMark.localScale = Vector3.one * 2.2f;
+                winMark.localScale = Vector3.one * winMarkStartScale;
                 winMarkGroup.alpha = 0f;
-                winMark.DOScale(1f, 0.45f).SetDelay(markAt).SetEase(Ease.OutBack, 2.2f).SetLink(gameObject);
-                winMarkGroup.DOFade(1f, 0.2f).SetDelay(markAt).SetLink(gameObject);
+                winMark.DOScale(1f, winMarkSeconds).SetDelay(markAt).SetEase(Ease.OutBack, 2.2f).SetLink(gameObject);
+                winMarkGroup.DOFade(1f, winMarkFadeSeconds).SetDelay(markAt).SetLink(gameObject);
             }
 
             // 승자는 1.6초마다 한 번 깡충 (시안 hop: 70% → 80% 에 16 위로, 90% 에 제자리)
@@ -396,35 +446,43 @@ namespace Chapchu.UI.ResultScreen
                 RectTransform body = characterImage.rectTransform;
                 float home = body.anchoredPosition.y;
                 DOTween.Sequence().SetLink(gameObject).SetDelay(hopAt).SetLoops(-1)
-                    .AppendInterval(1.12f)
-                    .Append(body.DOAnchorPosY(home + 16f, 0.16f).SetEase(Ease.OutQuad))
-                    .Append(body.DOAnchorPosY(home, 0.16f).SetEase(Ease.InQuad))
-                    .AppendInterval(0.16f);
+                    .AppendInterval(hopRestSeconds)
+                    .Append(body.DOAnchorPosY(home + hopHeight, hopStepSeconds).SetEase(Ease.OutQuad))
+                    .Append(body.DOAnchorPosY(home, hopStepSeconds).SetEase(Ease.InQuad))
+                    .AppendInterval(hopStepSeconds);
             }
 
             // 「나」 화살표는 1.1초 주기로 위아래 8
             if (mePointer.gameObject.activeSelf)
-                mePointer.DOAnchorPosY(mePointer.anchoredPosition.y + 8f, 0.55f).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo).SetLink(gameObject);
+                mePointer.DOAnchorPosY(mePointer.anchoredPosition.y + mePointerDistance, mePointerSeconds).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo).SetLink(gameObject);
         }
 
-        // 위 180 에서 떨어지며 나타난다 (시안 drop)
+        /// <summary>
+        /// 아래 distance 에서 떠오르며 나타난다 (시안 fadeup) — 결과 화면의 뷰들이 함께 쓴다. delay 초 뒤 seconds 초 동안.
+        /// blockUntilShown 이면 다 보일 때까지 눌리지 않는다.
+        /// </summary>
+        public static void Rise(RectTransform target, CanvasGroup group, float delay, float seconds, float distance, bool blockUntilShown = false)
+        {
+            Vector2 home = target.anchoredPosition;
+            target.anchoredPosition = home + new Vector2(0f, -distance);
+            group.alpha = 0f;
+            target.DOAnchorPos(home, seconds).SetDelay(delay).SetEase(Ease.OutQuad).SetLink(target.gameObject);
+            Tween fade = group.DOFade(1f, seconds).SetDelay(delay).SetLink(group.gameObject);
+            if (!blockUntilShown)
+                return;
+
+            group.blocksRaycasts = false;
+            fade.OnComplete(() => group.blocksRaycasts = true);
+        }
+
+        // 위에서 떨어지며 나타난다 (시안 drop)
         private void Drop(RectTransform target, CanvasGroup group, float delay)
         {
             Vector2 home = target.anchoredPosition;
-            target.anchoredPosition = home + new Vector2(0f, 180f);
+            target.anchoredPosition = home + new Vector2(0f, dropHeight);
             group.alpha = 0f;
-            target.DOAnchorPos(home, 0.5f).SetDelay(delay).SetEase(Ease.OutBack, 1.8f).SetLink(gameObject);
-            group.DOFade(1f, 0.25f).SetDelay(delay).SetLink(gameObject);
-        }
-
-        // 아래 20 에서 떠오르며 나타난다 (시안 fadeup)
-        private void Rise(RectTransform target, CanvasGroup group, float delay, float seconds)
-        {
-            Vector2 home = target.anchoredPosition;
-            target.anchoredPosition = home + new Vector2(0f, -20f);
-            group.alpha = 0f;
-            target.DOAnchorPos(home, seconds).SetDelay(delay).SetEase(Ease.OutQuad).SetLink(gameObject);
-            group.DOFade(1f, seconds).SetDelay(delay).SetLink(gameObject);
+            target.DOAnchorPos(home, dropSeconds).SetDelay(delay).SetEase(Ease.OutBack, 1.8f).SetLink(gameObject);
+            group.DOFade(1f, dropFadeSeconds).SetDelay(delay).SetLink(gameObject);
         }
     }
 }

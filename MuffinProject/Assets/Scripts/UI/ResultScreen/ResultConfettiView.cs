@@ -32,6 +32,12 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private Vector3 fall = new Vector3(0.45f, 0.985f, 7f);
         [Tooltip("조각 크기 — 폭 최소 · 폭 더하는 폭 · 높이 최소 · 높이 더하는 폭 (시안 10 · 10 · 16 · 14).")]
         [SerializeField] private Vector4 pieceSize = new Vector4(10f, 10f, 16f, 14f);
+        [Tooltip("조각의 회전 — 처음 각도의 폭 · 프레임마다 도는 빠르기의 폭 (시안 6 · 0.3).")]
+        [SerializeField] private Vector2 spin = new Vector2(6f, 0.3f);
+        [Tooltip("좌우로 흔들리며 떨어진다 — 흔들림 주기를 나누는 값(프레임) · 프레임마다 흔들리는 폭 (시안 14 · 1.4).")]
+        [SerializeField] private Vector2 sway = new Vector2(14f, 1.4f);
+        [Tooltip("뒤집히듯 높이가 줄었다 느는 주기를 나누는 값 (프레임, 시안 9).")]
+        [SerializeField] private float flipPeriod = 9f;
         [Tooltip("이 y 를 넘으면 사라진다 (시안 1120).")]
         [SerializeField] private float floorY = 1120f;
         [Tooltip("조각 색 (시안 CONF_COLORS).")]
@@ -97,8 +103,8 @@ namespace Chapchu.UI.ResultScreen
                     Vy = -launch.y - Random.value * launch.z,
                     Width = pieceSize.x + Random.value * pieceSize.y,
                     Height = pieceSize.z + Random.value * pieceSize.w,
-                    Angle = Random.value * 6f,
-                    Spin = (Random.value - 0.5f) * 0.3f,
+                    Angle = Random.value * spin.x,
+                    Spin = (Random.value - 0.5f) * spin.y,
                     Color = colors[Random.Range(0, colors.Length)],
                 });
             }
@@ -112,7 +118,7 @@ namespace Chapchu.UI.ResultScreen
                 Piece p = _pieces[i];
                 p.Vy = Mathf.Min(p.Vy + fall.x, fall.z);
                 p.Vx *= fall.y;
-                p.X += p.Vx + Mathf.Sin((p.Life + p.Angle * 10f) / 14f) * 1.4f;
+                p.X += p.Vx + Mathf.Sin((p.Life + p.Angle * 10f) / sway.x) * sway.y;
                 p.Y += p.Vy;
                 p.Angle += p.Spin;
                 p.Life++;
@@ -131,7 +137,7 @@ namespace Chapchu.UI.ResultScreen
                 pen.Translate(p.X, p.Y);
                 pen.Rotate(p.Angle);
                 pen.BeginPath();
-                pen.Rect(-p.Width / 2f, -p.Height / 2f, p.Width, p.Height * Mathf.Abs(Mathf.Cos(p.Life / 9f)) + 2f); // 뒤집히듯 높이가 줄었다 는다
+                pen.Rect(-p.Width / 2f, -p.Height / 2f, p.Width, p.Height * Mathf.Abs(Mathf.Cos(p.Life / flipPeriod)) + 2f); // 뒤집히듯 높이가 줄었다 는다
                 pen.Fill(p.Color);
                 pen.Restore();
             }

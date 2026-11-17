@@ -61,6 +61,10 @@ namespace Chapchu.Network
 
             _server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
 
+            // 새 판이다 — 지난 판의 종료 요약을 비운다 (결과 화면이 지난 판을 그리지 않게)
+            if (NetworkManager.Instance != null)
+                NetworkManager.Instance.LastResult = null;
+
             if (PhotonNetwork.InRoom)
             {
                 foreach (Player player in PhotonNetwork.PlayerList)
@@ -981,7 +985,7 @@ namespace Chapchu.Network
 
             // 이름은 각자 게임을 시작할 때 찍어 둔 것 — 나간 사람은 지금 방에 없다. 봇은 「봇 N」
             string[] names = actors.Select(actor => BotRoster.IsBot(actor) ? BotRoster.NicknameOf(actor) : _startNames.TryGetValue(actor, out string name) ? name : "").ToArray();
-            GameResult.Last = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left, stats, endTurn);
+            NetworkManager.Instance.LastResult = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left, stats, endTurn);
 
             _gameEnded = true;
             GameEvents.RaiseGameEnded(winner, (GameEndReason)reason);

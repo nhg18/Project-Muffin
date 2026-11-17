@@ -48,7 +48,7 @@ namespace Chapchu.Network.Events
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
-        public static event Action<int, GameEndReason> OnGameEnded;          // winner(무승부 -1), reason — 요약은 GameResult.Last, 곧 방장이 전원을 결과 씬으로 옮긴다
+        public static event Action<int, GameEndReason> OnGameEnded;          // winner(무승부 -1), reason — 요약은 NetworkManager.LastResult, 곧 방장이 전원을 결과 씬으로 옮긴다
 
         // ── 나에게만 ──
         public static event Action<int, int> OnMyCardDrawn;                  // cardInstanceId, cardId

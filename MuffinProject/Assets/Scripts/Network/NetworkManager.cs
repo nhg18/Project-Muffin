@@ -42,6 +42,9 @@ namespace Chapchu.Network
         internal int[] HostBots => _room.HostBots;
         internal int[] HostBotLevels => _room.HostBotLevels;
 
+        /// <summary>방금 끝난 판의 「게임 종료 요약」 — 게임 씬에서 받아 결과 씬이 읽는다 (09-network.md 3절). 방을 나가거나 게임을 시작하면 null.</summary>
+        public GameResult LastResult { get; internal set; }
+
         /// <summary>
         /// 믿는 방장의 actorNumber (09-network.md 13절) — 방에 들어올 때의 방장, 그 뒤엔 방장이 나가서 바뀐 사람만.
         /// 남이 방장 자리를 가져가도(SetMasterClient) 바뀌지 않는다. 결과 알림은 이 사람이 보낸 것만 받는다. 방 밖이면 -1.
@@ -260,6 +263,7 @@ namespace Chapchu.Network
         public override void OnLeftRoom()
         {
             PunEventFilter.ResetLog();
+            LastResult = null;
             _guard.OnLeftRoom();
             _room.OnLeftRoom();
         }

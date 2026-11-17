@@ -23,6 +23,12 @@ namespace Chapchu.UI.ResultScreen
         [Tooltip("쉬는 동안의 투명도 (시안 .emo:disabled 0.5).")]
         [SerializeField] private float cooldownAlpha = 0.5f;
 
+        [Header("등장 연출 (시안 .stage.intro .bottom)")]
+        [Tooltip("떠오르기 시작하는 깊이 — 제자리보다 이만큼 아래 (시안 fadeup 20).")]
+        [SerializeField] private float riseDistance = 20f;
+        [Tooltip("떠오르는 시간 (초).")]
+        [SerializeField] private float riseSeconds = 0.4f;
+
         /// <summary>이모트 버튼을 눌렀다 — 이모트 번호.</summary>
         public event Action<int> EmoteClicked;
 
@@ -55,14 +61,6 @@ namespace Chapchu.UI.ResultScreen
         }
 
         /// <summary>등장 연출 (시안 .stage.intro .bottom) — delay 초 뒤 떠오른다. 보이기 전에는 눌리지 않는다.</summary>
-        public void PlayIntro(float delay)
-        {
-            Vector2 home = root.anchoredPosition;
-            root.anchoredPosition = home + new Vector2(0f, -20f);
-            group.alpha = 0f;
-            group.blocksRaycasts = false;
-            root.DOAnchorPos(home, 0.4f).SetDelay(delay).SetEase(Ease.OutQuad).SetLink(gameObject);
-            group.DOFade(1f, 0.4f).SetDelay(delay).SetLink(gameObject).OnComplete(() => group.blocksRaycasts = true);
-        }
+        public void PlayIntro(float delay) => ResultPodiumView.Rise(root, group, delay, riseSeconds, riseDistance, blockUntilShown: true);
     }
 }

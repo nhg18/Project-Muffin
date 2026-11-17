@@ -96,17 +96,19 @@ namespace Chapchu.Network
         #region 요청 (각 클라 → 방장)
 
         /// <summary>「한 판 더」 — 준비 · 취소. 결과는 방 속성으로 온다 (StateChanged).</summary>
-        public void RequestSetReady(bool ready)
+        public void RequestSetReady(bool ready) => SendRequest(nameof(RPC_ResultRequestSetReady), ready);
+
+        // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
+        private void SendRequest(string rpcName, params object[] parameters)
         {
-            // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
             Player master = PhotonNetwork.CurrentRoom?.GetPlayer(NetworkManager.TrustedMaster);
             if (master == null)
             {
-                Debug.LogWarning($"[{nameof(PunResultServer)}] 믿는 방장이 없다 — 준비 요청을 보내지 않는다");
+                Debug.LogWarning($"[{nameof(PunResultServer)}] 믿는 방장이 없다 — {rpcName} 요청을 보내지 않는다");
                 return;
             }
 
-            photonView.RPC(nameof(RPC_ResultRequestSetReady), master, ready);
+            photonView.RPC(rpcName, master, parameters);
         }
 
         [PunRPC]
@@ -125,17 +127,7 @@ namespace Chapchu.Network
         }
 
         /// <summary>이모트(빠른 말)를 보낸다. 방장이 받아 주면 전원에게 EmoteShown 으로 온다 — 나에게도.</summary>
-        public void RequestEmote(int index)
-        {
-            Player master = PhotonNetwork.CurrentRoom?.GetPlayer(NetworkManager.TrustedMaster);
-            if (master == null)
-            {
-                Debug.LogWarning($"[{nameof(PunResultServer)}] 믿는 방장이 없다 — 이모트를 보내지 않는다");
-                return;
-            }
-
-            photonView.RPC(nameof(RPC_ResultRequestEmote), master, (byte)index);
-        }
+        public void RequestEmote(int index) => SendRequest(nameof(RPC_ResultRequestEmote), (byte)index);
 
         [PunRPC]
         private void RPC_ResultRequestEmote(byte index, PhotonMessageInfo info)
@@ -177,13 +169,27 @@ namespace Chapchu.Network
             if (!NetworkManager.IsTrustedMaster || _started)
                 return;
 
+            // 명단 · 봇 · 준비 · 마감은 프레임마다 한 번씩만 읽는다 (Members · Ready · Deadline 과 같은 값)
             double now = PhotonNetwork.Time;
-            int[] members = Members;
-            int[] ready = Ready;
+            double deadline = Deadline;
+            int[] bots = BotRoster.Actors;
+            int[] members = PhotonNetwork.PlayerList.Select(player => player.ActorNumber).Concat(bots).ToArray();
+            int[] written = NetworkManager.RoomProp(RoomProps.ResultReady) as int[] ?? Array.Empty<int>();
+            int[] ready = members.Where(written.Contains).ToArray();
+            double startAt = StartAt;
+
+            // 준비해 둔 사람이 방에 없다 (나감) — 카운트다운을 취소하고 준비를 남은 사람으로 다시 쓴다. 판정은 다음 프레임에 다시 (07 11-1)
+            if (written.Length != ready.Length)
+            {
+                if (startAt > 0)
+                    Write(RoomProps.ResultStartAt, null);
+                Write(RoomProps.ResultReady, ready);
+                return;
+            }
 
             // 봇은 화면이 열린 시각(마감 − AutoLeaveSeconds)부터 차례로 준비한다
-            double openedAt = Deadline - AutoLeaveSeconds;
-            int[] due = BotRoster.Actors.Where((bot, i) => now >= openedAt + BotReadyDelay + BotReadyStep * i && !ready.Contains(bot)).ToArray();
+            double openedAt = deadline - AutoLeaveSeconds;
+            int[] due = bots.Where((bot, i) => now >= openedAt + BotReadyDelay + BotReadyStep * i && !ready.Contains(bot)).ToArray();
             if (due.Length > 0)
             {
                 ready = ready.Concat(due).ToArray();
@@ -192,7 +198,6 @@ namespace Chapchu.Network
 
             // 지금 방에 있는 사람 + 봇이 2명 이상이고 전원 준비 — 나간 사람은 기다리지 않는다
             bool allReady = members.Length >= NetworkManager.MinPlayers && ready.Length == members.Length;
-            double startAt = StartAt;
             if (startAt > 0)
             {
                 if (!allReady)
@@ -200,7 +205,7 @@ namespace Chapchu.Network
                 else if (now >= startAt)
                     StartNextGame();
             }
-            else if (allReady && Deadline - now >= CountdownSeconds)
+            else if (allReady && deadline - now >= CountdownSeconds)
             {
                 // 마감 직전에는 시작하지 않는다 — 카운트다운 도중에 마감이 지나 일부만 나가지 않게
                 Write(RoomProps.ResultStartAt, now + CountdownSeconds);

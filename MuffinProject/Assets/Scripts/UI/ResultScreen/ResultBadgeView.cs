@@ -32,6 +32,12 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float tightNameSize = 20f;
         [SerializeField] private float tightValueSize = 15f;
 
+        [Header("등장 연출 (시안 badge)")]
+        [Tooltip("튀어나오는 시간 (초).")]
+        [SerializeField] private float popSeconds = 0.4f;
+        [Tooltip("튀어나올 때 제 크기를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float popOvershoot = 2f;
+
         private void Awake()
         {
             if (size == null || row == null || box == null || circleSize == null || icon == null || iconImage == null || nameText == null || valueText == null)
@@ -65,7 +71,7 @@ namespace Chapchu.UI.ResultScreen
         public void PlayIntro(float delay)
         {
             transform.localScale = Vector3.zero;
-            transform.DOScale(1f, 0.4f).SetDelay(delay).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+            transform.DOScale(1f, popSeconds).SetDelay(delay).SetEase(Ease.OutBack, popOvershoot).SetLink(gameObject);
         }
     }
 }

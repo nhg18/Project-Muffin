@@ -43,10 +43,13 @@ namespace Chapchu.UI.GameScreen
         };
 
         /// <summary>닉네임(서식 태그 · 제어 문자를 거른 것, NicknameValidator.ForDisplay), 비면 P{actorNumber}.</summary>
-        public static string NameOf(Player player)
+        public static string NameOf(Player player) => NameOf(player.NickName, player.ActorNumber);
+
+        /// <summary>닉네임 원본을 걸러 표시 이름으로, 비면 P{actorNumber} — 방에 없는 사람(결과 화면의 나간 사람)의 이름도 같은 규칙으로 만든다.</summary>
+        public static string NameOf(string nickname, int actorNumber)
         {
-            string name = NicknameValidator.ForDisplay(player.NickName);
-            return name.Length == 0 ? string.Format(NicknameFallbackFormat, player.ActorNumber) : name;
+            string name = NicknameValidator.ForDisplay(nickname);
+            return name.Length == 0 ? string.Format(NicknameFallbackFormat, actorNumber) : name;
         }
 
         /// <summary>

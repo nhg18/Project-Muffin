@@ -26,6 +26,16 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private TMP_Text meRankText;
         [SerializeField] private TMP_Text meDetailText;
 
+        [Header("등장 연출 (시안 .stage.intro)")]
+        [Tooltip("제목이 튀어나오기 시작하는 크기 (배).")]
+        [SerializeField] private float titleStartScale = 0.3f;
+        [Tooltip("제목이 튀어나오기까지 · 제 크기가 되는 시간 · 나타나는 시간 (초).")]
+        [SerializeField] private Vector3 titleTiming = new Vector3(0.15f, 0.6f, 0.3f);
+        [Tooltip("알약이 떠오르기까지 · 떠오르는 시간 (초).")]
+        [SerializeField] private Vector2 pillsTiming = new Vector2(0.55f, 0.4f);
+        [Tooltip("알약이 떠오르기 시작하는 깊이 — 제자리보다 이만큼 아래 (시안 fadeup 20).")]
+        [SerializeField] private float riseDistance = 20f;
+
         private void Awake()
         {
             if (title == null || titleGroup == null || titleText == null || pills == null || pillsGroup == null || reasonLabelText == null || reasonText == null
@@ -52,16 +62,12 @@ namespace Chapchu.UI.ResultScreen
         /// <summary>등장 연출 (시안 .stage.intro) — 제목이 튀어나오고 알약이 떠오른다.</summary>
         public void PlayIntro()
         {
-            title.localScale = Vector3.one * 0.3f;
+            title.localScale = Vector3.one * titleStartScale;
             titleGroup.alpha = 0f;
-            title.DOScale(1f, 0.6f).SetDelay(0.15f).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
-            titleGroup.DOFade(1f, 0.3f).SetDelay(0.15f).SetLink(gameObject);
+            title.DOScale(1f, titleTiming.y).SetDelay(titleTiming.x).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+            titleGroup.DOFade(1f, titleTiming.z).SetDelay(titleTiming.x).SetLink(gameObject);
 
-            Vector2 home = pills.anchoredPosition;
-            pills.anchoredPosition = home + new Vector2(0f, -20f);
-            pillsGroup.alpha = 0f;
-            pills.DOAnchorPos(home, 0.4f).SetDelay(0.55f).SetEase(Ease.OutQuad).SetLink(gameObject);
-            pillsGroup.DOFade(1f, 0.4f).SetDelay(0.55f).SetLink(gameObject);
+            ResultPodiumView.Rise(pills, pillsGroup, pillsTiming.x, pillsTiming.y, riseDistance);
         }
     }
 }
