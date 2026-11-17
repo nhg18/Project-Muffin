@@ -1,14 +1,15 @@
 # Unity 빌드 CI/CD — .github/workflows/unity-ci.yml 로 넣는다
-# CI : develop 으로 가는 PR · develop push → Android 빌드가 깨지지 않는지 확인
+# CI : test_build 로 가는 PR 에서만 Android 빌드 검사 (develop · 기능 브랜치에서는 돌지 않는다)
+#      test_build 에 머지된 뒤 한 번 더 돌아 Library 캐시를 test_build 에 저장한다 → 다음 PR 빌드가 빨라진다
 # CD : v* 태그 push (예: v0.2.0) → 서명된 AAB 빌드 → 아티팩트 업로드 (+ 플레이 콘솔 업로드는 아래 주석 참고)
 name: Unity 빌드
 
 on:
   pull_request:
-    branches: [develop]
+    branches: [test_build]
     paths-ignore: ["docs/**", "**/*.md"]
   push:
-    branches: [develop]
+    branches: [test_build]   # 캐시용. 머지 뒤 빌드가 필요 없으면 이 줄을 지운다
     tags: ["v*"]
     paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
