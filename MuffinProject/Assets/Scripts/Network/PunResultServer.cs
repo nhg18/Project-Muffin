@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Core;
 using Chapchu.Network.Events;
@@ -13,6 +14,7 @@ namespace Chapchu.Network
     /// 결과 화면의 「한 판 더」 (07-win-condition.md 11-1) — 준비 모으기 · 봇 준비 · 카운트다운 · 다음 판 시작. ResultScene 에 하나 둔다.
     /// 요청: RequestSetReady → RPC_ResultRequestSetReady → (방장).
     /// 결과: 알림 없이 방 속성(지금 값)으로만 — 준비한 사람 · 시작 시각. 화면은 StateChanged 를 듣고 다시 읽는다.
+    /// 이모트(빠른 말, 07 11-2)도 방장을 거친다: RequestEmote → RPC_ResultRequestEmote → (방장) → RPC_OnResultEmote → EmoteShown.
     /// 원본은 방장 메모리다 (NetworkManager.RoomProp). 방 속성 사본은 아무 클라나 쓸 수 있어 읽을 때 모양 · 범위를 확인한다 (09-network.md 13절).
     /// </summary>
     [RequireComponent(typeof(PhotonView))]
@@ -22,6 +24,8 @@ namespace Chapchu.Network
         public const float AutoLeaveSeconds = 45f;
         /// <summary>전원 준비부터 다음 판 시작까지 (초) — 3 · 2 · 1 각 0.8초 + 「다음 판 시작!」 1.1초.</summary>
         public const float CountdownSeconds = 3.5f;
+        /// <summary>이모트(빠른 말)의 수 — 번호는 0 부터 (07 11-2).</summary>
+        public const int EmoteCount = 4;
 
         // 봇은 화면이 열리고 차례로 준비한다 (초, 18-bot.md) — 첫 봇 · 그 뒤 봇마다
         private const float BotReadyDelay = 2.9f;
@@ -31,12 +35,18 @@ namespace Chapchu.Network
         // 남이 마감을 당겨 써서 방 전원을 내보내지 못하게
         private const float DeadlineSlack = 10f;
 
+        // 방장이 한 사람의 이모트를 받아 주는 간격 (초) — 화면의 버튼 쿨다운(1.2초)보다 조금 짧게, 늦게 도착한 정상 요청은 버리지 않게
+        private const float EmoteInterval = 1f;
+
         private readonly RequestLimiter _limiter = new RequestLimiter(nameof(PunResultServer));
+        private readonly Dictionary<int, float> _emoteAt = new Dictionary<int, float>(); // 방장 — 사람마다 마지막으로 이모트를 알린 때
         private double _openedAt;
         private bool _started; // 방장 — 다음 판 씬 이동을 보냈다 (씬이 바뀔 때까지 몇 프레임 더 돈다)
 
         /// <summary>준비한 사람 · 카운트다운 · 방 인원이 바뀜. 값은 Ready · StartAt · Members 로 다시 읽는다.</summary>
         public event Action StateChanged;
+        /// <summary>누가 이모트를 보냄 — actorNumber · 이모트 번호(0 ~ EmoteCount − 1).</summary>
+        public event Action<int, int> EmoteShown;
 
         /// <summary>지금 방에 있는 사람 + 봇 — 다음 판에 들어갈 사람들. 사람(actorNumber 순) 뒤에 봇.</summary>
         public static int[] Members => PhotonNetwork.InRoom
@@ -112,6 +122,49 @@ namespace Chapchu.Network
                 return;
 
             Write(RoomProps.ResultReady, ready ? now.Append(actor).ToArray() : now.Where(a => a != actor).ToArray());
+        }
+
+        /// <summary>이모트(빠른 말)를 보낸다. 방장이 받아 주면 전원에게 EmoteShown 으로 온다 — 나에게도.</summary>
+        public void RequestEmote(int index)
+        {
+            Player master = PhotonNetwork.CurrentRoom?.GetPlayer(NetworkManager.TrustedMaster);
+            if (master == null)
+            {
+                Debug.LogWarning($"[{nameof(PunResultServer)}] 믿는 방장이 없다 — 이모트를 보내지 않는다");
+                return;
+            }
+
+            photonView.RPC(nameof(RPC_ResultRequestEmote), master, (byte)index);
+        }
+
+        [PunRPC]
+        private void RPC_ResultRequestEmote(byte index, PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            if (index >= EmoteCount) return;
+
+            int actor = info.Sender.ActorNumber;
+            float now = Time.unscaledTime;
+            if (_emoteAt.TryGetValue(actor, out float last) && now - last < EmoteInterval)
+                return; // 도배 — 답 없이 버린다
+
+            _emoteAt[actor] = now;
+            photonView.RPC(nameof(RPC_OnResultEmote), RpcTarget.All, actor, index);
+        }
+
+        #endregion
+
+        #region 알림 (방장 → 전원)
+
+        [PunRPC]
+        private void RPC_OnResultEmote(int actorNumber, byte index, PhotonMessageInfo info)
+        {
+            // 믿는 방장이 보낸 것만 — 아무 클라나 남의 이름으로 말풍선을 띄우지 못하게 (09-network.md 13절)
+            if (info.Sender == null || info.Sender.ActorNumber != NetworkManager.TrustedMaster || index >= EmoteCount)
+                return;
+
+            EmoteShown?.Invoke(actorNumber, index);
         }
 
         #endregion

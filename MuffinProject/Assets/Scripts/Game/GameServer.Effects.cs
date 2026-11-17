@@ -30,7 +30,7 @@ namespace Chapchu.Game
             if (hp <= 0 && entry.SurviveAt.TryGetValue(actor, out int keep))
                 hp = Math.Max(1, keep);
 
-            SetHp(actor, hp, entry.User);
+            CountDamage(actor, entry.User, -SetHp(actor, hp, entry.User));
             if (hp <= 0)
                 entry.KnockedDown.Add(actor);
             if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
@@ -48,7 +48,7 @@ namespace Chapchu.Game
             {
                 if (amount > 0)
                 {
-                    SetHp(actor, _players[actor].Hp - amount, entry.User);
+                    CountDamage(actor, entry.User, -SetHp(actor, _players[actor].Hp - amount, entry.User)); // 피해의 주인 = 회복 카드를 낸 사람
                     if (_players[actor].Hp <= 0)
                         entry.KnockedDown.Add(actor);
                     RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
@@ -67,7 +67,7 @@ namespace Chapchu.Game
 
             int hp = Math.Min(MaxHp, player.Hp + amount);
             if (hp != player.Hp)
-                SetHp(actor, hp); // 실제 회복량 0 이면 사건 없음 (06 6절)
+                AddStat(actor, StatKind.Healed, SetHp(actor, hp)); // 실제 회복량 0 이면 사건 없음 (06 6절)
         }
 
         /// <summary>「HP N 으로 생존」 지금 (T17) — 손패 · 다른 설치 함정을 버리고 HP N, 사망 대기면 바로 생존으로 (06 6 · 8절).</summary>
@@ -101,7 +101,10 @@ namespace Chapchu.Game
                 return;
 
             for (int i = 0; i < count; i++)
-                DrawOne(actor);
+            {
+                if (DrawOne(actor) && entry != null)
+                    AddStat(actor, StatKind.Drawn); // 다시 받기(113 — entry 없음)는 뽑기로 세지 않는다
+            }
 
             if (entry != null)
                 RecordAfter(AfterKind.DrewCards, actor, entry.User, count);
@@ -140,6 +143,8 @@ namespace Chapchu.Game
                 return;
 
             MoveHandCards(from, to, cards);
+            AddStat(to, StatKind.Stolen, cards.Count);
+            AddStat(from, StatKind.Lost, cards.Count);
             RecordAfter(AfterKind.Stolen, from, to, cards.Count);
         }
 

@@ -505,7 +505,7 @@ namespace Chapchu.Network
                         break;
 
                     case GameEnded ended:
-                        Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, ended.Actors, ended.Ranks, ended.Hps, ended.OutTurns, ended.DownedBy, ended.Left);
+                        Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, ended.Actors, ended.Ranks, ended.Hps, ended.OutTurns, ended.DownedBy, ended.Left, ended.Stats, ended.EndTurn);
                         Debug.Log($"[{nameof(PunGameServer)}] 게임 종료 — {ended.Reason} · 승자 P{ended.Winner} — {_server.DebugState(Debug.isDebugBuild)}");
 
                         // 결과 화면의 상태를 새로 쓴다 — 지난 판의 마감 · 준비가 남아 결과 씬이 열리자마자 로비로 나가거나 바로 시작하지 않게 (07 11-1)
@@ -967,14 +967,21 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnGameEnded(int seq, int winner, byte reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, PhotonMessageInfo info)
+        private void RPC_OnGameEnded(int seq, int winner, byte reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, int[] stats, int endTurn, PhotonMessageInfo info)
         {
             if (!Paired(actors, ranks) || !Paired(actors, hps) || !Paired(actors, outTurns) || !Paired(actors, downedBy) || !Paired(actors, left) || !Accept(seq, info))
                 return;
 
+            // 지표는 사람마다 StatCount 개 (07 11-4)
+            if (stats == null || stats.Length != actors.Length * GameServer.StatCount)
+            {
+                Debug.LogWarning($"[{nameof(PunGameServer)}] 길이가 맞지 않는 지표 — 종료 요약을 버린다");
+                return;
+            }
+
             // 이름은 각자 게임을 시작할 때 찍어 둔 것 — 나간 사람은 지금 방에 없다. 봇은 「봇 N」
             string[] names = actors.Select(actor => BotRoster.IsBot(actor) ? BotRoster.NicknameOf(actor) : _startNames.TryGetValue(actor, out string name) ? name : "").ToArray();
-            GameResult.Last = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left);
+            GameResult.Last = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left, stats, endTurn);
 
             _gameEnded = true;
             GameEvents.RaiseGameEnded(winner, (GameEndReason)reason);

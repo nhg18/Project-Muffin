@@ -28,8 +28,12 @@ namespace Chapchu.Network
         public IReadOnlyList<int> DownedBy { get; }
         /// <summary>게임 도중 방을 나가서 빠졌는지.</summary>
         public IReadOnlyList<bool> Left { get; }
+        /// <summary>게임이 끝난 턴 번호 — 끝까지 남은 사람의 「생존 턴 수」.</summary>
+        public int EndTurn { get; }
 
-        internal GameResult(int winner, GameEndReason reason, int[] actors, string[] names, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left)
+        private readonly int[] _stats; // 사람마다 GameServer.StatCount 개 — Actors 순서대로 이어 붙인 것
+
+        internal GameResult(int winner, GameEndReason reason, int[] actors, string[] names, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, int[] stats, int endTurn)
         {
             Winner = winner;
             Reason = reason;
@@ -40,6 +44,11 @@ namespace Chapchu.Network
             OutTurns = outTurns;
             DownedBy = downedBy;
             Left = left;
+            _stats = stats;
+            EndTurn = endTurn;
         }
+
+        /// <summary>index 번째 사람(Actors 순서)의 지표 값 (07 11-4).</summary>
+        public int Stat(int index, StatKind kind) => _stats[index * GameServer.StatCount + (int)kind];
     }
 }

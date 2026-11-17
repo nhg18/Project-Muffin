@@ -55,10 +55,27 @@ namespace Chapchu.UI.ResultScreen
         private const float WinMarkIntroAt = 2.3f;
         private const float HopStartAt = 2.6f;
 
+        // 시상대에 보이는 배지 수 — 더 받은 업적은 「판 기록」 에서 본다 (시안 MAX_BADGES)
+        private const int MaxBadges = 3;
+        private const string ReadyBubble = "준비!";
+
         [SerializeField] private PunResultServer server;
         [SerializeField] private ResultTitleView title;
         [SerializeField] private ResultButtonsView buttons;
         [SerializeField] private ResultCountdownView countdown;
+        [SerializeField] private ResultBoardView board;
+        [SerializeField] private ResultEmoteView emotes;
+
+        [Header("배경 · 연출")]
+        [Tooltip("노란 빛 — 승자 칸 뒤로 옮긴다 (x 만).")]
+        [SerializeField] private RectTransform glow;
+        [SerializeField] private ResultConfettiView confetti;
+
+        [Header("업적")]
+        [Tooltip("지표 아이콘 — ResultAwards.Metrics 와 같은 순서.")]
+        [SerializeField] private Sprite[] metricIcons;
+        [Tooltip("말풍선이 그려지는 층 — 시상대 칸들보다 위.")]
+        [SerializeField] private RectTransform bubbleLayer;
 
         [Header("시상대")]
         [Tooltip("시상대 칸이 놓이는 자리 — 1920 무대의 왼쪽 아래가 원점, 바닥선 높이에 있다.")]
@@ -68,28 +85,39 @@ namespace Chapchu.UI.ResultScreen
         private readonly List<ResultPodiumView> _podiums = new List<ResultPodiumView>(); // 순위 순 — _result.Actors 와 같은 자리
         private readonly List<Color> _colors = new List<Color>();
         private readonly List<string> _names = new List<string>();
+        private readonly HashSet<int> _readyShown = new HashSet<int>(); // 「준비!」 말풍선을 이미 띄운 사람 — 준비를 풀면 빠진다
         private GameResult _result;
         private bool _isLeaving;
+        private bool _hasRefreshed;
 
         private void Awake()
         {
-            if (server == null || title == null || buttons == null || countdown == null || podiumArea == null || podiumPrefab == null)
+            if (server == null || title == null || buttons == null || countdown == null || podiumArea == null || podiumPrefab == null || board == null || emotes == null
+                || glow == null || confetti == null || bubbleLayer == null || metricIcons == null || metricIcons.Length != ResultAwards.Metrics.Length)
                 Debug.LogError($"[{nameof(ResultPresenter)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable()
         {
             server.StateChanged += Refresh;
+            server.EmoteShown += HandleEmoteShown;
             buttons.AgainClicked += HandleAgainClicked;
             buttons.LobbyClicked += Leave;
+            buttons.BoardClicked += HandleBoardClicked;
+            board.CloseClicked += HandleBoardCloseClicked;
+            emotes.EmoteClicked += HandleEmoteClicked;
             RoomEvents.OnLeftRoom += HandleLeftRoom;
         }
 
         private void OnDisable()
         {
             server.StateChanged -= Refresh;
+            server.EmoteShown -= HandleEmoteShown;
             buttons.AgainClicked -= HandleAgainClicked;
             buttons.LobbyClicked -= Leave;
+            buttons.BoardClicked -= HandleBoardClicked;
+            board.CloseClicked -= HandleBoardCloseClicked;
+            emotes.EmoteClicked -= HandleEmoteClicked;
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
         }
 
@@ -118,6 +146,10 @@ namespace Chapchu.UI.ResultScreen
             double now = PhotonNetwork.Time;
             double startAt = server.StartAt;
             countdown.Show(startAt > 0, startAt - now);
+
+            // 「판 기록」 — 다음 판 카운트다운이 시작되면 닫는다. Esc · Android 뒤로가기로도 닫는다 (22-popup-ui.md 1절 #4)
+            if (board.IsOpen && (startAt > 0 || Input.GetKeyDown(KeyCode.Escape)))
+                board.SetOpen(false);
             buttons.ShowSeconds(Mathf.CeilToInt((float)(server.Deadline - now)));
 
             // 자동 이동 — 방장이 보내는 것이 아니라 각자 방을 나간다 (07 11-1). 카운트다운 중이면 다음 판으로 가는 중이다
@@ -140,6 +172,8 @@ namespace Chapchu.UI.ResultScreen
                 _colors.Add(PlayerLook.ColorOf(_result.Actors[i], _result.Actors));
             }
 
+            ResultAwards.Compute(_result, out bool[][] tops, out List<ResultAwards.Award>[] awards);
+
             for (int i = 0; i < count; i++)
             {
                 int actor = _result.Actors[i];
@@ -155,10 +189,24 @@ namespace Chapchu.UI.ResultScreen
                     stat: isOut ? string.Format(_result.Left[i] ? LeftStatFormat : OutStatFormat, _result.OutTurns[i]) : null,
                     sub: isOut && downedBy >= 0 ? string.Format(DownedByFormat, _names[downedBy]) : null,
                     hasWinMark: actor == _result.Winner && _result.Reason == GameEndReason.Chapchu));
+                podium.ShowBadges(awards[i].Take(MaxBadges).Select(award => new ResultBadgeInfo(
+                    metricIcons[award.Metric], ResultAwards.Metrics[award.Metric].Award, string.Format(ResultAwards.Metrics[award.Metric].ValueFormat, award.Value))).ToList());
+                podium.MoveBubbleTo(bubbleLayer);
                 _podiums.Add(podium);
             }
 
+            // 「판 기록」 — 지표 줄마다 사람(순위 순)의 값 · 1등 · 업적
+            board.ShowPlayers(_names, _colors, _result.Actors.ToList().IndexOf(me));
+            for (int m = 0; m < ResultAwards.Metrics.Length; m++)
+            {
+                ResultAwards.Metric metric = ResultAwards.Metrics[m];
+                board.AddRow(metric.Name, Enumerable.Range(0, count).Select(i => _result.Stat(i, metric.Kind)).ToList(), tops[m], metricIcons[m], metric.Award);
+            }
+
             int winner = _result.Actors.ToList().IndexOf(_result.Winner);
+            if (winner >= 0)
+                glow.anchoredPosition = new Vector2(layout.x[layout.slot[winner]], glow.anchoredPosition.y);
+
             switch (_result.Reason)
             {
                 case GameEndReason.Chapchu:
@@ -207,6 +255,15 @@ namespace Chapchu.UI.ResultScreen
             for (int i = 0; i < _podiums.Count; i++)
                 _podiums[i].PlayIntro(PodiumIntroStart + (3 - i) * PodiumIntroStep, CrownIntroAt, WinMarkIntroAt, HopStartAt);
             buttons.PlayIntro(ButtonsIntroAt);
+            emotes.PlayIntro(ButtonsIntroAt);
+
+            // 색종이는 승자 칸 위에서 — 무승부면 터뜨리지 않는다
+            int winner = _result.Actors.ToList().IndexOf(_result.Winner);
+            if (winner >= 0)
+            {
+                (float[] x, int[] slot) layout = Layouts[_result.Actors.Count];
+                confetti.Play(layout.x[layout.slot[winner]]);
+            }
         }
 
         #endregion
@@ -230,6 +287,13 @@ namespace Chapchu.UI.ResultScreen
                 bool isReady = Array.IndexOf(ready, actor) >= 0;
                 _podiums[i].SetReady(isReady);
                 _podiums[i].SetGone(isGone);
+
+                // 다른 사람이 준비하면 말풍선 「준비!」 (시안) — 화면이 열릴 때 이미 준비돼 있던 사람은 띄우지 않는다
+                if (!isReady)
+                    _readyShown.Remove(actor);
+                else if (_readyShown.Add(actor) && _hasRefreshed && actor != me)
+                    _podiums[i].Say(ReadyBubble);
+
                 buttons.ShowDot(i, _colors[i], isReady, isGone);
                 if (isGone)
                     gone.Add(_names[i]);
@@ -237,6 +301,7 @@ namespace Chapchu.UI.ResultScreen
 
             // 남은 사람끼리 이어서 한다 — 방에 있는 사람 + 봇이 2명 이상이면 (07 11-1)
             buttons.ShowAgain(members.Length >= NetworkManager.MinPlayers, Array.IndexOf(ready, me) >= 0, ready.Length, members.Length, string.Join(NameSeparator, gone));
+            _hasRefreshed = true;
         }
 
         private void HandleAgainClicked()
@@ -245,6 +310,35 @@ namespace Chapchu.UI.ResultScreen
                 return;
 
             server.RequestSetReady(Array.IndexOf(server.Ready, PhotonNetwork.LocalPlayer.ActorNumber) < 0);
+        }
+
+        #endregion
+
+        #region 판 기록 · 이모트
+
+        private void HandleBoardClicked()
+        {
+            if (_result != null && server.StartAt <= 0)
+                board.SetOpen(!board.IsOpen);
+        }
+
+        private void HandleBoardCloseClicked() => board.SetOpen(false);
+
+        private void HandleEmoteClicked(int index)
+        {
+            if (_result == null || _isLeaving)
+                return;
+
+            server.RequestEmote(index);
+        }
+
+        // 누가 이모트를 보냈다 (방장이 알림) — 그 사람 캐릭터 옆에 말풍선
+        private void HandleEmoteShown(int actor, int index)
+        {
+            int at = _result == null ? -1 : _result.Actors.ToList().IndexOf(actor);
+            string text = emotes.TextOf(index);
+            if (at >= 0 && text != null)
+                _podiums[at].Say(text);
         }
 
         #endregion

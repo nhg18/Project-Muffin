@@ -27,6 +27,9 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private RectTransform root;
         [SerializeField] private CanvasGroup group;
 
+        [Header("판 기록")]
+        [SerializeField] private Button boardButton;
+
         [Header("로비로")]
         [SerializeField] private Button lobbyButton;
         [SerializeField] private UIShape lobbyBox;
@@ -62,13 +65,16 @@ namespace Chapchu.UI.ResultScreen
         public event Action AgainClicked;
         /// <summary>「로비로」 를 눌렀다.</summary>
         public event Action LobbyClicked;
+        /// <summary>「판 기록」 을 눌렀다.</summary>
+        public event Action BoardClicked;
 
         private void Awake()
         {
-            if (root == null || group == null || lobbyButton == null || lobbyBox == null || lobbySubText == null || againButton == null || againBox == null
+            if (root == null || group == null || boardButton == null || lobbyButton == null || lobbyBox == null || lobbySubText == null || againButton == null || againBox == null
                 || againShadow == null || againText == null || againSubText == null || dotRow == null || dotPrefab == null)
                 Debug.LogError($"[{nameof(ResultButtonsView)}] 참조 중 비어 있는 것이 있습니다.", this);
 
+            boardButton.onClick.AddListener(() => BoardClicked?.Invoke());
             lobbyButton.onClick.AddListener(() => LobbyClicked?.Invoke());
             againButton.onClick.AddListener(() => AgainClicked?.Invoke());
         }

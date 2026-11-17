@@ -40,6 +40,7 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotYourTurn);
 
             SetChapchu(requester, true);
+            AddStat(requester, StatKind.ChapchuDeclared); // 카드로 부여된 찹츄(GiveChapchu)는 선언이 아니다
             if (_declareWait)
                 AdvanceTurn(); // 선언 대기 중 — 승인된 순간 턴 종료, 남은 시간을 기다리지 않는다 (03-turn.md 4절)
 
@@ -96,7 +97,9 @@ namespace Chapchu.Game
                 actors.Select(actor => _players[actor].Hp).ToArray(),
                 actors.Select(actor => _players[actor].OutTurn).ToArray(),
                 actors.Select(actor => _players[actor].DownedBy).ToArray(),
-                actors.Select(actor => _players[actor].HasLeft).ToArray()));
+                actors.Select(actor => _players[actor].HasLeft).ToArray(),
+                actors.SelectMany(actor => _stats[actor]).ToArray(),
+                TurnSerial));
         }
 
         // 순위 묶음 — 0 승자 · 1 끝까지 남은 사람 · 2 빠진 사람(최종 사망 · 나감)

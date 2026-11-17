@@ -67,6 +67,7 @@ namespace Chapchu.Game
             foreach (CardEffect effect in card.Effects)
                 effect.Prepare(this, entry); // 낼 때 정하는 값 (116 뽑을 장수)
             _chain.Add(entry);
+            AddStat(user, card.Type == CardType.Counter ? StatKind.Counters : StatKind.Actions); // 승인된 사용 — 무효화돼도 센다 (07 11-4)
             _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
 
             _reactionOpensAt = _clock() + card.RevealSeconds;
@@ -163,6 +164,9 @@ namespace Chapchu.Game
                         ResolveNegated(entry);
                         continue;
                     }
+
+                    if (entry.Card.Type == CardType.Counter)
+                        AddStat(entry.User, StatKind.CounterSuccess); // 무효화되지 않고 처리됐다 (07 11-4)
 
                     int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));

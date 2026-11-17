@@ -39,7 +39,7 @@ namespace Chapchu.Game
 
             int count = _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount;
             for (int i = 0; i < count && _players[requester].Hp > 0; i++)
-                DrawOne(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
+                CountDraw(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
             CheckDeathPending(_clock()); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
             // 드로우는 끝나면 턴 종료. 빈 덱 피해로 사망 대기가 생기면 그것이 끝난 뒤 (03-turn.md 4절)
@@ -78,6 +78,13 @@ namespace Chapchu.Game
                 for (int i = 0; i < InitialHandCount; i++)
                     DrawOne(actor);
             }
+        }
+
+        // 뽑기 1장 — 실제로 뽑았으면 「카드 드로우」 지표에 센다 (07 11-4). 시작 손패 · 다시 받기는 DrawOne 을 바로 부른다.
+        private void CountDraw(int actor)
+        {
+            if (DrawOne(actor))
+                AddStat(actor, StatKind.Drawn);
         }
 
         // 덱 맨 위 1장을 actor 손패로. 모든 뽑기(시작 배분 · 뽑기 요청 · 카드 효과)가 여기를 지난다.

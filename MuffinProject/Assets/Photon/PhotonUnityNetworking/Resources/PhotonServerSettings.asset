@@ -111,6 +111,8 @@ MonoBehaviour:
   - RPC_RequestChoose
   - RPC_OnChainDiscarded
   - RPC_ResultRequestSetReady
+  - RPC_OnResultEmote
+  - RPC_ResultRequestEmote
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -116,6 +116,7 @@ namespace Chapchu.Game
 
             player.Traps.Remove(trap);
             _trapSetOrder.Remove(trap.InstanceId);
+            AddStat(owner, StatKind.Traps);
             _events.Add(new TrapActivated(owner, trap.InstanceId, trap.CardId, targets, player.Traps.Count));
 
             var entry = new ChainEntry(trap, owner, targets) { TriggerAmount = after?.Amount ?? 0 };

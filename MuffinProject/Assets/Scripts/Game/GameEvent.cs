@@ -327,8 +327,12 @@
         public int[] DownedBy { get; }
         /// <summary>방을 나가서 빠졌는지 — 화면이 「이탈」 로 구별한다 (07 11-2).</summary>
         public bool[] Left { get; }
+        /// <summary>이 판의 지표 (07 11-4) — 사람마다 <see cref="GameServer.StatCount"/> 개씩 <see cref="StatKind"/> 순서로, Actors 순서대로 이어 붙였다.</summary>
+        public int[] Stats { get; }
+        /// <summary>게임이 끝난 턴 번호 — 끝까지 남은 사람의 「생존 턴 수」 (07 11-4).</summary>
+        public int EndTurn { get; }
 
-        public GameEnded(int winner, GameEndReason reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left)
+        public GameEnded(int winner, GameEndReason reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, int[] stats, int endTurn)
         {
             Winner = winner;
             Reason = reason;
@@ -338,6 +342,8 @@
             OutTurns = outTurns;
             DownedBy = downedBy;
             Left = left;
+            Stats = stats;
+            EndTurn = endTurn;
         }
     }
 

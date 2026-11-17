@@ -1,4 +1,5 @@
-﻿using Chapchu.UI.Fx;
+﻿using System.Collections.Generic;
+using Chapchu.UI.Fx;
 using Chapchu.UI.GameScreen;
 using DG.Tweening;
 using TMPro;
@@ -42,6 +43,21 @@ namespace Chapchu.UI.ResultScreen
             Stat = stat;
             Sub = sub;
             HasWinMark = hasWinMark;
+        }
+    }
+
+    /// <summary>시상대의 업적 배지 하나에 그릴 값 — ResultPresenter 가 지표의 1등에서 만든다.</summary>
+    public readonly struct ResultBadgeInfo
+    {
+        public readonly Sprite Icon;
+        public readonly string Award;
+        public readonly string Value;
+
+        public ResultBadgeInfo(Sprite icon, string award, string value)
+        {
+            Icon = icon;
+            Award = award;
+            Value = value;
         }
     }
 
@@ -99,6 +115,46 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private Graphic[] boneEmptyParts;
         [SerializeField] private TMP_Text hpText;
 
+        [Header("업적 배지 (시상대 아래쪽에 붙는다)")]
+        [Tooltip("순위 · 탈락 줄 묶음 — 높이를 재서 배지가 들어갈지 본다.")]
+        [SerializeField] private RectTransform head;
+        [SerializeField] private VerticalLayoutGroup headColumn;
+        [Tooltip("순위 숫자의 줄 높이.")]
+        [SerializeField] private LayoutElement rankSize;
+        [SerializeField] private TMP_Text tiedText;
+        [Tooltip("배지가 쌓이는 자리 — 아래가 축.")]
+        [SerializeField] private RectTransform badgeArea;
+        [SerializeField] private VerticalLayoutGroup badgeColumn;
+        [SerializeField] private ResultBadgeView badgePrefab;
+
+        [Header("말풍선 (시안 .bubble) — 이모트 · 「준비!」")]
+        [Tooltip("말풍선 — 왼쪽 아래가 축 (거기서 튀어나온다). 숨어 있을 때는 크기 0 · 투명.")]
+        [SerializeField] private RectTransform bubble;
+        [SerializeField] private CanvasGroup bubbleGroup;
+        [SerializeField] private TMP_Text bubbleText;
+        [Tooltip("말풍선이 떠 있는 시간 (초, 시안 2.4).")]
+        [SerializeField] private float bubbleSeconds = 2.4f;
+
+        [Header("배지가 들어갈 자리 계산 (시안 fitPodium)")]
+        [Tooltip("시상대 위 끝에서 순위 줄까지 (테두리 6 + 안쪽 여백 18).")]
+        [SerializeField] private float headTop = 24f;
+        [Tooltip("순위 줄 묶음과 배지 사이의 최소 틈.")]
+        [SerializeField] private float headBadgeGap = 6f;
+        [Tooltip("배지 높이 · 배지 사이 틈.")]
+        [SerializeField] private Vector2 badgeSize = new Vector2(44f, 6f);
+        [Tooltip("시상대 아래 끝에서 배지까지 (테두리 6 + 안쪽 여백 12).")]
+        [SerializeField] private float badgeBottom = 18f;
+
+        [Header("모자랄 때 줄이는 값 (시안 .podium.tight)")]
+        [SerializeField] private float tightHeadTop = 16f;
+        [SerializeField] private float tightBadgeBottom = 15f;
+        [SerializeField] private float tightBadgeGap = 4f;
+        [SerializeField] private float tightRankFontSize = 54f;
+        [SerializeField] private float tightTiedFontSize = 20f;
+        [SerializeField] private float tightStatFontSize = 24f;
+        [SerializeField] private float tightSubFontSize = 17f;
+        [SerializeField] private float tightHeadSpacing = 1f;
+
         [Header("크기 (시안 :root)")]
         [Tooltip("순위별 시상대 높이 — 1 · 2 · 3 · 4위.")]
         [SerializeField] private float[] podiumHeights = { 288f, 266f, 252f, 240f };
@@ -113,6 +169,8 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float rankFontSize = 84f;
         [Tooltip("3 · 4위의 순위 숫자 크기.")]
         [SerializeField] private float lowRankFontSize = 68f;
+        [Tooltip("순위 숫자의 줄 높이 — 글자 크기의 배수 (시안 .rank line-height).")]
+        [SerializeField] private float rankLineHeight = 0.95f;
         [Tooltip("탈락한 캐릭터의 기울기 (도).")]
         [SerializeField] private float outTilt = 7f;
         [Tooltip("탈락한 캐릭터가 내려앉는 거리.")]
@@ -149,10 +207,16 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float goneDash = 12f;
         [SerializeField] private float goneGap = 8f;
 
+        private readonly List<ResultBadgeView> _badges = new List<ResultBadgeView>();
         private bool _isWinner;
+        private Sequence _bubbleTween;
 
         private void Awake()
         {
+            if (head == null || headColumn == null || rankSize == null || tiedText == null || badgeArea == null || badgeColumn == null || badgePrefab == null
+                || bubble == null || bubbleGroup == null || bubbleText == null)
+                Debug.LogError($"[{nameof(ResultPodiumView)}] 배지 · 말풍선 참조 중 비어 있는 것이 있습니다.", this);
+
             if (podium == null || podiumBox == null || podiumHighlight == null || podiumHighlightEdge == null || meRing == null || rankText == null || tiedChip == null
                 || statText == null || subText == null || upper == null || nameTag == null || nameTagGroup == null || nameTagBox == null || colorDot == null || nameText == null
                 || meChip == null || readyChip == null || goneChip == null || character == null || characterGroup == null || characterImage == null || crown == null
@@ -176,7 +240,7 @@ namespace Chapchu.UI.ResultScreen
             podiumHighlight.color = podiumHighlightColors[tier];
             meRing.SetActive(info.IsMe);
             rankText.text = info.Rank.ToString();
-            rankText.fontSize = info.Rank >= 3 ? lowRankFontSize : rankFontSize;
+            SetRankSize(info.Rank >= 3 ? lowRankFontSize : rankFontSize);
             tiedChip.SetActive(info.IsTied);
             statText.gameObject.SetActive(info.Stat != null);
             statText.text = info.Stat;
@@ -214,6 +278,64 @@ namespace Chapchu.UI.ResultScreen
             }
         }
 
+        /// <summary>
+        /// 업적 배지를 시상대 아래쪽에 쌓는다 — Show 뒤에 한 번. 순위 줄 + 배지가 시상대 높이에 안 들어가면 숫자 · 글자 · 배지를 조금씩 줄인다 (시안 fitPodium).
+        /// </summary>
+        public void ShowBadges(IReadOnlyList<ResultBadgeInfo> badges)
+        {
+            if (badges.Count == 0)
+                return;
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(head);
+            float need = headTop + head.rect.height + headBadgeGap + badges.Count * badgeSize.x + (badges.Count - 1) * badgeSize.y + badgeBottom;
+            bool isTight = need > podium.rect.height;
+            if (isTight)
+            {
+                head.anchoredPosition = new Vector2(head.anchoredPosition.x, -tightHeadTop);
+                headColumn.spacing = tightHeadSpacing;
+                SetRankSize(tightRankFontSize);
+                tiedText.fontSize = tightTiedFontSize;
+                statText.fontSize = tightStatFontSize;
+                subText.fontSize = tightSubFontSize;
+                badgeArea.anchoredPosition = new Vector2(badgeArea.anchoredPosition.x, tightBadgeBottom);
+                badgeColumn.spacing = tightBadgeGap;
+            }
+
+            foreach (ResultBadgeInfo info in badges)
+            {
+                ResultBadgeView badge = Instantiate(badgePrefab, badgeArea);
+                badge.Show(info.Icon, info.Award, info.Value, isTight);
+                _badges.Add(badge);
+            }
+        }
+
+        // 순위 숫자의 크기 — 줄 높이도 따라 바뀐다
+        private void SetRankSize(float fontSize)
+        {
+            rankText.fontSize = fontSize;
+            rankSize.minHeight = fontSize * rankLineHeight;
+            rankSize.preferredHeight = fontSize * rankLineHeight;
+        }
+
+        /// <summary>말풍선을 다른 칸 위에 그려지는 층으로 옮긴다 — 자리는 그대로. 값을 그린 뒤(Show), 등장 연출 전에 한 번.</summary>
+        public void MoveBubbleTo(RectTransform layer) => bubble.SetParent(layer, true);
+
+        /// <summary>캐릭터 옆에 말풍선을 띄운다 (이모트 · 「준비!」) — 잠깐 뒤 스스로 사라진다. 나간 사람은 띄우지 않는다.</summary>
+        public void Say(string text)
+        {
+            if (goneChip.activeSelf)
+                return;
+
+            bubbleText.text = text;
+            _bubbleTween?.Kill();
+            _bubbleTween = DOTween.Sequence().SetLink(bubble.gameObject)
+                .Append(bubble.DOScale(1f, 0.25f).SetEase(Ease.OutBack, 2f))
+                .Join(bubbleGroup.DOFade(1f, 0.2f))
+                .AppendInterval(bubbleSeconds - 0.25f)
+                .Append(bubble.DOScale(0f, 0.25f).SetEase(Ease.InQuad))
+                .Join(bubbleGroup.DOFade(0f, 0.2f));
+        }
+
         /// <summary>「한 판 더」 를 눌렀는지 — 이름표의 「준비」 꼬리표.</summary>
         public void SetReady(bool isReady) => readyChip.SetActive(isReady);
 
@@ -224,6 +346,12 @@ namespace Chapchu.UI.ResultScreen
                 return;
 
             goneChip.SetActive(isGone);
+            if (isGone)
+            {
+                _bubbleTween?.Kill(); // 떠 있던 말풍선도 지운다
+                bubble.localScale = Vector3.zero;
+                bubbleGroup.alpha = 0f;
+            }
             nameText.color = isGone ? muted : ink;
             nameTagBox.Set(UIShape.ShapeKind.RoundRect, tagRadius, tagBorder, ink, 1f, isGone ? goneDash : 0f, isGone ? goneGap : 0f);
         }
@@ -240,6 +368,8 @@ namespace Chapchu.UI.ResultScreen
             Drop(character, characterGroup, delay + 0.35f);
             Drop(nameTag, nameTagGroup, delay + 0.35f);
             Rise(hpBar, hpBarGroup, delay + 0.75f, 0.35f);
+            for (int i = 0; i < _badges.Count; i++)
+                _badges[i].PlayIntro(delay + 0.7f + i * 0.14f);
 
             if (crown.gameObject.activeSelf)
             {

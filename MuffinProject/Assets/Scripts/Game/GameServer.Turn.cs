@@ -220,7 +220,7 @@ namespace Chapchu.Game
             int extra = _players[actor].TurnStartDraws;
             _players[actor].TurnStartDraws = 0;
             for (int i = 0; i < extra; i++)
-                DrawOne(actor);
+                CountDraw(actor);
             CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
         }
 
