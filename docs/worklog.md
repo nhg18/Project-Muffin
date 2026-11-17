@@ -21,6 +21,8 @@
 - `ChainCardsPresenter` 가 카드를 낸 순간 앞 층(`TopCardLayerView`)에 올리고, 버림 더미 · 좌석에 닿아 지울 때 · 손패로 돌려줄 때 내린다. 씬 `GameScene` 의 `ChainCards.topLayer` 연결(YAML 한 줄) · `TableBuilder.BuildChainCards` 에 같은 참조. `10-ui` 2-1 「카드 연출 자리」 · 「앞 층」 에 적음. 시트(기록 서랍 · 메뉴 · 고르기 판)는 여전히 카드 위.
 - 확인: `run.sh multi 2` 통과 · 3 단계 · 반응 시간 스크린샷에서 카드가 상대 캐릭터 · 이름표 위. `restart 2` 다시 통과. 손패를 올린 채(같은 앞 층 카메라에서 깊이로 겹침) · 카운터가 붙은 체인은 눈으로 보지 않았다.
 - 이어서 PM 「손패가 가장 앞」 — 앞 층을 둘로: 레이어 `TopChainCards`(TagManager 10) + 체인 카메라 `TopChainCamera`(depth −1+2, 투명 바탕) 가 낸 카드를 먼저, `TopCardCamera`(depth −1+3) 는 깊이만 지우고 손패를. 같은 렌더 텍스처. `TopCardLayerView.SetChain` · 메뉴 `Chapchu/Game Screen/Add Top Chain Camera` 로 씬에 넣음 — Unity 저장이 레이아웃 값 · 새 필드 기본값까지 다시 써서, 씬은 카메라 · 참조 · 카메라 값 6곳만 남기고 되돌림. PM 지시로 이 단계는 실행 확인 안 함.
+- 이어서 PM 「낸 카드에 카드 이름 + 시간초가 가려지는 버그 … 카드보다 위에」 — 원인: 앞 층이 그림 한 장이라 낸 카드 · 손패가 HUD 의 알약(`ReactionTimer`)을 함께 덮었다. 층마다 렌더 텍스처 · RawImage 를 따로 두고(`TopCardLayerView` 의 Pass 둘), HUD 안 순서를 `Center` < 체인 그림 `TopChainCards` < `CenterFront`(주인 태그 · 반응 타이머를 옮김) < … < 손패 그림 `TopCards` < 시트로. `TopCardCamera` 는 다시 투명 바탕. 기존 씬은 메뉴 `Chapchu/Game Screen/Split Top Card Layer`(앞의 `Add Top Chain Camera` 를 대신) 로 넣고, 씬은 이번에도 필요한 변경만 남김. 확인: `run.sh multi 2` 통과 · `_reaction` 스크린샷 두 화면 모두 「반응 · 9초」 알약이 낸 카드 위, 손패는 카드 앞. 주인 태그가 보이는 장면 · 카운터 체인은 눈으로 보지 않았다.
+- 문서와 다른 점(PM 확인): `10-ui` 282 · 410줄은 반응 타이머가 없다(2026-11-15)는데 코드는 반응 시간마다 알약을 띄운다 — 이번엔 보이게만 고쳤다.
 - 이번 테스트 실행이 남긴 다른 변경(커밋 안 함): TMP 글꼴 동적 아틀라스 4개 · `ProjectSettings.asset`. `PhotonServerSettings` 의 RpcList 에 `RPC_OnChainDiscarded` 가 빠져 있던 것이 채워짐 — 커밋할지 PM 확인.
 
 ### 확인

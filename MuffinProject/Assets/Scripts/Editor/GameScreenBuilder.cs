@@ -142,8 +142,12 @@ namespace Chapchu.EditorTools
             OpponentSeatsPresenter seats = BuildOpponentSeats(center, deck);
             TargetAskView targetAsk = BuildTargetAsk(center, dimmer);
             Wire(seats, ("targetAsk", targetAsk), ("myPanel", myPanel));
-            CardOwnerTagView ownerTag = BuildCardOwnerTag(center);
-            ReactionTimerPresenter reactionTimer = BuildReactionTimer(center);
+
+            // 낸 카드(체인 층 — 3D 를 그린 그림) → 그 위에 주인 태그 · 반응 타이머 (사용자 2026-11-17). 손패 층은 아래 TopCards 로 더 위
+            RawImage chainImage = BuildTopChainImage(canvasRect);
+            RectTransform centerFront = BuildCenterFront(canvasRect);
+            CardOwnerTagView ownerTag = BuildCardOwnerTag(centerFront);
+            ReactionTimerPresenter reactionTimer = BuildReactionTimer(centerFront);
 
             // 판 효과 줄 — 상대 좌석보다 위 (프로토타입 v2 .gfx z 24), 손패 층 · 서랍보다 아래
             RectTransform boardLayer = BuildBoardLayer(canvasRect);
@@ -151,7 +155,7 @@ namespace Chapchu.EditorTools
 
             // 손패 안내 · HUD 위 카드 층 — 가운데 묶음(가림판 · 좌석)보다 위, 서랍보다 아래
             PlayLineView playLine = BuildPlayLine(canvasRect);
-            TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera);
+            TopCardLayerView topLayer = BuildTopCardLayer(canvasRect, camera, chainImage);
             HandRevealView handReveal = BuildHandReveal(canvasRect);
             ScreenFlashView screenFlash = BuildScreenFlash(canvasRect);
 
@@ -222,26 +226,39 @@ namespace Chapchu.EditorTools
         }
 
         /// <summary>
-        /// 열린 씬의 앞 층에 체인 카메라를 더한다 — 낸 카드는 HUD 위 · 손패 뒤 (사용자 2026-11-17). 앞 층 카메라는 깊이만 지우게 바꾼다.
-        /// 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 값만 맞춘다.
+        /// 열린 씬의 앞 층을 둘로 나눈다 (사용자 2026-11-17) — 체인 카메라 + 체인 층 그림(TopChainCards)을 Center 바로 뒤에, 그 뒤에 CenterFront 를 두고
+        /// 주인 태그 · 반응 타이머를 옮긴다. 순서: 상대 좌석 < 낸 카드 < 주인 태그 · 반응 타이머 < … < 손패. 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 값만 맞춘다.
         /// </summary>
-        [MenuItem("Chapchu/Game Screen/Add Top Chain Camera")]
-        public static void AddTopChainCamera()
+        [MenuItem("Chapchu/Game Screen/Split Top Card Layer")]
+        public static void SplitTopCardLayer()
         {
-            TopCardLayerView[] views = Object.FindObjectsByType<TopCardLayerView>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            TopCardLayerView view = Object.FindFirstObjectByType<TopCardLayerView>(FindObjectsInactive.Include);
             Camera main = Camera.main;
-            if (views.Length == 0 || main == null)
+            Transform canvas = view != null ? view.transform.parent : null;
+            Transform center = canvas != null ? canvas.Find("Center") : null;
+            Transform ownerTag = center != null ? center.Find("CardOwnerTag") ?? canvas.Find("CenterFront/CardOwnerTag") : null;
+            Transform timer = center != null ? center.Find("ReactionTimer") ?? canvas.Find("CenterFront/ReactionTimer") : null;
+            if (view == null || main == null || center == null || ownerTag == null || timer == null)
             {
-                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 TopCardLayerView 또는 메인 카메라가 없다.");
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 TopCardLayerView · 메인 카메라 · Center · CardOwnerTag · ReactionTimer 중 없는 것이 있다.");
                 return;
             }
 
-            Camera top = TableBuilder.SetupTopCamera(main);
-            Camera chain = TableBuilder.SetupTopChainCamera(main);
-            foreach (TopCardLayerView view in views)
-                Wire(view, ("topCamera", top), ("chainCamera", chain));
-            EditorSceneManager.MarkSceneDirty(main.gameObject.scene);
-            Debug.Log($"[{nameof(GameScreenBuilder)}] 체인 카메라를 더함 — 씬을 저장할 것.");
+            var canvasRect = (RectTransform)canvas;
+            Transform chainImage = canvas.Find("TopChainCards");
+            if (chainImage == null)
+                chainImage = BuildTopChainImage(canvasRect).transform;
+            Transform front = canvas.Find("CenterFront");
+            if (front == null)
+                front = BuildCenterFront(canvasRect);
+            chainImage.SetSiblingIndex(center.GetSiblingIndex() + 1);
+            front.SetSiblingIndex(chainImage.GetSiblingIndex() + 1);
+            ownerTag.SetParent(front, false);
+            timer.SetParent(front, false);
+
+            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(main)), ("chainCamera", TableBuilder.SetupTopChainCamera(main)), ("chainImage", chainImage.GetComponent<RawImage>()));
+            EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 앞 층을 체인 층 · 손패 층으로 나눔 — 씬을 저장할 것.");
         }
 
         /// <summary>uGUI 손패 카드 프리팹 3개를 같은 경로에 다시 만든다 (GUID 유지). CardFxTestBench 가 쓴다 — 인게임 손패는 3D 카드(TableBuilder). 사람이 프리팹을 손봤다면 지워진다.</summary>
@@ -729,22 +746,35 @@ namespace Chapchu.EditorTools
         }
 
         // HUD 위 카드 층 — TopCards 레이어만 그리는 카메라의 그림을 화면 전체에 얹는다 (TopCardLayerView). 올린 손패 · 끄는 카드 · 대상 고르는 카드가 HUD 를 덮는다.
-        public static TopCardLayerView BuildTopCardLayer(RectTransform canvasRect, Camera mainCamera)
+        public static TopCardLayerView BuildTopCardLayer(RectTransform canvasRect, Camera mainCamera, RawImage chainImage)
         {
-            var go = new GameObject("TopCards", typeof(RectTransform), typeof(RawImage));
-            go.layer = LayerMask.NameToLayer("UI");
-            var rect = (RectTransform)go.transform;
-            rect.SetParent(canvasRect, false);
-            Stretch(rect);
+            RawImage image = NewLayerImage("TopCards", canvasRect);
+            var view = image.gameObject.AddComponent<TopCardLayerView>();
+            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)), ("chainCamera", TableBuilder.SetupTopChainCamera(mainCamera)), ("chainImage", chainImage));
+            return view;
+        }
 
-            var image = go.GetComponent<RawImage>();
+        // HUD 위 체인 층 — 낸 카드의 그림 (TopCardLayerView 의 chainImage). 상대 좌석 · 가림판(Center) 위, 주인 태그 · 반응 타이머(CenterFront) 아래.
+        public static RawImage BuildTopChainImage(RectTransform canvasRect) => NewLayerImage("TopChainCards", canvasRect);
+
+        // 가운데 묶음의 앞쪽 — 체인 층 그림 위에 보여야 하는 것(주인 태그 · 반응 타이머). Center 와 같은 자리 · 크기.
+        public static RectTransform BuildCenterFront(RectTransform canvasRect)
+        {
+            RectTransform front = NewRect("CenterFront", canvasRect);
+            Anchor(front, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(HandView.ReferenceWidth, HandView.ReferenceHeight));
+            return front;
+        }
+
+        // 앞 층 그림 한 장 — 화면 전체 · 눌리지 않음 · 앞 층 합성 재질 · 꺼 둔 채 (뷰가 켠다)
+        private static RawImage NewLayerImage(string name, RectTransform canvasRect)
+        {
+            RectTransform rect = NewRect(name, canvasRect);
+            Stretch(rect);
+            var image = rect.gameObject.AddComponent<RawImage>();
             image.raycastTarget = false;
             image.material = TableBuilder.TopLayerCompositeMaterial();
             image.enabled = false;
-
-            var view = go.AddComponent<TopCardLayerView>();
-            Wire(view, ("topCamera", TableBuilder.SetupTopCamera(mainCamera)), ("chainCamera", TableBuilder.SetupTopChainCamera(mainCamera)));
-            return view;
+            return image;
         }
 
         // 새 카드 보여 주기의 HUD (시안 .rvbar · .rvhint × 2) — 크게 띄운 카드 아래에 남은 시간 막대 440 × 20 과 안내 글. 카드는 앞 층(3D)이 그린다.

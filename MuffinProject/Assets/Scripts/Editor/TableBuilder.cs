@@ -191,7 +191,7 @@ namespace Chapchu.EditorTools
 
         /// <summary>
         /// 앞 층의 체인 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopChainCards 레이어(낸 카드)만 투명 바탕에 그린다.
-        /// 앞 층 카메라와 같은 렌더 텍스처에 먼저(depth 낮게) 그려, 손패가 그 위에 온다 (사용자 2026-11-17). 평소에는 꺼 두고 뷰가 켠다.
+        /// 그림은 자기 렌더 텍스처에 그리고 HUD 의 체인 층 RawImage 가 얹는다 — 상대 좌석 위 · 반응 타이머 · 손패 층 아래 (사용자 2026-11-17). 평소에는 꺼 두고 뷰가 켠다.
         /// 낸 카드는 누르기를 받지 않으므로 PhysicsRaycaster 는 없다. 이미 있으면 값만 맞춘다.
         /// </summary>
         public static Camera SetupTopChainCamera(Camera main) =>
@@ -199,11 +199,11 @@ namespace Chapchu.EditorTools
 
         /// <summary>
         /// 앞 층 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopCards 레이어(손패)만 그린다. 그림은 TopCardLayerView 가 렌더 텍스처로 받아 HUD 위에 얹는다.
-        /// 체인 카메라가 같은 텍스처에 낸 카드를 그린 뒤 깊이만 지우고 그린다 — 겹쳐도 손패가 앞 (사용자 2026-11-17).
+        /// 투명 바탕. 이 층의 RawImage 가 체인 층 · 반응 타이머보다 뒤 형제라 손패가 언제나 앞이다 (사용자 2026-11-17).
         /// 평소에는 꺼 두고 뷰가 켠다. PhysicsRaycaster 는 앞 층 카드가 뒤에 있는 것(내 함정 칸 · 덱)의 탭을 가리게 하려고 붙인다. 이미 있으면 값만 맞춘다.
         /// </summary>
         public static Camera SetupTopCamera(Camera main) =>
-            SetupTopLayerCamera(main, TopCameraName, TopCardLayerView.TopLayerName, CameraClearFlags.Depth, 3, true); // 바탕은 체인 카메라가 지운다
+            SetupTopLayerCamera(main, TopCameraName, TopCardLayerView.TopLayerName, CameraClearFlags.SolidColor, 3, true);
 
         /// <summary>앞 층 카메라 공통 — 메인 카메라의 자식으로 한 레이어만 그리고, 메인 카메라 컬링에서는 그 레이어를 뺀다. 평소에는 꺼 둔다. 이미 있으면 값만 맞춘다.</summary>
         private static Camera SetupTopLayerCamera(Camera main, string cameraName, string layerName, CameraClearFlags clearFlags, int depthOffset, bool raycaster)
