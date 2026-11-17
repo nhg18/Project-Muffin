@@ -74,7 +74,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (card == null) return;
 
-            bool changed = onTop ? _cards.Add(card) : _cards.Remove(card);
+            // 내릴 때는 그 층에 있는 카드만 — 손패에서 체인으로 넘어간 카드에 늦게 온 Set(false) 가 체인 층에서 내리지 않게
+            bool changed = onTop ? _cards.Add(card) : card.gameObject.layer == layer && _cards.Remove(card);
             if (!changed) return;
 
             card.SetLayer(onTop ? layer : _handLayer);
