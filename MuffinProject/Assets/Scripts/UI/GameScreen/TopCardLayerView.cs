@@ -150,8 +150,9 @@ namespace Chapchu.UI.GameScreen
         {
             if (pass == null || pass.Texture == null) return;
 
-            pass.Camera.targetTexture = null;
-            pass.Image.texture = null;
+            // 씬이 내려갈 때는 카메라 · 이미지가 먼저 파괴돼 있을 수 있다 (게임이 끝나 결과 씬으로 넘어갈 때)
+            if (pass.Camera != null) pass.Camera.targetTexture = null;
+            if (pass.Image != null) pass.Image.texture = null;
             pass.Texture.Release();
             Destroy(pass.Texture);
             pass.Texture = null;
