@@ -34,19 +34,19 @@ namespace Chapchu.Network
         [Tooltip("이번 게임의 덱 구성 (05-deck.md 8절). 덱 구성은 미정 — 지금은 카드 묶음 덱(Deck_Main, 11-card-list 0절)을 쓴다.")]
         [SerializeField] private DeckData deck;
 
-        [Tooltip("게임이 끝나고 결과를 보여 주는 시간(초). 지나면 방장이 방을 다시 열고 전원을 방 씬으로 옮긴다 (08-room.md 4절).")]
-        [Min(0)] [SerializeField] private float resultSeconds = 5f;
+        [Tooltip("게임이 끝난 뒤 결과 씬으로 넘어가기까지의 시간(초) — 마지막 연출을 볼 시간 (07-win-condition.md 11-1, 제안).")]
+        [Min(0)] [SerializeField] private float resultDelaySeconds = 2f;
 
         private GameServer _server; // 모든 클라가 만들지만 방장에서만 쓰인다
         private BotDriver _bots;    // 봇의 판단 — 방장에서만 (18-bot.md 3절 #1). 봇이 없으면 null
         private int _sentSeq;       // 방장 — 마지막으로 보낸 처리 번호 (09-network.md 5절)
         private int _receivedSeq;   // 각 클라 — 마지막으로 받은 처리 번호
 
-        // 요청 빈도 제한 (09-network.md 13절) — 보낸 사람마다 RequestBurst 개까지 몰아서, 그 뒤엔 초당 RequestsPerSecond 개. 넘친 요청은 답 없이 버린다
-        private const float RequestBurst = 10f;
-        private const float RequestsPerSecond = 5f;
-        private readonly Dictionary<int, (float tokens, float at)> _requestBudget = new Dictionary<int, (float tokens, float at)>();
-        private readonly HashSet<int> _requestThrottled = new HashSet<int>(); // 지금 막혀 있는 보낸 사람 — 경고를 한 번만
+        private readonly RequestLimiter _limiter = new RequestLimiter(nameof(PunGameServer)); // 요청 빈도 제한 (09-network.md 13절)
+
+        // 게임을 시작할 때의 닉네임 — 결과 화면이 나간 사람의 이름도 보이게 (07-win-condition.md 11-2). 모든 클라가 자기 것을 찍어 둔다
+        private readonly Dictionary<int, string> _startNames = new Dictionary<int, string>();
+        private bool _gameEnded; // 종료 알림을 받았다 — 이 뒤로는 요청을 보내지 않는다 (곧 결과 씬으로 넘어간다)
 
         // 방장이 바뀔 때 방 속성의 처리 번호를 이어받는 한도 — 남이 큰 값을 써서 새 방장의 알림을 모두 묵은 것으로 만들지 못하게
         private const int MaxSeqJump = 1000;
@@ -60,6 +60,12 @@ namespace Chapchu.Network
                 Debug.LogError($"[{nameof(PunGameServer)}] {nameof(deck)} 참조가 비어 있습니다.", this);
 
             _server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+
+            if (PhotonNetwork.InRoom)
+            {
+                foreach (Player player in PhotonNetwork.PlayerList)
+                    _startNames[player.ActorNumber] = player.NickName;
+            }
         }
 
         // 이 씬은 방에서 LoadLevel 로 넘어오므로 방장이 바로 시작한다 (01-game-flow.md 3절).
@@ -90,18 +96,7 @@ namespace Chapchu.Network
             Debug.Log($"[{nameof(PunGameServer)}] 게임 시작 — 참가자 {string.Join(", ", actors.Select(a => $"P{a}"))} · 덱 {cards.Count}장");
 
             // 지난 판의 지금 값을 지운다 — 시작 일이 다시 쓰지 않는 값 (늦게 열린 화면이 지난 판 상태를 읽지 않게)
-            var reset = new Hashtable { [PlayerProps.LifeState] = (byte)LifeState.Alive, [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0, [PlayerProps.HandCount] = 0 };
-            foreach (Player player in PhotonNetwork.PlayerList)
-                NetworkManager.Instance.SetPlayerProps(player, reset);
-
-            // 버림 더미는 빈 채로 · 턴 방향은 정방향으로 시작한다 — 값이 null 이면 Photon 이 키를 지운다
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null, [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null };
-            foreach (int bot in bots)
-            {
-                foreach (DictionaryEntry entry in reset)
-                    roomReset[BotRoster.PropKey((string)entry.Key, bot)] = entry.Value;
-            }
-            NetworkManager.Instance.SetRoomProps(roomReset);
+            ResetPublicProps();
 
             if (bots.Length > 0)
                 _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
@@ -157,6 +152,9 @@ namespace Chapchu.Network
         // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
         private void SendRequest(string rpcName, params object[] parameters)
         {
+            if (_gameEnded)
+                return; // 끝난 판에는 어차피 거절(코드 13)이다 — 씬이 바뀐 뒤 도착해 받을 곳이 없는 요청을 만들지 않는다
+
             Player master = PhotonNetwork.CurrentRoom?.GetPlayer(NetworkManager.TrustedMaster);
             if (master == null)
             {
@@ -171,7 +169,7 @@ namespace Chapchu.Network
         private void RPC_RequestDraw(PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.Draw(info.Sender.ActorNumber));
         }
 
@@ -179,7 +177,7 @@ namespace Chapchu.Network
         private void RPC_RequestPlayCard(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.PlayCard(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
@@ -187,7 +185,7 @@ namespace Chapchu.Network
         private void RPC_RequestSetTrap(int cardInstanceId, PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.SetTrap(info.Sender.ActorNumber, cardInstanceId));
         }
 
@@ -195,7 +193,7 @@ namespace Chapchu.Network
         private void RPC_RequestMySync(PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
 
             // 지금까지 보낸 알림 뒤에 간다 — 받는 쪽은 이 번호 전의 묵은 알림을 버린다
             _server.GetPrivateCards(info.Sender.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
@@ -207,7 +205,7 @@ namespace Chapchu.Network
         private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.DeclareChapchu(info.Sender.ActorNumber));
         }
 
@@ -215,7 +213,7 @@ namespace Chapchu.Network
         private void RPC_RequestChoose(int option, PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.Choose(info.Sender.ActorNumber, option));
         }
 
@@ -223,7 +221,7 @@ namespace Chapchu.Network
         private void RPC_RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers, PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
-            if (!AllowRequest(info)) return;
+            if (!_limiter.Allow(info)) return;
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
@@ -251,29 +249,6 @@ namespace Chapchu.Network
                 fromRoom = 0;
             }
             _sentSeq = System.Math.Max(known, fromRoom);
-        }
-
-        // 보낸 사람마다 요청 빈도를 제한한다 — 거절도 방장이 답을 보내므로, 요청을 쏟아 방장 · 방 전원의 대역을 채우지 못하게
-        private bool AllowRequest(PhotonMessageInfo info)
-        {
-            if (info.Sender == null)
-                return false; // 이미 나간 사람
-
-            float now = Time.unscaledTime;
-            int actor = info.Sender.ActorNumber;
-            float tokens = _requestBudget.TryGetValue(actor, out (float tokens, float at) budget)
-                ? Mathf.Min(RequestBurst, budget.tokens + (now - budget.at) * RequestsPerSecond)
-                : RequestBurst;
-
-            bool allowed = tokens >= 1f;
-            _requestBudget[actor] = (allowed ? tokens - 1f : tokens, now);
-
-            // 경고는 막히기 시작할 때 한 번만 — 쏟아붓는 요청마다 로그를 쓰지 않게
-            if (allowed)
-                _requestThrottled.Remove(actor);
-            else if (_requestThrottled.Add(actor))
-                Debug.LogWarning($"[{nameof(PunGameServer)}] P{actor} 요청이 너무 잦다 — 다시 허용될 때까지 버린다");
-            return allowed;
         }
 
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
@@ -530,10 +505,13 @@ namespace Chapchu.Network
                         break;
 
                     case GameEnded ended:
-                        double returnAt = PhotonNetwork.Time + resultSeconds;
-                        Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, returnAt);
+                        Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, ended.Actors, ended.Ranks, ended.Hps, ended.OutTurns, ended.DownedBy, ended.Left);
                         Debug.Log($"[{nameof(PunGameServer)}] 게임 종료 — {ended.Reason} · 승자 P{ended.Winner} — {_server.DebugState(Debug.isDebugBuild)}");
-                        StartCoroutine(ReturnToRoomRoutine());
+
+                        // 결과 화면의 상태를 새로 쓴다 — 지난 판의 마감 · 준비가 남아 결과 씬이 열리자마자 로비로 나가거나 바로 시작하지 않게 (07 11-1)
+                        roomProps[RoomProps.ResultDeadline] = PhotonNetwork.Time + resultDelaySeconds + PunResultServer.AutoLeaveSeconds;
+                        roomProps[RoomProps.ResultReady] = null;
+                        roomProps[RoomProps.ResultStartAt] = null;
                         break;
 
                     case RequestRejected rejected:
@@ -577,18 +555,37 @@ namespace Chapchu.Network
                 roomProps[RoomProps.DiscardTop] = discardedCardIds[discardedCardIds.Length - 1];
         }
 
-        // 결과 표시 시간 뒤 방을 다시 열고 전원을 방 씬으로 (08-room.md 4절). 다음 판은 방에서 다시 시작한다.
-        private IEnumerator ReturnToRoomRoutine()
+        // 게임이 끝나면 잠깐 뒤 방장이 전원을 결과 씬으로 옮긴다 (07-win-condition.md 11-1). 종료 알림을 받은 모든 클라가 돌린다 —
+        // 그 사이에 방장이 나가면 새 믿는 방장이 이어서 한다. 씬이 바뀌면 이 오브젝트와 함께 끝난다.
+        private IEnumerator GoToResultRoutine()
         {
-            yield return new WaitForSeconds(resultSeconds);
-            if (!NetworkManager.IsTrustedMaster)
-                yield break;
+            yield return new WaitForSeconds(resultDelaySeconds);
+            yield return new WaitUntil(() => NetworkManager.IsTrustedMaster);
 
-            // 버림 더미 스냅샷은 방으로 돌아가기 전에 비운다 — 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다
-            // 찹츄 · 함정 · 손패 장수도 같은 이유로 여기서 지운다 — 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다. 봇은 방 속성 키 (18-bot.md 9절)
-            // HP 는 시작 값(MaxHp)으로 — 다음 판 화면이 지난 판 HP 를 보이거나 시작 HP 100 을 변화로 기록하지 않게
-            var playerReset = new Hashtable { [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0, [PlayerProps.HandCount] = 0, [PlayerProps.Hp] = GameServer.MaxHp };
-            var roomReset = new Hashtable { [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null, [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null };
+            // 다음 판 화면들의 Start(스냅샷 복구)는 방장의 시작 초기화보다 먼저 읽는다 — 그래서 게임 씬을 떠나기 전에 지운다.
+            // 「한 판 더」 로 시작할 때 지우면 늦다: 방장은 자기가 쓴 속성을 서버 응답 뒤에야 보는데, 씬을 여는 동안은 받기가 멈춘다.
+            // 결과 화면은 이 값이 아니라 종료 요약(GameResult)을 읽는다.
+            ResetPublicProps();
+            NetworkManager.Instance.LoadSceneForAll(ScenePaths.Result);
+        }
+
+        // 판마다 새로 시작하는 공개 값(지금 값 스냅샷)을 처음으로 — 시작 일이 다시 쓰지 않는 값까지. 값이 null 이면 Photon 이 키를 지운다.
+        // 찹츄 · 함정 · 손패 장수: 게임 종료는 찹츄를 해제하지 않고, 시작 일은 이 값을 다시 보내지 않는다.
+        // HP 는 시작 값으로 — 다음 판 화면이 지난 판 HP 를 보이거나 시작 HP 를 변화로 기록하지 않게.
+        // 턴 주인 · 마감 · 덱 장수: 다음 판 화면이 열리자마자 지난 판의 턴을 그리지 않게. 봇은 방 속성 키 (18-bot.md 9절)
+        private static void ResetPublicProps()
+        {
+            var playerReset = new Hashtable
+            {
+                [PlayerProps.LifeState] = (byte)LifeState.Alive, [PlayerProps.ChapChu] = false, [PlayerProps.TrapCount] = 0,
+                [PlayerProps.HandCount] = 0, [PlayerProps.Hp] = GameServer.MaxHp, [PlayerProps.ActionBlock] = null,
+            };
+            var roomReset = new Hashtable
+            {
+                [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null,
+                [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null, [RoomProps.TurnActor] = null, [RoomProps.TurnDeadline] = null, [RoomProps.DeckCount] = null,
+                [RoomProps.EventSeq] = null, // 처리 번호는 판마다 1부터 — 지난 판 번호를 새 방장이 이어받지 않게
+            };
             foreach (int bot in BotRoster.Actors)
             {
                 foreach (DictionaryEntry entry in playerReset)
@@ -598,9 +595,6 @@ namespace Chapchu.Network
 
             foreach (Player player in PhotonNetwork.PlayerList)
                 NetworkManager.Instance.SetPlayerProps(player, playerReset);
-
-            NetworkManager.Instance.UpdateRoomOptions(isVisible: !BotRoster.IsSoloRoom, isOpen: true); // 「혼자 하기」 방은 비공개 그대로 (18-bot.md 10절)
-            NetworkManager.Instance.LoadSceneForAll(ScenePaths.Room);
         }
 
         // 처리 번호 (09-network.md 5절) — 방장이 보내는 알림 1건마다 1씩 는다. 받는 쪽은 이미 받은 번호 이하를 버린다 (중복 적용 방지).
@@ -973,10 +967,18 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnGameEnded(int seq, int winner, byte reason, double returnAt, PhotonMessageInfo info)
+        private void RPC_OnGameEnded(int seq, int winner, byte reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, PhotonMessageInfo info)
         {
-            if (Accept(seq, info))
-                GameEvents.RaiseGameEnded(winner, (GameEndReason)reason, returnAt);
+            if (!Paired(actors, ranks) || !Paired(actors, hps) || !Paired(actors, outTurns) || !Paired(actors, downedBy) || !Paired(actors, left) || !Accept(seq, info))
+                return;
+
+            // 이름은 각자 게임을 시작할 때 찍어 둔 것 — 나간 사람은 지금 방에 없다. 봇은 「봇 N」
+            string[] names = actors.Select(actor => BotRoster.IsBot(actor) ? BotRoster.NicknameOf(actor) : _startNames.TryGetValue(actor, out string name) ? name : "").ToArray();
+            GameResult.Last = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left);
+
+            _gameEnded = true;
+            GameEvents.RaiseGameEnded(winner, (GameEndReason)reason);
+            StartCoroutine(GoToResultRoutine());
         }
 
         [PunRPC]

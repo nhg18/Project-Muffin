@@ -30,7 +30,7 @@ namespace Chapchu.Game
             if (hp <= 0 && entry.SurviveAt.TryGetValue(actor, out int keep))
                 hp = Math.Max(1, keep);
 
-            SetHp(actor, hp);
+            SetHp(actor, hp, entry.User);
             if (hp <= 0)
                 entry.KnockedDown.Add(actor);
             if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
@@ -48,7 +48,7 @@ namespace Chapchu.Game
             {
                 if (amount > 0)
                 {
-                    SetHp(actor, _players[actor].Hp - amount);
+                    SetHp(actor, _players[actor].Hp - amount, entry.User);
                     if (_players[actor].Hp <= 0)
                         entry.KnockedDown.Add(actor);
                     RecordAfter(AfterKind.Damaged, actor, entry.User, amount);

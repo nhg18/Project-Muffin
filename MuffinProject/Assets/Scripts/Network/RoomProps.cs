@@ -18,5 +18,10 @@
         public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 112 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
         public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 123 기다려! — 07 4.3). 아무도 없으면 키를 지운다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
+
+        // 결과 화면 (07-win-condition.md 11-1) — 방장이 게임 종료 때 새로 쓴다
+        public const string ResultDeadline = "resDeadline"; // 이 서버 시각이 지나면 각자 방을 나가 로비로 (double)
+        public const string ResultReady = "resReady";       // 「한 판 더」 를 누른 사람 · 준비한 봇 (int[]). 아무도 없으면 키를 지운다
+        public const string ResultStartAt = "resStartAt";   // 전원 준비 — 이 서버 시각에 다음 판 시작 (double). 카운트다운이 없으면 키를 지운다
     }
 }

@@ -406,10 +406,10 @@ namespace Chapchu.DebugTools
 
         private void HandleChapchuChanged(int actorNumber, bool isChapchu) => Log($"P{actorNumber} 찹츄 {(isChapchu ? "선언" : "해제")}");
 
-        private void HandleGameEnded(int winner, GameEndReason reason, double returnAt)
+        private void HandleGameEnded(int winner, GameEndReason reason)
         {
             _gameEnded = true;
-            Log($"게임 종료 — {reason} · 승자 P{winner} · {returnAt - PhotonNetwork.Time:0.0}초 뒤 방으로");
+            Log($"게임 종료 — {reason} · 승자 P{winner} · 곧 결과 화면으로");
         }
 
         private void HandleMyRequestRejected(int code) => Log($"내 요청 거절 — 코드 {code}");

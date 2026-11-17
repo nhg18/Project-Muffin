@@ -73,10 +73,36 @@ namespace Chapchu.Game
                 EndGame(-1, GameEndReason.Draw);
         }
 
+        // 끝내면서 「게임 종료 요약」 을 만든다 (07 11-3). 순위: 승자 → 남은 사람(HP 높은 순) → 빠진 사람(늦게 빠진 순).
+        // 같은 값이면 공동 순위 · 다음 순위는 건너뛴다. 무승부는 전원 1위. 대소동이 나간 사람을 턴 순서에서 빼므로 _players 로 센다.
         private void EndGame(int winner, GameEndReason reason)
         {
             _gameOver = true;
-            _events.Add(new GameEnded(winner, reason));
+
+            int[] actors = _players.Keys
+                .OrderBy(actor => RankGroup(actor, winner))
+                .ThenByDescending(RankValue)
+                .ThenBy(actor => actor)
+                .ToArray();
+
+            var ranks = new int[actors.Length];
+            for (int i = 0; i < actors.Length; i++)
+            {
+                bool tied = i > 0 && RankGroup(actors[i], winner) == RankGroup(actors[i - 1], winner) && RankValue(actors[i]) == RankValue(actors[i - 1]);
+                ranks[i] = reason == GameEndReason.Draw ? 1 : tied ? ranks[i - 1] : i + 1;
+            }
+
+            _events.Add(new GameEnded(winner, reason, actors, ranks,
+                actors.Select(actor => _players[actor].Hp).ToArray(),
+                actors.Select(actor => _players[actor].OutTurn).ToArray(),
+                actors.Select(actor => _players[actor].DownedBy).ToArray(),
+                actors.Select(actor => _players[actor].HasLeft).ToArray()));
         }
+
+        // 순위 묶음 — 0 승자 · 1 끝까지 남은 사람 · 2 빠진 사람(최종 사망 · 나감)
+        private int RankGroup(int actor, int winner) => actor == winner ? 0 : IsInGame(actor) ? 1 : 2;
+
+        // 묶음 안에서 큰 값이 위 — 남은 사람은 HP, 빠진 사람은 빠진 턴 번호
+        private int RankValue(int actor) => IsInGame(actor) ? _players[actor].Hp : _players[actor].OutTurn;
     }
 }

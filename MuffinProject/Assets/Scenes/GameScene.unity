@@ -10675,7 +10675,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   deck: {fileID: 11400000, guid: 914cd90ad35768b48b8f4d8014fb49c5, type: 2}
-  resultSeconds: 5
+  resultDelaySeconds: 2
 --- !u!114 &381565665
 MonoBehaviour:
   m_ObjectHideFlags: 0

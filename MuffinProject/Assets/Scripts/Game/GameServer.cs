@@ -71,6 +71,7 @@ namespace Chapchu.Game
             _falloutTurns = 0;
             _restartPending = false;
             _heldNext = -1;
+            TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)
             ResetGaepan();
             ClearChoice();
             _judgesElimination = actors.Count >= 2;

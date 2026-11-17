@@ -308,16 +308,36 @@
         Draw         // 무승부 — 전원 최종 사망
     }
 
-    /// <summary>게임이 끝났다 (07-win-condition.md). 무승부면 Winner = -1. 이 뒤로는 모든 요청을 거절한다.</summary>
+    /// <summary>
+    /// 게임이 끝났다 (07-win-condition.md). 무승부면 Winner = -1. 이 뒤로는 모든 요청을 거절한다.
+    /// 「게임 종료 요약」(07 11-3 · 11-4)을 함께 싣는다 — 배열은 모두 같은 길이, 순위 순(같은 순위는 actorNumber 순)이다. 나간 사람도 들어 있다.
+    /// </summary>
     public sealed class GameEnded : GameEvent
     {
         public int Winner { get; }
         public GameEndReason Reason { get; }
+        public int[] Actors { get; }
+        /// <summary>순위 — 1부터. 같은 값이면 공동 순위이고 다음 순위는 건너뛴다 (1 · 2 · 2 · 4). 무승부는 전원 1.</summary>
+        public int[] Ranks { get; }
+        /// <summary>끝났을 때의 HP. 탈락한 사람은 0 이 아닐 수 있다(나간 사람) — 화면은 탈락이면 0 으로 보인다.</summary>
+        public int[] Hps { get; }
+        /// <summary>게임에서 빠진 턴 번호 (최종 사망 · 나감). 끝까지 남았으면 0.</summary>
+        public int[] OutTurns { get; }
+        /// <summary>HP 를 0 으로 만든 사람 (07 11-3 「킬」). 없으면 -1.</summary>
+        public int[] DownedBy { get; }
+        /// <summary>방을 나가서 빠졌는지 — 화면이 「이탈」 로 구별한다 (07 11-2).</summary>
+        public bool[] Left { get; }
 
-        public GameEnded(int winner, GameEndReason reason)
+        public GameEnded(int winner, GameEndReason reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left)
         {
             Winner = winner;
             Reason = reason;
+            Actors = actors;
+            Ranks = ranks;
+            Hps = hps;
+            OutTurns = outTurns;
+            DownedBy = downedBy;
+            Left = left;
         }
     }
 

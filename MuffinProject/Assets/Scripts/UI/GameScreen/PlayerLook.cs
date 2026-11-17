@@ -71,6 +71,18 @@ namespace Chapchu.UI.GameScreen
         /// <summary>플레이어의 흰 바탕 위 글자색.</summary>
         public static Color InkOf(int actorNumber) => LookOf(actorNumber, MeInk, SeatInks);
 
+        /// <summary>
+        /// 게임을 시작할 때의 명단으로 본 목걸이 색 — 결과 화면이 쓴다. 누가 나가도 게임에서 보던 색 그대로다
+        /// (ColorOf 는 지금 방에 있는 사람으로 좌석을 세어, 나간 사람은 회색이 되고 남은 사람의 색이 밀린다).
+        /// </summary>
+        public static Color ColorOf(int actorNumber, IEnumerable<int> startActors)
+        {
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
+            var ordered = new List<int> { me };
+            ordered.AddRange(startActors.Where(actor => actor != me).OrderBy(actor => actor)); // 봇 식별자는 사람보다 크다 — 사람 뒤에 봇 번호 순
+            return LookOf(actorNumber, ordered, MeColor, SeatColors);
+        }
+
         /// <summary>actorNumber 의 표시 이름. 봇이면 「봇 N」 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
         public static string NameOf(int actorNumber)
         {
@@ -81,9 +93,10 @@ namespace Chapchu.UI.GameScreen
             return player != null ? NameOf(player) : string.Format(NicknameFallbackFormat, actorNumber);
         }
 
-        private static Color LookOf(int actorNumber, Color me, Color[] seats)
+        private static Color LookOf(int actorNumber, Color me, Color[] seats) => LookOf(actorNumber, OrderedActors(), me, seats);
+
+        private static Color LookOf(int actorNumber, List<int> ordered, Color me, Color[] seats)
         {
-            List<int> ordered = OrderedActors();
             int index = ordered.IndexOf(actorNumber);
             if (index == 0) return me;
             if (index < 0) return UnseatedColor;

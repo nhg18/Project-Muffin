@@ -109,6 +109,9 @@ namespace Chapchu.Game
             if (!_players.TryGetValue(actor, out PlayerState player) || player.HasLeft)
                 return TakeEvents();
 
+            // 이미 죽었거나 게임이 끝난 뒤에 나가면 빠진 턴을 다시 적지 않는다 — 죽은 사람이 나중에 나가 순위가 오르지 않게 (07 11-3)
+            if (player.Life != LifeState.Dead && !_gameOver)
+                player.OutTurn = TurnSerial;
             player.HasLeft = true;
             int[] discarded = DiscardAll(actor);
             _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count));

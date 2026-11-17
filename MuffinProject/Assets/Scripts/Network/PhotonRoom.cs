@@ -298,6 +298,8 @@ namespace Chapchu.Network
 
         public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable changed)
         {
+            RoomEvents.RaiseRoomPropsChanged(changed);
+
             if (!changed.ContainsKey(RoomProps.Bots) && !changed.ContainsKey(RoomProps.BotLevels))
                 return;
 
