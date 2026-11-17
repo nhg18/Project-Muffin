@@ -31,6 +31,7 @@ namespace Chapchu.EditorTools
         private const string TableName = "Table";
         private const string HandCameraName = "HandCamera";
         private const string TopCameraName = "TopCardCamera";
+        private const string TopChainCameraName = "TopChainCamera";
         public const string HandLayerName = "HandCards"; // 내 카드 전용 레이어 — TagManager 에 없으면 빈 사용자 칸(8~)에 만든다
         private const string PrefabFolder = "Assets/Prefab/Table";
         private const string MaterialFolder = "Assets/Materials/Cards";
@@ -189,27 +190,40 @@ namespace Chapchu.EditorTools
             });
 
         /// <summary>
-        /// 앞 층 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopCards 레이어만 투명 바탕에 그린다. 그림은 TopCardLayerView 가 렌더 텍스처로 받아 HUD 위에 얹는다.
+        /// 앞 층의 체인 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopChainCards 레이어(낸 카드)만 투명 바탕에 그린다.
+        /// 그림은 자기 렌더 텍스처에 그리고 HUD 의 체인 층 RawImage 가 얹는다 — 상대 좌석 위 · 반응 타이머 · 손패 층 아래 (사용자 2026-11-17). 평소에는 꺼 두고 뷰가 켠다.
+        /// 낸 카드는 누르기를 받지 않으므로 PhysicsRaycaster 는 없다. 이미 있으면 값만 맞춘다.
+        /// </summary>
+        public static Camera SetupTopChainCamera(Camera main) =>
+            SetupTopLayerCamera(main, TopChainCameraName, TopCardLayerView.ChainLayerName, CameraClearFlags.SolidColor, 2, false);
+
+        /// <summary>
+        /// 앞 층 카메라 — 메인 카메라의 자식(같은 자리 · 같은 화각)으로 TopCards 레이어(손패)만 그린다. 그림은 TopCardLayerView 가 렌더 텍스처로 받아 HUD 위에 얹는다.
+        /// 투명 바탕. 이 층의 RawImage 가 체인 층 · 반응 타이머보다 뒤 형제라 손패가 언제나 앞이다 (사용자 2026-11-17).
         /// 평소에는 꺼 두고 뷰가 켠다. PhysicsRaycaster 는 앞 층 카드가 뒤에 있는 것(내 함정 칸 · 덱)의 탭을 가리게 하려고 붙인다. 이미 있으면 값만 맞춘다.
         /// </summary>
-        public static Camera SetupTopCamera(Camera main)
+        public static Camera SetupTopCamera(Camera main) =>
+            SetupTopLayerCamera(main, TopCameraName, TopCardLayerView.TopLayerName, CameraClearFlags.SolidColor, 3, true);
+
+        /// <summary>앞 층 카메라 공통 — 메인 카메라의 자식으로 한 레이어만 그리고, 메인 카메라 컬링에서는 그 레이어를 뺀다. 평소에는 꺼 둔다. 이미 있으면 값만 맞춘다.</summary>
+        private static Camera SetupTopLayerCamera(Camera main, string cameraName, string layerName, CameraClearFlags clearFlags, int depthOffset, bool raycaster)
         {
-            int layer = EnsureLayer(TopCardLayerView.TopLayerName);
+            int layer = EnsureLayer(layerName);
             main.cullingMask &= ~(1 << layer);
 
-            Transform existing = main.transform.Find(TopCameraName);
-            GameObject go = existing != null ? existing.gameObject : new GameObject(TopCameraName, typeof(Camera), typeof(PhysicsRaycaster));
+            Transform existing = main.transform.Find(cameraName);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(cameraName, typeof(Camera));
             go.transform.SetParent(main.transform, false);
             go.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
 
             var camera = go.GetComponent<Camera>();
             camera.CopyFrom(main);
-            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.clearFlags = clearFlags;
             camera.backgroundColor = Color.clear;
             camera.cullingMask = 1 << layer;
-            camera.depth = main.depth + 2;
+            camera.depth = main.depth + depthOffset;
             camera.enabled = false;
-            if (go.GetComponent<PhysicsRaycaster>() == null)
+            if (raycaster && go.GetComponent<PhysicsRaycaster>() == null)
                 go.AddComponent<PhysicsRaycaster>();
             return camera;
         }
@@ -420,7 +434,7 @@ namespace Chapchu.EditorTools
         /// 체인 카드 — 내는 자리(1 단계) · 크게 두는 자리(3 단계 · 홀드) · 어둡게 덮는 판 (10-ui.md 2-1 「카드 연출 자리」 · 5-1).
         /// 열린 씬에 이것만 더할 때도 쓴다 — 이미 있으면 덮어쓰지 않고 null.
         /// </summary>
-        public static ChainCardsPresenter BuildChainCards(Transform table, DiscardPileView discardPile, OpponentSeatsPresenter seats, CardOwnerTagView ownerTag, DeckData gameDeck)
+        public static ChainCardsPresenter BuildChainCards(Transform table, DiscardPileView discardPile, OpponentSeatsPresenter seats, CardOwnerTagView ownerTag, DeckData gameDeck, TopCardLayerView topLayer)
         {
             const string name = "ChainCards";
             if (table.Find(name) != null)
@@ -447,7 +461,7 @@ namespace Chapchu.EditorTools
                 ("actionCardPrefab", EnsureCardPrefab(CardType.Action)),
                 ("counterCardPrefab", EnsureCardPrefab(CardType.Counter)),
                 ("trapCardPrefab", EnsureCardPrefab(CardType.Trap)),
-                ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer),
+                ("seats", seats), ("ownerTag", ownerTag), ("dimmer", dimmer), ("topLayer", topLayer),
                 ("showSpot", showSpot), ("discardSpot", discardPile.TopAnchor));
             return presenter;
         }

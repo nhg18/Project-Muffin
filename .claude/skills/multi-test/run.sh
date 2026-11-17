@@ -601,6 +601,18 @@ run_restart() {
     until_ok "$MAIN" ForceCard 112 || return
     log "▶ 처리 · 새 판 대기"
     sleep 20
+    log "▶ 새 판 — 가운데에 대소동 카드가 남지 않았나 (손패 · 체인 카드가 버림 더미로 날아간 뒤)"
+    for project in "${EDITORS[@]}"; do
+        for _ in $(seq 1 15); do
+            console_lines "$project" | grep -q '\[GameDebugInput\].*대소동 — ' && break
+            sleep 1
+        done
+        sleep 2
+        out=$(call "$project" ChainCardsEmpty)
+        log "  $(name_of "$project"): $out"
+        case "$out" in OK*) ;; *) fail "$(name_of "$project") $out" ;; esac
+        if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$project" Shot "$SHOT_DIR/restart_center_$(name_of "$project").png")"; fi
+    done
     log "▶ 새 판에서 두 턴 진행 (피폭 1턴째 · 2턴째)"
     for _ in $(seq 1 40); do
         for project in "${EDITORS[@]}"; do

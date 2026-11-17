@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-11-17 · 대소동 뒤 가운데 카드가 남는 버그 (`feature/game-screen`)
+
+### 계기 (PM)
+- 「대소동 카드를 내면 … 화면 가운데에 표시되었던 대소동 카드가 사라지지 않고 계속 나타나 게임화면을 크게 가려버림 … 피폭텍스트만 남기고 카드를 계속 보여줄 필요는 없어」 → 추천안(버림 더미로 날린 뒤 더미째 비우기)으로.
+
+### 원인
+- 대소동 효과가 적용되면 서버 `ContinueResolve` 가 `DiscardChain` 전에 돌아가 `ChainDiscarded` 가 오지 않는다 (카드는 새 덱으로 — 규칙대로라 서버는 그대로). 화면 `GameRestartedRoutine` 은 체인 카드를 치우지 않았다.
+
+### 한 것
+- `ChainCardsPresenter.DiscardAllRoutine` — 체인에 남은 카드를 모두 버림 더미 자리로 날려 지운다. `GameRestartedRoutine` 이 손패보다 먼저 부르고, 그 뒤 더미를 비운다. 판 효과 줄 「피폭」 · 기록은 그대로.
+- `run.sh restart` 에 새 판 뒤 가운데 카드 0장 확인(`MultiTest.ChainCardsEmpty`) · SHOT_DIR 이면 `restart_center_*.png`.
+
+### 낸 카드를 HUD 위에 (같은 세션, PM 「카드를 냈을때 그 카드는 다른 오브젝트들보다 맨 위에」)
+- 원인: 체인 카드는 3D 층이라 Overlay HUD(상대 좌석 캐릭터 · 패널)가 항상 그 위에 그려졌다.
+- `ChainCardsPresenter` 가 카드를 낸 순간 앞 층(`TopCardLayerView`)에 올리고, 버림 더미 · 좌석에 닿아 지울 때 · 손패로 돌려줄 때 내린다. 씬 `GameScene` 의 `ChainCards.topLayer` 연결(YAML 한 줄) · `TableBuilder.BuildChainCards` 에 같은 참조. `10-ui` 2-1 「카드 연출 자리」 · 「앞 층」 에 적음. 시트(기록 서랍 · 메뉴 · 고르기 판)는 여전히 카드 위.
+- 확인: `run.sh multi 2` 통과 · 3 단계 · 반응 시간 스크린샷에서 카드가 상대 캐릭터 · 이름표 위. `restart 2` 다시 통과. 손패를 올린 채(같은 앞 층 카메라에서 깊이로 겹침) · 카운터가 붙은 체인은 눈으로 보지 않았다.
+- 이어서 PM 「손패가 가장 앞」 — 앞 층을 둘로: 레이어 `TopChainCards`(TagManager 10) + 체인 카메라 `TopChainCamera`(depth −1+2, 투명 바탕) 가 낸 카드를 먼저, `TopCardCamera`(depth −1+3) 는 깊이만 지우고 손패를. 같은 렌더 텍스처. `TopCardLayerView.SetChain` · 메뉴 `Chapchu/Game Screen/Add Top Chain Camera` 로 씬에 넣음 — Unity 저장이 레이아웃 값 · 새 필드 기본값까지 다시 써서, 씬은 카메라 · 참조 · 카메라 값 6곳만 남기고 되돌림. PM 지시로 이 단계는 실행 확인 안 함.
+- 이어서 PM 「낸 카드에 카드 이름 + 시간초가 가려지는 버그 … 카드보다 위에」 — 원인: 앞 층이 그림 한 장이라 낸 카드 · 손패가 HUD 의 알약(`ReactionTimer`)을 함께 덮었다. 층마다 렌더 텍스처 · RawImage 를 따로 두고(`TopCardLayerView` 의 Pass 둘), HUD 안 순서를 `Center` < 체인 그림 `TopChainCards` < `CenterFront`(주인 태그 · 반응 타이머를 옮김) < … < 손패 그림 `TopCards` < 시트로. `TopCardCamera` 는 다시 투명 바탕. 기존 씬은 메뉴 `Chapchu/Game Screen/Split Top Card Layer`(앞의 `Add Top Chain Camera` 를 대신) 로 넣고, 씬은 이번에도 필요한 변경만 남김. 확인: `run.sh multi 2` 통과 · `_reaction` 스크린샷 두 화면 모두 「반응 · 9초」 알약이 낸 카드 위, 손패는 카드 앞. 주인 태그가 보이는 장면 · 카운터 체인은 눈으로 보지 않았다.
+- 문서와 다른 점(PM 확인): `10-ui` 282 · 410줄은 반응 타이머가 없다(2026-11-15)는데 코드는 반응 시간마다 알약을 띄운다 — 이번엔 보이게만 고쳤다.
+- 이번 테스트 실행이 남긴 다른 변경(커밋 안 함): TMP 글꼴 동적 아틀라스 4개 · `ProjectSettings.asset`. `PhotonServerSettings` 의 RpcList 에 `RPC_OnChainDiscarded` 가 빠져 있던 것이 채워짐 — 커밋할지 PM 확인.
+
+### 확인
+- `run.sh restart 2` 통과 — 두 화면 모두 가운데 카드 없음 · 버림 0 · 피폭 줄 · 콘솔 에러 0. 수정 전 코드로 이 확인이 실패하는지는 돌려 보지 않았다. 대소동 위에 카운터가 올라간 체인은 돌려 보지 않았다 (같은 함수가 남은 카드를 모두 치운다).
+
+---
+
 ## 2026-11-16 · 카드 문구 정리 (`docs/card-text-cleanup`)
 
 ### 계기 (PM)
