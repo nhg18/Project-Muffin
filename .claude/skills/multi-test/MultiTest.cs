@@ -85,7 +85,11 @@ public static class MultiTest
     private const string SlotButtonField = "slotButton"; // RoomSlotView — 칸 전체 버튼
     private const string ResultPodiumsField = "_podiums";     // ResultPresenter — 순위 순 시상대
     private const string ResultTitleField = "title";          // ResultPresenter — 제목 · 알약
-    private const string ResultButtonsField = "buttons";      // ResultPresenter — 「로비로」 · 「한 판 더」
+    private const string ResultButtonsField = "buttons";      // ResultPresenter — 「판 기록」 · 「로비로」 · 「한 판 더」
+    private const string ResultBoardField = "board";          // ResultPresenter — 「판 기록」 판
+    private const string ResultEmotesField = "emotes";        // ResultPresenter — 이모트 버튼
+    private const string ServerStatsField = "_stats";         // GameServer — 판 지표 (actorNumber → StatKind 순 값)
+    private const string BubbleLogKey = "MultiTest.BubbleLog"; // ArmBubbleLog 가 본 말풍선 (에디터마다 따로)
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
     private const double ReactionSeconds = 10, TurnSeconds = 30;
@@ -671,7 +675,8 @@ public static class MultiTest
     }
 
     /// <summary>
-    /// 결과 화면에 그려진 것 한 줄 — 제목 · 승리 방식 알약 + 시상대마다 (순위 순) 순위 · 이름 · HP 또는 탈락 줄 · 「…에게 당함」 · 왕관 · 찹츄 승리 마크.
+    /// 결과 화면에 그려진 것 한 줄 — 제목 · 승리 방식 알약 + 시상대마다 (순위 순) 순위 · 이름 · HP 또는 탈락 줄 · 「…에게 당함」 · 왕관 · 찹츄 승리 마크 · 업적 배지
+    /// + 「판 기록」 의 지표 줄마다 사람(순위 순) 값(1등은 *) → 업적.
     /// 「나」 표시 · 준비 · 나감은 화면마다 · 때마다 달라 넣지 않는다 — 에디터끼리 이 줄이 같아야 한다.
     /// </summary>
     public static string ResultSummary()
@@ -695,6 +700,17 @@ public static class MultiTest
             if (IsShown(podium, "subText")) line.Append(" (" + ResultField<TMP_Text>(podium, "subText").text + ")");
             if (IsShown(podium, "crown")) line.Append(" 왕관");
             if (IsShown(podium, "winMark")) line.Append(" 찹츄마크");
+            var badges = ResultField<List<ResultBadgeView>>(podium, "_badges");
+            if (badges.Count > 0)
+                line.Append(" 배지[" + string.Join(", ", badges.Select(badge => ResultField<TMP_Text>(badge, "nameText").text + " " + ResultField<TMP_Text>(badge, "valueText").text)) + "]");
+        }
+
+        var board = ResultField<ResultBoardView>(presenter, ResultBoardField);
+        foreach (ResultBoardRowView row in ResultField<List<ResultBoardRowView>>(board, "_rows"))
+        {
+            line.Append(" | " + ResultField<TMP_Text>(row, "metricText").text + " "
+                + string.Join(" ", ResultField<ResultBoardRowView.Cell[]>(row, "cells").Where(cell => cell.root.activeSelf).Select(cell => cell.text.text + (cell.pill.enabled ? "*" : "")))
+                + " → " + (ResultField<GameObject>(row, "award").activeSelf ? ResultField<TMP_Text>(row, "awardText").text : "없음"));
         }
 
         return line.ToString();
@@ -722,7 +738,7 @@ public static class MultiTest
         return line.ToString();
     }
 
-    /// <summary>결과 화면의 버튼을 누른다 — which = again(「한 판 더」) · lobby(「로비로」). 등장 연출이 끝나 눌릴 때까지 WAIT.</summary>
+    /// <summary>결과 화면의 버튼을 누른다 — which = again(「한 판 더」) · lobby(「로비로」) · board(「판 기록」). 등장 연출이 끝나 눌릴 때까지 WAIT.</summary>
     public static string ResultTap(string which)
     {
         ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
@@ -733,12 +749,120 @@ public static class MultiTest
         if (!ResultField<CanvasGroup>(buttons, "group").blocksRaycasts)
             return "WAIT 버튼이 아직 떠오르는 중";
 
-        var button = ResultField<UnityEngine.UI.Button>(buttons, which == "lobby" ? "lobbyButton" : "againButton");
+        string label = which == "lobby" ? "로비로" : which == "board" ? "판 기록" : "한 판 더";
+        var button = ResultField<UnityEngine.UI.Button>(buttons, which == "lobby" ? "lobbyButton" : which == "board" ? "boardButton" : "againButton");
         if (!button.interactable)
-            return "FAIL 「" + (which == "lobby" ? "로비로" : "한 판 더") + "」 가 눌리지 않는다";
+            return "FAIL 「" + label + "」 가 눌리지 않는다";
 
         button.onClick.Invoke();
-        return "OK 「" + (which == "lobby" ? "로비로" : "한 판 더") + "」 누름";
+        return "OK 「" + label + "」 누름";
+    }
+
+    /// <summary>「판 기록」 판 — want = close 면 ✕ 를 눌러 닫는다 (열려 있지 않았으면 FAIL). open · closed 면 그 상태가 될 때까지 WAIT.</summary>
+    public static string ResultBoard(string want)
+    {
+        ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
+        if (presenter == null)
+            return "WAIT 결과 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        var board = ResultField<ResultBoardView>(presenter, ResultBoardField);
+        int rows = ResultField<List<ResultBoardRowView>>(board, "_rows").Count;
+        if (want == "close")
+        {
+            if (!board.IsOpen)
+                return "FAIL 판 기록이 열려 있지 않다";
+            ResultField<UnityEngine.UI.Button>(board, "closeButton").onClick.Invoke();
+            return board.IsOpen ? "FAIL ✕ 를 눌러도 판 기록이 닫히지 않는다" : "OK 판 기록(지표 " + rows + "줄)을 ✕ 로 닫음";
+        }
+
+        return board.IsOpen == (want == "open") ? "OK 판 기록 " + (board.IsOpen ? "열림 — 지표 " + rows + "줄" : "닫힘") : "WAIT 판 기록이 " + (board.IsOpen ? "열려" : "닫혀") + " 있다";
+    }
+
+    /// <summary>결과 화면의 이모트 버튼을 누른다 — index = 0 부터. 등장 연출 · 쉬는 시간이 끝나 눌릴 때까지 WAIT. 답 끝에 내 이름 (「나 = 이름」).</summary>
+    public static string ResultEmote(string index)
+    {
+        ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
+        if (presenter == null)
+            return "WAIT 결과 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        var emotes = ResultField<ResultEmoteView>(presenter, ResultEmotesField);
+        CanvasGroup group = ResultField<CanvasGroup>(emotes, "group");
+        if (!group.blocksRaycasts || !group.interactable)
+            return "WAIT 이모트 버튼이 아직 눌리지 않는다";
+
+        int i = int.Parse(index);
+        ResultPodiumView mine = ResultField<List<ResultPodiumView>>(presenter, ResultPodiumsField).FirstOrDefault(podium => IsShown(podium, "meChip"));
+        ResultField<UnityEngine.UI.Button[]>(emotes, "buttons")[i].onClick.Invoke();
+        return "OK 이모트 " + i + " 「" + emotes.TextOf(i) + "」 누름 — 나 = " + (mine != null ? ResultField<TMP_Text>(mine, "nameText").text : "?");
+    }
+
+    /// <summary>
+    /// 말풍선 지켜보기 — 시상대의 말풍선(이모트 · 「준비!」)이 뜰 때마다 「이름:글」 을 적어 둔다 (BubbleLog 로 읽는다).
+    /// 말풍선은 2.4초면 사라져 CLI 부름 사이로는 놓친다. 결과 화면을 벗어나면 스스로 멈춘다.
+    /// </summary>
+    public static string ArmBubbleLog()
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        SessionState.SetString(BubbleLogKey, "");
+        var showing = new Dictionary<ResultPodiumView, string>();
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            ResultPresenter presenter = EditorApplication.isPlaying ? Object.FindFirstObjectByType<ResultPresenter>() : null;
+            if (presenter == null)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+            foreach (ResultPodiumView podium in ResultField<List<ResultPodiumView>>(presenter, ResultPodiumsField))
+            {
+                if (ResultField<CanvasGroup>(podium, "bubbleGroup").alpha <= 0.5f)
+                {
+                    showing.Remove(podium);
+                    continue;
+                }
+                string text = ResultField<TMP_Text>(podium, "bubbleText").text;
+                if (showing.TryGetValue(podium, out string last) && last == text)
+                    continue;
+                showing[podium] = text;
+                SessionState.SetString(BubbleLogKey, SessionState.GetString(BubbleLogKey, "") + " " + ResultField<TMP_Text>(podium, "nameText").text + ":" + text);
+            }
+        };
+        EditorApplication.update += tick;
+        return "OK 말풍선 지켜보는 중";
+    }
+
+    /// <summary>ArmBubbleLog 뒤로 뜬 말풍선 — 「이름:글」 들.</summary>
+    public static string BubbleLog() => "OK 말풍선 —" + SessionState.GetString(BubbleLogKey, " (지켜보지 않음)");
+
+    /// <summary>
+    /// 결과 화면 등장 연출 찍기 — 결과 씬이 열리고 secondsCsv 초 뒤마다 prefix + "_<초>.png" (색종이처럼 CLI 부름 사이로는 놓치는 것). 게임 중에 미리 걸어 둔다.
+    /// </summary>
+    public static string ArmResultShots(string prefix, string secondsCsv)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        double[] times = secondsCsv.Split(',').Select(double.Parse).ToArray();
+        double openedAt = -1;
+        int taken = 0;
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying || taken >= times.Length)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+            if (openedAt < 0)
+            {
+                if (Object.FindFirstObjectByType<ResultPresenter>() == null) return;
+                openedAt = EditorApplication.timeSinceStartup;
+            }
+            if (EditorApplication.timeSinceStartup - openedAt < times[taken]) return;
+            ScreenCapture.CaptureScreenshot(prefix + "_" + times[taken].ToString("0.0") + ".png");
+            taken++;
+        };
+        EditorApplication.update += tick;
+        return "OK 결과 화면 스크린샷 대기 → " + prefix + "_<" + secondsCsv + ">.png";
     }
 
     /// <summary>지금 게임 뷰의 그리는 횟수 — 화면을 붙였을 때 worklog 에 남기는 값 (CODE_CONVENTION 10절). 통과 · 실패 없이 숫자만.</summary>
@@ -2923,11 +3047,180 @@ public static class MultiTest
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
+    /// <summary>
+    /// 판 지표 집계 (07-win-condition.md 11-4) — 방장이 세는 가한 · 받은 피해, 회복, 킬, 빼앗은 · 빼앗긴 카드, 드로우, 행동 · 카운터 · 함정 사용, 카운터 성공, 찹츄 선언.
+    /// 실제로 바뀐 만큼만 세는지, 세지 않기로 한 것(시작 손패 · 시작 HP · 손패 교환 · 대소동의 새 판)을 빼는지, 대소동을 넘어 이어지는지, 종료 요약에 실리는지 본다.
+    /// </summary>
+    public static string Stats()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        FieldInfo statsField = typeof(GameServer).GetField(ServerStatsField, Private);
+        int Stat(ChainTable t, int actor, StatKind kind) => ((Dictionary<int, int[]>)statsField.GetValue(t.Server))[actor][(int)kind];
+        int Sum(ChainTable t, StatKind kind) => Stat(t, t.Turn, kind) + Stat(t, t.O1, kind) + Stat(t, t.O2, kind);
+        Card Held(ChainTable t, int actor, int kind) => t.Hand(actor).First(c => c.CardId == kind);
+        Func<int, Card> Act(TargetType target, params CardEffect[] e) => id => new Card(id, 900, CardType.Action, target, e, null, ChainTable.Reveal, ChainTable.Resolve);
+
+        // 1. 피해 — 낸 사람의 가한 피해 · 맞은 사람의 받은 피해 · 행동 사용
+        {
+            var t = new ChainTable();
+            Check(Enum.GetValues(typeof(StatKind)).Cast<StatKind>().All(kind => Sum(t, kind) == 0), "새 판 — 모든 지표 0 (시작 손패 · 시작 HP 는 세지 않는다)");
+            t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Hit), t.O1);
+            Check(Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20 && Sum(t, StatKind.Dealt) == 20 && Sum(t, StatKind.Taken) == 20 && Stat(t, t.Turn, StatKind.Actions) == 1,
+                "피해 20 → 낸 사람 가한 피해 20 · 맞은 사람 받은 피해 20 · 행동 사용 1");
+        }
+
+        // 2. 실제로 깎인 만큼만 · 킬은 최종 사망 때
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 5);
+            t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Hit), t.O1);
+            Check(Stat(t, t.Turn, StatKind.Dealt) == 5 && Stat(t, t.O1, StatKind.Taken) == 5, "HP 5 에 피해 20 → 실제로 깎인 5 만");
+            Check(Sum(t, StatKind.Kills) == 0, "사망 대기 중엔 킬이 아니다");
+            t.Run(t.Now + 8);
+            Check(t.State(t.O1).Life == LifeState.Dead && Stat(t, t.Turn, StatKind.Kills) == 1 && Sum(t, StatKind.Kills) == 1, "최종 사망 → 당하게 한 사람 킬 1");
+        }
+
+        // 3. 자기 피해 — 받은 피해에만
+        {
+            var t = new ChainTable();
+            t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Storm));
+            Check(Stat(t, t.Turn, StatKind.Dealt) == 40 && Stat(t, t.Turn, StatKind.Taken) == 20 && Sum(t, StatKind.Taken) == 60, "전원 피해 20 → 가한 피해 40(남 둘) · 내가 받은 피해 20");
+        }
+
+        // 4. 회복 — 상한까지 실제로 찬 만큼
+        {
+            var t = new ChainTable();
+            t.SetHp(t.Turn, 90);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new HealEffect { subject = EffectSubject.Self, amount = 30 })));
+            Check(Stat(t, t.Turn, StatKind.Healed) == 10 && Sum(t, StatKind.Healed) == 10, "HP 90 에 회복 30 → 실제로 찬 10 만");
+        }
+
+        // 5. 빼앗은 · 빼앗긴 카드 — 훔침만. 손패 교환은 아니다
+        {
+            var t = new ChainTable();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new StealEffect { count = 2 })), t.O1);
+            Check(Stat(t, t.Turn, StatKind.Stolen) == 2 && Stat(t, t.O1, StatKind.Lost) == 2 && Sum(t, StatKind.Stolen) == 2 && Sum(t, StatKind.Lost) == 2, "훔침 2장 → 빼앗은 2 · 빼앗긴 2");
+            var swap = new ChainTable();
+            swap.PlayAndResolve(swap.Turn, swap.Give(swap.Turn, Act(TargetType.OneOther, new SwapHandEffect())), swap.O1);
+            Check(Sum(swap, StatKind.Stolen) == 0 && Sum(swap, StatKind.Lost) == 0, "손패 교환은 빼앗은 · 빼앗긴 카드가 아니다");
+        }
+
+        // 6. 드로우 — 턴 뽑기 · 카드 효과로 실제 들어온 장수. 빈 덱은 0 이고 그 피해는 받은 피해에만
+        {
+            var t = new ChainTable();
+            int before = t.HandCount(t.Turn);
+            t.Server.Draw(t.Turn);
+            int drew = t.HandCount(t.Turn) - before;
+            Check(drew > 0 && Stat(t, t.Turn, StatKind.Drawn) == drew && Sum(t, StatKind.Drawn) == drew, "턴 뽑기 → 뽑은 장수 (" + drew + ")");
+
+            var effect = new ChainTable();
+            effect.PlayAndResolve(effect.Turn, effect.Give(effect.Turn, Act(TargetType.Self, new DrawEffect { subject = EffectSubject.Self, count = 2 })));
+            Check(Stat(effect, effect.Turn, StatKind.Drawn) == 2, "카드 효과로 2장 → 드로우 2");
+
+            var empty = new ChainTable();
+            empty.EmptyDeck();
+            empty.Server.Draw(empty.Turn);
+            empty.Run(empty.Now + 3);
+            int lost = 100 - empty.Hp(empty.Turn);
+            Check(lost > 0 && Stat(empty, empty.Turn, StatKind.Drawn) == 0 && Stat(empty, empty.Turn, StatKind.Taken) == lost && Sum(empty, StatKind.Dealt) == 0,
+                "빈 덱 — 드로우 0 · 빈 덱 피해 " + lost + " 은 받은 피해에만 (가한 사람 없음)");
+        }
+
+        // 7. 카운터 — 사용 · 성공. 무효된 카운터는 성공이 아니다
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(1.5);
+            t.Counter(t.O1, ChainTable.Negate);
+            t.At(100);
+            t.Tick();
+            Check(Stat(t, t.O1, StatKind.Counters) == 1 && Stat(t, t.O1, StatKind.CounterSuccess) == 1 && Stat(t, t.Turn, StatKind.Actions) == 1 && Sum(t, StatKind.Dealt) == 0,
+                "카운터로 무효 → 카운터 사용 1 · 성공 1 · 무효된 행동 카드도 사용 1 · 피해 0");
+
+            var twice = new ChainTable();
+            twice.Play(twice.Turn, ChainTable.Hit, twice.O1);
+            twice.At(1.5);
+            twice.Counter(twice.O1, ChainTable.Negate);
+            twice.At(1.5 + ChainTable.Reveal + 0.1);
+            twice.Counter(twice.O2, ChainTable.Negate);
+            twice.At(100);
+            twice.Tick();
+            Check(Stat(twice, twice.O1, StatKind.Counters) == 1 && Stat(twice, twice.O1, StatKind.CounterSuccess) == 0 && Stat(twice, twice.O2, StatKind.CounterSuccess) == 1
+                  && Stat(twice, twice.Turn, StatKind.Dealt) == 20, "카운터의 카운터 → 무효된 카운터는 성공 0 · 무효한 카운터는 성공 1 · 피해는 들어감");
+        }
+
+        // 8. 함정 — 발동한 수. 함정 피해의 주인은 함정 주인
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            Check(Sum(t, StatKind.Traps) == 0, "설치만 한 함정은 세지 않는다");
+            t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Hit), t.O1);
+            t.Run(t.Now + 14);
+            Check(Stat(t, t.O1, StatKind.Traps) == 1 && Sum(t, StatKind.Traps) == 1 && Stat(t, t.O1, StatKind.Dealt) == 10 && Stat(t, t.Turn, StatKind.Taken) == 10,
+                "함정 발동 → 함정 사용 1 · 함정 피해 10 은 함정 주인의 가한 피해");
+        }
+
+        // 9. 찹츄 선언 — 받아들여진 선언만
+        {
+            var t = new ChainTable();
+            t.Server.DeclareChapchu(t.Turn);
+            Check(Sum(t, StatKind.ChapchuDeclared) == 0, "거절된 선언은 세지 않는다");
+            t.SetHandSize(t.Turn, 10);
+            t.Server.DeclareChapchu(t.Turn);
+            Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1, "찹츄 선언 1");
+        }
+
+        // 10. 112 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
+        {
+            DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
+            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 112) : null;
+            Check(big != null, "Deck_Main 에 112 대소동이 있다");
+            if (big != null)
+            {
+                var t = new ChainTable();
+                t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Hit), t.O1);
+                t.RunUntilTurn(t.O1, t.Now + 5);
+                var events = t.PlayAndResolve(t.O1, t.Give(t.O1, id => new Card(id, big.CardId, big.Type, big.Target, big.Effects, big.ReactsTo, ChainTable.Reveal, ChainTable.Resolve,
+                    big.Trigger, big.TriggerValue, big.Condition, big.TargetCondition)));
+                events.AddRange(t.Run(t.Now + 3));
+                Check(events.OfType<GameRestarted>().Any() && t.Hp(t.O1) == 100 && Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20
+                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "112 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
+                Check(Sum(t, StatKind.Healed) == 0 && Sum(t, StatKind.Drawn) == 0, "새 판의 HP 100 · 다시 받은 손패는 회복 · 드로우가 아니다");
+            }
+        }
+
+        // 11. 종료 요약 — 지표가 순위 순(Actors 와 같은 자리)으로 실린다
+        {
+            var t = new ChainTable();
+            t.State(t.O1).IsChapchu = true;
+            t.Play(t.Turn, ChainTable.Hit, t.O2);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            t.Tick();
+            t.At(100);
+            GameEnded ended = t.Tick().OfType<GameEnded>().FirstOrDefault();
+            int n = GameServer.StatCount;
+            int At(int actor, StatKind kind) => ended.Stats[ended.Actors.ToList().IndexOf(actor) * n + (int)kind];
+            Check(ended != null && ended.Stats.Length == 3 * n && At(t.Turn, StatKind.Dealt) == 20 && At(t.O2, StatKind.Taken) == 20 && At(t.O1, StatKind.Dealt) == 0
+                  && At(t.Turn, StatKind.Actions) == 1 && ended.EndTurn >= 1, "종료 요약 — 사람마다 지표 " + n + "개 · 끝난 턴");
+            sb.AppendLine("  · " + Summary(ended));
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
     // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
-    // 게임 종료 요약 한 줄 — 순위 순으로 「순위:P번호 HP n · 탈락 턴 · 당한 사람 · 나감」
+    // 게임 종료 요약 한 줄 — 순위 순으로 「순위:P번호 HP n · 탈락 턴 · 당한 사람 · 나감 · 지표(StatKind 순)」 + 끝난 턴
     private static string Summary(GameEnded ended) => ended == null
         ? "종료 없음"
-        : string.Join(" / ", ended.Actors.Select((actor, i) => $"{ended.Ranks[i]}:P{actor} HP{ended.Hps[i]} T{ended.OutTurns[i]} by{ended.DownedBy[i]}{(ended.Left[i] ? " 나감" : "")}"));
+        : string.Join(" / ", ended.Actors.Select((actor, i) => $"{ended.Ranks[i]}:P{actor} HP{ended.Hps[i]} T{ended.OutTurns[i]} by{ended.DownedBy[i]}{(ended.Left[i] ? " 나감" : "")}"
+            + $" 지표[{string.Join(",", ended.Stats.Skip(i * GameServer.StatCount).Take(GameServer.StatCount))}]")) + $" · 끝난 턴 {ended.EndTurn}";
 
     private sealed class ChainTable
     {

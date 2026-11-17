@@ -213,7 +213,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과" "Stats:판 지표 집계"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'
@@ -285,25 +285,56 @@ wait_scene() {
 
 # 결과 화면 (07-win-condition.md 11절): 전원 ResultScene · 그려진 결과 줄이 모든 화면에서 같음 · 공개 HP 는 시작 값 · 방은 닫힌 채.
 # 첫 인자가 있으면 결과 줄에 그 글자가 있어야 한다. SHOT_DIR 이 있으면 등장 연출이 끝난 뒤 result<꼬리>_<에디터>.png.
+# 셋째 인자가 있으면 이모트 · 판 기록도 본다 (10초쯤 더 걸린다 — 뒤에 「한 판 더」 를 눌러야 하는 full 의 첫 결과 화면은 45초 자동 이동에 걸려 빼고, 둘째에서 본다).
 check_result() {
-    local want="${1:-}" tag="${2:-}" project out first=""
+    local want="${1:-}" tag="${2:-}" extras="${3:-}" who="" project out first=""
     wait_scene ResultScene || return 1
     for project in "${EDITORS[@]}"; do
-        until_ok "$project" ResultSummary || return 1
-        out=$(call "$project" ResultSummary)
+        out=""
+        for _ in $(seq 1 $WAIT_TRIES); do
+            out=$(call "$project" ResultSummary)
+            case "$out" in OK*|FAIL*) break ;; esac
+            sleep 2
+        done
+        case "$out" in OK*) log "  $(name_of "$project"): $out" ;; *) fail "$(name_of "$project"): 결과 화면이 그려지지 않았다 — $out"; return 1 ;; esac
         if [ -z "$first" ]; then first="$out"; elif [ "$out" != "$first" ]; then fail "$(name_of "$project") 의 결과 화면이 메인과 다르다: $out"; fi
         if [ -n "$want" ] && [[ "$out" != *"$want"* ]]; then fail "$(name_of "$project") 결과 화면에 「$want」 이 없다"; fi
         until_ok "$project" ExpectHpReset || return 1   # 지난 판 HP 가 남지 않는다 — 다음 판 좌석 · 기록의 기준 값
         until_ok "$project" ExpectRoomClosed || return 1
     done
-    sleep 4   # 등장 연출(약 3초) · 봇 준비(2.9초부터)
+    [ -n "${SHOT_DIR:-}" ] && mkdir -p "$SHOT_DIR"
+    # 말풍선(이모트 · 「준비!」)은 2.4초면 사라진다 — 뜨는 것을 에디터 안에서 적어 두게 한다. 이 부름들이 등장 연출(약 3초) 기다림을 겸한다
+    for project in "${EDITORS[@]}"; do until_ok "$project" ArmBubbleLog || return 1; done
+    if [ -n "$extras" ]; then
+        # 이모트 — 메인이 누르면 방장을 거쳐 모든 화면의 메인 캐릭터 옆에 말풍선
+        out=""
+        for _ in $(seq 1 $WAIT_TRIES); do
+            out=$(call "$MAIN" ResultEmote 0)
+            case "$out" in OK*|FAIL*) break ;; esac
+            sleep 1
+        done
+        log "  $(name_of "$MAIN"): $out"
+        case "$out" in OK*) who="${out##*나 = }" ;; *) fail "이모트를 누르지 못했다"; return 1 ;; esac
+        if [ -n "${SHOT_DIR:-}" ]; then log "  $(name_of "$MAIN"): $(call "$MAIN" Shot "$SHOT_DIR/result${tag}_emote_$(name_of "$MAIN").png")"; fi
+    else
+        sleep 2   # 등장 연출(약 3초) · 봇 준비(2.9초부터)
+    fi
     for project in "${EDITORS[@]}"; do
         log "  $(name_of "$project"): $(call "$project" ResultState) · $(call "$project" Batches)"
         if [ -n "${SHOT_DIR:-}" ]; then
-            mkdir -p "$SHOT_DIR"
             log "  $(name_of "$project"): $(call "$project" Shot "$SHOT_DIR/result${tag}_$(name_of "$project").png")"
         fi
     done
+    [ -n "$extras" ] || return 0
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" BubbleLog)
+        log "  $(name_of "$project"): $out"
+        [[ "$out" == *" $who:GG"* ]] || fail "$(name_of "$project") 에 $who 의 말풍선 「GG」 가 뜨지 않았다"
+    done
+    # 판 기록 — 「판 기록」 버튼으로 열리고 ✕ 로 닫힌다
+    until_ok "$MAIN" ResultTap board || return 1
+    if [ -n "${SHOT_DIR:-}" ]; then log "  $(name_of "$MAIN"): $(call "$MAIN" Shot "$SHOT_DIR/result${tag}_board_$(name_of "$MAIN").png")"; fi
+    until_ok "$MAIN" ResultBoard close || return 1
 }
 
 # 차례인 클라이언트가 행동하며 한 판을 끝까지 (full). 끝 알림은 2초 뒤 결과 씬으로 넘어가므로 「게임 화면 아님 (ResultScene)」 도 끝으로 본다.
@@ -382,6 +413,8 @@ run_full() {
     until_ok "$MAIN" SetAllHp "$hp" || return
 
     log "▶ 한 판 끝까지 — 체력 ${hp} 에서 시작, 차례인 클라이언트가 행동"
+    # SHOT_DIR 이 있으면 결과 화면 등장 연출(색종이)을 미리 걸어 찍는다
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$MAIN" ArmResultShots "$SHOT_DIR/result_intro_$(name_of "$MAIN")" "2.2,2.8,3.6")"; fi
     play_to_end "$clients" || return
 
     log "▶ 판정"
@@ -394,7 +427,7 @@ run_full() {
     compare_turns
 
     log "▶ 결과 화면 — 모든 화면이 같은 결과"
-    check_result "" "" || return
+    check_result "" "" "" || return
 
     log "▶ 한 판 더 — 전원 준비 → 카운트다운 → 새 판 (방은 닫힌 채 · HP 시작 값)"
     for project in "${EDITORS[@]}"; do
@@ -403,11 +436,13 @@ run_full() {
     wait_scene GameScene || return
     sleep 2
     for project in "${EDITORS[@]}"; do
+        out=$(call "$project" BubbleLog)   # 다른 사람이 준비하면 그 캐릭터 옆에 「준비!」 (내 준비는 띄우지 않는다)
+        if [[ "$out" == *":준비!"* ]]; then log "  $(name_of "$project"): $out"; else fail "$(name_of "$project") 에 다른 사람의 「준비!」 말풍선이 뜨지 않았다 — $out"; fi
         until_ok "$project" ExpectRoomClosed || return
     done
     until_ok "$MAIN" SetAllHp 5 || return   # 둘째 판은 빨리 끝낸다 — 결과 화면의 「로비로」 를 보려는 것
     play_to_end "$clients" || return
-    check_result "" "2" || return
+    check_result "" "2" 1 || return   # 이모트 · 판 기록은 여기서 — 뒤가 「로비로」 뿐이라 시간이 넉넉하다
 
     # 마지막 클라이언트(방장이 아닌 쪽)가 나간다 — 남은 화면에 「나감」. 2명이었으면 혼자 남아 「한 판 더」 가 꺼지고 45초 마감에 스스로 로비로 간다
     leaver="${EDITORS[$((${#EDITORS[@]} - 1))]}"
@@ -473,6 +508,8 @@ run_solo() {
     fi
 
     log "▶ 한 판 끝까지 — 봇은 방장 기기에서 스스로, 사람은 차례에 행동"
+    # SHOT_DIR 이 있으면 결과 화면 등장 연출(색종이)을 미리 걸어 찍는다
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$MAIN" ArmResultShots "$SHOT_DIR/result_intro_$(name_of "$MAIN")" "2.2,2.8,3.6")"; fi
     play_solo_to_end || return
 
     log "▶ 판정"
@@ -485,7 +522,7 @@ run_solo() {
     if console_lines "$MAIN" | grep '\[BotDriver\]' | grep -q '7-1 .*점'; then log "  봇이 7-1 점수로 행동"; else fail "봇의 7-1 행동 줄이 없다"; fi
 
     log "▶ 결과 화면 — 봇은 스스로 준비한다"
-    check_result "" "" || return
+    check_result "" "" 1 || return
     until_ok "$MAIN" ExpectBots "1,2,3" 1 False && log "  봇 3 그대로 · 혼자 하기 방은 비공개 그대로"
     for _ in $(seq 1 10); do
         line=$(call "$MAIN" ResultState)
@@ -509,7 +546,7 @@ run_solo() {
     fi
     until_ok "$MAIN" SetAllHp 5 || return   # 둘째 판은 빨리 끝낸다 — 결과 화면의 「로비로」 를 보려는 것
     play_solo_to_end || return
-    check_result "" "2" || return
+    check_result "" "2" "" || return
 
     log "▶ 로비로"
     until_ok "$MAIN" ResultTap lobby || return
@@ -713,7 +750,7 @@ run_chapchu() {
         if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
     done
     log "▶ 결과 화면 — 찹츄 승리 알약 · 마크"
-    check_result "찹츄마크" "_chapchu" || return
+    check_result "찹츄마크" "_chapchu" 1 || return
     for project in "${EDITORS[@]}"; do
         check_errors "$project"
     done
