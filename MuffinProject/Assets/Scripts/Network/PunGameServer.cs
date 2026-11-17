@@ -61,10 +61,6 @@ namespace Chapchu.Network
 
             _server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
 
-            // 새 판이다 — 지난 판의 종료 요약을 비운다 (결과 화면이 지난 판을 그리지 않게)
-            if (NetworkManager.Instance != null)
-                NetworkManager.Instance.LastResult = null;
-
             if (PhotonNetwork.InRoom)
             {
                 foreach (Player player in PhotonNetwork.PlayerList)
@@ -76,6 +72,10 @@ namespace Chapchu.Network
         // 한 프레임 뒤에 — 방장 자신에게는 알림이 그 자리에서 재생되므로, 화면들의 Start(좌석 대응 · 스냅샷 복구)가 먼저 끝나야 시작 알림이 덮어쓴다.
         private IEnumerator Start()
         {
+            // 새 판이다 — 지난 판의 종료 요약을 비운다 (결과 화면이 지난 판을 그리지 않게). 방장 여부를 보기 전에 — 모든 기기에서 비운다
+            if (NetworkManager.Instance != null)
+                NetworkManager.Instance.LastResult = null;
+
             if (!NetworkManager.IsTrustedMaster)
                 yield break;
 
