@@ -12,6 +12,7 @@ using Chapchu.Network;
 using Chapchu.UI.GameScreen;
 using Chapchu.UI.Lobby;
 using Chapchu.UI.Popups;
+using Chapchu.UI.ResultScreen;
 using Chapchu.UI.RoomScreen;
 using Chapchu.UI.Title;
 using Photon.Pun;
@@ -82,6 +83,9 @@ public static class MultiTest
     private const string SlotNameField = "nameText";     // RoomSlotView — 이름표 글자
     private const string SlotBotTagField = "botTagLabel"; // RoomSlotView — 봇 꼬리표 글자 「(봇 · 보통)」
     private const string SlotButtonField = "slotButton"; // RoomSlotView — 칸 전체 버튼
+    private const string ResultPodiumsField = "_podiums";     // ResultPresenter — 순위 순 시상대
+    private const string ResultTitleField = "title";          // ResultPresenter — 제목 · 알약
+    private const string ResultButtonsField = "buttons";      // ResultPresenter — 「로비로」 · 「한 판 더」
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
     private const double ReactionSeconds = 10, TurnSeconds = 30;
@@ -212,7 +216,10 @@ public static class MultiTest
             }
         }
 
-        int index = hand.FindIndex(cardId => IsActionWithEffect(deck, cardId));
+        // 대상에게 함정이 있어야 낼 수 있는 카드(104 파헤치기)는 함정이 없으면 건너뛴다 — 내면 거절돼 턴이 시간 초과까지 멈춘다
+        int target = NextActor(me);
+        bool targetHasTrap = BotRoster.TryGetPublic(target, PlayerProps.TrapCount, out object trapCount) && trapCount is int trapsOfTarget && trapsOfTarget > 0;
+        int index = hand.FindIndex(id => IsActionWithEffect(deck, id) && (deck.GetCard(id).targetCondition != TargetCondition.HasTrap || targetHasTrap));
 
         if (index < 0)
         {
@@ -221,7 +228,6 @@ public static class MultiTest
         }
 
         // 방장은 자기에게 보낸 RPC 를 그 자리에서 실행해 손패 목록이 바로 줄어든다 — 카드 번호는 요청 전에 읽는다
-        int target = NextActor(me);
         int cardId = hand[index];
         server.RequestPlayCard(instances[index], new[] { target });
         return "OK P" + me + setLog + " · 카드 " + cardId + " → P" + target;
@@ -634,7 +640,7 @@ public static class MultiTest
     }
 
     /// <summary>
-    /// 게임이 끝나 방으로 돌아온 뒤 — 모두(사람 = Player 속성, 봇 = 방 속성)의 공개 HP 가 시작 값으로 되돌려졌는가 (PunGameServer.ReturnToRoomRoutine).
+    /// 게임이 끝나 결과 화면으로 온 뒤 — 모두(사람 = Player 속성, 봇 = 방 속성)의 공개 HP 가 시작 값으로 되돌려졌는가 (PunGameServer.ResetPublicProps).
     /// 지난 판 HP 가 남으면 다음 판 화면이 그 값을 보이고 기록에 가짜 「HP +N」 줄이 생긴다. 속성이 닿을 때까지 WAIT.
     /// </summary>
     public static string ExpectHpReset()
@@ -652,6 +658,99 @@ public static class MultiTest
         }
 
         return (all ? "OK 공개 HP 시작 값 —" : "WAIT 공개 HP 가 시작 값이 아님 —") + log;
+    }
+
+    // ── 결과 화면 (ResultScene — 07-win-condition.md 11절) ──
+
+    private static T ResultField<T>(object owner, string field) => (T)owner.GetType().GetField(field, Private).GetValue(owner);
+
+    private static bool IsShown(object owner, string field)
+    {
+        object value = owner.GetType().GetField(field, Private).GetValue(owner);
+        return value is GameObject go ? go.activeInHierarchy : ((Component)value).gameObject.activeInHierarchy;
+    }
+
+    /// <summary>
+    /// 결과 화면에 그려진 것 한 줄 — 제목 · 승리 방식 알약 + 시상대마다 (순위 순) 순위 · 이름 · HP 또는 탈락 줄 · 「…에게 당함」 · 왕관 · 찹츄 승리 마크.
+    /// 「나」 표시 · 준비 · 나감은 화면마다 · 때마다 달라 넣지 않는다 — 에디터끼리 이 줄이 같아야 한다.
+    /// </summary>
+    public static string ResultSummary()
+    {
+        ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
+        if (presenter == null)
+            return "WAIT 결과 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        var podiums = ResultField<List<ResultPodiumView>>(presenter, ResultPodiumsField);
+        if (podiums.Count == 0)
+            return "WAIT 시상대가 아직 없다";
+
+        var title = ResultField<ResultTitleView>(presenter, ResultTitleField);
+        var line = new StringBuilder("OK 「" + ResultField<TMP_Text>(title, "titleText").text + "」 [" + ResultField<TMP_Text>(title, "reasonLabelText").text + " · "
+            + ResultField<TMP_Text>(title, "reasonText").text + "]");
+        foreach (ResultPodiumView podium in podiums)
+        {
+            line.Append(" | " + (IsShown(podium, "tiedChip") ? "공동 " : "") + ResultField<TMP_Text>(podium, "rankText").text + "위 " + ResultField<TMP_Text>(podium, "nameText").text);
+            if (IsShown(podium, "hpBar")) line.Append(" ♥" + ResultField<TMP_Text>(podium, "hpText").text);
+            if (IsShown(podium, "statText")) line.Append(" " + ResultField<TMP_Text>(podium, "statText").text);
+            if (IsShown(podium, "subText")) line.Append(" (" + ResultField<TMP_Text>(podium, "subText").text + ")");
+            if (IsShown(podium, "crown")) line.Append(" 왕관");
+            if (IsShown(podium, "winMark")) line.Append(" 찹츄마크");
+        }
+
+        return line.ToString();
+    }
+
+    /// <summary>결과 화면의 준비 · 나감 · 버튼 상태 한 줄 (화면마다 다를 수 있다). 「한 판 더」 가 꺼져 있으면 "OK … 한 판 더 꺼짐".</summary>
+    public static string ResultState()
+    {
+        ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
+        if (presenter == null)
+            return "WAIT 결과 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        var podiums = ResultField<List<ResultPodiumView>>(presenter, ResultPodiumsField);
+        var buttons = ResultField<ResultButtonsView>(presenter, ResultButtonsField);
+        var again = ResultField<UnityEngine.UI.Button>(buttons, "againButton");
+        var line = new StringBuilder("OK");
+        foreach (ResultPodiumView podium in podiums)
+        {
+            line.Append(" " + ResultField<TMP_Text>(podium, "nameText").text + (IsShown(podium, "meChip") ? "(나)" : "")
+                + (IsShown(podium, "goneChip") ? "=나감" : IsShown(podium, "readyChip") ? "=준비" : "=대기"));
+        }
+
+        line.Append(" · 한 판 더 " + (again.interactable ? "켜짐" : "꺼짐") + " 「" + ResultField<TMP_Text>(buttons, "againText").text + " / " + ResultField<TMP_Text>(buttons, "againSubText").text
+            + "」 · 로비로 「" + ResultField<TMP_Text>(buttons, "lobbySubText").text + "」");
+        return line.ToString();
+    }
+
+    /// <summary>결과 화면의 버튼을 누른다 — which = again(「한 판 더」) · lobby(「로비로」). 등장 연출이 끝나 눌릴 때까지 WAIT.</summary>
+    public static string ResultTap(string which)
+    {
+        ResultPresenter presenter = Object.FindFirstObjectByType<ResultPresenter>();
+        if (presenter == null)
+            return "WAIT 결과 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        var buttons = ResultField<ResultButtonsView>(presenter, ResultButtonsField);
+        if (!ResultField<CanvasGroup>(buttons, "group").blocksRaycasts)
+            return "WAIT 버튼이 아직 떠오르는 중";
+
+        var button = ResultField<UnityEngine.UI.Button>(buttons, which == "lobby" ? "lobbyButton" : "againButton");
+        if (!button.interactable)
+            return "FAIL 「" + (which == "lobby" ? "로비로" : "한 판 더") + "」 가 눌리지 않는다";
+
+        button.onClick.Invoke();
+        return "OK 「" + (which == "lobby" ? "로비로" : "한 판 더") + "」 누름";
+    }
+
+    /// <summary>지금 게임 뷰의 그리는 횟수 — 화면을 붙였을 때 worklog 에 남기는 값 (CODE_CONVENTION 10절). 통과 · 실패 없이 숫자만.</summary>
+    public static string Batches() => "OK batches " + UnityStats.batches + " · setPass " + UnityStats.setPassCalls + " (" + SceneManager.GetActiveScene().name + ")";
+
+    /// <summary>방이 닫혀 있는가 — 결과 화면 · 다음 판은 방을 다시 열지 않는다 (08-room.md 4절).</summary>
+    public static string ExpectRoomClosed()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        return (PhotonNetwork.CurrentRoom.IsOpen ? "WAIT 방이 열려 있다" : "OK 방 닫힘") + " · 공개 " + PhotonNetwork.CurrentRoom.IsVisible;
     }
 
     /// <summary>가운데 체인 자리에 남은 카드 수 — 112 대소동의 새 판 뒤에는 0 이어야 한다 (ChainCardsPresenter 아래의 CardView).</summary>
@@ -1295,6 +1394,11 @@ public static class MultiTest
             List<GameEvent> events = t.Tick().ToList();
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<TurnStarted>().Any(), "남은 1인 처치 승리");
+            int[] fallen = new[] { t.O1, t.O2 }.OrderBy(a => a).ToArray();
+            Check(ended != null && ended.Actors.SequenceEqual(new[] { t.Turn }.Concat(fallen)) && ended.Ranks.SequenceEqual(new[] { 1, 2, 2 })
+                  && ended.DownedBy.SequenceEqual(new[] { -1, t.Turn, t.Turn }) && ended.OutTurns.SequenceEqual(new[] { 0, 1, 1 })
+                  && ended.Hps.SequenceEqual(new[] { 100, 0, 0 }) && !ended.Left.Any(left => left),
+                "요약 — 같은 턴에 함께 탈락 → 공동 2위 · 당한 사람 = 카드 주인 · 탈락 턴 1 (" + Summary(ended) + ")");
         }
 
         // 4. 무승부 — 전원 최종 사망 (나 포함 전원 피해)
@@ -1308,6 +1412,9 @@ public static class MultiTest
             t.At(200);
             GameEnded ended = t.Tick().OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == -1 && ended.Reason == GameEndReason.Draw, "전원 사망 → 무승부");
+            Check(ended != null && ended.Actors.SequenceEqual(new[] { 1, 2, 3 }) && ended.Ranks.All(rank => rank == 1)
+                  && ended.Actors.Select((actor, i) => ended.DownedBy[i] == (actor == t.Turn ? -1 : t.Turn)).All(ok => ok),
+                "요약 — 무승부는 전원 1위 · 자기 피해는 「당함」 이 아니다 (" + Summary(ended) + ")");
         }
 
         // 5. 나가서 1명 — 체인이 없으면 바로, 체인 중이면 처리 뒤
@@ -1316,6 +1423,44 @@ public static class MultiTest
             t.Server.RemovePlayer(t.O1);
             GameEnded ended = t.Server.RemovePlayer(t.O2).OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn, "다른 사람이 모두 나감 → 바로 처치 승리");
+            Check(ended != null && ended.Ranks.SequenceEqual(new[] { 1, 2, 2 }) && ended.Left.SequenceEqual(new[] { false, true, true })
+                  && ended.OutTurns.SequenceEqual(new[] { 0, 1, 1 }) && ended.DownedBy.All(by => by == -1),
+                "요약 — 나간 사람은 나간 턴에 탈락 · 「나감」 표시 · 당한 사람 없음 (" + Summary(ended) + ")");
+        }
+
+        // 6. 요약의 순위 — 늦게 빠진 사람이 위. 죽은 뒤에 나가도 탈락 턴은 그대로 (07 11-3)
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            t.Tick();
+            t.At(100);
+            t.Tick(); // O1 최종 사망 (1턴) → O2 의 턴 (2턴)
+            bool second = t.Server.CurrentTurnActor == t.O2;
+            t.Server.RemovePlayer(t.O1); // 죽은 사람이 나중에 나감
+            GameEnded ended = t.Server.RemovePlayer(t.O2).OfType<GameEnded>().FirstOrDefault();
+            Check(second && ended != null && ended.Actors.SequenceEqual(new[] { t.Turn, t.O2, t.O1 }) && ended.Ranks.SequenceEqual(new[] { 1, 2, 3 })
+                  && ended.OutTurns.SequenceEqual(new[] { 0, 2, 1 }) && ended.DownedBy.SequenceEqual(new[] { -1, -1, t.Turn }) && ended.Left.SequenceEqual(new[] { false, true, true }),
+                "요약 — 2턴에 나간 사람 2위 · 1턴에 죽은 사람 3위 (죽은 뒤 나가도 그대로) · 당한 사람 (" + Summary(ended) + ")");
+        }
+
+        // 7. 요약의 순위 — 찹츄 승리: 남은 사람은 HP 높은 순, 같으면 공동 (07 11-3)
+        {
+            var t = new ChainTable();
+            t.State(t.O1).IsChapchu = true;
+            t.SetHandSize(t.O1, 10);
+            t.SetHp(t.O1, 5);
+            t.SetHp(t.O2, 90);
+            t.Play(t.Turn, ChainTable.Hit, t.O2);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            t.Tick();
+            t.At(100);
+            GameEnded ended = t.Tick().OfType<GameEnded>().FirstOrDefault();
+            int o2Hp = t.Hp(t.O2);
+            Check(ended != null && ended.Reason == GameEndReason.Chapchu && ended.Actors.SequenceEqual(new[] { t.O1, t.Turn, t.O2 }) && ended.Ranks.SequenceEqual(new[] { 1, 2, 3 })
+                  && ended.Hps.SequenceEqual(new[] { 5, 100, o2Hp }) && o2Hp > 5 && o2Hp < 90 && ended.OutTurns.All(turn => turn == 0) && ended.DownedBy.All(by => by == -1),
+                "요약 — 찹츄 승자가 HP 가 가장 낮아도 1위 · 남은 사람은 HP 순 (" + Summary(ended) + ")");
         }
         {
             var t = new ChainTable();
@@ -2779,6 +2924,11 @@ public static class MultiTest
     }
 
     // Chain 시나리오의 판 하나 — 3인, 시계를 직접 움직인다. 손패는 사람마다 모든 시험 카드 1장씩.
+    // 게임 종료 요약 한 줄 — 순위 순으로 「순위:P번호 HP n · 탈락 턴 · 당한 사람 · 나감」
+    private static string Summary(GameEnded ended) => ended == null
+        ? "종료 없음"
+        : string.Join(" / ", ended.Actors.Select((actor, i) => $"{ended.Ranks[i]}:P{actor} HP{ended.Hps[i]} T{ended.OutTurns[i]} by{ended.DownedBy[i]}{(ended.Left[i] ? " 나감" : "")}"));
+
     private sealed class ChainTable
     {
         public const double Reveal = 1.46, Resolve = 1.28;
