@@ -10,31 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_114
+  m_Name: Card_1021
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 114
-  cardName: "\uAD70\uCE68\uC774 \uC2F9 \uB3C4\uB178"
-  cardImage: {fileID: 21300000, guid: 999edf1cb2b8f764994bf53f373be78d, type: 3}
+  id: 1021
+  cardName: "\uAC1C\uD310 \uC624\uBD84\uC804"
+  cardImage: {fileID: 0}
   type: 0
-  targetType: 3
+  targetType: 5
   targetCondition: 0
-  grade: 0
-  description: "\uB098\uB97C \uBE80 \uBAA8\uB450\uC5D0\uAC8C\uC11C 1\uC7A5\uC529
-    \uBE7C\uC557\uB294\uB2E4"
+  grade: 3
+  description: "5\uBC14\uD034 \uB4A4 \uBC18\uBC18 \uD655\uB960\uB85C HP \uAF34\uCC0C
+    \uB610\uB294 \uC190\uD328 \uAF34\uCC0C\uAC00 \uC989\uC2DC \uC0AC\uB9DD\uD55C\uB2E4
+    (\uB3D9\uC810\uC774\uBA74 \uBB34\uC791\uC704 1\uBA85)"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
   reactCondition: 0
   revealSeconds: 1
-  resolveSeconds: 1.28
+  resolveSeconds: 3
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117934215004250
+  - rid: 4532117965319438437
   references:
     version: 2
     RefIds:
-    - rid: 4532117934215004250
-      type: {class: StealEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
-      data:
-        count: 1
+    - rid: 4532117965319438437
+      type: {class: StartGaepanEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data: 

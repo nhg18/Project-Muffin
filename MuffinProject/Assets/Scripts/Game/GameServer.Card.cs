@@ -40,7 +40,7 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotActionCard);
 
             if (_players[requester].ActionBlocked)
-                return Reject(requester, RejectCode.ActionBlocked); // 107 짖기 — 이번 턴은 행동 카드만 막는다. 뽑기 · 함정 설치 · 카운터는 된다
+                return Reject(requester, RejectCode.ActionBlocked); // 1007 짖기 — 이번 턴은 행동 카드만 막는다. 뽑기 · 함정 설치 · 카운터는 된다
 
             int[] targets = ResolveTargets(requester, card.Target, requestedTargets, condition: card.TargetCondition);
             if (targets == null || (targets.Length == 0 && card.Target != TargetType.None))
@@ -77,7 +77,7 @@ namespace Chapchu.Game
                 case TargetType.ChapchuPlayers: return inGame.Where(a => _players[a].IsChapchu).ToArray();
                 case TargetType.ChapchuOthers:  return others.Where(a => _players[a].IsChapchu).ToArray();
                 case TargetType.MostHand:
-                    // 나를 포함한 생존자 중 손패 최다 1명 — 낸 카드는 뺀 장수, 동률이면 무작위 (11-card-list 118). 낼 때 정해 공개한다
+                    // 나를 포함한 생존자 중 손패 최다 1명 — 낸 카드는 뺀 장수, 동률이면 무작위 (11-card-list 1018). 낼 때 정해 공개한다
                     System.Func<int, int> handAfter = a => _players[a].Hand.Count - (a == requester && fromHand ? 1 : 0);
                     int[] alive = inGame.Where(a => _players[a].Life == LifeState.Alive).ToArray();
                     if (alive.Length == 0)
@@ -86,7 +86,7 @@ namespace Chapchu.Game
                     int[] tied = alive.Where(a => handAfter(a) == most).ToArray();
                     return new[] { tied[_random.Next(tied.Length)] };
                 case TargetType.NextPlayer:
-                    // 턴 진행 방향으로 다음 차례 (120 얼음!). 나밖에 없으면 대상 0명 — 거절
+                    // 턴 진행 방향으로 다음 차례 (1020 얼음!). 나밖에 없으면 대상 0명 — 거절
                     int nextActor = GetNextActor(requester);
                     return nextActor != requester ? new[] { nextActor } : new int[0];
                 case TargetType.MoreHandThanMe:

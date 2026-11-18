@@ -5,7 +5,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 대상이 고른다 — 0 손패 전부 버리기 · 1 amount 피해 받기 (119 목표 조준, 11-card-list 119). seconds 안에 안 고르면 방장이 무작위.
+    /// 대상이 고른다 — 0 손패 전부 버리기 · 1 amount 피해 받기 (1019 목표 조준, 11-card-list 1019). seconds 안에 안 고르면 방장이 무작위.
     /// 고르는 동안 처리가 멈춘다 (GameServer.Choice.cs). 손패가 0장이어도 버리기를 고를 수 있다 — 아무 손해 없이 끝.
     /// </summary>
     [Serializable]
@@ -25,7 +25,7 @@ namespace Chapchu.Game.Effects
         private const double BotBaseScore = 40;
         private const double BotPerHandCard = 3;       // 대상 손패 1장마다
         private const double BotMustDiscardBonus = 40; // 대상 HP ≤ amount — 버릴 수밖에 없다
-        // 18-bot.md 7-4 「카드 효과의 대상으로 고르는 중이다 (119 목표 조준)」 — 봇이 대상일 때 손패가 이 이상이면 피해를 받는다
+        // 18-bot.md 7-4 「카드 효과의 대상으로 고르는 중이다 (1019 목표 조준)」 — 봇이 대상일 때 손패가 이 이상이면 피해를 받는다
         private const int BotTakeDamageHand = 5;
 
         internal override double BotScore(Bots.BotView view, int[] receivers)

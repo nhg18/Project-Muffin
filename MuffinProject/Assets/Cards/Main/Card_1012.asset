@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_118
+  m_Name: Card_1012
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 118
-  cardName: "\uBB34\uC57C\uD638"
-  cardImage: {fileID: 21300000, guid: 5bbcff8fd3325de4790b351b136427bc, type: 3}
+  id: 1012
+  cardName: "\uB300\uC18C\uB3D9"
+  cardImage: {fileID: 21300000, guid: a72c1ed9169031349940145ec544ec47, type: 3}
   type: 0
-  targetType: 11
+  targetType: 0
   targetCondition: 0
-  grade: 2
-  description: "\uC190\uD328\uAC00 \uAC00\uC7A5 \uB9CE\uC740 \uC0AC\uB78C\uC774 \uB098\uBA38\uC9C0
-    \uBAA8\uB450\uC5D0\uAC8C 1\uC7A5\uC529 \uBE7C\uC557\uAE34\uB2E4"
+  grade: 3
+  description: "\uAC8C\uC784\uC744 \uC0C8\uB85C \uC2DC\uC791\uD55C\uB2E4. \uC774\uD6C4
+    \uB9E4 \uD134 \uBAA8\uB450 1, 2, 3\u2026\uC529 \uCEE4\uC9C0\uB294 \uD53C\uD3ED
+    \uD53C\uD574\uB97C \uBC1B\uB294\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
@@ -30,10 +31,10 @@ MonoBehaviour:
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117934215004276
+  - rid: 4532117965319438423
   references:
     version: 2
     RefIds:
-    - rid: 4532117934215004276
-      type: {class: ShareFromTargetEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+    - rid: 4532117965319438423
+      type: {class: RestartEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data: 

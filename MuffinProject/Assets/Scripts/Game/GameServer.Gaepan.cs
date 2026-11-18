@@ -2,10 +2,10 @@
 
 namespace Chapchu.Game
 {
-    // GameServer.Gaepan.cs — 121 개판 오분전: 바퀴 세기 · 반반 기준 판정 (11-card-list 121, 프로토타입 v2 gpTick)
+    // GameServer.Gaepan.cs — 1021 개판 오분전: 바퀴 세기 · 반반 기준 판정 (11-card-list 1021, 프로토타입 v2 gpTick)
     public partial class GameServer
     {
-        // 확정 (11-card-list 121 · 사용자 2026-11-13).
+        // 확정 (11-card-list 1021 · 사용자 2026-11-13).
         public const int GaepanRounds = 5;
         // 판정 공개 뒤 HP 0 까지 — 프로토타입 v2 판정 팻말 연출(4명 기준 최대): 기준 룰렛 0.52 + 1.6 + 0.26 → 수치 표 1.14 → 「꼴찌는?!」 0.65.
         // 처형씬(6.75초)은 넣지 않는다 (사용자 2026-11-13 — 2.3초를 이 길이로 바꿈). 화면은 GaepanJudgeView 가 같은 시간표로 그린다.
@@ -58,7 +58,7 @@ namespace Chapchu.Game
             _gaepanCaster = -1;
             _events.Add(new GaepanChanged(caster, 0, false));
             if (alive.Length < 2)
-                return; // 판정 없음 (11-card-list 121 예외)
+                return; // 판정 없음 (11-card-list 1021 예외)
 
             bool byHp = _random.Next(2) == 0;
             int ValueOf(int actor) => byHp ? _players[actor].Hp : _players[actor].Hand.Count;
@@ -82,7 +82,7 @@ namespace Chapchu.Game
             CheckDeathPending(now);
         }
 
-        // 112 대소동 · 게임 시작 — 개판은 처음으로
+        // 1012 대소동 · 게임 시작 — 개판은 처음으로
         private void ResetGaepan()
         {
             bool had = _gaepanCaster != -1;
@@ -99,7 +99,7 @@ namespace Chapchu.Game
         // 게임에 남은 생존자 (사망 대기 제외) — 바퀴의 길이 · 판정 후보
         private int[] AliveActors() => _turnOrder.Where(actor => IsInGame(actor) && _players[actor].Life == LifeState.Alive).ToArray();
 
-        /// <summary>개판 오분전이 걸려 있다 (121).</summary>
+        /// <summary>개판 오분전이 걸려 있다 (1021).</summary>
         public bool IsGaepanActive => _gaepanCaster != -1;
     }
 }

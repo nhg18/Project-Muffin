@@ -159,7 +159,7 @@ namespace Chapchu.EditorTools
             HandRevealView handReveal = BuildHandReveal(canvasRect);
             ScreenFlashView screenFlash = BuildScreenFlash(canvasRect);
 
-            // 121 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 시작 제목 · 판정 팻말은 화면 덮기 위 · 서랍 아래
+            // 1021 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 시작 제목 · 판정 팻말은 화면 덮기 위 · 서랍 아래
             GaepanPresenter gaepan = BuildGaepan(canvasRect, boardLayer, seats, (RectTransform)safeArea.Find("MyCharacter"));
 
             // 서랍 · 팝업 — 가장 위
@@ -988,7 +988,7 @@ namespace Chapchu.EditorTools
 
         // 발밑 노란 타원 184 × 44 + 흰 테 6 (시안 .spot)
         /// <summary>
-        /// 화면 덮기 (10-ui.md 5-1 — 113 기억 삭제의 하얀 화면). 캔버스 전체 · 손패 층 위 · 서랍 아래. 입력을 막지 않는다. 기본 숨김.
+        /// 화면 덮기 (10-ui.md 5-1 — 1013 기억 삭제의 하얀 화면). 캔버스 전체 · 손패 층 위 · 서랍 아래. 입력을 막지 않는다. 기본 숨김.
         /// 이미 만든 씬에 더할 때도 이 함수를 부른다 — 부르는 쪽이 서랍(Sheets) 앞에 둔다.
         /// </summary>
         internal static ScreenFlashView BuildScreenFlash(RectTransform canvasRect)
@@ -1296,7 +1296,7 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 카드 효과 고르기 판 (프로토타입 v2 .pop2.pick · G.choose 선택지 — 119 목표 조준). 판 폭 880 · 머리 띠(Band) = 발 아이콘 + 제목 + 남은 초(오른쪽).
+        // 카드 효과 고르기 판 (프로토타입 v2 .pop2.pick · G.choose 선택지 — 1019 목표 조준). 판 폭 880 · 머리 띠(Band) = 발 아이콘 + 제목 + 남은 초(오른쪽).
         // 몸통 = 설명 + 버튼 줄(첫 버튼 주 버튼 노랑 · 둘째 흰색). 바탕 가림이 탭을 먹는다 — 눌러도 닫히지 않는다. 판(Panel)은 비활성으로 둔다.
         public static ChoicePopupPresenter BuildChoicePopup(RectTransform parent, PunGameServer server)
         {

@@ -56,10 +56,10 @@ namespace Chapchu.Cards
         [Min(0)] public float resolveSeconds = 1.28f;
 
         [Header("화면 덮기 (10-ui.md 5-1) — 효과가 적용될 때 모든 화면을 이 색으로 덮었다가 걷는다. 화면만의 연출이라 방장 시각 계산에 들지 않는다")]
-        [Tooltip("덮는 색 · 진하기(알파). 알파 0 이면 덮지 않는다 — 113 기억 삭제: 흰색 97% (시안 whiteout).")]
+        [Tooltip("덮는 색 · 진하기(알파). 알파 0 이면 덮지 않는다 — 1013 기억 삭제: 흰색 97% (시안 whiteout).")]
         public Color resolveFlashColor = Color.clear;
 
-        [Tooltip("다 걷힐 때까지 초 — 113 기억 삭제: 1 (시안 whiteout).")]
+        [Tooltip("다 걷힐 때까지 초 — 1013 기억 삭제: 1 (시안 whiteout).")]
         [Min(0)] public float resolveFlashSeconds;
 
         // 위에서부터 순서대로 실행. 인스펙터의 + 메뉴(Editor/CardDataEditor)로 종류를 골라 추가한다.

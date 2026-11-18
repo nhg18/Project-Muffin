@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Chapchu.Game
 {
-    // GameServer.Restart.cs — 112 대소동: 게임 새로 시작 · 피폭 피해 (11-card-list 112)
+    // GameServer.Restart.cs — 1012 대소동: 게임 새로 시작 · 피폭 피해 (11-card-list 1012)
     public partial class GameServer
     {
         // _turnEndStage 값 — 턴 끝 처리를 어디까지 했나 (프로토타입 v2 turnEnd2 순서)
@@ -89,10 +89,10 @@ namespace Chapchu.Game
             return true;
         }
 
-        /// <summary>피폭 피해 k^n (11-card-list 112). 화면도 다음 턴 피해를 이 식으로 보인다.</summary>
+        /// <summary>피폭 피해 k^n (11-card-list 1012). 화면도 다음 턴 피해를 이 식으로 보인다.</summary>
         public static int FalloutDamage(int turns, int n) => (int)Math.Min(int.MaxValue, Math.Pow(turns, n));
 
-        // 지금 방에 있는 사람(나간 사람 제외, 죽은 사람 포함)으로 처음처럼 — 대소동 횟수 · 통계 · 기록만 남는다 (11-card-list 112).
+        // 지금 방에 있는 사람(나간 사람 제외, 죽은 사람 포함)으로 처음처럼 — 대소동 횟수 · 통계 · 기록만 남는다 (11-card-list 1012).
         private void Restart()
         {
             _restartPending = false;

@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_120
+  m_Name: Card_1019
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 120
-  cardName: "\uC5BC\uC74C!"
-  cardImage: {fileID: 21300000, guid: 5716fc1da30e6f74a9ea84b42ad532bd, type: 3}
+  id: 1019
+  cardName: "\uBAA9\uD45C \uC870\uC900"
+  cardImage: {fileID: 21300000, guid: d238f8c10b50ccc438769ef38deca420, type: 3}
   type: 0
-  targetType: 12
+  targetType: 1
   targetCondition: 0
-  grade: 1
-  description: "\uB2E4\uC74C \uC0AC\uB78C\uC740 \uD134\uC744 \uD55C \uBC88 \uAC74\uB108\uB6F4\uB2E4"
+  grade: 3
+  description: "\uB300\uC0C1\uC740 \uC190\uD328 \uC804\uBD80 \uBC84\uB9AC\uAE30\uC640
+    80 \uD53C\uD574 \uC911 \uD558\uB098\uB97C \uACE0\uB978\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
@@ -29,11 +30,12 @@ MonoBehaviour:
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117965319438412
+  - rid: 4532117965319438448
   references:
     version: 2
     RefIds:
-    - rid: 4532117965319438412
-      type: {class: SkipTurnEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+    - rid: 4532117965319438448
+      type: {class: DiscardOrDamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data:
-        subject: 0
+        amount: 80
+        seconds: 5
