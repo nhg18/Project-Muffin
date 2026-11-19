@@ -859,12 +859,17 @@ play_turns() {
             case "$out" in
                 OK*)   log "  $(name_of "$project"): $out"; done_rounds=$((done_rounds + 1)); LAST_ACT="$out"; sleep 2; break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return 1 ;;
-                *"게임 끝"*|*"(ResultScene)"*) fail "$(name_of "$project"): 판이 먼저 끝났다 — $out"; return 1 ;;
+                *"게임 끝"*|*"(ResultScene)"*) fail "$(name_of "$project"): 판이 먼저 끝났다 — $out"; dump_tail "$project"; return 1 ;;
             esac
         done
         sleep 1
     done
     [ $done_rounds -ge "$rounds" ] || { fail "턴이 진행되지 않는다 (${done_rounds}/${rounds})"; return 1; }
+}
+
+# 판이 뜻밖에 끝났을 때 — 왜 끝났는지 콘솔의 마지막 줄들을 남긴다
+dump_tail() {
+    console_lines "$1" | grep -E 'GameDebugInput|PunGameServer|BotDriver' | tail -12 | sed -E 's/^[a-z-]*	//' | cut -c1-260 | sed 's/^/      /'
 }
 
 run_migrate() {
@@ -1015,7 +1020,7 @@ run_migrate_kick() {
     log "  메인: $out"
     [ "$out" = "OK 방에서 나왔어요 / 3턴 동안 행동하지 않아 게임에서 나왔어요." ] || fail "강제 퇴장된 방장의 경고 팝업이 다르다: $out"
     out=$(call "$clone" MigrateProbe state); log "  $(name_of "$clone"): $out"
-    case "$out" in *"방장 True"*"판 보유 True"*) ;; *) fail "클론이 판을 이어받지 않았다: $out"; return ;; esac
+    case "$out" in *"방장 True"*"판 보유 True"*) ;; *) fail "클론이 판을 이어받지 않았다: $out"; dump_tail "$clone"; return ;; esac
     console_lines "$clone" | grep -q '방장 이주 — 사본으로 판을 이어받았다' || fail "$(name_of "$clone") 이주 로그가 없다"
     log "▶ 클론이 봇과 판을 잇는다 — 클론 턴 2번"
     play_turns 2 "$clone" || return
