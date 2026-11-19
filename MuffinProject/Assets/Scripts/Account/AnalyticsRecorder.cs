@@ -24,20 +24,11 @@ namespace Chapchu.Account
         /// <summary>titleBlocked 의 reason (27 5-1)</summary>
         public enum TitleBlockReason { Update, Maintenance }
 
-        /// <summary>accountLinked 의 provider (27 5-1)</summary>
-        public enum LinkProvider { Google, Apple }
-
         /// <summary>roomEntered 의 via (27 5-2)</summary>
         public enum RoomVia { QuickStart, Create, Code, Invite }
 
         /// <summary>roomLeftBeforeStart 의 reason (27 5-2)</summary>
         public enum RoomLeaveReason { Self, Kicked, Disconnected, VersionMismatch }
-
-        /// <summary>matchEnded · myMatchResult 의 winType (27 5-3)</summary>
-        public enum WinType { Kill, Chapchu, Draw }
-
-        /// <summary>matchLeft 의 reason (27 5-3)</summary>
-        public enum MatchLeaveReason { Quit, TimeoutKick, Disconnect }
 
         /// <summary>resultAction 의 action (27 5-3)</summary>
         public enum ResultAction { ToRoom, Exit }
@@ -101,15 +92,6 @@ namespace Chapchu.Account
             RequestDeletion();
         }
 
-        /// <summary>계정 삭제가 성공한 뒤 — 분석 데이터 삭제 요청 · 수집 끔 · 기기의 선택도 지운다 (27 6절 · 23 6-4)</summary>
-        public static void ForgetForAccountDeletion()
-        {
-            SetCollecting(false);
-            RequestDeletion();
-            PlayerPrefs.DeleteKey(PlayerPrefsKeys.PlayRecordAgreed);
-            PlayerPrefs.Save();
-        }
-
         // ── 5-1 처음 실행 · 계정 ──
 
         public static void RecordConsentAccepted(ConsentFrom from)
@@ -124,9 +106,6 @@ namespace Chapchu.Account
         public static void RecordTitleBlocked(TitleBlockReason reason)
             => Record("titleBlocked", ("reason", ToValue(reason)));
 
-        public static void RecordAccountLinked(LinkProvider provider, bool switched)
-            => Record("accountLinked", ("provider", ToValue(provider)), ("switched", switched));
-
         // ── 5-2 로비 · 방 ──
 
         public static void RecordRoomEntered(RoomVia via, bool isPublic, int humans)
@@ -135,36 +114,7 @@ namespace Chapchu.Account
         public static void RecordRoomLeftBeforeStart(int waitSeconds, RoomLeaveReason reason)
             => Record("roomLeftBeforeStart", ("waitSeconds", waitSeconds), ("reason", ToValue(reason)));
 
-        public static void RecordLanguageChanged(string from, string to)
-            => Record("languageChanged", ("from", from), ("to", to));
-
-        // ── 5-3 판 ── (방장만 보내는 셋은 matchStarted · matchEnded · matchCardStats — 27 2절)
-
-        public static void RecordMatchStarted(string matchId, int humans, int bots, int botEasy, int botNormal, int botHard, bool quickStart, int matchIndexInRoom)
-            => Record("matchStarted",
-                ("matchId", matchId), ("humans", humans), ("bots", bots), ("botEasy", botEasy),
-                ("botNormal", botNormal), ("botHard", botHard), ("quickStart", quickStart),
-                ("matchIndexInRoom", matchIndexInRoom));
-
-        public static void RecordMatchEnded(string matchId, int turns, int durationSeconds, WinType winType, bool winnerIsBot, int leavers, int reconnects)
-            => Record("matchEnded",
-                ("matchId", matchId), ("turns", turns), ("durationSeconds", durationSeconds),
-                ("winType", ToValue(winType)), ("winnerIsBot", winnerIsBot), ("leavers", leavers),
-                ("reconnects", reconnects));
-
-        public static void RecordMatchCardStats(string matchId, int cardId, int plays, int playersUsed, bool winnerUsed)
-            => Record("matchCardStats",
-                ("matchId", matchId), ("cardId", cardId), ("plays", plays), ("playersUsed", playersUsed),
-                ("winnerUsed", winnerUsed));
-
-        public static void RecordMyMatchResult(string matchId, int rank, bool won, WinType winType, int survivedTurns, int damageDealt, int kills, int cardsPlayed, int timeouts, int chapchuDeclares)
-            => Record("myMatchResult",
-                ("matchId", matchId), ("rank", rank), ("won", won), ("winType", ToValue(winType)),
-                ("survivedTurns", survivedTurns), ("damageDealt", damageDealt), ("kills", kills),
-                ("cardsPlayed", cardsPlayed), ("timeouts", timeouts), ("chapchuDeclares", chapchuDeclares));
-
-        public static void RecordMatchLeft(string matchId, int turn, MatchLeaveReason reason)
-            => Record("matchLeft", ("matchId", matchId), ("turn", turn), ("reason", ToValue(reason)));
+        // ── 5-3 판 ── (matchStarted · matchEnded · matchCardStats · myMatchResult · matchLeft 는 게임 화면에 붙일 때 더한다 — 방장만 보내는 셋은 27 2절)
 
         public static void RecordResultAction(ResultAction action)
             => Record("resultAction", ("action", ToValue(action)));

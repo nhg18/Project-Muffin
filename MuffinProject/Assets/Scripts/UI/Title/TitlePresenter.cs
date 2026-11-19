@@ -225,8 +225,7 @@ namespace Chapchu.UI.Title
             }
 
             _autoSignIn = true;
-            bottom.ShowLoading(AutoSignInText);
-            BeginLoading();
+            ShowLoading(AutoSignInText);
             yield return SignInRoutine();
         }
 
@@ -525,8 +524,7 @@ namespace Chapchu.UI.Title
                 AnalyticsRecorder.SaveChoice(_playRecordChoice.Value);
 
             PlayerPrefs.Save();
-            sheet.ShowLoading(StartingText);
-            BeginLoading();
+            ShowLoading(StartingText);
             Run(SignInRoutine());
         }
 

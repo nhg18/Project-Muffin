@@ -47,6 +47,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private LobbyFxView fx;
 
         private AnalyticsRecorder.ScreenName _screenBelowPopup = AnalyticsRecorder.ScreenName.Lobby; // 창을 닫으면 돌아갈 화면 (27 5-5)
+        private bool _inPopupScreen; // 플레이 기록에 창 화면으로 들어가 있는지 — EnterPopupScreen 에서 켜고 ClosePopups 에서 끈다
 
         /// <summary>설정의 「초대 알림」 스위치가 켜져 있는지 (기기 저장, 처음엔 켜짐).</summary>
         public static bool IsInviteNoticeOn => ReadSwitch(PlayerPrefsKeys.InviteNoticeOn);
@@ -179,8 +180,11 @@ namespace Chapchu.UI.Lobby
         private void ClosePopups()
         {
             HidePopups();
-            if (IsPopupScreen(AnalyticsRecorder.CurrentScreen))
-                AnalyticsRecorder.RecordScreenViewed(_screenBelowPopup);
+            if (!_inPopupScreen)
+                return;
+
+            _inPopupScreen = false;
+            AnalyticsRecorder.RecordScreenViewed(_screenBelowPopup);
         }
 
         // 다른 창을 열기 전에 닫기만 — 창에서 창으로 옮길 때 아래 화면을 끼워 남기지 않는다
@@ -194,16 +198,13 @@ namespace Chapchu.UI.Lobby
             popupDimmer.SetActive(false);
         }
 
-        private static bool IsPopupScreen(AnalyticsRecorder.ScreenName screen)
-            => screen == AnalyticsRecorder.ScreenName.Quest || screen == AnalyticsRecorder.ScreenName.Friends
-            || screen == AnalyticsRecorder.ScreenName.Profile || screen == AnalyticsRecorder.ScreenName.Settings;
-
         // 창 하나에 들어감 — 창 위에서 창을 열면 맨 아래 화면을 그대로 둔다
         private void EnterPopupScreen(AnalyticsRecorder.ScreenName screen)
         {
-            if (!IsPopupScreen(AnalyticsRecorder.CurrentScreen))
+            if (!_inPopupScreen)
                 _screenBelowPopup = AnalyticsRecorder.CurrentScreen;
 
+            _inPopupScreen = true;
             AnalyticsRecorder.RecordScreenViewed(screen);
         }
 
