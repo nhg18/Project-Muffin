@@ -1021,7 +1021,12 @@ run_migrate_kick() {
     play_turns 2 "$clone" || return
     sleep 8
     log "  마지막 턴 줄: $(console_lines "$clone" | grep '\[GameDebugInput\]' | grep ' 턴 P' | tail -1 | sed -E 's/.*\[GameDebugInput\] //')"
-    until_ok "$clone" TableUiExpect || return
+    # 그 사이 판이 끝났으면(봇의 찹츄 등) 화면 비교는 건너뛴다 — 이주 뒤 판이 끝까지 간 것이다
+    if console_lines "$clone" | grep -q '\[GameDebugInput\].*게임 종료'; then
+        log "  $(name_of "$clone"): 판이 끝남 — $(console_lines "$clone" | grep '게임 종료' | tail -1 | sed -E 's/.*게임 종료/게임 종료/')"
+    else
+        until_ok "$clone" TableUiExpect || return
+    fi
     check_errors "$clone"
 }
 
