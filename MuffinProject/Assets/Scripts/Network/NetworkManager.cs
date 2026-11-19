@@ -130,10 +130,8 @@ namespace Chapchu.Network
         /// </summary>
         public void LeaveRoom() => _room.LeaveRoom();
     
-        /// <summary>
-        /// 룸 생성 함수
-        /// </summary>
-        public void CreateRoom() => _room.CreateRoom();
+        /// <summary>「방 만들기」 — 비공개로 만든다. 방 안에서 방장이 공개로 바꿀 수 있다 (08-room.md 5절 #7)</summary>
+        public void CreateRoom() => _room.CreateRoom(isPublic: false);
     
         /// <summary>
         /// 룸 옵션 생성 함수
