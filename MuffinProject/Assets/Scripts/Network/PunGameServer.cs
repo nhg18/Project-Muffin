@@ -338,6 +338,8 @@ namespace Chapchu.Network
             if (backup == null || !server.Restore(backup, deck.CreateCards()))
             {
                 Debug.LogError($"[{nameof(PunGameServer)}] 방장 이주 실패 — {(backup == null ? "받아 둔 사본이 없다" : server.RestoreError)}. 판을 중지하고 방으로 돌아간다");
+                // 거절 알림은 방 속성 번호를 올리지 않는다 — 누군가 이미 받은 번호를 넘겨서 보내야 중지 알림을 묵은 것으로 버리지 않는다
+                _sentSeq += MaxSeqJump;
                 Halt();
                 return;
             }
@@ -350,16 +352,18 @@ namespace Chapchu.Network
                 ? CreateBots(bots)
                 : null;
 
-            Debug.Log($"[{nameof(PunGameServer)}] 방장 이주 — 사본으로 판을 이어받았다 (처리 번호 {_sentSeq})");
-            Send(_server.ResumeAfterMigration());
-
-            // 사본 뒤에 나간 사람 (앞 방장 포함) — 나감 알림은 앞 방장만 받았다
-            foreach (int actor in _startNames.Keys.ToArray())
+            // 사본 뒤에 나간 사람 (앞 방장 포함) — 나감 알림은 앞 방장만 받았다. 그 사람 앞으로는 단계를 다시 알리지 않는다
+            int[] departed = _startNames.Keys.Where(actor =>
             {
                 Player player = PhotonNetwork.CurrentRoom.GetPlayer(actor);
-                if (player == null || player.IsInactive)
-                    Send(_server.RemovePlayer(actor));
-            }
+                return player == null || player.IsInactive;
+            }).ToArray();
+
+            Debug.Log($"[{nameof(PunGameServer)}] 방장 이주 — 사본으로 판을 이어받았다 (처리 번호 {_sentSeq})");
+            Send(_server.ResumeAfterMigration(departed));
+
+            foreach (int actor in departed)
+                Send(_server.RemovePlayer(actor));
 
             // 각자의 손패 · 함정을 방장 값으로 맞춘다 — 사본이 마지막 알림보다 한 걸음 늦었을 수 있다
             foreach (Player player in PhotonNetwork.PlayerList)

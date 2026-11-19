@@ -362,9 +362,12 @@ namespace Chapchu.Game
         /// 새 방장이 Restore 뒤에 한 번 부른다 — 멈췄던 단계부터 이어 간다 (09-network.md 9.1, PM 2026-11-19).
         /// 앞 방장이 사라진 뒤 흐른 시간은 알 수 없으므로, 멈췄던 단계의 시간은 처음부터 다시 준다 (턴 · 반응 · 고르기 · 사망 대기 · 개판 판정 공개).
         /// 반응 시간의 스킵 · 고민 연장 기록은 그대로다. 덱은 다시 섞는다 — 예비 방장일 때 받은 순서를 쓰지 못하게 (화면에는 알리지 않는다).
+        /// departed — 사본 뒤에 나간 사람 (앞 방장 포함). 곧 RemovePlayer 로 나감 처리하므로 그 사람 앞으로는 단계를 다시 알리지 않는다.
         /// </summary>
-        public IReadOnlyList<GameEvent> ResumeAfterMigration()
+        public IReadOnlyList<GameEvent> ResumeAfterMigration(ICollection<int> departed = null)
         {
+            departed ??= Array.Empty<int>();
+
             if (_gameOver)
                 return TakeEvents();
 
@@ -381,15 +384,16 @@ namespace Chapchu.Game
             if (IsDeathPending)
             {
                 _deathDeadline = now + DeathResponseTime;
-                foreach (int actor in _turnOrder.Where(a => _players[a].Life == LifeState.DeathPending && !_players[a].HasLeft))
+                foreach (int actor in _turnOrder.Where(a => _players[a].Life == LifeState.DeathPending && !_players[a].HasLeft && !departed.Contains(a)))
                     _events.Add(new DeathPending(actor, now, _deathDeadline));
             }
 
             if (IsChoosing)
             {
                 _choiceDeadline = now + _choiceEffect.seconds;
-                _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
-                    _choiceEffect.amount, now, _choiceDeadline));
+                if (!departed.Contains(_choiceActor))
+                    _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
+                        _choiceEffect.amount, now, _choiceDeadline));
             }
 
             if (IsGaepanJudging)
@@ -406,7 +410,7 @@ namespace Chapchu.Game
                 _turnDeadline = now + TurnTimeLimit;
                 // 멈춰 있으면 풀릴 때 UpdateTurnClock 이 남은 시간(15초)으로 알린다
                 _turnPaused = IsPaused(now);
-                if (!_turnPaused && IsInGame(CurrentTurnActor))
+                if (!_turnPaused && IsInGame(CurrentTurnActor) && !departed.Contains(CurrentTurnActor))
                     _events.Add(new TurnResumed(CurrentTurnActor, _turnDeadline));
             }
 
