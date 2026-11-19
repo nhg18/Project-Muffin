@@ -1,23 +1,20 @@
-﻿using System;
-using Chapchu.Game;
-using DG.Tweening;
+﻿using Chapchu.Game;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.GameScreen
 {
-    /// <summary>찹츄 버튼의 표시 상태 (07-win-condition.md 4.1 · 10-ui.md 7절). 판정은 방장이 한다.</summary>
+    /// <summary>찹츄 자리의 표시 상태 (10-ui.md 2-1 「찹츄 버튼 상태」). 선언은 자동이라 입력이 아니다 (07-win-condition.md 4.1).</summary>
     public enum ChapchuButtonState
     {
-        Unavailable, // 손패가 10장이 아니다 — 점 10개로 진행도
-        Ready,       // 10장 — 누를 수 있다
-        Declared,    // 선언했다 — 다음 내 턴까지 10장 지키기
+        NotDeclared, // 내가 찹츄 상태가 아니다 — 점 10개로 손패 수
+        Declared,    // 내가 찹츄 상태 — 내 턴이 시작될 때 10장이면 승리
     }
 
     /// <summary>
-    /// 우하단 찹츄 버튼 = 외치는 말풍선 (10-ui.md 2-1 HUD v2 「찹츄 버튼」). 비활성: 회색 「찹츄!」 + 점 10개(손패 수). 10장: 분홍 · 흰 글자 잉크 외곽선 · 「지금 외치기!」 · 흔들림.
-    /// 선언 뒤: 분홍 · 「찹츄 완료」. 값을 받아 표시하고 탭을 이벤트로만 알린다.
+    /// 우하단 찹츄 자리 = 외치는 말풍선 모양 (10-ui.md 2-1 HUD v2 「찹츄 버튼」). 선언 전: 회색 「찹츄!」 + 점 10개(손패 수). 선언 뒤: 분홍 · 「찹츄 완료」.
+    /// 표시만 한다 — 누를 수 없다 (2026-11-14 자동 선언. 이 자리의 쓰임은 미정, 10-ui.md 11절 #21). 「지금 외치기!」 꼬리표 · 느낌 아이콘은 꺼 둔다.
     /// </summary>
     public class ChapchuButtonView : MonoBehaviour
     {
@@ -48,16 +45,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Color pipOn = new Color32(0xff, 0x4f, 0x8b, 0xFF);
         [SerializeField] private float unavailableLabelSize = 68f;
         [SerializeField] private float readyLabelSize = 76f;
-        [Tooltip("10장일 때 흰 글자 둘레 잉크 외곽선 두께 (TMP outline, 0~1).")]
+        [Tooltip("선언 뒤 흰 글자 둘레 잉크 외곽선 두께 (TMP outline, 0~1).")]
         [SerializeField] private float readyOutline = 0.25f;
-        [Tooltip("10장일 때 좌우로 흔들리는 각도 · 주기(초).")]
-        [SerializeField] private float wobbleAngle = 3f;
-        [SerializeField] private float wobbleDuration = 1.2f;
-
-        private Tween _wobble;
-
-        /// <summary>찹츄 버튼을 눌렀다 — 비활성 모양일 때도 알린다 (안내 토스트, 10-ui.md 「찹츄 버튼 상태」). 요청할지 안내할지는 프레젠터가 정한다.</summary>
-        public event Action ChapchuClicked;
 
         private void Awake()
         {
@@ -66,21 +55,10 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(ChapchuButtonView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
-        private void OnEnable()
-        {
-            button.onClick.AddListener(HandleClicked);
-        }
-
-        private void OnDisable()
-        {
-            button.onClick.RemoveListener(HandleClicked);
-            StopWobble();
-        }
-
         /// <summary>상태 · 손패 수. 점은 handCount 개까지 켜지고, 10 을 넘으면 「+n」.</summary>
         public void SetState(ChapchuButtonState state, int handCount, int requiredCount)
         {
-            bool shout = state != ChapchuButtonState.Unavailable;
+            bool shout = state == ChapchuButtonState.Declared;
 
             fill.color = shout ? readyFill : unavailableFill;
             tailFill.color = fill.color;
@@ -89,40 +67,18 @@ namespace Chapchu.UI.GameScreen
             label.outlineWidth = shout ? readyOutline : 0f;
             label.outlineColor = readyShadow;
             shadow.color = shout ? readyShadow : unavailableShadow;
-            shadow.gameObject.SetActive(state != ChapchuButtonState.Declared);
-            button.interactable = state != ChapchuButtonState.Declared; // 비활성 모양도 탭은 받는다 — 안내 토스트
+            shadow.gameObject.SetActive(!shout);
+            button.interactable = false; // 입력이 아니다 — 선언은 자동 (10-ui.md 7절)
 
             pipsRow.SetActive(!shout);
-            readyTag.SetActive(state == ChapchuButtonState.Ready);
-            doneTag.SetActive(state == ChapchuButtonState.Declared);
-            emIcon.SetActive(state == ChapchuButtonState.Ready);
+            readyTag.SetActive(false);
+            doneTag.SetActive(shout);
+            emIcon.SetActive(false);
 
             for (int i = 0; i < pips.Length; i++)
                 pips[i].color = i < handCount ? pipOn : pipOff;
             overText.gameObject.SetActive(handCount > requiredCount);
             overText.text = string.Format(OverFormat, handCount - requiredCount);
-
-            if (state == ChapchuButtonState.Ready)
-                StartWobble();
-            else
-                StopWobble();
         }
-
-        private void StartWobble()
-        {
-            if (_wobble != null) return;
-
-            transform.localRotation = Quaternion.Euler(0f, 0f, -wobbleAngle);
-            _wobble = transform.DOLocalRotate(new Vector3(0f, 0f, wobbleAngle), wobbleDuration / 2f).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo).SetLink(gameObject);
-        }
-
-        private void StopWobble()
-        {
-            _wobble?.Kill();
-            _wobble = null;
-            transform.localRotation = Quaternion.identity;
-        }
-
-        private void HandleClicked() => ChapchuClicked?.Invoke();
     }
 }

@@ -15,7 +15,7 @@ namespace Chapchu.Game
 
         /// <summary>
         /// 드로우 요청 — TurnDrawCount 장(손패가 찹츄 장수 − 1 이면 1장). 메인 행동이라 끝나면 턴이 넘어간다 (03-turn.md 3절).
-        /// 뽑아서 손패가 정확히 10장이 되면 바로 넘기지 않고 선언 대기를 연다 (03-turn.md 4절).
+        /// 뽑아서 손패가 정확히 10장이 되면 찹츄가 자동 선언되고 턴은 보통대로 끝난다 (03-turn.md 4절 · 07 4.1).
         /// </summary>
         public IReadOnlyList<GameEvent> Draw(int requester)
         {
@@ -39,7 +39,7 @@ namespace Chapchu.Game
 
             int count = _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount;
             for (int i = 0; i < count && _players[requester].Hp > 0; i++)
-                DrawOne(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
+                CountDraw(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
             CheckDeathPending(_clock()); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
             // 드로우는 끝나면 턴 종료. 빈 덱 피해로 사망 대기가 생기면 그것이 끝난 뒤 (03-turn.md 4절)
@@ -47,13 +47,6 @@ namespace Chapchu.Game
             {
                 _mainActionUsed = true;
                 _nextTurnAt = _clock();
-            }
-            else if (_players[requester].Hand.Count == ChapchuHandCount)
-            {
-                // 뽑아서 정확히 10장 — 턴이 바로 끝나지 않고 선언 대기가 열린다. 선언이 승인되면 그 순간, 아니면 대기가 끝날 때 턴 종료 (03-turn.md 4절 · 07 4.1)
-                _mainActionUsed = true; // 대기 중 다른 입력(카드 · 다시 뽑기 · 함정 설치)은 메인 행동을 한 것으로 거절된다
-                _declareWait = true;
-                _nextTurnAt = _clock() + DeclareWaitSeconds;
             }
             else
             {
@@ -78,6 +71,13 @@ namespace Chapchu.Game
                 for (int i = 0; i < InitialHandCount; i++)
                     DrawOne(actor);
             }
+        }
+
+        // 뽑기 1장 — 실제로 뽑았으면 「카드 드로우」 지표에 센다 (07 11-4). 시작 손패 · 다시 받기는 DrawOne 을 바로 부른다.
+        private void CountDraw(int actor)
+        {
+            if (DrawOne(actor))
+                AddStat(actor, StatKind.Drawn);
         }
 
         // 덱 맨 위 1장을 actor 손패로. 모든 뽑기(시작 배분 · 뽑기 요청 · 카드 효과)가 여기를 지난다.

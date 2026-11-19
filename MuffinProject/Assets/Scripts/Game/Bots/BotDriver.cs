@@ -8,7 +8,7 @@ namespace Chapchu.Game.Bots
     /// <summary>
     /// 봇의 판단 (18-bot.md 7절). 방장 기기에서만 돈다 (3절 #1).
     /// 내 턴에는 할 수 있는 수(뽑기 · 카드 × 대상 · 기다림)마다 점수를 매겨 가장 높은 수를 둔다 (7-1). 반응(카운터 · 함정 · 고르기)은 7-4 의 순서대로.
-    /// 사람과 같은 요청 메서드(GameServer.Draw · PlayCard · DeclareChapchu …)를 부르고, 돌아온 일어난 일을 그대로 넘긴다 — 지름길이 없다 (3절 #2).
+    /// 사람과 같은 요청 메서드(GameServer.Draw · PlayCard …)를 부르고, 돌아온 일어난 일을 그대로 넘긴다 — 지름길이 없다 (3절 #2).
     /// 방장이 매 프레임 Tick 을 부르고, 방에서 일어난 일을 Observe 로 알려 준다. 행동마다 이유 한 줄을 TakeLogs 로 남긴다 (7-6).
     /// </summary>
     public sealed class BotDriver
@@ -22,7 +22,6 @@ namespace Chapchu.Game.Bots
         private const double TrapStepMin = 0.6, TrapStepMax = 1.2; // 함정 1장을 놓고 다음 일까지 (초, × 생각 시간 배수)
         private const double LatestAct = GameServer.TurnTimeLimit - 4; // 메인 행동은 턴 시작에서 이 초 안에 — 15초 제한에 여유를 둔다
         private const int MaxRequestsPerTurn = 3;          // 거절 포함
-        private const int MaxDeclaresPerTurn = 2;          // 거절돼도 매 프레임 다시 내지 않게
 
         // 18-bot.md 4절 「점수 값」 — 나머지는 BotView · 각 효과의 BotScore
         private const double IdleScore = -5;        // 아무것도 하지 않음 (손패가 10장이 아닐 때)
@@ -53,8 +52,6 @@ namespace Chapchu.Game.Bots
             public string ThinkNote;   // 생각 시간 — 로그용 (7-6)
             public bool Done;
             public int Requests;
-            public double DeclareAt = -1; // 선언 대기에서 선언할 시각. 아직 안 정했으면 음수
-            public int Declares;
 
             // 이번 반응 창 — 창 하나(Key)에 한 번만. 거절돼도 그 창에서는 더 내지 않는다 (7-4)
             public string ReactKey;
@@ -165,7 +162,6 @@ namespace Chapchu.Game.Bots
             }
             mind.LastTickAt = now;
 
-            DeclareIfReady(turn, mind, now, events);
             if (!mind.Done && now >= mind.ActAt && !_server.IsBusy && !_server.MainActionUsed)
                 TakeTurn(turn, mind, now, events);
 
@@ -180,8 +176,6 @@ namespace Chapchu.Game.Bots
             mind.Done = false;
             mind.LastTickAt = now;
             mind.Requests = 0;
-            mind.DeclareAt = -1;
-            mind.Declares = 0;
 
             // 원한은 내 턴마다 1 씩 식는다 (7-8)
             foreach (int actor in mind.Grudge.Keys.ToArray())
@@ -211,41 +205,6 @@ namespace Chapchu.Game.Bots
             mind.ThinkNote = $" · 생각 {mind.ActAt - now:0.0}초" + (hesitates ? " · 망설임" : "");
         }
 
-        // 7-5 — 내 턴에 손패가 정확히 10장이면 선언한다. 뽑아서 10장(선언 대기)이면 난이도의 반응 시간 뒤, 카드 효과로 10장이면 턴이 넘어가기 전에 바로.
-        // 메인 행동 전에 이미 10장이면 7-1 이 「선언하고 기다림」 을 고를 때 한다 (TakeTurn).
-        private void DeclareIfReady(int bot, BotMind mind, double now, List<GameEvent> events)
-        {
-            PlayerState me = _server.StateOf(bot);
-            if (me.Life != LifeState.Alive || me.IsChapchu || me.Hand.Count != GameServer.ChapchuHandCount || _server.IsResolving)
-                return;
-
-            if (_server.IsDeclareWait)
-            {
-                if (mind.DeclareAt < 0)
-                    mind.DeclareAt = now + ReactDelay(mind.Spec);
-                if (now < mind.DeclareAt)
-                    return;
-            }
-            else if (!_server.MainActionUsed)
-            {
-                return;
-            }
-
-            Declare(bot, mind, events, _server.IsDeclareWait ? "뽑아서 손패 10장 (선언 대기)" : "카드를 쓰고 손패 10장");
-        }
-
-        private void Declare(int bot, BotMind mind, List<GameEvent> events, string why)
-        {
-            if (mind.Declares >= MaxDeclaresPerTurn)
-                return;
-
-            mind.Declares++;
-            IReadOnlyList<GameEvent> result = _server.DeclareChapchu(bot);
-            events.AddRange(result);
-            int code = RejectCodeOf(result, bot);
-            Log(bot, code == 0 ? $"7-5 {why} → 찹츄 선언" : $"7-5 찹츄 선언 거절 (코드 {code})");
-        }
-
         // 점수가 가장 높은 수 하나. 거절되면 그 수를 빼고 다음 수로 — 거절 포함 3회까지.
         // 그 전에 손패의 함정을 빈 칸 수만큼 한 장씩, 사이에 잠깐 쉬며 설치한다 (7-4, 메인 행동 아님 — 요청 횟수에 넣지 않는다).
         private void TakeTurn(int bot, BotMind mind, double now, List<GameEvent> events)
@@ -266,10 +225,7 @@ namespace Chapchu.Game.Bots
 
                 if (move.Request == null)
                 {
-                    Log(bot, line);
-                    PlayerState me = _server.StateOf(bot);
-                    if (!me.IsChapchu && me.Hand.Count == GameServer.ChapchuHandCount)
-                        Declare(bot, mind, events, "내 턴 · 손패 10장");
+                    Log(bot, line); // 찹츄 선언은 자동이라 봇이 따로 요청하지 않는다 (7-5)
                     mind.Done = true;
                     return;
                 }
@@ -327,11 +283,11 @@ namespace Chapchu.Game.Bots
             int hand = me.Hand.Count;
             var moves = new List<Move>();
 
-            // 기다림 — 손패가 10장이면 선언하고(또는 찹츄를 지키며) 턴을 흘린다. 다른 수는 10장을 깨는 만큼 감점된다
+            // 기다림 — 손패가 10장이면 그대로 지키며 턴을 흘린다 (찹츄 상태인데 10장으로 턴을 맞았다 = 「기다려」 로 승리가 미뤄졌다, 7-5). 다른 수는 10장을 깨는 만큼 감점된다
             bool ten = hand == GameServer.ChapchuHandCount;
             moves.Add(new Move
             {
-                Text = me.IsChapchu ? "찹츄 유지 — 기다림" : ten ? "손패 10장 — 선언하고 기다림" : "아무것도 하지 않음",
+                Text = ten && me.IsChapchu ? "찹츄 유지 — 기다림" : ten ? "손패 10장 유지 — 기다림" : "아무것도 하지 않음",
                 Score = ten ? 0 : IdleScore
             });
 
@@ -525,11 +481,11 @@ namespace Chapchu.Game.Bots
         #region 함정 · 반응 (7-4)
 
         // 7-4 — 손패 앞쪽 함정 1장을 빈 칸에 설치한다. 놓았으면 true — 빈 칸 · 함정이 남았으면 잠깐 쉬고 다시 부른다 (TakeTurn).
-        // 손패가 10장(찹츄)이면 설치하지 않는다 — 설치하면 9장이 되어 찹츄가 깨진다
+        // 손패가 10장이면 설치하지 않는다 — 설치하면 9장이 되어 내 턴 시작 판정에서 찹츄가 무효가 된다 (07 4.2)
         private bool SetOneTrap(int bot, List<GameEvent> events)
         {
             PlayerState me = _server.StateOf(bot);
-            if (me.IsChapchu || me.Hand.Count == GameServer.ChapchuHandCount || me.Traps.Count >= GameServer.TrapSlotCount)
+            if (me.Hand.Count == GameServer.ChapchuHandCount || me.Traps.Count >= GameServer.TrapSlotCount)
                 return false;
 
             Card card = me.Hand.FirstOrDefault(c => c.Type == CardType.Trap);

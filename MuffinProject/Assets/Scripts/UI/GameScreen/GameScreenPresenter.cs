@@ -19,6 +19,8 @@ namespace Chapchu.UI.GameScreen
     public class GameScreenPresenter : MonoBehaviour
     {
         private const string ChoosingFormat = "{0} 고르는 중";
+        private const string MyChapchuShout = "찹츄!";            // 10-ui.md 5-2 #1 — 내가 선언했을 때
+        private const string OtherChapchuShoutFormat = "{0} 찹츄!"; // 남이 선언했을 때. {0} = 이름
 
         [SerializeField] private DeckPresenter deck;
         [SerializeField] private DiscardPilePresenter discardPile;
@@ -38,6 +40,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private MyTrapsPresenter myTraps;
         [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 1013).")]
         [SerializeField] private ScreenFlashView screenFlash;
+        [Tooltip("찹츄 선언 연출 — 집중선 + 큰 말풍선 (10-ui.md 5-2 #1).")]
+        [SerializeField] private ChapchuShoutView chapchuShout;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
         [SerializeField] private DeckData cardDeck;
 
@@ -55,7 +59,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || cardDeck == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -507,6 +511,7 @@ namespace Chapchu.UI.GameScreen
             history.ShowGameRestarted(user, count, order);
             boardEffects.ShowRestarted();
             gaepan.ShowRestarted();
+            chapchuShout.Hide();
             hand.EndReaction();
             reactionTimer.Hide();
             _chainCount = 0;
@@ -639,7 +644,8 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 찹츄 선언 · 해제 — 내 패널(버튼 「찹츄 완료」) 또는 그 사람 좌석, 턴 띠 칩, 기록. 선언 연출(전원 화면 1.5초, 10-ui.md 7절)은 아직 없다.
+        // 찹츄 선언 · 해제(턴 시작 판정의 무효) — 내 패널(「찹츄 완료」) 또는 그 사람 좌석, 턴 띠 칩, 기록.
+        // 찹츄 상태가 되면(자동 선언 · 카드로 부여) 모든 화면에 선언 연출 — 큐를 세우지 않는다 (10-ui.md 5-2 #1 · 7절).
         private void HandleChapchuChanged(int actorNumber, bool isChapchu)
         {
             bool isMe = IsMe(actorNumber);
@@ -651,9 +657,11 @@ namespace Chapchu.UI.GameScreen
                 else
                     seats.ShowChapchu(actorNumber, isChapchu);
                 turnStrip.ShowChapchu(actorNumber, isChapchu);
-                if (isChapchu)
-                    history.ShowChapchuDeclared(actorNumber);
-                return null;
+                if (!isChapchu)
+                    return null;
+
+                history.ShowChapchuDeclared(actorNumber);
+                return chapchuShout.PlayRoutine(isMe ? MyChapchuShout : string.Format(OtherChapchuShoutFormat, PlayerLook.NameOf(actorNumber)));
             });
         }
 

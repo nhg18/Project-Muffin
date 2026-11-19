@@ -3,6 +3,7 @@ using Chapchu.Cards;
 using Chapchu.Network;
 using Chapchu.UI;
 using Chapchu.UI.Fx;
+using Chapchu.UI.Fx.Common;
 using Chapchu.UI.GameScreen;
 using TMPro;
 using UnityEditor;
@@ -133,7 +134,7 @@ namespace Chapchu.EditorTools
             FeedView feed = BuildFeed(safeArea);
             MyPanelView myPanel = BuildMyCharacterAndPanel(safeArea);
             ChapchuButtonView chapchu = BuildChapchuButton(safeArea);
-            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu), ("server", TableBuilder.FindServer(nameof(MyPanelPresenter))));
+            Wire(myPanel.GetComponent<MyPanelPresenter>(), ("chapchuButton", chapchu));
 
             // 가운데 묶음 — 어둡게 가리는 판 · 상대 좌석 · 대상 선택 안내
             RectTransform center = NewRect("Center", canvasRect);
@@ -170,6 +171,9 @@ namespace Chapchu.EditorTools
             BuildMenuSheet(sheets, menu);
             BuildChoicePopup(sheets, TableBuilder.FindServer(nameof(ChoicePopupPresenter)));
 
+            // 찹츄 선언 연출 — 모든 것 위 (프로토타입 v2 #vfx z 58 > 서랍 45). 입력을 막지 않는다
+            ChapchuShoutView chapchuShout = BuildChapchuShout(canvasRect, center);
+
             // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
             var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
             HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, handReveal, coveredHud);
@@ -196,11 +200,39 @@ namespace Chapchu.EditorTools
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
                 ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects), ("gaepan", gaepan),
-                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("cardDeck", gameDeck));
+                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("chapchuShout", chapchuShout), ("cardDeck", gameDeck));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
             Debug.Log($"[{nameof(GameScreenBuilder)}] {CanvasName} 조립 완료 — 씬을 저장할 것.");
+        }
+
+        /// <summary>열린 씬에 찹츄 선언 연출(ChapchuShout)을 더하고 연출 큐에 잇는다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 아무것도 하지 않는다.</summary>
+        [MenuItem("Chapchu/Game Screen/Add Chapchu Shout")]
+        public static void AddChapchuShout()
+        {
+            GameObject canvas = GameObject.Find(CanvasName);
+            Transform center = canvas != null ? canvas.transform.Find("Center") : null;
+            GameScreenPresenter presenter = canvas != null ? canvas.GetComponentInChildren<GameScreenPresenter>(true) : null;
+            if (center == null || presenter == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 {CanvasName} · Center · GameScreenPresenter 가 없다.");
+                return;
+            }
+
+            if (canvas.GetComponentInChildren<ChapchuShoutView>(true) != null)
+            {
+                Debug.Log($"[{nameof(GameScreenBuilder)}] ChapchuShout 이 이미 있다.");
+                return;
+            }
+
+            _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
+            _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
+            ChapchuShoutView shout = BuildChapchuShout((RectTransform)canvas.transform, (RectTransform)center);
+            Undo.RegisterCreatedObjectUndo(shout.gameObject, "Add Chapchu Shout");
+            Wire(presenter, ("chapchuShout", shout));
+            EditorSceneManager.MarkSceneDirty(canvas.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] ChapchuShout 을 더함 — 씬을 저장할 것.");
         }
 
         /// <summary>열린 씬에 이미 있는 HUD 위 카드 층(TopCards)에 앞 층 합성 재질만 넣는다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다.</summary>
@@ -639,13 +671,9 @@ namespace Chapchu.EditorTools
             Stretch(shadow.rectTransform, 0f, 10f, 0f, -10f); // 아래로 10 (시안 box-shadow 0 5px 0)
             Image fill = RoundBox(root, Ink, 6f, 48f, White, true);
 
-            // 꼬리 — 왼쪽 아래 (60, −20) 32 × 32 를 45° 돌린 마름모. 잉크 마름모 위에 바탕색 마름모를 6 위로 겹쳐 아래 두 변만 잉크가 보인다
-            Image tailInk = NewImage("TailInk", root, Ink);
-            Anchor(tailInk.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(76f, -4f), new Vector2(32f, 32f));
-            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            Image tailFill = NewImage("TailFill", root, White);
-            Anchor(tailFill.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(76f, 2f), new Vector2(32f, 32f));
-            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            // 꼬리 — 왼쪽 아래 32 × 32 를 45° 돌린 마름모. 중심은 판의 아래 가장자리에 — 더 내리면 마름모의 양쪽 어깨가 테 밑으로 나와 세모가 아니라 마름모로 보인다.
+            // 잉크 마름모는 그림자 앞, 바탕색 마름모는 같은 중심 · 테 6 만큼 안쪽 = 20 (BubbleTail)
+            Image tailFill = BubbleTail(root, shadow.transform.GetSiblingIndex() + 1, White, new Vector2(76f, 0f), 32f, new Vector2(76f, 0f), 20f)[1];
 
             RectTransform content = NewRect("Content", root);
             Stretch(content);
@@ -1000,6 +1028,54 @@ namespace Chapchu.EditorTools
             return view;
         }
 
+        /// <summary>
+        /// 찹츄 선언 연출 (10-ui.md 5-2 #1 — 프로토타입 v2 fxSpeed · .bigshout, × 2). 캔버스 전체 · 맨 위 · 입력을 막지 않는다. 기본 숨김.
+        /// 가운데 = 화면 가운데에서 40 위 (시안 H/2 − 20). 흔들 판 = 가운데 묶음(center) — FxShaker 를 붙인다.
+        /// </summary>
+        internal static ChapchuShoutView BuildChapchuShout(RectTransform canvasRect, RectTransform center)
+        {
+            var middle = new Vector2(0.5f, 0.5f);
+            var spot = new Vector2(0f, 40f);
+
+            RectTransform root = NewRect("ChapchuShout", canvasRect);
+            Stretch(root);
+            var rootGroup = root.gameObject.AddComponent<CanvasGroup>();
+            rootGroup.blocksRaycasts = false;
+            rootGroup.interactable = false;
+
+            // 집중선 — 잉크 50% 쐐기 44개
+            RectTransform linesRect = NewRect("Lines", root);
+            Anchor(linesRect, middle, middle, spot, Vector2.zero);
+            var lines = linesRect.gameObject.AddComponent<UISpeedLines>();
+            lines.color = new Color(Ink.r, Ink.g, Ink.b, 0.5f);
+            lines.raycastTarget = false;
+            var linesGroup = linesRect.gameObject.AddComponent<CanvasGroup>();
+
+            // 말풍선 — 찹츄 색 바탕 · 잉크 테 10 · 반지름 88 · 안쪽 여백 16 80 28 (시안 .bigshout span: 테 5 · 반지름 44 · 여백 8 40 14)
+            RectTransform bubble = NewRect("Bubble", root);
+            Anchor(bubble, middle, middle, spot, Vector2.zero);
+            var bubbleGroup = bubble.gameObject.AddComponent<CanvasGroup>();
+            HorizontalLayout(bubble, new RectOffset(80, 80, 16, 28), 0f, TextAnchor.MiddleCenter, true, true);
+            FitBoth(bubble.gameObject);
+            ShapeBox(bubble, Ink, 10f, 88f, Chu); // 판 전체를 흐리게 하므로(bubbleGroup) 한 메시로 — 둘로 나누면 테두리가 면 너머로 비친다 (CODE_CONVENTION 10절)
+
+            // 꼬리 — 왼쪽 아래 68 × 68 을 45° 돌린 마름모 (시안 34 × 34, left 60 · bottom −22). 바탕색 마름모는 같은 중심 · 테 10 만큼 안쪽 = 48 (BubbleTail)
+            foreach (Image tail in BubbleTail(bubble, 0, Chu, new Vector2(164f, 0f), 68f, new Vector2(164f, 0f), 48f))
+                tail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            // 글자 184 (시안 92) — 흰 글자 + 잉크 외곽선 (외곽선은 뷰가 실행 때 넣는다)
+            TMP_Text label = NewText("Label", bubble, "찹츄!", 184f, White, true);
+            label.enableWordWrapping = false;
+
+            if (center.GetComponent<FxShaker>() == null)
+                center.gameObject.AddComponent<FxShaker>();
+
+            var view = root.gameObject.AddComponent<ChapchuShoutView>();
+            Wire(view, ("lines", lines), ("linesGroup", linesGroup), ("bubble", bubble), ("bubbleGroup", bubbleGroup), ("label", label), ("shaker", center.GetComponent<FxShaker>()));
+            root.gameObject.SetActive(false);
+            return view;
+        }
+
         private static readonly Vector2 PickRingSize = new Vector2(200f, 52f);
 
         // 대상 선택 발밑 빨간 링 (시안 .ring.pick). 기본 숨김 — 부르는 쪽이 자리를 잡는다.
@@ -1096,12 +1172,8 @@ namespace Chapchu.EditorTools
 
             Image fill = RoundBox(root, Ink, 5f, 28f, Chu);
             float tailX = g.SayLeft ? 190f - 28f - 12f : 28f + 12f;
-            Image tailInk = NewImage("TailInk", root, Ink);
-            Anchor(tailInk.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(tailX, -6f), new Vector2(24f, 24f));
-            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            Image tailFill = NewImage("TailFill", root, Chu);
-            Anchor(tailFill.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(tailX, -1f), new Vector2(24f, 24f));
-            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            // 꼬리 (BubbleTail) — 바탕색 마름모 자리 · 크기는 사용자가 씬에서 맞춘 값 (2026-11-19, Seat1 기준 — 반대쪽을 보는 좌석은 좌우를 뒤집는다)
+            BubbleTail(root, 0, Chu, new Vector2(tailX, 0f), 24f, new Vector2(tailX + (g.SayLeft ? -0.54f : 0.54f), 5.4f), 21f);
 
             TMP_Text text = NewText("Text", fill.transform, "찹츄!", 38f, White, true);
             Stretch(text.rectTransform);
@@ -1677,6 +1749,24 @@ namespace Chapchu.EditorTools
             box.raycastTarget = raycastTarget;
             box.Set(UIShape.ShapeKind.RoundRect, radius, borderWidth, borderColor);
             return box;
+        }
+
+        /// <summary>
+        /// 말풍선 꼬리 — 45° 돌린 마름모 둘. 판(RoundBox · ShapeBox)을 만든 뒤에 부른다. 자리는 parent 왼쪽 아래 기준 마름모의 중심.
+        /// 잉크 마름모는 inkSiblingIndex(판 뒤)에 둬서 판 아래로 나온 세모만 보이고, 바탕색 마름모가 판 앞에서 테를 꼬리 안쪽 폭만큼만 연다.
+        /// 바탕색 마름모를 위로 밀어 겹치면 테를 꼬리 선보다 넓게 파먹어 마름모가 드러난다 (사용자 2026-11-19). 돌려주는 값 = { 잉크, 바탕색 }.
+        /// </summary>
+        private static Image[] BubbleTail(Transform parent, int inkSiblingIndex, Color fillColor, Vector2 inkCenter, float inkSize, Vector2 fillCenter, float fillSize)
+        {
+            var pivot = new Vector2(0.5f, 0.5f);
+            Image tailInk = NewImage("TailInk", parent, Ink);
+            Anchor(tailInk.rectTransform, Vector2.zero, pivot, inkCenter, new Vector2(inkSize, inkSize));
+            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            tailInk.transform.SetSiblingIndex(inkSiblingIndex);
+            Image tailFill = NewImage("TailFill", parent, fillColor);
+            Anchor(tailFill.rectTransform, Vector2.zero, pivot, fillCenter, new Vector2(fillSize, fillSize));
+            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            return new[] { tailInk, tailFill };
         }
 
         private static Sprite Hud(string name)

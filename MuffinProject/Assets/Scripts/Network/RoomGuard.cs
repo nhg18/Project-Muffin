@@ -92,6 +92,12 @@ namespace Chapchu.Network
             room.MaxPlayers = _maxPlayers = maxPlayers;
         }
 
+        /// <summary>
+        /// 방 속성 읽기 — 믿는 방장은 자기가 쓴 원본을, 다른 클라는 방 속성 사본을 (09-network.md 3절). 없으면 null.
+        /// 방장은 자기가 쓴 값을 서버 확인 뒤에야 방에서 본다 — 쓴 직후에 다시 읽어 판정하는 값은 이것으로 읽는다.
+        /// </summary>
+        public object RoomValue(string key) => IsTrustedMaster ? _room[key] : PhotonNetwork.CurrentRoom?.CustomProperties[key];
+
         private static void Remember(Hashtable intended, Hashtable props)
         {
             foreach (DictionaryEntry entry in props)

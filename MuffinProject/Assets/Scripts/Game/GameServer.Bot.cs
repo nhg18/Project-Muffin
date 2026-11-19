@@ -34,9 +34,6 @@ namespace Chapchu.Game
 
         internal double DeathDeadline => _deathDeadline;
 
-        /// <summary>선언 대기 중 — 턴 주인이 뽑아서 10장이 됐고 아직 턴이 넘어가지 않았다 (03-turn.md 4절).</summary>
-        internal bool IsDeclareWait => _declareWait;
-
         /// <summary>덱 + 버림 더미 장수 — 이보다 많이 뽑으면 빈 덱 피해 (05-deck.md 5절). 둘 다 공개 값이다.</summary>
         internal int DrawableCount => _deck.Count + _discardPile.Count;
 
