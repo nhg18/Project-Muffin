@@ -232,7 +232,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 체인에 남은 카드를 모두 버림 더미 자리로 보내 지운다 — 112 대소동의 새 판 (체인이 처리 도중에 버려져 ChainDiscarded 가 오지 않는다, 11-card-list 112).
+        /// 체인에 남은 카드를 모두 버림 더미 자리로 보내 지운다 — 1012 대소동의 새 판 (체인이 처리 도중에 버려져 ChainDiscarded 가 오지 않는다, 11-card-list 1012).
         /// 카드는 새 덱에 들어갔으니 버림 더미 장수는 바꾸지 않는다 — 부르는 쪽이 더미를 비운다. 연출 큐가 기다릴 코루틴.
         /// </summary>
         public IEnumerator DiscardAllRoutine()

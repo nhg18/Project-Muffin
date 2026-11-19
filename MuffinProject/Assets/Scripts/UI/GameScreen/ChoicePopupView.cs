@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 카드 효과 고르기 판 — 선택지 버튼 2개 (프로토타입 v2 `.pop2.pick` · G.choose opts, 11-card-list 119).
+    /// 카드 효과 고르기 판 — 선택지 버튼 2개 (프로토타입 v2 `.pop2.pick` · G.choose opts, 11-card-list 1019).
     /// 머리 띠: 발 아이콘 + 제목 + 남은 초(오른쪽). 몸통: 설명 + 버튼 줄(첫 버튼이 주 버튼). 받은 값을 표시만 한다.
     /// </summary>
     public class ChoicePopupView : MonoBehaviour

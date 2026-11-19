@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_111
+  m_Name: Card_1017
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 111
-  cardName: "\uC6B4\uBA85 \uB4A4\uC9D1\uAE30"
-  cardImage: {fileID: 21300000, guid: 72414c2bbed2c2548a88e419e4aba595, type: 3}
+  id: 1017
+  cardName: "\uC9C0\uC625\uCC38\uB9C8\uB3C4"
+  cardImage: {fileID: 21300000, guid: a0e5b9ab0a469524c9bf8512199d83dc, type: 3}
   type: 0
-  targetType: 1
+  targetType: 3
   targetCondition: 0
-  grade: 2
-  description: "\uB300\uC0C1\uACFC HP\uB97C \uB9DE\uBC14\uAFBC\uB2E4"
+  grade: 3
+  description: "\uB098\uB97C \uBE80 \uBAA8\uB450\uC5D0\uAC8C 40 \uD53C\uD574\uB97C
+    \uC900\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
@@ -29,10 +30,12 @@ MonoBehaviour:
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117934215004274
+  - rid: 4532117934215004251
   references:
     version: 2
     RefIds:
-    - rid: 4532117934215004274
-      type: {class: SwapHpEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
-      data: 
+    - rid: 4532117934215004251
+      type: {class: DamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        subject: 0
+        amount: 40

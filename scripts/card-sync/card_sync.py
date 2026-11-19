@@ -34,7 +34,7 @@ CARD_LIST_MD = "docs/systems/11-card-list.md"
 RULE_HEADINGS = ("효과", "추가 사용 조건", "발동 조건", "예외")
 REQUIRED = ("Name", "Type", "대상", "장수", "카드 문구", "등급")
 GRADE_ENUM = {"일반": "Normal", "고급": "Fine", "희귀": "Rare", "개판": "Gaepan"}
-TYPE_PREFIX = {"Action": 100, "Counter": 200, "Trap": 300}
+TYPE_PREFIX = {"Action": 1000, "Counter": 2000, "Trap": 3000}
 
 NOTION_VERSION = "2025-09-03"
 API = "https://api.notion.com/v1"
@@ -536,7 +536,7 @@ class Bot:
             if c["id"] is not None or c["state"] == "삭제" or c["type"] not in TYPE_PREFIX:
                 continue
             base = TYPE_PREFIX[c["type"]]
-            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 100]
+            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 1000]
             c["id"] = max(used, default=base) + 1
             self.n.update_page(c["page"], {"ID": {"number": c["id"]}})
             self.say(f"ID 채움: {c['name']} → {c['id']}")

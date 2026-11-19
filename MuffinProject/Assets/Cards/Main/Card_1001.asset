@@ -10,31 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_121
+  m_Name: Card_1001
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 121
-  cardName: "\uAC1C\uD310 \uC624\uBD84\uC804"
-  cardImage: {fileID: 0}
+  id: 1001
+  cardName: "\uBB3C\uC5B4\uB72F\uAE30"
+  cardImage: {fileID: 21300000, guid: 189283ae12f7e274c8dbc511fa597e90, type: 3}
   type: 0
-  targetType: 5
+  targetType: 1
   targetCondition: 0
-  grade: 3
-  description: "5\uBC14\uD034 \uB4A4 \uBC18\uBC18 \uD655\uB960\uB85C HP \uAF34\uCC0C
-    \uB610\uB294 \uC190\uD328 \uAF34\uCC0C\uAC00 \uC989\uC2DC \uC0AC\uB9DD\uD55C\uB2E4
-    (\uB3D9\uC810\uC774\uBA74 \uBB34\uC791\uC704 1\uBA85)"
+  grade: 0
+  description: "\uB300\uC0C1\uC5D0\uAC8C 20 \uD53C\uD574\uB97C \uC900\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
   reactCondition: 0
   revealSeconds: 1
-  resolveSeconds: 3
+  resolveSeconds: 1.28
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117965319438437
+  - rid: 4532117934215004248
   references:
     version: 2
     RefIds:
-    - rid: 4532117965319438437
-      type: {class: StartGaepanEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
-      data: 
+    - rid: 4532117934215004248
+      type: {class: DamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        subject: 0
+        amount: 20

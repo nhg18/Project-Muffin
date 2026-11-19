@@ -5,7 +5,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 받는 사람의 다음 실제 턴에 행동 카드 금지 — 겹쳐도 1회 (BlockAction — 107 짖기, 11-card-list 107 · 03-turn.md 7절).
+    /// 받는 사람의 다음 실제 턴에 행동 카드 금지 — 겹쳐도 1회 (BlockAction — 1007 짖기, 11-card-list 1007 · 03-turn.md 7절).
     /// 스킵된 턴은 세지 않는다. 뽑기 · 함정 설치 · 카운터는 그대로. 봇은 내 HP 가 낮을 때 몸을 지키는 데 쓴다 (18-bot.md 7-3).
     /// </summary>
     [Serializable]

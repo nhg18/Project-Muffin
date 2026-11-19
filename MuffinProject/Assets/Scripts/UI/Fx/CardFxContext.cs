@@ -47,7 +47,7 @@ namespace Chapchu.UI.Fx
         public IReadOnlyList<CardFxSeat> Seats = Array.Empty<CardFxSeat>();
 
         /// <summary>
-        /// 카드를 한 장씩 받는 사람들, 받는 순서 (예: 무야호 — 쓴 사람부터 턴 순서, 대상 손패가 떨어지면 거기까지 · 11-card-list 118).
+        /// 카드를 한 장씩 받는 사람들, 받는 순서 (예: 무야호 — 쓴 사람부터 턴 순서, 대상 손패가 떨어지면 거기까지 · 11-card-list 1018).
         /// 받는 사람을 정하는 카드가 아니면 비어 있다.
         /// </summary>
         public IReadOnlyList<CardFxSeat> Receivers = Array.Empty<CardFxSeat>();

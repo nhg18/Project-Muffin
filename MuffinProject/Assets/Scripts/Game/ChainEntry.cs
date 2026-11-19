@@ -30,16 +30,16 @@ namespace Chapchu.Game
         public readonly Dictionary<int, int> SurviveAt = new Dictionary<int, int>();       // C11 — 받는 사람 → 남길 HP
         public readonly HashSet<int> ProtectTraps = new HashSet<int>();                     // C12 — 함정 주인
 
-        /// <summary>낼 때 정한 값 — 효과 → 값 (116 뽑을 장수). CardEffect.Prepare 가 채운다.</summary>
+        /// <summary>낼 때 정한 값 — 효과 → 값 (1016 뽑을 장수). CardEffect.Prepare 가 채운다.</summary>
         public readonly Dictionary<Effects.CardEffect, int> Rolled = new Dictionary<Effects.CardEffect, int>();
 
-        /// <summary>이 카드의 피해로 HP 가 0 이 된 사람 — 그 순간에 정한다 (사망 대기에서 살아나도 남는다). 105 드롭킥 「못 쓰러뜨리면」 판정 (11-card-list 4절 #2).</summary>
+        /// <summary>이 카드의 피해로 HP 가 0 이 된 사람 — 그 순간에 정한다 (사망 대기에서 살아나도 남는다). 1005 드롭킥 「못 쓰러뜨리면」 판정 (11-card-list 4절 #2).</summary>
         public readonly HashSet<int> KnockedDown = new HashSet<int>();
 
         /// <summary>체인에서 바로 아래 카드 (맨 아래면 null) — 체인에 오를 때 정한다. 카운터가 반응한 카드다 (04 7절).</summary>
         public ChainEntry Below;
 
-        /// <summary>처리 중 — 다음에 적용할 효과 번호. 0 이면 아직 처리 전. 대상의 고르기(119)로 멈췄다 이어 갈 때 쓴다 (04 9.3).</summary>
+        /// <summary>처리 중 — 다음에 적용할 효과 번호. 0 이면 아직 처리 전. 대상의 고르기(1019)로 멈췄다 이어 갈 때 쓴다 (04 9.3).</summary>
         public int NextEffect;
 
         public ChainEntry(Card card, int user, int[] targets)

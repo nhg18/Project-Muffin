@@ -4,7 +4,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 쓴 사람과 대상의 HP 를 서로 바꾼다 (SwapHp — 111 운명 뒤집기). HP 설정이라 피해 · 회복이 아니다 — 감소 · 반사 · 함정이 걸리지 않는다 (11-card-list 1-2).
+    /// 쓴 사람과 대상의 HP 를 서로 바꾼다 (SwapHp — 1011 운명 뒤집기). HP 설정이라 피해 · 회복이 아니다 — 감소 · 반사 · 함정이 걸리지 않는다 (11-card-list 1-2).
     /// 봇은 대상 HP 가 내 HP 보다 높을 때만 쓴다 — 차이가 클수록 점수가 높다 (18-bot.md 7-3).
     /// </summary>
     [Serializable]
