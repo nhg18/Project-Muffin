@@ -177,6 +177,7 @@ namespace Chapchu.Game
                 {
                     CardEffect effect = effects[entry.NextEffect++];
                     effect.Apply(this, entry);
+                    SettleChapchu(); // 효과 하나가 끝난 뒤의 손패로 자동 선언 (07 4.1)
                     if (_restartPending)
                         return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
                     if (IsChoosing)

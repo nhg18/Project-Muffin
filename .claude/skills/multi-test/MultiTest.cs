@@ -48,8 +48,7 @@ public static class MultiTest
     private const string WarnMessageField = "warnMessage";
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomPresenter — 「나가기」 (혼자면 확인 없이 나간다)
     private const string RoomLastLogField = "lastLineText";                // RoomLogView — 접힌 로그의 최근 한 줄
-    private const string ChapchuClickedMethod = "HandleChapchuClicked";    // MyPanelPresenter — 찹츄 버튼 탭
-    private const string ChapchuStateMethod = "GetChapchuState";           // MyPanelPresenter — 찹츄 버튼 상태
+    private const string PanelChapchuField = "_isChapchu";                 // MyPanelPresenter — 내 찹츄 상태 (찹츄 자리 「찹츄 완료」)
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
     private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
@@ -257,11 +256,13 @@ public static class MultiTest
         return "OK P" + me + " 남의 턴에 카드 사용 요청";
     }
 
-    // ── 찹츄 버튼 (07-win-condition.md 4.1 · 10-ui.md 「찹츄 버튼 상태」) ──
+    // ── 찹츄 자동 선언 (07-win-condition.md 4.1 · 10-ui.md 「찹츄 버튼 상태」) ──
+
+    private const string ChapchuReportedKey = "MultiTest.ChapchuReported";
 
     /// <summary>
-    /// 내 턴이면: 찹츄 버튼이 활성(내 턴 · 10장)이면 버튼을 누르고, 아니면 비활성 버튼을 한 번 눌러 본 뒤(요청이 가면 안 된다) 뽑는다.
-    /// 선언한 뒤 같은 턴에는 아무것도 하지 않는다 — 뽑으면 11장이 돼 해제된다. 턴은 30초 뒤 넘어간다.
+    /// 내 화면에 찹츄가 선언돼 있으면 한 번만 「찹츄 선언됨」 을 알린다 (선언은 자동 — 누르는 것이 없다). 아니고 내 턴이면 뽑는다.
+    /// 선언된 뒤에는 뽑지 않는다 — 10장을 지켜 다음 내 턴 시작에 이긴다.
     /// </summary>
     public static string ChapchuStep()
     {
@@ -278,22 +279,18 @@ public static class MultiTest
         if ((bool)typeof(GameDebugInput).GetField(GameEndedField, Private).GetValue(input))
             return "SKIP P" + me + " 게임 끝";
 
-        if (turnActor != me)
-            return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
-
         int handCount = ((List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input)).Count;
-        string state = ChapchuStateOf(panel);
-        if (state == "Declared")
-            return "SKIP P" + me + " 선언함 — 턴이 넘어가길 기다림";
-
-        if (state == "Ready")
+        if (ChapchuStateOf(panel) == "Declared")
         {
-            Call(panel, ChapchuClickedMethod);
-            return "OK P" + me + " 찹츄 버튼 누름 (손패 " + handCount + ")";
+            string room = PhotonNetwork.CurrentRoom.Name + ":" + panel.GetInstanceID(); // 방 이름은 판마다 같다 (Debug) — 이 판의 화면 오브젝트로 가른다
+            if (SessionState.GetString(ChapchuReportedKey, "") == room)
+                return "SKIP P" + me + " 선언됨 — 10장을 지키며 내 턴을 기다림";
+            SessionState.SetString(ChapchuReportedKey, room);
+            return "OK P" + me + " 찹츄 선언됨 (손패 " + handCount + ")";
         }
 
-        if (handCount == GameServer.ChapchuHandCount)
-            return "WAIT P" + me + " 손패 10장 · 내 턴인데 버튼이 아직 " + state + " (연출 큐 대기)";
+        if (turnActor != me)
+            return "SKIP P" + me + " 남의 턴(P" + turnActor + ")";
 
         double deadline = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDeadline, out object value) ? (double)value : -1;
         string turnKey = deadline.ToString("R");
@@ -301,12 +298,43 @@ public static class MultiTest
             return "SKIP P" + me + " 처리 중";
         SessionState.SetString(ActedTurnKey, turnKey);
 
-        Call(panel, ChapchuClickedMethod); // 비활성 — 안내 토스트만, 선언 요청은 가지 않아야 한다 (거절 코드 11 이 오면 요청이 간 것)
         server.RequestDraw();
-        return "OK P" + me + " 비활성 버튼 누름(손패 " + handCount + ") · 뽑기";
+        return "OK P" + me + " 뽑기 (손패 " + handCount + ")";
     }
 
-    /// <summary>actor 의 찹츄 상태가 이 화면에 보일 때까지 WAIT — 내 것이면 버튼 「찹츄 완료」, 남의 것이면 그 좌석의 찹츄 표시.</summary>
+    /// <summary>
+    /// 찹츄 선언 연출 찍기 — 연출(ChapchuShoutView)이 켜지고 secondsCsv 초 뒤마다 prefix + "_<초>.png". 1.5초짜리라 CLI 부름 사이로는 놓친다 — 게임 중에 미리 걸어 둔다. 첫 선언 한 번만.
+    /// </summary>
+    public static string ArmShoutShots(string prefix, string secondsCsv)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+        ChapchuShoutView shout = Object.FindFirstObjectByType<ChapchuShoutView>(FindObjectsInactive.Include);
+        if (shout == null) return "FAIL 씬에 ChapchuShoutView 가 없다";
+        double[] times = secondsCsv.Split(',').Select(double.Parse).ToArray();
+        double startedAt = -1;
+        int taken = 0;
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying || shout == null || taken >= times.Length)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+            if (startedAt < 0)
+            {
+                if (!shout.gameObject.activeInHierarchy) return;
+                startedAt = EditorApplication.timeSinceStartup;
+            }
+            if (EditorApplication.timeSinceStartup - startedAt < times[taken]) return;
+            ScreenCapture.CaptureScreenshot(prefix + "_" + times[taken].ToString("0.0") + ".png");
+            taken++;
+        };
+        EditorApplication.update += tick;
+        return "OK 찹츄 선언 연출 스크린샷 대기 → " + prefix + "_<" + secondsCsv + ">.png";
+    }
+
+    /// <summary>actor 의 찹츄 상태가 이 화면에 보일 때까지 WAIT — 내 것이면 찹츄 자리 「찹츄 완료」, 남의 것이면 그 좌석의 찹츄 표시.</summary>
     public static string ChapchuExpect(string actor)
     {
         MyPanelPresenter panel = Object.FindFirstObjectByType<MyPanelPresenter>();
@@ -319,7 +347,7 @@ public static class MultiTest
         if (target == me)
         {
             string state = ChapchuStateOf(panel);
-            return state == "Declared" ? "OK P" + me + " 내 버튼 「찹츄 완료」" : "WAIT P" + me + " 내 버튼 " + state;
+            return state == "Declared" ? "OK P" + me + " 내 찹츄 자리 「찹츄 완료」" : "WAIT P" + me + " 내 찹츄 자리 " + state;
         }
 
         var seatOf = (Dictionary<int, OpponentSeatView>)typeof(OpponentSeatsPresenter).GetField(SeatOfField, Private).GetValue(seats);
@@ -332,11 +360,11 @@ public static class MultiTest
 
     private static string ChapchuStateOf(MyPanelPresenter panel)
     {
-        MethodInfo info = typeof(MyPanelPresenter).GetMethod(ChapchuStateMethod, Private);
+        FieldInfo info = typeof(MyPanelPresenter).GetField(PanelChapchuField, Private);
         if (info == null)
-            throw new MissingMethodException(nameof(MyPanelPresenter), ChapchuStateMethod + " — 이름이 바뀌었으면 MultiTest.cs 의 표를 고친다");
+            throw new MissingFieldException(nameof(MyPanelPresenter), PanelChapchuField + " — 이름이 바뀌었으면 MultiTest.cs 의 표를 고친다");
 
-        return info.Invoke(panel, null).ToString();
+        return (bool)info.GetValue(panel) ? "Declared" : "NotDeclared";
     }
 
     // ── 한 클라이언트 UI 흐름: 타이틀 → 로비 → 방 → 나가기 ──
@@ -1179,10 +1207,10 @@ public static class MultiTest
         var notStarted = new GameServer(new System.Random(1), () => now);
         var requests = new List<Func<IReadOnlyList<GameEvent>>>
         {
-            () => notStarted.DeclareChapchu(actors[0]), () => notStarted.PlayCounter(actors[0], 1, null)
+            () => notStarted.PlayCounter(actors[0], 1, null)
         };
         if (!server.IsGameOver)
-            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.DeclareChapchu(stranger), () => server.PlayCounter(stranger, 1, null) });
+            requests.AddRange(new Func<IReadOnlyList<GameEvent>>[] { () => server.PlayCounter(stranger, 1, null) });
 
         bool strangerOk;
         try
@@ -1195,7 +1223,7 @@ public static class MultiTest
             sb.AppendLine("FAIL 참가자가 아닌 요청에서 예외 — " + e.GetType().Name);
         }
         failed |= !strangerOk;
-        sb.AppendLine((strangerOk ? "" : "FAIL ") + "참가자가 아닌 사람의 찹츄 · 카운터 · 함정 발동 요청 → 10 (" + requests.Count + "건)");
+        sb.AppendLine((strangerOk ? "" : "FAIL ") + "참가자가 아닌 사람의 카운터 · 함정 발동 요청 → 10 (" + requests.Count + "건)");
 
         // 남의 닉네임 표시 거르기 — 서식 태그 · 제어 문자 · 길이. 검사를 통과한 이름은 그대로
         var names = new (string raw, string shown)[]
@@ -1440,70 +1468,88 @@ public static class MultiTest
             sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
         }
 
-        // 1. 찹츄 선언 조건 → 다음 자기 턴 시작에 승리
+        Func<int, Card> Act(TargetType target, params CardEffect[] e) => id => new Card(id, 900, CardType.Action, target, e, null, ChainTable.Reveal, ChainTable.Resolve);
+        bool Declared(IEnumerable<GameEvent> events, int actor) => events.OfType<ChapchuChanged>().Any(e => e.Actor == actor && e.IsChapchu);
+        bool Cleared(IEnumerable<GameEvent> events, int actor) => events.OfType<ChapchuChanged>().Any(e => e.Actor == actor && !e.IsChapchu);
+
+        // 1. 자동 선언 (07 4.1) — 내 턴에 뽑아 정확히 10장 → 선언 · 대기 없이 턴 종료 → 다음 자기 턴 시작에 승리
         {
-            var own = new ChainTable();
-            Check(own.Code(own.Server.DeclareChapchu(own.Turn)) == RejectCode.NotTenCards, "손패 6장 선언 → 11");
-            own.SetHandSize(own.Turn, 10);
-            Check(own.Server.DeclareChapchu(own.Turn).OfType<ChapchuChanged>().Any(e => e.IsChapchu), "10장 · 내 턴에 선언 → 찹츄");
-            Check(own.Code(own.Server.DeclareChapchu(own.Turn)) == RejectCode.AlreadyChapchu, "다시 선언 → 12");
-
             var t = new ChainTable();
-            t.SetHandSize(t.O1, 10);
-            Check(t.Code(t.Server.DeclareChapchu(t.O1)) == RejectCode.NotYourTurn && !t.State(t.O1).IsChapchu, "10장 · 남의 턴에 선언 → 1 (내 턴에만, 07 4.1)");
-            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태
-            t.Play(t.Turn, ChainTable.Hit, t.O2);
-            t.At(ChainTable.Reveal + ReactionSeconds);
-            t.Tick();
-            t.At(100);
-            List<GameEvent> events = t.Tick().ToList();
+            t.SetHandSize(t.Turn, 8);
+            IReadOnlyList<GameEvent> drawn = t.Server.Draw(t.Turn);
+            Check(t.HandCount(t.Turn) == 10 && Declared(drawn, t.Turn) && drawn.OfType<TurnStarted>().Any(e => e.Actor == t.O1),
+                "8장에서 2장 뽑아 10장 → 자동 선언 · 선언 대기 없이 바로 턴 종료");
+            Check(!t.Server.Draw(t.O1).OfType<ChapchuChanged>().Any() && !t.State(t.O1).IsChapchu, "6장에서 뽑아 8장 → 선언 없음");
+            List<GameEvent> events = t.Server.Draw(t.O2).ToList();
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
-            Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(), "자기 턴이 오는 순간 찹츄 승리 (턴 시작 없음)");
-            Check(t.Code(t.Server.Draw(t.O1)) == RejectCode.GameOver && t.Tick().Count == 0, "끝난 뒤 요청 → 13 · Tick 은 아무 일 없음");
+            Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(), "자기 턴이 오는 순간 10장 → 찹츄 승리 (턴 시작 없음)");
+            Check(t.Code(t.Server.Draw(t.Turn)) == RejectCode.GameOver && t.Tick().Count == 0, "끝난 뒤 요청 → 13 · Tick 은 아무 일 없음");
         }
-
-        // 1-2. 선언 대기 — 뽑아서 정확히 10장이면 턴이 바로 끝나지 않고 5초 (03-turn 4절)
         {
             var t = new ChainTable();
             t.SetHandSize(t.Turn, 9);
             IReadOnlyList<GameEvent> drawn = t.Server.Draw(t.Turn);
-            Check(drawn.OfType<CardDrawn>().Count() == 1 && t.HandCount(t.Turn) == 10 && !drawn.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn,
-                "9장에서 1장 뽑아 10장 → 턴이 넘어가지 않는다 (선언 대기)");
-            Check(t.Code(t.Server.Draw(t.Turn)) == RejectCode.MainActionUsed && t.Code(t.Play(t.Turn, ChainTable.Hit, t.O1)) == RejectCode.MainActionUsed,
-                "대기 중 다시 뽑기 · 카드 → 7");
-            t.At(3);
-            Check(!t.Tick().OfType<TurnStarted>().Any(), "3초 — 아직 대기");
-            IReadOnlyList<GameEvent> declared = t.Server.DeclareChapchu(t.Turn);
-            Check(declared.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu) && declared.OfType<TurnStarted>().Any(e => e.Actor == t.O1),
-                "대기 중 선언 → 승인된 순간 턴 종료");
+            Check(drawn.OfType<CardDrawn>().Count() == 1 && t.HandCount(t.Turn) == 10 && Declared(drawn, t.Turn) && drawn.OfType<TurnStarted>().Any(e => e.Actor == t.O1),
+                "9장에서 1장 뽑아 10장 → 자동 선언 · 바로 턴 종료");
         }
         {
             var t = new ChainTable();
-            t.SetHandSize(t.Turn, 9);
-            t.Server.Draw(t.Turn);
-            t.At(4.9);
-            bool waiting = !t.Tick().OfType<TurnStarted>().Any();
-            t.At(5);
-            Check(waiting && t.Tick().OfType<TurnStarted>().Any(e => e.Actor == t.O1) && !t.State(t.Turn).IsChapchu, "선언 없이 5초 → 턴 종료 (찹츄 아님)");
-        }
-        {
-            var t = new ChainTable();
-            t.SetHandSize(t.Turn, 7);
-            Check(t.Server.Draw(t.Turn).OfType<TurnStarted>().Any(e => e.Actor == t.O1) && t.HandCount(t.Turn) == 9, "7장에서 2장 뽑아 9장 → 대기 없이 바로 턴 종료");
+            t.SetHandSize(t.Turn, 11);
+            Check(Declared(t.Play(t.Turn, ChainTable.Hit, t.O1), t.Turn) && t.HandCount(t.Turn) == 10, "11장에서 카드를 내 10장 → 자동 선언");
         }
 
-        // 2. 10장이 아니게 되면 즉시 해제 — 승리 없음
+        // 1-2. 남의 턴에도 선언 · 효과 하나가 끝난 뒤의 장수만 본다 (지나친 10장은 선언 아님, PM 2026-11-19)
         {
             var t = new ChainTable();
-            t.SetHandSize(t.Turn, 10);
-            t.Server.DeclareChapchu(t.Turn);
-            IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
-            Check(played.OfType<ChapchuChanged>().Any(e => !e.IsChapchu), "카드를 내 9장 → 즉시 해제");
-            t.At(ChainTable.Reveal + ReactionSeconds);
-            t.Tick();
-            t.At(100);
-            t.Tick();
-            Check(!t.Server.IsGameOver && t.Server.CurrentTurnActor == t.O1, "해제된 사람은 이기지 않는다");
+            t.SetHandSize(t.O1, 9);
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DrawEffect { subject = EffectSubject.Target, count = 1 })), t.O1);
+            Check(t.HandCount(t.O1) == 10 && Declared(events, t.O1) && t.State(t.O1).IsChapchu, "남의 턴에 카드 효과로 10장 → 자동 선언");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.O1, 9);
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DrawEffect { subject = EffectSubject.Target, count = 2 })), t.O1);
+            Check(t.HandCount(t.O1) == 11 && !events.OfType<ChapchuChanged>().Any() && !t.State(t.O1).IsChapchu, "9장에서 2장 뽑는 효과 → 11장 — 지나친 10장은 선언이 아니다");
+        }
+
+        // 2. 선언 뒤 장수가 바뀌어도 유지 → 자기 턴 시작에 10장이 아니면 무효 → 다시 10장이면 재선언 (07 4.2)
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 8);
+            t.Server.Draw(t.Turn); // 10장 선언 → O1 턴
+            List<GameEvent> events = t.PlayAndResolve(t.O1, t.Give(t.O1, Act(TargetType.OneOther, new DiscardEffect { subject = EffectSubject.Target, count = 1 })), t.Turn);
+            Check(t.HandCount(t.Turn) == 9 && t.State(t.Turn).IsChapchu && !Cleared(events, t.Turn), "선언 뒤 9장이 돼도 찹츄 유지");
+            t.RunUntilTurn(t.O2, t.Now + 20);
+            events = t.Server.Draw(t.O2).ToList();
+            Check(Cleared(events, t.Turn) && !t.Server.IsGameOver && events.OfType<TurnStarted>().Any(e => e.Actor == t.Turn) && !t.State(t.Turn).IsChapchu,
+                "자기 턴 시작에 9장 → 선언 무효 · 턴은 보통대로 시작");
+            events = t.Server.Draw(t.Turn).ToList();
+            Check(t.HandCount(t.Turn) == 10 && Declared(events, t.Turn), "그 턴에 뽑아 다시 10장 → 재선언");
+            t.Server.Draw(t.O1);
+            GameEnded ended = t.Server.Draw(t.O2).OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Chapchu, "재선언한 뒤 다음 자기 턴에 승리");
+        }
+
+        // 2-2. 사망 대기 중에는 선언하지 않는다 → 살아난 뒤 10장이면 선언 (PM 2026-11-19)
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 10);
+            t.SetHandSize(t.O1, 9);
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DamageEffect { subject = EffectSubject.Target, amount = 10 }, new DrawEffect { subject = EffectSubject.Target, count = 1 })), t.O1);
+            bool pending = events.OfType<DeathPending>().Any(e => e.Actor == t.O1);
+            Check(pending && t.HandCount(t.O1) == 10 && !t.State(t.O1).IsChapchu, "HP 0 · 사망 대기 중 10장 → 선언하지 않는다");
+            t.SetHp(t.O1, 30); // 대기 중 회복
+            events = t.Run(t.Now + 8);
+            Check(events.OfType<DeathAvoided>().Any(e => e.Actor == t.O1) && Declared(events, t.O1), "살아난 뒤 10장 → 선언");
+        }
+
+        // 2-3. 부여된 찹츄 (A20 · T16) — 장수 조건 없이 붙고, 그 사람의 턴 시작에 판정 (07 7 · 8절)
+        {
+            var t = new ChainTable();
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1);
+            Check(t.HandCount(t.O1) == 6 && Declared(events, t.O1), "6장인 사람에게 찹츄 부여 → 붙는다");
+            events = t.Run(t.Now + 20);
+            Check(Cleared(events, t.O1) && events.OfType<TurnStarted>().Any(e => e.Actor == t.O1) && !t.Server.IsGameOver, "부여된 찹츄도 턴 시작에 10장이 아니면 무효");
         }
 
         // 3. 처치 승리 — 마지막 1인, 사망 대기가 끝난 뒤
@@ -1759,17 +1805,7 @@ public static class MultiTest
         Check(lines > 0, $"행동 이유 로그 {lines}줄 · 카운터 {counters} · 함정 발동 {traps}");
         sb.Append(sample);
 
-        // ② 찹츄 선언 — 내 턴에만 (7-5). 남의 턴에 10장이면 기다린다 · 뽑아서 10장이면 선언 대기 안에서 1 ~ 3초 뒤 · 턴 시작 때 이미 10장이면 선언하고 기다린다
-        {
-            double now = 0;
-            var t = new ChainTable(() => now);
-            var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
-            t.SetHandSize(t.O1, 10);
-            var events = new List<GameEvent>();
-            for (now = 0; now < BotTurnSeconds; now += 0.1)
-                events.AddRange(driver.Tick());
-            Check(events.Count == 0 && !t.State(t.O1).IsChapchu, "남의 턴에 손패 10장 → 선언하지 않는다 (요청도 없다)");
-        }
+        // ② 찹츄 (7-5) — 선언은 자동이라 봇이 요청하지 않는다. 뽑아서 10장이면 그 순간 선언 · 턴 종료, 찹츄 · 10장으로 턴을 맞으면(「기다려」) 지킨다
         {
             double now = 0;
             var t = new ChainTable(() => now);
@@ -1784,20 +1820,20 @@ public static class MultiTest
                 if (drewAt < 0 && tick.OfType<CardDrawn>().Any()) drewAt = now;
                 if (tick.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu)) declaredAt = now;
             }
-            Check(drewAt >= 0 && declaredAt - drewAt >= 0.9 && declaredAt - drewAt <= 3.1 && !events.OfType<RequestRejected>().Any(),
-                $"내 턴 9장 → 뽑아 10장 → 선언 대기 1 ~ 3초 뒤 선언 ({declaredAt - drewAt:0.0}초)");
-            Check(events.OfType<TurnStarted>().Any(e => e.Actor == t.O1), "선언이 승인된 순간 턴 종료");
+            Check(drewAt >= 0 && declaredAt == drewAt && !events.OfType<RequestRejected>().Any(), "내 턴 9장 → 뽑아 10장 → 그 순간 자동 선언 (봇의 선언 요청 없음)");
+            Check(events.OfType<TurnStarted>().Any(e => e.Actor == t.O1), "선언 대기 없이 턴 종료");
         }
         {
             double now = 0;
             var t = new ChainTable(() => now);
             var driver = new BotDriver(t.Server, new[] { t.Turn }, new System.Random(1), () => now);
             t.SetHandSize(t.Turn, 10);
+            t.State(t.Turn).IsChapchu = true; // 「기다려」 로 승리가 미뤄진 턴
             var events = new List<GameEvent>();
             for (now = 0; now < BotTurnSeconds; now += 0.1)
                 events.AddRange(t.Tick().Concat(driver.Tick()));
-            Check(events.OfType<ChapchuChanged>().Any(e => e.Actor == t.Turn && e.IsChapchu) && !events.OfType<CardDrawn>().Any() && !events.OfType<CardPlayed>().Any() && t.HandCount(t.Turn) == 10,
-                "턴 시작 때 이미 10장 → 선언하고 기다린다 (뽑지도 내지도 않는다)");
+            Check(!events.OfType<CardDrawn>().Any() && !events.OfType<CardPlayed>().Any() && t.HandCount(t.Turn) == 10 && t.State(t.Turn).IsChapchu,
+                "찹츄 · 10장으로 내 턴 → 지킨다 (뽑지도 내지도 않는다)");
         }
 
         // ③ 카운터 — 나를 노린 카드에 1 ~ 3초 뒤. 남끼리의 카드에는 내지 않는다
@@ -2824,7 +2860,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O1, 10);
-            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
+            t.State(t.O1).IsChapchu = true; // 선언해 둔 상태
             t.SetHandSize(t.O2, 10);
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new MoveChapChuEffect())), t.O1, t.O2);
             Check(!t.State(t.O1).IsChapchu && t.State(t.O2).IsChapchu, "MoveChapChu 대상 1 → 대상 2");
@@ -2832,7 +2868,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O1, 10);
-            t.State(t.O1).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
+            t.State(t.O1).IsChapchu = true; // 선언해 둔 상태
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.ChapchuPlayers, Dmg(20))));
             Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, "대상 ChapchuPlayers — 찹츄인 사람만");
         }
@@ -2968,10 +3004,8 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.SetHandSize(t.O2, 10);
-            t.State(t.O2).IsChapchu = true; // 지난 자기 턴에 선언해 둔 상태 (선언은 내 턴에만, 07 4.1)
-            t.SetHandSize(t.O1, 10);
-            Card c15 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.GivesMeChapchu, new NegateEffect { selfOnly = true }));
-            t.SetHandSize(t.O1, 11); // 카운터를 내면 10장
+            t.State(t.O2).IsChapchu = true; // 선언해 둔 상태
+            Card c15 = t.Give(t.O1, Ctr(TargetType.None, actionTrap, ReactCondition.GivesMeChapchu, new NegateEffect { selfOnly = true })); // 카운터를 내면 6장 — 10장이면 자동 선언이 된다
             t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.TwoOthers, new MoveChapChuEffect())), t.O2, t.O1);
             t.At(2);
             Check(!(t.Counter(t.O1, c15)[0] is RequestRejected), "C15 조건 「나에게 찹츄 부여」 맞음");
@@ -3167,14 +3201,17 @@ public static class MultiTest
                 "함정 발동 → 함정 사용 1 · 함정 피해 10 은 함정 주인의 가한 피해");
         }
 
-        // 9. 찹츄 선언 — 받아들여진 선언만
+        // 9. 찹츄 선언 — 자동 선언만 센다. 카드로 부여된 찹츄는 선언이 아니다
         {
             var t = new ChainTable();
-            t.Server.DeclareChapchu(t.Turn);
-            Check(Sum(t, StatKind.ChapchuDeclared) == 0, "거절된 선언은 세지 않는다");
-            t.SetHandSize(t.Turn, 10);
-            t.Server.DeclareChapchu(t.Turn);
-            Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1, "찹츄 선언 1");
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1);
+            Check(t.State(t.O1).IsChapchu && Sum(t, StatKind.ChapchuDeclared) == 0, "부여된 찹츄는 세지 않는다");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHandSize(t.Turn, 8);
+            t.Server.Draw(t.Turn);
+            Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1 && Sum(t, StatKind.ChapchuDeclared) == 1, "뽑아 10장 → 찹츄 선언 1");
         }
 
         // 10. 112 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
@@ -3200,6 +3237,7 @@ public static class MultiTest
         {
             var t = new ChainTable();
             t.State(t.O1).IsChapchu = true;
+            t.SetHandSize(t.O1, GameServer.ChapchuHandCount); // 턴 시작 판정은 정확히 10장일 때만 승리 (07 4.2)
             t.Play(t.Turn, ChainTable.Hit, t.O2);
             t.At(ChainTable.Reveal + ReactionSeconds);
             t.Tick();

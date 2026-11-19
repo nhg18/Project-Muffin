@@ -121,6 +121,7 @@ namespace Chapchu.Game
 
         private IReadOnlyList<GameEvent> TakeEvents()
         {
+            SettleChapchu(); // 요청 · Tick 하나가 끝날 때 남은 손패 변화를 마저 본다 (07 4.1)
             if (_events.Count == 0)
                 return Array.Empty<GameEvent>(); // Tick 이 매 프레임 부르므로 빈 목록은 할당하지 않는다
 

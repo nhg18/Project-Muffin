@@ -312,11 +312,11 @@ namespace Chapchu.Game
 
         // ── 찹츄 ──
 
-        /// <summary>찹츄 부여 (A20 · T16). 손패가 정확히 10장이 아니면 붙지 않는다 (07 7절). 다른 사람이 준 것이면 「찹츄 부여된 후」(T16) 기록.</summary>
+        /// <summary>찹츄 부여 (A20 · T16). 손패 장수를 보지 않는다 — 부여된 찹츄도 그 사람의 턴이 시작될 때 판정한다 (07 7 · 8절, 2026-11-14). 다른 사람이 준 것이면 「찹츄 부여된 후」(T16) 기록.</summary>
         internal void GiveChapchu(int actor, int source)
         {
             PlayerState player = _players[actor];
-            if (!player.IsChapchu && player.Life == LifeState.Alive && player.Hand.Count == ChapchuHandCount)
+            if (!player.IsChapchu && player.Life == LifeState.Alive)
                 SetChapchu(actor, true);
 
             if (source >= 0 && source != actor)

@@ -1,6 +1,5 @@
 ﻿using Chapchu.Game;
 using Chapchu.Network;
-using Chapchu.UI.Popups;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -10,39 +9,25 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 내 패널 · 찹츄 버튼에 내 값을 넣는다 (10-ui.md 2-1 「내 패널」 · 「찹츄 버튼」 · 7절). HP · 손패 수 · 내 턴 · 찹츄 상태는 GameScreenPresenter 가 연출 큐에서 순서대로 넘긴다.
-    /// 찹츄 버튼 상태(내 턴 · 정확히 10장 · 선언 여부)는 여기 한 곳에서 계산하고, 누르면 선언을 요청한다 — 판정은 방장 (07-win-condition.md 4.1 · 10절).
+    /// 찹츄 자리는 손패 수 · 찹츄 상태만 보인다 — 선언은 방장이 자동으로 한다 (07-win-condition.md 4.1, 2026-11-14).
     /// 남은 초는 턴 순서 띠(TurnStripPresenter)가 센다. 늦게 열렸을 때는 Start 에서 CustomProperties 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
     [RequireComponent(typeof(MyPanelView))]
     public class MyPanelPresenter : MonoBehaviour
     {
-        private const string NotTenCardsToastFormat = "손패가 정확히 {0}장일 때 외칠 수 있어요. 지금은 {1}장이에요."; // 10-ui.md 「찹츄 버튼 상태」. {0} = GameServer.ChapchuHandCount
-
-        [SerializeField] private PunGameServer server;
-        [Tooltip("우하단 찹츄 버튼 — 손패 수 · 내 턴 · 찹츄 상태에 따라 모양이 바뀐다.")]
+        [Tooltip("우하단 찹츄 자리 — 손패 수 · 찹츄 상태에 따라 모양이 바뀐다.")]
         [SerializeField] private ChapchuButtonView chapchuButton;
 
         private MyPanelView _view;
         private int _handCount;
-        private bool _isMyTurn;
         private bool _isChapchu;
 
         private void Awake()
         {
             _view = GetComponent<MyPanelView>();
 
-            if (server == null || chapchuButton == null)
+            if (chapchuButton == null)
                 Debug.LogError($"[{nameof(MyPanelPresenter)}] 참조 중 비어 있는 것이 있습니다.", this);
-        }
-
-        private void OnEnable()
-        {
-            chapchuButton.ChapchuClicked += HandleChapchuClicked;
-        }
-
-        private void OnDisable()
-        {
-            chapchuButton.ChapchuClicked -= HandleChapchuClicked;
         }
 
         private void Start()
@@ -72,7 +57,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>HP — 뼈다귀는 최대 HP(GameServer.MaxHp) 대비 비율.</summary>
         public void ShowHp(int hp) => _view.SetHp(hp, GameServer.MaxHp);
 
-        /// <summary>손패 장수 — 찹츄 버튼의 점 · 상태도 같이 바뀐다.</summary>
+        /// <summary>손패 장수 — 찹츄 자리의 점도 같이 바뀐다.</summary>
         public void ShowHandCount(int count)
         {
             _handCount = count;
@@ -80,15 +65,10 @@ namespace Chapchu.UI.GameScreen
             RefreshChapchuButton();
         }
 
-        /// <summary>턴이 바뀌었다 — 머리 띠 색 · 상황 문구. 찹츄 버튼은 내 턴에만 활성.</summary>
-        public void ShowTurn(bool isMyTurn)
-        {
-            _isMyTurn = isMyTurn;
-            _view.SetMyTurn(isMyTurn);
-            RefreshChapchuButton();
-        }
+        /// <summary>턴이 바뀌었다 — 머리 띠 색 · 상황 문구.</summary>
+        public void ShowTurn(bool isMyTurn) => _view.SetMyTurn(isMyTurn);
 
-        /// <summary>내 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 머리 띠 · 버튼 「찹츄 완료」. 해제되면 바로 돌아간다.</summary>
+        /// <summary>내 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 머리 띠 · 「찹츄 완료」. 손패가 10장이 아니어도 남고, 내 턴 시작 판정에서 무효가 되면 바로 돌아간다 (10-ui.md 7절).</summary>
         public void ShowChapchu(bool isChapchu)
         {
             _isChapchu = isChapchu;
@@ -96,30 +76,7 @@ namespace Chapchu.UI.GameScreen
             RefreshChapchuButton();
         }
 
-        // 활성 = 내 턴 · 정확히 10장 · 아직 선언 안 함 (10-ui.md 「찹츄 버튼 상태」). 표시일 뿐 — 선언할 수 있는지는 방장이 본다.
-        private ChapchuButtonState GetChapchuState()
-        {
-            if (_isChapchu)
-                return ChapchuButtonState.Declared;
-
-            return _isMyTurn && _handCount == GameServer.ChapchuHandCount ? ChapchuButtonState.Ready : ChapchuButtonState.Unavailable;
-        }
-
-        private void RefreshChapchuButton() => chapchuButton.SetState(GetChapchuState(), _handCount, GameServer.ChapchuHandCount);
-
-        // 활성이면 선언 요청 — 결과는 OnChapchuChanged 또는 거절 토스트로 온다. 비활성이면 요청하지 않고 이유를 토스트로.
-        private void HandleChapchuClicked()
-        {
-            ChapchuButtonState state = GetChapchuState();
-            if (state == ChapchuButtonState.Ready)
-            {
-                server?.RequestDeclareChapchu();
-                return;
-            }
-
-            if (state != ChapchuButtonState.Unavailable || PopupManager.Instance == null) return;
-
-            PopupManager.Instance.ShowToast(string.Format(NotTenCardsToastFormat, GameServer.ChapchuHandCount, _handCount));
-        }
+        private void RefreshChapchuButton() =>
+            chapchuButton.SetState(_isChapchu ? ChapchuButtonState.Declared : ChapchuButtonState.NotDeclared, _handCount, GameServer.ChapchuHandCount);
     }
 }

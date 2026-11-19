@@ -144,9 +144,6 @@ namespace Chapchu.Network
         /// </summary>
         public void RequestMySync() => SendRequest(nameof(RPC_RequestMySync));
 
-        /// <summary>찹츄 선언 — 내 턴 · 손패가 정확히 10장일 때 (07-win-condition.md 4.1).</summary>
-        public void RequestDeclareChapchu() => SendRequest(nameof(RPC_RequestDeclareChapchu));
-
         /// <summary>내가 고르는 효과의 답 (1019 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
         public void RequestChoose(int option) => SendRequest(nameof(RPC_RequestChoose), option);
 
@@ -203,14 +200,6 @@ namespace Chapchu.Network
             _server.GetPrivateCards(info.Sender.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
             SendTo(info.Sender.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
             NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.EventSeq] = _sentSeq }); // 새 방장이 이 번호부터 잇게 (09-network.md 5절)
-        }
-
-        [PunRPC]
-        private void RPC_RequestDeclareChapchu(PhotonMessageInfo info)
-        {
-            if (!NetworkManager.IsTrustedMaster) return;
-            if (!_limiter.Allow(info)) return;
-            Send(_server.DeclareChapchu(info.Sender.ActorNumber));
         }
 
         [PunRPC]

@@ -3,10 +3,10 @@ using System.Linq;
 
 namespace Chapchu.Game
 {
-    // GameServer.Win.cs — 찹츄 선언 · 해제 · 승리 판정 · 게임 종료 (07-win-condition.md)
+    // GameServer.Win.cs — 찹츄 자동 선언 · 승리 판정 · 게임 종료 (07-win-condition.md)
     public partial class GameServer
     {
-        /// <summary>찹츄 선언 장수 — 정확히 10장 (07-win-condition.md 4.1 확정). 화면의 찹츄 버튼도 이 값을 쓴다.</summary>
+        /// <summary>찹츄 선언 장수 — 정확히 10장 (07-win-condition.md 4.1 확정). 화면의 찹츄 자리도 이 값을 쓴다.</summary>
         public const int ChapchuHandCount = 10;
 
         private bool _gameOver;
@@ -14,45 +14,33 @@ namespace Chapchu.Game
 
         public bool IsGameOver => _gameOver;
 
-        /// <summary>찹츄 선언 (07-win-condition.md 4.1). 내 턴에만 — 살아 있고 손패가 정확히 10장일 때. 선언 대기 중에 승인되면 그 순간 턴이 끝난다 (03-turn.md 4절).</summary>
-        public IReadOnlyList<GameEvent> DeclareChapchu(int requester)
+        // 손패가 바뀐 사람 — 처리 한 덩어리(효과 하나 · 뽑기 한 번 · 카드 한 장 내기)가 끝난 뒤의 장수로 선언을 판정한다 (SettleChapchu)
+        private readonly HashSet<int> _handDirty = new HashSet<int>();
+
+        // 손패 장수가 바뀌는 곳마다 부른다. 선언 뒤에는 장수가 바뀌어도 찹츄가 풀리지 않는다 — 장수는 턴 시작 판정 때만 본다 (07 4.2).
+        private void OnHandChanged(int actor) => _handDirty.Add(actor);
+
+        // 자동 선언 (07-win-condition.md 4.1, 2026-11-14) — 손패가 바뀐 사람 중 정확히 10장인 사람을 찹츄 상태로. 내 턴 · 남의 턴을 가리지 않는다.
+        // 효과 하나가 끝난 뒤의 장수만 본다 — 여러 장을 뽑다 지나친 10장은 선언이 아니다 (PM 2026-11-19).
+        // HP 0 · 사망 대기 중에는 선언하지 않는다. 살아나면 그때 10장인지 다시 본다 (FinalizeDeaths, PM 2026-11-19).
+        private void SettleChapchu()
         {
-            if (_gameOver)
-                return Reject(requester, RejectCode.GameOver);
+            if (_handDirty.Count == 0)
+                return;
 
-            // 참가자가 아닌 요청(시작 전 · 방장이 바뀐 뒤)도 여기서 거절한다 — 원본을 꺼내기 전에
-            if (!InGame(requester) || _players[requester].Life != LifeState.Alive)
-                return Reject(requester, RejectCode.NotAlive);
+            foreach (int actor in _turnOrder) // 여럿이 함께 10장이 되면 턴 순서대로 알린다
+            {
+                if (!_handDirty.Contains(actor) || _gameOver || !IsInGame(actor))
+                    continue;
 
-            if (requester != CurrentTurnActor)
-                return Reject(requester, RejectCode.NotYourTurn); // 남의 턴에는 선언할 수 없다 (07 4.1, 2026-11-07)
+                PlayerState player = _players[actor];
+                if (player.IsChapchu || player.Life != LifeState.Alive || player.Hp <= 0 || player.Hand.Count != ChapchuHandCount)
+                    continue;
 
-            PlayerState player = _players[requester];
-
-            if (player.IsChapchu)
-                return Reject(requester, RejectCode.AlreadyChapchu);
-
-            if (player.Hand.Count != ChapchuHandCount)
-                return Reject(requester, RejectCode.NotTenCards);
-
-            // 마감이 지난 요청 — 넘김은 다음 Tick 이 한다 (09-network.md 8절)
-            if (_declareWait ? _clock() >= _nextTurnAt : !_mainActionUsed && IsTurnTimeUp(_clock()))
-                return Reject(requester, RejectCode.NotYourTurn);
-
-            SetChapchu(requester, true);
-            AddStat(requester, StatKind.ChapchuDeclared); // 카드로 부여된 찹츄(GiveChapchu)는 선언이 아니다
-            if (_declareWait)
-                AdvanceTurn(); // 선언 대기 중 — 승인된 순간 턴 종료, 남은 시간을 기다리지 않는다 (03-turn.md 4절)
-
-            return TakeEvents();
-        }
-
-        // 손패 장수가 바뀌는 곳마다 부른다 — 10장이 아니게 되는 순간 즉시 해제, 자동 재선언 없음 (07 4.2).
-        private void OnHandChanged(int actor)
-        {
-            PlayerState player = _players[actor];
-            if (player.IsChapchu && player.Hand.Count != ChapchuHandCount)
-                SetChapchu(actor, false);
+                SetChapchu(actor, true);
+                AddStat(actor, StatKind.ChapchuDeclared); // 카드로 부여된 찹츄(GiveChapchu)는 선언이 아니다
+            }
+            _handDirty.Clear();
         }
 
         private void SetChapchu(int actor, bool value)

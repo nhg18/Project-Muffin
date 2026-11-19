@@ -15,7 +15,7 @@ namespace Chapchu.Game
 
         /// <summary>
         /// 드로우 요청 — TurnDrawCount 장(손패가 찹츄 장수 − 1 이면 1장). 메인 행동이라 끝나면 턴이 넘어간다 (03-turn.md 3절).
-        /// 뽑아서 손패가 정확히 10장이 되면 바로 넘기지 않고 선언 대기를 연다 (03-turn.md 4절).
+        /// 뽑아서 손패가 정확히 10장이 되면 찹츄가 자동 선언되고 턴은 보통대로 끝난다 (03-turn.md 4절 · 07 4.1).
         /// </summary>
         public IReadOnlyList<GameEvent> Draw(int requester)
         {
@@ -47,13 +47,6 @@ namespace Chapchu.Game
             {
                 _mainActionUsed = true;
                 _nextTurnAt = _clock();
-            }
-            else if (_players[requester].Hand.Count == ChapchuHandCount)
-            {
-                // 뽑아서 정확히 10장 — 턴이 바로 끝나지 않고 선언 대기가 열린다. 선언이 승인되면 그 순간, 아니면 대기가 끝날 때 턴 종료 (03-turn.md 4절 · 07 4.1)
-                _mainActionUsed = true; // 대기 중 다른 입력(카드 · 다시 뽑기 · 함정 설치)은 메인 행동을 한 것으로 거절된다
-                _declareWait = true;
-                _nextTurnAt = _clock() + DeclareWaitSeconds;
             }
             else
             {

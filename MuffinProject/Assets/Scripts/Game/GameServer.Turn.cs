@@ -8,12 +8,10 @@ namespace Chapchu.Game
     {
         // 확정 (03-turn.md 2절).
         public const double TurnTimeLimit = 15; // UI 턴 타이머 링도 이 값을 읽는다
-        internal const double DeclareWaitSeconds = 5; // 뽑아서 손패가 정확히 10장이 된 뒤 선언을 기다리는 시간 (03-turn.md 2 · 4절)
 
         private double _turnDeadline;
         private bool _mainActionUsed;     // 이번 턴에 메인 행동을 했다 — 체인 처리 · 후처리 연출이 끝날 때까지 (03-turn.md 3 · 4절)
         private double _nextTurnAt = -1;  // 메인 행동의 체인을 처리했고, 이 시각에 다음 턴 (04-card.md 8절). 음수면 없음
-        private bool _declareWait;        // 선언 대기 중 — 뽑아서 10장이 됐다. _nextTurnAt 에 끝난다 (03-turn.md 4절)
         private double _resumeAt = -1;    // 메인 행동 전에 끼어든 체인(함정)의 후처리 연출이 끝나는 시각 — 그때까지 턴이 멈춰 있다
         private bool _turnPaused;         // 메인 행동 전인데 체인 · 함정 시간 · 사망 대기로 턴 제한 시간이 멈췄다
         private double _lastTickAt;
@@ -141,11 +139,11 @@ namespace Chapchu.Game
         }
 
         // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다.
-        // 다음 사람이 찹츄 상태면 그 턴이 시작되는 순간 승리 (07 4.3 · 5절 — 가장 먼저 자기 턴이 돌아온 사람).
+        // 다음 사람이 찹츄 상태면 그 턴이 시작되는 순간 판정한다 — 손패가 정확히 10장이면 승리, 아니면 선언 무효 (07 4.2 · 4.3 · 5절 — 가장 먼저 자기 턴이 돌아온 사람).
         // 「다음 턴 스킵」 이 걸린 사람은 건너뛴다 — 스킵된 턴은 시작하지 않은 것 (찹츄 판정 없음, 03-turn.md 7절). 스킵 직후 「턴 스킵된 후」 함정 (04 6절).
         private void AdvanceTurn()
         {
-            _declareWait = false; // 선언 대기는 턴을 넘기는 순간 끝난다 — 턴 끝 처리(피폭 · 개판)로 멈춰도 다시 열리지 않는다
+            SettleChapchu(); // 이 턴에 10장이 된 사람은 턴이 넘어가기 전에 선언된다 (07 4.1)
             if (HoldTurnEnd())
                 return; // 대소동 → 새 판 · 피폭 피해의 사망 대기 · 함정 시간 (11-card-list 1012)
 
@@ -183,14 +181,22 @@ namespace Chapchu.Game
 
             // 건 사람의 「기다려」 는 그 사람의 실제 턴이 시작되기 전에 끝난다 — 그래서 건 사람은 이 턴에 찹츄로 이길 수 있다 (11-card-list 1023)
             EndWaitOf(next);
+            SettleChapchu(); // 턴 끝 처리(피폭 · 개판 · 스킵)에서 바뀐 손패까지 본 뒤에 판정한다
             if (_players[next].IsChapchu)
             {
-                if (!IsWaiting)
+                if (IsWaiting)
+                {
+                    _events.Add(new ChapchuWinHeld(next)); // 판정만 건너뛴다 — 찹츄는 그대로(장수도 보지 않는다), 다음 자기 턴에 다시 판정 (07 4.3)
+                }
+                else if (_players[next].Hand.Count == ChapchuHandCount)
                 {
                     EndGame(next, GameEndReason.Chapchu);
                     return;
                 }
-                _events.Add(new ChapchuWinHeld(next)); // 판정만 건너뛴다 — 찹츄는 그대로, 다음 자기 턴에 다시 판정 (07 4.3)
+                else
+                {
+                    SetChapchu(next, false); // 선언 무효 — 다시 정확히 10장이 되면 자동으로 재선언된다 (07 4.2)
+                }
             }
 
             SetTurn(next);

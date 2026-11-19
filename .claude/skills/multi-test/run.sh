@@ -6,7 +6,7 @@
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
-#   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 · 내 턴에 찹츄 버튼 → 표시 → 찹츄 승리 → 결과 화면
+#   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
@@ -688,26 +688,34 @@ compare_screens() {
     done
 }
 
-# 찹츄 버튼 (기능 8 A): 모두 뽑기만 해서 손패 10장을 만들고, 내 턴에 활성이 된 버튼을 눌러 선언 → 두 화면의 표시 → 다음 자기 턴에 찹츄 승리 → 결과 화면(찹츄 승리 알약 · 마크).
-# 뽑아서 10장이 되면 선언 대기가 5초뿐이다 (03-turn.md 4절) — 9장에서 뽑은 클라이언트는 쉬지 않고 바로 다시 불러 그 안에 버튼을 누른다.
+# 찹츄 자동 선언 (07-win-condition.md 4절): 모두 뽑기만 해서 손패 10장 → 자동 선언 → 모든 화면의 표시 → 다음 자기 턴 시작에 찹츄 승리 → 결과 화면(찹츄 승리 알약 · 마크).
 run_chapchu() {
     local clients="${1:-2}" project other out ended=0 declared="" actor line first=""
     enter_game "$clients" || return
 
-    log "▶ 뽑기만 — 손패 10장 · 내 턴이면 찹츄 버튼"
+    # SHOT_DIR 이 있으면 첫 선언 연출(집중선 · 큰 말풍선, 1.5초)을 에디터마다 찍는다 (MultiTest.ArmShoutShots)
+    if [ -n "${SHOT_DIR:-}" ]; then
+        mkdir -p "$SHOT_DIR"
+        for project in "${EDITORS[@]}"; do
+            log "  $(name_of "$project"): $(call "$project" ArmShoutShots "$SHOT_DIR/shout_$(name_of "$project")" "0.2,0.6,1.3")"
+        done
+    fi
+
+    log "▶ 뽑기만 — 손패 10장이 되면 자동 선언"
     for _ in $(seq 1 $((clients * 150))); do
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ChapchuStep)
-            if [[ "$out" == OK*"(손패 9) · 뽑기"* ]]; then
+            # 뽑았으면 그 화면에 선언이 떴는지 바로 다시 본다 — 다른 사람이 이어서 뽑으면 먼저 선언한 사람이 곧바로 이겨 표시를 볼 틈이 없다
+            if [[ "$out" == OK*"뽑기"* ]]; then
                 log "  $(name_of "$project"): $out"
+                sleep 2
                 out=$(call "$project" ChapchuStep)
-                [[ "$out" == WAIT* ]] && out=$(call "$project" ChapchuStep)
             fi
             case "$out" in
-                OK*"찹츄 버튼 누름"*)
+                OK*"찹츄 선언됨"*)
                     log "  $(name_of "$project"): $out"
                     actor=$(printf '%s' "$out" | sed -E 's/^OK P([0-9]+).*/\1/')
-                    # 표시를 모든 화면에서 본다. 이 선언으로 턴이 넘어가 먼저 선언한 사람이 바로 이기면 2초 뒤 결과 씬이라 — 그러면 표시 확인을 멈추고 끝으로 본다
+                    # 표시를 모든 화면에서 본다. 턴이 넘어가 먼저 선언한 사람이 바로 이기면 2초 뒤 결과 씬이라 — 그러면 표시 확인을 멈추고 끝으로 본다
                     for other in "${EDITORS[@]}"; do
                         for _ in $(seq 1 $WAIT_TRIES); do
                             out=$(call "$other" ChapchuExpect "$actor")
@@ -738,15 +746,15 @@ run_chapchu() {
         [ $ended -eq 1 ] && break
         sleep 1
     done
-    [ -n "$declared" ] || { fail "찹츄 버튼이 활성이 되지 않았다"; return; }
+    [ -n "$declared" ] || { fail "찹츄가 선언되지 않았다"; return; }
     [ $ended -eq 1 ] || { fail "게임이 끝나지 않았다"; return; }
 
     log "▶ 판정 — 선언한 사람:$declared"
     for project in "${EDITORS[@]}"; do
         line=$(console_lines "$project" | grep '\[GameDebugInput\].*게임 종료 — ' | tail -1 | sed -E 's/.*게임 종료 — ([^·]*· 승자 P-?[0-9]+).*/\1/')
-        log "  $(name_of "$project"): 「${line:-없음}」 · 찹츄 선언 줄 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 찹츄 선언')개 · 선언 거절(코드 11 · 12) $(console_lines "$project" | grep -cE '내 요청 거절 — 코드 (11|12)')번"
+        log "  $(name_of "$project"): 「${line:-없음}」 · 찹츄 선언 줄 $(console_lines "$project" | grep -c '\[GameDebugInput\].* 찹츄 선언')개"
         printf '%s' "$line" | grep -q 'Chapchu' || fail "$(name_of "$project") 찹츄 승리로 끝나지 않았다"
-        console_lines "$project" | grep -qE '내 요청 거절 — 코드 (11|12)' && fail "$(name_of "$project") 비활성 버튼이 선언 요청을 보냈다"
+        console_lines "$project" | grep -q '\[GameDebugInput\].* 찹츄 선언' || fail "$(name_of "$project") 에 찹츄 선언 알림이 오지 않았다"
         if [ -z "$first" ]; then first="$line"; elif [ "$line" != "$first" ]; then fail "$(name_of "$project") 의 결과가 메인과 다르다"; fi
     done
     log "▶ 결과 화면 — 찹츄 승리 알약 · 마크"

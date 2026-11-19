@@ -74,7 +74,6 @@ MonoBehaviour:
   - RPC_OnPlayerLeftGame
   - RPC_OnChapchuChanged
   - RPC_OnGameEnded
-  - RPC_RequestDeclareChapchu
   - RPC_OnMyTrapSet
   - RPC_OnTrapActivated
   - RPC_OnTrapSet

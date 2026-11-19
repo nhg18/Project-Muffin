@@ -80,6 +80,7 @@ namespace Chapchu.Game
                 {
                     player.Life = LifeState.Alive;
                     _events.Add(new DeathAvoided(actor, player.Hp));
+                    _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
                     continue;
                 }
 
