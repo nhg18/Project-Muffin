@@ -244,7 +244,7 @@ namespace Chapchu.UI.Title
             // 동의했으면 로그인 전에 수집을 켠다 — 로그인 실패(signInFailed)도 남기려고 (27 6절)
             Task initialize = AccountService.InitializeAsync();
             yield return Wait(initialize, AccountService.SignInTimeoutSeconds);
-            if (AccountService.IsInitialized) // 앞선 초기화가 아직 도는 중이면 작업은 바로 끝난다 — 준비됐을 때만 켜고, 아니면 다음 시도로
+            if (AccountService.IsInitialized) // 앞선 초기화가 아직 도는 중이면 작업은 바로 끝난다 — 준비됐을 때만 켜고, 아니면 닉네임 읽기 뒤에
                 StartPlayRecord();
 
             Task signIn = AccountService.SignInAsync();
@@ -262,6 +262,9 @@ namespace Chapchu.UI.Title
                 FailSignIn(load);
                 yield break;
             }
+
+            if (!_titleViewRecorded && AccountService.IsInitialized) // 위에서 초기화가 덜 끝나 건너뛰었으면 여기서 켠다
+                StartPlayRecord();
 
             _savedNickname = string.IsNullOrEmpty(load.Result) ? null : load.Result;
             _nicknameLoaded = true;
