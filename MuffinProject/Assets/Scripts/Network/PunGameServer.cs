@@ -338,8 +338,6 @@ namespace Chapchu.Network
             if (backup == null || !server.Restore(backup, deck.CreateCards()))
             {
                 Debug.LogError($"[{nameof(PunGameServer)}] 방장 이주 실패 — {(backup == null ? "받아 둔 사본이 없다" : server.RestoreError)}. 판을 중지하고 방으로 돌아간다");
-                // 거절 알림은 방 속성 번호를 올리지 않는다 — 누군가 이미 받은 번호를 넘겨서 보내야 중지 알림을 묵은 것으로 버리지 않는다
-                _sentSeq += MaxSeqJump;
                 Halt();
                 return;
             }
@@ -397,7 +395,10 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnGameHalted(int seq, PhotonMessageInfo info)
         {
-            if (!Accept(seq, info))
+            // 처리 번호로 거르지 않는다 — 사본 없이 이어받은 새 방장은 앞 방장이 누구에게 몇 번까지 보냈는지(거절 알림) 모른다.
+            // 번호가 겹쳐 중지 알림을 묵은 것으로 버리면 그 사람만 경고 없이 방으로 옮겨진다. 믿는 방장이 보냈는지만 본다 —
+            // 이 알림은 판의 마지막 알림이고 여러 번 받아도 결과가 같다 (09-network.md 9.1 #11)
+            if (info.Sender == null || info.Sender.ActorNumber != NetworkManager.TrustedMaster)
                 return;
 
             _gameEnded = true; // 이 뒤로는 요청을 보내지 않는다
