@@ -513,7 +513,7 @@ namespace Chapchu.Game.Bots
             if (!_server.InGame(bot) || !TryFindReaction(bot, now, out Reaction reaction))
             {
                 mind.ReactKey = null;
-                SkipIfAsked(bot, now);
+                SkipIfAsked(bot, now, events);
                 return;
             }
 
@@ -533,11 +533,11 @@ namespace Chapchu.Game.Bots
             int code = RejectCodeOf(result, bot);
             Log(bot, code == 0 ? reaction.Reason : $"{reaction.Reason} → 거절 (코드 {code}), 이 창에서는 더 내지 않음");
             if (code != 0)
-                _server.SkipReaction(bot); // 더 내지 않으니 남을 기다리게 하지 않는다
+                events.AddRange(_server.SkipReaction(bot)); // 더 내지 않으니 남을 기다리게 하지 않는다
         }
 
         // 낼 수 있는 카운터가 있어 물어 왔지만 낼 생각이 없다 — 난이도의 반응 시간 뒤 스킵한다. 봇 때문에 반응 시간을 다 기다리지 않게 (04-card.md 8절).
-        private void SkipIfAsked(int bot, double now)
+        private void SkipIfAsked(int bot, double now, List<GameEvent> events)
         {
             if (!_server.InGame(bot) || !_server.IsReactionOpen(now) || !_server.IsReactionAsked(bot))
                 return;
@@ -550,7 +550,7 @@ namespace Chapchu.Game.Bots
             }
 
             if (now >= mind.SkipAt)
-                _server.SkipReaction(bot);
+                events.AddRange(_server.SkipReaction(bot));
         }
 
         // 반응할 거리를 우선순위로 하나 (7-4). 없으면 false.

@@ -291,8 +291,11 @@ namespace Chapchu.Network
             RoomEvents.RaisePlayerEntered(player);
         }
 
-        public void OnPlayerLeft(Player player)
+        /// <param name="trustedMasterLeft">방장 자리를 뺏긴 채로 믿는 방장이 나가 믿는 방장이 바뀜 (RoomGuard.OnPlayerLeft) — Photon 은 방장 바뀜을 알리지 않는다</param>
+        public void OnPlayerLeft(Player player, bool trustedMasterLeft)
         {
+            if (trustedMasterLeft)
+                SwitchTrustedMaster(PhotonNetwork.MasterClient);
             RoomEvents.RaisePlayerLeft(player);
         }
 
@@ -314,7 +317,7 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 방장 전환시 호출되는 콜백 함수
-        /// 방장 이탈 시 처리(08-room.md 5절 #5)는 미정이라 통지만 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
+        /// 방장 이탈 처리(방 해체 · 결과 화면 로비로 — 08-room.md 5절 #5)는 화면이 통지를 받아 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {
@@ -322,7 +325,13 @@ namespace Chapchu.Network
             if (!_guard.AcceptMasterSwitch(newMasterClient))
                 return;
 
-            Debug.LogWarning($"[{nameof(PhotonRoom)}] 방장 교체 → {newMasterClient.NickName} (방장 이탈 처리는 미정, 09 9절)");
+            SwitchTrustedMaster(newMasterClient);
+        }
+
+        // 믿는 방장이 바뀐 두 길(정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감)이 함께 쓴다
+        private void SwitchTrustedMaster(Player newMasterClient)
+        {
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 믿는 방장이 나감 → 방장 {newMasterClient?.NickName} (08-room.md 5절 #5)");
             AdoptBots();
             RoomEvents.RaiseMasterClientSwitched(newMasterClient);
         }

@@ -18,7 +18,7 @@ namespace Chapchu.Network.Events
         public static event Action<Player> OnPlayerEntered;
         public static event Action<Player> OnPlayerLeft;
         public static event Action<List<RoomInfo>> OnRoomListUpdate;
-        /// <summary>방장(마스터 클라이언트)이 바뀜. OnPlayerLeft 와의 호출 순서는 보장되지 않는다.</summary>
+        /// <summary>믿는 방장이 바뀜 (09-network.md 13절) — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 누가 방장 자리를 가져간 것은 올리지 않는다. OnPlayerLeft 와의 호출 순서는 보장되지 않는다.</summary>
         public static event Action<Player> OnMasterClientSwitched;
         /// <summary>방의 봇 목록 또는 봇 난이도가 바뀜 (18-bot.md 5절) — 봇 번호 (오름차순). 난이도는 BotRoster.LevelOf 로 읽는다. 방 화면이 칸 · 로그를 갱신한다.</summary>
         public static event Action<int[]> OnBotsChanged;
