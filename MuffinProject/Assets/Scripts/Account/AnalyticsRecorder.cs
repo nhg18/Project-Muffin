@@ -59,7 +59,7 @@ namespace Chapchu.Account
 
         /// <summary>
         /// 첫 실행 팝업에서 고른 값을 기기에 기록한다 — 약관 동의와 같은 때(닉네임 「시작」, 23 6-1).
-        /// 수집은 아직 켜지 않는다 — 로그인 뒤 <see cref="StartIfAgreed"/>.
+        /// 수집은 아직 켜지 않는다 — UGS 가 준비된 뒤(로그인 전) <see cref="StartIfAgreed"/>.
         /// </summary>
         public static void SaveChoice(bool agreed)
         {
@@ -68,7 +68,7 @@ namespace Chapchu.Account
         }
 
         /// <summary>
-        /// UGS 로그인 뒤에 부른다 — 동의했으면 수집을 켠다 (27 6절 「수집 대기 → 수집 중」).
+        /// UGS 가 준비된 뒤, 로그인 전에 부른다 — 동의했으면 수집을 켠다. 로그인 실패(signInFailed)도 남기려고 (27 6절, PM 2026-11-20).
         /// <paramref name="justAgreed"/> 는 이번 실행에서 처음 동의했을 때만 참 — 그때만 consentAccepted 를 보낸다.
         /// </summary>
         public static void StartIfAgreed(bool justAgreed)

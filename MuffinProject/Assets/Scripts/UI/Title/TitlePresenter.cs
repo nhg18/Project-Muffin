@@ -241,11 +241,10 @@ namespace Chapchu.UI.Title
 
             _nicknameLoaded = false;
 
-            // 동의했으면 로그인 전에 수집을 켠다 — 로그인 실패(signInFailed)도 남기려고 (27 6절)
+            // 동의했으면 로그인 전에 수집을 켠다 — 로그인 실패(signInFailed)도 남기려고 (27 6절, PM 2026-11-20)
             Task initialize = AccountService.InitializeAsync();
             yield return Wait(initialize, AccountService.SignInTimeoutSeconds);
-            if (AccountService.IsInitialized) // 앞선 초기화가 아직 도는 중이면 작업은 바로 끝난다 — 준비됐을 때만 켜고, 아니면 닉네임 읽기 뒤에
-                StartPlayRecord();
+            EnsurePlayRecordStarted();
 
             Task signIn = AccountService.SignInAsync();
             yield return Wait(signIn, AccountService.SignInTimeoutSeconds);
@@ -263,8 +262,7 @@ namespace Chapchu.UI.Title
                 yield break;
             }
 
-            if (!_titleViewRecorded && AccountService.IsInitialized) // 위에서 초기화가 덜 끝나 건너뛰었으면 여기서 켠다
-                StartPlayRecord();
+            EnsurePlayRecordStarted(); // 위에서 초기화가 덜 끝나 못 켰으면 여기서
 
             _savedNickname = string.IsNullOrEmpty(load.Result) ? null : load.Result;
             _nicknameLoaded = true;
@@ -750,6 +748,7 @@ namespace Chapchu.UI.Title
             AnalyticsRecorder.SignInFailKind kind = rejected
                 ? AnalyticsRecorder.SignInFailKind.Rejected
                 : AnalyticsRecorder.SignInFailKind.Network;
+            EnsurePlayRecordStarted(); // 초기화가 늦게 끝난 실패 — 켜고 나서 남긴다
             AnalyticsRecorder.RecordSignInFailed(kind, code);
             ShowFail(FailKind.Login, title, description, code);
         }
@@ -793,14 +792,15 @@ namespace Chapchu.UI.Title
 
         private bool NeedsPlayRecordChoice => !AnalyticsRecorder.HasChoice && !_playRecordChoice.HasValue;
 
-        // 수집 켜기(동의했을 때만) · 타이틀 화면 기록 — 수집은 로그인 뒤가 아니라 UGS 초기화 뒤에 켜진다 (27 5-5 · 6절)
-        private void StartPlayRecord()
+        // 수집 켜기(동의했을 때만) · 타이틀 화면 기록 — UGS 가 준비된 첫 때 한 번. 로그인 전이다 (27 5-5 · 6절, PM 2026-11-20).
+        // 앞선 초기화가 아직 도는 중이면 InitializeAsync 가 바로 끝나므로, 준비됐는지는 상태로 본다 — 못 켰으면 다음 자리(로그인 실패 · 닉네임 읽기 뒤)에서 다시
+        private void EnsurePlayRecordStarted()
         {
-            AnalyticsRecorder.StartIfAgreed(_playRecordChoice == true);
-            _playRecordChoice = null; // consentAccepted 는 한 번만
-            if (_titleViewRecorded)
+            if (_titleViewRecorded || !AccountService.IsInitialized)
                 return;
 
+            AnalyticsRecorder.StartIfAgreed(_playRecordChoice == true);
+            _playRecordChoice = null; // consentAccepted 는 한 번만
             _titleViewRecorded = true;
             AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Title);
         }
