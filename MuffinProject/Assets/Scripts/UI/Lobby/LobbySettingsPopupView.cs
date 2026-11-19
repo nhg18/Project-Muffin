@@ -21,6 +21,8 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private LobbySwitchView sfxSwitch;
         [SerializeField] private LobbySwitchView bgmSwitch;
         [SerializeField] private LobbySwitchView inviteSwitch;
+        [Tooltip("정보 「플레이 기록 보내기」 (17 7-4 · 27-analytics)")]
+        [SerializeField] private LobbySwitchView playRecordSwitch;
         [SerializeField] private TMP_Text blockedCountText;
         [SerializeField] private Button manageButton;
         [SerializeField] private TMP_Text loginText;
@@ -46,6 +48,7 @@ namespace Chapchu.UI.Lobby
         public event Action<bool> OnSfxChanged;
         public event Action<bool> OnBgmChanged;
         public event Action<bool> OnInviteChanged;
+        public event Action<bool> OnPlayRecordChanged;
         public event Action OnBlockListRequested;
         public event Action OnBackRequested;
         public event Action<HubPerson> OnUnblockRequested;
@@ -55,7 +58,7 @@ namespace Chapchu.UI.Lobby
 
         private void Awake()
         {
-            if (settingsContent == null || closeButton == null || sfxSwitch == null || bgmSwitch == null || inviteSwitch == null || blockedCountText == null
+            if (settingsContent == null || closeButton == null || sfxSwitch == null || bgmSwitch == null || inviteSwitch == null || playRecordSwitch == null || blockedCountText == null
                 || manageButton == null || loginText == null || deleteButton == null || privacyButton == null || contactButton == null)
                 Debug.LogError($"[{nameof(LobbySettingsPopupView)}] 설정 참조가 비어 있습니다.", this);
 
@@ -75,6 +78,7 @@ namespace Chapchu.UI.Lobby
             sfxSwitch.OnChanged += HandleSwitchChanged;
             bgmSwitch.OnChanged += HandleSwitchChanged;
             inviteSwitch.OnChanged += HandleSwitchChanged;
+            playRecordSwitch.OnChanged += HandleSwitchChanged;
             foreach (LobbyPersonRowView row in _rows)
                 row.OnSecondaryClicked += HandleUnblockClicked;
         }
@@ -91,17 +95,19 @@ namespace Chapchu.UI.Lobby
             sfxSwitch.OnChanged -= HandleSwitchChanged;
             bgmSwitch.OnChanged -= HandleSwitchChanged;
             inviteSwitch.OnChanged -= HandleSwitchChanged;
+            playRecordSwitch.OnChanged -= HandleSwitchChanged;
             foreach (LobbyPersonRowView row in _rows)
                 row.OnSecondaryClicked -= HandleUnblockClicked;
         }
 
-        public void ShowSettings(bool sfxOn, bool bgmOn, bool inviteOn, int blockedCount, string loginName)
+        public void ShowSettings(bool sfxOn, bool bgmOn, bool inviteOn, bool playRecordOn, int blockedCount, string loginName)
         {
             blockContent.SetActive(false);
             settingsContent.SetActive(true);
             sfxSwitch.Set(sfxOn);
             bgmSwitch.Set(bgmOn);
             inviteSwitch.Set(inviteOn);
+            playRecordSwitch.Set(playRecordOn);
             blockedCountText.text = string.Format(BlockedCountFormat, blockedCount);
             loginText.text = loginName;
         }
@@ -140,8 +146,10 @@ namespace Chapchu.UI.Lobby
                 OnSfxChanged?.Invoke(changed.IsOn);
             else if (changed == bgmSwitch)
                 OnBgmChanged?.Invoke(changed.IsOn);
-            else
+            else if (changed == inviteSwitch)
                 OnInviteChanged?.Invoke(changed.IsOn);
+            else
+                OnPlayRecordChanged?.Invoke(changed.IsOn);
         }
 
         private void HandleCloseClicked() => OnCloseRequested?.Invoke();

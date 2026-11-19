@@ -771,7 +771,7 @@ namespace Chapchu.UI.Title
                 return;
 
             _titleViewRecorded = true;
-            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Title, AnalyticsRecorder.ScreenName.None);
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Title);
         }
 
         private void Run(IEnumerator routine)

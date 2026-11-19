@@ -171,13 +171,25 @@ namespace Chapchu.Account
 
         // ── 5-4 재화 · 치장 ── (questRewardClaimed · boxOpened 는 서버 지급(24 2절)이 붙을 때 더한다 — 지금 값은 기기 안의 임시 값)
 
-        public static void RecordItemEquipped(string itemId, string slot)
-            => Record("itemEquipped", ("itemId", itemId), ("slot", slot));
+        /// <summary>slot 은 슬롯 enum 이름의 첫 글자를 소문자로 (Character → character)</summary>
+        public static void RecordItemEquipped(string itemId, Enum slot)
+            => Record("itemEquipped", ("itemId", itemId), ("slot", ToValue(slot)));
 
         // ── 5-5 화면 · 로딩 ──
 
-        public static void RecordScreenViewed(ScreenName screen, ScreenName from)
-            => Record("screenViewed", ("screen", ToValue(screen)), ("from", ToValue(from)));
+        /// <summary>지금 보고 있는 화면 — 팝업을 닫을 때 그 아래 화면으로 돌아가려고 읽는다</summary>
+        public static ScreenName CurrentScreen { get; private set; } = ScreenName.None;
+
+        /// <summary>화면 · 팝업에 들어감. 같은 화면에 머무는 동안은 다시 보내지 않는다 — from 은 바로 앞 화면 (27 5-5)</summary>
+        public static void RecordScreenViewed(ScreenName screen)
+        {
+            if (screen == CurrentScreen)
+                return;
+
+            ScreenName from = CurrentScreen;
+            CurrentScreen = screen;
+            Record("screenViewed", ("screen", ToValue(screen)), ("from", ToValue(from)));
+        }
 
         public static void RecordLobbyReached(float loadSeconds, bool isFirstRun, bool cardDataDownloaded)
             => Record("lobbyReached", ("loadSeconds", loadSeconds), ("isFirstRun", isFirstRun), ("cardDataDownloaded", cardDataDownloaded));

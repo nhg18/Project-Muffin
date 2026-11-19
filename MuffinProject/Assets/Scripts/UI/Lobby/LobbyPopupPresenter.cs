@@ -1,4 +1,5 @@
 ﻿using Chapchu.Core;
+using Chapchu.Account;
 using Chapchu.Network;
 using UnityEngine;
 
@@ -45,6 +46,8 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private LobbyInviteBannerView invite;
         [SerializeField] private LobbyFxView fx;
 
+        private AnalyticsRecorder.ScreenName _screenBelowPopup = AnalyticsRecorder.ScreenName.Lobby; // 창을 닫으면 돌아갈 화면 (27 5-5)
+
         /// <summary>설정의 「초대 알림」 스위치가 켜져 있는지 (기기 저장, 처음엔 켜짐).</summary>
         public static bool IsInviteNoticeOn => ReadSwitch(PlayerPrefsKeys.InviteNoticeOn);
 
@@ -86,6 +89,7 @@ namespace Chapchu.UI.Lobby
             settings.OnSfxChanged += HandleSfxChanged;
             settings.OnBgmChanged += HandleBgmChanged;
             settings.OnInviteChanged += HandleInviteNoticeChanged;
+            settings.OnPlayRecordChanged += HandlePlayRecordChanged;
             settings.OnBlockListRequested += HandleBlockListRequested;
             settings.OnBackRequested += ShowSettings;
             settings.OnUnblockRequested += HandleUnblockRequested;
@@ -119,6 +123,7 @@ namespace Chapchu.UI.Lobby
             settings.OnSfxChanged -= HandleSfxChanged;
             settings.OnBgmChanged -= HandleBgmChanged;
             settings.OnInviteChanged -= HandleInviteNoticeChanged;
+            settings.OnPlayRecordChanged -= HandlePlayRecordChanged;
             settings.OnBlockListRequested -= HandleBlockListRequested;
             settings.OnBackRequested -= ShowSettings;
             settings.OnUnblockRequested -= HandleUnblockRequested;
@@ -153,7 +158,8 @@ namespace Chapchu.UI.Lobby
         /// <summary>퀘스트 창을 연다.</summary>
         public void ShowQuests()
         {
-            ClosePopups();
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Quest);
             quests.Show(Data);
             popupDimmer.SetActive(true);
         }
@@ -161,7 +167,7 @@ namespace Chapchu.UI.Lobby
         /// <summary>뽑기 확률 창을 연다.</summary>
         public void ShowRates()
         {
-            ClosePopups();
+            HidePopups();
             rates.Show(Data);
             popupDimmer.SetActive(true);
         }
@@ -169,7 +175,16 @@ namespace Chapchu.UI.Lobby
         /// <summary>친구 창이 열려 있으면 목록을 데이터에 맞춰 다시 그린다.</summary>
         public void RefreshFriends() => friends.Refresh();
 
+        // 창을 닫고 그 아래 화면으로 돌아간다 — 플레이 기록에는 창 아래 화면에 다시 들어간 것으로 남긴다 (27 5-5)
         private void ClosePopups()
+        {
+            HidePopups();
+            if (IsPopupScreen(AnalyticsRecorder.CurrentScreen))
+                AnalyticsRecorder.RecordScreenViewed(_screenBelowPopup);
+        }
+
+        // 다른 창을 열기 전에 닫기만 — 창에서 창으로 옮길 때 아래 화면을 끼워 남기지 않는다
+        private void HidePopups()
         {
             friends.Hide();
             profile.Hide();
@@ -179,19 +194,34 @@ namespace Chapchu.UI.Lobby
             popupDimmer.SetActive(false);
         }
 
+        private static bool IsPopupScreen(AnalyticsRecorder.ScreenName screen)
+            => screen == AnalyticsRecorder.ScreenName.Quest || screen == AnalyticsRecorder.ScreenName.Friends
+            || screen == AnalyticsRecorder.ScreenName.Profile || screen == AnalyticsRecorder.ScreenName.Settings;
+
+        // 창 하나에 들어감 — 창 위에서 창을 열면 맨 아래 화면을 그대로 둔다
+        private void EnterPopupScreen(AnalyticsRecorder.ScreenName screen)
+        {
+            if (!IsPopupScreen(AnalyticsRecorder.CurrentScreen))
+                _screenBelowPopup = AnalyticsRecorder.CurrentScreen;
+
+            AnalyticsRecorder.RecordScreenViewed(screen);
+        }
+
         #region 프로필 · 설정
 
         private void HandleProfileRequested()
         {
-            ClosePopups();
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Profile);
             profile.Show(NetworkManager.Nickname, Data, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
 
         private void ShowSettings()
         {
-            ClosePopups();
-            settings.ShowSettings(ReadSwitch(PlayerPrefsKeys.SfxOn), ReadSwitch(PlayerPrefsKeys.BgmOn), IsInviteNoticeOn,
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Settings);
+            settings.ShowSettings(ReadSwitch(PlayerPrefsKeys.SfxOn), ReadSwitch(PlayerPrefsKeys.BgmOn), IsInviteNoticeOn, AnalyticsRecorder.IsAgreed,
                 Data.Blocked.Count, IsAccountLogin ? string.Format(LoginNameFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
@@ -210,9 +240,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleInviteNoticeChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.InviteNoticeOn, isOn);
 
+        // 켬 → 수집 시작 / 끔 → 수집 중지 + 이미 보낸 기록 삭제 요청. 토스트 없음 (17 7-4 · 27 6절)
+        private static void HandlePlayRecordChanged(bool isOn) => AnalyticsRecorder.SetAgreedFromSettings(isOn);
+
         private void HandleBlockListRequested()
         {
-            ClosePopups();
+            HidePopups();
             settings.ShowBlockList(Data);
             popupDimmer.SetActive(true);
         }
@@ -244,7 +277,8 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendsRequested()
         {
-            ClosePopups();
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Friends);
             friends.Show(Data);
             popupDimmer.SetActive(true);
         }

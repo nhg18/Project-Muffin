@@ -1,4 +1,5 @@
-﻿using Chapchu.Network;
+﻿using Chapchu.Account;
+using Chapchu.Network;
 using UnityEngine;
 
 namespace Chapchu.UI.Lobby
@@ -58,6 +59,7 @@ namespace Chapchu.UI.Lobby
 
         private void Start()
         {
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Lobby);
             home.SetProfile(NetworkManager.Nickname, Data.MyCode);
             RefreshWallet();
             RefreshBadges();
