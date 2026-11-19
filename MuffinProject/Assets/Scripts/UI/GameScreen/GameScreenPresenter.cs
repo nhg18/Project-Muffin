@@ -44,6 +44,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ChapchuShoutView chapchuShout;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
         [SerializeField] private DeckData cardDeck;
+        [Tooltip("설정 · 나가기 — 강제 퇴장 · 판 중지 알림을 넘긴다. 비어 있으면 씬에서 찾는다.")]
+        [SerializeField] private GameMenuPresenter menu;
 
         // 단계 하나 = 영역에 값을 넣고, 기다릴 연출이 있으면 그 코루틴을 돌려준다 (없으면 null).
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
@@ -61,6 +63,11 @@ namespace Chapchu.UI.GameScreen
         {
             if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
+
+            if (menu == null)
+                menu = FindFirstObjectByType<GameMenuPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때
+            if (menu == null)
+                Debug.LogError($"[{nameof(GameScreenPresenter)}] {nameof(GameMenuPresenter)} 를 찾지 못했습니다 — 강제 퇴장 · 판 중지를 처리하지 못합니다.", this);
         }
 
         private void OnEnable()
@@ -107,6 +114,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
             GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
+            GameEvents.OnGameHalted += HandleGameHalted;
             GameEvents.OnChapchuChanged += HandleChapchuChanged;
         }
 
@@ -154,6 +162,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
             GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
+            GameEvents.OnGameHalted -= HandleGameHalted;
             GameEvents.OnChapchuChanged -= HandleChapchuChanged;
 
             if (_playing != null)
@@ -651,6 +660,17 @@ namespace Chapchu.UI.GameScreen
                 discardPile.Show(cardIds, discardCount);
                 return null;
             });
+
+            // 내가 강제 퇴장됐으면 큐를 기다리지 않고 바로 — 경고 예약 · 방 나가기 (곧 씬이 바뀐다)
+            if (menu != null)
+                menu.ShowPlayerLeftGame(actorNumber, forced);
+        }
+
+        // 판 중지 — 곧 방 씬으로 옮겨지므로 큐를 기다리지 않고 바로 경고를 예약한다 (09-network.md 9.1)
+        private void HandleGameHalted()
+        {
+            if (menu != null)
+                menu.ShowGameHalted();
         }
 
         // 찹츄 선언 · 해제(턴 시작 판정의 무효) — 내 패널(「찹츄 완료」) 또는 그 사람 좌석, 턴 띠 칩, 기록.

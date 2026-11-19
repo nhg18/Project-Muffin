@@ -34,27 +34,25 @@ namespace Chapchu.UI.GameScreen
         {
             _view.ExitConfirmed += HandleExitConfirmed;
             RoomEvents.OnLeftRoom += HandleLeftRoom;
-            GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
-            GameEvents.OnGameHalted += HandleGameHalted;
         }
 
         private void OnDisable()
         {
             _view.ExitConfirmed -= HandleExitConfirmed;
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
-            GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
-            GameEvents.OnGameHalted -= HandleGameHalted;
         }
 
+        // 아래 둘은 GameScreenPresenter(큐)가 알림을 받은 자리에서 바로 부른다 — 곧 씬이 바뀌므로 연출 큐를 기다리지 않는다 (CODE_CONVENTION 9절)
+
         // 방장이 사라졌는데 판을 이어받지 못했다 — 새 방장이 곧 전원을 방으로 옮긴다. 도착해서 사유를 알린다 (09-network.md 9.1 · 22-popup-ui.md)
-        private void HandleGameHalted()
+        public void ShowGameHalted()
         {
             if (PopupManager.Instance != null)
                 PopupManager.Instance.ShowWarningOnNextScene(HaltedTitle, HaltedText);
         }
 
         // 방장이 나를 강제 퇴장시켰다 — 규칙에서는 이미 빠졌다. 방을 나가 로비로 가고, 도착해서 사유를 알린다.
-        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced)
+        public void ShowPlayerLeftGame(int actorNumber, bool forced)
         {
             if (!forced || NetworkManager.Instance == null || PhotonNetwork.LocalPlayer == null || actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                 return;
