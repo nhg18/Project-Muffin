@@ -511,7 +511,7 @@
         }
     }
 
-    /// <summary>버림 더미 맨 위 카드를 손패로 가져왔다 (109 아 맞다! — 05-deck.md 7절). 버림 더미는 공개라 카드도 전원에게. TopCardId = 가져간 뒤 맨 위 (비면 0).</summary>
+    /// <summary>버림 더미 맨 위 카드를 손패로 가져왔다 (1009 아 맞다! — 05-deck.md 7절). 버림 더미는 공개라 카드도 전원에게. TopCardId = 가져간 뒤 맨 위 (비면 0).</summary>
     public sealed class DiscardTaken : GameEvent
     {
         public int Actor { get; }
@@ -532,7 +532,7 @@
         }
     }
 
-    /// <summary>행동 카드 금지 상태 (107 짖기, 11-card-list 107). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
+    /// <summary>행동 카드 금지 상태 (1007 짖기, 11-card-list 1007). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
     public enum ActionBlock : byte
     {
         None,     // 없음
@@ -540,7 +540,7 @@
         ThisTurn  // 이번 턴 금지 — 그 턴이 끝나면 None
     }
 
-    /// <summary>행동 카드 금지 상태가 바뀌었다 (107 짖기). 공개 — 전원.</summary>
+    /// <summary>행동 카드 금지 상태가 바뀌었다 (1007 짖기). 공개 — 전원.</summary>
     public sealed class ActionBlockChanged : GameEvent
     {
         public int Actor { get; }
@@ -553,7 +553,7 @@
         }
     }
 
-    /// <summary>「기다려」 를 건 사람들이 바뀌었다 (123 기다려!, 07 4.3). 비어 있지 않은 동안 아무도 찹츄로 이기지 않는다. 공개 — 전원.</summary>
+    /// <summary>「기다려」 를 건 사람들이 바뀌었다 (1023 기다려!, 07 4.3). 비어 있지 않은 동안 아무도 찹츄로 이기지 않는다. 공개 — 전원.</summary>
     public sealed class WaitChanged : GameEvent
     {
         public int[] Casters { get; }
@@ -564,7 +564,7 @@
         }
     }
 
-    /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
+    /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
     public sealed class ChapchuWinHeld : GameEvent
     {
         public int Actor { get; }
@@ -575,7 +575,7 @@
         }
     }
 
-    /// <summary>턴 진행 방향이 바뀌었다 (145 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
+    /// <summary>턴 진행 방향이 바뀌었다 (1045 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
     public sealed class TurnDirectionChanged : GameEvent
     {
         public bool Reversed { get; }
@@ -589,8 +589,8 @@
     }
 
     /// <summary>
-    /// 대소동(112)으로 게임을 새로 시작한다 — 이 뒤로 HP · 손패 · 첫 턴이 시작 때처럼 온다. 화면은 판 상태(손패 · 함정 · 버림 더미 · 찹츄 · 사망 · 방향 · 판 효과)를 처음으로 되돌린다.
-    /// User = 대소동을 쓴 사람. Count = 이 판에서 대소동을 쓴 횟수 n. Order = 새 턴 순서 (나간 사람 제외, 죽은 사람 포함). 통계 · 기록 서랍은 이어진다 (11-card-list 112).
+    /// 대소동(1012)으로 게임을 새로 시작한다 — 이 뒤로 HP · 손패 · 첫 턴이 시작 때처럼 온다. 화면은 판 상태(손패 · 함정 · 버림 더미 · 찹츄 · 사망 · 방향 · 판 효과)를 처음으로 되돌린다.
+    /// User = 대소동을 쓴 사람. Count = 이 판에서 대소동을 쓴 횟수 n. Order = 새 턴 순서 (나간 사람 제외, 죽은 사람 포함). 통계 · 기록 서랍은 이어진다 (11-card-list 1012).
     /// </summary>
     public sealed class GameRestarted : GameEvent
     {
@@ -607,7 +607,7 @@
     }
 
     /// <summary>
-    /// 피폭 상태가 바뀌었다 (112 대소동). N = 대소동 횟수, Turns = 새로 시작한 뒤 피폭이 들어간 턴 수 k. Turns 가 1 이상이면 방금 모두가 k^N 피해를 입었다.
+    /// 피폭 상태가 바뀌었다 (1012 대소동). N = 대소동 횟수, Turns = 새로 시작한 뒤 피폭이 들어간 턴 수 k. Turns 가 1 이상이면 방금 모두가 k^N 피해를 입었다.
     /// 다음 턴 끝의 피해는 (k+1)^N — 판 효과 줄 「피폭 · 턴이 끝날 때마다 모두 −N」. N 이 0 이면 피폭 없음. 공개 — 전원.
     /// </summary>
     public sealed class FalloutChanged : GameEvent
@@ -622,7 +622,7 @@
         }
     }
     /// <summary>
-    /// 개판 오분전 상태가 바뀌었다 (121). Caster = 건 사람 (-1 이면 112 대소동으로 지워짐), Left = 남은 바퀴 (0 이면 끝 — 판정이 따르면 GaepanJudged),
+    /// 개판 오분전 상태가 바뀌었다 (1021). Caster = 건 사람 (-1 이면 1012 대소동으로 지워짐), Left = 남은 바퀴 (0 이면 끝 — 판정이 따르면 GaepanJudged),
     /// Again = 개판 중에 다시 써서 처음부터. 판 효과 줄 「개판 오분전 · N바퀴 남음」. 공개 — 전원.
     /// </summary>
     public sealed class GaepanChanged : GameEvent
@@ -640,7 +640,7 @@
     }
 
     /// <summary>
-    /// 개판 오분전 판정 (121). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
+    /// 개판 오분전 판정 (1021). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
     /// Actors · Values = 판정 때 살아 있던 사람과 그 기준 값 (같은 순서) — 각자 머리 위 수치 표. 공개 GameServer.GaepanJudgeSeconds 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
     /// </summary>
     public sealed class GaepanJudged : GameEvent
@@ -663,7 +663,7 @@
         }
     }
     /// <summary>
-    /// 대상이 고르기 시작 (119 목표 조준). Actor = 고르는 사람, User = 카드를 쓴 사람, HandCount = 고르는 사람의 손패 장수 (「손패 전부 버리기 (n장)」),
+    /// 대상이 고르기 시작 (1019 목표 조준). Actor = 고르는 사람, User = 카드를 쓴 사람, HandCount = 고르는 사람의 손패 장수 (「손패 전부 버리기 (n장)」),
     /// Damage = 피해 쪽 수치, StartsAt · Deadline = 서버 시각. 그동안 게임 · 턴 시간이 멈춘다. 공개 — 전원 (고르는 사람은 팝업, 나머지는 「고르는 중」 타이머).
     /// </summary>
     public sealed class ChoiceStarted : GameEvent
@@ -689,7 +689,7 @@
     }
 
     /// <summary>
-    /// 고르기가 끝났다 (119). Option 0 손패 전부 버리기 · 1 피해 받기 · -1 고르는 사람이 나가 불발. TimedOut = 시간 초과로 방장이 무작위. 결과(버림 · 피해)는 뒤따르는 사건들. 공개 — 전원.
+    /// 고르기가 끝났다 (1019). Option 0 손패 전부 버리기 · 1 피해 받기 · -1 고르는 사람이 나가 불발. TimedOut = 시간 초과로 방장이 무작위. 결과(버림 · 피해)는 뒤따르는 사건들. 공개 — 전원.
     /// </summary>
     public sealed class ChoiceMade : GameEvent
     {

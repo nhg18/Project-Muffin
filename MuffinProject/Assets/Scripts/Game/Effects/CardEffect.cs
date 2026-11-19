@@ -22,7 +22,7 @@ namespace Chapchu.Game.Effects
         /// <summary>방장의 규칙이 체인을 처리할 때 부른다. entry = 체인에 오른 이 카드 (쓴 사람 · 확정된 대상).</summary>
         internal abstract void Apply(GameServer server, ChainEntry entry);
 
-        /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 116 뽑을 장수). 기본은 없음.</summary>
+        /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 1016 뽑을 장수). 기본은 없음.</summary>
         internal virtual void Prepare(GameServer server, ChainEntry entry) { }
 
         /// <summary>

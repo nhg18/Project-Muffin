@@ -10,18 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_112
+  m_Name: Card_1011
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 112
-  cardName: "\uB300\uC18C\uB3D9"
-  cardImage: {fileID: 21300000, guid: a72c1ed9169031349940145ec544ec47, type: 3}
+  id: 1011
+  cardName: "\uC6B4\uBA85 \uB4A4\uC9D1\uAE30"
+  cardImage: {fileID: 21300000, guid: 72414c2bbed2c2548a88e419e4aba595, type: 3}
   type: 0
-  targetType: 0
+  targetType: 1
   targetCondition: 0
-  grade: 3
-  description: "\uAC8C\uC784\uC744 \uC0C8\uB85C \uC2DC\uC791\uD55C\uB2E4. \uC774\uD6C4
-    \uB9E4 \uD134 \uBAA8\uB450 1, 2, 3\u2026\uC529 \uCEE4\uC9C0\uB294 \uD53C\uD3ED
-    \uD53C\uD574\uB97C \uBC1B\uB294\uB2E4"
+  grade: 2
+  description: "\uB300\uC0C1\uACFC HP\uB97C \uB9DE\uBC14\uAFBC\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
@@ -31,10 +29,10 @@ MonoBehaviour:
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117965319438423
+  - rid: 4532117934215004274
   references:
     version: 2
     RefIds:
-    - rid: 4532117965319438423
-      type: {class: RestartEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+    - rid: 4532117934215004274
+      type: {class: SwapHpEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data: 

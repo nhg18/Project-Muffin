@@ -4,7 +4,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 개판 오분전 시작 (121, 11-card-list 121). 이 턴이 끝난 뒤부터 턴을 세어 생존자 수만큼이면 한 바퀴, 5바퀴 뒤 반반 기준 꼴찌가 HP 0.
+    /// 개판 오분전 시작 (1021, 11-card-list 1021). 이 턴이 끝난 뒤부터 턴을 세어 생존자 수만큼이면 한 바퀴, 5바퀴 뒤 반반 기준 꼴찌가 HP 0.
     /// 개판 중에 다시 쓰면 처음부터. 건 사람이 죽거나 나가도 이어진다 (사용자 2026-11-13).
     /// </summary>
     [Serializable]

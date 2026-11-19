@@ -119,8 +119,8 @@
 | 16 | `NotSetTrap` | 설치되지 않은 함정 |
 | 17 | `TrapConditionNotMet` | 함정 발동 조건 · 시점이 맞지 않는다 (`04` 6절 「발동 시점」) |
 | 18 | `Resolving` | 체인 · 함정 처리 · 사망 대기 중이라 메인 행동을 할 수 없다 — 끝난 뒤에 (`03-turn` 4절) |
-| 19 | `ActionBlocked` | 이번 턴은 행동 카드를 쓸 수 없다 — 107 짖기 (`11-card-list` 107). 뽑기 · 함정 설치 · 카운터는 된다 (2026-11-13) |
-| 20 | `NotChoosing` | 고르기 요청 — 지금 고르는 사람이 아니다 (남의 고르기 · 시간이 지나 이미 무작위로 끝남, `11-card-list` 119) (2026-11-13) |
+| 19 | `ActionBlocked` | 이번 턴은 행동 카드를 쓸 수 없다 — 1007 짖기 (`11-card-list` 1007). 뽑기 · 함정 설치 · 카운터는 된다 (2026-11-13) |
+| 20 | `NotChoosing` | 고르기 요청 — 지금 고르는 사람이 아니다 (남의 고르기 · 시간이 지나 이미 무작위로 끝남, `11-card-list` 1019) (2026-11-13) |
 
 ---
 
@@ -162,7 +162,7 @@ public static class PlayerProps
     public const string TrapCount = "trapCount";
     public const string LifeState = "lifeState";
     public const string ChapChu   = "chapChu";
-    public const string ActionBlock = "actionBlock"; // 행동 카드 금지 (byte: 1 다음 턴 · 2 이번 턴, 107). 없으면 키 없음 (2026-11-13)
+    public const string ActionBlock = "actionBlock"; // 행동 카드 금지 (byte: 1 다음 턴 · 2 이번 턴, 1007). 없으면 키 없음 (2026-11-13)
 }
 
 public static class RoomProps
@@ -175,9 +175,9 @@ public static class RoomProps
     public const string Bots         = "bots";     // 봇 번호 배열 (int[], 18-bot 9절)
     public const string BotLevels    = "botLv";    // 봇 난이도 (int[3] — [봇 번호 − 1] 자리, 18-bot 7-7). 없으면 전부 보통 (2026-11-14)
     public const string Solo         = "solo";     // 「혼자 하기」 방 (bool, 18-bot 10절)
-    public const string WaitCasters  = "wait";     // 「기다려」 를 건 사람들 (int[], 123). 없으면 키 없음 (2026-11-13)
-    public const string Gaepan       = "gaepan";   // 개판 오분전 [건 사람, 남은 바퀴] (int[], 121). 없으면 키 없음 (2026-11-13)
-    public const string Fallout      = "fallout";  // 대소동 피폭 [n 대소동 횟수, k 지난 턴 수] (int[], 112). 없으면 키 없음 (2026-11-13)
+    public const string WaitCasters  = "wait";     // 「기다려」 를 건 사람들 (int[], 1023). 없으면 키 없음 (2026-11-13)
+    public const string Gaepan       = "gaepan";   // 개판 오분전 [건 사람, 남은 바퀴] (int[], 1021). 없으면 키 없음 (2026-11-13)
+    public const string Fallout      = "fallout";  // 대소동 피폭 [n 대소동 횟수, k 지난 턴 수] (int[], 1012). 없으면 키 없음 (2026-11-13)
     public const string ResultDeadline = "resDeadline"; // 결과 화면: 이 서버 시각이 지나면 각자 방을 나가 로비로 (double). 게임 종료 때 쓴다 (07 11-1, 2026-11-17)
     public const string ResultReady    = "resReady";    // 결과 화면: 「한 판 더」 를 누른 사람 · 준비한 봇 (int[]). 아무도 없으면 키 없음
     public const string ResultStartAt  = "resStartAt";  // 결과 화면: 전원 준비 — 이 서버 시각에 다음 판 시작 (double). 카운트다운이 없으면 키 없음
@@ -271,7 +271,7 @@ photonView.RPC(nameof(RPC_SyncMyHand), targetPlayer, cardInstanceIds, cardIds);
 | 처리 번호 | 결과 전파 · 개별 응답 RPC 는 첫 인자가 처리 번호 (5절) |
 | 내 카드 다시 받기 | 화면이 늦게 열렸거나 다시 그릴 때 클라가 요청하면, 마스터가 그 사람의 손패 · 설치 함정 내용을 지금 처리 번호로 그 사람에게만 보낸다. 공개 값은 스냅샷(6절)에서 읽는다 (2026-11-06) |
 | 전체 복원 (재접속) | 「내 카드 다시 받기」 의 확장. 끊겼다 돌아온 사람에게 마스터가 **전체 스냅샷**(좌석 · 손패 · 함정 내용 · 전원 HP · 생존 · 찹츄 · 턴 주인 · 진행 방향 · 체인 상태 · 반응 시작 · 턴 마감 시각 · 덱 장수)을 처리 번호와 함께 그 사람에게만 보낸다 (12절, 2026-11-07) |
-| 대상이 고르는 효과 (119) | 방장이 `RPC_OnChoiceStarted`(고르는 사람 · 쓴 사람 · 카드 · 손패 장수 · 피해 · 시작 · 마감 시각)를 **전원**에게 보내고, 고르는 사람이 `RPC_RequestChoose(option)` 으로 요청한다(요청자는 `Sender`). 방장이 시간 · 고르는 사람을 판정하고 `RPC_OnChoiceMade`(고르는 사람 · 고른 것(0 버리기 · 1 피해 · −1 나가서 불발) · 시간 초과)를 전원에게. 시간 초과면 방장이 무작위로 (2026-11-13) |
+| 대상이 고르는 효과 (1019) | 방장이 `RPC_OnChoiceStarted`(고르는 사람 · 쓴 사람 · 카드 · 손패 장수 · 피해 · 시작 · 마감 시각)를 **전원**에게 보내고, 고르는 사람이 `RPC_RequestChoose(option)` 으로 요청한다(요청자는 `Sender`). 방장이 시간 · 고르는 사람을 판정하고 `RPC_OnChoiceMade`(고르는 사람 · 고른 것(0 버리기 · 1 피해 · −1 나가서 불발) · 시간 초과)를 전원에게. 시간 초과면 방장이 무작위로 (2026-11-13) |
 | 반응 시간 스킵 · 고민 연장 | 스킵 = `RPC_RequestReactionSkip()`, 고민 = `RPC_RequestReactionHold(cardInstanceId)` (요청자는 `Sender`). 방장이 반응 시간 중인지 · 요청자가 물어야 할 사람인지 (고민은 그 카드가 그 사람의 낼 수 있는 목록에 있는지 · 이번 반응 시간에 아직 늘리지 않았는지) 를 보고 처리한다. **둘 다 결과를 전파하지 않고, 거절해도 알리지 않는다** — 모두 스킵하면 체인 처리가 시작되는 것으로만 드러난다 (`04-card` 8절, 2026-11-15) |
 | 게임 종료 → 결과 화면 (`07` 11-1) | 방장이 `RPC_OnGameEnded`(승자 · 승리 방식 + 순위 순 배열: 접속 번호 · 순위 · 최종 HP · 빠진 턴 · 당한 사람 · 나감 + **판 지표**(사람마다 12개를 순위 순으로 이어 붙인 정수 배열, `07` 11-4) · **끝난 턴 번호**, 2026-11-18)를 **전원**에게 보내고, 같은 때 결과 화면 상태(마감 시각 · 준비 · 카운트다운 지움)를 방 속성에 쓴다. 2초 뒤 공개 값(HP · 손패 장수 · 턴 주인 · 처리 번호 등 — 봇 키 포함)을 시작 값으로 되돌리고 전원을 결과 씬으로 옮긴다 (13절 #5). 그 사이 방장이 바뀌면 새 믿는 방장이 이어서 한다. 게임이 끝난 뒤 클라는 게임 요청을 보내지 않는다 (2026-11-17) |
 | 결과 화면의 요청 (`07` 11-1) | 결과 씬의 PhotonView(`PunResultServer` — 씬 뷰 ID **2**, 게임 씬의 1 과 겹치지 않게)가 맡는다. 준비 · 취소 = `RPC_ResultRequestSetReady(ready)` (요청자는 `Sender`). 방장이 준비한 사람 · 카운트다운 끝 시각을 방 속성에 쓰고 화면은 그 값을 그린다 — 준비에는 결과 RPC 가 없다. 이모트 = `RPC_ResultRequestEmote(번호)` → 방장이 번호(0 ~ 3) · 보낸 사람이 방에 있는지 · 빈도(13절 #6 에 더해 사람마다 1초에 한 번)를 보고 `RPC_OnResultEmote(접속 번호, 번호)` 를 전원에게 보낸다. 받는 쪽은 믿는 방장이 보낸 것만 받고 번호 범위를 다시 본다. 말은 번호로만 오간다 — 글자를 보내지 않는다 (`07` 11-2, 2026-11-18). 봇 준비 · 전원 준비 판정 · 다음 판 시작은 방장. 자동 이동은 각 클라가 스스로 방을 나간다 (2026-11-17) |

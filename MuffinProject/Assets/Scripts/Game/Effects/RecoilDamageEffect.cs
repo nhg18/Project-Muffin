@@ -5,7 +5,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 대상을 못 쓰러뜨렸으면 쓴 사람이 amount 피해 (105 드롭킥). 「쓰러뜨림」 = 이 카드의 피해로 대상 HP 가 0 이 됐다 — 그 순간에 정한다.
+    /// 대상을 못 쓰러뜨렸으면 쓴 사람이 amount 피해 (1005 드롭킥). 「쓰러뜨림」 = 이 카드의 피해로 대상 HP 가 0 이 됐다 — 그 순간에 정한다.
     /// 사망 대기에서 살아나도 쓰러뜨린 것이다 (사용자 2026-11-13 · 프로토타입 v2, 11-card-list 4절 #2). 대상이 빠졌으면 불발.
     /// </summary>
     [Serializable]

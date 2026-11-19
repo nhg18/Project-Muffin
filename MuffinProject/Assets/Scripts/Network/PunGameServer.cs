@@ -147,7 +147,7 @@ namespace Chapchu.Network
         /// <summary>찹츄 선언 — 내 턴 · 손패가 정확히 10장일 때 (07-win-condition.md 4.1).</summary>
         public void RequestDeclareChapchu() => SendRequest(nameof(RPC_RequestDeclareChapchu));
 
-        /// <summary>내가 고르는 효과의 답 (119 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
+        /// <summary>내가 고르는 효과의 답 (1019 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
         public void RequestChoose(int option) => SendRequest(nameof(RPC_RequestChoose), option);
 
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>

@@ -10,12 +10,12 @@ namespace Chapchu.Game.Effects
     {
         public EffectSubject subject;
         public int count;
-        // 0 보다 크면 count ~ randomMax 사이 무작위 장수 — 카드를 낼 때 방장이 정한다 (116)
+        // 0 보다 크면 count ~ randomMax 사이 무작위 장수 — 카드를 낼 때 방장이 정한다 (1016)
         public int randomMax;
         // 함정 전용 — 사건 값만큼 뽑는다 (T09 「버려진 장수만큼」). 켜면 count 는 쓰지 않는다.
         public bool useTriggerAmount;
 
-        // 18-bot 7-1 — 내가 뽑는 정해진 장수는 BotHandGain 으로. 무작위 장수(116)는 나올 수 있는 장수마다의 내 손패 값을 평균한다. 상대가 뽑으면 그 상대 손패 점수
+        // 18-bot 7-1 — 내가 뽑는 정해진 장수는 BotHandGain 으로. 무작위 장수(1016)는 나올 수 있는 장수마다의 내 손패 값을 평균한다. 상대가 뽑으면 그 상대 손패 점수
         internal override double BotScore(Bots.BotView view, int[] receivers)
         {
             if (useTriggerAmount)

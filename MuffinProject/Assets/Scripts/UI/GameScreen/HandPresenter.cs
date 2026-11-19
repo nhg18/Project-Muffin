@@ -225,7 +225,7 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        /// <summary>버림 더미에서 가져온 카드 (109 아 맞다!) — 더미 자리에서 꺼내 뽑은 카드처럼 크게 보여 준 뒤 손패 끝에 붙인다.</summary>
+        /// <summary>버림 더미에서 가져온 카드 (1009 아 맞다!) — 더미 자리에서 꺼내 뽑은 카드처럼 크게 보여 준 뒤 손패 끝에 붙인다.</summary>
         public void TakeFromDiscard(int cardInstanceId, int cardId, Vector3 from)
         {
             CardData data = deck.GetCard(cardId);

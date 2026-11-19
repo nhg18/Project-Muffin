@@ -149,8 +149,8 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (113 기억 삭제). 교환 · 재분배라 「버려진 후」 · 「여러 장 뽑은 후」 기록을 남기지 않는다
-        /// — 훔침 · 버림에 반응하는 카드의 대상이 아니다 (11-card-list 113).
+        /// 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (1013 기억 삭제). 교환 · 재분배라 「버려진 후」 · 「여러 장 뽑은 후」 기록을 남기지 않는다
+        /// — 훔침 · 버림에 반응하는 카드의 대상이 아니다 (11-card-list 1013).
         /// </summary>
         internal void RedealHand(int actor)
         {
@@ -162,7 +162,7 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 버림 더미 맨 위 1장을 손패로 (109 아 맞다!). 체인의 카드는 체인이 끝난 뒤 쌓이므로 체인이 시작되기 전의 맨 위다 (04-card.md 9.1).
+        /// 버림 더미 맨 위 1장을 손패로 (1009 아 맞다!). 체인의 카드는 체인이 끝난 뒤 쌓이므로 체인이 시작되기 전의 맨 위다 (04-card.md 9.1).
         /// 가져올 카드가 없으면 불발.
         /// </summary>
         internal void TakeDiscardTop(int actor, ChainEntry entry)
@@ -183,7 +183,7 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 대상 손패에서 나머지 모두가 1장씩 가져간다 (118 무야호). 받는 순서는 쓴 사람부터 턴 진행 방향 — 카드가 떨어지면 거기서 끝 (11-card-list 118).
+        /// 대상 손패에서 나머지 모두가 1장씩 가져간다 (1018 무야호). 받는 순서는 쓴 사람부터 턴 진행 방향 — 카드가 떨어지면 거기서 끝 (11-card-list 1018).
         /// 가져가기는 훔침이라 「훔쳐진 후」 기록이 남는다.
         /// </summary>
         internal void ShareFromTarget(int target, ChainEntry entry)
@@ -196,7 +196,7 @@ namespace Chapchu.Game
             }
         }
 
-        /// <summary>두 사람의 HP 를 서로 바꾼다 (111 운명 뒤집기). HP 설정이라 피해 · 회복이 아니다 — 감소 · 반사 · 함정이 걸리지 않는다.</summary>
+        /// <summary>두 사람의 HP 를 서로 바꾼다 (1011 운명 뒤집기). HP 설정이라 피해 · 회복이 아니다 — 감소 · 반사 · 함정이 걸리지 않는다.</summary>
         internal void SwapHp(int a, int b)
         {
             if (a == b || !IsInGame(a) || !IsInGame(b))
@@ -207,7 +207,7 @@ namespace Chapchu.Game
             SetHp(b, hpA);
         }
 
-        /// <summary>min ~ max 사이 무작위 정수 (둘 다 포함) — 효과가 낼 때 정하는 값 (116).</summary>
+        /// <summary>min ~ max 사이 무작위 정수 (둘 다 포함) — 효과가 낼 때 정하는 값 (1016).</summary>
         internal int RollRange(int min, int max) => _random.Next(min, max + 1);
 
         /// <summary>두 사람의 손패 전체를 바꾼다 (A11 · A18).</summary>

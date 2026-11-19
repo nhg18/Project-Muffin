@@ -24,9 +24,9 @@ namespace Chapchu.Game
         ChapchuPlayers, // 찹츄 상태 플레이어 전원, 나 포함 (자동 — A02)
         ChapchuOthers,  // 나를 뺀 찹츄 상태 플레이어 전원 (자동 — T04)
         MoreHandThanMe, // 나보다 손패가 많은 모든 플레이어 — 이 카드를 낸 뒤의 내 장수와 비교 (자동 — A23)
-        OneAny,         // 나를 포함한 1명 고름 (106 핥아주기, 04-card.md 11절)
-        MostHand,       // 나를 포함한 생존자 중 손패가 가장 많은 1명 — 이 카드를 낸 뒤의 장수, 동률이면 무작위 (자동 — 118 무야호)
-        NextPlayer      // 턴 진행 방향으로 다음 차례 1명 (자동 — 120 얼음!, 03-turn.md 6절 #4)
+        OneAny,         // 나를 포함한 1명 고름 (1006 핥아주기, 04-card.md 11절)
+        MostHand,       // 나를 포함한 생존자 중 손패가 가장 많은 1명 — 이 카드를 낸 뒤의 장수, 동률이면 무작위 (자동 — 1018 무야호)
+        NextPlayer      // 턴 진행 방향으로 다음 차례 1명 (자동 — 1020 얼음!, 03-turn.md 6절 #4)
     }
 
     // 고르는 대상 타입(OneOther · TwoOthers · OneAny)의 대상 후보 조건 — 카드별 「추가 사용 조건」 (11-card-list.md 1-2 · 04-card.md 5 · 11절).
@@ -34,9 +34,9 @@ namespace Chapchu.Game
     public enum TargetCondition
     {
         None,       // 조건 없음
-        HasHand,    // 손패 1장 이상 (102 낚아채기)
-        HpBelowMax, // HP 가 최대보다 낮다 (106 핥아주기)
-        HasTrap     // 설치한 함정 1장 이상 (104 파헤치기)
+        HasHand,    // 손패 1장 이상 (1002 낚아채기)
+        HpBelowMax, // HP 가 최대보다 낮다 (1006 핥아주기)
+        HasTrap     // 설치한 함정 1장 이상 (1004 파헤치기)
     }
 
     // 함정의 발동 조건 종류 (04-card.md 6절 「발동 시점」). 카드 에셋에는 순서 번호로 저장된다 — 끝에만 추가한다.

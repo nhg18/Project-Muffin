@@ -34,7 +34,7 @@ CARD_LIST_MD = "docs/systems/11-card-list.md"
 RULE_HEADINGS = ("효과", "추가 사용 조건", "발동 조건", "예외")
 REQUIRED = ("Name", "Type", "대상", "장수", "카드 문구", "등급")
 GRADE_ENUM = {"일반": "Normal", "고급": "Fine", "희귀": "Rare", "개판": "Gaepan"}
-TYPE_PREFIX = {"Action": 100, "Counter": 200, "Trap": 300}
+TYPE_PREFIX = {"Action": 1000, "Counter": 2000, "Trap": 3000}
 
 NOTION_VERSION = "2025-09-03"
 API = "https://api.notion.com/v1"
@@ -266,19 +266,40 @@ def word_diff(a, b):
     return out
 
 
-def marked(old, new, diff, ctx=8):
-    """「바뀐 부분」 칸 — 빠진 글 빨강 취소선, 들어간 글 초록 굵게, 같은 글은 바뀐 곳 앞뒤 ctx 자만."""
+def line_changes(a, b):
+    """바뀐 줄만 — (빠진 줄들, 들어간 줄들) 목록. 빈 줄은 뺀다 (값이 비었다가 생긴 칸)."""
+    a, b = a.split(NL), b.split(NL)
     out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        cut, add = [x for x in a[i1:i2] if x], [x for x in b[j1:j2] if x]
+        if op != "equal" and (cut or add):
+            out.append((cut, add))
+    return out
+
+
+def marked(old, new, diff):
+    """「바뀐 부분」 칸 — 바뀐 줄만. 빠진 글 빨강 취소선, 들어간 글 초록 굵게.
+    한 줄이 한 줄로 조금 바뀌면(60% 이상 같음) 「~」 줄에 단어만 칠하고, 새로 쓴 줄은 「−」 · 「+」 줄째 칠한다."""
+    out = []
+
+    def put(t, ann=None):
+        item = {"type": "text", "text": {"content": t[:2000]}}
+        if ann:
+            item["annotations"] = ann
+        out.append(item)
+
     for k, label in diff:
-        out.append({"type": "text", "text": {"content": (NL if out else "") + label + ": "}})
-        parts = word_diff(field(old, k).replace(NL, " / "), field(new, k).replace(NL, " / "))
-        for i, (op, t) in enumerate(parts):
-            if op == "=" and len(t) > ctx * 2:
-                t = ("…" + t[-ctx:]) if i == 0 else (t[:ctx] + "…") if i == len(parts) - 1 else (t[:ctx] + "…" + t[-ctx:])
-            item = {"type": "text", "text": {"content": t[:2000]}}
-            if op != "=":
-                item["annotations"] = CUT if op == "-" else ADD
-            out.append(item)
+        put((NL if out else "") + f"[{label}]")
+        for cut, add in line_changes(field(old, k), field(new, k)):
+            if len(cut) == len(add) == 1 and difflib.SequenceMatcher(None, cut[0], add[0], autojunk=False).ratio() >= 0.6:
+                put(NL + "~ ")
+                for op, t in word_diff(cut[0], add[0]):
+                    put(t, None if op == "=" else CUT if op == "-" else ADD)
+            else:
+                for line in cut:
+                    put(NL + "− " + line, CUT)
+                for line in add:
+                    put(NL + "+ " + line, ADD)
     return out[:100]   # 노션 한 칸 조각 제한
 
 
@@ -477,7 +498,7 @@ class Bot:
         pending = {int(l.split()[1]) for l in changed}
         return {"cards": cards, "reworked": sorted(self.reworked & pending)}, released, changed
 
-    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후(전체) · 바뀐 부분(단어 diff) · 본문(git diff)
+    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후(바뀐 줄) · 바뀐 부분(줄 diff, 조금 바뀐 줄은 단어) · 본문(git diff)
     def record(self, old, new):
         extra, blocks = {}, []
         if old is None:
@@ -492,8 +513,10 @@ class Bot:
                 return
             labels = [label for _, label in diff]
             kind = "삭제" if new["state"] == "삭제" else ("상태" if labels == ["상태"] else "수정")
-            before = NL.join(f"{label}: {old.get(k)}" for k, label in diff)
-            after = NL.join(f"{label}: {new.get(k)}" for k, label in diff)
+            # 바뀐 줄만 — 본문 규칙 전체를 붙이면 칸이 길어져 무엇이 바뀌었는지 안 보인다
+            ch = {k: line_changes(field(old, k), field(new, k)) for k, _ in diff}
+            before = NL.join(f"{label}: " + (NL.join(x for c, _ in ch[k] for x in c) or "(없음)") for k, label in diff)
+            after = NL.join(f"{label}: " + (NL.join(x for _, a in ch[k] for x in a) or "(없음)") for k, label in diff)
             extra = {"바뀐 부분": {"rich_text": marked(old, new, diff)}}
             blocks = [git_diff(old, new, diff)]
         card = new or old
@@ -513,7 +536,7 @@ class Bot:
             if c["id"] is not None or c["state"] == "삭제" or c["type"] not in TYPE_PREFIX:
                 continue
             base = TYPE_PREFIX[c["type"]]
-            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 100]
+            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 1000]
             c["id"] = max(used, default=base) + 1
             self.n.update_page(c["page"], {"ID": {"number": c["id"]}})
             self.say(f"ID 채움: {c['name']} → {c['id']}")

@@ -22,7 +22,7 @@ namespace Chapchu.Game.Bots
         // 18-bot.md 7-1 「내가 받는 피해」 · 「회복」, 7-3 「행동 카드 금지」 — HP 기준
         private const int LowHp = 30;             // 이 미만이면 위험 — 자해 −20 · 회복 × 1.5
         private const int MidHp = 50, HighHp = 70; // 회복 × 1.0 · × 0.6 의 경계
-        public const int GuardHp = 40;            // 107 짖기 — 내 HP 가 이 이하면 몸을 지키는 값을 더한다
+        public const int GuardHp = 40;            // 1007 짖기 — 내 HP 가 이 이하면 몸을 지키는 값을 더한다
 
         // 18-bot.md 7-1 「내가 받는 피해」 · 「내 손패」
         private const double SelfKnockoutScore = -1000;  // 그 피해로 쓰러짐 — 그 수는 두지 않는다
@@ -38,7 +38,7 @@ namespace Chapchu.Game.Bots
         /// <summary>이 수의 점수에 크게 든 이유 — 로그용 (7-6). 수 하나를 채점하기 전에 비운다.</summary>
         public readonly List<string> Notes = new List<string>();
 
-        /// <summary>그 카드가 지금 내 손패에 있다면 낼 수 있는 가장 높은 효과 점수 (109 가 버림 더미 맨 위를 볼 때). 봇 판단기가 넣는다.</summary>
+        /// <summary>그 카드가 지금 내 손패에 있다면 낼 수 있는 가장 높은 효과 점수 (1009 가 버림 더미 맨 위를 볼 때). 봇 판단기가 넣는다.</summary>
         public Func<Card, double> WorthOf = _ => 0;
 
         private readonly HashSet<int> _noticed; // 이번 턴에 찹츄를 알아챈 상대 (7-7 「찹츄 알아챔」)

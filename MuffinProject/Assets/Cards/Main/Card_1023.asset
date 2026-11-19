@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_116
+  m_Name: Card_1023
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 116
-  cardName: "\uC0C1\uC0C1\uB3C4 \uBABB\uD55C \uC815\uCCB4"
-  cardImage: {fileID: 21300000, guid: 872635380515ffd4487f4863f2160a62, type: 3}
+  id: 1023
+  cardName: "\uAE30\uB2E4\uB824!"
+  cardImage: {fileID: 0}
   type: 0
-  targetType: 4
+  targetType: 5
   targetCondition: 0
-  grade: 1
-  description: "\uBB34\uC791\uC704\uB85C 1~10\uC7A5\uC744 \uBF51\uB294\uB2E4"
+  grade: 2
+  description: "\uB2E4\uC74C \uB0B4 \uD134 \uC2DC\uC791 \uC804\uAE4C\uC9C0 \uC544\uBB34\uB3C4
+    \uC2B9\uB9AC\uD560 \uC218 \uC5C6\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
@@ -29,14 +30,10 @@ MonoBehaviour:
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
-  - rid: 4532117934215004272
+  - rid: 4532117965319438413
   references:
     version: 2
     RefIds:
-    - rid: 4532117934215004272
-      type: {class: DrawEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
-      data:
-        subject: 1
-        count: 1
-        randomMax: 10
-        useTriggerAmount: 0
+    - rid: 4532117965319438413
+      type: {class: StartWaitEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data: 

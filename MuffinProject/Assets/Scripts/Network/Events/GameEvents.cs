@@ -35,16 +35,16 @@ namespace Chapchu.Network.Events
         public static event Action<int, int, int, int> OnTrapMoved;          // from, to, fromTrapCount, toTrapCount — 함정 빼앗기 (종류는 두 사람만)
         public static event Action<int> OnTurnSkipMarked;                    // actorNumber — 다음 턴 스킵이 걸림
         public static event Action<int> OnTurnSkipped;                       // actorNumber — 턴이 스킵됨
-        public static event Action<int, int, int, int, int, int> OnDiscardTaken; // actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId(비면 0) — 버림 더미 맨 위를 손패로 (109)
-        public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (145)
-        public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (107 짖기: 다음 실제 턴 · 이번 턴 · 없음)
-        public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (123). 비면 끝, 그동안 찹츄 승리 없음
-        public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (112)
-        public static event Action<int, int, int, int, int, double, double> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline — 대상이 고르기 시작 (119). 그동안 게임 · 턴 시간 멈춤
-        public static event Action<int, int, bool> OnChoiceMade;             // actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (119)
-        public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대소동으로 지움), again 이면 다시 써서 처음부터 (121)
-        public static event Action<int, bool, int, int[], int[], int[]> OnGaepanJudged; // loser, byHp, value, tied, actors, values — 개판 판정 공개 (살아 있던 사람 · 기준 값). GaepanJudgeSeconds 뒤 loser 의 HP 0 (121)
-        public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (112)
+        public static event Action<int, int, int, int, int, int> OnDiscardTaken; // actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId(비면 0) — 버림 더미 맨 위를 손패로 (1009)
+        public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (1045)
+        public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (1007 짖기: 다음 실제 턴 · 이번 턴 · 없음)
+        public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (1023). 비면 끝, 그동안 찹츄 승리 없음
+        public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (1012)
+        public static event Action<int, int, int, int, int, double, double> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline — 대상이 고르기 시작 (1019). 그동안 게임 · 턴 시간 멈춤
+        public static event Action<int, int, bool> OnChoiceMade;             // actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (1019)
+        public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대소동으로 지움), again 이면 다시 써서 처음부터 (1021)
+        public static event Action<int, bool, int, int[], int[], int[]> OnGaepanJudged; // loser, byHp, value, tied, actors, values — 개판 판정 공개 (살아 있던 사람 · 기준 값). GaepanJudgeSeconds 뒤 loser 의 HP 0 (1021)
+        public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (1012)
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존

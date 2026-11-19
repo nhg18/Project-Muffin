@@ -14,7 +14,7 @@ namespace Chapchu.Game
         private double _reactionOpensAt;  // 이 전은 연출 중 — 카운터를 받지 않는다 (04 8절)
         private double _reactionDeadline;
 
-        // 처리 중에 멈춘 카드들 — [0] 부터 이어서 처리한다. 대상이 고르는 동안(119)만 남아 있다 (ContinueResolve).
+        // 처리 중에 멈춘 카드들 — [0] 부터 이어서 처리한다. 대상이 고르는 동안(1019)만 남아 있다 (ContinueResolve).
         private readonly List<ChainEntry> _resolving = new List<ChainEntry>();
         private bool IsResolvePaused => _resolving.Count > 0;
 
@@ -65,7 +65,7 @@ namespace Chapchu.Game
         {
             var entry = new ChainEntry(card, user, targets) { Below = _chain.Count > 0 ? _chain[_chain.Count - 1] : null };
             foreach (CardEffect effect in card.Effects)
-                effect.Prepare(this, entry); // 낼 때 정하는 값 (116 뽑을 장수)
+                effect.Prepare(this, entry); // 낼 때 정하는 값 (1016 뽑을 장수)
             _chain.Add(entry);
             AddStat(user, card.Type == CardType.Counter ? StatKind.Counters : StatKind.Actions); // 승인된 사용 — 무효화돼도 센다 (07 11-4)
             _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
@@ -146,7 +146,7 @@ namespace Chapchu.Game
         }
 
         // 처리할 카드가 남아 있는 동안 위에서부터 효과를 적용한다. 효과 사이에서는 멈추지 않는다 — 피해 뒤에 효과가 더 있어도 이어서 (04 9.3, 2026-11-15).
-        // 대상이 고르는 효과(119)에서만 멈추고, 고른 뒤 Advance 가 다시 부른다.
+        // 대상이 고르는 효과(1019)에서만 멈추고, 고른 뒤 Advance 가 다시 부른다.
         // settleAt = 이번에 적용하는 결과의 후처리 연출(3 · 4 단계)이 끝나는 시각 — 처음엔 맨 아래 카드의, 이어 갈 때는 고른 결과의.
         // 함정 · 사망 대기는 이 시각 뒤에, 다음 턴(메인 행동 전이면 턴 재개)도 그 뒤로 미룬다 (04 8 · 9.2절 · 06 8절).
         private void ContinueResolve(double settleAt)
@@ -180,7 +180,7 @@ namespace Chapchu.Game
                     if (_restartPending)
                         return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
                     if (IsChoosing)
-                        return; // 대상이 고르는 중 (119) — 고르면 Advance 가 이어 간다
+                        return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
                 }
 
                 _resolving.RemoveAt(0);

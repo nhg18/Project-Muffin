@@ -88,7 +88,7 @@ namespace Chapchu.Game
                 player.OutTurn = TurnSerial; // 턴 밖(사망 대기)에 죽으면 그때 진행 중인 턴의 번호 (07 11-3)
                 int[] discarded = DiscardAll(actor);
                 _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
-                EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 123)
+                EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 1023)
             }
         }
 
