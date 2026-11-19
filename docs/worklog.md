@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-11-19 · 시간 초과 자동 뽑기 + 3턴 강제 퇴장 (`feature/turn-timeout-auto`)
+
+### 결정 (PM, 2026-11-19)
+- 시간 초과 자동 행동은 **뽑기만** — 2026-11-15 「낼 수 있는 카드 중 무작위 1장」 폐기. 자리에 없는 사람의 무작위 카드가 남의 판을 흔들지 않게.
+- 자동 뽑기로는 **10장이 되지 않게**: 7장 이하 2장 · 8장 1장 · 9장 0장(턴만 넘김) · 10장 이상 2장. 자리에 없는 사람이 자동 뽑기 → 자동 선언 → 다음 턴 승리로 이기지 않게. 「기다려」 로 미뤄진 10장은 2장을 뽑아 깨진다(의도 유지).
+- **3번째 연속 시간 초과는 자동 행동 없이 바로 강제 퇴장.** 그 사람은 로비에서 경고 「방에서 나왔어요 / 3턴 동안 행동하지 않아 게임에서 나왔어요.」
+- 내가 채운 해석 (PM 에게 보고함, 반대 없으면 유지): 0장을 뽑은 턴도 연속 횟수에 센다 · 0장인 턴은 뽑기를 시도하지 않으니 빈 덱 피해도 없다.
+
+### 한 것
+- **문서**: `03-turn` 2 · 4 · 8 · 10절, `05-deck` 4절, `09` 12절, `22-popup-ui` 3절(로비 도착 경고 1줄), `development-plan` 기능 2.
+- **규칙** (`Scripts/Game`): 턴 마감에 `TimeOutTurn` — 연속 횟수(`PlayerState.TimeoutStreak`) +1, `TimeoutLimit`(3) 번째면 `Remove(actor, forced: true)`, 아니면 `DrawForTurn(AutoDrawCount)`. 직접 뽑기 · 카드 사용이 횟수를 0 으로. 뽑기의 적용 부분을 `DrawForTurn` 으로 나눠 직접 뽑기와 함께 쓴다. `StartGame` 에 「시간 초과 대상이 아닌 사람」(봇) 인자 — 그들의 턴은 예전처럼 그냥 넘어간다.
+- **전송**: `PlayerLeft.Forced` → `RPC_OnPlayerLeftGame` 에 `bool forced` 추가 (RPC 이름은 그대로라 RpcList 변화 없음). `PunGameServer` 가 봇 번호를 `StartGame` 에 넘긴다.
+- **화면**: 강제 퇴장된 본인은 `GameMenuPresenter` 가 방을 나가 로비로(나가기와 같은 길), `PopupManager.ShowWarningOnNextScene` 으로 도착 뒤 경고. 씬이 바뀌면 열린 팝업이 모두 닫히기 때문에 「다음 씬에서 띄우기」 를 더했다.
+- **시험 도구**: `rules` 의 Death 에 시간 초과 6 ~ 10 (장수별 자동 뽑기 · 빈 덱 · 3번째 강제 퇴장 · 횟수 초기화 · 대상 아닌 사람). 기존 시나리오의 `ChainTable` 은 전원을 대상에서 빼 예전 동작 유지. `ExpireTurn` 은 기본이 「그냥 넘김」, `auto` · `others` 가 실제 시간 초과. 새 `run.sh timeout` · `WarningPopupText`.
+
+### 확인
+- **메인 에디터가 CLI 에 응답하지 않아(`unity status` = unreachable) 클론 에디터에서 규칙 계층만 돌렸다.** 컴파일 통과, Death 의 새 시간 초과 항목 전부 통과, Rules · Win · Trap · Effects 통과.
+- 남은 실패 5건은 전부터 있던 것: 턴 30초를 가정한 시험 4건(Chain 2 · Death 「죽은 사람은 대상이 될 수 없다」 · Bot 「1023 끝난 뒤…」) · `Deck_Main` 에 112 없음 1건.
+- PM 이 직접 플레이로 확인했다고 알려 옴 (2026-11-19) — 그 뒤 커밋. 아래 시나리오는 AI 가 돌린 것이 아니다.
+- **AI 가 확인하지 못한 것**: `run.sh timeout`(작성만 함 — 강제 퇴장 알림이 두 화면에 가는지 · 클론이 로비로 가고 경고가 뜨는지 · 메인이 결과 화면으로 가는지) · `multi 2` · `full 2` · `solo` · `gaepan`(ExpireTurn 을 쓴다).
+
+### 다음 할 일
+- 메인 에디터가 돌아오면 `rules` → `timeout` → `multi 2` → `full 2` → `solo` → `gaepan`.
+- 로비 도착 경고를 공용 `WarningPopup` 으로 띄웠다 — 로비의 다른 경고는 로비 전용 창(`LobbyModalView.ShowWarn`)을 쓴다. 모양이 다르면 로비 쪽으로 옮길지 PM 확인.
+- 재접속(기능 11)을 만들 때: 끊긴 사람의 턴도 이 시간 초과 경로를 탄다 (지금은 끊기면 바로 나간 것으로 처리).
+
+---
+
 ## 2026-11-19 · 카드 데이터 불러오기 · 원격 패치 기획 (`docs/card-data-delivery`)
 
 ### 계기 (PM)

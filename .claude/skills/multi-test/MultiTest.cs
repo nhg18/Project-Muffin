@@ -66,6 +66,9 @@ public static class MultiTest
     private const string ChoiceSecondButtonField = "secondButton";         // ChoicePopupView — 「80 피해 받기」 (1019)
     private const string ChoiceFirstButtonField = "firstButton";           // ChoicePopupView — 「손패 전부 버리기」
     private const string TimerLabelField = "labelText";                    // ReactionTimerView — 알약 글 (「반응」 · 「{이름} 고르는 중」)
+    private const string WarningMainTextField = "mainText";                // WarningPopup — 제목 (WarningPopupText)
+    private const string WarningSubTextField = "subText";                  // WarningPopup — 사유
+    private const string NoTimeoutField = "_noTimeoutActors";              // GameServer — 시간 초과 대상이 아닌 사람 (ExpireTurn)
     private const string TurnDeadlineField = "_turnDeadline";              // GameServer — 턴 마감 (ExpireTurn)
     private const string PunServerField = "_server";                       // PunGameServer — 규칙 원본 (방장)
     private const string ServerDeckField = "deck";                         // PunGameServer — 게임에 쓰는 덱
@@ -974,7 +977,16 @@ public static class MultiTest
     }
 
     // 방장: 지금 턴의 제한 시간을 끝낸다 — 다음 Tick 에 시간 초과로 넘어간다 (행동 없이 턴을 빨리 돌리기 — 1021 개판 바퀴)
-    public static string ExpireTurn()
+    // mode "auto" = 실제 시간 초과 (자동 뽑기 · 연속 3번째 강제 퇴장, 03-turn 4절). "others" = 방장(나)의 턴은 그냥 넘기고 남의 턴만 실제 시간 초과.
+    // 그 밖에는 그 턴 주인을 대상에서 빼서 예전처럼 턴만 넘긴다.
+    // 떠 있는 공용 경고 팝업(PopupManager)의 「제목 / 사유」 — 강제 퇴장 뒤 로비 도착 (22-popup-ui 3절)
+    public static string WarningPopupText()
+    {
+        WarningPopup popup = Object.FindFirstObjectByType<WarningPopup>();
+        return popup == null ? "WAIT 경고 팝업 없음" : "OK " + ReadText(popup, WarningMainTextField) + " / " + ReadText(popup, WarningSubTextField);
+    }
+
+    public static string ExpireTurn(string mode = "")
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
         if (server == null)
@@ -985,8 +997,16 @@ public static class MultiTest
         var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
         if (rules.IsGameOver)
             return "SKIP 게임 끝";
+        var noTimeout = (HashSet<int>)typeof(GameServer).GetField(NoTimeoutField, Private).GetValue(rules);
+        if (mode == "others")
+            mode = rules.CurrentTurnActor == PhotonNetwork.LocalPlayer.ActorNumber ? "" : "auto";
+        if (mode == "auto")
+            noTimeout.Remove(rules.CurrentTurnActor);
+        else
+            noTimeout.Add(rules.CurrentTurnActor);
         typeof(GameServer).GetField(TurnDeadlineField, Private).SetValue(rules, 0d);
-        return "OK P" + rules.CurrentTurnActor + " 턴 시간 끝 — " + rules.DebugState();
+        int streak = ((PlayerState)((System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(rules))[rules.CurrentTurnActor]).TimeoutStreak;
+        return "OK P" + rules.CurrentTurnActor + " 턴 시간 끝" + (mode == "auto" ? " (자동 행동 · 연속 " + streak + " → " + (streak + 1) + ")" : "") + " — " + rules.DebugState();
     }
 
     // 1019 목표 조준 — 고르기 시작 알림을 기다렸다가 (5초 안에 골라야 해서 CLI 부름 사이로는 늦다 — 에디터 안에서 바로 한다)
@@ -1451,7 +1471,105 @@ public static class MultiTest
             var t = new ChainTable();
             int before = t.DiscardCount;
             PlayerLeft left = t.Server.RemovePlayer(t.O2).OfType<PlayerLeft>().FirstOrDefault();
-            Check(left != null && left.DiscardCount == before + 6 && t.HandCount(t.O2) == 0, "나감 → 손패 6장 버림 더미로");
+            Check(left != null && !left.Forced && left.DiscardCount == before + 6 && t.HandCount(t.O2) == 0, "나감 → 손패 6장 버림 더미로 (강제 퇴장 표시 없음)");
+        }
+
+        double limit = GameServer.TurnTimeLimit + 0.3;
+        // 다른 두 사람이 직접 뽑아 턴을 돌린다 — 손패를 줄여 두어 뽑다가 10장(찹츄)이 되지 않게
+        void PassOthers(ChainTable table)
+        {
+            foreach (int other in new[] { table.O1, table.O2 })
+            {
+                table.SetHandSize(other, 3);
+                table.Server.Draw(other);
+            }
+        }
+
+        // 6. 시간 초과 자동 뽑기 — 카드는 내지 않고 뽑기만, 자동 뽑기로는 10장이 되지 않게 (03-turn 4절, PM 2026-11-19)
+        foreach ((int hand, int drawn) in new[] { (0, 2), (6, 2), (7, 2), (8, 1), (9, 0), (10, 2), (11, 2) })
+        {
+            var t = new ChainTable(null, true);
+            t.SetHandSize(t.Turn, hand);
+            List<GameEvent> events = t.Run(limit);
+            Check(events.OfType<CardDrawn>().Count(d => d.Actor == t.Turn) == drawn && !events.OfType<CardPlayed>().Any()
+                && t.HandCount(t.Turn) == hand + drawn && t.Server.CurrentTurnActor == t.O1 && t.State(t.Turn).TimeoutStreak == 1
+                && !events.OfType<ChapchuChanged>().Any(c => c.IsChapchu),
+                $"시간 초과 · 손패 {hand}장 → {drawn}장 뽑고 턴 넘어감 · 카드 사용 없음 · 선언 없음 · 연속 1 (실제 +{t.HandCount(t.Turn) - hand})");
+        }
+
+        // 7. 9장 · 빈 덱 시간 초과 → 뽑지 않으니 빈 덱 피해도 없다. 8장이면 1장을 못 뽑아 피해 1
+        {
+            var t = new ChainTable(null, true);
+            t.SetHandSize(t.Turn, 9);
+            t.EmptyDeck();
+            List<GameEvent> events = t.Run(limit);
+            Check(!events.OfType<EmptyDeckDamaged>().Any() && t.Hp(t.Turn) == 100 && t.Server.CurrentTurnActor == t.O1, "시간 초과 · 9장 · 빈 덱 → 피해 없이 턴만 넘어감");
+
+            t = new ChainTable(null, true);
+            t.SetHandSize(t.Turn, 8);
+            t.EmptyDeck();
+            events = t.Run(limit);
+            Check(events.OfType<EmptyDeckDamaged>().Count() == 1 && t.Hp(t.Turn) == 99, "시간 초과 · 8장 · 빈 덱 → 못 뽑은 1장만큼 빈 덱 피해 1");
+        }
+
+        // 8. 3턴 연속 시간 초과 → 3번째에는 뽑지 않고 바로 강제 퇴장 (나가기와 같은 처리 + 강제 퇴장 표시)
+        {
+            var t = new ChainTable(null, true);
+            int a = t.Turn;
+            for (int round = 1; round <= GameServer.TimeoutLimit; round++)
+            {
+                int before = t.HandCount(a);
+                List<GameEvent> events = t.Run(t.Now + limit);
+                if (round < GameServer.TimeoutLimit)
+                {
+                    Check(t.State(a).TimeoutStreak == round && t.HandCount(a) > before && !t.State(a).HasLeft, $"시간 초과 {round}번째 → 자동 뽑기 · 연속 {round}");
+                    PassOthers(t);
+                    Check(t.Server.CurrentTurnActor == a, "다른 두 사람이 직접 뽑아 다시 그 사람 턴");
+                }
+                else
+                {
+                    PlayerLeft left = events.OfType<PlayerLeft>().FirstOrDefault();
+                    Check(left != null && left.Actor == a && left.Forced && !events.OfType<CardDrawn>().Any(d => d.Actor == a) && t.State(a).HasLeft
+                        && t.HandCount(a) == 0 && t.Server.CurrentTurnActor == t.O1 && !t.Server.IsGameOver,
+                        $"시간 초과 {round}번째 → 뽑지 않고 바로 강제 퇴장 · 손패 버림 · 다음 사람 턴");
+                    GameEnded ended = t.Server.RemovePlayer(t.O2).OfType<GameEnded>().FirstOrDefault();
+                    Check(ended != null && ended.Winner == t.O1, "강제 퇴장 뒤 한 명이 더 나가면 남은 사람 승리");
+                }
+            }
+        }
+
+        // 9. 직접 뽑기 · 카드 사용으로 턴을 끝내면 연속 횟수는 0 으로
+        {
+            var t = new ChainTable(null, true);
+            int a = t.Turn;
+            for (int i = 0; i < 2; i++)
+            {
+                t.Run(t.Now + limit);
+                PassOthers(t);
+            }
+            Check(t.State(a).TimeoutStreak == 2 && t.Server.CurrentTurnActor == a, "두 번 시간 초과 — 연속 2");
+            t.SetHandSize(a, 3);
+            t.Server.Draw(a);
+            Check(t.State(a).TimeoutStreak == 0, "직접 뽑기 → 연속 0");
+            PassOthers(t);
+            t.Run(t.Now + limit);
+            Check(t.State(a).TimeoutStreak == 1 && !t.State(a).HasLeft, "그 뒤 시간 초과 → 연속 1 (퇴장 아님)");
+            PassOthers(t);
+            t.Play(a, ChainTable.Hit, t.O1);
+            Check(t.State(a).TimeoutStreak == 0, "카드 사용 → 연속 0");
+        }
+
+        // 10. 봇(시간 초과 대상이 아닌 사람)은 마감에 그냥 넘어간다 — 뽑지 않고, 세지 않고, 퇴장도 없다 (18-bot 11절)
+        {
+            var t = new ChainTable();
+            int a = t.Turn;
+            bool drew = false;
+            for (int round = 0; round < GameServer.TimeoutLimit + 1; round++)
+            {
+                drew |= t.Run(t.Now + limit).OfType<CardDrawn>().Any(d => d.Actor == a);
+                PassOthers(t);
+            }
+            Check(!drew && t.HandCount(a) == 6 && t.State(a).TimeoutStreak == 0 && !t.State(a).HasLeft, "대상이 아닌 사람 — 시간 초과 4번에도 뽑기 · 횟수 · 퇴장 없음");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -1773,7 +1891,7 @@ public static class MultiTest
             double now = 0;
             var server = new GameServer(new System.Random(game), () => now);
             int[] actors = { 1001, 1002, 1003, 1004 };
-            server.StartGame(actors, deck.CreateCards());
+            server.StartGame(actors, deck.CreateCards(), actors);
             var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(server);
             foreach (PlayerState state in states.Values)
                 state.Hp = 40;
@@ -2618,7 +2736,7 @@ public static class MultiTest
                     double now = 0;
                     int[] actors = { 1001, 1002, 1003, 1004 };
                     var server = new GameServer(new System.Random(game), () => now);
-                    server.StartGame(actors, paceDeck.CreateCards());
+                    server.StartGame(actors, paceDeck.CreateCards(), actors);
                     var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, _ => level);
                     while (!server.IsGameOver && now < 3600)
                     {
@@ -2667,7 +2785,7 @@ public static class MultiTest
         double now = 0;
         int[] actors = Enumerable.Range(1001, seats.Length).ToArray();
         var server = new GameServer(new System.Random(game), () => now);
-        server.StartGame(actors, deck.CreateCards());
+        server.StartGame(actors, deck.CreateCards(), actors);
         var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, actor => seats[actor - 1001]);
         while (now < 3600)
         {
@@ -2708,7 +2826,7 @@ public static class MultiTest
         {
             double now = 0;
             var server = new GameServer(new System.Random(game), () => now);
-            server.StartGame(actors, main.CreateCards());
+            server.StartGame(actors, main.CreateCards(), actors);
             var driver = new BotDriver(server, actors, new System.Random(game + 7919), () => now, actor => seats[actor - 1001]);
             GameEnded ended = null;
             while (ended == null && now < 3600)
@@ -3280,12 +3398,13 @@ public static class MultiTest
         }
 
         // clock 을 주면 그 시계를 쓴다 (봇 시험처럼 밖에서 시간을 돌릴 때). 그때 At() 은 쓰지 않는다
-        public ChainTable(Func<double> clock)
+        // timeouts = 시간 초과 자동 뽑기 · 강제 퇴장을 켠다 (03-turn 4절). 기본은 끔 — 다른 시나리오는 턴을 시간 초과로 그냥 넘긴다 (봇과 같은 취급)
+        public ChainTable(Func<double> clock, bool timeouts = false)
         {
             Server = new GameServer(new System.Random(1), clock ?? (() => _now));
             int[] actors = { 1, 2, 3 };
             var deck = Enumerable.Range(1, 30).Select(i => MakeCard(i, Hit)).ToList();
-            Server.StartGame(actors, deck);
+            Server.StartGame(actors, deck, timeouts ? null : actors);
             _players = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(Server);
             _order = ((List<int>)typeof(GameServer).GetField(ServerTurnOrderField, Private).GetValue(Server)).ToArray();
 

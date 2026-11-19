@@ -635,7 +635,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 나간 사람의 좌석은 RoomEvents 가 지운다 — 여기서는 더미만.
-        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount)
+        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced)
         {
             Enqueue(() =>
             {

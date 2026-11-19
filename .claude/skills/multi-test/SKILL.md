@@ -14,6 +14,7 @@ bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메�
 bash .claude/skills/multi-test/run.sh full [클라이언트=2] [HP=20]   # 한 판 끝까지 — 체력을 낮춰 시작 → 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
 bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 · 난이도 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 자동 선언 → 두 화면 표시(선언 연출 포함) → 찹츄 승리 → 결과 화면 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
+bash .claude/skills/multi-test/run.sh timeout                     # 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째 강제 퇴장 → 클론은 로비 + 경고 팝업 · 메인은 결과 화면
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디터마다 게임 뷰 PNG — 처음 나온 카드의 3 단계 확대(_zoom) · 반응 시간(_reaction · _later) + 턴이 끝난 뒤. 화면 눈 확인용 (MultiTest.ArmCardShots · Shot)
 ```
 
@@ -68,5 +69,5 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 * **한 단계가 계속 WAIT** — 콘솔을 직접 본다: `unity command console.get --tail 50 --project-path <프로젝트> </dev/null`.
 * **컴파일 실패로 종료 2** — 에디터가 Safe Mode 면 CLI 가 붙지 않는다. 컴파일 에러부터 고친다.
 * 에디터를 막 열면 Unity Search 색인 에러(`ArgumentOutOfRangeException` … `SearchInit.IndexationOnStartup`)가 뜰 수 있다. 스택에 게임 · Photon 코드가 없는 에러는 "참고 · 에디터 내부 에러" 로만 찍고 판정에서 뺀다.
-* 턴은 30초면 저절로 넘어간다. `multi` 는 지금 턴 주인을 읽어서 행동하므로 영향 없지만, 손으로 단계를 이어 칠 때는 빨리 친다.
+* 턴은 15초면 방장이 대신 뽑고 넘어간다 — 3번 연속이면 그 사람이 강제 퇴장된다 (봇 제외, `03-turn` 4절). `ExpireTurn` 은 기본이 「그냥 넘김」 이라 횟수를 세지 않는다 (`auto` · `others` 가 실제 시간 초과). `multi` 는 지금 턴 주인을 읽어서 행동하므로 영향 없지만, 손으로 단계를 이어 칠 때는 빨리 친다.
 * 명령은 항상 `</dev/null` 을 붙인다 — 없으면 CLI 가 입력을 기다리며 멈춘다.

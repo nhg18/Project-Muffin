@@ -209,12 +209,15 @@
         public int Actor { get; }
         public int[] CardIds { get; }
         public int DiscardCount { get; }
+        /// <summary>연속 시간 초과로 방장이 내보냈다 (03-turn.md 10절) — 그 사람 화면은 스스로 방을 나가 로비로 간다.</summary>
+        public bool Forced { get; }
 
-        public PlayerLeft(int actor, int[] cardIds, int discardCount)
+        public PlayerLeft(int actor, int[] cardIds, int discardCount, bool forced)
         {
             Actor = actor;
             CardIds = cardIds;
             DiscardCount = discardCount;
+            Forced = forced;
         }
     }
 

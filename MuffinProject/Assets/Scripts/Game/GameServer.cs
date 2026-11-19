@@ -54,8 +54,12 @@ namespace Chapchu.Game
         /// 게임 시작 1회 (01-game-flow.md 3절 순서): 덱 셔플 → 체력 100 → 5장씩 → 턴 순서 무작위 · 첫 턴.
         /// deck 의 카드는 장마다 고유 InstanceId 를 가져야 한다 (09-network.md 7절).
         /// </summary>
-        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck)
+        /// <param name="noTimeoutActors">시간 초과 자동 행동 · 강제 퇴장을 받지 않는 사람 — 봇 (03-turn.md 4절). 없으면 전원이 받는다.</param>
+        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck, IEnumerable<int> noTimeoutActors = null)
         {
+            _noTimeoutActors.Clear();
+            if (noTimeoutActors != null)
+                _noTimeoutActors.UnionWith(noTimeoutActors);
             _players.Clear();
             _chain.Clear();
             _resolving.Clear();

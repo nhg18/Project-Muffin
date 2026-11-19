@@ -7,6 +7,7 @@
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
+#   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
@@ -807,6 +808,39 @@ run_restart() {
     done
 }
 
+# 시간 초과 (03-turn.md 4절): 방장이 클론의 턴만 실제 시간 초과로 끝낸다 (메인의 턴은 그냥 넘김) → 자동 뽑기 2번 → 3번째에 뽑지 않고 강제 퇴장
+# → 클론은 스스로 방을 나가 로비 + 경고 팝업 (22-popup-ui.md 3절), 메인은 혼자 남아 처치 승리 → 결과 화면.
+run_timeout() {
+    local clone out lines project
+    enter_game 2 || return
+    clone="${EDITORS[1]}"
+    log "▶ 클론의 턴을 시간 초과로 (메인의 턴은 그냥 넘김)"
+    for _ in $(seq 1 30); do
+        out=$(call "$MAIN" ExpireTurn others)
+        case "$out" in FAIL*) fail "$out"; return ;; OK*) log "  $out" ;; *) break ;; esac
+        sleep 3
+        console_lines "$MAIN" | grep -q '\[GameDebugInput\].*강제 퇴장' && break
+    done
+    log "▶ 판정"
+    for project in "${EDITORS[@]}"; do
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]')
+        printf '%s' "$lines" | grep -q '게임 중 강제 퇴장' || fail "$(name_of "$project") 강제 퇴장 줄이 없다"
+        printf '%s' "$lines" | grep -q '게임 중 나감' && fail "$(name_of "$project") 강제 퇴장이 보통 나감으로 찍혔다"
+    done
+    wait_scene_one "$clone" LobbyScene || return
+    for _ in $(seq 1 10); do
+        out=$(call "$clone" WarningPopupText)
+        case "$out" in OK*) break ;; esac
+        sleep 1
+    done
+    log "  $(name_of "$clone"): $out"
+    [ "$out" = "OK 방에서 나왔어요 / 3턴 동안 행동하지 않아 게임에서 나왔어요." ] || fail "클론의 로비 경고 팝업이 다르다: $out"
+    wait_scene_one "$MAIN" ResultScene || return
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 # 1021 개판 오분전: 방장이 턴 주인에게 1021 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
 run_gaepan() {
     local clients="${1:-2}" project out lines first="" ended=""
@@ -927,6 +961,7 @@ case "${1:-}" in
     chapchu) shift; run_chapchu "$@" ;;
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;
+    timeout) shift; run_timeout ;;
     aim)     shift; run_aim "$@" ;;
     fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;

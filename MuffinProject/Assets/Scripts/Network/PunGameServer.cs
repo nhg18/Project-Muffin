@@ -105,7 +105,7 @@ namespace Chapchu.Network
             if (bots.Length > 0)
                 _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
 
-            Send(_server.StartGame(actors, cards));
+            Send(_server.StartGame(actors, cards, bots)); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
         }
 
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
@@ -339,7 +339,7 @@ namespace Chapchu.Network
                         break;
 
                     case PlayerLeft left:
-                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.CardIds, left.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.CardIds, left.DiscardCount, left.Forced);
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
                         SetDiscardTop(roomProps, left.CardIds);
                         break;
@@ -750,10 +750,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int[] cardIds, int discardCount, PhotonMessageInfo info)
+        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int[] cardIds, int discardCount, bool forced, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaisePlayerLeftGame(actorNumber, Ints(cardIds), discardCount);
+                GameEvents.RaisePlayerLeftGame(actorNumber, Ints(cardIds), discardCount, forced);
         }
 
         [PunRPC]
