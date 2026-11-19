@@ -48,5 +48,14 @@ namespace Chapchu.Game
 
         // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 10장이 아니게 되면 즉시 해제 (07-win-condition.md 7절).
         public bool IsChapchu;
+
+        // 게임에서 빠진 턴 번호 — 최종 사망했거나 나간 때 한 번만 적는다 (07-win-condition.md 11-3 순위). 남아 있으면 0.
+        public int OutTurn;
+
+        // 나가서 게임에서 빠졌다 — OutTurn 을 나갈 때 적은 사람만. 최종 사망한 뒤 나간 사람은 사망으로 빠진 것이라 false (07-win-condition.md 11-2 「이탈 · N턴」).
+        public bool OutByLeaving;
+
+        // HP 를 0 으로 만든 마지막 피해의 주인 (07-win-condition.md 11-3 「킬」). 빈 덱 · 자기 피해 · 판정이거나 HP 가 0 보다 크면 -1.
+        public int DownedBy = -1;
     }
 }

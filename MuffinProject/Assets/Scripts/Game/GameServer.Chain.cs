@@ -67,6 +67,7 @@ namespace Chapchu.Game
             foreach (CardEffect effect in card.Effects)
                 effect.Prepare(this, entry); // 낼 때 정하는 값 (1016 뽑을 장수)
             _chain.Add(entry);
+            AddStat(user, card.Type == CardType.Counter ? StatKind.Counters : StatKind.Actions); // 승인된 사용 — 무효화돼도 센다 (07 11-4)
             _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
 
             _reactionOpensAt = _clock() + card.RevealSeconds;
@@ -164,6 +165,9 @@ namespace Chapchu.Game
                         continue;
                     }
 
+                    if (entry.Card.Type == CardType.Counter)
+                        AddStat(entry.User, StatKind.CounterSuccess); // 무효화되지 않고 처리됐다 (07 11-4)
+
                     int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
                 }
@@ -173,6 +177,7 @@ namespace Chapchu.Game
                 {
                     CardEffect effect = effects[entry.NextEffect++];
                     effect.Apply(this, entry);
+                    SettleChapchu(); // 효과 하나가 끝난 뒤의 손패로 자동 선언 (07 4.1)
                     if (_restartPending)
                         return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
                     if (IsChoosing)

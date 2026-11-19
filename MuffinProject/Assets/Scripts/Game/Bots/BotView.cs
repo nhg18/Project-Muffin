@@ -59,14 +59,18 @@ namespace Chapchu.Game.Bots
         /// <summary>나를 뺀 생존자 (턴 순서대로).</summary>
         public int[] Opponents => Server.ActorsInGame.Where(a => a != Bot && Server.StateOf(a).Life == LifeState.Alive).ToArray();
 
-        /// <summary>그 상대가 찹츄 상태이고, 내가 이번 턴에 그것을 알아챘다.</summary>
-        public bool SeesChapchu(int actor) => actor != Bot && Server.StateOf(actor).IsChapchu && _noticed.Contains(actor);
+        /// <summary>
+        /// 그 상대가 찹츄 상태이면서 지금 정확히 10장이고, 내가 이번 턴에 그것을 알아챘다.
+        /// 찹츄 상태여도 10장이 아니면 그 사람 턴에 무효가 되므로 위협이 아니다 — 보통 상대로 본다 (18-bot.md 7-5).
+        /// </summary>
+        public bool SeesChapchu(int actor) =>
+            actor != Bot && Server.StateOf(actor).IsChapchu && Server.HandCountOf(actor) == GameServer.ChapchuHandCount && _noticed.Contains(actor);
 
         public bool SeesAnyChapchu => Opponents.Any(SeesChapchu);
 
         /// <summary>
         /// 찹츄 상태가 아닌 상대의 손패가 hand 장일 때 그 상대가 찹츄에 얼마나 가까운가 (7-1 「상대 손패」).
-        /// 10장 = 자기 턴에 선언 · 8 ~ 9장 = 한 번 뽑으면 10장 · 11장 = 한 장 내면 10장 · 7장 = 두 번 뽑으면.
+        /// 10장 = 자동 선언 · 8 ~ 9장 = 한 번 뽑으면 10장 · 11장 = 한 장 내면 10장 · 7장 = 두 번 뽑으면.
         /// </summary>
         public double NearChapchu(int hand)
         {
@@ -162,14 +166,14 @@ namespace Chapchu.Game.Bots
             return hand * CardValue + bonus;
         }
 
-        /// <summary>이 수를 둔 뒤 내 손패가 after 장이 될 때의 점수. 찹츄 상태를 스스로 깨면 더 깎는다.</summary>
+        /// <summary>이 수를 둔 뒤 내 손패가 after 장이 될 때의 점수. 찹츄 상태인데 10장을 스스로 깨면 더 깎는다 — 상태는 남지만 내 턴 시작 때 무효가 된다.</summary>
         public double OwnHandScore(int after)
         {
             int before = MyHand;
             double score = HandPotential(after) - HandPotential(before);
             if (after == GameServer.ChapchuHandCount && before != after)
                 Notes.Add("찹츄 준비");
-            if (Me.IsChapchu && after != GameServer.ChapchuHandCount)
+            if (Me.IsChapchu && before == GameServer.ChapchuHandCount && after != GameServer.ChapchuHandCount)
                 score -= BreakOwnChapchuPenalty;
 
             return score > 0 && Style == BotStyle.Collector ? score * StyleBonus : score;

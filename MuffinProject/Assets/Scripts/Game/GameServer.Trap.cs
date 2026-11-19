@@ -116,6 +116,7 @@ namespace Chapchu.Game
 
             player.Traps.Remove(trap);
             _trapSetOrder.Remove(trap.InstanceId);
+            AddStat(owner, StatKind.Traps);
             _events.Add(new TrapActivated(owner, trap.InstanceId, trap.CardId, targets, player.Traps.Count));
 
             var entry = new ChainEntry(trap, owner, targets) { TriggerAmount = after?.Amount ?? 0 };
@@ -126,6 +127,7 @@ namespace Chapchu.Game
             foreach (CardEffect effect in trap.Effects)
             {
                 effect.Apply(this, entry);
+                SettleChapchu(); // 효과 하나가 끝난 뒤의 손패로 자동 선언 (07 4.1)
                 if (_restartPending)
                     return at; // 대소동 — 남은 처리는 버린다
             }

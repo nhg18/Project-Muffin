@@ -20,16 +20,28 @@ namespace Chapchu.Game
             if (amount <= 0)
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
 
-            SetHp(actor, _players[actor].Hp - amount);
+            CountDamage(actor, source, -SetHp(actor, _players[actor].Hp - amount));
             RecordDamage(actor, source);
         }
 
         // 체력은 여기서만 바꾼다 — 원본 변경과 일어난 일이 항상 같이 나간다. 0 미만 · 최대치 초과 불가 (06-health.md 2절).
-        private void SetHp(int actor, int hp)
+        // source = 이 변화를 일으킨 카드의 주인 (없으면 -1). HP 가 0 이 되는 순간의 주인을 적어 둔다 — 결과 화면 「○○에게 당함」 (07 11-3 「킬」).
+        // 자기 피해는 킬이 아니다. HP 가 다시 0 보다 커지면(사망을 면함) 지운다.
+        // 돌려주는 값 = 실제로 변한 양 (늘면 +, 줄면 −) — 지표는 이 값으로 센다 (07 11-4).
+        private int SetHp(int actor, int hp, int source = -1)
         {
             PlayerState player = _players[actor];
+            int before = player.Hp;
             player.Hp = Math.Clamp(hp, 0, MaxHp);
+            if (before <= 0 && player.Hp > 0)
+                _handDirty.Add(actor); // HP 0 에서 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
+            if (player.Hp > 0)
+                player.DownedBy = -1;
+            else if (before > 0)
+                player.DownedBy = source != actor ? source : -1;
+
             _events.Add(new HpChanged(actor, player.Hp));
+            return player.Hp - before;
         }
 
         // 체인 처리 · 빈 덱 피해 뒤에 부른다. HP 0 인 생존자 전원을 사망 대기로 (06 8 · 11절).
@@ -62,6 +74,7 @@ namespace Chapchu.Game
                 if (player.HasLeft)
                 {
                     player.Life = LifeState.Dead; // 대기 중에 나갔다 — 나감 처리(PlayerLeft)가 이미 끝났다
+                    AddStat(player.DownedBy, StatKind.Kills); // 결과 화면의 「○○에게 당함」 과 같게 센다
                     continue;
                 }
 
@@ -69,13 +82,17 @@ namespace Chapchu.Game
                 {
                     player.Life = LifeState.Alive;
                     _events.Add(new DeathAvoided(actor, player.Hp));
+                    _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
                     continue;
                 }
 
                 player.Life = LifeState.Dead;
+                AddStat(player.DownedBy, StatKind.Kills); // 킬은 최종 사망이 확정될 때 (07 11-3)
+                player.OutTurn = TurnSerial; // 턴 밖(사망 대기)에 죽으면 그때 진행 중인 턴의 번호 (07 11-3)
                 int[] discarded = DiscardAll(actor);
                 _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
                 EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 1023)
+                ClearChapchu(actor); // 죽은 사람의 찹츄 표시가 남지 않게 해제를 알린다 (07 9절)
             }
         }
 

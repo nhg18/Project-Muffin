@@ -30,13 +30,14 @@ namespace Chapchu.Game
             if (hp <= 0 && entry.SurviveAt.TryGetValue(actor, out int keep))
                 hp = Math.Max(1, keep);
 
-            SetHp(actor, hp);
+            CountDamage(actor, entry.User, -SetHp(actor, hp, entry.User));
             if (hp <= 0)
                 entry.KnockedDown.Add(actor);
             if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
             {
                 _players[actor].Life = LifeState.Alive; // 사망 방지(C11)로 HP 1 이상 — 바로 생존 (06 3 · 8절)
                 _events.Add(new DeathAvoided(actor, _players[actor].Hp));
+                _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             }
             RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
         }
@@ -48,7 +49,7 @@ namespace Chapchu.Game
             {
                 if (amount > 0)
                 {
-                    SetHp(actor, _players[actor].Hp - amount);
+                    CountDamage(actor, entry.User, -SetHp(actor, _players[actor].Hp - amount, entry.User)); // 피해의 주인 = 회복 카드를 낸 사람
                     if (_players[actor].Hp <= 0)
                         entry.KnockedDown.Add(actor);
                     RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
@@ -67,7 +68,7 @@ namespace Chapchu.Game
 
             int hp = Math.Min(MaxHp, player.Hp + amount);
             if (hp != player.Hp)
-                SetHp(actor, hp); // 실제 회복량 0 이면 사건 없음 (06 6절)
+                AddStat(actor, StatKind.Healed, SetHp(actor, hp)); // 실제 회복량 0 이면 사건 없음 (06 6절)
         }
 
         /// <summary>「HP N 으로 생존」 지금 (T17) — 손패 · 다른 설치 함정을 버리고 HP N, 사망 대기면 바로 생존으로 (06 6 · 8절).</summary>
@@ -89,6 +90,7 @@ namespace Chapchu.Game
             {
                 player.Life = LifeState.Alive;
                 _events.Add(new DeathAvoided(actor, player.Hp));
+                _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             }
         }
 
@@ -101,7 +103,10 @@ namespace Chapchu.Game
                 return;
 
             for (int i = 0; i < count; i++)
-                DrawOne(actor);
+            {
+                if (DrawOne(actor) && entry != null)
+                    AddStat(actor, StatKind.Drawn); // 다시 받기(113 — entry 없음)는 뽑기로 세지 않는다
+            }
 
             if (entry != null)
                 RecordAfter(AfterKind.DrewCards, actor, entry.User, count);
@@ -140,6 +145,8 @@ namespace Chapchu.Game
                 return;
 
             MoveHandCards(from, to, cards);
+            AddStat(to, StatKind.Stolen, cards.Count);
+            AddStat(from, StatKind.Lost, cards.Count);
             RecordAfter(AfterKind.Stolen, from, to, cards.Count);
         }
 
@@ -307,11 +314,11 @@ namespace Chapchu.Game
 
         // ── 찹츄 ──
 
-        /// <summary>찹츄 부여 (A20 · T16). 손패가 정확히 10장이 아니면 붙지 않는다 (07 7절). 다른 사람이 준 것이면 「찹츄 부여된 후」(T16) 기록.</summary>
+        /// <summary>찹츄 부여 (A20 · T16). 손패 장수를 보지 않는다 — 부여된 찹츄도 그 사람의 턴이 시작될 때 판정한다 (07 7 · 8절, 2026-11-14). 다른 사람이 준 것이면 「찹츄 부여된 후」(T16) 기록.</summary>
         internal void GiveChapchu(int actor, int source)
         {
             PlayerState player = _players[actor];
-            if (!player.IsChapchu && player.Life == LifeState.Alive && player.Hand.Count == ChapchuHandCount)
+            if (!player.IsChapchu && player.Life == LifeState.Alive)
                 SetChapchu(actor, true);
 
             if (source >= 0 && source != actor)

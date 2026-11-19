@@ -24,7 +24,10 @@ namespace Chapchu.Network.Events
         public static event Action<int[]> OnBotsChanged;
         /// <summary>내가 믿는 방장이 됨 (09-network.md 13절) — 정상 방장 이주 · 방장 자리를 뺏긴 채 믿는 방장이 나감. 방에 들어올 때는 부르지 않는다.</summary>
         public static event Action OnBecameTrustedMaster;
+        /// <summary>방 속성이 바뀜 — 바뀐 키만 든 표. 방 속성은 아무 클라나 쓸 수 있으니 읽는 쪽이 모양 · 범위를 확인한다 (09-network.md 13절).</summary>
+        public static event Action<ExitGames.Client.Photon.Hashtable> OnRoomPropsChanged;
 
+        public static void RaiseRoomPropsChanged(ExitGames.Client.Photon.Hashtable changed) => OnRoomPropsChanged?.Invoke(changed);
         public static void RaiseCreatedRoom() => OnCreatedRoom?.Invoke();
         public static void RaiseCreateRoomFailed(short returnCode, string message) => OnCreateRoomFailed?.Invoke(returnCode, message);
         public static void RaiseJoinedRoom() => OnJoinedRoom?.Invoke();

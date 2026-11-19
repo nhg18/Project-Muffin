@@ -13,6 +13,7 @@
         public const string Lobby = "LobbyScene";
         public const string Room = "RoomScene";
         public const string Game = "GameScene";
+        public const string Result = "ResultScene";
         public const string DebugLobby = "DebugLobbyScene";
     }
 

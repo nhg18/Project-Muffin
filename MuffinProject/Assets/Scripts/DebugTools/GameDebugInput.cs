@@ -12,7 +12,7 @@ namespace Chapchu.DebugTools
     /// <summary>
     /// 멀티 테스트용 키 입력과 결과 로그. UI 없이 키로 요청을 보내고, 이 클라이언트가 받은 결과를 콘솔에 찍는다. 판정은 하지 않는다.
     /// 턴이 시작될 때마다 "내 손패 · 모두의 손패 장수 · 체력" 한 줄을 찍는다 — 클라이언트마다 비교해 기능 1 · 2 를 확인한다.
-    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, C = 손패 첫 카운터를 체인 맨 위에, K = 찹츄 선언,
+    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, C = 손패 첫 카운터를 체인 맨 위에,
     /// T = 손패 첫 함정 설치 (함정은 행동이 끝나면 자동 발동 — 04-card.md 6절).
     /// </summary>
     public class GameDebugInput : MonoBehaviour
@@ -139,9 +139,6 @@ namespace Chapchu.DebugTools
 
             if (Input.GetKeyDown(KeyCode.C))
                 PlayFirstCounter();
-
-            if (Input.GetKeyDown(KeyCode.K))
-                server.RequestDeclareChapchu();
 
             if (Input.GetKeyDown(KeyCode.T))
                 SetFirstTrap();
@@ -406,10 +403,10 @@ namespace Chapchu.DebugTools
 
         private void HandleChapchuChanged(int actorNumber, bool isChapchu) => Log($"P{actorNumber} 찹츄 {(isChapchu ? "선언" : "해제")}");
 
-        private void HandleGameEnded(int winner, GameEndReason reason, double returnAt)
+        private void HandleGameEnded(int winner, GameEndReason reason)
         {
             _gameEnded = true;
-            Log($"게임 종료 — {reason} · 승자 P{winner} · {returnAt - PhotonNetwork.Time:0.0}초 뒤 방으로");
+            Log($"게임 종료 — {reason} · 승자 P{winner} · 곧 결과 화면으로");
         }
 
         private void HandleMyRequestRejected(int code) => Log($"내 요청 거절 — 코드 {code}");

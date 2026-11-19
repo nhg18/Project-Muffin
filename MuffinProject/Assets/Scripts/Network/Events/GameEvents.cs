@@ -48,7 +48,7 @@ namespace Chapchu.Network.Events
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
-        public static event Action<int, GameEndReason, double> OnGameEnded;  // winner(무승부 -1), reason, returnAt(방으로 이동하는 서버 시각)
+        public static event Action<int, GameEndReason> OnGameEnded;          // winner(무승부 -1), reason — 요약은 NetworkManager.LastResult, 곧 방장이 전원을 결과 씬으로 옮긴다
 
         // ── 나에게만 ──
         public static event Action<int, int> OnMyCardDrawn;                  // cardInstanceId, cardId
@@ -73,7 +73,7 @@ namespace Chapchu.Network.Events
         public static void RaisePlayerDied(int actorNumber, int[] cardIds, int discardCount) => OnPlayerDied?.Invoke(actorNumber, cardIds, discardCount);
         public static void RaisePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount) => OnPlayerLeftGame?.Invoke(actorNumber, cardIds, discardCount);
         public static void RaiseChapchuChanged(int actorNumber, bool isChapchu) => OnChapchuChanged?.Invoke(actorNumber, isChapchu);
-        public static void RaiseGameEnded(int winner, GameEndReason reason, double returnAt) => OnGameEnded?.Invoke(winner, reason, returnAt);
+        public static void RaiseGameEnded(int winner, GameEndReason reason) => OnGameEnded?.Invoke(winner, reason);
         public static void RaiseTurnResumed(int actorNumber, double deadline) => OnTurnResumed?.Invoke(actorNumber, deadline);
         public static void RaiseTrapSet(int actorNumber, int handCount, int trapCount) => OnTrapSet?.Invoke(actorNumber, handCount, trapCount);
         public static void RaiseTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount) => OnTrapActivated?.Invoke(actorNumber, cardInstanceId, cardId, targets, trapCount);
