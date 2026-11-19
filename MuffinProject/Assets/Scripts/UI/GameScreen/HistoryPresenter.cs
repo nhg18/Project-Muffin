@@ -24,6 +24,7 @@ namespace Chapchu.UI.GameScreen
         private const string HpText = "HP";
         private const string ChapchuText = "찹츄!";
         private const string SkippedText = "턴 건너뜀";
+        private const string HostChangedText = "방장이 바뀌었어요";
         private const string BlockNextText = "다음 턴 행동 카드 금지";
         private const string BlockThisText = "이번 턴 행동 카드 금지";
         private const string WaitStartText = "기다려! — 다음 턴까지 찹츄 승리 없음";
@@ -192,6 +193,9 @@ namespace Chapchu.UI.GameScreen
             _waitCasters.Clear();
             _turnStarted = false;
         }
+
+        /// <summary>게임 중에 방장이 바뀌었다 — 판은 그대로 이어진다 (09-network.md 9.1). 지금 턴 아래에 한 줄.</summary>
+        public void ShowHostChanged() => Add(new HistoryEntry { Actor = _turnActor, Text = HostChangedText, Icon = HistoryIcon.Card });
 
         /// <summary>피폭 (1012) — 턴이 끝나 모두 k^n 피해를 입었으면 한 줄. 새 판(k 0)은 적지 않는다.</summary>
         public void ShowFallout(int n, int turns)

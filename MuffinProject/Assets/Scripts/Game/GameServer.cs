@@ -131,6 +131,8 @@ namespace Chapchu.Game
 
             GameEvent[] taken = _events.ToArray();
             _events.Clear();
+            if (taken.Any(e => !(e is RequestRejected)))
+                Revision++; // 상태가 바뀌었다 — 예비 방장에게 다시 보낸다 (GameServer.Snapshot.cs)
             return taken;
         }
 

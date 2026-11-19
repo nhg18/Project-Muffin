@@ -641,6 +641,11 @@ public static class MultiTest
 
     public static string RemoveBot(string number) => NetworkManager.Instance.RemoveBot(int.Parse(number)) ? "OK 봇 " + number + " 제거 요청" : "FAIL 봇 제거 안 됨";
 
+    /// <summary>방에 사람이 expected 명 모일 때까지 WAIT.</summary>
+    public static string RoomCount(string expected) => PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.PlayerCount >= int.Parse(expected)
+        ? "OK 방 인원 " + PhotonNetwork.CurrentRoom.PlayerCount
+        : "WAIT 방 인원 " + (PhotonNetwork.CurrentRoom == null ? 0 : PhotonNetwork.CurrentRoom.PlayerCount) + " / " + expected;
+
     public static string AddBot() => NetworkManager.Instance.AddBot() ? "OK 봇 추가 요청" : "FAIL 봇 추가 안 됨";
 
     /// <summary>방 화면에서 봇 number 의 칸을 누른다 — 방장이면 난이도가 다음 것으로 바뀐다 (18-bot.md 8-1).</summary>
@@ -1087,6 +1092,58 @@ public static class MultiTest
     // mode "auto" = 실제 시간 초과 (자동 뽑기 · 연속 3번째 강제 퇴장, 03-turn 4절). "others" = 방장(나)의 턴은 그냥 넘기고 남의 턴만 실제 시간 초과.
     // 그 밖에는 그 턴 주인을 대상에서 빼서 예전처럼 턴만 넘긴다.
     // 떠 있는 공용 경고 팝업(PopupManager)의 「제목 / 사유」 — 강제 퇴장 뒤 로비 도착 (22-popup-ui 3절)
+    // 방장 이주 시험 (run.sh migrate) — leave: 지금 방을 나간다 · stop: (방장) 사본을 더 보내지 않는다 · drop: (예비 방장) 받아 둔 사본을 버린다 · state: 내 상태
+    public static string MigrateProbe(string step)
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+
+        FieldInfo backup = typeof(PunGameServer).GetField("_backup", Private);
+        FieldInfo started = typeof(PunGameServer).GetField("_started", Private);
+        if (backup == null || started == null)
+            return "FAIL PunGameServer 의 _backup · _started 필드 이름이 바뀌었다";
+
+        switch (step)
+        {
+            case "leave":
+                PhotonNetwork.LeaveRoom();
+                return "OK 방을 나감 (방장 " + NetworkManager.IsTrustedMaster + ")";
+            case "stop":
+                if (!NetworkManager.IsTrustedMaster) return "WAIT 방장 아님";
+                started.SetValue(server, false);
+                return "OK 사본 보내기 멈춤";
+            case "drop":
+                backup.SetValue(server, null);
+                return "OK 사본 버림";
+            default:
+                return "OK 방장 " + NetworkManager.IsTrustedMaster + " · 사본 " + (backup.GetValue(server) != null) + " · 판 보유 " + started.GetValue(server);
+        }
+    }
+
+    /// <summary>기록 서랍에 그 글자의 줄이 있는가.</summary>
+    public static string HistoryHas(string text)
+    {
+        HistoryPresenter history = Object.FindFirstObjectByType<HistoryPresenter>();
+        if (history == null)
+            return "WAIT 게임 화면 아님";
+
+        var entries = (List<HistoryEntry>)typeof(HistoryPresenter).GetField("_entries", Private).GetValue(history);
+        int count = entries.Count(e => e.Text == text);
+        return count > 0 ? "OK 기록 「" + text + "」 " + count + "줄" : "WAIT 기록에 「" + text + "」 없음 (" + entries.Count + "줄)";
+    }
+
+    /// <summary>지금 방을 나간다 (어느 씬에서든).</summary>
+    public static string LeaveRoomNow()
+    {
+        if (!PhotonNetwork.InRoom) return "WAIT 방 없음";
+        bool master = NetworkManager.IsTrustedMaster;
+        PhotonNetwork.LeaveRoom();
+        return "OK 방을 나감 (방장 " + master + ")";
+    }
+
+    public static string InRoom() => "OK 방 안 " + PhotonNetwork.InRoom + " · " + SceneManager.GetActiveScene().name;
+
     public static string WarningPopupText()
     {
         WarningPopup popup = Object.FindFirstObjectByType<WarningPopup>();
@@ -1107,6 +1164,8 @@ public static class MultiTest
         var noTimeout = (HashSet<int>)typeof(GameServer).GetField(NoTimeoutField, Private).GetValue(rules);
         if (mode == "others")
             mode = rules.CurrentTurnActor == PhotonNetwork.LocalPlayer.ActorNumber ? "" : "auto";
+        if (mode == "mine") // 방장 자신의 턴만 시간 초과 (방장 강제 퇴장 → 이주)
+            mode = rules.CurrentTurnActor == PhotonNetwork.LocalPlayer.ActorNumber ? "auto" : "";
         if (mode == "auto")
             noTimeout.Remove(rules.CurrentTurnActor);
         else
@@ -3404,6 +3463,294 @@ public static class MultiTest
     /// 판 지표 집계 (07-win-condition.md 11-4) — 방장이 세는 가한 · 받은 피해, 회복, 킬, 빼앗은 · 빼앗긴 카드, 드로우, 행동 · 카운터 · 함정 사용, 카운터 성공, 찹츄 선언.
     /// 실제로 바뀐 만큼만 세는지, 세지 않기로 한 것(시작 손패 · 시작 HP · 손패 교환 · 대소동의 새 판)을 빼는지, 대소동을 넘어 이어지는지, 종료 요약에 실리는지 본다.
     /// </summary>
+    // ── 방장 이주 (09-network 9.1, PM 2026-11-19) — 상태 담기 · 되살리기 · 이어 가기 ──
+    // 되살린 상태가 원래와 같은지는 GameServer 의 필드를 리플렉션으로 모두 적어 견준다 (DumpState) — 새 원본 필드를 Capture · Restore 에 빠뜨리면 여기서 걸린다.
+    public static string Migrate()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        double opens = ChainTable.Reveal;
+        Card Choice(int id) => new Card(id, 1019, CardType.Action, TargetType.OneOther,
+            new CardEffect[] { new DiscardOrDamageEffect { amount = 80, seconds = 5 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+
+        // 같은 난수 · 같은 시계로 되살린다 — 그 뒤 같은 요청을 주면 끝까지 같아야 한다
+        GameServer Clone(ChainTable t, out bool restored, Func<double> clock = null)
+        {
+            GameSnapshot snapshot = t.Server.Capture();
+            typeof(GameServer).GetField("_random", Private).SetValue(t.Server, new System.Random(7));
+            var clone = new GameServer(new System.Random(7), clock ?? (() => t.Now));
+            restored = clone.Restore(snapshot, CardsOf(t.Server));
+            return clone;
+        }
+        void Same(ChainTable t, string what)
+        {
+            GameServer clone = Clone(t, out bool restored);
+            string a = DumpState(t.Server), b = DumpState(clone);
+            Check(restored && a == b, what + (restored ? a == b ? "" : " — 다른 곳: " + FirstDifference(a, b) : " — 되살리기 실패: " + clone.RestoreError));
+        }
+
+        // 1. 되살린 상태 = 원래 상태 (판의 여러 순간)
+        {
+            var t = new ChainTable();
+            Same(t, "턴 시작 직후");
+
+            t.GiveTrap(t.Turn, ChainTable.TrapLowHp);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.State(t.O2).SkipNextTurn = true;
+            t.State(t.O1).TimeoutStreak = 2;
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            t.At(opens + 1);
+            t.Server.SkipReaction(asked.First(a => a.Actor != t.O1).Actor);
+            t.Server.HoldReaction(t.O1, asked.First(a => a.Actor == t.O1).CardInstanceIds[0]);
+            Same(t, "반응 시간 중 — 체인 1장 · 스킵 1명 · 고민 연장 1명 · 함정 설치 · 턴 스킵 표시");
+
+            t.Counter(t.O1, ChainTable.Negate);
+            Same(t, "카운터가 오른 뒤 — 체인 2장 (아래 카드 연결)");
+
+            // 이어서 끝까지 — 원래 방장과 되살린 방장이 같은 결과
+            GameServer clone = Clone(t, out bool restored);
+            double until = t.Now + opens + ReactionSeconds + ChainTable.Resolve + 1;
+            for (double now = t.Now; now < until; now += 0.1)
+            {
+                t.At(now);
+                t.Server.Tick();
+                clone.Tick();
+            }
+            Check(restored && DumpState(t.Server) == DumpState(clone) && t.Hp(t.O1) == 100, "되살린 방장이 체인을 끝까지 처리 — 원래 방장과 같은 결과 (무효 → ♥100)"
+                + (DumpState(t.Server) == DumpState(clone) ? "" : " — 다른 곳: " + FirstDifference(DumpState(t.Server), DumpState(clone))));
+        }
+        {
+            var t = new ChainTable();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Choice), t.O1);
+            Same(t, "고르기 중 (1019) — 처리 중인 카드 · 고르는 사람");
+
+            GameServer clone = Clone(t, out _);
+            clone.Choose(t.O1, 1);
+            Check(DumpHp(clone, t.O1) == 20, "되살린 방장에게 고르기 → 피해 80 (♥20)");
+        }
+        {
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            t.Run(t.Now + ChainTable.Resolve + 0.2);
+            Check(t.State(t.O1).Life == LifeState.DeathPending, "사망 대기까지 진행");
+            Same(t, "사망 대기 중 — 버림 더미 · 「~한 후」 기록 · 지표");
+        }
+
+        // 2. 새 방장이 이어 간다 — 멈췄던 단계의 시간을 처음부터 (ResumeAfterMigration)
+        {
+            // 반응 시간: 이주에 10초가 걸려도 5초를 새로 준다 · 스킵은 유지 · 끝나면 원래대로 처리
+            var t = new ChainTable();
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            int skipper = asked.First(a => a.Actor != t.O1).Actor;
+            t.At(opens + 4);
+            t.Server.SkipReaction(skipper);
+            GameServer clone = Clone(t, out _);
+            int[] deckBefore = DeckIds(clone);
+            t.At(opens + 14);
+            IReadOnlyList<GameEvent> resumed = clone.ResumeAfterMigration();
+            Check(!resumed.OfType<CardResolved>().Any() && !clone.Tick().OfType<CardResolved>().Any(), "반응 시간 중 이주 — 마감(5초)이 지났어도 바로 처리하지 않는다");
+            Check(!resumed.OfType<TurnResumed>().Any(), "메인 행동을 한 턴 — 턴 시간을 다시 알리지 않는다");
+            int[] deckAfter = DeckIds(clone);
+            Check(deckBefore.OrderBy(x => x).SequenceEqual(deckAfter.OrderBy(x => x)) && !deckBefore.SequenceEqual(deckAfter), "덱을 다시 섞는다 — 같은 카드 · 다른 순서");
+            int skipCard = t.Hand(skipper).First(c => c.CardId == ChainTable.Negate).InstanceId;
+            Check(t.Code(clone.PlayCounter(skipper, skipCard, new int[0])) == RejectCode.NotReactionTime, "스킵 기록 유지 — 스킵한 사람의 카운터 → 6");
+            t.At(opens + 14 + ReactionSeconds - 0.1);
+            Check(!clone.Tick().OfType<CardResolved>().Any(), "새 반응 시간 4.9초 — 아직");
+            t.At(opens + 14 + ReactionSeconds);
+            Check(clone.Tick().OfType<CardResolved>().Any() && DumpHp(clone, t.O1) == 80, "새 반응 시간 5초 → 처리 (♥80)");
+        }
+        {
+            // 턴: 15초를 새로
+            var t = new ChainTable();
+            t.At(10);
+            t.Server.Tick();
+            GameServer clone = Clone(t, out _);
+            t.At(40);
+            TurnResumed turn = clone.ResumeAfterMigration().OfType<TurnResumed>().FirstOrDefault();
+            Check(turn != null && turn.Actor == t.Turn && System.Math.Abs(turn.Deadline - 55) < 0.01, "턴 중 이주 — 턴 주인에게 15초를 새로 알린다");
+            t.At(54.9);
+            Check(clone.CurrentTurnActor == t.Turn && !clone.Tick().OfType<TurnStarted>().Any(), "새 마감 전 — 턴 유지");
+            t.At(55.1);
+            clone.Tick();
+            Check(clone.CurrentTurnActor != t.Turn, "새 마감 → 턴 넘어감");
+        }
+        {
+            // 사망 대기 · 고르기: 처음부터 다시
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            t.Run(t.Now + ChainTable.Resolve + 0.2);
+            GameServer clone = Clone(t, out _);
+            double at = t.Now + 30;
+            t.At(at);
+            DeathPending pending = clone.ResumeAfterMigration().OfType<DeathPending>().FirstOrDefault();
+            Check(pending != null && pending.Actor == t.O1 && System.Math.Abs(pending.Deadline - (at + 5)) < 0.01, "사망 대기 중 이주 — 5초를 다시 센다");
+            t.At(at + 4.9);
+            Check(!clone.Tick().OfType<PlayerDied>().Any(), "4.9초 — 아직");
+            t.At(at + 5);
+            Check(clone.Tick().OfType<PlayerDied>().Any(), "5초 → 최종 사망");
+
+            t = new ChainTable();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, Choice), t.O1);
+            clone = Clone(t, out _);
+            at = t.Now + 30;
+            t.At(at);
+            ChoiceStarted choice = clone.ResumeAfterMigration().OfType<ChoiceStarted>().FirstOrDefault();
+            Check(choice != null && choice.Actor == t.O1 && System.Math.Abs(choice.Deadline - (at + 5)) < 0.01 && !clone.Tick().OfType<ChoiceMade>().Any(), "고르기 중 이주 — 고를 시간을 다시 준다");
+            clone.Choose(t.O1, 0);
+            Check(clone.Capture().Ints.Length > 0 && HandOf(clone, t.O1) == 0, "되살린 뒤 고르기 — 손패 전부 버리기");
+        }
+
+        // 3. 읽을 수 없는 스냅샷은 되살리지 않는다 — 새 방장은 판을 중지한다 (전송 층)
+        {
+            var t = new ChainTable();
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            GameSnapshot good = t.Server.Capture();
+            Card[] cards = CardsOf(t.Server);
+            bool Bad(GameSnapshot snapshot, Card[] with) => !new GameServer(new System.Random(1), () => 0).Restore(snapshot, with);
+
+            Check(!Bad(good, cards), "온전한 스냅샷 → 되살림");
+            Check(Bad(new GameSnapshot(good.Ints.Take(good.Ints.Length - 3).ToArray(), good.Times), cards), "잘린 스냅샷 → 실패");
+            Check(Bad(new GameSnapshot(good.Ints.Concat(new[] { 1 }).ToArray(), good.Times), cards), "값이 남는 스냅샷 → 실패");
+            int[] wrongVersion = good.Ints.ToArray();
+            wrongVersion[0] = 999;
+            Check(Bad(new GameSnapshot(wrongVersion, good.Times), cards), "다른 버전 → 실패");
+            Check(Bad(good, cards.Take(3).ToArray()), "이 덱에 없는 카드 → 실패");
+            Check(Bad(new GameSnapshot(null, null), cards), "빈 스냅샷 → 실패");
+        }
+
+        // 4. 변경 번호 — 상태가 바뀔 때만 는다 (예비 방장에게 다시 보낼 때)
+        {
+            var t = new ChainTable();
+            int before = t.Server.Revision;
+            t.Server.Draw(t.O1); // 남의 턴 — 거절
+            t.Server.Tick();
+            Check(t.Server.Revision == before, "거절 · 변화 없는 Tick — 그대로");
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            int played = t.Server.Revision;
+            t.At(opens + 1);
+            t.Server.SkipReaction(asked[0].Actor);
+            Check(played > before && t.Server.Revision > played, "카드 사용 · 스킵(알림 없음) — 는다");
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
+    private static int DumpHp(GameServer server, int actor) => PlayersOf(server)[actor].Hp;
+    private static int HandOf(GameServer server, int actor) => PlayersOf(server)[actor].Hand.Count;
+    private static Dictionary<int, PlayerState> PlayersOf(GameServer server) => (Dictionary<int, PlayerState>)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(server);
+    private static int[] DeckIds(GameServer server) => ((List<Card>)typeof(GameServer).GetField(ServerDeckListField, Private).GetValue(server)).Select(c => c.InstanceId).ToArray();
+
+    // 이 판에 있는 카드 전부 — 시험 판은 손으로 쥐여 준 카드가 섞여 있어 덱 에셋으로 만들 수 없다
+    private static Card[] CardsOf(GameServer server)
+    {
+        var found = new Dictionary<int, Card>();
+        void Visit(object value, int depth)
+        {
+            if (value == null || depth > 4 || value is string || value.GetType().IsPrimitive)
+                return;
+            if (value is Card card)
+            {
+                found[card.InstanceId] = card;
+                return;
+            }
+            if (value is System.Collections.IDictionary map)
+            {
+                foreach (object item in map.Values)
+                    Visit(item, depth + 1);
+                return;
+            }
+            if (value is System.Collections.IEnumerable list)
+            {
+                foreach (object item in list)
+                    Visit(item, depth + 1);
+                return;
+            }
+            if (value.GetType().Assembly != typeof(GameServer).Assembly || value is CardEffect)
+                return;
+            foreach (FieldInfo field in value.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                Visit(field.GetValue(value), depth + 1);
+        }
+        Visit(server, 0);
+        return found.Values.ToArray();
+    }
+
+    // GameServer 의 원본 상태를 한 줄씩 적는다 — 필드 이름으로 찾지 않고 전부. 난수 · 시계 · 이번 요청의 알림 · 변경 번호는 상태가 아니다
+    private static string DumpState(GameServer server)
+    {
+        var sb = new StringBuilder();
+        foreach (FieldInfo field in typeof(GameServer).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).OrderBy(f => f.Name))
+        {
+            if (field.Name == "_random" || field.Name == "_clock" || field.Name == "_events" || field.Name.Contains("Revision") || field.Name.Contains("RestoreError"))
+                continue;
+            sb.Append(field.Name).Append(" = ").AppendLine(DumpValue(field.GetValue(server), 0));
+        }
+        return sb.ToString();
+    }
+
+    private static string DumpValue(object value, int depth)
+    {
+        if (value == null) return "null";
+        if (value is double d) return d.ToString("R");
+        if (value is string || value.GetType().IsPrimitive || value.GetType().IsEnum) return value.ToString();
+        if (value is Card card) return "#" + card.InstanceId;
+        if (value is CardEffect effect) return effect.GetType().Name;
+        if (depth > 5) return "…";
+        if (value is System.Collections.IDictionary map)
+        {
+            var pairs = new List<string>();
+            foreach (System.Collections.DictionaryEntry entry in map)
+                pairs.Add(DumpValue(entry.Key, depth + 1) + ":" + DumpValue(entry.Value, depth + 1));
+            return "{" + string.Join(", ", pairs.OrderBy(x => x, StringComparer.Ordinal)) + "}";
+        }
+        if (value is System.Collections.IEnumerable list)
+        {
+            var items = new List<string>();
+            foreach (object item in list)
+                items.Add(DumpValue(item, depth + 1));
+            Type type = value.GetType();
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(HashSet<>))
+                items.Sort(StringComparer.Ordinal); // 집합은 순서가 뜻이 없다
+            return "[" + string.Join(" ", items) + "]";
+        }
+
+        // PlayerState · ChainEntry · AfterRecord — 필드를 모두. 체인의 「아래 카드」 는 그 카드만 적는다 (서로 물고 돌지 않게)
+        var fields = new List<string>();
+        foreach (FieldInfo field in value.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).OrderBy(f => f.Name))
+        {
+            object inner = field.GetValue(value);
+            fields.Add(field.Name + "=" + (inner is ChainEntryMarker ? "" : inner != null && inner.GetType() == value.GetType() ? "→" + DumpCardOf(inner) : DumpValue(inner, depth + 1)));
+        }
+        return "(" + string.Join(" ", fields) + ")";
+    }
+
+    private sealed class ChainEntryMarker { }
+
+    // 같은 형의 안쪽 값(체인의 아래 카드)은 그 카드 번호로만
+    private static string DumpCardOf(object entry)
+    {
+        PropertyInfo card = entry.GetType().GetProperty("Card");
+        return card == null ? "?" : DumpValue(card.GetValue(entry), 9);
+    }
+
+    private static string FirstDifference(string a, string b)
+    {
+        string[] linesA = a.Split('\n'), linesB = b.Split('\n');
+        for (int i = 0; i < Math.Min(linesA.Length, linesB.Length); i++)
+        {
+            if (linesA[i] != linesB[i])
+                return "원래 「" + linesA[i].Trim() + "」 / 되살림 「" + linesB[i].Trim() + "」";
+        }
+        return "줄 수가 다르다";
+    }
+
     public static string Stats()
     {
         var sb = new StringBuilder();
@@ -3718,6 +4065,8 @@ public static class MultiTest
         public IReadOnlyList<GameEvent> Counter(int actor, int kind) => Server.PlayCounter(actor, Find(actor, kind), new int[0]);
 
         public int Code(IReadOnlyList<GameEvent> events) => events.Count == 1 && events[0] is RequestRejected r ? r.Code : 0;
+
+        public Card Find2(int actor, int kind) => ((PlayerState)_players[actor]).Hand.Find(c => c.CardId == kind);
 
         private int Find(int actor, int kind)
         {

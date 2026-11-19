@@ -215,7 +215,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과" "Stats:판 지표 집계"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과" "Stats:판 지표 집계" "Migrate:방장 이주 — 상태 담기 · 되살리기 · 이어 가기"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'
@@ -846,6 +846,185 @@ run_skip() {
 
 # 시간 초과 (03-turn.md 4절): 방장이 클론의 턴만 실제 시간 초과로 끝낸다 (메인의 턴은 그냥 넘김) → 자동 뽑기 2번 → 3번째에 뽑지 않고 강제 퇴장
 # → 클론은 스스로 방을 나가 로비 + 경고 팝업 (22-popup-ui.md 3절), 메인은 혼자 남아 처치 승리 → 결과 화면.
+# 방장 이주 (09-network 9.1) — 메인(방장) + 클론(예비 방장) + 봇 1 (방장이 나가도 판이 남게).
+#   migrate      카드가 나온 뒤 방장(메인)이 나감 → 클론이 사본으로 이어받아 봇과 판을 잇는다
+#   migrate fail 사본 없이 방장이 나감 → 클론은 방으로 돌아오고 경고 팝업
+play_turns() {
+    local rounds="$1" project out done_rounds=0
+    shift
+    for _ in $(seq 1 $((rounds * 20))); do
+        [ $done_rounds -ge "$rounds" ] && return 0
+        for project in "$@"; do
+            out=$(call "$project" ActIfMyTurn)
+            case "$out" in
+                OK*)   log "  $(name_of "$project"): $out"; done_rounds=$((done_rounds + 1)); LAST_ACT="$out"; sleep 2; break ;;
+                FAIL*) fail "$(name_of "$project"): $out"; return 1 ;;
+                *"게임 끝"*|*"(ResultScene)"*) fail "$(name_of "$project"): 판이 먼저 끝났다 — $out"; return 1 ;;
+            esac
+        done
+        sleep 1
+    done
+    [ $done_rounds -ge "$rounds" ] || { fail "턴이 진행되지 않는다 (${done_rounds}/${rounds})"; return 1; }
+}
+
+run_migrate() {
+    local mode="${1:-}" project out clone lines before after
+    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0")
+    clone="${EDITORS[1]}"
+    log "▶ 준비 — 클라이언트 2개 + 봇 1"
+    prepare "$LOBBY_SCENE"
+    log "▶ 입장 · 봇 추가 · 시작"
+    for project in "${EDITORS[@]}"; do
+        until_ok "$project" Join || return
+        sleep 2
+    done
+    until_ok "$MAIN" RoomCount 2 || return
+    out=$(call "$MAIN" AddBot); log "  메인: $out"
+    until_ok "$MAIN" ExpectBots 1 3 False || return
+    until_ok "$MAIN" StartGame 2 || return
+    wait_scene GameScene || return
+    sleep 2
+
+    log "▶ 방장이 있을 때 — 카드가 나올 때까지 턴 진행"
+    LAST_ACT=""
+    for _ in 1 2 3 4 5 6; do
+        play_turns 1 "${EDITORS[@]}" || return
+        printf '%s' "$LAST_ACT" | grep -q '카드' && break
+    done
+    log "  메인: $(call "$MAIN" MigrateProbe state) / $(name_of "$clone"): $(call "$clone" MigrateProbe state)"
+    call "$clone" MigrateProbe state | grep -q '방장 False · 사본 True' || { fail "예비 방장(클론)이 사본을 받지 않았다"; return; }
+    call "$MAIN" MigrateProbe state | grep -q '사본 False' || fail "방장이 사본을 갖고 있다"
+
+    if [ "$mode" = "fail" ]; then
+        log "▶ 사본 없이 방장이 나감 → 방으로 돌아옴"
+        until_ok "$MAIN" MigrateProbe stop || return
+        sleep 1
+        log "  $(name_of "$clone"): $(call "$clone" MigrateProbe drop)"
+        log "  메인: $(call "$MAIN" MigrateProbe leave)"
+        wait_scene_one "$clone" RoomScene || return
+        for _ in $(seq 1 10); do
+            out=$(call "$clone" WarningPopupText)
+            case "$out" in OK*) break ;; esac
+            sleep 1
+        done
+        log "  $(name_of "$clone"): $out"
+        [ "$out" = "OK 방으로 돌아왔어요 / 게임을 이어갈 수 없어 방으로 돌아왔어요." ] || fail "방으로 돌아온 뒤의 경고 팝업이 다르다: $out"
+        out=$(call "$clone" ExpectBots 1 3 False); log "  $(name_of "$clone"): $out"
+        case "$out" in *"열림 True"*) ;; *) fail "돌아온 방이 열려 있지 않다 — 다시 시작할 수 없다: $out" ;; esac
+        console_lines "$clone" | grep -q '방장 이주 실패' || fail "$(name_of "$clone") 이주 실패 로그가 없다"
+        # 이주 실패는 LogError 로 남긴다 — 그 줄만 빼고 본다
+        lines=$(console_lines "$clone" | awk -F'\t' '$1 == "error"' | grep -v '방장 이주 실패')
+        [ -z "$lines" ] && log "  $(name_of "$clone"): 다른 콘솔 에러 0" || { fail "$(name_of "$clone") 콘솔 에러:"; printf '%s\n' "$lines" | sed 's/^/      /'; }
+        return
+    fi
+
+    log "▶ 처리 도중 방장(메인)이 나감"
+    before=$(console_lines "$clone" | grep -c '\[BotDriver\]')
+    log "  메인: $(call "$MAIN" MigrateProbe leave)"
+    sleep 6
+    out=$(call "$clone" MigrateProbe state); log "  $(name_of "$clone"): $out"
+    case "$out" in *"방장 True"*"판 보유 True"*) ;; *) fail "예비 방장이 판을 이어받지 않았다: $out"; return ;; esac
+    console_lines "$clone" | grep -q '방장 이주 — 사본으로 판을 이어받았다' || fail "$(name_of "$clone") 이주 로그가 없다"
+    sleep 12   # 멈췄던 체인(반응 시간을 새로) · 후처리가 끝날 때까지
+
+    log "▶ 클론이 봇과 판을 잇는다 — 클론 턴 3번"
+    play_turns 3 "$clone" || return
+    sleep 12
+    log "▶ 판정"
+    lines=$(console_lines "$clone" | grep '\[GameDebugInput\]')
+    printf '%s' "$lines" | grep -q '게임 중 나감' || fail "$(name_of "$clone") 앞 방장의 나감 줄이 없다"
+    after=$(console_lines "$clone" | grep -c '\[BotDriver\]')
+    log "  $(name_of "$clone"): 봇 이유 줄 ${before} → ${after} (새 방장 기기에서 봇이 판단한다)"
+    [ "$after" -gt "$before" ] || fail "이주 뒤 봇이 행동하지 않는다"
+    log "  마지막 턴 줄: $(printf '%s\n' "$lines" | grep ' 턴 P' | tail -1 | sed -E 's/.*\[GameDebugInput\] //')"
+    until_ok "$clone" TableUiExpect || return
+    out=$(call "$clone" HistoryHas "방장이 바뀌었어요"); log "  $(name_of "$clone"): $out"
+    case "$out" in OK*) ;; *) fail "기록 서랍에 「방장이 바뀌었어요」 가 없다" ;; esac
+    check_errors "$clone"
+}
+
+# 방장이 나간 뒤 남은 사람(클론)이 방 밖으로 나와 경고 팝업을 보는가 — 방 해체 · 결과 화면 방장 이탈
+expect_disbanded() {
+    local clone="$1" out
+    for _ in $(seq 1 20); do
+        out=$(call "$clone" WarningPopupText)
+        case "$out" in OK*) break ;; esac
+        sleep 1
+    done
+    log "  $(name_of "$clone"): $out · $(call "$clone" InRoom)"
+    [ "$out" = "OK 방이 사라졌어요 / 방장이 나가서 방이 사라졌어요." ] || fail "방장이 나간 뒤의 경고 팝업이 다르다: $out"
+    call "$clone" InRoom | grep -q '방 안 False' || fail "$(name_of "$clone") 이 아직 방에 있다"
+    check_errors "$clone"
+}
+
+# migrate room — 방 대기 중 방장이 나감 → 방 해체 (08-room 5절 #5)
+run_migrate_room() {
+    local project clone
+    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0"); clone="${EDITORS[1]}"
+    log "▶ 준비 — 클라이언트 2개"
+    prepare "$LOBBY_SCENE"
+    for project in "${EDITORS[@]}"; do until_ok "$project" Join || return; sleep 2; done
+    until_ok "$MAIN" RoomCount 2 || return
+    wait_scene RoomScene || return
+    log "▶ 방 대기 중 방장(메인)이 나감"
+    log "  메인: $(call "$MAIN" LeaveRoomNow)"
+    expect_disbanded "$clone"
+}
+
+# migrate result — 결과 화면에서 방장이 나감 → 전원 로비로 (07 11절)
+run_migrate_result() {
+    local clone
+    enter_game 2 || return
+    clone="${EDITORS[1]}"
+    until_ok "$MAIN" SetAllHp 5 || return
+    play_to_end 2 || return
+    wait_scene ResultScene || return
+    sleep 3
+    log "▶ 결과 화면에서 방장(메인)이 나감"
+    log "  메인: $(call "$MAIN" LeaveRoomNow)"
+    expect_disbanded "$clone"
+}
+
+# migrate kick — 방장이 3턴 연속 시간 초과로 강제 퇴장 → 클론이 이어받아 봇과 판을 잇는다 (03-turn 4절 · 09 9.1)
+run_migrate_kick() {
+    local project out clone
+    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0"); clone="${EDITORS[1]}"
+    log "▶ 준비 — 클라이언트 2개 + 봇 1"
+    prepare "$LOBBY_SCENE"
+    for project in "${EDITORS[@]}"; do until_ok "$project" Join || return; sleep 2; done
+    until_ok "$MAIN" RoomCount 2 || return
+    log "  메인: $(call "$MAIN" AddBot)"
+    until_ok "$MAIN" ExpectBots 1 3 False || return
+    until_ok "$MAIN" StartGame 2 || return
+    wait_scene GameScene || return
+    sleep 2
+    log "▶ 방장(메인)의 턴만 시간 초과로 — 3번째에 강제 퇴장"
+    for _ in $(seq 1 40); do
+        out=$(call "$MAIN" ExpireTurn mine)
+        case "$out" in OK*) log "  ${out%% — *}" ;; *) break ;; esac
+        sleep 3
+        console_lines "$clone" | grep -q '\[GameDebugInput\].*강제 퇴장' && break
+    done
+    console_lines "$clone" | grep -q '\[GameDebugInput\].*P1 게임 중 강제 퇴장' || { fail "방장이 강제 퇴장되지 않았다"; return; }
+    sleep 6
+    for _ in $(seq 1 10); do
+        out=$(call "$MAIN" WarningPopupText)
+        case "$out" in OK*) break ;; esac
+        sleep 1
+    done
+    log "  메인: $out"
+    [ "$out" = "OK 방에서 나왔어요 / 3턴 동안 행동하지 않아 게임에서 나왔어요." ] || fail "강제 퇴장된 방장의 경고 팝업이 다르다: $out"
+    out=$(call "$clone" MigrateProbe state); log "  $(name_of "$clone"): $out"
+    case "$out" in *"방장 True"*"판 보유 True"*) ;; *) fail "클론이 판을 이어받지 않았다: $out"; return ;; esac
+    console_lines "$clone" | grep -q '방장 이주 — 사본으로 판을 이어받았다' || fail "$(name_of "$clone") 이주 로그가 없다"
+    log "▶ 클론이 봇과 판을 잇는다 — 클론 턴 2번"
+    play_turns 2 "$clone" || return
+    sleep 8
+    log "  마지막 턴 줄: $(console_lines "$clone" | grep '\[GameDebugInput\]' | grep ' 턴 P' | tail -1 | sed -E 's/.*\[GameDebugInput\] //')"
+    until_ok "$clone" TableUiExpect || return
+    check_errors "$clone"
+}
+
 run_timeout() {
     local clone out lines project
     enter_game 2 || return
@@ -990,6 +1169,13 @@ run_fx() {
 
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
+    migrate) shift
+        case "${1:-}" in
+            room)   run_migrate_room ;;
+            result) run_migrate_result ;;
+            kick)   run_migrate_kick ;;
+            *)      run_migrate "$@" ;;
+        esac ;;
     ui)    shift; run_ui ;;
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;

@@ -24,6 +24,8 @@ namespace Chapchu.UI.ResultScreen
         // 시안 문구 (07-win-condition.md 11-2)
         private const string WinTitleFormat = "{0} 승리!";
         private const string DrawTitle = "무승부!";
+        private const string HostLeftTitle = "방이 사라졌어요";
+        private const string HostLeftText = "방장이 나가서 방이 사라졌어요.";
         private const string ChapchuLabel = "찹츄 승리";
         private const string ChapchuReasonFormat = "손패 {0}장으로 찹츄를 외쳤어요!";
         private const string EliminationLabel = "처치 승리";
@@ -112,6 +114,7 @@ namespace Chapchu.UI.ResultScreen
             board.CloseClicked += HandleBoardCloseClicked;
             emotes.EmoteClicked += HandleEmoteClicked;
             RoomEvents.OnLeftRoom += HandleLeftRoom;
+            RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
         }
 
         private void OnDisable()
@@ -124,6 +127,7 @@ namespace Chapchu.UI.ResultScreen
             board.CloseClicked -= HandleBoardCloseClicked;
             emotes.EmoteClicked -= HandleEmoteClicked;
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
+            RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
         }
 
         // 결과 씬은 방장이 방 전원을 옮겨서 열린다 — 요약은 게임 씬에서 이미 받았다
@@ -368,6 +372,16 @@ namespace Chapchu.UI.ResultScreen
 
             _isLeaving = true;
             NetworkManager.Instance.LeaveRoom();
+        }
+
+        // 결과 화면에서 방장이 나갔다 — 「한 판 더」 는 없다. 모두 로비로 나가고, 도착해서 사유를 알린다 (07-win-condition.md 11절, PM 2026-11-19)
+        private void HandleMasterClientSwitched(Photon.Realtime.Player newMaster)
+        {
+            if (_isLeaving)
+                return;
+
+            Chapchu.UI.Popups.PopupManager.Instance.ShowWarningOnNextScene(HostLeftTitle, HostLeftText);
+            Leave();
         }
 
         // 내가 나갔거나 접속이 끊겼다 — 어느 쪽이든 로비로 (08-room.md 6절)

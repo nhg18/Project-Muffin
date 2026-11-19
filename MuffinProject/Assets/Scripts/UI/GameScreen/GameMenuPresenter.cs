@@ -19,6 +19,8 @@ namespace Chapchu.UI.GameScreen
     {
         // 22-popup-ui.md 3절 「3턴 연속 시간 초과로 강제 퇴장된 뒤 로비 도착」
         private const string ForcedOutTitle = "방에서 나왔어요";
+        private const string HaltedTitle = "방으로 돌아왔어요";
+        private const string HaltedText = "게임을 이어갈 수 없어 방으로 돌아왔어요.";
         private const string ForcedOutText = "3턴 동안 행동하지 않아 게임에서 나왔어요.";
 
         private GameMenuView _view;
@@ -33,6 +35,7 @@ namespace Chapchu.UI.GameScreen
             _view.ExitConfirmed += HandleExitConfirmed;
             RoomEvents.OnLeftRoom += HandleLeftRoom;
             GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
+            GameEvents.OnGameHalted += HandleGameHalted;
         }
 
         private void OnDisable()
@@ -40,6 +43,14 @@ namespace Chapchu.UI.GameScreen
             _view.ExitConfirmed -= HandleExitConfirmed;
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
             GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
+            GameEvents.OnGameHalted -= HandleGameHalted;
+        }
+
+        // 방장이 사라졌는데 판을 이어받지 못했다 — 새 방장이 곧 전원을 방으로 옮긴다. 도착해서 사유를 알린다 (09-network.md 9.1 · 22-popup-ui.md)
+        private void HandleGameHalted()
+        {
+            if (PopupManager.Instance != null)
+                PopupManager.Instance.ShowWarningOnNextScene(HaltedTitle, HaltedText);
         }
 
         // 방장이 나를 강제 퇴장시켰다 — 규칙에서는 이미 빠졌다. 방을 나가 로비로 가고, 도착해서 사유를 알린다.

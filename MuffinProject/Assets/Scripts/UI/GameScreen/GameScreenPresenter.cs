@@ -93,6 +93,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken += HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
@@ -139,6 +140,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken -= HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
@@ -498,6 +500,9 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 턴 스킵 (1020 얼음!) · 행동 카드 금지 (1007 짖기) · 기다려 (1023) — 상태 표시 시안이 없어 기록에 한 줄만 (11-card-list 4절 #10, 2026-11-13)
+        // 방장이 바뀌었다 — 기록에 한 줄만 (팝업 없음, 09-network.md 9.1)
+        private void HandleMasterClientSwitched(Photon.Realtime.Player newMaster) => Enqueue(() => { history.ShowHostChanged(); return null; });
+
         private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); return null; });
 
         private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });

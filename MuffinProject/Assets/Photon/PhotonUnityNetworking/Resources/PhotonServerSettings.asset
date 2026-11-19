@@ -114,6 +114,8 @@ MonoBehaviour:
   - RPC_ResultRequestEmote
   - RPC_RequestReactionHold
   - RPC_RequestReactionSkip
+  - RPC_OnBackup
+  - RPC_OnGameHalted
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

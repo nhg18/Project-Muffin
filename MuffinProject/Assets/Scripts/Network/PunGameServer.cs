@@ -48,6 +48,16 @@ namespace Chapchu.Network
         private readonly Dictionary<int, string> _startNames = new Dictionary<int, string>();
         private bool _gameEnded; // 종료 알림을 받았다 — 이 뒤로는 요청을 보내지 않는다 (곧 결과 씬으로 넘어간다)
 
+        // ── 방장 이주 (09-network.md 9.1) ──
+        private bool _started;          // 방장 — 이 기기의 규칙이 판을 갖고 있다 (시작했거나 사본으로 되살렸다)
+        private int _backupActor = -1;  // 방장 — 마지막으로 사본을 보낸 예비 방장
+        private int _backupRevision;    // 방장 — 그때의 상태 변경 번호 (GameServer.Revision)
+        private GameSnapshot _backup;   // 예비 방장 — 방장에게서 받은 가장 새 사본. 화면에는 쓰지 않는다
+        private int _backupSeq;         // 예비 방장 — 그 사본을 만들 때 방장이 보낸 마지막 처리 번호
+
+        // 사본 하나의 크기 한도 — 카드 · 사람 수로 보아 넉넉하다. 넘으면 받지 않는다
+        private const int MaxBackupLength = 20000;
+
         // 방장이 바뀔 때 방 속성의 처리 번호를 이어받는 한도 — 남이 큰 값을 써서 새 방장의 알림을 모두 묵은 것으로 만들지 못하게
         private const int MaxSeqJump = 1000;
 
@@ -105,6 +115,7 @@ namespace Chapchu.Network
             if (bots.Length > 0)
                 _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
 
+            _started = true;
             Send(_server.StartGame(actors, cards, bots)); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
         }
 
@@ -115,16 +126,18 @@ namespace Chapchu.Network
                 return;
 
             Send(_server.Tick());
-            if (_bots == null)
-                return;
-
-            Send(_bots.Tick());
-            foreach (string reason in _bots.TakeLogs())
+            if (_bots != null)
             {
-                // 봇의 이유 줄은 손패 · 함정 내용을 담는다 — 개발 빌드에서만 (CODE_CONVENTION 7절). 버리기는 늘 한다
-                if (Debug.isDebugBuild)
-                    Debug.Log($"[{nameof(BotDriver)}] {reason}");
+                Send(_bots.Tick());
+                foreach (string reason in _bots.TakeLogs())
+                {
+                    // 봇의 이유 줄은 손패 · 함정 내용을 담는다 — 개발 빌드에서만 (CODE_CONVENTION 7절). 버리기는 늘 한다
+                    if (Debug.isDebugBuild)
+                        Debug.Log($"[{nameof(BotDriver)}] {reason}");
+                }
             }
+
+            SendBackup(); // 알림이 없는 변화(스킵 · 고민 연장) · 예비 방장이 바뀐 때
         }
 
         #region 요청 (각 클라 → 방장)
@@ -243,16 +256,131 @@ namespace Chapchu.Network
         public override void OnEnable()
         {
             base.OnEnable();
-            RoomEvents.OnBecameTrustedMaster += InheritSeq;
+            RoomEvents.OnBecameTrustedMaster += TakeOver;
         }
 
         public override void OnDisable()
         {
             base.OnDisable();
-            RoomEvents.OnBecameTrustedMaster -= InheritSeq;
+            RoomEvents.OnBecameTrustedMaster -= TakeOver;
         }
 
-        // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)
+        #region 방장 이주 (09-network.md 9.1)
+
+        // 예비 방장 = 방장이 사라지면 Photon 이 방장으로 세울 사람 — 방에 남은 사람 중 번호가 가장 작은 사람. 없으면 null
+        private static Player BackupPlayer()
+        {
+            Player backup = null;
+            foreach (Player player in PhotonNetwork.PlayerListOthers)
+            {
+                if (!player.IsInactive && (backup == null || player.ActorNumber < backup.ActorNumber))
+                    backup = player;
+            }
+            return backup;
+        }
+
+        // 방장 — 상태가 바뀌었거나 예비 방장이 바뀌었으면 상태 전체를 예비 방장 한 명에게만 보낸다. 손패 · 함정 · 덱 순서가 들어 있다 —
+        // 그 기기의 화면은 이 값을 쓰지 않는다. 방 속성에는 두지 않는다 (전원이 읽는다)
+        private void SendBackup()
+        {
+            if (!_started || _gameEnded)
+                return;
+
+            Player backup = BackupPlayer();
+            if (backup == null)
+            {
+                _backupActor = -1;
+                return;
+            }
+
+            if (backup.ActorNumber == _backupActor && _server.Revision == _backupRevision)
+                return;
+
+            GameSnapshot snapshot = _server.Capture();
+            _backupActor = backup.ActorNumber;
+            _backupRevision = _server.Revision;
+            photonView.RPC(nameof(RPC_OnBackup), backup, _sentSeq, snapshot.Ints, snapshot.Times);
+        }
+
+        [PunRPC]
+        private void RPC_OnBackup(int sentSeq, int[] ints, double[] times, PhotonMessageInfo info)
+        {
+            if (info.Sender == null || info.Sender.ActorNumber != NetworkManager.TrustedMaster)
+                return;
+            if (ints == null || times == null || ints.Length > MaxBackupLength || times.Length > MaxBackupLength)
+                return;
+
+            _backup = new GameSnapshot(ints, times);
+            _backupSeq = sentSeq;
+        }
+
+        // 내가 믿는 방장이 됐다 — 받아 둔 사본으로 판을 되살려 멈췄던 단계부터 잇는다. 사본이 없거나 읽을 수 없으면 판을 중지하고 방으로 돌아간다.
+        private void TakeOver()
+        {
+            InheritSeq();
+            if (_gameEnded || _started)
+                return; // 끝난 판은 결과 씬으로 옮기기만 하면 된다 (GoToResultRoutine)
+
+            GameSnapshot backup = _backup;
+            _backup = null;
+            var server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time);
+            if (backup == null || !server.Restore(backup, deck.CreateCards()))
+            {
+                Debug.LogError($"[{nameof(PunGameServer)}] 방장 이주 실패 — {(backup == null ? "받아 둔 사본이 없다" : server.RestoreError)}. 판을 중지하고 방으로 돌아간다");
+                Halt();
+                return;
+            }
+
+            _server = server;
+            _started = true;
+            _sentSeq = System.Math.Max(_sentSeq, _backupSeq);
+
+            int[] bots = BotRoster.Actors;
+            _bots = bots.Length > 0
+                ? new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase))
+                : null;
+
+            Debug.Log($"[{nameof(PunGameServer)}] 방장 이주 — 사본으로 판을 이어받았다 (처리 번호 {_sentSeq})");
+            Send(_server.ResumeAfterMigration());
+
+            // 사본 뒤에 나간 사람 (앞 방장 포함) — 나감 알림은 앞 방장만 받았다
+            foreach (int actor in _startNames.Keys.ToArray())
+            {
+                Player player = PhotonNetwork.CurrentRoom.GetPlayer(actor);
+                if (player == null || player.IsInactive)
+                    Send(_server.RemovePlayer(actor));
+            }
+
+            // 각자의 손패 · 함정을 방장 값으로 맞춘다 — 사본이 마지막 알림보다 한 걸음 늦었을 수 있다
+            foreach (Player player in PhotonNetwork.PlayerList)
+            {
+                _server.GetPrivateCards(player.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
+                SendTo(player.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
+            }
+            NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.EventSeq] = _sentSeq });
+        }
+
+        // 판을 이어 갈 수 없다 — 전원에게 알리고 방(대기 화면)으로 돌아간다. 거기서 다시 시작할 수 있다 (09-network.md 9.1, PM 2026-11-19)
+        private void Halt()
+        {
+            Broadcast(nameof(RPC_OnGameHalted));
+            NetworkManager.Instance.UpdateRoomOptions(null, isOpen: true);
+            NetworkManager.Instance.LoadSceneForAll(ScenePaths.Room);
+        }
+
+        [PunRPC]
+        private void RPC_OnGameHalted(int seq, PhotonMessageInfo info)
+        {
+            if (!Accept(seq, info))
+                return;
+
+            _gameEnded = true; // 이 뒤로는 요청을 보내지 않는다
+            GameEvents.RaiseGameHalted();
+        }
+
+        #endregion
+
+        // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다.
         // 방장 자리만 가져간 사람은 이어받지 않는다 — 믿는 방장이 될 때 이어받는다 (09-network.md 13절 #1)
         private void InheritSeq()
         {
@@ -555,6 +683,7 @@ namespace Chapchu.Network
 
             roomProps[RoomProps.EventSeq] = _sentSeq; // 지금 값 스냅샷이 어느 알림까지 반영했는지
             NetworkManager.Instance.SetRoomProps(roomProps);
+            SendBackup(); // 알림과 같은 묶음으로 나가게 — 알림만 가고 사본이 안 간 채 방장이 사라지는 틈을 줄인다
 
             foreach (KeyValuePair<int, Hashtable> pair in playerProps)
             {

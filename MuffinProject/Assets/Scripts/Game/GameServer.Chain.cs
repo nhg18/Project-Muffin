@@ -82,6 +82,7 @@ namespace Chapchu.Game
                 _reactionSkipped.Add(requester);
                 if (_reactionAsked.Count == 0)
                     _reactionDeadline = now; // 다음 Tick 에 체인을 처리한다
+                Revision++; // 알림은 없지만 상태가 바뀌었다 (GameServer.Snapshot.cs)
             }
 
             return TakeEvents();
@@ -98,6 +99,7 @@ namespace Chapchu.Game
                 && usable.Contains(cardInstanceId) && _reactionHeld.Add(requester))
             {
                 _reactionDeadline = System.Math.Max(_reactionDeadline, now + ReactionHoldSeconds);
+                Revision++;
             }
 
             return TakeEvents();
