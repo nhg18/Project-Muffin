@@ -445,7 +445,7 @@ namespace Chapchu.UI.ResultScreen
             {
                 RectTransform body = characterImage.rectTransform;
                 float home = body.anchoredPosition.y;
-                DOTween.Sequence().SetLink(gameObject).SetDelay(hopAt).SetLoops(-1)
+                DOTween.Sequence().SetLink(gameObject).SetDelay(hopAt, false).SetLoops(-1) // false = 지연은 처음 한 번만 — 기본은 반복마다 다시 든다
                     .AppendInterval(hopRestSeconds)
                     .Append(body.DOAnchorPosY(home + hopHeight, hopStepSeconds).SetEase(Ease.OutQuad))
                     .Append(body.DOAnchorPosY(home, hopStepSeconds).SetEase(Ease.InQuad))

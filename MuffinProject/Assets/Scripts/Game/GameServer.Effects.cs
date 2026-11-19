@@ -37,6 +37,7 @@ namespace Chapchu.Game
             {
                 _players[actor].Life = LifeState.Alive; // 사망 방지(C11)로 HP 1 이상 — 바로 생존 (06 3 · 8절)
                 _events.Add(new DeathAvoided(actor, _players[actor].Hp));
+                _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             }
             RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
         }
@@ -89,6 +90,7 @@ namespace Chapchu.Game
             {
                 player.Life = LifeState.Alive;
                 _events.Add(new DeathAvoided(actor, player.Hp));
+                _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             }
         }
 

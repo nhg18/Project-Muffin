@@ -33,6 +33,8 @@ namespace Chapchu.Game
             PlayerState player = _players[actor];
             int before = player.Hp;
             player.Hp = Math.Clamp(hp, 0, MaxHp);
+            if (before <= 0 && player.Hp > 0)
+                _handDirty.Add(actor); // HP 0 에서 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             if (player.Hp > 0)
                 player.DownedBy = -1;
             else if (before > 0)
@@ -90,6 +92,7 @@ namespace Chapchu.Game
                 int[] discarded = DiscardAll(actor);
                 _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
                 EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 1023)
+                ClearChapchu(actor); // 죽은 사람의 찹츄 표시가 남지 않게 해제를 알린다 (07 9절)
             }
         }
 

@@ -671,15 +671,9 @@ namespace Chapchu.EditorTools
             Stretch(shadow.rectTransform, 0f, 10f, 0f, -10f); // 아래로 10 (시안 box-shadow 0 5px 0)
             Image fill = RoundBox(root, Ink, 6f, 48f, White, true);
 
-            // 꼬리 — 왼쪽 아래 32 × 32 를 45° 돌린 마름모. 중심은 판의 아래 가장자리에 — 더 내리면 마름모의 양쪽 어깨가 테 밑으로 나와 세모가 아니라 마름모로 보인다. 잉크 마름모는 판(테두리 · 바탕) 뒤 · 그림자 앞에 둬서 판 아래로 나온 세모만 보이고,
-            // 바탕색 마름모(같은 중심 · 테 6 만큼 안쪽 = 20)가 판 앞에서 테를 꼬리 안쪽 폭만큼만 연다. 위로 밀어 겹치면 바탕색이 테를 꼬리 선보다 넓게 파먹어 마름모가 드러난다 (사용자 2026-11-19)
-            Image tailInk = NewImage("TailInk", root, Ink);
-            Anchor(tailInk.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(76f, 0f), new Vector2(32f, 32f));
-            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            tailInk.transform.SetSiblingIndex(shadow.transform.GetSiblingIndex() + 1);
-            Image tailFill = NewImage("TailFill", root, White);
-            Anchor(tailFill.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(76f, 0f), new Vector2(20f, 20f));
-            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            // 꼬리 — 왼쪽 아래 32 × 32 를 45° 돌린 마름모. 중심은 판의 아래 가장자리에 — 더 내리면 마름모의 양쪽 어깨가 테 밑으로 나와 세모가 아니라 마름모로 보인다.
+            // 잉크 마름모는 그림자 앞, 바탕색 마름모는 같은 중심 · 테 6 만큼 안쪽 = 20 (BubbleTail)
+            Image tailFill = BubbleTail(root, shadow.transform.GetSiblingIndex() + 1, White, new Vector2(76f, 0f), 32f, new Vector2(76f, 0f), 20f)[1];
 
             RectTransform content = NewRect("Content", root);
             Stretch(content);
@@ -1063,19 +1057,10 @@ namespace Chapchu.EditorTools
             var bubbleGroup = bubble.gameObject.AddComponent<CanvasGroup>();
             HorizontalLayout(bubble, new RectOffset(80, 80, 16, 28), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(bubble.gameObject);
-            RoundBox(bubble, Ink, 10f, 88f, Chu);
+            ShapeBox(bubble, Ink, 10f, 88f, Chu); // 판 전체를 흐리게 하므로(bubbleGroup) 한 메시로 — 둘로 나누면 테두리가 면 너머로 비친다 (CODE_CONVENTION 10절)
 
-            // 꼬리 — 왼쪽 아래 68 × 68 을 45° 돌린 마름모 (시안 34 × 34, left 60 · bottom −22).
-            // 잉크 마름모는 말풍선 판 뒤에 둬서 판 아래로 나온 세모만 보이고, 바탕색 마름모(같은 중심 · 테 10 만큼 안쪽 = 48)가 판 앞에서 테를 딱 꼬리 안쪽 폭만큼 연다.
-            // 위로 밀어 겹치면 바탕색이 테 윗부분을 꼬리 선보다 넓게 파먹어 마름모가 드러난다 (사용자 2026-11-19)
-            Image tailInk = NewImage("TailInk", bubble, Ink);
-            Anchor(tailInk.rectTransform, Vector2.zero, middle, new Vector2(164f, 0f), new Vector2(68f, 68f));
-            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            tailInk.transform.SetAsFirstSibling();
-            Image tailFill = NewImage("TailFill", bubble, Chu);
-            Anchor(tailFill.rectTransform, Vector2.zero, middle, new Vector2(164f, 0f), new Vector2(48f, 48f));
-            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            foreach (Image tail in new[] { tailInk, tailFill })
+            // 꼬리 — 왼쪽 아래 68 × 68 을 45° 돌린 마름모 (시안 34 × 34, left 60 · bottom −22). 바탕색 마름모는 같은 중심 · 테 10 만큼 안쪽 = 48 (BubbleTail)
+            foreach (Image tail in BubbleTail(bubble, 0, Chu, new Vector2(164f, 0f), 68f, new Vector2(164f, 0f), 48f))
                 tail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
 
             // 글자 184 (시안 92) — 흰 글자 + 잉크 외곽선 (외곽선은 뷰가 실행 때 넣는다)
@@ -1187,15 +1172,8 @@ namespace Chapchu.EditorTools
 
             Image fill = RoundBox(root, Ink, 5f, 28f, Chu);
             float tailX = g.SayLeft ? 190f - 28f - 12f : 28f + 12f;
-            // 꼬리 — 잉크 마름모는 판 뒤(판 아래로 나온 세모만 보인다), 바탕색 마름모가 판 앞에서 테를 연다 (사용자 2026-11-19)
-            Image tailInk = NewImage("TailInk", root, Ink);
-            Anchor(tailInk.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(tailX, 0f), new Vector2(24f, 24f));
-            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            tailInk.transform.SetAsFirstSibling();
-            Image tailFill = NewImage("TailFill", root, Chu);
-            // 바탕색 마름모 자리 · 크기는 사용자가 씬에서 맞춘 값 (2026-11-19, Seat1 기준 — 반대쪽을 보는 좌석은 좌우를 뒤집는다)
-            Anchor(tailFill.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(tailX + (g.SayLeft ? -0.54f : 0.54f), 5.4f), new Vector2(21f, 21f));
-            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            // 꼬리 (BubbleTail) — 바탕색 마름모 자리 · 크기는 사용자가 씬에서 맞춘 값 (2026-11-19, Seat1 기준 — 반대쪽을 보는 좌석은 좌우를 뒤집는다)
+            BubbleTail(root, 0, Chu, new Vector2(tailX, 0f), 24f, new Vector2(tailX + (g.SayLeft ? -0.54f : 0.54f), 5.4f), 21f);
 
             TMP_Text text = NewText("Text", fill.transform, "찹츄!", 38f, White, true);
             Stretch(text.rectTransform);
@@ -1771,6 +1749,24 @@ namespace Chapchu.EditorTools
             box.raycastTarget = raycastTarget;
             box.Set(UIShape.ShapeKind.RoundRect, radius, borderWidth, borderColor);
             return box;
+        }
+
+        /// <summary>
+        /// 말풍선 꼬리 — 45° 돌린 마름모 둘. 판(RoundBox · ShapeBox)을 만든 뒤에 부른다. 자리는 parent 왼쪽 아래 기준 마름모의 중심.
+        /// 잉크 마름모는 inkSiblingIndex(판 뒤)에 둬서 판 아래로 나온 세모만 보이고, 바탕색 마름모가 판 앞에서 테를 꼬리 안쪽 폭만큼만 연다.
+        /// 바탕색 마름모를 위로 밀어 겹치면 테를 꼬리 선보다 넓게 파먹어 마름모가 드러난다 (사용자 2026-11-19). 돌려주는 값 = { 잉크, 바탕색 }.
+        /// </summary>
+        private static Image[] BubbleTail(Transform parent, int inkSiblingIndex, Color fillColor, Vector2 inkCenter, float inkSize, Vector2 fillCenter, float fillSize)
+        {
+            var pivot = new Vector2(0.5f, 0.5f);
+            Image tailInk = NewImage("TailInk", parent, Ink);
+            Anchor(tailInk.rectTransform, Vector2.zero, pivot, inkCenter, new Vector2(inkSize, inkSize));
+            tailInk.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            tailInk.transform.SetSiblingIndex(inkSiblingIndex);
+            Image tailFill = NewImage("TailFill", parent, fillColor);
+            Anchor(tailFill.rectTransform, Vector2.zero, pivot, fillCenter, new Vector2(fillSize, fillSize));
+            tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            return new[] { tailInk, tailFill };
         }
 
         private static Sprite Hud(string name)

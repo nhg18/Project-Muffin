@@ -272,7 +272,7 @@ namespace Chapchu.UI.ResultScreen
         {
             title.PlayIntro();
             for (int i = 0; i < _podiums.Count; i++)
-                _podiums[i].PlayIntro(podiumIntroStart + (3 - i) * podiumIntroStep, crownIntroAt, winMarkIntroAt, hopStartAt);
+                _podiums[i].PlayIntro(podiumIntroStart + (_podiums.Count - 1 - i) * podiumIntroStep, crownIntroAt, winMarkIntroAt, hopStartAt);
             buttons.PlayIntro(buttonsIntroAt);
             emotes.PlayIntro(buttonsIntroAt);
 

@@ -121,6 +121,7 @@ namespace Chapchu.Game
             if (_gameOver)
                 return TakeEvents();
 
+            ClearChapchu(actor); // 나간 사람의 찹츄가 남아 표시되거나 옮겨지지(A20) 않게 해제를 알린다 (07 9절)
             CheckElimination(); // 체인 · 사망 대기가 없으면 바로 (07 3절). 있으면 그것이 끝난 뒤
             if (!_gameOver && actor == CurrentTurnActor && !_mainActionUsed && !IsPaused(_clock()))
                 AdvanceTurn();
