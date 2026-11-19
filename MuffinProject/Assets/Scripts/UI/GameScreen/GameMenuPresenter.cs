@@ -1,4 +1,5 @@
-﻿using Chapchu.Core;
+﻿using System.Collections;
+using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Popups;
@@ -50,7 +51,16 @@ namespace Chapchu.UI.GameScreen
             Debug.Log($"[{nameof(GameMenuPresenter)}] 3턴 연속 시간 초과로 강제 퇴장 — 방을 나간다", this);
             if (PopupManager.Instance != null)
                 PopupManager.Instance.ShowWarningOnNextScene(ForcedOutTitle, ForcedOutText);
-            NetworkManager.Instance.LeaveRoom();
+            StartCoroutine(LeaveRoomNextFrame());
+        }
+
+        // 이 알림은 방장의 Send 묶음 도중에 온다 (방장 자신이 대상이면 그 자리에서 실행된다).
+        // 바로 나가면 같은 묶음의 뒤 알림(턴 시작 · 게임 종료)이 남은 사람에게 가지 않으므로 묶음이 끝난 다음 프레임에 나간다.
+        private IEnumerator LeaveRoomNextFrame()
+        {
+            yield return null;
+            if (NetworkManager.Instance != null)
+                NetworkManager.Instance.LeaveRoom();
         }
 
         private void HandleExitConfirmed()

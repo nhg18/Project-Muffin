@@ -96,8 +96,9 @@ namespace Chapchu.Game
             {
                 AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
             }
-            else if (CurrentTurnActor != -1 && now >= _turnDeadline)
+            else if (CurrentTurnActor != -1 && (!_turnPaused || _mainActionUsed) && now >= _turnDeadline)
             {
+                // 멈춤이 막 풀린 프레임에는 마감이 아직 안 늘어났으므로 보지 않는다 — 이번 프레임의 UpdateTurnClock 이 늘린 뒤 다음 Tick 에서 (IsTurnTimeUp 과 같다)
                 TimeOutTurn();
             }
         }
