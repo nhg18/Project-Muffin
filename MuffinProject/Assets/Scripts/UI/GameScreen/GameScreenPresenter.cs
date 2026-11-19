@@ -67,6 +67,8 @@ namespace Chapchu.UI.GameScreen
         {
             hand.OnRaisedChanged += HandleHandRaised;
             chainCards.OnBottomChanged += reactionTimer.SetCardsBottom;
+            hand.OnReactionAsked += reactionTimer.SetSkipVisible;
+            reactionTimer.OnSkipClicked += hand.SkipReaction;
             GameEvents.OnHpChanged += HandleHpChanged;
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
@@ -111,6 +113,8 @@ namespace Chapchu.UI.GameScreen
         {
             hand.OnRaisedChanged -= HandleHandRaised;
             chainCards.OnBottomChanged -= reactionTimer.SetCardsBottom;
+            hand.OnReactionAsked -= reactionTimer.SetSkipVisible;
+            reactionTimer.OnSkipClicked -= hand.SkipReaction;
             GameEvents.OnHpChanged -= HandleHpChanged;
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
@@ -410,14 +414,14 @@ namespace Chapchu.UI.GameScreen
                 seats.ShowHandCount(actorNumber, handCount);
         }
 
-        // 카드가 체인에 오를 때마다 반응 시간이 새로 정해진다 — 카드 연출 단계 뒤에 재생되므로 크게 둔 카드 아래에 뜬다.
-        private void HandleReactionStarted(double opensAt, double deadline)
+        // 카드가 체인에 오를 때마다 반응 시간이 새로 정해진다. 남은 시간은 보이지 않는다 — 내가 낼 수 있는 카운터가 있으면
+        // 열린 동안 초록 빛 + 「스킵」 버튼(hand.OnReactionAsked)만 뜬다 (10-ui.md 5절).
+        private void HandleReactionStarted(double opensAt)
         {
             Enqueue(() =>
             {
                 reactionTimer.SetCardName(chainCards.TopCardName);
-                reactionTimer.Show(opensAt, deadline);
-                hand.ShowReaction(opensAt, deadline);
+                hand.ShowReaction(opensAt);
                 return null;
             });
         }

@@ -219,8 +219,8 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))}");
         }
 
-        private void HandleReactionStarted(double opensAt, double deadline)
-            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
+        private void HandleReactionStarted(double opensAt)
+            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림");
 
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
         {

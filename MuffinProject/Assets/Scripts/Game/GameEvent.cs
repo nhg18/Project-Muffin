@@ -88,16 +88,17 @@
         }
     }
 
-    /// <summary>반응 시간이 정해졌다 (04-card.md 8절). 카드가 체인에 오를 때마다 다시 온다. 시각은 서버 시각(초) — OpensAt 전은 연출 중이라 카운터를 받지 않는다.</summary>
+    /// <summary>
+    /// 반응 시간이 정해졌다 (04-card.md 8절). 카드가 체인에 오를 때마다 다시 온다. 시각은 서버 시각(초) — OpensAt 전은 연출 중이라 카운터를 받지 않는다.
+    /// 마감 시각은 싣지 않는다 — 방장만 안다 (고민 연장을 드러내지 않게). 닫힌 것은 체인 처리가 시작되는 것으로 안다.
+    /// </summary>
     public sealed class ReactionStarted : GameEvent
     {
         public double OpensAt { get; }
-        public double Deadline { get; }
 
-        public ReactionStarted(double opensAt, double deadline)
+        public ReactionStarted(double opensAt)
         {
             OpensAt = opensAt;
-            Deadline = deadline;
         }
     }
 

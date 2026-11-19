@@ -149,6 +149,9 @@ namespace Chapchu.UI.GameScreen
         private CardView _hovered;
         private CardView _selected;
         private CardView _dragging;
+
+        /// <summary>지금 쥐고 있는 카드 — 끄는 중인 카드, 없으면 고른 카드. 없으면 null.</summary>
+        public CardView HeldCard => _dragging != null ? _dragging : _selected;
         private CardView _held;        // 손패에서 잠깐 따로 둔 카드 (대상 고르는 중) — 자리 계산에서 뺀다
         private readonly HashSet<CardView> _shown = new HashSet<CardView>(); // 새로 들어와 크게 보여 주는 중인 카드 — 손패에는 있지만 자리 계산에서 뺀다
         private Vector2 _dragOffset;   // 잡은 지점을 유지하려고 — 카드 가운데 − 포인터

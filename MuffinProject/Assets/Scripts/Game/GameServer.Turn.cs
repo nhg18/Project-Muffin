@@ -147,6 +147,7 @@ namespace Chapchu.Game
             _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count, forced));
             EndWaitOf(actor);
             CancelChoiceOf(actor); // 고르는 중에 나갔다 — 그 효과는 불발 (1019)
+            DropFromReaction(actor);
             if (_gameOver)
                 return;
 

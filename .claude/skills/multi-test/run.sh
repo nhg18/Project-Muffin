@@ -7,6 +7,7 @@
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
+#   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
@@ -25,7 +26,7 @@ WAIT_TRIES=30   # 대기 단계 최대 시도 (2초 간격)
 
 FAILED=0
 EDITORS=()
-PROBED=0   # multi 의 카운터 요청: 0 안 함 · 1 행동 카드로(코드 8 기대) · 2 카운터 카드로(무효 기대)
+PROBED=0   # multi 의 카운터 요청: 0 안 함 · 1 행동 카드로(코드 6 · 8 기대) · 2 카운터 카드로(무효 기대)
 
 log()  { printf '%s\n' "$*"; }
 fail() { log "  ✗ $*"; FAILED=1; }
@@ -664,8 +665,9 @@ compare_screens() {
         total=$((total + count))
     done
     [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
-    # 카운터 카드를 냈으면 행동 카드가 무효, 아니면 거절 코드 8 (CounterProbe)
-    local pattern='내 요청 거절 — 코드 8' what='카운터 요청 거절 (코드 8)'
+    # 카운터 카드를 냈으면 행동 카드가 무효, 아니면 거절 (CounterProbe) — 코드 8(카운터 카드가 아니다), 또는 아무도 낼 카운터가 없어
+    # 반응 시간이 0초로 닫힌 뒤라 코드 6(반응 시간 아님, 04-card 8절)
+    local pattern='내 요청 거절 — 코드 [68]' what='카운터 요청 거절 (코드 6 · 8)'
     if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — '; what='카운터로 행동 카드 무효'; fi
     total=0
     for project in "${EDITORS[@]}"; do
@@ -803,6 +805,40 @@ run_restart() {
     done
     compare_turns
     check_table_ui restart
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 반응 시간의 스킵 버튼 (04-card.md 8절 · 10-ui.md 5절): 클론의 턴에 방장이 낼 수 있는 카운터를 쥐고, 클론이 방장을 노리는 카드를 낸다
+# → 방장 화면에 초록 빛 + 「스킵」 버튼(남은 초 없음) → 누르면 버튼 · 빛이 꺼지고 → 스킵한 뒤의 카운터는 거절(코드 6).
+run_skip() {
+    local out project
+    enter_game 2 || return
+    log "▶ 클론의 턴에 방장에게 카운터를 쥐여 주고 클론이 카드를 낸다"
+    for _ in $(seq 1 20); do
+        out=$(call "$MAIN" ReactionSkipProbe arm)
+        case "$out" in
+            OK*) break ;;
+            FAIL*) fail "$out"; return ;;
+        esac
+        # 방장의 턴이다 — 뽑아서 넘긴다
+        call "$MAIN" ExpireTurn >/dev/null
+        sleep 2
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "남의 턴이 오지 않았다: $out"; return ;; esac
+    for _ in $(seq 1 8); do
+        out=$(call "$MAIN" ReactionSkipProbe click)
+        case "$out" in WAIT*) sleep 0.3 ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "스킵 버튼: $out" ;; esac
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$MAIN" Shot "$SHOT_DIR/skip_after_$(name_of "$MAIN").png")"; fi
+    out=$(call "$MAIN" ReactionSkipProbe after)
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "스킵 뒤: $out" ;; esac
+    sleep 6
     for project in "${EDITORS[@]}"; do
         check_errors "$project"
     done
@@ -962,6 +998,7 @@ case "${1:-}" in
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;
     timeout) shift; run_timeout ;;
+    skip)    shift; run_skip ;;
     aim)     shift; run_aim "$@" ;;
     fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;

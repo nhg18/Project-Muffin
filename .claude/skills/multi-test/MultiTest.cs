@@ -68,6 +68,9 @@ public static class MultiTest
     private const string TimerLabelField = "labelText";                    // ReactionTimerView — 알약 글 (「반응」 · 「{이름} 고르는 중」)
     private const string WarningMainTextField = "mainText";                // WarningPopup — 제목 (WarningPopupText)
     private const string WarningSubTextField = "subText";                  // WarningPopup — 사유
+    private const string HandUsableField = "_usable";                      // HandView — 낼 수 있는 카운터 (ReactionSkipProbe)
+    private const string SkipButtonField = "skipButton";                   // ReactionTimerView — 스킵 버튼 (CounterProbe)
+    private const string PillLabelField = "labelText";                     // ReactionTimerView — 알약 글자
     private const string NoTimeoutField = "_noTimeoutActors";              // GameServer — 시간 초과 대상이 아닌 사람 (ExpireTurn)
     private const string TurnDeadlineField = "_turnDeadline";              // GameServer — 턴 마감 (ExpireTurn)
     private const string PunServerField = "_server";                       // PunGameServer — 규칙 원본 (방장)
@@ -94,11 +97,12 @@ public static class MultiTest
     private const string BubbleLogKey = "MultiTest.BubbleLog"; // ArmBubbleLog 가 본 말풍선 (에디터마다 따로)
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
-    private const double ReactionSeconds = 10, TurnSeconds = 30;
+    private const double ReactionSeconds = 5, TurnSeconds = 30; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
     private const double BotTurnSeconds = 9; // 보통 봇이 수를 두는 가장 늦은 때 — 고민되는 수 5.5초 + 망설임 2.5초 = 8초에 여유 (18-bot.md 4절 · 7-7)
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
     private const string ActedTurnKey = "MultiTest.ActedTurnDeadline";
+    private const string ActedCardKey = "MultiTest.ActedCard"; // 이번 턴에 낸 카드 (인스턴스) — 거절됐는지 보려고
 
     // ── 준비 · 뒷정리 ──
 
@@ -198,12 +202,20 @@ public static class MultiTest
         // 카드를 낸 턴은 체인 처리 · 후처리 동안 같은 턴이 이어진다 (03-turn.md 4절) — 턴 마감 시각으로 같은 턴인지 본다
         double deadline = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDeadline, out object value) ? (double)value : -1;
         string turnKey = deadline.ToString("R");
-        if (SessionState.GetString(ActedTurnKey, "") == turnKey)
-            return "SKIP P" + me + " 처리 중";
-        SessionState.SetString(ActedTurnKey, turnKey);
-
         var hand = (List<int>)typeof(GameDebugInput).GetField(MyHandField, Private).GetValue(input);
         var instances = (List<int>)typeof(GameDebugInput).GetField(MyHandInstancesField, Private).GetValue(input);
+        if (SessionState.GetString(ActedTurnKey, "") == turnKey)
+        {
+            // 낸 카드가 아직 손패에 있다 = 거절됐다 (대상 조건 · 행동 금지 등). 그대로 두면 시간 초과가 쌓여 3번째에 강제 퇴장된다 (03-turn 4절) — 대신 뽑는다
+            int tried = SessionState.GetInt(ActedCardKey, -1);
+            if (tried < 0 || !instances.Contains(tried))
+                return "SKIP P" + me + " 처리 중";
+            SessionState.SetInt(ActedCardKey, -1);
+            server.RequestDraw();
+            return "OK P" + me + " · 낸 카드가 거절됨 → 뽑기";
+        }
+        SessionState.SetString(ActedTurnKey, turnKey);
+        SessionState.SetInt(ActedCardKey, -1);
         var deck = (DeckData)typeof(PunGameServer).GetField(ServerDeckField, Private).GetValue(server);
 
         // 함정은 메인 행동이 아니다 — 빈 칸이 있으면 손패의 함정 하나를 먼저 설치한다 (04-card.md 6절)
@@ -235,6 +247,7 @@ public static class MultiTest
 
         // 방장은 자기에게 보낸 RPC 를 그 자리에서 실행해 손패 목록이 바로 줄어든다 — 카드 번호는 요청 전에 읽는다
         int cardId = hand[index];
+        SessionState.SetInt(ActedCardKey, instances[index]);
         server.RequestPlayCard(instances[index], new[] { target });
         return "OK P" + me + setLog + " · 카드 " + cardId + " → P" + target;
     }
@@ -407,8 +420,12 @@ public static class MultiTest
             {
                 var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
                 string glowLog = glow == null ? "빛 없음" : glow.activeSelf ? "초록 빛 켜짐" : "초록 빛 꺼짐";
+                // 스킵 버튼 — 낼 수 있는 카운터가 있으면 반응 시간 동안 알약이 「스킵」 으로 켜진다 (10-ui 5절)
+                ReactionTimerView pill = Object.FindFirstObjectByType<ReactionTimerView>();
+                var skip = pill == null ? null : (UnityEngine.UI.Button)typeof(ReactionTimerView).GetField(SkipButtonField, Private).GetValue(pill);
+                string skipLog = skip == null ? "스킵 버튼 없음" : skip.isActiveAndEnabled ? "스킵 버튼 켜짐 「" + ReadText(pill, PillLabelField) + "」" : "스킵 버튼 꺼짐";
                 UseFromHand(instances[counter]);
-                return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + glowLog;
+                return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + glowLog + " · " + skipLog;
             }
         }
 
@@ -976,6 +993,96 @@ public static class MultiTest
         return first == "CardPlayed" ? "OK P" + actor + " 카드 " + cardId + " 사용" + (targets.Length > 0 ? " → P" + targets[0] : "") : "FAIL 사용 결과 " + first;
     }
 
+    // 반응 시간의 스킵 버튼 (10-ui 5절 · 04-card 8절) — 방장 화면에서 본다. 남의 턴에 부른다.
+    //   arm   = 내 손패에 낼 수 있는 카운터 1장을 쥐여 주고(화면 손패에도), 턴 주인이 나를 노리는 행동 카드를 내게 한다
+    //   click = 반응 시간이 열렸으면 초록 빛 · 「스킵」 버튼이 켜졌는지 보고 버튼을 누른다 (Button.onClick — 화면 경로)
+    //   after = 버튼 · 초록 빛이 꺼졌는지, 스킵한 뒤의 카운터가 거절되는지(방장 규칙에 직접)
+    private const string SkipProbeKey = "MultiTest.SkipProbeCard";
+    private const int SkipProbeInstance = 95000;
+    public static string ReactionSkipProbe(string step)
+    {
+        PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
+        if (server == null)
+            return "WAIT 게임 화면 아님";
+        if (!PhotonNetwork.IsMasterClient)
+            return "FAIL 방장만 부른다";
+
+        var rules = (GameServer)typeof(PunGameServer).GetField(PunServerField, Private).GetValue(server);
+        var states = (System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(rules);
+        int me = PhotonNetwork.LocalPlayer.ActorNumber;
+        ReactionTimerView pill = Object.FindFirstObjectByType<ReactionTimerView>();
+        var skip = pill == null ? null : (UnityEngine.UI.Button)typeof(ReactionTimerView).GetField(SkipButtonField, Private).GetValue(pill);
+        if (skip == null)
+            return "FAIL 스킵 버튼이 씬에 없다";
+
+        switch (step)
+        {
+            case "arm":
+            {
+                int actor = rules.CurrentTurnActor;
+                if (actor == -1 || actor == me)
+                    return "WAIT 남의 턴이 아니다 (P" + actor + ")";
+
+                List<Card> all = server.Deck.CreateCards().ToList();
+                Card hit = all.FirstOrDefault(c => c.Type == CardType.Action && c.Target == TargetType.OneOther && c.TargetCondition == TargetCondition.None);
+                // 게임 덱(Deck_Main)에는 아직 카운터가 없다 — 시험 덱의 카운터 규칙을 빌리고, 화면에 그릴 수 있게 카드 번호는 게임 덱의 것(그 행동 카드)을 쓴다
+                DeckData testDeck = AssetDatabase.FindAssets("Deck_Default t:DeckData").Select(g => AssetDatabase.LoadAssetAtPath<DeckData>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault();
+                Card counter = testDeck == null ? null : testDeck.CreateCards().FirstOrDefault(c => c.Type == CardType.Counter && c.Target == TargetType.None
+                    && c.Condition == ReactCondition.Any && c.ReactsTo.Contains(CardType.Action));
+                if (hit == null || counter == null)
+                    return "FAIL 덱에 맞는 행동 · 카운터 카드가 없다";
+
+                var mine = new Card(SkipProbeInstance, hit.CardId, counter.Type, counter.Target, counter.Effects, counter.ReactsTo, counter.RevealSeconds, counter.ResolveSeconds, counter.Trigger, counter.TriggerValue, counter.Condition, counter.TargetCondition);
+                var forced = new Card(SkipProbeInstance + 1, hit.CardId, hit.Type, hit.Target, hit.Effects, hit.ReactsTo, hit.RevealSeconds, hit.ResolveSeconds, hit.Trigger, hit.TriggerValue, hit.Condition, hit.TargetCondition);
+                ((PlayerState)states[me]).Hand.Add(mine);
+                ((PlayerState)states[actor]).Hand.Add(forced);
+                Object.FindFirstObjectByType<HandPresenter>().GainCards(new[] { SkipProbeInstance }, new[] { hit.CardId }); // 화면 손패에도 그 카드를
+
+                IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, new[] { me });
+                bool asked = events.OfType<CountersUsable>().Any(u => u.Actor == me && u.CardInstanceIds.Contains(SkipProbeInstance));
+                typeof(PunGameServer).GetMethod("Send", Private).Invoke(server, new object[] { events });
+                if (!events.OfType<CardPlayed>().Any())
+                    return "FAIL 카드 사용이 거절됨 — " + (events.Count > 0 ? events[0].GetType().Name : "없음");
+                return asked ? "OK P" + actor + " 가 카드 " + hit.CardId + " → P" + me + " · 내 카운터 " + counter.CardId + " 를 물어 옴" : "FAIL 방장이 내 카운터를 묻지 않았다";
+            }
+            case "click":
+            {
+                CardView card = FindHandCard(SkipProbeInstance);
+                if (card == null)
+                    return "WAIT 손패에 카운터가 아직 없다";
+                var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
+                if (!skip.isActiveAndEnabled)
+                    return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
+
+                string label = ReadText(pill, PillLabelField);
+                bool glowing = glow != null && glow.activeSelf;
+                // 시험용 카운터는 게임 덱의 행동 카드 모양으로 그려진다 — 행동 카드 프리팹에는 초록 빛 오브젝트가 없어 빛은 보지 못한다.
+                // 대신 손패 뷰가 그 카드를 「낼 수 있는 카운터」 로 알고 있는지 본다.
+                HandView handView = Object.FindFirstObjectByType<HandView>();
+                bool listed = ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Contains(SkipProbeInstance);
+                if (glow == null)
+                    glowing = listed;
+                bool secondsShown = ((TMP_Text)typeof(ReactionTimerView).GetField("secondsText", Private).GetValue(pill)).gameObject.activeInHierarchy;
+                skip.onClick.Invoke();
+                bool off = !skip.isActiveAndEnabled && !(glow != null && glow.activeSelf)
+                    && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Count == 0;
+                return (label == "스킵" && glowing && !secondsShown && off ? "OK" : "FAIL") + " 버튼 「" + label + "」 · 낼 수 있는 카운터 표시 " + (glowing ? "켜짐" : "꺼짐")
+                    + " · 남은 초 " + (secondsShown ? "보임" : "안 보임") + " → 누른 뒤 " + (off ? "버튼 · 빛 꺼짐" : "아직 켜져 있다");
+            }
+            case "after":
+            {
+                // 스킵한 뒤에는 이번 반응 시간에 카운터를 받지 않는다 (PM 2026-11-19) — 이미 처리가 시작됐어도 코드 6
+                IReadOnlyList<GameEvent> result = rules.PlayCounter(me, SkipProbeInstance, new int[0]);
+                int code = result.Count == 1 && result[0] is RequestRejected rejected ? rejected.Code : 0;
+                ((PlayerState)states[me]).Hand.RemoveAll(c => c.InstanceId == SkipProbeInstance);
+                Object.FindFirstObjectByType<HandPresenter>().LoseCards(new[] { SkipProbeInstance });
+                return (code == RejectCode.NotReactionTime && !skip.isActiveAndEnabled ? "OK" : "FAIL") + " 스킵 뒤 카운터 → 코드 " + code + " · 버튼 " + (skip.isActiveAndEnabled ? "켜짐" : "꺼짐");
+            }
+            default:
+                return "FAIL 모르는 단계 " + step;
+        }
+    }
+
     // 방장: 지금 턴의 제한 시간을 끝낸다 — 다음 Tick 에 시간 초과로 넘어간다 (행동 없이 턴을 빨리 돌리기 — 1021 개판 바퀴)
     // mode "auto" = 실제 시간 초과 (자동 뽑기 · 연속 3번째 강제 퇴장, 03-turn 4절). "others" = 방장(나)의 턴은 그냥 넘기고 남의 턴만 실제 시간 초과.
     // 그 밖에는 그 턴 주인을 대상에서 빼서 예전처럼 턴만 넘긴다.
@@ -1298,7 +1405,7 @@ public static class MultiTest
             t.At(1.5);
             IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
             ReactionStarted reaction = counter.OfType<ReactionStarted>().FirstOrDefault();
-            Check(reaction != null && Math.Abs(reaction.OpensAt - (1.5 + ChainTable.Reveal)) < 1e-6 && Math.Abs(reaction.Deadline - (1.5 + ChainTable.Reveal + ReactionSeconds)) < 1e-6, "카운터 → 반응 시간 다시 (연출 뒤 10초)");
+            Check(reaction != null && Math.Abs(reaction.OpensAt - (1.5 + ChainTable.Reveal)) < 1e-6, "카운터 → 반응 시간 다시 (연출 뒤 — 마감은 알림에 없다)");
             t.At(ChainTable.Reveal + ReactionSeconds);
             Check(t.Tick().Count == 0, "처음 마감이 지나도 처리 안 함");
             t.At(1.5 + ChainTable.Reveal + ReactionSeconds);
@@ -1369,6 +1476,100 @@ public static class MultiTest
             t.At(100);
             t.Tick();
             Check(t.Hp(t.O1) == 80 && t.Server.CurrentTurnActor == t.NextOf(user), "끝까지 처리 → 다음 차례 P" + t.Server.CurrentTurnActor);
+        }
+
+        // ── 반응 시간: 5초 · 스킵 · 고민 연장 (04-card 8절, 2026-11-15 · PM 2026-11-19) ──
+        double opens = ChainTable.Reveal;
+        bool Resolved(IEnumerable<GameEvent> events) => events.OfType<CardResolved>().Any();
+
+        // 낼 수 있는 사람이 없으면 반응 시간을 열자마자(0초) 처리한다
+        {
+            var t = new ChainTable();
+            foreach (int actor in new[] { t.Turn, t.O1, t.O2 })
+            {
+                t.Hand(actor).Clear();
+                t.GiveCard(actor, ChainTable.Hit);
+            }
+            IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
+            Check(!played.OfType<CountersUsable>().Any(), "카운터가 아무에게도 없다 — 물을 사람 없음");
+            t.At(opens - 0.1);
+            Check(!Resolved(t.Tick()), "연출 중에는 처리하지 않는다");
+            t.At(opens);
+            Check(Resolved(t.Tick()) && t.Hp(t.O1) < 100, "낼 사람이 없으면 연출 직후 바로 처리 (0초)");
+        }
+
+        // 모두 스킵하면 남은 시간을 기다리지 않는다 · 스킵한 사람의 카운터는 받지 않는다
+        {
+            var t = new ChainTable();
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            Check(asked.Length >= 2, "낼 수 있는 사람에게만 목록 — " + asked.Length + "명");
+            t.At(opens - 0.1);
+            t.Server.SkipReaction(asked[0].Actor);
+            t.At(opens + 0.5);
+            Check(!Resolved(t.Tick()), "연출 중의 스킵은 버린다 — 아직 처리 없음");
+            for (int i = 0; i < asked.Length - 1; i++)
+                t.Server.SkipReaction(asked[i].Actor);
+            Check(!Resolved(t.Tick()), "한 명이 남았으면 기다린다");
+            Check(t.Code(t.Server.PlayCounter(asked[0].Actor, asked[0].CardInstanceIds[0], new int[0])) == RejectCode.NotReactionTime, "스킵한 사람의 카운터 → 6");
+            t.Server.SkipReaction(asked[asked.Length - 1].Actor);
+            Check(Resolved(t.Tick()), "모두 스킵 → 바로 처리 (열린 지 0.5초)");
+        }
+
+        // 스킵하지 않으면 5초 마감 · 물어 오지 않은 사람의 스킵은 버린다
+        {
+            var t = new ChainTable();
+            t.Hand(t.O2).Clear();
+            t.GiveCard(t.O2, ChainTable.Hit);
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            Check(asked.All(a => a.Actor != t.O2), "카운터가 없는 사람은 묻지 않는다");
+            t.At(opens + 1);
+            t.Server.SkipReaction(t.O2);
+            t.At(opens + ReactionSeconds - 0.1);
+            Check(!Resolved(t.Tick()), "마감 전 — 처리 없음 (5초)");
+            t.At(opens + ReactionSeconds);
+            Check(Resolved(t.Tick()), "5초 마감 → 처리");
+        }
+
+        // 고민 연장 — 막판에 집으면 「그 순간 + 3초」 까지, 한 사람당 1회, 일찍 집으면 늘지 않는다
+        {
+            var t = new ChainTable();
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            CountersUsable who = asked[0];
+            int hitId = t.Hand(who.Actor).First(c => !who.CardInstanceIds.Contains(c.InstanceId)).InstanceId;
+            t.At(opens - 0.1);
+            t.Server.HoldReaction(who.Actor, who.CardInstanceIds[0]); // 연출 중 — 버린다 (1회를 쓰지도 않는다)
+            t.At(opens + 4);
+            t.Server.HoldReaction(who.Actor, hitId); // 낼 수 없는 카드 — 버린다
+            t.At(opens + 4.5);
+            Check(t.Server.HoldReaction(who.Actor, who.CardInstanceIds[0]).Count == 0, "고민 중 — 아무것도 알리지 않는다");
+            t.At(opens + ReactionSeconds + 0.1);
+            Check(!Resolved(t.Tick()), "4.5초에 집음 → 5초가 지나도 처리 없음");
+            t.At(opens + 7.4);
+            t.Server.HoldReaction(who.Actor, who.CardInstanceIds[0]); // 두 번째 — 버린다
+            Check(!Resolved(t.Tick()), "7.4초 — 아직 (마감 7.5초)");
+            t.At(opens + 7.5);
+            Check(Resolved(t.Tick()), "집은 순간 + 3초 = 7.5초에 처리 · 두 번째 연장은 없다");
+
+            t = new ChainTable();
+            who = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().First();
+            t.At(opens + 1);
+            t.Server.HoldReaction(who.Actor, who.CardInstanceIds[0]);
+            t.At(opens + ReactionSeconds);
+            Check(Resolved(t.Tick()), "1초에 집음(3초 넘게 남음) → 늘지 않고 5초에 처리");
+        }
+
+        // 새 카운터가 오르면 스킵 · 연장이 새로 — 스킵했던 사람도 다시 물어 온다
+        {
+            var t = new ChainTable();
+            CountersUsable[] asked = t.Play(t.Turn, ChainTable.Hit, t.O1).OfType<CountersUsable>().ToArray();
+            CountersUsable skipper = asked.First(a => a.Actor != t.O1);
+            t.At(opens + 1);
+            t.Server.SkipReaction(skipper.Actor);
+            IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
+            Check(counter.OfType<CardPlayed>().Any(), "다른 사람이 카운터를 냄 — 반응 시간 다시");
+            bool askedAgain = counter.OfType<CountersUsable>().Any(a => a.Actor == skipper.Actor);
+            t.At(1 + opens + opens + 4.9);
+            Check(!askedAgain || !Resolved(t.Tick()), "새 반응 시간 — 앞의 스킵은 이어지지 않는다" + (askedAgain ? "" : " (그 사람이 낼 것이 없어 확인 생략)"));
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();

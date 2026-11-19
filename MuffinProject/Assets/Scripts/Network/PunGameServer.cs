@@ -150,6 +150,12 @@ namespace Chapchu.Network
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestPlayCounter), cardInstanceId, targetActorNumbers);
 
+        /// <summary>반응 시간 스킵 — 낼 수 있는 카운터가 있지만 내지 않는다. 답은 오지 않는다 (04-card.md 8절).</summary>
+        public void RequestReactionSkip() => SendRequest(nameof(RPC_RequestReactionSkip));
+
+        /// <summary>고민 중 — 낼 수 있는 카운터를 집었다. 반응 시간에 한 번만 보낸다. 답은 오지 않는다 (04-card.md 8절 「고민 연장」).</summary>
+        public void RequestReactionHold(int cardInstanceId) => SendRequest(nameof(RPC_RequestReactionHold), cardInstanceId);
+
         // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
         private void SendRequest(string rpcName, params object[] parameters)
         {
@@ -216,6 +222,22 @@ namespace Chapchu.Network
             if (!NetworkManager.IsTrustedMaster) return;
             if (!_limiter.Allow(info)) return;
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
+        }
+
+        [PunRPC]
+        private void RPC_RequestReactionSkip(PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            Send(_server.SkipReaction(info.Sender.ActorNumber));
+        }
+
+        [PunRPC]
+        private void RPC_RequestReactionHold(int cardInstanceId, PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            Send(_server.HoldReaction(info.Sender.ActorNumber, cardInstanceId));
         }
 
         public override void OnEnable()
@@ -305,7 +327,7 @@ namespace Chapchu.Network
                         break;
 
                     case ReactionStarted reaction:
-                        Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt, reaction.Deadline);
+                        Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt); // 마감은 보내지 않는다 (09-network.md 3절)
                         break;
 
                     case CountersUsable usable:
@@ -701,10 +723,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnReactionStarted(int seq, double opensAt, double deadline, PhotonMessageInfo info)
+        private void RPC_OnReactionStarted(int seq, double opensAt, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseReactionStarted(opensAt, deadline);
+                GameEvents.RaiseReactionStarted(opensAt);
         }
 
         [PunRPC]

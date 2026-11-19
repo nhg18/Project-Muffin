@@ -17,7 +17,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, double> OnTurnStarted;               // actorNumber, deadline(PhotonNetwork.Time 기준 초)
         public static event Action<int, double> OnTurnResumed;               // actorNumber, deadline — 메인 행동 전에 멈췄던 턴이 이어짐 (턴 시작 아님)
         public static event Action<int, int, int, int[], int, int> OnCardPlayed; // actorNumber, cardInstanceId, cardId, targets, handCount, discardCount — 체인에 올라감 (연출 1 ~ 3 단계). 효과는 OnCardResolved 뒤
-        public static event Action<double, double> OnReactionStarted;        // opensAt, deadline (PhotonNetwork.Time 기준 초) — opensAt 전은 연출 중, 카운터 거절
+        public static event Action<double> OnReactionStarted;                // opensAt — 마감은 오지 않는다 (PhotonNetwork.Time 기준 초) — opensAt 전은 연출 중, 카운터 거절
         public static event Action<int, int, int, int[], int> OnCardResolved; // actorNumber, cardInstanceId, cardId, targets, discardCount — 효과 적용 (연출 4 단계), 효과 결과가 뒤따른다
         public static event Action<int, int, int, int> OnCardNegated;        // actorNumber, cardInstanceId, cardId, discardCount — 무효화, 4 단계 없이 버림 더미로
         public static event Action<int, int> OnEmptyDeckDamaged;             // actorNumber, amount — 빈 덱 피해, 체력은 뒤따르는 OnHpChanged
@@ -65,7 +65,7 @@ namespace Chapchu.Network.Events
         public static void RaiseDeckRefilled(int deckCount) => OnDeckRefilled?.Invoke(deckCount);
         public static void RaiseTurnStarted(int actorNumber, double deadline) => OnTurnStarted?.Invoke(actorNumber, deadline);
         public static void RaiseCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount) => OnCardPlayed?.Invoke(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
-        public static void RaiseReactionStarted(double opensAt, double deadline) => OnReactionStarted?.Invoke(opensAt, deadline);
+        public static void RaiseReactionStarted(double opensAt) => OnReactionStarted?.Invoke(opensAt);
         public static void RaiseCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount) => OnCardResolved?.Invoke(actorNumber, cardInstanceId, cardId, targets, discardCount);
         public static void RaiseCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount) => OnCardNegated?.Invoke(actorNumber, cardInstanceId, cardId, discardCount);
         public static void RaiseEmptyDeckDamaged(int actorNumber, int amount) => OnEmptyDeckDamaged?.Invoke(actorNumber, amount);

@@ -32,6 +32,9 @@ namespace Chapchu.Game
 
         internal bool IsReactionOpen(double now) => _chain.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
 
+        /// <summary>이번 반응 시간에 물어 온 사람인가 — 낼 수 있는 카운터가 있고 아직 스킵하지 않았다.</summary>
+        internal bool IsReactionAsked(int actor) => _reactionAsked.ContainsKey(actor);
+
         internal double DeathDeadline => _deathDeadline;
 
         /// <summary>덱 + 버림 더미 장수 — 이보다 많이 뽑으면 빈 덱 피해 (05-deck.md 5절). 둘 다 공개 값이다.</summary>
