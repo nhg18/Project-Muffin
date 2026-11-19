@@ -20,7 +20,8 @@ namespace Chapchu.Game
         Counters,        // 카운터 사용 — 승인된 카운터 사용 수
         CounterSuccess,  // 카운터 성공 — 낸 카운터 중 무효화되지 않은 수
         Traps,           // 함정 사용 — 발동한 함정 수 (설치는 세지 않는다)
-        ChapchuDeclared  // 찹츄 선언 — 승인된 선언 수
+        ChapchuDeclared, // 찹츄 선언 — 승인된 선언 수
+        Timeouts         // 시간 초과 — 내 턴이 메인 행동 없이 시간이 다 돼 넘어간 수 (03 2절 · 27 5-3 myMatchResult.timeouts). 결과 화면에는 쓰지 않는다
     }
 
     // GameServer.Stats.cs — 이 판의 지표 집계 (07-win-condition.md 11-4). 세는 곳은 각 규칙 파일, 여기는 담는 곳.

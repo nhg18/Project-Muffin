@@ -18,6 +18,12 @@
         public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 1012 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
         public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 1023 기다려! — 07 4.3). 아무도 없으면 키를 지운다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
+        public const string QuickStart = "quick";          // 빠른 시작이 만든 방 (bool) — 플레이 기록 matchStarted.quickStart (27 5-3). 키가 없으면 아님
+
+        // 플레이 기록 (27-analytics 5-3) — 방장이 판 시작 때 쓴다. 판이 끝날 때의 방장(바뀌었을 수 있다)과 각자의 이벤트가 같은 값을 쓰게 방에 둔다
+        public const string MatchId = "matchId";           // 판 식별 = 방 이름 + 판 시작 시각(UTC 초) (string, 24 7-1)
+        public const string MatchStartedAt = "matchAt";    // 판 시작 서버 시각 (double, PhotonNetwork.Time) — matchEnded.durationSeconds
+        public const string MatchIndex = "matchNo";        // 이 방에서 몇 번째 판 (int, 1부터) — matchStarted.matchIndexInRoom
 
         // 결과 화면 (07-win-condition.md 11-1) — 방장이 게임 종료 때 새로 쓴다
         public const string ResultDeadline = "resDeadline"; // 이 서버 시각이 지나면 각자 방을 나가 로비로 (double)

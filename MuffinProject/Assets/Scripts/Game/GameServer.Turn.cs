@@ -94,6 +94,7 @@ namespace Chapchu.Game
             }
             else if (CurrentTurnActor != -1 && now >= _turnDeadline)
             {
+                AddStat(CurrentTurnActor, StatKind.Timeouts);
                 AdvanceTurn();
             }
         }

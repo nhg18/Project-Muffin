@@ -10,6 +10,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
+using AnalyticsRecorder = Chapchu.Account.AnalyticsRecorder; // Photon.Realtime 에도 AccountService 가 있어 통째로 가져오지 않는다
 
 namespace Chapchu.Network
 {
@@ -47,6 +48,13 @@ namespace Chapchu.Network
         // 게임을 시작할 때의 닉네임 — 결과 화면이 나간 사람의 이름도 보이게 (07-win-condition.md 11-2). 모든 클라가 자기 것을 찍어 둔다
         private readonly Dictionary<int, string> _startNames = new Dictionary<int, string>();
         private bool _gameEnded; // 종료 알림을 받았다 — 이 뒤로는 요청을 보내지 않는다 (곧 결과 씬으로 넘어간다)
+
+        // 플레이 기록 (27-analytics 5-3). 카드 사용은 모든 클라가 받은 알림으로 센다 — 판 도중 방장이 바뀌어도 끝낼 때의 방장이 판 전체 값을 갖게 (27 8절)
+        private readonly Dictionary<int, int> _cardPlays = new Dictionary<int, int>();                   // 카드 종류 → 낸 횟수 (행동 · 카운터 · 함정 발동)
+        private readonly Dictionary<int, HashSet<int>> _cardUsers = new Dictionary<int, HashSet<int>>(); // 카드 종류 → 낸 사람
+        private string _matchId;   // 이 판의 식별 — 방을 나간 뒤에는 방 속성을 못 읽어 받아 둔다. null = 아직 모름
+        private int _turnsSeen;    // 이 판에서 시작된 턴 수 — matchLeft.turn
+        private bool _leftRecorded;
 
         // 방장이 바뀔 때 방 속성의 처리 번호를 이어받는 한도 — 남이 큰 값을 써서 새 방장의 알림을 모두 묵은 것으로 만들지 못하게
         private const int MaxSeqJump = 1000;
@@ -105,6 +113,7 @@ namespace Chapchu.Network
             if (bots.Length > 0)
                 _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
 
+            StartMatchRecord(bots);
             Send(_server.StartGame(actors, cards));
         }
 
@@ -501,6 +510,8 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnGameEnded), ended.Winner, (byte)ended.Reason, ended.Actors, ended.Ranks, ended.Hps, ended.OutTurns, ended.DownedBy, ended.Left, ended.Stats, ended.EndTurn);
                         Debug.Log($"[{nameof(PunGameServer)}] 게임 종료 — {ended.Reason} · 승자 P{ended.Winner} — {_server.DebugState(Debug.isDebugBuild)}");
 
+                        RecordMatchEnded(ended);
+
                         // 결과 화면의 상태를 새로 쓴다 — 지난 판의 마감 · 준비가 남아 결과 씬이 열리자마자 로비로 나가거나 바로 시작하지 않게 (07 11-1)
                         roomProps[RoomProps.ResultDeadline] = PhotonNetwork.Time + resultDelaySeconds + PunResultServer.AutoLeaveSeconds;
                         roomProps[RoomProps.ResultReady] = null;
@@ -689,15 +700,25 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnTurnStarted(int seq, int actorNumber, double deadline, PhotonMessageInfo info)
         {
-            if (Accept(seq, info))
-                GameEvents.RaiseTurnStarted(actorNumber, deadline);
+            if (!Accept(seq, info))
+                return;
+
+            _turnsSeen++;
+            // 씬이 늦게 열려 판 식별이 쓰이는 것을 놓친 클라 — 첫 턴에는 방에 새 값이 있다 (방장이 시작 알림보다 먼저 쓴다)
+            if (_matchId == null && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.MatchId, out object value) && value is string matchId)
+                _matchId = matchId;
+
+            GameEvents.RaiseTurnStarted(actorNumber, deadline);
         }
 
         [PunRPC]
         private void RPC_OnCardPlayed(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount, PhotonMessageInfo info)
         {
-            if (Accept(seq, info))
-                GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, Ints(targets), handCount, discardCount);
+            if (!Accept(seq, info))
+                return;
+
+            CountPlay(actorNumber, cardId);
+            GameEvents.RaiseCardPlayed(actorNumber, cardInstanceId, cardId, Ints(targets), handCount, discardCount);
         }
 
         [PunRPC]
@@ -780,8 +801,11 @@ namespace Chapchu.Network
         [PunRPC]
         private void RPC_OnTrapActivated(int seq, int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount, PhotonMessageInfo info)
         {
-            if (Accept(seq, info))
-                GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, Ints(targets), trapCount);
+            if (!Accept(seq, info))
+                return;
+
+            CountPlay(actorNumber, cardId);
+            GameEvents.RaiseTrapActivated(actorNumber, cardInstanceId, cardId, Ints(targets), trapCount);
         }
 
         [PunRPC]
@@ -975,6 +999,7 @@ namespace Chapchu.Network
             // 이름은 각자 게임을 시작할 때 찍어 둔 것 — 나간 사람은 지금 방에 없다. 봇은 「봇 N」
             string[] names = actors.Select(actor => BotRoster.IsBot(actor) ? BotRoster.NicknameOf(actor) : _startNames.TryGetValue(actor, out string name) ? name : "").ToArray();
             NetworkManager.Instance.LastResult = new GameResult(winner, (GameEndReason)reason, actors, names, ranks, hps, outTurns, downedBy, left, stats, endTurn);
+            RecordMyMatchResult(NetworkManager.Instance.LastResult);
 
             _gameEnded = true;
             GameEvents.RaiseGameEnded(winner, (GameEndReason)reason);
@@ -993,6 +1018,113 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseMyRequestRejected(code);
+        }
+
+        #endregion
+
+        #region 플레이 기록 (27-analytics 5-3)
+
+        // 방장 — 판 시작 (덱을 나눌 때). 판 식별 · 시작 시각 · 몇 번째 판을 방에 둔다 (24 7-1 · 27 8절)
+        private void StartMatchRecord(int[] bots)
+        {
+            Room room = PhotonNetwork.CurrentRoom;
+            int index = (room.CustomProperties.TryGetValue(RoomProps.MatchIndex, out object last) && last is int lastIndex ? lastIndex : 0) + 1;
+            _matchId = $"{room.Name}-{System.DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            NetworkManager.Instance.SetRoomProps(new Hashtable
+            {
+                [RoomProps.MatchId] = _matchId, [RoomProps.MatchStartedAt] = PhotonNetwork.Time, [RoomProps.MatchIndex] = index,
+            });
+
+            var botLevels = new int[3]; // [BotLevel] 자리에 그 난이도 봇 수
+            foreach (int bot in bots)
+                botLevels[(int)BotRoster.LevelOf(bot - BotRoster.ActorBase)]++;
+
+            // 빠른 시작 방 표시는 방을 만드는 곳(PhotonRoom)이 쓴다 — 아직 쓰는 곳이 없어 늘 거짓이다
+            bool quickStart = room.CustomProperties.TryGetValue(RoomProps.QuickStart, out object quick) && quick is bool isQuick && isQuick;
+            AnalyticsRecorder.RecordMatchStarted(_matchId, PhotonNetwork.PlayerList.Length, bots.Length,
+                botLevels[(int)BotLevel.Easy], botLevels[(int)BotLevel.Normal], botLevels[(int)BotLevel.Hard], quickStart, index);
+        }
+
+        // 방장 — 「게임 종료 요약」 을 보낼 때 matchEnded, 바로 뒤에 이 판에 나온 카드 종류마다 matchCardStats (27 5-3)
+        private void RecordMatchEnded(GameEnded ended)
+        {
+            string matchId = MatchIdOfRoom();
+            object startedAt = PhotonNetwork.CurrentRoom.CustomProperties[RoomProps.MatchStartedAt];
+            int durationSeconds = startedAt is double at ? Mathf.Max(0, Mathf.RoundToInt((float)(PhotonNetwork.Time - at))) : 0;
+            int leavers = ended.Left.Count(hasLeft => hasLeft);
+
+            // 재접속이 아직 없다 (09 12절) — 붙으면 그 횟수의 합
+            AnalyticsRecorder.RecordMatchEnded(matchId, ended.EndTurn, durationSeconds, ToWinType(ended.Reason), BotRoster.IsBot(ended.Winner), leavers, 0);
+            foreach (KeyValuePair<int, int> pair in _cardPlays)
+            {
+                HashSet<int> users = _cardUsers[pair.Key];
+                AnalyticsRecorder.RecordMatchCardStats(matchId, pair.Key, pair.Value, users.Count, users.Contains(ended.Winner));
+            }
+        }
+
+        // 각자 — 「게임 종료 요약」 을 받았을 때. 끝까지 있었던 판만, 봇은 기기가 없어 보내지 않는다 (27 5-3)
+        private void RecordMyMatchResult(GameResult result)
+        {
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
+            int index = -1;
+            for (int i = 0; i < result.Actors.Count; i++)
+            {
+                if (result.Actors[i] == me)
+                    index = i;
+            }
+
+            if (index < 0 || result.Left[index])
+                return;
+
+            int outTurn = result.OutTurns[index]; // 0 = 끝까지 남음 → 끝난 턴이 생존 턴 수
+            int cardsPlayed = result.Stat(index, StatKind.Actions) + result.Stat(index, StatKind.Counters) + result.Stat(index, StatKind.Traps);
+            AnalyticsRecorder.RecordMyMatchResult(MatchIdOfRoom(), result.Ranks[index], result.Winner == me, ToWinType(result.Reason),
+                outTurn > 0 ? outTurn : result.EndTurn, result.Stat(index, StatKind.Dealt), result.Stat(index, StatKind.Kills), cardsPlayed,
+                result.Stat(index, StatKind.Timeouts), result.Stat(index, StatKind.ChapchuDeclared));
+        }
+
+        private void CountPlay(int actor, int cardId)
+        {
+            _cardPlays[cardId] = _cardPlays.TryGetValue(cardId, out int plays) ? plays + 1 : 1;
+            if (!_cardUsers.TryGetValue(cardId, out HashSet<int> users))
+                _cardUsers[cardId] = users = new HashSet<int>();
+            users.Add(actor);
+        }
+
+        // 방장이 판 시작 때 쓴 식별을 받아 둔다 — 지난 판의 값이 방에 남아 있으므로 씬이 열린 뒤 새로 쓰인 것만 받는다
+        public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
+        {
+            if (propertiesThatChanged.TryGetValue(RoomProps.MatchId, out object value) && value is string matchId)
+                _matchId = matchId;
+        }
+
+        // 판 도중 나감 — 스스로 나가기는 방을 나간 뒤, 끊김은 끊긴 때. 3턴 연속 시간 초과 퇴장은 규칙에 아직 없다 (03 2절)
+        public override void OnLeftRoom() => RecordMatchLeft(AnalyticsRecorder.MatchLeaveReason.Quit);
+
+        public override void OnDisconnected(DisconnectCause cause) => RecordMatchLeft(AnalyticsRecorder.MatchLeaveReason.Disconnect);
+
+        private void RecordMatchLeft(AnalyticsRecorder.MatchLeaveReason reason)
+        {
+            if (_gameEnded || _leftRecorded || _matchId == null)
+                return;
+
+            _leftRecorded = true;
+            AnalyticsRecorder.RecordMatchLeft(_matchId, _turnsSeen, reason);
+        }
+
+        private string MatchIdOfRoom() => _matchId ?? "";
+
+        private static AnalyticsRecorder.WinType ToWinType(GameEndReason reason)
+        {
+            switch (reason)
+            {
+                case GameEndReason.Chapchu:
+                    return AnalyticsRecorder.WinType.Chapchu;
+                case GameEndReason.Draw:
+                    return AnalyticsRecorder.WinType.Draw;
+                default:
+                    return AnalyticsRecorder.WinType.Kill;
+            }
         }
 
         #endregion
