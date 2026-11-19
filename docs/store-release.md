@@ -147,11 +147,11 @@
 
 | 서비스 | 쓰는 곳 | 무료 | 넘으면 |
 | --- | --- | --- | --- |
-| Photon PUN | 멀티 | 20 CCU (개발용) · 100 CCU 요금제(위 표) | 20 · 100 CCU 는 **접속을 막는다** (과금 없음). 500 CCU 이상 유료만 초과를 허용하고 다음 청구서에 붙인다 — 초과 단가는 확인 필요 |
+| Photon PUN | 멀티 | 20 CCU (개발용) · 100 CCU 요금제(위 표) | 20 · 100 CCU 는 **접속을 막는다** (과금 없음). 500 CCU 이상 유료만 초과를 허용하고 다음 청구서에 붙인다 — 단가는 구독 계약에만 있다 (8절) |
 | UGS Authentication · Remote Config | 로그인 · 설정 값 · 카드 데이터 버전 | 과금 없음 | — |
 | UGS Cloud Save | 닉네임 · 장착 · 보유 · 통계 · 재화 | 매달 저장 5GiB · 쓰기 100만 회 · 읽기 100만 회 | 저장 1GiB 당 $0.50 · 쓰기 1만 회당 $0.025 · 읽기 1만 회당 $0.009 |
 | UGS Cloud Code | 닉네임 검사 · 판 결과 보고 · 보상 · 상자 (`23` 7-1) | 매달 호출 100만 회 · 실행 20시간 · 응답 1GiB | 호출 100만 회당 $1.50. Cloud Code 안에서 Cloud Save 를 부르면 둘 다 과금된다 |
-| UGS CCD | 카드 데이터 파일 (`systems/26-card-data.md`) | 매달 전송 50GB (올리기 포함) | 1GB 당 $0.08 |
+| UGS CCD | 카드 데이터 파일 (`systems/26-card-data.md`) | 매달 전송 50GB (올리기 포함) · 저장 무료 | 1GB 당 $0.08 |
 | GitHub Actions | 카드 정리 봇 · CI | 공개 저장소의 기본 러너 무료 | — |
 | 노션 API · KIPRIS Plus | 봇 · 이름 점검 | 과금 없음 (요청 제한만 — 노션 평균 초당 3회) | — |
 
@@ -313,8 +313,8 @@
 - **Google Play 타깃 재평가** — 치와와 아트가 아동 대상으로 읽혀 13세 미만 포함을 요구받을 수 있음. 요구받으면 Families 정책 범위(광고 없음 · 기기 식별자 전송 여부 · Photon/UGS SDK) 확인
 - **「만 14세 이상」 자기 확인 체크의 충분성** — 가이드라인은 「합리적 장치」를 권장하지 기준을 못 박지 않는다. 분쟁 사례 없음. → 출시 전 법률 자문 1회를 6절 준비물로 올렸다 (2026-11-07, 결정 9 A 안)
 - Apple 회비 공식 원화가, 계정 가입 소요 시간
-- Photon 500 CCU 이상의 초과 단가 · 「첫 초과 뒤 48시간 안에 올리지 않으면 상한」 이 지금도 맞는지 (검색 요약으로만 봤다, 3-1)
-- UGS Remote Config 값 하나의 크기 제한 (옛 문서 약 1만 자) · CCD 저장 용량 제한 (3-1 · `systems/26-card-data.md` 4절)
+- Photon 500 CCU 이상의 초과 단가 — 공개 가격표에 없고 「구독 계약에 정한 값」 으로만 나온다. 첫 초과 뒤 48시간 안에 플랜을 올리지 않으면 상한이 걸릴 수 있다 (2026-11-19 확인). 우리 100 CCU 요금제는 초과를 막으므로 500 CCU 로 올릴 때 계약서를 본다
+- ~~UGS Remote Config 값 크기 · CCD 저장 용량~~ — 2026-11-19 확인: Remote Config 설정 하나 5MB · 문자열 65,535자, CCD 저장 · 파일 크기 한도는 공식 문서에 없음 (`systems/26-card-data.md` 4절)
 
 ---
 
@@ -368,7 +368,8 @@
 - Photon 초과(burst) 정책: https://doc.photonengine.com/photon/current/pricing
 - UGS 가격 (Authentication · Remote Config · Cloud Save · Cloud Code · CCD): https://unity.com/products/gaming-services/pricing · Cloud Code 비용: https://docs.unity.com/en-us/cloud-code/scripts/reference/cost · CCD 과금 방식: https://support.unity.com/hc/en-us/articles/35114118738324-CCD-How-does-the-Cloud-Content-Delivery-pricing-model-work
 - UGS 예산 알림: https://docs.unity.com/cloud/en-us/billing/budget · 결제 정보 없이 무료 한도 초과: https://docs.unity.com/en-us/services/pricing-and-billing
-- Remote Config 값 1만 자 (옛 API 문서): https://docs.unity3d.com/Packages/com.unity.services.apis@1.0/api/Unity.Services.Apis.Admin.RemoteConfig.JsonSetting.html
+- Remote Config 크기 (설정 5MB · 문자열 65,535자): https://services.docs.unity.com/remote-config-admin/ · 5MB 를 늘릴 계획 없음: https://discussions.unity.com/t/increate-remote-config-limit-of-5mb/938743 · 옛 값 1만 자: https://docs.unity3d.com/Packages/com.unity.services.apis@1.0/api/Unity.Services.Apis.Admin.RemoteConfig.JsonSetting.html
+- CCD 한도 (업로드 크기 제한 없음 · 한 번에 200개): https://docs.unity.com/en-us/oas-content-delivery-management/1.0.0 · https://docs.unity.com/en-us/ccd/faq
 - 노션 API 요청 제한: https://developers.notion.com/reference/request-limits
 - 확률형 아이템: https://www.korea.kr/news/policyNewsView.do?newsId=148924297 · https://www.etnews.com/20250806000278 · 정의(직·간접 유상) · 1억 원 면제 · 2025-08-01 개정 시행: https://www.korea.kr/multi/visualNewsView.do?newsId=148924522 · https://factrace.kr/issues/loot-box-disclosure-2026 · https://www.newspost.kr/news/articleView.html?idxno=216334
 - 만 14세 미만 · 법정대리인 동의: 개인정보 보호법 22조의2 https://casenote.kr/법령/개인정보_보호법/제22조의2 · 동의 확인 방법 https://www.privacy.go.kr/front/contents/cntntsView.do?contsNo=75 · 아동 · 청소년 개인정보 보호 가이드라인(2022-07-22) https://www.korea.kr/news/policyNewsView.do?newsId=148903862 · https://www.kimchang.com/ko/insights/detail.kc?sch_section=4&idx=25475 · 보호 연령 확대 구상(기본계획, 법 아님) https://www.korea.kr/news/policyNewsView.do?newsId=148903393 · 2026-09-11 시행 개정 요지 https://datalaw.kr/guides/pipa-2026-amendment/
