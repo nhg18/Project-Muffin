@@ -31,6 +31,8 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private LobbyModalView modal;
         [SerializeField] private LobbyFxView fx;
 
+        private int _nicknameRejectCount; // 이번 닉네임을 저장하기 전 금칙어로 거절된 횟수 (27 5-1 nicknameSaved)
+
         private void Awake()
         {
             if (lobby == null || home == null || profile == null || settings == null || modal == null || fx == null)
@@ -51,7 +53,11 @@ namespace Chapchu.UI.Lobby
             modal.OnInputSubmitted -= HandleInputSubmitted;
         }
 
-        private void HandleNicknameChangeRequested() => modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
+        private void HandleNicknameChangeRequested()
+        {
+            _nicknameRejectCount = 0;
+            modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
+        }
 
         private void HandleDeleteAccountRequested()
             => modal.ShowWarn(DeleteTitle, DeleteMessage, OkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
@@ -75,6 +81,9 @@ namespace Chapchu.UI.Lobby
 
             if (result != NicknameValidationResult.Valid)
             {
+                if (result == NicknameValidationResult.BannedWord)
+                    _nicknameRejectCount++;
+
                 modal.SetInputError(NicknameValidator.GetErrorMessage(result));
                 return;
             }
@@ -105,6 +114,8 @@ namespace Chapchu.UI.Lobby
                 yield break;
             }
 
+            AnalyticsRecorder.RecordNicknameSaved(false, _nicknameRejectCount);
+            _nicknameRejectCount = 0;
             NetworkManager.Instance.SetNickname(nickname);
             home.SetProfile(nickname, lobby.Data.MyCode);
             if (profile.IsOpen)

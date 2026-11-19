@@ -95,7 +95,8 @@ namespace Chapchu.UI.Title
         private bool _enterAfterChoice;      // 자동 로그인 기기인데 고른 기록이 없어 팝업부터 띄웠다
         private bool _quitFromPlayRecord;    // 플레이 기록 팝업에서 뒤로가기 → 종료 확인 — 취소하면 팝업으로 돌아간다
         private int _nicknameRejectCount;    // 이번 닉네임을 저장하기 전 금칙어로 거절된 횟수
-        private float _loadStartedAt;        // 로딩(로그인 중…)을 시작한 시각 — 고르는 시간은 빼고 잰다
+        private float _loadSeconds;          // 로딩 묶음이 떠 있던 초의 합 — 고르는 시간 · 실패 · 점검 팝업을 보는 시간은 빼고 잰다
+        private float _loadingSince = -1f;   // 지금 떠 있는 로딩 묶음이 뜬 시각 — 떠 있지 않으면 음수
         private bool _titleViewRecorded;
         private bool _maintenanceRecorded;
 
@@ -225,6 +226,7 @@ namespace Chapchu.UI.Title
 
             _autoSignIn = true;
             bottom.ShowLoading(AutoSignInText);
+            BeginLoading();
             yield return SignInRoutine();
         }
 
@@ -238,12 +240,11 @@ namespace Chapchu.UI.Title
             }
 
             _nicknameLoaded = false;
-            _loadStartedAt = Time.realtimeSinceStartup;
 
             // 동의했으면 로그인 전에 수집을 켠다 — 로그인 실패(signInFailed)도 남기려고 (27 6절)
             Task initialize = AccountService.InitializeAsync();
             yield return Wait(initialize, AccountService.SignInTimeoutSeconds);
-            if (Succeeded(initialize))
+            if (AccountService.IsInitialized) // 앞선 초기화가 아직 도는 중이면 작업은 바로 끝난다 — 준비됐을 때만 켜고, 아니면 다음 시도로
                 StartPlayRecord();
 
             Task signIn = AccountService.SignInAsync();
@@ -276,6 +277,7 @@ namespace Chapchu.UI.Title
             if (ServerConfig.NeedsUpdate)
             {
                 AnalyticsRecorder.RecordTitleBlocked(AnalyticsRecorder.TitleBlockReason.Update);
+                EndLoading();
                 popup.ShowUpdate();
                 yield break;
             }
@@ -288,6 +290,7 @@ namespace Chapchu.UI.Title
                     AnalyticsRecorder.RecordTitleBlocked(AnalyticsRecorder.TitleBlockReason.Maintenance);
                 }
 
+                EndLoading();
                 popup.ShowMaintenance(ServerConfig.MaintenanceMessage);
                 yield return new WaitForSecondsRealtime(ServerConfig.MaintenanceRetrySeconds);
                 yield return FetchConfig();
@@ -335,6 +338,7 @@ namespace Chapchu.UI.Title
                 {
                     StopFlow();
                     _nicknameRejectCount++;
+                    EndLoading();
                     sheet.ReturnToNickname(NicknameValidator.GetErrorMessage(NicknameValidationResult.BannedWord));
                     return;
                 }
@@ -350,6 +354,7 @@ namespace Chapchu.UI.Title
             }
 
             // 저장된 로그인인데 서버에 닉네임이 없다 — 추천 이름을 넣어 두고 바로 「시작」 할 수 있게
+            EndLoading();
             bottom.Hide();
             sheet.ShowNickname(NicknameValidator.Suggest());
         }
@@ -363,6 +368,7 @@ namespace Chapchu.UI.Title
             if (!Succeeded(save))
             {
                 Debug.LogWarning($"[{nameof(TitlePresenter)}] 닉네임 저장 실패: {save.Exception?.GetBaseException().Message ?? "시간 초과"}");
+                EndLoading();
                 sheet.ReturnToNickname(SaveFailedText);
                 yield break;
             }
@@ -389,7 +395,8 @@ namespace Chapchu.UI.Title
             PlayerPrefs.Save();
 
             // 카드 데이터 받기(26-card-data)가 아직 없어 늘 거짓이다 — 붙으면 그 결과로
-            AnalyticsRecorder.RecordLobbyReached(Time.realtimeSinceStartup - _loadStartedAt, _firstRun, false);
+            EndLoading();
+            AnalyticsRecorder.RecordLobbyReached(_loadSeconds, _firstRun, false);
             StartCoroutine(LeaveForLobbyRoutine());
         }
 
@@ -518,6 +525,7 @@ namespace Chapchu.UI.Title
 
             PlayerPrefs.Save();
             sheet.ShowLoading(StartingText);
+            BeginLoading();
             Run(SignInRoutine());
         }
 
@@ -696,10 +704,29 @@ namespace Chapchu.UI.Title
                 sheet.ShowLoading(message);
             else
                 bottom.ShowLoading(message);
+
+            BeginLoading();
+        }
+
+        // lobbyReached.loadSeconds — 로딩 묶음이 뜰 때부터 다른 것으로 바뀔 때까지를 더한다 (27 5-5)
+        private void BeginLoading()
+        {
+            if (_loadingSince < 0f)
+                _loadingSince = Time.realtimeSinceStartup;
+        }
+
+        private void EndLoading()
+        {
+            if (_loadingSince < 0f)
+                return;
+
+            _loadSeconds += Time.realtimeSinceStartup - _loadingSince;
+            _loadingSince = -1f;
         }
 
         private void ShowFail(FailKind kind, string title, string description, string code)
         {
+            EndLoading();
             _failKind = kind;
             if (sheet.IsOpen)
                 sheet.ShowFail(title, description, code, kind == FailKind.Login);
@@ -712,11 +739,12 @@ namespace Chapchu.UI.Title
             Exception exception = task.Exception?.GetBaseException();
             Debug.LogWarning($"[{nameof(TitlePresenter)}] 로그인 실패: {exception?.Message ?? "시간 초과"}");
 
-            (string title, string description) = AccountService.Classify(exception) == SignInFailure.Rejected
+            bool rejected = AccountService.Classify(exception) == SignInFailure.Rejected;
+            (string title, string description) = rejected
                 ? (SignInRejectedTitle, SignInRejectedText)
                 : (SignInUnavailableTitle, SignInUnavailableText);
             string code = AccountService.GetErrorCodeName(exception);
-            AnalyticsRecorder.SignInFailKind kind = AccountService.Classify(exception) == SignInFailure.Rejected
+            AnalyticsRecorder.SignInFailKind kind = rejected
                 ? AnalyticsRecorder.SignInFailKind.Rejected
                 : AnalyticsRecorder.SignInFailKind.Network;
             AnalyticsRecorder.RecordSignInFailed(kind, code);
