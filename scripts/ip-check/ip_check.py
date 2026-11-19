@@ -19,10 +19,19 @@ import sys
 import urllib.parse
 import urllib.request
 
-API = "https://plus.kipris.or.kr/kipo-api/kipi/trademarkInfoSearchService/getWordSearch"
+API = "https://plus.kipris.or.kr/kipo-api/kipi/trademarkInfoSearchService/getAdvancedSearch"
 PAGE = 500
-MAX_PAGES = 10           # 한 이름에 5,000건 넘게 나오면 기계 판정을 포기한다
-CLASSES = {"9", "41"}    # 게임 소프트웨어 · 게임 서비스 (store-release 6-1 1번)
+MAX_PAGES = 10           # 한 류에 5,000건 넘게 나오면 기계 판정을 포기한다
+CLASSES = ("09", "41")   # 게임 소프트웨어 · 게임 서비스 (store-release 6-1 1번)
+
+# 고급 검색은 아래 값을 하나라도 빼면 INVALID_REQUEST_PARAMETER_ERROR 다 (2026-11-19 확인).
+# 상태는 「등록」 만, 상표 종류 · 모양은 전부.
+STATUS = {"application": "false", "registration": "true", "refused": "false", "expiration": "false",
+          "withdrawal": "false", "publication": "false", "cancel": "false", "abandonment": "false"}
+KINDS = {k: "true" for k in (
+    "trademark serviceMark trademarkServiceMark businessEmblem collectiveMark geoOrgMark certMark "
+    "geoCertMark internationalMark character figure compositionCharacter figureComposition fragrance "
+    "sound color colorMixed dimension hologram invisible motion visual").split()}
 
 # 정답을 아는 이름 — 매 실행 첫머리에 조회해서 결과가 다르면 아무것도 쓰지 않는다 (2026-11-18 확인)
 CANARY = {
@@ -65,10 +74,10 @@ class Kipris:
         self.key = key
         self.calls = 0
 
-    def page(self, word, page_no):
+    def page(self, word, cls, page_no):
         self.calls += 1
-        qs = urllib.parse.urlencode({"searchString": word, "searchRecentYear": 0,
-                                     "numOfRows": PAGE, "pageNo": page_no, "ServiceKey": self.key})
+        qs = urllib.parse.urlencode(dict(STATUS, **KINDS, trademarkName=word, classification=cls,
+                                         numOfRows=PAGE, pageNo=page_no, ServiceKey=self.key))
         try:
             with urllib.request.urlopen(API + "?" + qs, timeout=30) as r:
                 xml = r.read().decode("utf-8")
@@ -89,29 +98,33 @@ class Kipris:
     def check(self, name, budget):
         """1번 판정. budget = 이번 실행 전체 호출 상한 (None = 무제한).
 
-        검색은 띄어 쓴 낱말을 따로 찾아 결과가 커질 수 있다 (「죽은 척」 3,709건). 정확히 같은 이름이
-        어느 쪽에 있는지 모르므로 모든 쪽을 본다. MAX_PAGES 를 넘는 이름은 매일 상한에 걸려 영영
-        못 보게 되므로 미점검으로 돌려 사람이 KIPRIS 에서 직접 보게 한다.
+        상표명 · 류(09, 41 따로) · 등록 상태로 KIPRIS 가 미리 거른다 — 이름당 최소 2회.
+        상표명 검색은 「포함」 이라 결과를 다 보고 이름이 같은 것만 고른다. 문장부호는 검색어에서
+        뺀다 (「진짜 할거야?」 는 그대로 보내면 요청 오류). MAX_PAGES 를 넘는 류는 미점검.
         """
-        if budget is not None and self.calls >= budget:
+        word = re.sub(r"[^\w\s]", " ", name).strip()
+        if not word:
+            return {"result": UNCHECKED, "hits": [], "why": "검색할 글자가 없음"}
+        if budget is not None and self.calls + len(CLASSES) > budget:
             return {"result": SKIPPED, "hits": [], "why": "호출 상한"}
-        total, items = self.page(name, 1)
-        pages = -(-total // PAGE)
-        if pages > MAX_PAGES:
-            return {"result": UNCHECKED, "hits": [], "total": total,
-                    "why": "검색 결과 %d건 — KIPRIS 에서 사람이 확인" % total}
-        if budget is not None and self.calls + pages - 1 > budget:
-            return {"result": SKIPPED, "hits": [], "total": total, "why": "호출 상한"}
-        hits, page_no = [], 1
-        while True:
+        hits, total = [], 0
+        for cls in CLASSES:
+            n, items = self.page(word, cls, 1)
+            total += n
+            pages = -(-n // PAGE)
+            if pages > MAX_PAGES:
+                return {"result": UNCHECKED, "hits": [], "total": total,
+                        "why": "%s류 검색 결과 %d건 — KIPRIS 에서 사람이 확인" % (cls, n)}
+            for page_no in range(2, pages + 1):
+                if budget is not None and self.calls >= budget:
+                    return {"result": SKIPPED, "hits": [], "total": total, "why": "호출 상한"}
+                items += self.page(word, cls, page_no)[1]
             for it in items:
-                classes = {c.strip().lstrip("0") for c in it["classes"].split("|")}
-                if norm(it["title"]) == norm(name) and it["status"] == "등록" and classes & CLASSES:
+                classes = {c.strip().zfill(2) for c in it["classes"].split("|")}
+                if norm(it["title"]) == norm(name) and it["status"] == "등록" and cls in classes \
+                        and it["reg"] not in {h["reg"] for h in hits}:
                     hits.append(it)
-            if page_no >= pages or not items:
-                return {"result": FIX if hits else PASS, "hits": hits, "total": total}
-            page_no += 1
-            _, items = self.page(name, page_no)
+        return {"result": FIX if hits else PASS, "hits": hits, "total": total}
 
 
 def cmd_names(a):
