@@ -52,6 +52,8 @@ namespace Chapchu.Network
         private bool _started;          // 방장 — 이 기기의 규칙이 판을 갖고 있다 (시작했거나 사본으로 되살렸다)
         private int _backupActor = -1;  // 방장 — 마지막으로 사본을 보낸 예비 방장
         private int _backupRevision;    // 방장 — 그때의 상태 변경 번호 (GameServer.Revision)
+        private Player _backupPlayer;   // 방장 — 계산해 둔 예비 방장. 입장 · 퇴장 때만 다시 계산한다 (매 프레임 PlayerListOthers 를 읽지 않게)
+        private bool _backupPlayerStale = true; // 입장 · 퇴장이 있었다 — 다음 SendBackup 이 예비 방장을 다시 계산한다
         private GameSnapshot _backup;   // 예비 방장 — 방장에게서 받은 가장 새 사본. 화면에는 쓰지 않는다
         private int _backupSeq;         // 예비 방장 — 그 사본을 만들 때 방장이 보낸 마지막 처리 번호
 
@@ -286,7 +288,13 @@ namespace Chapchu.Network
             if (!_started || _gameEnded)
                 return;
 
-            Player backup = BackupPlayer();
+            if (_backupPlayerStale)
+            {
+                _backupPlayer = BackupPlayer();
+                _backupPlayerStale = false;
+            }
+
+            Player backup = _backupPlayer;
             if (backup == null)
             {
                 _backupActor = -1;
@@ -364,6 +372,7 @@ namespace Chapchu.Network
         private void Halt()
         {
             Broadcast(nameof(RPC_OnGameHalted));
+            ResetPublicProps(); // 방에서 다시 시작한 판의 화면이 중지된 판의 값을 읽지 않게 — 게임 씬을 떠나기 전에 지운다 (GoToResultRoutine 과 같은 순서)
             NetworkManager.Instance.UpdateRoomOptions(null, isOpen: true);
             NetworkManager.Instance.LoadSceneForAll(ScenePaths.Room);
         }
@@ -397,8 +406,15 @@ namespace Chapchu.Network
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
+            _backupPlayerStale = true;
             if (!NetworkManager.IsTrustedMaster) return;
             Send(_server.RemovePlayer(otherPlayer.ActorNumber));
+        }
+
+        // 다시 들어온 사람이 예비 방장이 될 수 있다 — 다음 SendBackup 이 다시 계산한다
+        public override void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            _backupPlayerStale = true;
         }
 
         #endregion
@@ -413,6 +429,7 @@ namespace Chapchu.Network
                 return;
 
             _bots?.Observe(events); // 봇도 판에서 일어난 일을 본다 — 누가 자기를 노렸는지 (18-bot.md 7-8)
+            int seqBefore = _sentSeq;
 
             var roomProps = new Hashtable();
             var playerProps = new Dictionary<int, Hashtable>();
@@ -679,7 +696,12 @@ namespace Chapchu.Network
             }
 
             if (onlyRejected)
+            {
+                // 거절 알림도 처리 번호를 올린다 — 번호만 공개해 새 방장이 이 번호부터 잇게 (09-network.md 5절 · 9.1). 봇의 거절은 알림이 나가지 않아 번호가 그대로다
+                if (_sentSeq != seqBefore)
+                    NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.EventSeq] = _sentSeq });
                 return;
+            }
 
             roomProps[RoomProps.EventSeq] = _sentSeq; // 지금 값 스냅샷이 어느 알림까지 반영했는지
             NetworkManager.Instance.SetRoomProps(roomProps);
