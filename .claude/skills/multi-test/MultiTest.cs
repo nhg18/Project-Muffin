@@ -37,6 +37,7 @@ public static class MultiTest
     private const string TappedMethod = "HandleTapped";                    // TitlePresenter — 「화면을 눌러 시작」
     private const string AllAgreeMethod = "HandleAllClicked";              // TermsAgreeView — 「모두 동의하기」
     private const string AgreeConfirmMethod = "HandleConfirmClicked";      // TermsAgreeView — 「동의하고 계속」
+    private const string PlayRecordAgreeMethod = "HandleAgreeClicked";     // TitlePopupView — 플레이 기록 수집 「동의」 (20 7-12)
     private const string GuestClickedMethod = "HandleGuestClicked";        // LoginSheetView — 「게스트로 시작」
     private const string StartClickedMethod = "HandleStartClicked";        // LoginSheetView — 닉네임 「시작」
     private const string JoinRoomRequestedMethod = "HandleJoinRoomRequested"; // LobbyRoomRequester
@@ -1061,6 +1062,14 @@ public static class MultiTest
                 TitlePresenter presenter = Object.FindFirstObjectByType<TitlePresenter>();
                 if (presenter == null)
                     return scene == "LobbyScene" ? "OK 자동 로그인 → 로비" : "WAIT 타이틀 아님 (" + scene + ")";
+
+                // 플레이 기록 수집 팝업(처음만) — 「동의」. 개발 빌드라 보내지는 않고 콘솔에만 찍힌다 (27 3절 #7)
+                TitlePopupView popup = Object.FindFirstObjectByType<TitlePopupView>();
+                if (popup != null && popup.Current == TitlePopup.PlayRecord)
+                {
+                    Call(popup, PlayRecordAgreeMethod);
+                    return "WAIT 플레이 기록 동의";
+                }
 
                 LoginSheetView sheet = Object.FindFirstObjectByType<LoginSheetView>();
                 TitleBottomView bottom = Object.FindFirstObjectByType<TitleBottomView>();

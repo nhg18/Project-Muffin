@@ -14,7 +14,7 @@ using DisconnectCause = Photon.Realtime.DisconnectCause; // Photon.Realtime 에�
 namespace Chapchu.UI.Title
 {
     /// <summary>
-    /// 타이틀 흐름 — 약관 동의 → 로그인 고르기 → (게스트) 닉네임 → 로그인 → 설정 값 → 접속 → 닉네임 저장 → 로비.
+    /// 타이틀 흐름 — 약관 동의 → 플레이 기록 수집(처음만, 27-analytics) → 로그인 고르기 → (게스트) 닉네임 → 로그인 → 설정 값 → 접속 → 닉네임 저장 → 로비.
     /// 자동 로그인(누르지 않아도 로비)은 계정(Google · Apple)으로 로그인해 둔 기기만. 게스트는 매번 「화면을 눌러 시작」 부터 —
     /// 계정(저장된 로그인)과 닉네임은 기기에 남아, 닉네임 창에 지난 닉네임이 미리 들어 있다 (PM 2026-11-11, 시안과 다른 점).
     /// 뷰와 계정(UGS) · 네트워크 · 씬 전환을 잇는 유일한 파일이다.
@@ -89,6 +89,16 @@ namespace Chapchu.UI.Title
         private bool _disconnectingOnPurpose;
         private bool _leaving;
 
+        // 플레이 기록(27-analytics)
+        private bool _firstRun;              // 약관 동의 기록이 없던 실행 — lobbyReached.isFirstRun
+        private bool? _playRecordChoice;     // 이번 실행에 팝업에서 고른 값 — 첫 실행은 「시작」 때 약관과 함께 기록한다 (20 7-12)
+        private bool _enterAfterChoice;      // 자동 로그인 기기인데 고른 기록이 없어 팝업부터 띄웠다
+        private bool _quitFromPlayRecord;    // 플레이 기록 팝업에서 뒤로가기 → 종료 확인 — 취소하면 팝업으로 돌아간다
+        private int _nicknameRejectCount;    // 이번 닉네임을 저장하기 전 금칙어로 거절된 횟수
+        private float _loadStartedAt;        // 로딩(로그인 중…)을 시작한 시각 — 고르는 시간은 빼고 잰다
+        private bool _titleViewRecorded;
+        private bool _maintenanceRecorded;
+
         private static bool IsApplePlatform => Application.platform == RuntimePlatform.IPhonePlayer;
 
         private void Awake()
@@ -127,6 +137,7 @@ namespace Chapchu.UI.Title
             popup.OnMaintenanceAcknowledged += HandleMaintenanceAcknowledged;
             popup.OnQuitConfirmed += HandleQuitConfirmed;
             popup.OnQuitCanceled += HandleQuitCanceled;
+            popup.OnPlayRecordChosen += HandlePlayRecordChosen;
 
             ConnectionEvents.OnConnected += HandleConnected;
             ConnectionEvents.OnDisconnected += HandleDisconnected;
@@ -153,6 +164,7 @@ namespace Chapchu.UI.Title
             popup.OnMaintenanceAcknowledged -= HandleMaintenanceAcknowledged;
             popup.OnQuitConfirmed -= HandleQuitConfirmed;
             popup.OnQuitCanceled -= HandleQuitCanceled;
+            popup.OnPlayRecordChosen -= HandlePlayRecordChosen;
 
             ConnectionEvents.OnConnected -= HandleConnected;
             ConnectionEvents.OnDisconnected -= HandleDisconnected;
@@ -166,6 +178,7 @@ namespace Chapchu.UI.Title
             // 동의 기록이 없으면 어디에도 접속하지 않고 「화면을 눌러 시작」 (23 3절 #9).
             // 게스트로 쓰던 기기도 「화면을 눌러 시작」 부터 — 자동 로그인은 계정 로그인만
             _agreed = PlayerPrefs.GetInt(PlayerPrefsKeys.TermsAgreed, 0) == 1;
+            _firstRun = !_agreed;
             if (!_agreed || PlayerPrefs.GetInt(PlayerPrefsKeys.AccountLogin, 0) != 1)
             {
                 bottom.ShowTap();
@@ -173,6 +186,15 @@ namespace Chapchu.UI.Title
             }
 
             bottom.Hide();
+
+            // 플레이 기록 팝업이 생기기 전에 동의한 기기 — 로그인 전에 한 번 묻는다 (27 8절)
+            if (!AnalyticsRecorder.HasChoice)
+            {
+                _enterAfterChoice = true;
+                popup.ShowPlayRecord();
+                return;
+            }
+
             Run(EnterRoutine());
         }
 
@@ -216,6 +238,14 @@ namespace Chapchu.UI.Title
             }
 
             _nicknameLoaded = false;
+            _loadStartedAt = Time.realtimeSinceStartup;
+
+            // 동의했으면 로그인 전에 수집을 켠다 — 로그인 실패(signInFailed)도 남기려고 (27 6절)
+            Task initialize = AccountService.InitializeAsync();
+            yield return Wait(initialize, AccountService.SignInTimeoutSeconds);
+            if (Succeeded(initialize))
+                StartPlayRecord();
+
             Task signIn = AccountService.SignInAsync();
             yield return Wait(signIn, AccountService.SignInTimeoutSeconds);
             if (!Succeeded(signIn))
@@ -245,12 +275,19 @@ namespace Chapchu.UI.Title
             yield return FetchConfig();
             if (ServerConfig.NeedsUpdate)
             {
+                AnalyticsRecorder.RecordTitleBlocked(AnalyticsRecorder.TitleBlockReason.Update);
                 popup.ShowUpdate();
                 yield break;
             }
 
             while (ServerConfig.IsMaintenance)
             {
+                if (!_maintenanceRecorded)
+                {
+                    _maintenanceRecorded = true;
+                    AnalyticsRecorder.RecordTitleBlocked(AnalyticsRecorder.TitleBlockReason.Maintenance);
+                }
+
                 popup.ShowMaintenance(ServerConfig.MaintenanceMessage);
                 yield return new WaitForSecondsRealtime(ServerConfig.MaintenanceRetrySeconds);
                 yield return FetchConfig();
@@ -297,6 +334,7 @@ namespace Chapchu.UI.Title
                     && NicknameValidator.ContainsBannedWord(_typedNickname, ServerConfig.BannedWords, ServerConfig.AllowedWords))
                 {
                     StopFlow();
+                    _nicknameRejectCount++;
                     sheet.ReturnToNickname(NicknameValidator.GetErrorMessage(NicknameValidationResult.BannedWord));
                     return;
                 }
@@ -329,6 +367,8 @@ namespace Chapchu.UI.Title
                 yield break;
             }
 
+            AnalyticsRecorder.RecordNicknameSaved(_savedNickname == null, _nicknameRejectCount);
+            _nicknameRejectCount = 0;
             _savedNickname = _typedNickname;
             GoToLobby();
         }
@@ -347,6 +387,9 @@ namespace Chapchu.UI.Title
                 PlayerPrefs.SetInt(PlayerPrefsKeys.AccountLogin, _method == LoginMethod.Guest ? 0 : 1);
 
             PlayerPrefs.Save();
+
+            // 카드 데이터 받기(26-card-data)가 아직 없어 늘 거짓이다 — 붙으면 그 결과로
+            AnalyticsRecorder.RecordLobbyReached(Time.realtimeSinceStartup - _loadStartedAt, _firstRun, false);
             StartCoroutine(LeaveForLobbyRoutine());
         }
 
@@ -397,6 +440,30 @@ namespace Chapchu.UI.Title
         private void HandleAgreed()
         {
             _agreed = true;
+            if (NeedsPlayRecordChoice)
+            {
+                popup.ShowPlayRecord();
+                return;
+            }
+
+            sheet.ShowLogin(IsApplePlatform);
+        }
+
+        // 「동의」 · 「동의 안 함」 — 어느 쪽이든 로그인 고르기로. 약관 기록이 이미 있는 기기는 바로 기록한다 (20 7-12)
+        private void HandlePlayRecordChosen(bool agreed)
+        {
+            _playRecordChoice = agreed;
+            if (PlayerPrefs.GetInt(PlayerPrefsKeys.TermsAgreed, 0) == 1)
+                AnalyticsRecorder.SaveChoice(agreed);
+
+            popup.Hide();
+            if (_enterAfterChoice)
+            {
+                _enterAfterChoice = false;
+                Run(EnterRoutine());
+                return;
+            }
+
             sheet.ShowLogin(IsApplePlatform);
         }
 
@@ -407,6 +474,7 @@ namespace Chapchu.UI.Title
             _autoSignIn = false;
             _method = LoginMethod.Guest;
             _typedNickname = null;
+            _nicknameRejectCount = 0;
             string lastNickname = PlayerPrefs.GetString(PlayerPrefsKeys.PlayerName, string.Empty);
             sheet.ShowNickname(string.IsNullOrEmpty(lastNickname) ? NicknameValidator.Suggest() : lastNickname);
         }
@@ -428,6 +496,9 @@ namespace Chapchu.UI.Title
 
             if (result != NicknameValidationResult.Valid)
             {
+                if (result == NicknameValidationResult.BannedWord)
+                    _nicknameRejectCount++;
+
                 sheet.ShowNicknameError(NicknameValidator.GetErrorMessage(result));
                 return;
             }
@@ -442,6 +513,9 @@ namespace Chapchu.UI.Title
 
             // 첫 로그인 — 여기서 동의를 기기에 기록한다 (23 6-1)
             PlayerPrefs.SetInt(PlayerPrefsKeys.TermsAgreed, 1);
+            if (_playRecordChoice.HasValue)
+                AnalyticsRecorder.SaveChoice(_playRecordChoice.Value);
+
             PlayerPrefs.Save();
             sheet.ShowLoading(StartingText);
             Run(SignInRoutine());
@@ -513,14 +587,32 @@ namespace Chapchu.UI.Title
             Application.Quit();
         }
 
-        private void HandleQuitCanceled() => popup.Hide();
+        private void HandleQuitCanceled()
+        {
+            if (_quitFromPlayRecord)
+            {
+                _quitFromPlayRecord = false;
+                popup.ShowPlayRecord();
+                return;
+            }
+
+            popup.Hide();
+        }
 
         // 뒤로가기: 종료 확인은 닫고 · 닫을 수 없는 팝업은 무시 · 닉네임은 ← 뒤로 · 고르기 창은 닫기 · 터치 대기는 종료 확인
         private void HandleBackKey()
         {
             if (popup.Current == TitlePopup.Quit)
             {
-                popup.Hide();
+                HandleQuitCanceled();
+                return;
+            }
+
+            // 플레이 기록 팝업은 닫히지 않는다 — 뒤로가기는 종료 확인 (20 7-12)
+            if (popup.Current == TitlePopup.PlayRecord)
+            {
+                _quitFromPlayRecord = true;
+                popup.ShowQuit();
                 return;
             }
 
@@ -580,10 +672,15 @@ namespace Chapchu.UI.Title
         private void OpenStartSheet()
         {
             bottom.Hide();
-            if (_agreed)
-                sheet.ShowLogin(IsApplePlatform);
-            else
+            if (!_agreed)
+            {
                 sheet.ShowAgree();
+                return;
+            }
+
+            sheet.ShowLogin(IsApplePlatform);
+            if (NeedsPlayRecordChoice)
+                popup.ShowPlayRecord(); // 플레이 기록 팝업이 생기기 전에 동의한 기기 (27 8절)
         }
 
         private void CloseSheet()
@@ -618,7 +715,12 @@ namespace Chapchu.UI.Title
             (string title, string description) = AccountService.Classify(exception) == SignInFailure.Rejected
                 ? (SignInRejectedTitle, SignInRejectedText)
                 : (SignInUnavailableTitle, SignInUnavailableText);
-            ShowFail(FailKind.Login, title, description, AccountService.GetErrorCodeName(exception));
+            string code = AccountService.GetErrorCodeName(exception);
+            AnalyticsRecorder.SignInFailKind kind = AccountService.Classify(exception) == SignInFailure.Rejected
+                ? AnalyticsRecorder.SignInFailKind.Rejected
+                : AnalyticsRecorder.SignInFailKind.Network;
+            AnalyticsRecorder.RecordSignInFailed(kind, code);
+            ShowFail(FailKind.Login, title, description, code);
         }
 
         // Google · Apple 로그인은 SDK 설정 전이라 연결하지 않았다 — 누르면 OS 창 실패와 같이 보인다
@@ -656,6 +758,20 @@ namespace Chapchu.UI.Title
             _connected = false;
             _disconnectingOnPurpose = true;
             NetworkManager.Instance.Disconnect();
+        }
+
+        private bool NeedsPlayRecordChoice => !AnalyticsRecorder.HasChoice && !_playRecordChoice.HasValue;
+
+        // 수집 켜기(동의했을 때만) · 타이틀 화면 기록 — 수집은 로그인 뒤가 아니라 UGS 초기화 뒤에 켜진다 (27 5-5 · 6절)
+        private void StartPlayRecord()
+        {
+            AnalyticsRecorder.StartIfAgreed(_playRecordChoice == true);
+            _playRecordChoice = null; // consentAccepted 는 한 번만
+            if (_titleViewRecorded)
+                return;
+
+            _titleViewRecorded = true;
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Title, AnalyticsRecorder.ScreenName.None);
         }
 
         private void Run(IEnumerator routine)
