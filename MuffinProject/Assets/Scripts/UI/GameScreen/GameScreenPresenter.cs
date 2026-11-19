@@ -12,7 +12,8 @@ namespace Chapchu.UI.GameScreen
     /// 인게임 화면의 연출 큐 (CODE_CONVENTION 9절 · 09-network.md 6.1). 방장이 보낸 일어난 일(GameEvents)을 받은 순서대로 줄 세우고,
     /// 하나씩 영역 프레젠터에 넘겨 연출이 끝난 뒤 다음을 꺼낸다. 화면 값은 재생하는 순간 이벤트에 담긴 값으로 바뀐다. 판정은 하지 않는다.
     /// 받는 순서 = 일어난 순서다 (GameServer 가 쌓은 순서대로 PunGameServer 가 보내고, 같은 보낸이의 RPC 는 순서가 지켜진다).
-    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(TurnStripPresenter 가 매 프레임 계산) · 퇴장(RoomEvents) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start).
+    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(TurnStripPresenter 가 매 프레임 계산) · 퇴장(RoomEvents) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start)
+    /// · 곧 씬이 바뀌는 알림의 경고 예약과 방 나가기 (내 강제 퇴장 · 판 중지 — GameMenuPresenter 를 받은 자리에서 바로 부른다).
     /// 체인: 카드가 나오면(OnCardPlayed) ChainCardsPresenter 가 크게 보여 주고, 반응 시간(OnReactionStarted)이 오면 그 아래에 반응 타이머. 처리 결과가 오면 카드를 치우고 체인이 비면 타이머를 숨긴다 (10-ui.md 5절).
     /// 버림 더미: 버림이 생기는 일(효과 적용 · 무효화 · 강제 버림 · 함정 파괴 · 사망 · 나감)마다 내 카드가 있으면 더미로 보낸 뒤 맨 위 카드 · 장수를 바꾼다 (10-ui.md 2-1 「버림 더미」).
     /// </summary>

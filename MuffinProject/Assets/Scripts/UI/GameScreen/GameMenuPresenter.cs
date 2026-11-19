@@ -42,7 +42,7 @@ namespace Chapchu.UI.GameScreen
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
         }
 
-        // 아래 둘은 GameScreenPresenter(큐)가 알림을 받은 자리에서 바로 부른다 — 곧 씬이 바뀌므로 연출 큐를 기다리지 않는다 (CODE_CONVENTION 9절)
+        // 아래 둘은 GameScreenPresenter(큐)가 알림을 받은 자리에서 바로 부른다 — 곧 씬이 바뀌므로 연출 큐를 기다리지 않는다 (CODE_CONVENTION 9절 「큐를 타지 않는 것」)
 
         // 방장이 사라졌는데 판을 이어받지 못했다 — 새 방장이 곧 전원을 방으로 옮긴다. 도착해서 사유를 알린다 (09-network.md 9.1 · 22-popup-ui.md)
         public void ShowGameHalted()
