@@ -72,7 +72,7 @@ namespace Chapchu.Network
             if (deck == null)
                 Debug.LogError($"[{nameof(PunGameServer)}] {nameof(deck)} 참조가 비어 있습니다.", this);
 
-            _server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+            _server = CreateServer();
 
             if (PhotonNetwork.InRoom)
             {
@@ -116,7 +116,7 @@ namespace Chapchu.Network
             ResetPublicProps();
 
             if (bots.Length > 0)
-                _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
+                _bots = CreateBots(bots);
 
             _started = true;
             Send(_server.StartGame(actors, cards, bots)); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
@@ -334,7 +334,7 @@ namespace Chapchu.Network
             _sentSeq = System.Math.Max(_sentSeq, _backupSeq); // 사본에 함께 온 번호 — 되살리지 못해 중지 알림만 보낼 때도 잇는다
             GameSnapshot backup = _backup;
             _backup = null;
-            var server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time);
+            var server = CreateServer();
             if (backup == null || !server.Restore(backup, deck.CreateCards()))
             {
                 Debug.LogError($"[{nameof(PunGameServer)}] 방장 이주 실패 — {(backup == null ? "받아 둔 사본이 없다" : server.RestoreError)}. 판을 중지하고 방으로 돌아간다");
@@ -347,7 +347,7 @@ namespace Chapchu.Network
 
             int[] bots = BotRoster.Actors;
             _bots = bots.Length > 0
-                ? new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase))
+                ? CreateBots(bots)
                 : null;
 
             Debug.Log($"[{nameof(PunGameServer)}] 방장 이주 — 사본으로 판을 이어받았다 (처리 번호 {_sentSeq})");
@@ -368,6 +368,17 @@ namespace Chapchu.Network
                 SendTo(player.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
             }
             NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.EventSeq] = _sentSeq });
+        }
+
+        // 시작 경로(Awake)와 이주 경로(TakeOver)가 함께 쓴다 — 한쪽만 바뀌어 이주한 판만 다르게 움직이지 않게
+        private static GameServer CreateServer()
+        {
+            return new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+        }
+
+        private BotDriver CreateBots(int[] bots)
+        {
+            return new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
         }
 
         // 판을 이어 갈 수 없다 — 전원에게 알리고 방(대기 화면)으로 돌아간다. 거기서 다시 시작할 수 있다 (09-network.md 9.1, PM 2026-11-19)
