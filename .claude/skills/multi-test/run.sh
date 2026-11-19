@@ -859,7 +859,10 @@ play_turns() {
             case "$out" in
                 OK*)   log "  $(name_of "$project"): $out"; done_rounds=$((done_rounds + 1)); LAST_ACT="$out"; sleep 2; break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return 1 ;;
-                *"게임 끝"*|*"(ResultScene)"*) fail "$(name_of "$project"): 판이 먼저 끝났다 — $out"; dump_tail "$project"; return 1 ;;
+                *"게임 끝"*|*"(ResultScene)"*)
+                    # END_OK=1 — 판이 끝나도 되는 구간 (이주 뒤: 새 방장이 판을 끝까지 판정한 것이다)
+                    if [ "${END_OK:-0}" = 1 ]; then log "  $(name_of "$project"): 판이 끝남 — $out"; GAME_ENDED=1; return 0; fi
+                    fail "$(name_of "$project"): 판이 먼저 끝났다 — $out"; dump_tail "$project"; return 1 ;;
             esac
         done
         sleep 1
@@ -933,8 +936,9 @@ run_migrate() {
     sleep 12   # 멈췄던 체인(반응 시간을 새로) · 후처리가 끝날 때까지
 
     log "▶ 클론이 봇과 판을 잇는다 — 클론 턴 3번"
-    play_turns 3 "$clone" || return
-    sleep 12
+    GAME_ENDED=0
+    END_OK=1 play_turns 3 "$clone" || return
+    [ "$GAME_ENDED" = 1 ] || sleep 12
     log "▶ 판정"
     lines=$(console_lines "$clone" | grep '\[GameDebugInput\]')
     printf '%s' "$lines" | grep -q '게임 중 나감' || fail "$(name_of "$clone") 앞 방장의 나감 줄이 없다"
@@ -942,9 +946,14 @@ run_migrate() {
     log "  $(name_of "$clone"): 봇 이유 줄 ${before} → ${after} (새 방장 기기에서 봇이 판단한다)"
     [ "$after" -gt "$before" ] || fail "이주 뒤 봇이 행동하지 않는다"
     log "  마지막 턴 줄: $(printf '%s\n' "$lines" | grep ' 턴 P' | tail -1 | sed -E 's/.*\[GameDebugInput\] //')"
-    until_ok "$clone" TableUiExpect || return
-    out=$(call "$clone" HistoryHas "방장이 바뀌었어요"); log "  $(name_of "$clone"): $out"
-    case "$out" in OK*) ;; *) fail "기록 서랍에 「방장이 바뀌었어요」 가 없다" ;; esac
+    # 판이 끝났으면 게임 화면이 없다 — 화면 비교 · 기록 서랍은 건너뛴다
+    if [ "$GAME_ENDED" = 1 ] || printf '%s' "$lines" | grep -q '게임 종료'; then
+        log "  $(name_of "$clone"): 이어받은 판이 끝남 — 화면 확인은 건너뜀"
+    else
+        until_ok "$clone" TableUiExpect || return
+        out=$(call "$clone" HistoryHas "방장이 바뀌었어요"); log "  $(name_of "$clone"): $out"
+        case "$out" in OK*) ;; *) fail "기록 서랍에 「방장이 바뀌었어요」 가 없다" ;; esac
+    fi
     check_errors "$clone"
 }
 
@@ -991,7 +1000,17 @@ run_migrate_result() {
 }
 
 # migrate kick — 방장이 3턴 연속 시간 초과로 강제 퇴장 → 클론이 이어받아 봇과 판을 잇는다 (03-turn 4절 · 09 9.1)
+# 봇은 시간 초과 턴 동안 손패를 모아 찹츄로 이길 수 있다 — 강제 퇴장 전에 판이 끝나면 볼 것이 없으므로 다시 한다 (3 = 다시)
 run_migrate_kick() {
+    local try
+    for try in 1 2 3; do
+        migrate_kick_once; [ $? -eq 3 ] || return
+        log "  다시 시도 ($try)"
+    done
+    fail "세 번 모두 강제 퇴장 전에 판이 끝났다"
+}
+
+migrate_kick_once() {
     local project out clone
     EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0"); clone="${EDITORS[1]}"
     log "▶ 준비 — 클라이언트 2개 + 봇 1"
@@ -1006,11 +1025,17 @@ run_migrate_kick() {
     log "▶ 방장(메인)의 턴만 시간 초과로 — 3번째에 강제 퇴장"
     for _ in $(seq 1 40); do
         out=$(call "$MAIN" ExpireTurn mine)
-        case "$out" in OK*) log "  ${out%% — *}" ;; *) break ;; esac
+        case "$out" in OK*) log "  ${out%% — *}" ;; *) log "  $out"; break ;; esac
         sleep 3
         console_lines "$clone" | grep -q '\[GameDebugInput\].*강제 퇴장' && break
     done
-    console_lines "$clone" | grep -q '\[GameDebugInput\].*P1 게임 중 강제 퇴장' || { fail "방장이 강제 퇴장되지 않았다"; return; }
+    if ! console_lines "$clone" | grep -q '\[GameDebugInput\].*P1 게임 중 강제 퇴장'; then
+        if console_lines "$clone" | grep -q '\[GameDebugInput\].*게임 종료'; then
+            log "  강제 퇴장 전에 판이 끝났다 — $(console_lines "$clone" | grep '게임 종료' | tail -1 | sed -E 's/.*게임 종료/게임 종료/' | cut -c1-80)"
+            return 3
+        fi
+        fail "방장이 강제 퇴장되지 않았다"; dump_tail "$clone"; return
+    fi
     sleep 6
     for _ in $(seq 1 10); do
         out=$(call "$MAIN" WarningPopupText)
@@ -1020,10 +1045,16 @@ run_migrate_kick() {
     log "  메인: $out"
     [ "$out" = "OK 방에서 나왔어요 / 3턴 동안 행동하지 않아 게임에서 나왔어요." ] || fail "강제 퇴장된 방장의 경고 팝업이 다르다: $out"
     out=$(call "$clone" MigrateProbe state); log "  $(name_of "$clone"): $out"
+    console_lines "$clone" | grep -q '방장 이주 — 사본으로 판을 이어받았다' || { fail "$(name_of "$clone") 이주 로그가 없다"; dump_tail "$clone"; return; }
+    # 이어받은 뒤 판이 벌써 끝났으면(봇의 찹츄 등 — 새 방장만 찍는 종료 줄) 이어받은 것이다
+    if console_lines "$clone" | grep -q '\[PunGameServer\] 게임 종료'; then
+        log "  $(name_of "$clone"): 이어받은 판이 끝남 — $(console_lines "$clone" | grep '\[GameDebugInput\].*게임 종료' | tail -1 | sed -E 's/.*게임 종료/게임 종료/' | cut -c1-80)"
+        check_errors "$clone"
+        return
+    fi
     case "$out" in *"방장 True"*"판 보유 True"*) ;; *) fail "클론이 판을 이어받지 않았다: $out"; dump_tail "$clone"; return ;; esac
-    console_lines "$clone" | grep -q '방장 이주 — 사본으로 판을 이어받았다' || fail "$(name_of "$clone") 이주 로그가 없다"
     log "▶ 클론이 봇과 판을 잇는다 — 클론 턴 2번"
-    play_turns 2 "$clone" || return
+    END_OK=1 play_turns 2 "$clone" || return
     sleep 8
     log "  마지막 턴 줄: $(console_lines "$clone" | grep '\[GameDebugInput\]' | grep ' 턴 P' | tail -1 | sed -E 's/.*\[GameDebugInput\] //')"
     # 그 사이 판이 끝났으면(봇의 찹츄 등) 화면 비교는 건너뛴다 — 이주 뒤 판이 끝까지 간 것이다
