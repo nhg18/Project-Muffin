@@ -152,10 +152,10 @@ namespace Chapchu.UI.GameScreen
         /// <summary>찹츄 선언 — 왕관 아이콘 한 줄. 해제는 적지 않는다.</summary>
         public void ShowChapchuDeclared(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = ChapchuText, Icon = HistoryIcon.Crown });
 
-        /// <summary>턴이 스킵됐다 (120 얼음!).</summary>
+        /// <summary>턴이 스킵됐다 (1020 얼음!).</summary>
         public void ShowTurnSkipped(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = SkippedText, Icon = HistoryIcon.Card });
 
-        /// <summary>행동 카드 금지 (107 짖기) — 걸렸을 때 · 그 턴이 시작될 때. 풀리는 것은 적지 않는다.</summary>
+        /// <summary>행동 카드 금지 (1007 짖기) — 걸렸을 때 · 그 턴이 시작될 때. 풀리는 것은 적지 않는다.</summary>
         public void ShowActionBlock(int actorNumber, ActionBlock state)
         {
             if (state == ActionBlock.None) return;
@@ -163,7 +163,7 @@ namespace Chapchu.UI.GameScreen
             Add(new HistoryEntry { Actor = actorNumber, Text = state == ActionBlock.ThisTurn ? BlockThisText : BlockNextText, Icon = HistoryIcon.Card });
         }
 
-        /// <summary>「기다려」 를 건 사람들이 바뀌었다 (123) — 새로 건 사람은 시작, 빠진 사람은 끝 줄.</summary>
+        /// <summary>「기다려」 를 건 사람들이 바뀌었다 (1023) — 새로 건 사람은 시작, 빠진 사람은 끝 줄.</summary>
         public void ShowWaitChanged(int[] casters)
         {
             var now = new HashSet<int>(casters ?? System.Array.Empty<int>());
@@ -177,7 +177,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 대소동으로 새 판 (112) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
+        /// 대소동으로 새 판 (1012) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
         /// </summary>
         public void ShowGameRestarted(int user, int count, int[] order)
         {
@@ -193,7 +193,7 @@ namespace Chapchu.UI.GameScreen
             _turnStarted = false;
         }
 
-        /// <summary>피폭 (112) — 턴이 끝나 모두 k^n 피해를 입었으면 한 줄. 새 판(k 0)은 적지 않는다.</summary>
+        /// <summary>피폭 (1012) — 턴이 끝나 모두 k^n 피해를 입었으면 한 줄. 새 판(k 0)은 적지 않는다.</summary>
         public void ShowFallout(int n, int turns)
         {
             if (turns <= 0) return;
@@ -201,7 +201,7 @@ namespace Chapchu.UI.GameScreen
             Add(new HistoryEntry { Actor = _turnActor, Text = string.Format(FalloutFormat, GameServer.FalloutDamage(turns, n), turns), Icon = HistoryIcon.Card });
         }
 
-        /// <summary>개판 오분전 (121) — 시작 · 다시 처음부터 · 남은 바퀴. 대소동으로 지워짐(caster -1)은 적지 않는다. 문구는 프로토타입 v2.</summary>
+        /// <summary>개판 오분전 (1021) — 시작 · 다시 처음부터 · 남은 바퀴. 대소동으로 지워짐(caster -1)은 적지 않는다. 문구는 프로토타입 v2.</summary>
         public void ShowGaepan(int caster, int left, bool again, bool started)
         {
             if (caster < 0)
@@ -214,7 +214,7 @@ namespace Chapchu.UI.GameScreen
                 Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanLeftFormat, left), Icon = HistoryIcon.Card });
         }
 
-        /// <summary>개판 오분전 판정 (121) — 기준 · 꼴찌 · 동점. HP 0 은 뒤따르는 HP 변화가 적는다.</summary>
+        /// <summary>개판 오분전 판정 (1021) — 기준 · 꼴찌 · 동점. HP 0 은 뒤따르는 HP 변화가 적는다.</summary>
         public void ShowGaepanJudged(int loser, bool byHp, int value, int[] tied)
         {
             string tiedText = tied.Length > 1 ? string.Format(GaepanTiedFormat, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf))) : "";
@@ -222,14 +222,14 @@ namespace Chapchu.UI.GameScreen
             Add(new HistoryEntry { Actor = loser, Text = string.Format(GaepanJudgeFormat, byHp ? GaepanByHp : GaepanByCard, PlayerLook.NameOf(loser), valueText) + tiedText, Icon = HistoryIcon.Card });
         }
 
-        /// <summary>119 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
+        /// <summary>1019 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
         public void ShowChoiceMade(int actor, int option, bool timedOut)
         {
             string text = option < 0 ? ChoiceLeftText : option == 0 ? ChoiceDiscardText : ChoiceDamageText;
             Add(new HistoryEntry { Actor = actor, Text = timedOut ? text + ChoiceTimeoutSuffix : text, Icon = HistoryIcon.Card });
         }
 
-        /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123).</summary>
+        /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023).</summary>
         public void ShowChapchuWinHeld(int actorNumber) => Add(new HistoryEntry { Actor = actorNumber, Text = ChapchuHeldText, Icon = HistoryIcon.Crown });
 
         private void Add(HistoryEntry entry)

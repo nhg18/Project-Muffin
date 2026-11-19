@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace Chapchu.EditorTools
 {
-    // GameScreenBuilder.Gaepan.cs — 121 개판 오분전 연출 (프로토타입 v2 .gp-hud · .gp-title · .gp-five · GP_FX.judge, 960 시안 × 2)
+    // GameScreenBuilder.Gaepan.cs — 1021 개판 오분전 연출 (프로토타입 v2 .gp-hud · .gp-title · .gp-five · GP_FX.judge, 960 시안 × 2)
     public static partial class GameScreenBuilder
     {
         // 스티커 글꼴 — 게임 글꼴(Galmuri11 Bold)에서 쓰는 글자만 구운 정적 에셋. 게임 글꼴 에셋은 여백이 5 라 시안의 굵은 흰 테 · 잉크 선이 들어가지 않는다.

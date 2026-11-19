@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 화면 전체를 한 색으로 덮었다가 서서히 걷는다 (10-ui.md 5-1 「화면 덮기」 — 113 기억 삭제의 하얀 화면, 시안 whiteout).
+    /// 화면 전체를 한 색으로 덮었다가 서서히 걷는다 (10-ui.md 5-1 「화면 덮기」 — 1013 기억 삭제의 하얀 화면, 시안 whiteout).
     /// 입력을 막지 않는다. 기다리지 않는 연출 — 덮는 동안 다음 일(새 손패)이 이어서 보인다. 기본은 비활성.
     /// </summary>
     [RequireComponent(typeof(Image))]

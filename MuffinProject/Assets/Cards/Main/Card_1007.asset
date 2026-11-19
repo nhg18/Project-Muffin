@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
-  m_Name: Card_107
+  m_Name: Card_1007
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
-  id: 107
+  id: 1007
   cardName: "\uC9D6\uAE30"
   cardImage: {fileID: 0}
   type: 0

@@ -33,8 +33,8 @@ namespace Chapchu.EditorTools
         private const string CommonFxFolder = FxPrefabFolder + "/Common";
         // 카드별 연출 프리팹은 재생할 때만 불러오므로 Resources 아래 (CardFxLoader)
         private const string CardFxResourceFolder = "Assets/Resources/CardFx";
-        // 이름 = Card_{카드 ID} (CardFxLoader.NameOf) — 117 지옥참마도
-        private const int HellBladeCardId = 117;
+        // 이름 = Card_{카드 ID} (CardFxLoader.NameOf) — 1017 지옥참마도
+        private const int HellBladeCardId = 1017;
         private static readonly string HellBladePrefabPath = CardFxResourceFolder + "/" + CardFxLoader.NameOf(HellBladeCardId) + ".prefab";
         private const string HellBladeName = "지옥참마도";
         private const string SpriteFolder = "Assets/Sprites/CardFx";

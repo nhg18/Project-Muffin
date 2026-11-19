@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Chapchu.Game
 {
-    // GameServer.Status.cs — 다음 턴까지 이어지는 상태: 행동 카드 금지(107 짖기) · 기다려(123 기다려!) (11-card-list 107 · 123, 03-turn.md 7절, 07 4.3)
+    // GameServer.Status.cs — 다음 턴까지 이어지는 상태: 행동 카드 금지(1007 짖기) · 기다려(1023 기다려!) (11-card-list 1007 · 1023, 03-turn.md 7절, 07 4.3)
     // 둘 다 「다음 턴」 은 실제로 오는 턴이다 — 스킵된 턴은 그 사람의 턴으로 세지 않는다 (03-turn.md 7절, 2026-11-13).
     public partial class GameServer
     {
@@ -12,7 +12,7 @@ namespace Chapchu.Game
 
         internal bool IsWaiting => _waitCasters.Count > 0;
 
-        /// <summary>actor 의 다음 실제 턴에 행동 카드를 금지한다 (107). 겹쳐도 1회.</summary>
+        /// <summary>actor 의 다음 실제 턴에 행동 카드를 금지한다 (1007). 겹쳐도 1회.</summary>
         internal void MarkActionBlock(int actor)
         {
             PlayerState player = _players[actor];
@@ -23,7 +23,7 @@ namespace Chapchu.Game
             _events.Add(new ActionBlockChanged(actor, ActionBlockOf(player)));
         }
 
-        /// <summary>user 의 다음 실제 턴이 시작되기 전까지 「기다려」 (123). 이미 걸어 둔 사람이 다시 쓰면 그대로.</summary>
+        /// <summary>user 의 다음 실제 턴이 시작되기 전까지 「기다려」 (1023). 이미 걸어 둔 사람이 다시 쓰면 그대로.</summary>
         internal void StartWait(int user)
         {
             if (!IsInGame(user) || _waitCasters.Contains(user))
@@ -55,7 +55,7 @@ namespace Chapchu.Game
             _events.Add(new ActionBlockChanged(actor, ActionBlockOf(player)));
         }
 
-        // actor 가 건 「기다려」 를 끝낸다 — 그 사람의 다음 실제 턴 시작 전 · 최종 사망 · 나감 (11-card-list 123 「즉시 종료」).
+        // actor 가 건 「기다려」 를 끝낸다 — 그 사람의 다음 실제 턴 시작 전 · 최종 사망 · 나감 (11-card-list 1023 「즉시 종료」).
         private void EndWaitOf(int actor)
         {
             if (_waitCasters.Remove(actor))

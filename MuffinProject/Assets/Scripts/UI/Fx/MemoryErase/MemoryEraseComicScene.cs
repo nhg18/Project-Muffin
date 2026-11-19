@@ -6,14 +6,14 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.MemoryErase
 {
     /// <summary>
-    /// 기억 삭제(카드 113) 만화 컷인 장면 — 불빛 한 번에 다들 손패를 버리고 새로 다섯 장 (시안 CI2.SC["기억 삭제"]).
+    /// 기억 삭제(카드 1013) 만화 컷인 장면 — 불빛 한 번에 다들 손패를 버리고 새로 다섯 장 (시안 CI2.SC["기억 삭제"]).
     /// 검은 양복 강아지(카드 그림 스티커)가 기억 지우개를 들고 튀어 들어온다 → 0.36 초부터 렌즈가 반짝 → 0.5 초 「딸깍」 →
     /// 0.56 초 그림 속 불빛이 켜지며 기계 둘레가 크게 빛난다(빛 · 빛줄기 · 고리 · 화면 번쩍) → 나머지 사람들(얼굴 원 + 손패 다섯 장)이 어두워지며 어지럽고,
     /// 손패가 빛가루로 흩어진 뒤 새 다섯 장이 위에서 떨어진다.
     /// 4 단계 장식은 없다 (시안 FXA 기억 삭제 s4 = 손패 옮기기뿐 — 게임 화면 몫).
     /// 연출 길이 2.56초 (3 단계) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
     /// 얼굴 그림은 모두 <see cref="CardFxContext.Character"/> 의 얼굴 칸 — 자리마다 얼굴 그림이 생기면 그것으로 바꾼다.
-    /// 기준 문서: docs/systems/11-card-list.md 113 기억 삭제 · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
+    /// 기준 문서: docs/systems/11-card-list.md 1013 기억 삭제 · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
     /// </summary>
     public class MemoryEraseComicScene : ComicScene
     {

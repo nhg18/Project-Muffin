@@ -3,7 +3,7 @@ using Chapchu.Game.Effects;
 
 namespace Chapchu.Game
 {
-    // GameServer.Choice.cs — 효과를 받는 사람이 고르는 효과 (119 목표 조준, 11-card-list 119).
+    // GameServer.Choice.cs — 효과를 받는 사람이 고르는 효과 (1019 목표 조준, 11-card-list 1019).
     // 고르는 동안 체인 처리 · 게임 · 턴 시간이 멈춘다. 시간 안에 안 고르면 방장이 무작위. 고르는 사람이 나가면 그 효과는 불발 (사용자 2026-11-13).
     public partial class GameServer
     {
@@ -28,7 +28,7 @@ namespace Chapchu.Game
         }
 
         /// <summary>
-        /// 고르기 요청 (119 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람만, 고르는 중에만.
+        /// 고르기 요청 (1019 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람만, 고르는 중에만.
         /// </summary>
         public IReadOnlyList<GameEvent> Choose(int requester, int option)
         {

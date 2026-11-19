@@ -30,13 +30,13 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HistoryPresenter history;
         [Tooltip("판 효과 줄 — 턴 순서 띠 아래 (기다려! · 피폭).")]
         [SerializeField] private BoardEffectsPresenter boardEffects;
-        [Tooltip("121 개판 오분전 — 시작 제목 · 자명종 · 판정 팻말.")]
+        [Tooltip("1021 개판 오분전 — 시작 제목 · 자명종 · 판정 팻말.")]
         [SerializeField] private GaepanPresenter gaepan;
         [Tooltip("체인에 올라간 카드 — 낸 카드를 모든 화면에 크게 보여 주고 처리되면 버림 더미로.")]
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
         [SerializeField] private MyTrapsPresenter myTraps;
-        [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 113).")]
+        [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 1013).")]
         [SerializeField] private ScreenFlashView screenFlash;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
         [SerializeField] private DeckData cardDeck;
@@ -429,7 +429,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 효과 적용 · 무효화 — 카드는 그 자리에 남고, 체인이 끝나면 쓴 순서대로 버림 더미로 간다 (HandleChainDiscarded, 04-card.md 9.1). 4 · 5 단계 · 도장 연출은 여기에 넣는다 (10-ui.md 5-1).
-        // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (113).
+        // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (1013).
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
             => Enqueue(() =>
             {
@@ -461,7 +461,7 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
-        // 버림 더미 맨 위 카드를 손패로 (109 아 맞다!) — 내 것은 더미 자리에서 꺼내 손패에 붙이고, 남의 것은 장수만. 더미는 그 뒤의 맨 위 · 장수로.
+        // 버림 더미 맨 위 카드를 손패로 (1009 아 맞다!) — 내 것은 더미 자리에서 꺼내 손패에 붙이고, 남의 것은 장수만. 더미는 그 뒤의 맨 위 · 장수로.
         private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
         {
             bool isMe = IsMe(actorNumber);
@@ -479,7 +479,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 턴 진행 방향 (145 뒤로 돌아) — 턴 띠 화살표.
+        // 턴 진행 방향 (1045 뒤로 돌아) — 턴 띠 화살표.
         private void HandleTurnDirectionChanged(bool reversed, int extraTurn)
         {
             Enqueue(() =>
@@ -489,7 +489,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 턴 스킵 (120 얼음!) · 행동 카드 금지 (107 짖기) · 기다려 (123) — 상태 표시 시안이 없어 기록에 한 줄만 (11-card-list 4절 #10, 2026-11-13)
+        // 턴 스킵 (1020 얼음!) · 행동 카드 금지 (1007 짖기) · 기다려 (1023) — 상태 표시 시안이 없어 기록에 한 줄만 (11-card-list 4절 #10, 2026-11-13)
         private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); return null; });
 
         private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });
@@ -498,7 +498,7 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
 
-        // 대소동 (112) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
+        // 대소동 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
         // 새 HP · 손패 · 첫 턴은 뒤따르는 알림이 시작 때처럼 채운다. 기록은 이어진다. 컷인 · 테이블 빛 연출은 넣지 않는다 (사용자 2026-11-13).
         private void HandleGameRestarted(int user, int count, int[] order) => Enqueue(() => GameRestartedRoutine(user, count, order));
 
@@ -533,7 +533,7 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
 
-        // 대상이 고르는 중 (119) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
+        // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
         private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
         {
             if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
@@ -544,7 +544,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleChoiceMade(int actor, int option, bool timedOut) =>
             Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut); return null; });
 
-        // 개판 오분전 (121, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
+        // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
         private void HandleGaepanChanged(int caster, int left, bool again) =>
             Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); return gaepan.ChangedRoutine(left); });
 

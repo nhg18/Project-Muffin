@@ -594,11 +594,11 @@ run_chapchu() {
     done
 }
 
-# 112 대소동 (드문 카드): 방장이 턴 주인에게 112 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
+# 1012 대소동 (드문 카드): 방장이 턴 주인에게 1012 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
 run_restart() {
     local clients="${1:-2}" project out lines first=""
     enter_game "$clients" || return
-    until_ok "$MAIN" ForceCard 112 || return
+    until_ok "$MAIN" ForceCard 1012 || return
     log "▶ 처리 · 새 판 대기"
     sleep 20
     log "▶ 새 판 — 가운데에 대소동 카드가 남지 않았나 (손패 · 체인 카드가 버림 더미로 날아간 뒤)"
@@ -637,7 +637,7 @@ run_restart() {
     done
 }
 
-# 121 개판 오분전: 방장이 턴 주인에게 121 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
+# 1021 개판 오분전: 방장이 턴 주인에게 1021 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
 run_gaepan() {
     local clients="${1:-2}" project out lines first="" ended=""
     enter_game "$clients" || return
@@ -647,7 +647,7 @@ run_gaepan() {
             call "$project" ArmGaepanShots "$SHOT_DIR/gaepan_$(name_of "$project")" >/dev/null
         done
     fi
-    until_ok "$MAIN" ForceCard 121 || return
+    until_ok "$MAIN" ForceCard 1021 || return
     log "▶ 처리 대기 (시작 제목 → 자명종)"
     sleep 16
     for project in "${EDITORS[@]}"; do
@@ -684,7 +684,7 @@ run_gaepan() {
     done
 }
 
-# 119 목표 조준: 방장이 턴 주인에게 119 를 쥐여 상대에게 쓰게 한다 → 대상 화면에 고르기 판 · 다른 화면에 「고르는 중」 → 대상이 판의 「피해 받기」 를 누른다(화면 경로)
+# 1019 목표 조준: 방장이 턴 주인에게 1019 를 쥐여 상대에게 쓰게 한다 → 대상 화면에 고르기 판 · 다른 화면에 「고르는 중」 → 대상이 판의 「피해 받기」 를 누른다(화면 경로)
 # → 모든 화면에 같은 고르기 줄 · 표가 방장 값과 같은지.
 run_aim() {
     local clients="${1:-2}" project out lines shot first="" opened="" seen=""
@@ -695,7 +695,7 @@ run_aim() {
         [ -n "${SHOT_DIR:-}" ] && { mkdir -p "$SHOT_DIR"; shot="$SHOT_DIR/aim_choice_$(name_of "$project").png"; }
         call "$project" ArmChoice 1 "$shot" >/dev/null
     done
-    until_ok "$MAIN" ForceCard 119 || return
+    until_ok "$MAIN" ForceCard 1019 || return
     log "▶ 고르기 판 (반응 시간 · 체인 처리 뒤 시작)"
     for project in "${EDITORS[@]}"; do
         for _ in $(seq 1 30); do

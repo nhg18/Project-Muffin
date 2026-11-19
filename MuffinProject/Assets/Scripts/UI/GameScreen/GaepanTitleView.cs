@@ -6,9 +6,9 @@ using UnityEngine;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 시작 제목 (프로토타입 v2 개판 컷인의 .gp-title · .gp-five — 121). 큰 스티커 글자 두 줄이 하나씩 튀어나오고 「N 바퀴 동안」 발바닥 도장이 찍힌다.
+    /// 개판 오분전 시작 제목 (프로토타입 v2 개판 컷인의 .gp-title · .gp-five — 1021). 큰 스티커 글자 두 줄이 하나씩 튀어나오고 「N 바퀴 동안」 발바닥 도장이 찍힌다.
     /// 컷인 장면(눈밭을 달리는 강아지 떼)은 넣지 않는다 — 제목 · 도장만 (사용자 2026-11-13). 시간표는 시안에서 장면이 먼저 나오던 1.35초를 당겼다.
-    /// 쓴 카드의 후처리 시간(Card_121 resolveSeconds 3초) 안에 끝난다.
+    /// 쓴 카드의 후처리 시간(Card_1021 resolveSeconds 3초) 안에 끝난다.
     /// </summary>
     public class GaepanTitleView : MonoBehaviour
     {

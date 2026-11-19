@@ -9,8 +9,8 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 판 효과 줄에 값을 넣는다 (프로토타입 v2 「판 전체에 걸린 효과」, 11-card-list 112 · 123). 순서는 시안대로 — 기다려! → … → 피폭.
-    /// 개판 오분전(121)은 이 줄이 아니라 왼쪽 위 자명종이다 (GaepanPresenter, 사용자 2026-11-13).
+    /// 판 효과 줄에 값을 넣는다 (프로토타입 v2 「판 전체에 걸린 효과」, 11-card-list 1012 · 1023). 순서는 시안대로 — 기다려! → … → 피폭.
+    /// 개판 오분전(1021)은 이 줄이 아니라 왼쪽 위 자명종이다 (GaepanPresenter, 사용자 2026-11-13).
     /// 값은 GameScreenPresenter 가 연출 큐 순서로 넘긴다. 늦게 열렸을 때는 Start 에서 방 속성 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
     [RequireComponent(typeof(BoardEffectsView))]
@@ -48,7 +48,7 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
-        /// <summary>「기다려」 를 건 사람들 (OnWaitChanged, 123).</summary>
+        /// <summary>「기다려」 를 건 사람들 (OnWaitChanged, 1023).</summary>
         public void ShowWait(int[] casters)
         {
             _waitCasters = Known(casters);
@@ -65,7 +65,7 @@ namespace Chapchu.UI.GameScreen
             return casters.Where(actors.Contains).Distinct().ToArray();
         }
 
-        /// <summary>피폭 (OnFalloutChanged, 112) — n 이 0 이면 없음.</summary>
+        /// <summary>피폭 (OnFalloutChanged, 1012) — n 이 0 이면 없음.</summary>
         public void ShowFallout(int n, int turns)
         {
             _falloutN = n;

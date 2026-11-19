@@ -343,7 +343,7 @@ namespace Chapchu.Game.Bots
             moves.Add(new Move { Text = $"뽑기 {want}장{NotesOf(view)}", Score = drawScore, Request = () => _server.Draw(bot) });
 
             if (me.ActionBlocked)
-                return moves; // 107 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준)
+                return moves; // 1007 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준)
 
             // 카드 — 같은 종류가 여러 장이면 손패 앞쪽 한 장만 본다
             var seen = new HashSet<int>();
@@ -355,7 +355,7 @@ namespace Chapchu.Game.Bots
                 int[][] options = ReceiverOptions(view, card).ToArray();
                 if (card.Target == TargetType.MostHand && options.Length > 1)
                 {
-                    // 118 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 118). 동률인 사람마다 점수를 내 평균한 수 하나 (18-bot.md 7-2)
+                    // 1018 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 1018). 동률인 사람마다 점수를 내 평균한 수 하나 (18-bot.md 7-2)
                     var notes = new List<string>();
                     double sum = 0;
                     bool usable = true;
@@ -432,7 +432,7 @@ namespace Chapchu.Game.Bots
             return true;
         }
 
-        // 그 카드가 지금 내 손패에 있다면 낼 수 있는 가장 높은 효과 점수 — 버림 더미 맨 위를 가져올 값어치 (109)
+        // 그 카드가 지금 내 손패에 있다면 낼 수 있는 가장 높은 효과 점수 — 버림 더미 맨 위를 가져올 값어치 (1009)
         private double WorthOf(BotView view, Card card)
         {
             double best = 0;
@@ -446,7 +446,7 @@ namespace Chapchu.Game.Bots
             return best;
         }
 
-        // 카드의 대상이 될 사람들 — 고르는 카드는 후보마다 하나씩, 자동 대상은 방장이 정할 그대로 하나(118 동률이면 동률인 사람마다). 낼 수 없으면 비어 있다.
+        // 카드의 대상이 될 사람들 — 고르는 카드는 후보마다 하나씩, 자동 대상은 방장이 정할 그대로 하나(1018 동률이면 동률인 사람마다). 낼 수 없으면 비어 있다.
         // 대상 후보 조건(11-card-list 1-2)은 방장 검증과 같은 기준으로 먼저 거른다. TwoOthers 는 쓰지 않는다 (7-3).
         private IEnumerable<int[]> ReceiverOptions(BotView view, Card card)
         {
@@ -578,7 +578,7 @@ namespace Chapchu.Game.Bots
         {
             if (_server.IsChoosing && _server.ChoiceActor == bot)
             {
-                // 119 목표 조준의 대상 — 반응처럼 난이도의 반응 시간 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
+                // 1019 목표 조준의 대상 — 반응처럼 난이도의 반응 시간 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
                 int option = _server.BotChoiceOption(bot);
                 reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"7-4 고르기 → {(option == 0 ? "손패 전부 버리기" : "피해 받기")}", () => _server.Choose(bot, option));
                 return true;
