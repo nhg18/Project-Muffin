@@ -55,6 +55,8 @@ namespace Chapchu.Game
             {
                 if (now < _deathDeadline)
                     return;
+                if (!_mainActionUsed)
+                    _resumeAt = System.Math.Max(_resumeAt, _deathDeadline); // 사망 대기가 프레임 중간에 끝났다 — 턴은 그 마감까지 멈춘 것으로 (UpdateTurnClock, 03-turn.md 4절)
                 FinalizeDeaths();
                 CheckElimination();
                 if (_gameOver)
@@ -279,7 +281,7 @@ namespace Chapchu.Game
                 else if (_turnPaused && IsInGame(CurrentTurnActor))
                 {
                     // 턴 주인이 빠졌으면 멈춘 채로 둔다 — 넘김은 Tick 의 Advance 가 한다 (요청 처리 중 정산은 턴을 바꾸지 않는다)
-                    // 끼어든 체인의 후처리 연출이 이번 프레임 안에서 끝났으면 그 시각까지는 멈춘 것으로
+                    // 끼어든 체인의 후처리 연출 · 사망 대기가 이번 프레임 안에서 끝났으면 그 시각까지는 멈춘 것으로
                     _turnDeadline += System.Math.Max(0, System.Math.Min(now, _resumeAt) - _lastTickAt);
                     _turnPaused = false;
                     _events.Add(new TurnResumed(CurrentTurnActor, _turnDeadline));
