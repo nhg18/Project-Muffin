@@ -14,6 +14,7 @@ namespace Chapchu.UI.GameScreen
         private const string ReactionLabel = "반응";
         private const string ResolvingLabel = "처리하는 중";
         private const string SoonText = "곧";
+        private const string SkipLabel = "스킵";
 
         [Tooltip("켜고 끄는 몸통 — 루트는 켜 둔다.")]
         [SerializeField] private GameObject body;
@@ -26,6 +27,11 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image barFill;
         [SerializeField] private TMP_Text secondsText;
         [SerializeField] private GameObject unitText;
+        [Tooltip("알약 전체를 누르는 버튼 — 스킵일 때만 켠다.")]
+        [SerializeField] private Button skipButton;
+
+        /// <summary>스킵을 눌렀다.</summary>
+        public event System.Action SkipClicked;
 
         [Header("손패를 올렸을 때 (10-ui.md 2-1 「카드 연출 자리」)")]
         [Tooltip("무엇에 반응하는지 — 체인 맨 위 카드 이름. 손패를 올렸을 때만 보인다 (카드가 작아져 이름이 안 읽히므로).")]
@@ -56,7 +62,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null || cardNameText == null)
+            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null || cardNameText == null || skipButton == null)
             {
                 Debug.LogError($"[{nameof(ReactionTimerView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
@@ -135,12 +141,42 @@ namespace Chapchu.UI.GameScreen
             labelText.color = ink;
         }
 
+        /// <summary>반응 시간에 내가 낼 수 있는 카운터가 있다 — 「스킵」 버튼. 남은 시간은 보이지 않는다 (10-ui.md 5절).</summary>
+        public void ShowSkip()
+        {
+            body.SetActive(true);
+            clockIcon.SetActive(false);
+            pauseIcon.SetActive(false);
+            bar.SetActive(false);
+            secondsText.gameObject.SetActive(false);
+            unitText.SetActive(false);
+            border.color = ink;
+            labelText.text = SkipLabel;
+            labelText.color = ink;
+            skipButton.enabled = true;
+        }
+
         public void Hide() => body.SetActive(false);
+
+        private void OnEnable()
+        {
+            if (skipButton != null)
+                skipButton.onClick.AddListener(HandleSkipClicked);
+        }
+
+        private void OnDisable()
+        {
+            if (skipButton != null)
+                skipButton.onClick.RemoveListener(HandleSkipClicked);
+        }
+
+        private void HandleSkipClicked() => SkipClicked?.Invoke();
 
         // counting = 시계 · 막대 · 초, 아니면 멈춤 아이콘 + 글만
         private void ShowParts(bool counting)
         {
             body.SetActive(true);
+            skipButton.enabled = false; // 고르는 중 알약은 누르는 것이 아니다
             clockIcon.SetActive(counting);
             pauseIcon.SetActive(!counting);
             bar.SetActive(counting);

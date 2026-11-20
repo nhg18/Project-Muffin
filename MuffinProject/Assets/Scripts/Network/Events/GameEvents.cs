@@ -17,13 +17,13 @@ namespace Chapchu.Network.Events
         public static event Action<int, double> OnTurnStarted;               // actorNumber, deadline(PhotonNetwork.Time 기준 초)
         public static event Action<int, double> OnTurnResumed;               // actorNumber, deadline — 메인 행동 전에 멈췄던 턴이 이어짐 (턴 시작 아님)
         public static event Action<int, int, int, int[], int, int> OnCardPlayed; // actorNumber, cardInstanceId, cardId, targets, handCount, discardCount — 체인에 올라감 (연출 1 ~ 3 단계). 효과는 OnCardResolved 뒤
-        public static event Action<double, double> OnReactionStarted;        // opensAt, deadline (PhotonNetwork.Time 기준 초) — opensAt 전은 연출 중, 카운터 거절
+        public static event Action<double> OnReactionStarted;                // opensAt — 마감은 오지 않는다 (PhotonNetwork.Time 기준 초) — opensAt 전은 연출 중, 카운터 거절
         public static event Action<int, int, int, int[], int> OnCardResolved; // actorNumber, cardInstanceId, cardId, targets, discardCount — 효과 적용 (연출 4 단계), 효과 결과가 뒤따른다
         public static event Action<int, int, int, int> OnCardNegated;        // actorNumber, cardInstanceId, cardId, discardCount — 무효화, 4 단계 없이 버림 더미로
         public static event Action<int, int> OnEmptyDeckDamaged;             // actorNumber, amount — 빈 덱 피해, 체력은 뒤따르는 OnHpChanged
         public static event Action<int, double, double> OnDeathPending;      // actorNumber, startsAt, deadline — 사망 대기, 게임이 멈춘다
         public static event Action<int, int[], int> OnPlayerDied;            // actorNumber, cardIds, discardCount — 최종 사망, 손패 0. cardIds = 버림 더미에 들어간 순서(손패 → 함정)
-        public static event Action<int, int[], int> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
+        public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
         public static event Action<int, int, int> OnTrapSet;                 // actorNumber, handCount, trapCount — 함정 설치 (종류는 OnMyTrapSet)
         public static event Action<int, int, int, int[], int> OnTrapActivated; // actorNumber, cardInstanceId, cardId, targets, trapCount — 공개 · 체인에 올라감
@@ -49,6 +49,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
         public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
         public static event Action<int, GameEndReason> OnGameEnded;          // winner(무승부 -1), reason — 요약은 NetworkManager.LastResult, 곧 방장이 전원을 결과 씬으로 옮긴다
+        public static event Action OnGameHalted;                             // 방장 이주에 실패해 판을 중지했다 — 곧 새 방장이 전원을 방으로 옮긴다 (09-network.md 9.1)
 
         // ── 나에게만 ──
         public static event Action<int, int> OnMyCardDrawn;                  // cardInstanceId, cardId
@@ -65,15 +66,16 @@ namespace Chapchu.Network.Events
         public static void RaiseDeckRefilled(int deckCount) => OnDeckRefilled?.Invoke(deckCount);
         public static void RaiseTurnStarted(int actorNumber, double deadline) => OnTurnStarted?.Invoke(actorNumber, deadline);
         public static void RaiseCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount) => OnCardPlayed?.Invoke(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
-        public static void RaiseReactionStarted(double opensAt, double deadline) => OnReactionStarted?.Invoke(opensAt, deadline);
+        public static void RaiseReactionStarted(double opensAt) => OnReactionStarted?.Invoke(opensAt);
         public static void RaiseCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount) => OnCardResolved?.Invoke(actorNumber, cardInstanceId, cardId, targets, discardCount);
         public static void RaiseCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount) => OnCardNegated?.Invoke(actorNumber, cardInstanceId, cardId, discardCount);
         public static void RaiseEmptyDeckDamaged(int actorNumber, int amount) => OnEmptyDeckDamaged?.Invoke(actorNumber, amount);
         public static void RaiseDeathPending(int actorNumber, double startsAt, double deadline) => OnDeathPending?.Invoke(actorNumber, startsAt, deadline);
         public static void RaisePlayerDied(int actorNumber, int[] cardIds, int discardCount) => OnPlayerDied?.Invoke(actorNumber, cardIds, discardCount);
-        public static void RaisePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount) => OnPlayerLeftGame?.Invoke(actorNumber, cardIds, discardCount);
+        public static void RaisePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced) => OnPlayerLeftGame?.Invoke(actorNumber, cardIds, discardCount, forced);
         public static void RaiseChapchuChanged(int actorNumber, bool isChapchu) => OnChapchuChanged?.Invoke(actorNumber, isChapchu);
         public static void RaiseGameEnded(int winner, GameEndReason reason) => OnGameEnded?.Invoke(winner, reason);
+        public static void RaiseGameHalted() => OnGameHalted?.Invoke();
         public static void RaiseTurnResumed(int actorNumber, double deadline) => OnTurnResumed?.Invoke(actorNumber, deadline);
         public static void RaiseTrapSet(int actorNumber, int handCount, int trapCount) => OnTrapSet?.Invoke(actorNumber, handCount, trapCount);
         public static void RaiseTrapActivated(int actorNumber, int cardInstanceId, int cardId, int[] targets, int trapCount) => OnTrapActivated?.Invoke(actorNumber, cardInstanceId, cardId, targets, trapCount);

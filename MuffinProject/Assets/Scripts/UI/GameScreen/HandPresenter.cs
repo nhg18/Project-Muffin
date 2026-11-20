@@ -78,7 +78,8 @@ namespace Chapchu.UI.GameScreen
         // 반응 시간 — 방장이 보낸 시각(서버 시각)과 낼 수 있는 내 카운터. 시각 안에서만 빛을 켠다.
         private readonly HashSet<int> _usableCounters = new HashSet<int>();
         private double _reactionOpensAt;
-        private double _reactionDeadline;
+        private bool _reactionPending; // 반응 시간이 정해졌고 아직 끝나지 않았다 (연출 중 포함) — 마감 시각은 오지 않는다
+        private bool _holdSent;        // 이번 반응 시간에 「고민 중」 을 이미 보냈다 (04-card.md 8절 — 1회)
         private bool _glowing;
 
         // 새로 들어와 크게 보여 주는 중인 카드 묶음 — 손패(HandView)에는 이미 들어 있고 자리만 따로다. 판정과 상관없는 연출.
@@ -92,6 +93,9 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
         public event System.Action<bool> OnRaisedChanged;
+
+        /// <summary>반응 시간이 열려 있고 내가 낼 수 있는 카운터가 있다 · 없다 — 스킵 버튼을 켜고 끈다 (10-ui.md 5절).</summary>
+        public event System.Action<bool> OnReactionAsked;
 
         private void Awake()
         {
@@ -149,21 +153,46 @@ namespace Chapchu.UI.GameScreen
             if (_showing.Count > 0 && Input.GetMouseButtonDown(0) && Time.time - _showLastAddAt > showClickGuard)
                 FinishShow();
 
-            double now = PhotonNetwork.Time;
-            bool glow = _usableCounters.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
+            bool glow = _usableCounters.Count > 0 && _reactionPending && PhotonNetwork.Time >= _reactionOpensAt;
+            if (glow)
+                SendHoldIfHeld();
             if (glow == _glowing) return;
 
             _glowing = glow;
             _view.ShowReaction(glow ? _usableCounters : null);
+            OnReactionAsked?.Invoke(glow);
+        }
+
+        // 고민 연장 — 낼 수 있는 카운터를 고르거나 끌기 시작하면 방장에게 「고민 중」 을 한 번 보낸다. 반응 시간이 열릴 때 이미 쥐고 있어도 보낸다.
+        // 화면에는 아무 표시도 없다 (04-card.md 8절 「고민 연장」).
+        private void SendHoldIfHeld()
+        {
+            if (_holdSent) return;
+
+            CardView held = _view.HeldCard;
+            if (held == null || !_usableCounters.Contains(held.InstanceId)) return;
+
+            _holdSent = true;
+            server.RequestReactionHold(held.InstanceId);
+        }
+
+        /// <summary>스킵 버튼 — 이번 반응 시간에는 내지 않는다. 방장에게 알리고 초록 빛 · 버튼을 끈다 (스킵한 뒤에는 카운터를 받지 않는다).</summary>
+        public void SkipReaction()
+        {
+            if (!_glowing) return;
+
+            server.RequestReactionSkip();
+            EndReaction();
         }
 
         /// <summary>반응 시간이 정해졌다 (OnReactionStarted) — 앞 반응 시간의 「낼 수 있는 카운터」 는 버린다. 새 목록은 ShowUsableCounters 로 따로 온다.</summary>
-        public void ShowReaction(double opensAt, double deadline)
+        public void ShowReaction(double opensAt)
         {
             FinishShow(); // 카운터를 낼 손패 · 체인 카드를 가리지 않게
             EndReaction();
             _reactionOpensAt = opensAt;
-            _reactionDeadline = deadline;
+            _reactionPending = true;
+            _holdSent = false;
         }
 
         /// <summary>이번 반응 시간에 낼 수 있는 내 카운터 (OnMyCountersUsable) — 반응 시간이 열려 있는 동안 초록 빛.</summary>
@@ -171,16 +200,24 @@ namespace Chapchu.UI.GameScreen
         {
             _usableCounters.Clear();
             _usableCounters.UnionWith(cardInstanceIds);
-            _glowing = false; // 다음 Update 에서 새 목록으로 다시 켠다
-            _view.ShowReaction(null);
+            SetGlowOff(); // 다음 Update 에서 새 목록으로 다시 켠다
         }
 
         /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다.</summary>
         public void EndReaction()
         {
             _usableCounters.Clear();
+            _reactionPending = false;
+            SetGlowOff();
+        }
+
+        private void SetGlowOff()
+        {
+            bool wasGlowing = _glowing;
             _glowing = false;
             _view.ShowReaction(null);
+            if (wasGlowing)
+                OnReactionAsked?.Invoke(false);
         }
 
         /// <summary>내가 설치한 함정 — 손패에서 떼어 함정 칸(slot 의 위치 · 회전 · 배율)으로 보내 지운다. 연출 큐가 기다릴 코루틴. 손패에 없으면(빼앗아 온 함정) 바로 끝난다.</summary>
@@ -254,7 +291,7 @@ namespace Chapchu.UI.GameScreen
         // 반응 시간이 걸려 있으면(체인이 있다) 가운데를 가리지 않게 보여 주지 않고 바로 손패로.
         private void AddAndShow(int cardInstanceId, CardData data, Vector3 spawnWorldPosition)
         {
-            if (PhotonNetwork.Time < _reactionDeadline)
+            if (_reactionPending)
             {
                 _view.AddCard(cardInstanceId, data, spawnWorldPosition);
                 return;

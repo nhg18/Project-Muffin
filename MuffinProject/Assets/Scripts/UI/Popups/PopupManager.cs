@@ -21,6 +21,7 @@ namespace Chapchu.UI.Popups
         private readonly List<Popup> _nonModals = new();
         private readonly List<Popup> _toasts = new();
         private Image _modalBlocker;
+        private (string Title, string Text)? _warningOnNextScene;
 
         protected override void Awake()
         {
@@ -102,7 +103,25 @@ namespace Chapchu.UI.Popups
             RefreshBlocker();
         }
 
-        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode) => CloseAll();
+        /// <summary>
+        /// 다음 씬이 열린 뒤 경고 팝업을 띄운다. 씬이 바뀌면 열린 팝업이 모두 닫히므로, 옮겨 간 화면에서 알릴 것은 여기에 맡긴다 (22-popup-ui.md 3절 「… 뒤 로비 도착」).
+        /// </summary>
+        public void ShowWarningOnNextScene(string title, string text) => _warningOnNextScene = (title, text);
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            CloseAll();
+            if (_warningOnNextScene == null)
+                return;
+
+            (string title, string text) = _warningOnNextScene.Value;
+            _warningOnNextScene = null;
+            WarningPopup popup = OpenModal<WarningPopup>();
+            if (popup == null)
+                return;
+            popup.MainText = title;
+            popup.SubText = text;
+        }
 
         private T Open<T>(RectTransform layer, List<Popup> opened) where T : Popup
         {

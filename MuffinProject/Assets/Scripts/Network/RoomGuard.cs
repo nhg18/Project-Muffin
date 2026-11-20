@@ -158,7 +158,8 @@ namespace Chapchu.Network
             return true;
         }
 
-        public void OnPlayerLeft(Player player)
+        /// <summary>나간 사람 정리. 믿는 방장이 바뀌었으면 true — AcceptMasterSwitch 의 true 와 같은 뜻이다.</summary>
+        public bool OnPlayerLeft(Player player)
         {
             _players.Remove(player.ActorNumber);
             _playerRestore.Remove(player.ActorNumber);
@@ -173,7 +174,9 @@ namespace Chapchu.Network
                     Adopt();
                     _becameTrustedMaster?.Invoke();
                 }
+                return true;
             }
+            return false;
         }
 
         // 방장이 되면 지금 방의 값을 원본으로 이어받는다 — 앞 방장이 쓴 값

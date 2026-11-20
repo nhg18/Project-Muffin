@@ -8,11 +8,18 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 확정 (04-card.md 2절).
-        private const double ReactionTimeLimit = 10;
+        private const double ReactionTimeLimit = 5;
+        // 고민 연장 — 낼 수 있는 카운터를 집으면 마감을 「그 순간 + 이 초」 까지 늦춘다. 한 사람당 반응 시간 한 번에 1회 (04-card.md 8절).
+        private const double ReactionHoldSeconds = 3;
 
         private readonly List<ChainEntry> _chain = new List<ChainEntry>(); // [0] = 맨 아래(메인 행동 카드), 끝 = 맨 위
         private double _reactionOpensAt;  // 이 전은 연출 중 — 카운터를 받지 않는다 (04 8절)
-        private double _reactionDeadline;
+        private double _reactionDeadline; // 방장만 안다 — 화면에 보내지 않는다 (고민 연장을 드러내지 않게)
+
+        // 이번 반응 시간에 물어야 할 사람 → 낼 수 있는 카운터. 스킵하면 빠지고, 비면 기다리지 않고 체인을 처리한다 (04 8절).
+        private readonly Dictionary<int, int[]> _reactionAsked = new Dictionary<int, int[]>();
+        private readonly HashSet<int> _reactionSkipped = new HashSet<int>(); // 스킵했다 — 이번 반응 시간에는 카운터를 받지 않는다 (PM 2026-11-19)
+        private readonly HashSet<int> _reactionHeld = new HashSet<int>();    // 고민 연장을 이미 썼다
 
         // 처리 중에 멈춘 카드들 — [0] 부터 이어서 처리한다. 대상이 고르는 동안(1019)만 남아 있다 (ContinueResolve).
         private readonly List<ChainEntry> _resolving = new List<ChainEntry>();
@@ -37,6 +44,9 @@ namespace Chapchu.Game
             if (_chain.Count == 0 || now < _reactionOpensAt || now >= _reactionDeadline)
                 return Reject(requester, RejectCode.NotReactionTime);
 
+            if (_reactionSkipped.Contains(requester))
+                return Reject(requester, RejectCode.NotReactionTime); // 스킵한 사람에게는 이번 반응 시간이 끝났다
+
             List<Card> hand = _players[requester].Hand;
             int index = hand.FindIndex(c => c.InstanceId == cardInstanceId);
             if (index < 0)
@@ -60,6 +70,48 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
+        /// <summary>
+        /// 반응 시간 스킵 — 물어 온 사람이 「안 낸다」 고 답한다. 물을 사람이 모두 스킵하면 남은 시간을 기다리지 않는다 (04-card.md 8절).
+        /// 결과를 알리지 않고, 맞지 않는 요청은 조용히 버린다 (09-network.md 7절).
+        /// </summary>
+        public IReadOnlyList<GameEvent> SkipReaction(int requester)
+        {
+            double now = _clock();
+            if (!_gameOver && IsReactionOpen(now) && _reactionAsked.Remove(requester))
+            {
+                _reactionSkipped.Add(requester);
+                if (_reactionAsked.Count == 0)
+                    _reactionDeadline = now; // 다음 Tick 에 체인을 처리한다
+                Revision++; // 알림은 없지만 상태가 바뀌었다 (GameServer.Snapshot.cs)
+            }
+
+            return TakeEvents();
+        }
+
+        /// <summary>
+        /// 고민 연장 — 낼 수 있는 카운터를 집었다. 마감이 「지금 + 3초」 보다 이르면 그 시각으로 늦춘다. 한 사람당 반응 시간 한 번에 1회.
+        /// 아무에게도 알리지 않고, 맞지 않는 요청은 조용히 버린다 (04-card.md 8절 「고민 연장」).
+        /// </summary>
+        public IReadOnlyList<GameEvent> HoldReaction(int requester, int cardInstanceId)
+        {
+            double now = _clock();
+            if (!_gameOver && IsReactionOpen(now) && _reactionAsked.TryGetValue(requester, out int[] usable)
+                && usable.Contains(cardInstanceId) && _reactionHeld.Add(requester))
+            {
+                _reactionDeadline = System.Math.Max(_reactionDeadline, now + ReactionHoldSeconds);
+                Revision++;
+            }
+
+            return TakeEvents();
+        }
+
+        // 물어야 할 사람이 게임에서 빠졌다 — 남은 사람이 없으면 기다리지 않는다.
+        private void DropFromReaction(int actor)
+        {
+            if (_reactionAsked.Remove(actor) && _reactionAsked.Count == 0 && _chain.Count > 0)
+                _reactionDeadline = System.Math.Min(_reactionDeadline, System.Math.Max(_clock(), _reactionOpensAt));
+        }
+
         // 손패에서 나온 카드(행동 · 카운터)를 체인 맨 위에 올리고, 그 카드의 연출(1 ~ 3 단계) 뒤에 반응 시간을 연다 (04 8절). 함정은 체인에 오르지 않는다 (FireTraps).
         private ChainEntry AddToChain(Card card, int user, int[] targets)
         {
@@ -71,16 +123,21 @@ namespace Chapchu.Game
             _events.Add(new CardPlayed(user, card.InstanceId, card.CardId, targets, _players[user].Hand.Count, _discardPile.Count));
 
             _reactionOpensAt = _clock() + card.RevealSeconds;
-            _reactionDeadline = _reactionOpensAt + ReactionTimeLimit;
-            _events.Add(new ReactionStarted(_reactionOpensAt, _reactionDeadline));
+            _events.Add(new ReactionStarted(_reactionOpensAt));
             AddCountersUsable(entry);
+            // 아무도 낼 수 없으면 반응 시간을 열자마자(0초) 처리한다 (04 8절)
+            _reactionDeadline = _reactionAsked.Count > 0 ? _reactionOpensAt + ReactionTimeLimit : _reactionOpensAt;
             return entry;
         }
 
         // 반응 시간이 정해질 때마다, 지금 맨 위 카드에 낼 수 있는 카운터를 손패에 가진 사람에게 그 목록을 알린다 — 화면의 초록 빛용 (10-ui.md 5절, 09-network.md 3절: 본인에게만).
         // PlayCounter 와 같은 판정(CanPlayCounter)을 쓴다 (대상 확정은 뺀다 — 낼 때 판정). 낼 수 있는 것이 없는 사람에겐 보내지 않는다.
+        // 낼 수 있는 사람이 이번 반응 시간에 「물어야 할 사람」 이다 — 나머지는 스킵한 것으로 본다 (04 8절).
         private void AddCountersUsable(ChainEntry top)
         {
+            _reactionAsked.Clear();
+            _reactionSkipped.Clear();
+            _reactionHeld.Clear();
             foreach (KeyValuePair<int, PlayerState> pair in _players)
             {
                 int actor = pair.Key;
@@ -92,7 +149,10 @@ namespace Chapchu.Game
                     .Select(c => c.InstanceId)
                     .ToArray();
                 if (usable.Length > 0)
+                {
+                    _reactionAsked[actor] = usable;
                     _events.Add(new CountersUsable(actor, usable));
+                }
             }
         }
 

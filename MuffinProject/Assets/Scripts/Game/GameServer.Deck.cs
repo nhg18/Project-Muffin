@@ -37,9 +37,20 @@ namespace Chapchu.Game
             if (IsTurnTimeUp(_clock()))
                 return Reject(requester, RejectCode.NotYourTurn);
 
-            int count = _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount;
-            for (int i = 0; i < count && _players[requester].Hp > 0; i++)
-                CountDraw(requester); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
+            _players[requester].TimeoutStreak = 0; // 직접 턴을 끝냈다 (03-turn.md 4절)
+            DrawForTurn(requester, _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount);
+            return TakeEvents();
+        }
+
+        // 시간 초과 자동 뽑기 장수 — 자동 뽑기로는 찹츄 장수(10)가 되지 않게: 7장 이하 2 · 8장 1 · 9장 0 · 10장 이상 2 (03-turn.md 4절, PM 2026-11-19).
+        private static int AutoDrawCount(int handCount) =>
+            handCount < ChapchuHandCount ? System.Math.Min(TurnDrawCount, ChapchuHandCount - 1 - handCount) : TurnDrawCount;
+
+        // 턴 뽑기(메인 행동)의 적용 — 직접 뽑기 · 시간 초과 자동 뽑기가 함께 쓴다. 끝나면 턴이 넘어간다.
+        private void DrawForTurn(int actor, int count)
+        {
+            for (int i = 0; i < count && _players[actor].Hp > 0; i++)
+                CountDraw(actor); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
             CheckDeathPending(_clock()); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
             // 드로우는 끝나면 턴 종료. 빈 덱 피해로 사망 대기가 생기면 그것이 끝난 뒤 (03-turn.md 4절)
@@ -52,8 +63,6 @@ namespace Chapchu.Game
             {
                 AdvanceTurn();
             }
-
-            return TakeEvents();
         }
 
         private void InitDeck(IReadOnlyList<Card> cards)

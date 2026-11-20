@@ -42,6 +42,7 @@ namespace Chapchu.Network
         private readonly Dictionary<int, float> _emoteAt = new Dictionary<int, float>(); // 방장 — 사람마다 마지막으로 이모트를 알린 때
         private double _openedAt;
         private bool _started; // 방장 — 다음 판 씬 이동을 보냈다 (씬이 바뀔 때까지 몇 프레임 더 돈다)
+        private bool _hostLeft; // 방장이 나갔다 — 다음 판은 없다. 모두 로비로 나간다 (07-win-condition.md 11절, PM 2026-11-19)
 
         /// <summary>준비한 사람 · 카운트다운 · 방 인원이 바뀜. 값은 Ready · StartAt · Members 로 다시 읽는다.</summary>
         public event Action StateChanged;
@@ -77,12 +78,14 @@ namespace Chapchu.Network
         {
             RoomEvents.OnRoomPropsChanged += HandleRoomPropsChanged;
             RoomEvents.OnPlayerLeft += HandlePlayerLeft;
+            RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
         }
 
         private void OnDisable()
         {
             RoomEvents.OnRoomPropsChanged -= HandleRoomPropsChanged;
             RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
+            RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
         }
 
         private void HandleRoomPropsChanged(Hashtable changed)
@@ -92,6 +95,9 @@ namespace Chapchu.Network
         }
 
         private void HandlePlayerLeft(Player player) => StateChanged?.Invoke();
+
+        // 새 방장은 이어받지 않는다 — 준비 · 카운트다운 · 다음 판 시작을 멈춘다. 화면(ResultPresenter)이 각자 방을 나간다
+        private void HandleMasterClientSwitched(Player newMaster) => _hostLeft = true;
 
         #region 요청 (각 클라 → 방장)
 
@@ -166,7 +172,7 @@ namespace Chapchu.Network
         // 봇 준비 · 카운트다운 · 다음 판 시작은 방장만 한다. 타이머를 따로 두지 않고 방 속성의 시각으로 판정한다 — 방장이 바뀌어도 이어진다.
         private void Update()
         {
-            if (!NetworkManager.IsTrustedMaster || _started)
+            if (!NetworkManager.IsTrustedMaster || _started || _hostLeft)
                 return;
 
             // 명단 · 봇 · 준비 · 마감은 프레임마다 한 번씩만 읽는다 (Members · Ready · Deadline 과 같은 값)

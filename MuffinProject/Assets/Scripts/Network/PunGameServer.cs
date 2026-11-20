@@ -48,6 +48,19 @@ namespace Chapchu.Network
         private readonly Dictionary<int, string> _startNames = new Dictionary<int, string>();
         private bool _gameEnded; // 종료 알림을 받았다 — 이 뒤로는 요청을 보내지 않는다 (곧 결과 씬으로 넘어간다)
 
+        // ── 방장 이주 (09-network.md 9.1) ──
+        private bool _started;          // 방장 — 이 기기의 규칙이 판을 갖고 있다 (시작했거나 사본으로 되살렸다)
+        private int _backupActor = -1;  // 방장 — 마지막으로 사본을 보낸 예비 방장
+        private int _backupRevision;    // 방장 — 그때의 상태 변경 번호 (GameServer.Revision)
+        private int _backupSentSeq;     // 방장 — 그때 사본에 실어 보낸 처리 번호. 번호만 올라도(거절 알림) 다시 보낸다
+        private Player _backupPlayer;   // 방장 — 계산해 둔 예비 방장. 입장 · 퇴장 때만 다시 계산한다 (매 프레임 PlayerListOthers 를 읽지 않게)
+        private bool _backupPlayerStale = true; // 입장 · 퇴장이 있었다 — 다음 SendBackup 이 예비 방장을 다시 계산한다
+        private GameSnapshot _backup;   // 예비 방장 — 방장에게서 받은 가장 새 사본. 화면에는 쓰지 않는다
+        private int _backupSeq;         // 예비 방장 — 그 사본을 만들 때 방장이 보낸 마지막 처리 번호
+
+        // 사본 하나의 크기 한도 — 카드 · 사람 수로 보아 넉넉하다. 넘으면 받지 않는다
+        private const int MaxBackupLength = 20000;
+
         // 방장이 바뀔 때 방 속성의 처리 번호를 이어받는 한도 — 남이 큰 값을 써서 새 방장의 알림을 모두 묵은 것으로 만들지 못하게
         private const int MaxSeqJump = 1000;
 
@@ -59,7 +72,7 @@ namespace Chapchu.Network
             if (deck == null)
                 Debug.LogError($"[{nameof(PunGameServer)}] {nameof(deck)} 참조가 비어 있습니다.", this);
 
-            _server = new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+            _server = CreateServer();
 
             if (PhotonNetwork.InRoom)
             {
@@ -103,9 +116,10 @@ namespace Chapchu.Network
             ResetPublicProps();
 
             if (bots.Length > 0)
-                _bots = new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
+                _bots = CreateBots(bots);
 
-            Send(_server.StartGame(actors, cards));
+            _started = true;
+            Send(_server.StartGame(actors, cards, bots)); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
         }
 
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
@@ -115,16 +129,18 @@ namespace Chapchu.Network
                 return;
 
             Send(_server.Tick());
-            if (_bots == null)
-                return;
-
-            Send(_bots.Tick());
-            foreach (string reason in _bots.TakeLogs())
+            if (_bots != null)
             {
-                // 봇의 이유 줄은 손패 · 함정 내용을 담는다 — 개발 빌드에서만 (CODE_CONVENTION 7절). 버리기는 늘 한다
-                if (Debug.isDebugBuild)
-                    Debug.Log($"[{nameof(BotDriver)}] {reason}");
+                Send(_bots.Tick());
+                foreach (string reason in _bots.TakeLogs())
+                {
+                    // 봇의 이유 줄은 손패 · 함정 내용을 담는다 — 개발 빌드에서만 (CODE_CONVENTION 7절). 버리기는 늘 한다
+                    if (Debug.isDebugBuild)
+                        Debug.Log($"[{nameof(BotDriver)}] {reason}");
+                }
             }
+
+            SendBackup(); // 알림이 없는 변화(스킵 · 고민 연장) · 예비 방장이 바뀐 때
         }
 
         #region 요청 (각 클라 → 방장)
@@ -149,6 +165,12 @@ namespace Chapchu.Network
 
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestPlayCounter), cardInstanceId, targetActorNumbers);
+
+        /// <summary>반응 시간 스킵 — 낼 수 있는 카운터가 있지만 내지 않는다. 답은 오지 않는다 (04-card.md 8절).</summary>
+        public void RequestReactionSkip() => SendRequest(nameof(RPC_RequestReactionSkip));
+
+        /// <summary>고민 중 — 낼 수 있는 카운터를 집었다. 반응 시간에 한 번만 보낸다. 답은 오지 않는다 (04-card.md 8절 「고민 연장」).</summary>
+        public void RequestReactionHold(int cardInstanceId) => SendRequest(nameof(RPC_RequestReactionHold), cardInstanceId);
 
         // 요청은 믿는 방장에게 보낸다 — 「지금 방장」 은 아무 클라나 가져갈 수 있다 (09-network.md 13절)
         private void SendRequest(string rpcName, params object[] parameters)
@@ -218,19 +240,174 @@ namespace Chapchu.Network
             Send(_server.PlayCounter(info.Sender.ActorNumber, cardInstanceId, targetActorNumbers));
         }
 
+        [PunRPC]
+        private void RPC_RequestReactionSkip(PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            Send(_server.SkipReaction(info.Sender.ActorNumber));
+        }
+
+        [PunRPC]
+        private void RPC_RequestReactionHold(int cardInstanceId, PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            Send(_server.HoldReaction(info.Sender.ActorNumber, cardInstanceId));
+        }
+
         public override void OnEnable()
         {
             base.OnEnable();
-            RoomEvents.OnBecameTrustedMaster += InheritSeq;
+            RoomEvents.OnBecameTrustedMaster += TakeOver;
         }
 
         public override void OnDisable()
         {
             base.OnDisable();
-            RoomEvents.OnBecameTrustedMaster -= InheritSeq;
+            RoomEvents.OnBecameTrustedMaster -= TakeOver;
         }
 
-        // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다. 게임 상태 이주는 보류 (09-network.md 9절)
+        #region 방장 이주 (09-network.md 9.1)
+
+        // 예비 방장 = 방장이 사라지면 Photon 이 방장으로 세울 사람 — 방에 남은 사람 중 번호가 가장 작은 사람. 없으면 null
+        private static Player BackupPlayer()
+        {
+            Player backup = null;
+            foreach (Player player in PhotonNetwork.PlayerListOthers)
+            {
+                if (!player.IsInactive && (backup == null || player.ActorNumber < backup.ActorNumber))
+                    backup = player;
+            }
+            return backup;
+        }
+
+        // 방장 — 상태가 바뀌었거나 예비 방장이 바뀌었으면 상태 전체를 예비 방장 한 명에게만 보낸다. 손패 · 함정 · 덱 순서가 들어 있다 —
+        // 그 기기의 화면은 이 값을 쓰지 않는다. 방 속성에는 두지 않는다 (전원이 읽는다)
+        private void SendBackup()
+        {
+            if (!_started || _gameEnded)
+                return;
+
+            if (_backupPlayerStale)
+            {
+                _backupPlayer = BackupPlayer();
+                _backupPlayerStale = false;
+            }
+
+            Player backup = _backupPlayer;
+            if (backup == null)
+            {
+                _backupActor = -1;
+                return;
+            }
+
+            if (backup.ActorNumber == _backupActor && _server.Revision == _backupRevision && _sentSeq == _backupSentSeq)
+                return;
+
+            GameSnapshot snapshot = _server.Capture();
+            _backupActor = backup.ActorNumber;
+            _backupRevision = _server.Revision;
+            _backupSentSeq = _sentSeq;
+            photonView.RPC(nameof(RPC_OnBackup), backup, _sentSeq, snapshot.Ints, snapshot.Times);
+        }
+
+        [PunRPC]
+        private void RPC_OnBackup(int sentSeq, int[] ints, double[] times, PhotonMessageInfo info)
+        {
+            if (info.Sender == null || info.Sender.ActorNumber != NetworkManager.TrustedMaster)
+                return;
+            if (ints == null || times == null || ints.Length > MaxBackupLength || times.Length > MaxBackupLength)
+                return;
+
+            _backup = new GameSnapshot(ints, times);
+            _backupSeq = sentSeq;
+        }
+
+        // 내가 믿는 방장이 됐다 — 받아 둔 사본으로 판을 되살려 멈췄던 단계부터 잇는다. 사본이 없거나 읽을 수 없으면 판을 중지하고 방으로 돌아간다.
+        private void TakeOver()
+        {
+            InheritSeq();
+            if (_gameEnded || _started)
+                return; // 끝난 판은 결과 씬으로 옮기기만 하면 된다 (GoToResultRoutine)
+
+            _sentSeq = System.Math.Max(_sentSeq, _backupSeq); // 사본에 함께 온 번호 — 되살리지 못해 중지 알림만 보낼 때도 잇는다
+            GameSnapshot backup = _backup;
+            _backup = null;
+            var server = CreateServer();
+            if (backup == null || !server.Restore(backup, deck.CreateCards()))
+            {
+                Debug.LogError($"[{nameof(PunGameServer)}] 방장 이주 실패 — {(backup == null ? "받아 둔 사본이 없다" : server.RestoreError)}. 판을 중지하고 방으로 돌아간다");
+                Halt();
+                return;
+            }
+
+            _server = server;
+            _started = true;
+
+            int[] bots = BotRoster.Actors;
+            _bots = bots.Length > 0
+                ? CreateBots(bots)
+                : null;
+
+            // 사본 뒤에 나간 사람 (앞 방장 포함) — 나감 알림은 앞 방장만 받았다. 그 사람 앞으로는 단계를 다시 알리지 않는다
+            int[] departed = _startNames.Keys.Where(actor =>
+            {
+                Player player = PhotonNetwork.CurrentRoom.GetPlayer(actor);
+                return player == null || player.IsInactive;
+            }).ToArray();
+
+            Debug.Log($"[{nameof(PunGameServer)}] 방장 이주 — 사본으로 판을 이어받았다 (처리 번호 {_sentSeq})");
+            Send(_server.ResumeAfterMigration(departed));
+
+            foreach (int actor in departed)
+                Send(_server.RemovePlayer(actor));
+
+            // 각자의 손패 · 함정을 방장 값으로 맞춘다 — 사본이 마지막 알림보다 한 걸음 늦었을 수 있다
+            foreach (Player player in PhotonNetwork.PlayerList)
+            {
+                _server.GetPrivateCards(player.ActorNumber, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds);
+                SendTo(player.ActorNumber, nameof(RPC_OnMySync), handIds, handCardIds, trapIds, trapCardIds);
+            }
+            NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.EventSeq] = _sentSeq });
+        }
+
+        // 시작 경로(Awake)와 이주 경로(TakeOver)가 함께 쓴다 — 한쪽만 바뀌어 이주한 판만 다르게 움직이지 않게
+        private static GameServer CreateServer()
+        {
+            return new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+        }
+
+        private BotDriver CreateBots(int[] bots)
+        {
+            return new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
+        }
+
+        // 판을 이어 갈 수 없다 — 전원에게 알리고 방(대기 화면)으로 돌아간다. 거기서 다시 시작할 수 있다 (09-network.md 9.1, PM 2026-11-19)
+        private void Halt()
+        {
+            Broadcast(nameof(RPC_OnGameHalted));
+            ResetPublicProps(); // 방에서 다시 시작한 판의 화면이 중지된 판의 값을 읽지 않게 — 게임 씬을 떠나기 전에 지운다 (GoToResultRoutine 과 같은 순서)
+            NetworkManager.Instance.UpdateRoomOptions(null, isOpen: true);
+            NetworkManager.Instance.LoadSceneForAll(ScenePaths.Room);
+        }
+
+        [PunRPC]
+        private void RPC_OnGameHalted(int seq, PhotonMessageInfo info)
+        {
+            // 처리 번호로 거르지 않는다 — 사본 없이 이어받은 새 방장은 앞 방장이 누구에게 몇 번까지 보냈는지(거절 알림) 모른다.
+            // 번호가 겹쳐 중지 알림을 묵은 것으로 버리면 그 사람만 경고 없이 방으로 옮겨진다. 믿는 방장이 보냈는지만 본다 —
+            // 이 알림은 판의 마지막 알림이고 여러 번 받아도 결과가 같다 (09-network.md 9.1 #11)
+            if (info.Sender == null || info.Sender.ActorNumber != NetworkManager.TrustedMaster)
+                return;
+
+            _gameEnded = true; // 이 뒤로는 요청을 보내지 않는다
+            GameEvents.RaiseGameHalted();
+        }
+
+        #endregion
+
+        // 새 믿는 방장은 이어서 번호를 매긴다 — 아니면 클라들이 새 알림을 묵은 것으로 버린다.
         // 방장 자리만 가져간 사람은 이어받지 않는다 — 믿는 방장이 될 때 이어받는다 (09-network.md 13절 #1)
         private void InheritSeq()
         {
@@ -247,8 +424,15 @@ namespace Chapchu.Network
         // 나간 사람은 최종 사망과 같이 — 턴 순서 · 대상 후보에서 빼고 손패를 버림 더미로 (01-game-flow.md 6절).
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
+            _backupPlayerStale = true;
             if (!NetworkManager.IsTrustedMaster) return;
             Send(_server.RemovePlayer(otherPlayer.ActorNumber));
+        }
+
+        // 다시 들어온 사람이 예비 방장이 될 수 있다 — 다음 SendBackup 이 다시 계산한다
+        public override void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            _backupPlayerStale = true;
         }
 
         #endregion
@@ -305,7 +489,7 @@ namespace Chapchu.Network
                         break;
 
                     case ReactionStarted reaction:
-                        Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt, reaction.Deadline);
+                        Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt); // 마감은 보내지 않는다 (09-network.md 3절)
                         break;
 
                     case CountersUsable usable:
@@ -339,7 +523,7 @@ namespace Chapchu.Network
                         break;
 
                     case PlayerLeft left:
-                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.CardIds, left.DiscardCount);
+                        Broadcast(nameof(RPC_OnPlayerLeftGame), left.Actor, left.CardIds, left.DiscardCount, left.Forced);
                         roomProps[RoomProps.DiscardCount] = left.DiscardCount; // 나간 사람의 Player Props 는 쓸 수 없다
                         SetDiscardTop(roomProps, left.CardIds);
                         break;
@@ -529,10 +713,16 @@ namespace Chapchu.Network
             }
 
             if (onlyRejected)
+            {
+                // 거절 알림도 처리 번호를 올린다 — 방 속성에는 쓰지 않고(09-network.md 13절 #6) 예비 방장에게만 사본과 함께 전한다 (9.1 흐름 2).
+                // 봇의 거절은 알림이 나가지 않아 번호가 그대로라 다시 보내지 않는다
+                SendBackup();
                 return;
+            }
 
             roomProps[RoomProps.EventSeq] = _sentSeq; // 지금 값 스냅샷이 어느 알림까지 반영했는지
             NetworkManager.Instance.SetRoomProps(roomProps);
+            SendBackup(); // 알림과 같은 묶음으로 나가게 — 알림만 가고 사본이 안 간 채 방장이 사라지는 틈을 줄인다
 
             foreach (KeyValuePair<int, Hashtable> pair in playerProps)
             {
@@ -701,10 +891,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnReactionStarted(int seq, double opensAt, double deadline, PhotonMessageInfo info)
+        private void RPC_OnReactionStarted(int seq, double opensAt, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseReactionStarted(opensAt, deadline);
+                GameEvents.RaiseReactionStarted(opensAt);
         }
 
         [PunRPC]
@@ -750,10 +940,10 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int[] cardIds, int discardCount, PhotonMessageInfo info)
+        private void RPC_OnPlayerLeftGame(int seq, int actorNumber, int[] cardIds, int discardCount, bool forced, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaisePlayerLeftGame(actorNumber, Ints(cardIds), discardCount);
+                GameEvents.RaisePlayerLeftGame(actorNumber, Ints(cardIds), discardCount, forced);
         }
 
         [PunRPC]

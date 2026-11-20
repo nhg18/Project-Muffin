@@ -200,7 +200,7 @@ namespace Chapchu.EditorTools
             Wire(presenter,
                 ("deck", deck.GetComponent<DeckPresenter>()), ("discardPile", discardPile.GetComponent<DiscardPilePresenter>()), ("hand", hand), ("myPanel", myPanel.GetComponent<MyPanelPresenter>()), ("seats", seats),
                 ("turnStrip", turnStrip.GetComponent<TurnStripPresenter>()), ("turnTimer", turnTimer), ("history", history), ("boardEffects", boardEffects), ("gaepan", gaepan),
-                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("chapchuShout", chapchuShout), ("cardDeck", gameDeck));
+                ("chainCards", chainCards), ("reactionTimer", reactionTimer), ("myTraps", myTraps), ("screenFlash", screenFlash), ("chapchuShout", chapchuShout), ("cardDeck", gameDeck), ("menu", menu.GetComponent<GameMenuPresenter>()));
 
             EditorSceneManager.MarkSceneDirty(canvasRect.gameObject.scene);
             Selection.activeGameObject = canvasRect.gameObject;
@@ -233,6 +233,29 @@ namespace Chapchu.EditorTools
             Wire(presenter, ("chapchuShout", shout));
             EditorSceneManager.MarkSceneDirty(canvas.scene);
             Debug.Log($"[{nameof(GameScreenBuilder)}] ChapchuShout 을 더함 — 씬을 저장할 것.");
+        }
+
+        /// <summary>열린 씬의 반응 타이머 알약에 「스킵」 버튼을 더한다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 아무것도 하지 않는다.</summary>
+        [MenuItem("Chapchu/Game Screen/Add Reaction Skip Button")]
+        public static void AddReactionSkipButton()
+        {
+            ReactionTimerView view = Object.FindFirstObjectByType<ReactionTimerView>(FindObjectsInactive.Include);
+            Transform body = view != null ? view.transform.Find("Body") : null;
+            if (body == null || body.Find("Border") == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 ReactionTimer/Body/Border 가 없다.");
+                return;
+            }
+
+            if (body.GetComponent<Button>() != null)
+            {
+                Debug.Log($"[{nameof(GameScreenBuilder)}] 스킵 버튼이 이미 있다.");
+                return;
+            }
+
+            Wire(view, ("skipButton", AddSkipButton((RectTransform)body)));
+            EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 스킵 버튼을 더함 — 씬을 저장할 것.");
         }
 
         /// <summary>열린 씬에 이미 있는 HUD 위 카드 층(TopCards)에 앞 층 합성 재질만 넣는다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다.</summary>
@@ -1256,13 +1279,25 @@ namespace Chapchu.EditorTools
 
             TMP_Text seconds = NewText("SecondsText", body, "10", 40f, Ink, true);
             TMP_Text unit = NewText("UnitText", body, "초", 24f, Ink, true);
+            Button skip = AddSkipButton(body);
 
             var view = root.gameObject.AddComponent<ReactionTimerView>();
             Wire(view,
                 ("body", body.gameObject), ("border", body.Find("Border").GetComponent<Image>()), ("clockIcon", clock.gameObject), ("pauseIcon", pause.gameObject),
-                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject), ("cardNameText", cardName));
+                ("labelText", label), ("bar", bar.gameObject), ("barFill", barFill), ("secondsText", seconds), ("unitText", unit.gameObject), ("cardNameText", cardName), ("skipButton", skip));
             body.gameObject.SetActive(false);
             return root.gameObject.AddComponent<ReactionTimerPresenter>();
+        }
+
+        // 알약 전체가 「스킵」 버튼 — 반응 시간에 내가 낼 수 있는 카운터가 있을 때만 켠다 (10-ui.md 5절, 자리 · 모양은 PM 2026-11-19 「알약 자리에 같은 모양」 · 추후 변경 가능)
+        public static Button AddSkipButton(RectTransform body)
+        {
+            Image border = body.Find("Border").GetComponent<Image>();
+            border.raycastTarget = true;
+            Button button = body.gameObject.AddComponent<Button>();
+            button.targetGraphic = border;
+            button.enabled = false;
+            return button;
         }
 
         // 반응 타이머의 카드 이름 (시계 뒤 · 「반응」 앞) — 손패를 올렸을 때만 보인다 (ReactionTimerView.SetDocked). 시안 .rt2.dock .cn

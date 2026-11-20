@@ -48,6 +48,7 @@ namespace Chapchu.Game
 
             // 적용 — 검증이 모두 끝난 뒤에만 상태를 바꾼다. 행동 카드 사용은 메인 행동 (03-turn.md 3절)
             _mainActionUsed = true;
+            _players[requester].TimeoutStreak = 0; // 직접 턴을 끝냈다 (03-turn.md 4절)
             hand.RemoveAt(index);
             AddToChain(card, requester, targets);
             OnHandChanged(requester);

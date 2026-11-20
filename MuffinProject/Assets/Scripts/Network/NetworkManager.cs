@@ -276,8 +276,8 @@ namespace Chapchu.Network
     
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            _guard.OnPlayerLeft(otherPlayer);
-            _room.OnPlayerLeft(otherPlayer);
+            bool trustedMasterLeft = _guard.OnPlayerLeft(otherPlayer);
+            _room.OnPlayerLeft(otherPlayer, trustedMasterLeft);
         }
 
         public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);

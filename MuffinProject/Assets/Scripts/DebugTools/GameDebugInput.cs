@@ -219,8 +219,8 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))}");
         }
 
-        private void HandleReactionStarted(double opensAt, double deadline)
-            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
+        private void HandleReactionStarted(double opensAt)
+            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림");
 
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
         {
@@ -243,12 +243,12 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 사망 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
-        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount)
+        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
+            Log($"P{actorNumber} 게임 중 {(forced ? "강제 퇴장" : "나감")} · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
         // 방장이 내 손패 · 함정을 0 으로 만들었다

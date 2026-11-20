@@ -29,7 +29,8 @@ namespace Chapchu.UI.RoomScreen
         private const string CountFormat = "{0} / {1}";
         private const string EnteredLogFormat = "{0}님이 입장했어요.";
         private const string LeftLogFormat = "{0}님이 퇴장했어요.";
-        private const string HostChangedLogFormat = "{0}님이 방장이 되었어요.";
+        private const string DisbandedTitle = "방이 사라졌어요";
+        private const string DisbandedText = "방장이 나가서 방이 사라졌어요.";
         private const string PublicLog = "공개로 변경";
         private const string PrivateLog = "비공개로 변경";
         private const string BotAddedLogFormat = "봇 {0} 추가";
@@ -39,7 +40,6 @@ namespace Chapchu.UI.RoomScreen
         private const string BotTagFormat = "(봇 · {0})";
         private const string BotLevelLogFormat = "봇 {0} 난이도 {1}";
         private static readonly BotLevel[] BotLevelCycle = { BotLevel.Normal, BotLevel.Hard, BotLevel.Easy };
-        private const string BecameHostToastFormat = "방장이 되었어요. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string FallbackNickname = "플레이어";
 
         [Header("위")]
@@ -359,11 +359,12 @@ namespace Chapchu.UI.RoomScreen
 
         private void HandleMasterClientSwitched(Player newMaster)
         {
-            log.Add(string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName)));
-            if (newMaster.IsLocal)
-                PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
+            // 방 대기 중에 방장이 나갔다 — 방 해체: 남은 사람은 모두 로비로, 도착해서 사유를 알린다 (08-room.md 5절 #5, PM 2026-11-19)
+            if (_isLeaving)
+                return;
 
-            Refresh();
+            PopupManager.Instance.ShowWarningOnNextScene(DisbandedTitle, DisbandedText);
+            Leave();
         }
 
         private void HandleBotsChanged(int[] numbers)
