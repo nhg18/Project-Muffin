@@ -81,7 +81,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 * 게임 상태(덱 · 손패 · 버림 더미 · HP · 처리 체인 · 처리 ID)는 객체 하나에 모은다. 방장 이주(`09-network` 9절)를 나중에 붙일 수 있게 하기 위해서다.
 * 규칙은 요청을 검증하고, 상태를 바꾸고, **일어난 일 목록**을 돌려준다. 누구에게 무엇을 보낼지(전체 · 소유자만)는 네트워크 계층이 정한다.
 * 난수와 시간은 밖에서 받는다. 반응 · 턴 타이머는 네트워크 계층이 재고 만료를 규칙에 알린다.
-* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다. 효과의 **값**(피해량 · 장수)은 `cards.json` 이 원본이다 — 에셋에서 고치면 다음 「카드 가져오기」 가 되돌린다. 원격으로 바꿀 값은 효과 클래스의 public `int` · `float` · `bool` · enum 필드로 둔다 (`26-card-data` 7-2).
+* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다. 효과의 **값**(피해량 · 장수)은 `cards.json` 이 원본이다 — 에셋에서 고치면 다음 「카드 패치하기」 가 되돌린다. `cards.json` 으로 바꿀 값은 효과 클래스의 public `int` · `float` · `bool` · enum 필드로 둔다 (`26-card-data` 7-2).
   * 효과 클래스는 `Scripts/Game/Effects/` 에 `종류 + Effect` 이름으로 (`DamageEffect`). 에셋에 클래스 이름 · 네임스페이스로 저장되므로 만든 뒤에는 바꾸지 않는다 — 바꾸면 그 효과가 에셋에서 빈다.
   * 효과는 같은 종류의 카드 여러 장이 한 인스턴스를 같이 쓴다. 실행 중에 필드를 바꾸지 않는다.
 * 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
