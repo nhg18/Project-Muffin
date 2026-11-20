@@ -148,7 +148,7 @@ namespace Chapchu.UI.Lobby
             StartCoroutine(RequestRoutine(request, roomCode));
         }
 
-        // 카드 데이터 맞추기 → (업데이트 · 점검이면 타이틀로) → 요청 보내기. 로딩 창은 처음부터 그 요청의 글로 뜬다
+        // 설정 값 읽기 → (업데이트 · 점검이면 타이틀로) → 카드 데이터 맞추기 → 요청 보내기. 로딩 창은 처음부터 그 요청의 글로 뜬다 (26 6-5 표의 순서)
         private IEnumerator RequestRoutine(RoomRequest request, string roomCode)
         {
             string loadingText = request switch
@@ -159,31 +159,38 @@ namespace Chapchu.UI.Lobby
             };
             modal.ShowLoading(loadingText);
 
-            // 받는 동안만 글을 「받는 중…」 으로 바꾼다 — 묻지 않고 받는다 (26 6-5)
+            // 읽기 실패 · 30초 안이면 맞추지 않고 누른 요청을 그대로 보낸다
             CardDataService cardData = CardDataService.Instance;
-            StartCoroutine(RefreshRoutine(cardData));
-            bool downloadingShown = false;
-            while (_refreshing)
-            {
-                if (cardData.IsDownloading != downloadingShown)
-                {
-                    downloadingShown = cardData.IsDownloading;
-                    modal.ShowLoading(downloadingShown ? DownloadingText : loadingText);
-                }
+            bool read = false;
+            yield return cardData.ReadRoutine(result => read = result);
 
-                yield return null;
-            }
-
-            if (downloadingShown)
-                modal.ShowLoading(loadingText);
-
-            // 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐다 — 요청을 보내지 않고 타이틀로 돌려보낸다. 닫을 수 없는 팝업은 타이틀이 띄운다 (23-login 7-6)
+            // 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐다 — 받지도 보내지도 않고 타이틀로 돌려보낸다. 닫을 수 없는 팝업은 타이틀이 띄운다 (23-login 7-6)
             if (AccountService.IsSignedIn && ServerConfig.HasValues && (ServerConfig.NeedsUpdate || ServerConfig.IsMaintenance))
             {
                 modal.HideLoading();
                 bool update = ServerConfig.NeedsUpdate;
                 modal.ShowWarn(update ? UpdateTitle : MaintenanceTitle, update ? UpdateText : ServerConfig.MaintenanceMessage, onOk: ReturnToTitle);
                 yield break;
+            }
+
+            if (read)
+            {
+                // 받는 동안만 글을 「받는 중…」 으로 바꾼다 — 묻지 않고 받는다 (26 6-5)
+                StartCoroutine(RefreshRoutine(cardData));
+                bool downloadingShown = false;
+                while (_refreshing)
+                {
+                    if (cardData.IsDownloading != downloadingShown)
+                    {
+                        downloadingShown = cardData.IsDownloading;
+                        modal.ShowLoading(downloadingShown ? DownloadingText : loadingText);
+                    }
+
+                    yield return null;
+                }
+
+                if (downloadingShown)
+                    modal.ShowLoading(loadingText);
             }
 
             // 서버가 새 요청을 받을 수 있다 = 포기한 옛 요청은 끝났다. 받을 수 없으면(옛 요청이 아직 처리 중) 표시를 그대로 둔다 —
@@ -212,7 +219,7 @@ namespace Chapchu.UI.Lobby
         private IEnumerator RefreshRoutine(CardDataService cardData)
         {
             _refreshing = true;
-            yield return cardData.RefreshRoutine();
+            yield return cardData.SyncRoutine();
             _refreshing = false;
         }
 

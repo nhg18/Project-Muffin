@@ -13,7 +13,7 @@ namespace Chapchu.Cards
     /// <summary>
     /// 카드 데이터 맞추기 — 서버가 정한 카드 데이터(Remote Config 의 확인값 + 주소)를 받아 게임 덱에 얹는다. 기준: docs/systems/26-card-data.md 6-1 · 6-5 · 7-5 · 8절
     /// 순서: 이미 그 데이터면 끝 → 빌드 기본본이 그 데이터면 빌드 기본본 → 기기 저장본 → 받기. 못 맞추면 저장본, 없으면 빌드 기본본으로 논다.
-    /// 타이틀이 접속 전에(SyncRoutine), 로비가 방에 가기 전에(RefreshRoutine) 부른다. 방 · 판 안에서는 부르지 않는다 — 그 방의 데이터로 끝까지 간다.
+    /// 타이틀이 접속 전에(SyncRoutine), 로비가 방에 가기 전에(ReadRoutine → SyncRoutine) 부른다. 방 · 판 안에서는 부르지 않는다 — 그 방의 데이터로 끝까지 간다.
     /// </summary>
     public class CardDataService : SingletonPersistent<CardDataService>
     {
@@ -114,13 +114,17 @@ namespace Chapchu.Cards
         }
 
         /// <summary>
-        /// 로비에서 방에 가려 할 때 (26 6-5) — 마지막으로 맞춘 지 30초가 지났으면 설정 값을 다시 읽고 맞춘다.
-        /// 로그인하지 않은 실행(디버그 로비)은 아무것도 하지 않는다.
+        /// 로비에서 방에 가려 할 때 (26 6-5) — 마지막으로 맞춘 지 30초가 지났으면 설정 값을 다시 읽는다. 읽었으면 onDone(true) —
+        /// 부른 쪽이 업데이트 · 점검을 먼저 보고, 둘 다 아닐 때만 SyncRoutine 으로 맞춘다.
+        /// 30초 안 · 읽기 실패 · 로그인하지 않은 실행(디버그 로비)은 onDone(false) — 맞추지 않고 지금 데이터로 간다.
         /// </summary>
-        public IEnumerator RefreshRoutine()
+        public IEnumerator ReadRoutine(Action<bool> onDone)
         {
             if (!AccountService.IsSignedIn || Time.realtimeSinceStartup - _lastSyncAt < RefreshIntervalSeconds)
+            {
+                onDone(false);
                 yield break;
+            }
 
             Task fetch = ServerConfig.FetchAsync();
             float waited = 0f;
@@ -130,10 +134,11 @@ namespace Chapchu.Cards
                 yield return null;
             }
 
-            if (!fetch.IsCompleted || fetch.IsFaulted)
-                Debug.LogWarning($"[{nameof(CardDataService)}] 설정 값 읽기 실패 — 마지막 값으로 맞춘다: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");
+            bool read = fetch.IsCompleted && !fetch.IsFaulted;
+            if (!read)
+                Debug.LogWarning($"[{nameof(CardDataService)}] 설정 값 읽기 실패 — 맞추지 않고 지금 데이터로 간다: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");
 
-            yield return SyncRoutine();
+            onDone(read);
         }
 
         #region 받기

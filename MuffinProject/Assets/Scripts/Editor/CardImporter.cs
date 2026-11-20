@@ -50,26 +50,42 @@ namespace Chapchu.EditorTools
                 if (data == null)
                 {
                     data = ScriptableObject.CreateInstance<CardData>();
-                    data.id = entry.id;
                     AssetDatabase.CreateAsset(data, path);
                     created++;
                 }
 
+                // 복제 · 손으로 고친 에셋의 id 도 파일 값으로 되돌린다 (26 3절 #10)
+                data.id = entry.id;
                 string before = Describe(data);
-                data.type = ParseEnum<CardType>(entry.type, entry.id);
-                if (data.effects.Count == 0 && entry.effects != null && entry.effects.Length > 0)
-                    data.effects = entry.effects.Select(e => CreateEffect(e, entry.id)).Where(e => e != null).ToList();
 
-                if (!CardSheet.TryApply(entry, data, out error))
+                // 사본에 얹고, 다 맞을 때만 에셋에 옮긴다 — 실패한 카드는 반쯤 바뀐 채 저장되지 않는다
+                CardData copy = UnityEngine.Object.Instantiate(data);
+                copy.name = data.name;
+                copy.type = ParseEnum<CardType>(entry.type, entry.id);
+                if (copy.effects.Count == 0 && entry.effects != null && entry.effects.Length > 0)
+                {
+                    // 하나라도 못 만들면 넣지 않는다 — 효과 수가 달라 실패로 센다. 짧은 목록이 저장되면 다음 가져오기가 다시 만들지 못한다
+                    List<CardEffect> effects = entry.effects.Select(e => CreateEffect(e, entry.id)).ToList();
+                    if (!effects.Contains(null))
+                        copy.effects = effects;
+                }
+
+                if (!CardSheet.TryApply(entry, copy, out error))
                 {
                     Debug.LogError($"[{nameof(CardImporter)}] {error} — 에셋의 효과 구성과 cards.json 을 맞추기", data);
                     failed++;
                 }
-                else if (Describe(data) != before)
+                else
                 {
-                    Debug.Log($"[{nameof(CardImporter)}] 카드 {entry.id} 바뀜\n  전: {before}\n  후: {Describe(data)}", data);
-                    changed++;
+                    EditorUtility.CopySerialized(copy, data);
+                    if (Describe(data) != before)
+                    {
+                        Debug.Log($"[{nameof(CardImporter)}] 카드 {entry.id} 바뀜\n  전: {before}\n  후: {Describe(data)}", data);
+                        changed++;
+                    }
                 }
+
+                UnityEngine.Object.DestroyImmediate(copy);
 
                 EnsureSprite(entry.id);
                 EditorUtility.SetDirty(data);

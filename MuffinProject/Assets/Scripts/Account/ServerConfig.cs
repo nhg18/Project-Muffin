@@ -10,7 +10,7 @@ namespace Chapchu.Account
     /// <summary>서버가 정한 카드 데이터 — 확인값과 파일 주소 (26-card-data 7-5).</summary>
     public readonly struct CardDataTarget
     {
-        private static readonly Regex HashPattern = new Regex("^[0-9a-f]{64}$");
+        private static readonly Regex HashPattern = new Regex(@"^[0-9a-f]{64}\z");
 
         /// <summary>파일 내용의 확인값 (CardSheet.HashOf). 이 값이 곧 카드 데이터의 신원이다 — 같은 값끼리 같은 방에 든다.</summary>
         public readonly string Hash;
