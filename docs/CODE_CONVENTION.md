@@ -81,7 +81,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 * 게임 상태(덱 · 손패 · 버림 더미 · HP · 처리 체인 · 처리 ID)는 객체 하나에 모은다. 방장 이주(`09-network` 9절)를 나중에 붙일 수 있게 하기 위해서다.
 * 규칙은 요청을 검증하고, 상태를 바꾸고, **일어난 일 목록**을 돌려준다. 누구에게 무엇을 보낼지(전체 · 소유자만)는 네트워크 계층이 정한다.
 * 난수와 시간은 밖에서 받는다. 반응 · 턴 타이머는 네트워크 계층이 재고 만료를 규칙에 알린다.
-* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다.
+* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다. 효과의 **값**(피해량 · 장수)은 `cards.json` 이 원본이다 — 에셋에서 고치면 다음 「카드 가져오기」 가 되돌린다. 원격으로 바꿀 값은 효과 클래스의 public `int` · `float` · `bool` · enum 필드로 둔다 (`26-card-data` 7-2).
   * 효과 클래스는 `Scripts/Game/Effects/` 에 `종류 + Effect` 이름으로 (`DamageEffect`). 에셋에 클래스 이름 · 네임스페이스로 저장되므로 만든 뒤에는 바꾸지 않는다 — 바꾸면 그 효과가 에셋에서 빈다.
   * 효과는 같은 종류의 카드 여러 장이 한 인스턴스를 같이 쓴다. 실행 중에 필드를 바꾸지 않는다.
 * 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
@@ -95,7 +95,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 
 | 시안 | Unity |
 | --- | --- |
-| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. 카드 그림은 `Sprites/Cards/Art/<카드 ID>.png`, 카드 틀 · 뒷면 · 빈 칸은 `Sprites/Cards/Frames/`, 캐릭터 그림은 `Sprites/Characters/`(노션 원본 그대로, 잘라 쓸 곳은 스프라이트 영역으로), 그 밖에는 `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
+| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. 카드 그림은 `Resources/CardArt/<카드 ID>.png` — 카드 정의가 그림을 쥐지 않고 카드 번호로 찾는다(`CardData.LoadArt`, `26-card-data` 3절 #3). 카드 틀 · 뒷면 · 빈 칸은 `Sprites/Cards/Frames/`, 캐릭터 그림은 `Sprites/Characters/`(노션 원본 그대로, 잘라 쓸 곳은 스프라이트 영역으로), 그 밖에는 `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
 | 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `UI/Fx/UIShape` 한 컴포넌트(면 + 테두리를 한 메시, 빌더 `ShapeBox`)로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다. 둘로 나누면 판을 흐리게 할 때(`CanvasGroup`) 테두리가 면 너머로 비친다. 빌더의 `RoundBox`(테두리 · 채움 두 오브젝트)는 옛 방식 — 그 상자를 고칠 때 `ShapeBox` 로 바꾼다. 타원 · 점선 테(`border-style: dashed`)도 `UIShape` |
 | 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다. 반투명 판은 한 장으로 — 같은 판을 두 장 겹치면 알파가 짙어진다 (85% 두 장 = 약 98%) |
 | 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. 모양을 따라 번지는 그림자(타원 판의 바닥 그림자 등)는 `UIShape` 의 번짐(`feather`). 시안 · 문서의 「번짐」(CSS blur)은 `feather` 에 **× 2** 로 넣는다 — blur 는 가장자리 안팎으로 그만큼 번지는 가우스, `feather` 는 투명해지는 전체 폭(안팎 절반씩). uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |

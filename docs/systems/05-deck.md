@@ -118,7 +118,7 @@
 | `CardData` (ScriptableObject) | 카드 1종의 정의 (id, 이름, 그림 주소, 타입, 대상, 조건, 효과, 카운터의 반응 대상, 연출 시간 — `10-ui` 5-1) | `Assets/Cards/*.asset` |
 | `DeckData.GetCard(id)` | id → `CardData` 조회. 게임에 나오는 카드는 전부 덱에서 나오므로 덱이 사전 역할도 한다 (옛 `CardDatabase` 는 2026-10-10 삭제) |  |
 | `DeckData` (ScriptableObject) | 덱 구성 — 카드별 매수 (`Entry { card, count }`). 옛 `DeckRecipe`(ID 반복 목록)를 2026-10-10 이름 · 형식 변경, GUID 유지 | `Assets/Cards/Decks/*.asset` · `Assets/Cards/Main/Deck_Main.asset` |
-| 카드 그림 | 카드 정의는 그림을 직접 갖지 않고 **주소만** 갖는다 — 필요할 때 불러오고 다 쓰면 내린다 (확정 2026-11-19, `26-card-data` 3절 #3) | 빌드 (Addressables 로컬 그룹) |
+| 카드 그림 | 카드 정의는 그림을 직접 갖지 않는다 — 카드 번호로 찾아, 필요한 화면이 불러오고 떠나면 내려간다 (확정 2026-11-19 · 방법 2026-11-20, `26-card-data` 3절 #3) | 빌드 (`Resources/CardArt/<카드 ID>.png`) |
 | 카드 목록 | 게임에 있는 모든 카드 정의의 목록 — 도감용. 덱과 다르다 (확정 2026-11-19, `26-card-data` 7-1) | 새로 만든다 |
 
 * 카드 정의 · 덱의 **값**은 앱을 켤 때 서버(UGS CCD)의 카드 데이터 파일로 덮어쓸 수 있다 — 원격 패치 (`26-card-data` 6-1). 이 절의 에셋은 그 빌드 기본본이다.
