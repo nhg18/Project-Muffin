@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-11-20 · 카드 원격 패치 폐기 — 카드도 빌드로 (`feature/card-build-patch`)
+
+### 결정 (PM, 2026-11-20)
+- UGS 를 통한 카드 버전 관리를 하지 않는다. 카드도 빌드에 패치한다: 노션 카드 DB 수정 → 봇이 `develop` 에 PR → 사람이 머지.
+- Unity 는 `cards.json` 을 읽어 카드 에셋(SO)에 넣는다.
+
+### 한 것
+- **문서**: `26-card-data` 를 「불러오기 · 빌드 패치」 로 다시 씀 — 원격 파일 · CCD · Remote Config 카드 키(`cardDataVersion` · `cardDataHash` · `remoteCardsOff`) · 카드 데이터 버전 · 방 속성 버전 · 받기 안전장치 · 언어 파일 받기 삭제, 7-3 배포 흐름 · 7-4 카드 가져오기(자동) 새로. 따라 고침: `versioning`(카드 데이터 버전 삭제, 카드 변경 = 앱 업데이트) · `store-release` 3-1(CCD 줄 삭제, 남는 안전장치 표를 `26` 7-8 에서 옮김) · `23-login` · `20-title-ui-full`(타이틀 「카드 데이터 확인」 단계 삭제) · `08-room` · `09-network` 12-1 · `14-lobby-ui` · `22-popup-ui`(받기 · 다른 버전 방 팝업 4줄 삭제) · `25-localization`(카드 문구도 빌드) · `05-deck` · `11-card-list` 0절 · `27-analytics` · `development-plan` 12C · `systems/README` · `scripts/card-sync/README`.
+- 로비에서 방에 가려 할 때 `minVersion` · `maintenance` 를 다시 읽는 규칙은 카드와 무관해 남기고 `23-login` 7-6 으로 옮겼다 (30초 캐시 포함).
+- **코드**: `CardImporter` — `cards.json` 이 다시 가져와지면 자동으로 「카드 가져오기」(배치 모드 제외) · 빌드 직전에 한 번 더(틀리면 `BuildFailedException`) · 전부 먼저 읽어 보고 틀린 값이 하나라도 있으면 에셋을 건드리지 않음 · 없는 효과 이름 · 필드 · 값도 실패로.
+- **봇**: 수치만 바뀐 확정 카드도 PR 줄에 「⚠ 수치 · 능력 변경 — 효과(에셋)도 고쳐야 함」 (봇은 효과 값을 못 고친다). PR 본문의 「머지 뒤 손으로 카드 가져오기」 안내를 자동으로.
+
+### 확인하지 못한 것
+- Unity 실행 확인 없음 (클라우드 세션 — Unity · `multi-test` · `/prepush` 를 못 돌림). 확인할 것: develop 을 받은 뒤 `cards.json` 만 바꿨을 때 콘솔에 「카드 N종 …」 한 줄 · `Card_*.asset` · `Deck_Main` 이 바뀜, `cards.json` 에 없는 효과 이름을 넣으면 에러 로그 + 에셋 그대로, 빌드 때 같은 값이면 빌드 실패.
+- `card_sync.py` 는 문법 확인만.
+
+### 다음 할 일
+- 출시 뒤 카드만 바뀐 업데이트의 버전 자리 (제안: PATCH, `26` 9절 #1).
+- 노션 「26. 카드 데이터」 · 「버전 관리」 사본을 머지 뒤 저장소 기준으로 다시 올린다 (페이지에 댓글 남김).
+
+---
+
 ## 2026-11-20 · 방장 이주 — 예비 방장 (`feature/master-migration`)
 
 `feature/reaction-time`(`64ff1067`) 위에서 작업. 찬반 리뷰가 남긴 지적(방장이 3턴 시간 초과로 강제 퇴장되면 판이 멈춘다)을 방장 이주로 푼다. 시간 초과 · 반응 시간 · 방장 이주를 PR 하나로 올린다.
