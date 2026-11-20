@@ -755,8 +755,8 @@ def main():
         open(args.pr_body, "w", encoding="utf-8").write(
             "노션 카드 DB 의 확정 카드에 맞춰 `cards.json` · `11-card-list` 1-1 을 고쳤어요 (카드 정리 봇).\n\n"
             + "\n".join(changed)
-            + "\n\n**머지하기 전에** 이 브랜치에서 Unity `Chapchu/카드 가져오기` 를 돌리고, 바뀐 카드 에셋 · `Deck_Main` 을 함께 커밋해 주세요 "
-              "(`python scripts/card-data/publish.py --check` 가 통과하면 된 거예요 — `26-card-data` 7-3). "
+            + "\n\n**머지한 뒤** `develop` 을 받아 Unity 를 열면 「카드 패치」 창이 떠요 — `카드 패치하기` 를 누르고, 바뀐 카드 에셋 · `Deck_Main` 을 커밋해 주세요 "
+              "(패치하지 않은 채로는 빌드가 되지 않아요 — `26-card-data` 7-3). "
               "1-2 카드별 규칙 글은 봇이 고치지 않아요 — 문구 · 수치가 본문에도 적혀 있으면 함께 봐 주세요.\n")
 
 
