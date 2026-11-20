@@ -126,6 +126,8 @@ namespace Chapchu.Cards
                 yield break;
             }
 
+            // 읽기 실패도 30초 간격에 넣는다 — 안 그러면 누를 때마다 다시 읽고 다시 기다린다
+            _lastSyncAt = Time.realtimeSinceStartup;
             Task fetch = ServerConfig.FetchAsync();
             float waited = 0f;
             while (!fetch.IsCompleted && waited < ServerConfig.FetchTimeoutSeconds)
