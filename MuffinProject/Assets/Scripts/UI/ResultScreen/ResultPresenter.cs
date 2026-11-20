@@ -10,6 +10,7 @@ using Chapchu.UI.Title;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using AnalyticsRecorder = Chapchu.Account.AnalyticsRecorder;
 
 namespace Chapchu.UI.ResultScreen
 {
@@ -95,6 +96,7 @@ namespace Chapchu.UI.ResultScreen
         private readonly HashSet<int> _readyShown = new HashSet<int>(); // 「준비!」 말풍선을 이미 띄운 사람 — 준비를 풀면 빠진다
         private GameResult _result;
         private bool _isLeaving;
+        private bool _resultActionRecorded; // resultAction 은 결과 화면마다 한 번 (27 5-3)
         private bool _hasRefreshed;
 
         private void Awake()
@@ -109,7 +111,7 @@ namespace Chapchu.UI.ResultScreen
             server.StateChanged += Refresh;
             server.EmoteShown += HandleEmoteShown;
             buttons.AgainClicked += HandleAgainClicked;
-            buttons.LobbyClicked += Leave;
+            buttons.LobbyClicked += HandleLobbyClicked;
             buttons.BoardClicked += HandleBoardClicked;
             board.CloseClicked += HandleBoardCloseClicked;
             emotes.EmoteClicked += HandleEmoteClicked;
@@ -122,7 +124,7 @@ namespace Chapchu.UI.ResultScreen
             server.StateChanged -= Refresh;
             server.EmoteShown -= HandleEmoteShown;
             buttons.AgainClicked -= HandleAgainClicked;
-            buttons.LobbyClicked -= Leave;
+            buttons.LobbyClicked -= HandleLobbyClicked;
             buttons.BoardClicked -= HandleBoardClicked;
             board.CloseClicked -= HandleBoardCloseClicked;
             emotes.EmoteClicked -= HandleEmoteClicked;
@@ -133,6 +135,7 @@ namespace Chapchu.UI.ResultScreen
         // 결과 씬은 방장이 방 전원을 옮겨서 열린다 — 요약은 게임 씬에서 이미 받았다
         private void Start()
         {
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Result);
             _result = NetworkManager.Instance != null ? NetworkManager.Instance.LastResult : null;
             if (_result == null || !PhotonNetwork.InRoom || !Layouts.ContainsKey(_result.Actors.Count)
                 || (_result.Reason != GameEndReason.Draw && !_result.Actors.Contains(_result.Winner)))
@@ -328,7 +331,15 @@ namespace Chapchu.UI.ResultScreen
             if (_result == null || _isLeaving)
                 return;
 
-            server.RequestSetReady(Array.IndexOf(server.Ready, PhotonNetwork.LocalPlayer.ActorNumber) < 0);
+            bool ready = Array.IndexOf(server.Ready, PhotonNetwork.LocalPlayer.ActorNumber) < 0;
+            // 「다시 하기」 를 처음 눌렀을 때 한 번 — 준비를 풀었다 다시 눌러도 더 보내지 않는다 (27 5-3)
+            if (ready && !_resultActionRecorded)
+            {
+                _resultActionRecorded = true;
+                AnalyticsRecorder.RecordResultAction(AnalyticsRecorder.ResultAction.ToRoom);
+            }
+
+            server.RequestSetReady(ready);
         }
 
         #endregion
@@ -363,6 +374,18 @@ namespace Chapchu.UI.ResultScreen
         #endregion
 
         #region 로비로
+
+        // 「로비로」 버튼 — 시간이 다 돼 저절로 나가는 것은 버튼이 아니라 남기지 않는다 (27 5-3)
+        private void HandleLobbyClicked()
+        {
+            if (!_isLeaving && !_resultActionRecorded)
+            {
+                _resultActionRecorded = true;
+                AnalyticsRecorder.RecordResultAction(AnalyticsRecorder.ResultAction.Exit);
+            }
+
+            Leave();
+        }
 
         // 「로비로」 · 자동 이동 — 방을 나간다. 씬은 나간 것이 확인된 뒤(HandleLeftRoom)에 연다
         private void Leave()
