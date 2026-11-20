@@ -26,8 +26,10 @@ Claude Code 기본 스킬 `code-review` 가 문제 후보를 찾고, **반대파
 |---|---|
 | 처음 push 하는 브랜치 (`origin/<브랜치>` 없음) | `origin/develop` 에서 갈라진 곳 |
 | 이미 push 한 브랜치 | `origin/<브랜치>` — 그 뒤 커밋만 |
-| push 한 뒤 develop 을 머지함 | `origin/<브랜치>` 와 그 develop 을 합친 트리 — 남이 develop 에 넣은 코드는 빠지고, 내 커밋 · 충돌 해결만 남는다 |
-| rebase · 남의 push 로 `origin/<브랜치>` 가 조상이 아님, 또는 합칠 때 충돌 | 경고 후 `origin/develop` 에서 갈라진 곳 |
+| push 한 뒤 develop 을 머지함 | `origin/<브랜치>` 와 그 develop 을 합친 트리 — 남이 develop 에 넣은 코드는 빠지고, 내 커밋 · 충돌 해결만 남는다. 충돌이 났으면 그 트리의 충돌 파일에 충돌 표시가 든 채로 비교해, 푼 자리만 diff 에 나온다 (문서만 충돌했으면 리뷰할 코드 없음 → 통과) |
+| rebase · 남의 push 로 `origin/<브랜치>` 가 조상이 아님 | 경고 후 `origin/develop` 에서 갈라진 곳 |
+
+남의 PR 충돌을 풀어 push 할 때도 로컬 브랜치 이름을 그 PR 브랜치와 같게 둔다 — 이름이 다르면 `origin/<브랜치>` 를 못 찾아 PR 전체를 다시 본다.
 
 `SKIP_REVIEW=1` 로 push 했거나 훅을 설치하지 않고 push 한 커밋도 「push 한 것」으로 보고 다시 보지 않는다.
 
