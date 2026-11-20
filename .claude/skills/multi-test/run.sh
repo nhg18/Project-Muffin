@@ -9,6 +9,7 @@
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
+#   run.sh carddata [턴=4]              메인 + 클론: 로컬 서버의 카드 데이터 받기 · 저장본 · 거절 → 데이터가 다른 방은 못 들어감 → 같은 데이터로 한 판
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
 # 종료 코드: 0 통과 · 1 실패 · 2 준비 안 됨 (저장 안 한 씬, 에디터 없음, 컴파일 실패)
@@ -191,9 +192,11 @@ for e in r.get("entries", []):
 '
 }
 
+# 둘째 인자(정규식)가 있으면 그 에러 줄은 뺀다 — 시나리오가 일부러 낸 에러
 check_errors() {
-    local project="$1" errors
+    local project="$1" expected="${2:-}" errors
     errors=$(console_lines "$project" | awk -F'\t' '$1 == "error"')
+    [ -n "$expected" ] && errors=$(printf '%s\n' "$errors" | grep -v -E "$expected")
     if [ -n "$errors" ]; then
         fail "$(name_of "$project") 콘솔 에러:"
         printf '%s\n' "$errors" | sed 's/^/      /'
@@ -1208,8 +1211,103 @@ run_fx() {
     check_errors "$MAIN"
 }
 
+# 카드 데이터 원격 패치 (26-card-data): 로컬 서버의 파일을 받아 얹기 · 저장본 · 못 쓰는 파일 거절 · 물러나기 →
+# 카드 데이터가 다른 방은 들어가자마자 나옴 → 같은 데이터로 한 판 (바뀐 값으로 판정, 화면끼리 같음).
+# Remote Config 는 거치지 않는다 — 그 값을 읽은 뒤의 길(CardDataService.SyncToRoutine)에 시험 값을 넣는다.
+run_carddata() {
+    local rounds="${1:-4}" port=8791 dir win base out project clone ok unknown kind wrong missing
+    wrong=$(printf 'a%.0s' $(seq 1 64)); missing=$(printf 'b%.0s' $(seq 1 64))
+    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0")
+    clone="${EDITORS[1]}"
+    dir=$(mktemp -d); win=$(cygpath -w "$dir" 2>/dev/null || printf '%s' "$dir")
+    base="http://127.0.0.1:$port"
+
+    # 시험 파일: ok(1001 피해 20 → 25 · 1006 장수 +2) · unknown(빌드에 없는 카드) · kind(효과 종류가 다름)
+    out=$(python "$SKILL_DIR/carddata_files.py" "$MAIN/Assets/Cards/Main/cards.json" "$win")
+    ok=$(printf '%s\n' "$out" | sed -n 1p | tr -d '\r'); unknown=$(printf '%s\n' "$out" | sed -n 2p | tr -d '\r'); kind=$(printf '%s\n' "$out" | sed -n 3p | tr -d '\r')
+    [ ${#ok} -eq 64 ] && [ ${#kind} -eq 64 ] || { log "✗ 시험 파일을 만들지 못했다: $out"; exit 2; }
+    python -m http.server "$port" --bind 127.0.0.1 --directory "$win" >/dev/null 2>&1 &
+    local server=$!
+
+    log "▶ 준비"
+    prepare "$LOBBY_SCENE"
+    trap "kill $server 2>/dev/null; rm -rf '$dir'; call '$MAIN' CardDataForget >/dev/null; cleanup" EXIT
+
+    log "▶ 받기 · 저장본 · 거절 (메인)"
+    call "$MAIN" CardDataForget >/dev/null
+    sync_expect "$MAIN" "" "" "원격 끔" "원격 False" "「20 피해를 준다」" "덱 45장" || return
+    sync_expect "$MAIN" "$ok" "$base/ok.json" "받기" "확인값 ${ok:0:8}" "원격 True" "「25 피해를 준다」" '"amount":25' "덱 47장" "에셋 「20 피해를 준다」" "저장본 True" || return
+    sync_expect "$MAIN" "" "" "원격 끔 — 빌드 기본본으로" "원격 False" "「20 피해를 준다」" "덱 45장" || return
+    sync_expect "$MAIN" "$ok" "http://127.0.0.1:1/none.json" "저장본으로 (서버 없이)" "확인값 ${ok:0:8}" "원격 True" "「25 피해를 준다」" || return
+    console_lines "$MAIN" | grep -q '카드 데이터 저장본 — ' || fail "저장본을 썼다는 로그가 없다"
+    sync_expect "$MAIN" "" "" "원격 끔" "원격 False" || return
+    sync_expect "$MAIN" "$wrong" "$base/ok.json" "확인값이 다른 파일 → 마지막 저장본" "확인값 ${ok:0:8}" "원격 True" || return
+    console_lines "$MAIN" | grep -q '받은 파일의 확인값이 다르다' || fail "확인값 거절 로그가 없다"
+    call "$MAIN" CardDataForget >/dev/null
+    sync_expect "$MAIN" "" "" "원격 끔 · 저장본 지움" "원격 False" || return
+    sync_expect "$MAIN" "$unknown" "$base/unknown.json" "빌드에 없는 카드 → 빌드 기본본" "원격 False" "「20 피해를 준다」" "저장본 False" || return
+    sync_expect "$MAIN" "$kind" "$base/kind.json" "효과 종류가 다름 → 빌드 기본본" "원격 False" "「20 피해를 준다」" || return
+    out=$(console_lines "$MAIN" | grep -c '를 쓸 수 없다 — '); [ "$out" -ge 3 ] && log "  못 쓰는 파일 거절 로그 ${out}줄" || fail "거절 로그가 3줄보다 적다 ($out)"
+    sync_expect "$MAIN" "$missing" "$base/missing.json" "없는 파일(404) → 빌드 기본본" "원격 False" || return
+    out=$(console_lines "$MAIN" | grep -c '카드 데이터 받기 실패 (1/3) — 404'); [ "$out" -eq 1 ] && log "  404 는 다시 시도하지 않는다" || fail "404 받기 실패 줄 ${out}개 (1개여야 한다)"
+    out=$(console_lines "$MAIN" | grep -c '카드 데이터 받기 실패 (2/3)'); [ "$out" -eq 0 ] || fail "404 를 다시 시도했다"
+    sync_expect "$MAIN" "$ok" "$base/ok.json" "다시 받기" "확인값 ${ok:0:8}" "원격 True" "저장본 True" || return
+
+    log "▶ 카드 데이터가 다른 방 (메인 = 받은 데이터 · 클론 = 빌드 기본본)"
+    until_ok "$MAIN" Join || return
+    until_ok "$MAIN" CardDataRoom || return
+    until_ok "$clone" Join || return
+    out=""
+    for _ in $(seq 1 $WAIT_TRIES); do
+        console_lines "$clone" | grep -q '카드 데이터가 다른 방 — 나간다' && { out=ok; break; }
+        sleep 1
+    done
+    [ "$out" = ok ] && log "  $(name_of "$clone"): 들어가자마자 나옴" || { fail "$(name_of "$clone") 이 다른 카드 데이터의 방에서 나오지 않았다"; return; }
+    sleep 3
+    out=$(call "$clone" InRoom); log "  $(name_of "$clone"): $out"; [[ "$out" == *"방 안 False"* ]] || fail "$(name_of "$clone") 이 아직 방에 있다"
+    out=$(call "$MAIN" CardDataRoom); log "  $(name_of "$MAIN"): $out"; [[ "$out" == *"1명"* ]] || fail "메인 방에 클론이 남아 있다"
+
+    log "▶ 같은 카드 데이터로 한 판 (클론은 기기 저장본으로 맞춘다)"
+    sync_expect "$clone" "$ok" "http://127.0.0.1:1/none.json" "저장본으로" "확인값 ${ok:0:8}" "원격 True" "「25 피해를 준다」" || return
+    until_ok "$clone" Join || return
+    until_ok "$clone" CardDataRoom || return
+    until_ok "$MAIN" StartGame 2 || return
+    wait_scene GameScene || return
+    sleep 2
+    play_turns "$rounds" "${EDITORS[@]}" || return
+    sleep 14   # 마지막 카드의 체인 처리 · 후처리
+    log "▶ 판정"
+    compare_turns
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project" '카드 데이터 .* 를 쓸 수 없다'
+    done
+}
+
+# 카드 데이터를 맞추고(CardDataSync) 끝난 상태 줄(CardDataState 1001)에 그 글자들이 다 있는지
+sync_expect() {
+    local project="$1" hash="$2" url="$3" what="$4"; shift 4
+    local state="" want
+    for _ in $(seq 1 $WAIT_TRIES); do
+        state=$(call "$project" CardDataSync "$hash" "$url")
+        case "$state" in OK*) break ;; FAIL*) fail "$(name_of "$project"): $state"; return 1 ;; esac
+        sleep 1
+    done
+    for _ in $(seq 1 $WAIT_TRIES); do
+        state=$(call "$project" CardDataState 1001)
+        case "$state" in OK*|FAIL*) break ;; esac
+        sleep 1
+    done
+    log "  $(name_of "$project") · $what: $state"
+    case "$state" in OK*) ;; *) fail "$what — 끝나지 않았다"; return 1 ;; esac
+    for want in "$@"; do
+        [[ "$state" == *"$want"* ]] || fail "$what — 「$want」 이 없다"
+    done
+    return 0
+}
+
 case "${1:-}" in
     rules) shift; run_rules "$@" ;;
+    carddata) shift; run_carddata "$@" ;;
     migrate) shift
         case "${1:-}" in
             room)   run_migrate_room ;;

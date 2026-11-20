@@ -33,6 +33,9 @@ public static class MultiTest
 {
     // ── 부르는 함수 (코드에서 이름이 바뀌면 여기를 고친다) ──
     private const string JoinButtonMethod = "ClickJoinButton";             // DebugScript
+    private const string CardSyncToMethod = "SyncToRoutine";               // CardDataService — 그 데이터로 맞춘다 (설정 값 대신 시험 값을 준다)
+    private const string CardServiceDeckField = "deck";                    // CardDataService — 게임 덱
+    private const string CardSyncBusyKey = "MultiTest.CardSyncBusy";
     private const string StartRequestedMethod = "HandleStartRequested";    // RoomPresenter
     private const string TappedMethod = "HandleTapped";                    // TitlePresenter — 「화면을 눌러 시작」
     private const string AllAgreeMethod = "HandleAllClicked";              // TermsAgreeView — 「모두 동의하기」
@@ -4099,6 +4102,81 @@ public static class MultiTest
                 default:       return new Card(instanceId, kind, CardType.Trap, TargetType.Self, new CardEffect[0], null, Reveal, Resolve, TrapTrigger.SelfDeathPending);
             }
         }
+    }
+
+    // ── 카드 데이터 원격 패치 (26-card-data) ──
+
+    /// <summary>
+    /// 카드 데이터를 그 확인값 · 주소로 맞추기 시작한다 (Remote Config 값 대신 시험 값). hash 가 빈 문자열이면 원격 끔(빌드 기본본).
+    /// 끝났는지 · 결과는 CardDataState.
+    /// </summary>
+    public static string CardDataSync(string hash, string url)
+    {
+        CardDataService service = CardDataService.Instance;
+        if (service == null)
+            return "WAIT 카드 데이터 서비스 없음 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (SessionState.GetBool(CardSyncBusyKey, false))
+            return "WAIT 맞추는 중";
+
+        MethodInfo method = typeof(CardDataService).GetMethod(CardSyncToMethod, Private);
+        if (method == null)
+            throw new MissingMethodException(nameof(CardDataService), CardSyncToMethod + " — 이름이 바뀌었으면 MultiTest.cs 의 표를 고친다");
+
+        SessionState.SetBool(CardSyncBusyKey, true);
+        var target = new Chapchu.Account.CardDataTarget(hash, url, 0);
+        service.StartCoroutine(CardSyncRoutine((System.Collections.IEnumerator)method.Invoke(service, new object[] { target })));
+        return "OK 맞추기 시작 " + (hash.Length >= 8 ? hash.Substring(0, 8) : "(원격 끔)");
+    }
+
+    private static System.Collections.IEnumerator CardSyncRoutine(System.Collections.IEnumerator inner)
+    {
+        yield return inner;
+        SessionState.SetBool(CardSyncBusyKey, false);
+    }
+
+    /// <summary>맞추기가 끝났으면 지금 쓰는 데이터 — 확인값 · 덱 장수 · 그 카드의 문구와 효과 값 · 원본 에셋의 문구 · 저장본.</summary>
+    public static string CardDataState(string cardId)
+    {
+        CardDataService service = CardDataService.Instance;
+        if (service == null)
+            return "WAIT 카드 데이터 서비스 없음";
+
+        if (SessionState.GetBool(CardSyncBusyKey, false))
+            return "WAIT 맞추는 중";
+
+        var deck = (DeckData)typeof(CardDataService).GetField(CardServiceDeckField, Private).GetValue(service);
+        int id = int.Parse(cardId);
+        CardData card = deck.GetCard(id);
+        CardData asset = AssetDatabase.LoadAssetAtPath<CardData>($"Assets/Cards/Main/Card_{id}.asset");
+        string effects = string.Join(" + ", card.effects.Select(e => e.GetType().Name + JsonUtility.ToJson(e)));
+        bool stored = System.IO.File.Exists(System.IO.Path.Combine(Application.persistentDataPath, "CardData", service.ActiveHash + ".json"));
+        return $"OK 확인값 {service.ActiveHash.Substring(0, 8)} · 원격 {deck.IsPatched} · 덱 {deck.CreateCards().Count}장 · {id} 「{card.description}」 {effects} · 에셋 「{asset.description}」 · 저장본 {stored}";
+    }
+
+    /// <summary>기기 저장본 · 마지막 확인값을 지운다 (시험 앞뒤 — 에디터와 클론은 저장 폴더를 같이 쓴다).</summary>
+    public static string CardDataForget()
+    {
+        string folder = System.IO.Path.Combine(Application.persistentDataPath, "CardData");
+        if (System.IO.Directory.Exists(folder))
+            System.IO.Directory.Delete(folder, true);
+
+        PlayerPrefs.DeleteKey(Chapchu.Core.PlayerPrefsKeys.CardDataHash);
+        PlayerPrefs.DeleteKey(Chapchu.Core.PlayerPrefsKeys.CardDataAppVersion);
+        PlayerPrefs.Save();
+        SessionState.SetBool(CardSyncBusyKey, false);
+        return "OK 저장본 지움";
+    }
+
+    /// <summary>방 안이면 방의 카드 데이터 확인값이 내 것과 같은지.</summary>
+    public static string CardDataRoom()
+    {
+        if (!PhotonNetwork.InRoom)
+            return "WAIT 방 없음";
+
+        string room = PhotonNetwork.CurrentRoom.CustomProperties[RoomProps.CardData] as string;
+        string mine = CardDataService.Instance.ActiveHash;
+        return room == mine ? $"OK 방 {room.Substring(0, 8)} = 나 · {PhotonNetwork.CurrentRoom.PlayerCount}명" : $"FAIL 방 {room} ≠ 나 {mine}";
     }
 
     // ── 내부 ──
