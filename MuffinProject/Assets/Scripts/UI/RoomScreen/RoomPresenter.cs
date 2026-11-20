@@ -13,6 +13,7 @@ using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using AnalyticsRecorder = Chapchu.Account.AnalyticsRecorder; // Photon.Realtime 에도 AccountService 가 있어 통째로 가져오지 않는다
 using UnityEngine.UI;
 
 namespace Chapchu.UI.RoomScreen
@@ -72,6 +73,7 @@ namespace Chapchu.UI.RoomScreen
         // 방이 닫혔다 = 방장이 시작을 눌렀다. 전원 화면이 「게임을 시작합니다」 가 되고 입력이 잠긴다
         private bool _isLocked;
         private bool _isLeaving;
+        private float _enteredAt = -1f; // 방에 들어온 시각 — 판 전에 나가면 roomLeftBeforeStart.waitSeconds (27 5-2). 음수 = 세지 않음
 
         // 공개 여부 · 열림 · 봇 목록 · 봇 난이도([봇 번호 − 1])의 지난 값 — 바뀐 것을 찾아 로그 · 잠금에 쓴다
         private bool _wasPublic;
@@ -210,6 +212,9 @@ namespace Chapchu.UI.RoomScreen
                 Leave();
                 return;
             }
+
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Room);
+            _enteredAt = Time.realtimeSinceStartup;
 
             Room room = PhotonNetwork.CurrentRoom;
             _wasPublic = room.IsVisible;
@@ -384,6 +389,15 @@ namespace Chapchu.UI.RoomScreen
 
         private void HandleLeftRoom()
         {
+            // 판이 시작되면 이 화면은 게임 씬으로 바뀌어 여기 오지 않는다 — 여기 오면 판 전에 나간 것.
+            // 내보내기 · 버전 다름은 아직 없어 내가 나갔나 · 끊겼나 둘만 가린다
+            if (_enteredAt >= 0f)
+            {
+                AnalyticsRecorder.RecordRoomLeftBeforeStart(Mathf.RoundToInt(Time.realtimeSinceStartup - _enteredAt),
+                    _isLeaving ? AnalyticsRecorder.RoomLeaveReason.Self : AnalyticsRecorder.RoomLeaveReason.Disconnected);
+                _enteredAt = -1f;
+            }
+
             // 들어온 곳으로 돌아간다. Lobby 에서 왔으면 Lobby, DebugLobby 에서 왔으면 DebugLobby.
             SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
         }

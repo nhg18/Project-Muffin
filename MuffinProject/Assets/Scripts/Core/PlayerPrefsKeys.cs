@@ -19,6 +19,9 @@ namespace Chapchu.Core
         /// <summary>약관 · 개인정보 동의 기록 (1 = 동의). 계정 삭제 때 지운다 (23-login 7-5 · 6-4)</summary>
         public const string TermsAgreed = "TermsAgreed";
 
+        /// <summary>플레이 기록 수집 선택 (1 = 동의 · 0 = 동의 안 함 · 없으면 아직 고르지 않음). 계정 삭제 때 지운다 (27-analytics 6절)</summary>
+        public const string PlayRecordAgreed = "PlayRecordAgreed";
+
         /// <summary>설정의 효과음 · 배경음 · 초대 알림 스위치 (1 = 켬, 없으면 켬). 이 기기에만 저장한다 (17-lobby-ui-full 5-4)</summary>
         public const string SfxOn = "SfxOn";
         public const string BgmOn = "BgmOn";

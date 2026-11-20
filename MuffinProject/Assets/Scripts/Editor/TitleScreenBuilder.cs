@@ -79,8 +79,9 @@ namespace Chapchu.EditorTools
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.TermsAgreed);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.PlayerName);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.AccountLogin);
+            PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.PlayRecordAgreed);
             PlayerPrefs.Save();
-            Debug.Log($"[{nameof(TitleScreenBuilder)}] 처음 실행으로 되돌림 — 약관 동의 · 저장된 로그인 · 닉네임 기록을 지웠다.");
+            Debug.Log($"[{nameof(TitleScreenBuilder)}] 처음 실행으로 되돌림 — 약관 동의 · 플레이 기록 선택 · 저장된 로그인 · 닉네임 기록을 지웠다.");
         }
 
         [MenuItem("Chapchu/Title Screen/Build UI")]

@@ -3,6 +3,7 @@ using Chapchu.Account;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using ErrorCode = Photon.Realtime.ErrorCode; // Photon.Realtime 에도 AccountService 가 있어 통째로 가져오지 않는다
@@ -176,7 +177,23 @@ namespace Chapchu.UI.Lobby
             }
 
             StopCoroutine(_roomTimeout); // 입장했다 — 방 씬이 열리기 전에 시간 초과가 끼어들지 않게 멈춘다
+            // 봇은 Photon 플레이어가 아니다 — PlayerCount 가 곧 사람 수 (18-bot)
+            AnalyticsRecorder.RecordRoomEntered(ToVia(_request), PhotonNetwork.CurrentRoom.IsVisible, PhotonNetwork.CurrentRoom.PlayerCount);
             SceneManager.LoadScene(ScenePaths.Room);
+        }
+
+        // 혼자 하기(봇 방)도 방 만들기다. 초대 수락은 친구 서버가 붙으면 Invite 로 (27 5-2)
+        private static AnalyticsRecorder.RoomVia ToVia(RoomRequest request)
+        {
+            switch (request)
+            {
+                case RoomRequest.Random:
+                    return AnalyticsRecorder.RoomVia.QuickStart;
+                case RoomRequest.Join:
+                    return AnalyticsRecorder.RoomVia.Code;
+                default:
+                    return AnalyticsRecorder.RoomVia.Create;
+            }
         }
 
         // 랜덤 매칭이 방을 못 찾으면 바로 새 방을 만든다 — 그 생성이 실패한 경우도 여기로 온다

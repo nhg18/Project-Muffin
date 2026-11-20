@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Chapchu.Account;
 using UnityEngine;
 
 namespace Chapchu.UI.Lobby
@@ -168,6 +169,7 @@ namespace Chapchu.UI.Lobby
                 StartCoroutine(EndMoveRoutine());
             }
 
+            AnalyticsRecorder.RecordScreenViewed(ToScreenName(screen));
             home.SetVisible(screen == Screen.Home);
             section.SetOpen(screen != Screen.Home);
             if (screen == Screen.Home)
@@ -179,6 +181,21 @@ namespace Chapchu.UI.Lobby
             RefreshSection();
             if (from != Screen.Home)
                 section.FlashContent();
+        }
+
+        // 상점 · 뽑기는 같은 「상점」 화면이다 — 뽑기는 상점의 탭 (27 5-5)
+        private static AnalyticsRecorder.ScreenName ToScreenName(Screen screen)
+        {
+            switch (screen)
+            {
+                case Screen.Box:
+                    return AnalyticsRecorder.ScreenName.Decorate;
+                case Screen.Shop:
+                case Screen.Gacha:
+                    return AnalyticsRecorder.ScreenName.Shop;
+                default:
+                    return AnalyticsRecorder.ScreenName.Lobby;
+            }
         }
 
         // 판 이동 연출(SetUpdate(true))과 같은 시계 · 같은 길이로 잠금을 푼다
@@ -400,6 +417,7 @@ namespace Chapchu.UI.Lobby
             {
                 // 서버가 없어 저장을 기다리지 않는다 — 바로 입힌다
                 Data.Equip(item);
+                AnalyticsRecorder.RecordItemEquipped(item.Id, item.Slot);
                 _boxSelected = item;
                 RefreshSection();
                 hero.Pop();

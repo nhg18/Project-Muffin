@@ -20,6 +20,9 @@ namespace Chapchu.UI.GameScreen
             _view = GetComponent<GameMenuView>();
         }
 
+        // 게임 화면에 들어감 (27 5-5) — 화면마다 한 컴포넌트가 맡는데, 게임 화면은 메뉴가 늘 있다
+        private void Start() => Chapchu.Account.AnalyticsRecorder.RecordScreenViewed(Chapchu.Account.AnalyticsRecorder.ScreenName.Game);
+
         private void OnEnable()
         {
             _view.ExitConfirmed += HandleExitConfirmed;
