@@ -37,6 +37,7 @@ namespace Chapchu.Cards
         [SerializeField] private DeckData deck;
 
         private float _lastSyncAt = float.NegativeInfinity;
+        private string _lastTargetHash; // 마지막으로 맞추려 한 서버 값 (원격 끔이면 null)
         private string _rejectedHash; // 이번 실행에 받았지만 쓸 수 없던 데이터 — 다시 받지 않는다
 
         /// <summary>지금 쓰는 카드 데이터의 확인값 — 방 속성에 쓰고, 같은 값의 방만 찾는다 (26 7-6).</summary>
@@ -88,6 +89,7 @@ namespace Chapchu.Cards
         private IEnumerator SyncToRoutine(CardDataTarget target)
         {
             _lastSyncAt = Time.realtimeSinceStartup;
+            _lastTargetHash = target.IsSet ? target.Hash : null;
             if (deck == null)
                 yield break;
 
@@ -114,15 +116,23 @@ namespace Chapchu.Cards
         }
 
         /// <summary>
-        /// 로비에서 방에 가려 할 때 (26 6-5) — 마지막으로 맞춘 지 30초가 지났으면 설정 값을 다시 읽는다. 읽었으면 onDone(true) —
-        /// 부른 쪽이 업데이트 · 점검을 먼저 보고, 둘 다 아닐 때만 SyncRoutine 으로 맞춘다.
-        /// 30초 안 · 읽기 실패 · 로그인하지 않은 실행(디버그 로비)은 onDone(false) — 맞추지 않고 지금 데이터로 간다.
+        /// 로비에서 방에 가려 할 때 (26 6-5) — 마지막으로 확인한 지 30초가 지났으면 설정 값을 다시 읽는다.
+        /// onDone(true) = 맞출 것이 있다 — 부른 쪽이 업데이트 · 점검을 먼저 보고, 둘 다 아닐 때만 SyncRoutine 으로 맞춘다.
+        /// onDone(false) = 맞추지 않고 지금 데이터로 간다 — 읽기 실패 · 로그인하지 않은 실행(디버그 로비) · 30초 안이고 서버 값이 그대로.
         /// </summary>
         public IEnumerator ReadRoutine(Action<bool> onDone)
         {
-            if (!AccountService.IsSignedIn || Time.realtimeSinceStartup - _lastSyncAt < RefreshIntervalSeconds)
+            if (!AccountService.IsSignedIn)
             {
                 onDone(false);
+                yield break;
+            }
+
+            if (Time.realtimeSinceStartup - _lastSyncAt < RefreshIntervalSeconds)
+            {
+                // 다시 읽지는 않는다. 시간 초과 뒤 늦게 끝난 읽기가 새 값을 가져다 놓았으면 그 값으로는 맞춘다 — 이미 맞추려 한 값이면 다시 하지 않는다
+                CardDataTarget target = ServerConfig.CardData;
+                onDone((target.IsSet ? target.Hash : null) != _lastTargetHash);
                 yield break;
             }
 

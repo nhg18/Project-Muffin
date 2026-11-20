@@ -159,10 +159,10 @@ namespace Chapchu.UI.Lobby
             };
             modal.ShowLoading(loadingText);
 
-            // 읽기 실패 · 30초 안이면 맞추지 않고 누른 요청을 그대로 보낸다
+            // 맞출 것이 없으면(읽기 실패 · 30초 안이고 서버 값이 그대로) 누른 요청을 그대로 보낸다
             CardDataService cardData = CardDataService.Instance;
-            bool read = false;
-            yield return cardData.ReadRoutine(result => read = result);
+            bool sync = false;
+            yield return cardData.ReadRoutine(result => sync = result);
 
             // 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐다 — 받지도 보내지도 않고 타이틀로 돌려보낸다. 닫을 수 없는 팝업은 타이틀이 띄운다 (23-login 7-6)
             if (AccountService.IsSignedIn && ServerConfig.HasValues && (ServerConfig.NeedsUpdate || ServerConfig.IsMaintenance))
@@ -173,7 +173,7 @@ namespace Chapchu.UI.Lobby
                 yield break;
             }
 
-            if (read)
+            if (sync)
             {
                 // 받는 동안만 글을 「받는 중…」 으로 바꾼다 — 묻지 않고 받는다 (26 6-5)
                 StartCoroutine(RefreshRoutine(cardData));
