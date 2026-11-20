@@ -17,6 +17,7 @@
         public const string Gaepan = "gaepan";            // 개판 오분전 [건 사람, 남은 바퀴] (int[], 1021). 개판이 없으면 키를 지운다
         public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 1012 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
         public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 1023 기다려! — 07 4.3). 아무도 없으면 키를 지운다
+        public const string CardData = "cd";               // 방장이 방을 만들 때 쓴 카드 데이터의 확인값 (string, 26-card-data.md 7-6). 로비에 보이는 속성 — 같은 값의 방만 찾고 들어간다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
 
         // 결과 화면 (07-win-condition.md 11-1) — 방장이 게임 종료 때 새로 쓴다

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Threading.Tasks;
 using Chapchu.Account;
+using Chapchu.Cards;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
@@ -14,7 +15,7 @@ using DisconnectCause = Photon.Realtime.DisconnectCause; // Photon.Realtime 에�
 namespace Chapchu.UI.Title
 {
     /// <summary>
-    /// 타이틀 흐름 — 약관 동의 → 플레이 기록 수집(처음만, 27-analytics) → 로그인 고르기 → (게스트) 닉네임 → 로그인 → 설정 값 → 접속 → 닉네임 저장 → 로비.
+    /// 타이틀 흐름 — 약관 동의 → 플레이 기록 수집(처음만, 27-analytics) → 로그인 고르기 → (게스트) 닉네임 → 로그인 → 설정 값 → 카드 데이터(26-card-data) → 접속 → 닉네임 저장 → 로비.
     /// 자동 로그인(누르지 않아도 로비)은 계정(Google · Apple)으로 로그인해 둔 기기만. 게스트는 매번 「화면을 눌러 시작」 부터 —
     /// 계정(저장된 로그인)과 닉네임은 기기에 남아, 닉네임 창에 지난 닉네임이 미리 들어 있다 (PM 2026-11-11, 시안과 다른 점).
     /// 뷰와 계정(UGS) · 네트워크 · 씬 전환을 잇는 유일한 파일이다.
@@ -295,6 +296,9 @@ namespace Chapchu.UI.Title
                 yield return new WaitForSecondsRealtime(ServerConfig.MaintenanceRetrySeconds);
                 yield return FetchConfig();
             }
+
+            // 접속 전에 카드 데이터를 맞춘다 — 로비에서 바로 같은 데이터의 방을 찾게 (26-card-data 6-1). 못 맞춰도 저장본 · 빌드 기본본으로 간다
+            yield return CardDataService.Instance.SyncRoutine();
 
             popup.Hide();
             Connect();

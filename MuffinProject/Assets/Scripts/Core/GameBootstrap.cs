@@ -1,4 +1,5 @@
-﻿using Chapchu.Network;
+﻿using Chapchu.Cards;
+using Chapchu.Network;
 using Chapchu.UI.Popups;
 using UnityEngine;
 
@@ -14,6 +15,7 @@ namespace Chapchu.Core
         /// <summary>생성 순서대로 나열한다. 먼저 필요한 매니저를 앞에 둔다. 프리팹 이름 = 매니저 클래스 이름 (ResourcePaths.Bootstrap 아래).</summary>
         private static readonly string[] ManagerPrefabs =
         {
+            nameof(CardDataService),
             nameof(NetworkManager),
             nameof(PopupManager),
         };

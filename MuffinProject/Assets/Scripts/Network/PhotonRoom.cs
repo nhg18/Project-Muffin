@@ -4,6 +4,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapchu.Cards;
 using Chapchu.Core;
 using Chapchu.Game.Bots;
 using Chapchu.Network.Events;
@@ -16,6 +17,10 @@ namespace Chapchu.Network
         // 연결이 없어 요청을 보내지 못함 — 실패로 알려 화면이 대기 표시를 닫고 「그 밖의 실패」 안내를 띄우게 (08-room.md 7절)
         private const short NotConnectedCode = ErrorCode.OperationNotAllowedInCurrentState;
         private const string NotConnectedMessage = "서버에 연결되어 있지 않아요.";
+
+        // 카드 데이터가 다른 방에 들어감 (26-card-data.md 7-6) — 방이 옛 데이터일 때 · 내가 새 데이터를 못 받았을 때
+        private const string RoomCardDataOldMessage = "방의 카드 버전이 달라요. 방장이 로비에 나갔다 오면 같이 할 수 있어요.";
+        private const string MyCardDataOldMessage = "새 카드 데이터를 받지 못해 이 방에 들어갈 수 없어요. 잠시 후 다시 시도해 주세요.";
 
         private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
 
@@ -33,6 +38,9 @@ namespace Chapchu.Network
 
         /// <summary>방장이 정한 봇 난이도 (서버 확인 전 포함). 방장이 아니면 null — 읽기는 BotRoster.LevelOf 로.</summary>
         internal int[] HostBotLevels => _hostBotLevels;
+
+        // 내가 쓰는 카드 데이터의 확인값 — 방 속성에 쓰고, 이 값의 방만 찾는다 (26-card-data.md 7-6)
+        private static string CardDataHash => CardDataService.Instance != null ? CardDataService.Instance.ActiveHash ?? "" : "";
 
         internal PhotonRoom(RoomGuard guard) => _guard = guard;
 
@@ -59,7 +67,8 @@ namespace Chapchu.Network
                 RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
                 return;
             }
-            PhotonNetwork.JoinRandomRoom();
+            // 같은 카드 데이터의 방만 찾는다. 없으면 OnJoinRandomFailed 가 내 데이터로 새 방을 만든다 (08-room.md 4절)
+            PhotonNetwork.JoinRandomRoom(new ExitGames.Client.Photon.Hashtable { [RoomProps.CardData] = CardDataHash }, 0);
         }
     
         public void LeaveRoom()
@@ -97,7 +106,8 @@ namespace Chapchu.Network
             _creatingSolo = true;
             int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers - bots.Length, false, true);
-            options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.Bots] = bots, [RoomProps.Solo] = true };
+            options.CustomRoomProperties[RoomProps.Bots] = bots;
+            options.CustomRoomProperties[RoomProps.Solo] = true;
             string code = RandomCode.GenerateRandomCode();
 
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
@@ -193,6 +203,9 @@ namespace Chapchu.Network
                 MaxPlayers = maxPlayers,
                 IsVisible = isVisible,
                 IsOpen = isOpen,
+                // 방은 만든 사람의 카드 데이터로 끝까지 간다 — 로비에 보여야 랜덤 매칭이 거른다 (26-card-data.md 7-6)
+                CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.CardData] = CardDataHash },
+                CustomRoomPropertiesForLobby = new[] { RoomProps.CardData },
             };
         }
     
@@ -241,6 +254,17 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinedRoom()
         {
+            // 카드 데이터가 다른 방이면 바로 나온다 — 방장 판정 값과 내 화면의 카드가 달라진다 (26-card-data.md 7-6).
+            // 코드 · 초대로 들어올 때만 생긴다 (랜덤 매칭은 같은 데이터의 방만 찾는다)
+            if (!Equals(PhotonNetwork.CurrentRoom.CustomProperties[RoomProps.CardData], CardDataHash))
+            {
+                bool mineIsOld = CardDataService.Instance != null && CardDataService.Instance.IsBehind;
+                Debug.LogWarning($"[{nameof(PhotonRoom)}] 카드 데이터가 다른 방 — 나간다 (방 {PhotonNetwork.CurrentRoom.CustomProperties[RoomProps.CardData]} · 나 {CardDataHash})");
+                PhotonNetwork.LeaveRoom();
+                RoomEvents.RaiseJoinRoomFailed(ErrorCode.InvalidOperation, mineIsOld ? MyCardDataOldMessage : RoomCardDataOldMessage);
+                return;
+            }
+
             AdoptBots();
             RoomEvents.RaiseJoinedRoom();
         }

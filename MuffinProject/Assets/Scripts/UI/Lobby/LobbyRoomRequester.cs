@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using Chapchu.Account;
+using Chapchu.Cards;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
@@ -12,7 +13,8 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 로비의 방 요청 — 혼자 하기 · 방 만들기 · 코드로 참가 · 랜덤 매칭 · 초대 수락. 결과는 RoomEvents 로 오고, 10초 안에 응답이 없으면 실패로 알린다.
-    /// 기준: docs/systems/08-room.md 7절 · 14-lobby-ui.md 6절 · 17-lobby-ui-full.md 5-1 · 22-popup-ui 3절
+    /// 요청을 보내기 전에 설정 값을 다시 읽어 카드 데이터를 맞춘다 — 앱을 켠 채 패치가 나와도 새 데이터의 방에 간다 (26-card-data 6-5).
+    /// 기준: docs/systems/08-room.md 7절 · 14-lobby-ui.md 6절 · 17-lobby-ui-full.md 5-1 · 22-popup-ui 3절 · 26-card-data.md 6-5
     /// </summary>
     public class LobbyRoomRequester : MonoBehaviour
     {
@@ -32,6 +34,12 @@ namespace Chapchu.UI.Lobby
         private const string NoRoomCodeText = "방 코드를 입력해 주세요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
+        // 26-card-data 6-5 — 방에 가기 전 확인. 업데이트 · 점검은 타이틀 팝업과 같은 글 (23-login 7-6)
+        private const string DownloadingText = "받는 중…";
+        private const string UpdateTitle = "업데이트 필요";
+        private const string UpdateText = "새 버전으로 업데이트해 주세요.";
+        private const string MaintenanceTitle = "점검 중";
+
         private const float RoomRequestTimeoutSeconds = 10f; // 14-lobby-ui 6절
 
         [SerializeField] private LobbyHomeView home;
@@ -41,6 +49,7 @@ namespace Chapchu.UI.Lobby
 
         private RoomRequest _request;
         private Coroutine _roomTimeout; // 방 요청의 응답을 기다리는 동안만 있다
+        private bool _refreshing;       // 요청을 보내기 전 카드 데이터를 맞추는 중
 
         // 초대 배너가 떠 있는 동안 플레이 버튼은 눌리지 않는다 (17 5-1)
         private bool CanPlay => !invite.IsShown && !sections.IsMoving && !modal.IsLoading;
@@ -136,6 +145,47 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _request = request;
+            StartCoroutine(RequestRoutine(request, roomCode));
+        }
+
+        // 카드 데이터 맞추기 → (업데이트 · 점검이면 타이틀로) → 요청 보내기. 로딩 창은 처음부터 그 요청의 글로 뜬다
+        private IEnumerator RequestRoutine(RoomRequest request, string roomCode)
+        {
+            string loadingText = request switch
+            {
+                RoomRequest.Random => SearchingText,
+                RoomRequest.Join   => JoiningText,
+                _                  => CreatingText,
+            };
+            modal.ShowLoading(loadingText);
+
+            // 받는 동안만 글을 「받는 중…」 으로 바꾼다 — 묻지 않고 받는다 (26 6-5)
+            CardDataService cardData = CardDataService.Instance;
+            StartCoroutine(RefreshRoutine(cardData));
+            bool downloadingShown = false;
+            while (_refreshing)
+            {
+                if (cardData.IsDownloading != downloadingShown)
+                {
+                    downloadingShown = cardData.IsDownloading;
+                    modal.ShowLoading(downloadingShown ? DownloadingText : loadingText);
+                }
+
+                yield return null;
+            }
+
+            if (downloadingShown)
+                modal.ShowLoading(loadingText);
+
+            // 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐다 — 요청을 보내지 않고 타이틀로 돌려보낸다. 닫을 수 없는 팝업은 타이틀이 띄운다 (23-login 7-6)
+            if (AccountService.IsSignedIn && ServerConfig.HasValues && (ServerConfig.NeedsUpdate || ServerConfig.IsMaintenance))
+            {
+                modal.HideLoading();
+                bool update = ServerConfig.NeedsUpdate;
+                modal.ShowWarn(update ? UpdateTitle : MaintenanceTitle, update ? UpdateText : ServerConfig.MaintenanceMessage, onOk: ReturnToTitle);
+                yield break;
+            }
+
             // 서버가 새 요청을 받을 수 있다 = 포기한 옛 요청은 끝났다. 받을 수 없으면(옛 요청이 아직 처리 중) 표시를 그대로 둔다 —
             // 새 요청은 그 자리에서 실패하고, 옛 요청의 늦은 입장은 계속 막는다
             if (NetworkManager.IsReady)
@@ -145,23 +195,28 @@ namespace Chapchu.UI.Lobby
             switch (request)
             {
                 case RoomRequest.Random:
-                    modal.ShowLoading(SearchingText);
                     NetworkManager.Instance.JoinRandomRoom();
                     break;
                 case RoomRequest.Create:
-                    modal.ShowLoading(CreatingText);
                     NetworkManager.Instance.CreateRoom();
                     break;
                 case RoomRequest.Solo:
-                    modal.ShowLoading(CreatingText);
                     NetworkManager.Instance.CreateSoloRoom();
                     break;
                 default:
-                    modal.ShowLoading(JoiningText);
                     NetworkManager.Instance.JoinRoom(roomCode);
                     break;
             }
         }
+
+        private IEnumerator RefreshRoutine(CardDataService cardData)
+        {
+            _refreshing = true;
+            yield return cardData.RefreshRoutine();
+            _refreshing = false;
+        }
+
+        private static void ReturnToTitle() => SceneManager.LoadScene(ScenePaths.Title);
 
         #endregion
 
