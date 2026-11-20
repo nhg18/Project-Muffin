@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,7 +39,7 @@ namespace Chapchu.Cards
 
         private float _lastSyncAt = float.NegativeInfinity;
         private string _lastTargetHash; // 마지막으로 맞추려 한 서버 값 (원격 끔이면 null)
-        private string _rejectedHash; // 이번 실행에 받았지만 쓸 수 없던 데이터 — 다시 받지 않는다
+        private readonly HashSet<string> _rejectedHashes = new HashSet<string>(); // 이번 실행에 받았지만 쓸 수 없던 데이터 전부 — 앱을 끌 때까지 다시 받지 않는다
 
         /// <summary>지금 쓰는 카드 데이터의 확인값 — 방 속성에 쓰고, 같은 값의 방만 찾는다 (26 7-6).</summary>
         public string ActiveHash => deck != null ? deck.ActiveHash : null;
@@ -105,7 +106,7 @@ namespace Chapchu.Cards
             if (target.Hash == deck.ActiveHash || TryUseStored(target.Hash))
                 yield break;
 
-            if (target.Hash != _rejectedHash)
+            if (!_rejectedHashes.Contains(target.Hash))
             {
                 yield return DownloadRoutine(target);
                 if (target.Hash == deck.ActiveHash)
@@ -161,7 +162,7 @@ namespace Chapchu.Cards
             if (!IsAllowed(target.Url))
             {
                 Debug.LogError($"[{nameof(CardDataService)}] 카드 데이터 주소가 https 가 아니다 — 받지 않는다: {target.Url}");
-                _rejectedHash = target.Hash;
+                _rejectedHashes.Add(target.Hash);
                 yield break;
             }
 
@@ -221,7 +222,7 @@ namespace Chapchu.Cards
                         bool clientError = request.responseCode >= 400 && request.responseCode < 500;
                         if (clientError && request.responseCode != TooManyRequests && request.responseCode != RequestTimeout)
                         {
-                            _rejectedHash = target.Hash;
+                            _rejectedHashes.Add(target.Hash);
                             break;
                         }
 
@@ -257,7 +258,7 @@ namespace Chapchu.Cards
 
         private void Reject(CardDataTarget target, string reason)
         {
-            _rejectedHash = target.Hash;
+            _rejectedHashes.Add(target.Hash);
             Debug.LogError($"[{nameof(CardDataService)}] 카드 데이터 {Short(target.Hash)} 를 쓸 수 없다 — {reason}");
         }
 

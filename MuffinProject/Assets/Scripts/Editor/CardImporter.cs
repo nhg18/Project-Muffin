@@ -60,32 +60,39 @@ namespace Chapchu.EditorTools
 
                 // 사본에 얹고, 다 맞을 때만 에셋에 옮긴다 — 실패한 카드는 반쯤 바뀐 채 저장되지 않는다
                 CardData copy = UnityEngine.Object.Instantiate(data);
-                copy.name = data.name;
-                copy.type = ParseEnum<CardType>(entry.type, entry.id);
-                if (copy.effects.Count == 0 && entry.effects != null && entry.effects.Length > 0)
+                try
                 {
-                    // 하나라도 못 만들면 넣지 않는다 — 효과 수가 달라 실패로 센다. 짧은 목록이 저장되면 다음 가져오기가 다시 만들지 못한다
-                    List<CardEffect> effects = entry.effects.Select(e => CreateEffect(e, entry.id)).ToList();
-                    if (!effects.Contains(null))
-                        copy.effects = effects;
-                }
-
-                if (!CardSheet.TryApply(entry, copy, out error))
-                {
-                    Debug.LogError($"[{nameof(CardImporter)}] {error} — 에셋의 효과 구성과 cards.json 을 맞추기", data);
-                    failed++;
-                }
-                else
-                {
-                    EditorUtility.CopySerialized(copy, data);
-                    if (Describe(data) != before)
+                    copy.name = data.name;
+                    // 모르는 종류 이름이면 사본의 종류를 그대로 둔다 — TryApply 가 종류가 다르다며 실패로 센다
+                    if (TryParseName(entry.type, out CardType type))
+                        copy.type = type;
+                    if (copy.effects.Count == 0 && entry.effects != null && entry.effects.Length > 0)
                     {
-                        Debug.Log($"[{nameof(CardImporter)}] 카드 {entry.id} 바뀜\n  전: {before}\n  후: {Describe(data)}", data);
-                        changed++;
+                        // 하나라도 못 만들면 넣지 않는다 — 효과 수가 달라 실패로 센다. 짧은 목록이 저장되면 다음 가져오기가 다시 만들지 못한다
+                        List<CardEffect> effects = entry.effects.Select(e => CreateEffect(e, entry.id)).ToList();
+                        if (!effects.Contains(null))
+                            copy.effects = effects;
+                    }
+
+                    if (!CardSheet.TryApply(entry, copy, out error))
+                    {
+                        Debug.LogError($"[{nameof(CardImporter)}] {error} — 에셋의 효과 구성과 cards.json 을 맞추기", data);
+                        failed++;
+                    }
+                    else
+                    {
+                        EditorUtility.CopySerialized(copy, data);
+                        if (Describe(data) != before)
+                        {
+                            Debug.Log($"[{nameof(CardImporter)}] 카드 {entry.id} 바뀜\n  전: {before}\n  후: {Describe(data)}", data);
+                            changed++;
+                        }
                     }
                 }
-
-                UnityEngine.Object.DestroyImmediate(copy);
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(copy);
+                }
 
                 EnsureSprite(entry.id);
                 EditorUtility.SetDirty(data);
@@ -107,11 +114,15 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(CardImporter)}] 카드 {sheet.cards.Length}종 (새로 {created} · 바뀜 {changed} · 실패 {failed}) · Deck_Main {entries.Sum(e => e.count)}장 · 확인값 {deck.dataHash}");
         }
 
-        private static T ParseEnum<T>(string value, int cardId) where T : struct
+        // enum 이름이 정확히 맞을 때만 — CardSheet 의 이름 읽기와 같은 기준 (숫자 · 쉼표 목록은 받지 않는다)
+        private static bool TryParseName<T>(string raw, out T value) where T : struct, Enum
         {
-            if (Enum.TryParse(value, out T result))
-                return result;
-            throw new ArgumentException($"카드 {cardId}: {typeof(T).Name} 에 「{value}」 가 없다");
+            value = default;
+            if (raw == null || !Enum.IsDefined(typeof(T), raw))
+                return false;
+
+            value = (T)Enum.Parse(typeof(T), raw);
+            return true;
         }
 
         // 파일이 덮는 값 전부를 한 줄로 — 가져오기 전후를 비교해 바뀐 카드를 알린다
