@@ -18,7 +18,7 @@ namespace Chapchu.Cards
     /// <summary>
     /// 카드 종류 1개의 정의 (에셋, 05-deck.md 8절). "이 카드가 무엇인가" 만 담는다 — 덱에 몇 장인지는 DeckData, 게임 안의 한 장은 Card.
     /// 화면은 CardId 로 이것을 찾아 그린다. 이름 · 문구 · 대상 · 등급 · 효과 값은 카드 데이터 파일(cards.json)이 원본이다 —
-    /// 「카드 가져오기」 가 매번 덮는다. 여기서 고쳐도 다음 가져오기에 되돌아간다 (CardSheet · 26-card-data.md 7-2).
+    /// 「카드 패치하기」 가 매번 덮는다. 여기서 고쳐도 다음 패치에 되돌아간다 (Editor/CardImporter · 26-card-data.md 7-2).
     /// </summary>
     [CreateAssetMenu(fileName = "Card_", menuName = "CardSystem/Card Data")]
     public class CardData : ScriptableObject

@@ -20,11 +20,5 @@
 
         /// <summary>Remote Config — 금칙어를 포함하지만 정상인 단어, 문자열 배열 JSON (23 8-1)</summary>
         public const string AllowedWords = "allowedWords";
-
-        /// <summary>
-        /// Remote Config — 지금 쓸 카드 데이터, JSON { "version": 번호, "hash": 확인값, "url": 파일 주소 } (26-card-data 7-5).
-        /// 키가 없거나 비어 있으면 원격 카드 데이터를 쓰지 않는다 — 빌드 기본본으로.
-        /// </summary>
-        public const string CardData = "cardData";
     }
 }

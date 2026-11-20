@@ -5,16 +5,17 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Chapchu.Cards;
 using Chapchu.Game;
 using Chapchu.Game.Effects;
 using UnityEngine;
 
-namespace Chapchu.Cards
+namespace Chapchu.EditorTools
 {
     /// <summary>
-    /// 카드 데이터 파일(cards.json) 한 벌 — 읽기 · 확인값 · 카드 정의에 얹기. 기준: docs/systems/26-card-data.md 7-2 · 7-3
-    /// 빌드 기본본(「카드 가져오기」)과 원격 패치(CardDataService)가 같은 파일을 같은 코드로 얹는다 — 값의 원본은 이 파일 하나다.
-    /// 파일이 바꿀 수 있는 것: 이름 · 문구 · 대상 · 대상 후보 조건 · 등급 · 장수 · 효과 값. 카드 종류 · 효과의 종류와 순서는 빌드가 정한다.
+    /// 카드 데이터 파일(cards.json) 한 벌 — 읽기 · 확인값 · 카드 정의에 얹기. 기준: docs/systems/26-card-data.md 7-2
+    /// 에디터에서만 쓴다 — 「카드 패치하기」(CardImporter)가 이 파일을 카드 에셋에 얹고, 게임은 에셋만 읽는다. 값의 원본은 이 파일 하나다.
+    /// 파일이 바꿀 수 있는 것: 이름 · 문구 · 대상 · 대상 후보 조건 · 등급 · 장수 · 효과 값. 카드 종류 · 효과의 종류와 순서는 에셋이 정한다.
     /// </summary>
     [Serializable]
     public class CardSheet
@@ -26,7 +27,7 @@ namespace Chapchu.Cards
 
         /// <summary>
         /// 파일 내용의 확인값 (SHA-256, 소문자 16진수). 줄바꿈(CRLF · LF)과 BOM 은 빼고 센다 —
-        /// 같은 파일이 저장소 줄바꿈 정책 · 받는 길에 따라 다른 값이 되지 않게.
+        /// 같은 파일이 저장소 줄바꿈 정책에 따라 다른 값이 되지 않게.
         /// </summary>
         public static string HashOf(string json)
         {
@@ -91,12 +92,12 @@ namespace Chapchu.Cards
 
         /// <summary>
         /// 파일의 카드 한 줄을 카드 정의에 얹는다. 종류 · 효과의 종류와 순서가 정의와 다르면 얹지 않고 false —
-        /// 그런 변경은 앱 업데이트로만 낸다 (26 3절 #9). 실패하면 data 가 반쯤 바뀌어 있을 수 있다 — 사본에 얹고, 실패하면 사본을 버린다.
+        /// 그런 변경은 에셋 · 코드를 사람이 고친다 (26 3절 #9). 실패하면 data 가 반쯤 바뀌어 있을 수 있다 — 사본에 얹고, 실패하면 사본을 버린다.
         /// </summary>
         public static bool TryApply(CardSheetEntry entry, CardData data, out string error)
         {
             if (!TryParseName(entry.type, out CardType type) || type != data.type)
-                return Fail(entry, $"종류 「{entry.type}」 — 빌드는 {data.type}", out error);
+                return Fail(entry, $"종류 「{entry.type}」 — 에셋은 {data.type}", out error);
 
             if (!TryParseName(entry.target, out TargetType target))
                 return Fail(entry, $"대상 「{entry.target}」 를 모른다", out error);
@@ -113,14 +114,14 @@ namespace Chapchu.Cards
 
             int effectCount = entry.effects?.Length ?? 0;
             if (effectCount != data.effects.Count)
-                return Fail(entry, $"효과 {effectCount}개 — 빌드는 {data.effects.Count}개", out error);
+                return Fail(entry, $"효과 {effectCount}개 — 에셋은 {data.effects.Count}개", out error);
 
             var values = new List<string>();
             for (int i = 0; i < effectCount; i++)
             {
                 CardEffect effect = data.effects[i];
                 if (effect == null || effect.GetType().Name != entry.effects[i].type)
-                    return Fail(entry, $"효과 {i}번 「{entry.effects[i].type}」 — 빌드는 {(effect == null ? "빈 칸" : effect.GetType().Name)}", out error);
+                    return Fail(entry, $"효과 {i}번 「{entry.effects[i].type}」 — 에셋은 {(effect == null ? "빈 칸" : effect.GetType().Name)}", out error);
 
                 if (!TrySetArgs(effect, entry.effects[i].args, values, out string reason))
                     return Fail(entry, $"효과 {i}번 {reason}", out error);

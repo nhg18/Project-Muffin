@@ -13,7 +13,6 @@ bash .claude/skills/multi-test/run.sh ui                          # 한 클라�
 bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메인 + 클론 — 2~3분 (클론을 새로 열면 더)
 bash .claude/skills/multi-test/run.sh full [클라이언트=2] [HP=20]   # 한 판 끝까지 — 체력을 낮춰 시작 → 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
 bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 · 난이도 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
-bash .claude/skills/multi-test/run.sh carddata [턴=4]              # 원격 카드 데이터 — 로컬 서버에서 받기 · 저장본 · 못 쓰는 파일 거절 → 데이터가 다른 방은 바로 나옴 → 같은 데이터로 한 판 (3~4분)
 bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 자동 선언 → 두 화면 표시(선언 연출 포함) → 찹츄 승리 → 결과 화면 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
 bash .claude/skills/multi-test/run.sh timeout                     # 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째 강제 퇴장 → 클론은 로비 + 경고 팝업 · 메인은 결과 화면
 bash .claude/skills/multi-test/run.sh skip                        # 반응 시간의 스킵 버튼 — 방장에게 카운터를 쥐여 줌 → 「스킵」 버튼 켜짐(남은 초 없음) → 누르면 버튼 · 빛 꺼짐 → 그 뒤 카운터 거절(코드 6)
@@ -36,7 +35,6 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 | 반응 시간 · 스킵 버튼 (`GameServer.Chain` · `ReactionTimer*` · `HandPresenter`) | `rules` → `skip` → `multi 2` |
 | 찹츄 자동 선언 · 찹츄 표시 (내 패널 · 좌석 · 턴 띠 · 선언 연출) | `chapchu 2` |
 | 봇 (`Game/Bots` · `BotRoster` · 방의 봇 추가 · 제거) | `rules` (Bot 시나리오) → `solo` |
-| 카드 데이터 (`CardSheet` · `CardDataService` · `DeckData` · 「카드 가져오기」 · 방 속성 `cd`) | `carddata` → `ui` |
 
 평소엔 2클라이언트, 기능을 마칠 때만 4클라이언트 (에디터 4개는 무겁다).
 
@@ -54,8 +52,6 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 * **결과 화면** (`check_result` — full · solo · chapchu 가 함께 쓴다, `07-win-condition` 11절) — 전원 `ResultScene` · 화면에 그려진 결과 줄(`ResultSummary`: 제목 · 승리 방식 알약 · 순위 순으로 순위 · 이름 · HP · 탈락 줄 · 당한 사람 · 왕관 · 찹츄 마크 · 업적 배지 + 「판 기록」 의 지표 줄마다 값(1등은 `*`) → 업적)이 모든 화면에서 같음 · 공개 HP 가 시작 값(`ExpectHpReset`) · 방이 닫힌 채(`ExpectRoomClosed`). 준비 · 나감 · 버튼 글자는 `ResultState`, 버튼은 `ResultTap again|lobby|board`. 이어서 **이모트**(메인이 `ResultEmote 0` → 모든 화면의 말풍선 기록 `ArmBubbleLog` · `BubbleLog` 에 「메인 이름:GG」) · **판 기록**(`ResultTap board` → `ResultBoard close` 로 ✕) 을 본다 (`check_result` 셋째 인자 — solo 는 첫 결과 화면, full 은 둘째, chapchu 는 마지막. full 의 첫 결과 화면은 판정 확인 뒤 「한 판 더」 까지 45초 자동 이동 안에 눌러야 해서 뺐다). full 은 「한 판 더」 뒤 다른 사람의 「준비!」 말풍선도 본다. SHOT_DIR 이 있으면 `result*_<에디터>.png` · `result*_emote_*` · `result*_board_*` + 등장 연출(색종이) `result_intro_<에디터>_<초>.png` (`ArmResultShots` — 게임 중에 미리 걸어 둔다). 게임 끝 알림 뒤 2초면 결과 씬으로 넘어가므로 끝을 기다리는 반복은 「게임 화면 아님 (ResultScene)」 도 끝으로 본다.
 
 * **BotArena** (run.sh 에 없는 진입점 — 봇 값을 맞출 때) — `unity command script.run --file <MultiTest.cs> --entry MultiTest.BotArena --args '["NEEE","200"]'`. 자리마다 난이도(E 쉬움 · N 보통 · H 어려움)로 봇끼리 게임 덱 N판 → 난이도별 승률 · 승리 방식 · 판 길이 · 카드별 사용 (`18-bot` 7-7 「난이도 확인」). 통과 · 실패 없이 숫자만 낸다. `rules` 의 Bot 시나리오 ⑤ 가 같은 방법으로 「보통 한 자리 승률: 쉬움 셋 사이 > 어려움 셋 사이」 를 본다.
-
-* **carddata** — 로컬 서버(`python -m http.server`, 127.0.0.1:8791)에 `cards.json` 을 고친 세 벌(`carddata_files.py`: 1001 피해 20 → 25 · 빌드에 없는 카드 · 효과 종류가 다름)을 올리고, Remote Config 를 읽은 뒤의 길(`CardDataService.SyncToRoutine`)에 시험 값(확인값 · 주소)을 넣는다 (`CardDataSync` → `CardDataState`). 메인: 받아 얹기(문구 · 효과 값 · 덱 장수가 바뀌고 에셋은 그대로 · 저장본 생김) → 원격 끔 → 서버 없이 저장본으로 → 확인값이 다른 파일은 버리고 마지막 저장본 → 저장본을 지운 뒤 없는 카드 · 다른 효과 종류 · 404 는 빌드 기본본(404 는 다시 시도 없음). 이어서 메인(받은 데이터)이 방을 만들고 클론(빌드 기본본)이 들어가면 **바로 나오는지**, 클론이 저장본으로 맞춘 뒤 들어가 한 판에서 턴 줄이 같은지. 일부러 낸 「쓸 수 없다」 에러는 판정에서 뺀다. **실제 Remote Config · CCD 는 거치지 않는다.**
 
 ## 사전 조건 · 스크립트가 지키는 것
 
@@ -76,7 +72,6 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 * **"Could not find RPC with index"** — RPC 를 새로 만들면 `PhotonServerSettings` 의 RpcList 가 메모리에서만 바뀐다. 메인에서 `AssetDatabase.SaveAssetIfDirty` 로 저장하고 클론에서 다시 가져온 뒤 돌린다. 이 파일은 커밋한다.
 * **한 단계가 계속 WAIT** — 콘솔을 직접 본다: `unity command console.get --tail 50 --project-path <프로젝트> </dev/null`.
 * **컴파일 실패로 종료 2** — 에디터가 Safe Mode 면 CLI 가 붙지 않는다. 컴파일 에러부터 고친다.
-* **클론이 응답하지 않는다 (CLI 가 30초 뒤 504)** — 클론을 처음 열면 그림 가져오기 설정을 저장하려다 ParrelSync 의 「Asset modifications saving detected and blocked」 창에 막힐 수 있다. 그 창을 닫으면 풀린다 (다음부터는 뜨지 않는다).
 * 에디터를 막 열면 Unity Search 색인 에러(`ArgumentOutOfRangeException` … `SearchInit.IndexationOnStartup`)가 뜰 수 있다. 스택에 게임 · Photon 코드가 없는 에러는 "참고 · 에디터 내부 에러" 로만 찍고 판정에서 뺀다.
 * 턴은 15초면 방장이 대신 뽑고 넘어간다 — 3번 연속이면 그 사람이 강제 퇴장된다 (봇 제외, `03-turn` 4절). `ExpireTurn` 은 기본이 「그냥 넘김」 이라 횟수를 세지 않는다 (`auto` · `others` 가 실제 시간 초과). `multi` 는 지금 턴 주인을 읽어서 행동하므로 영향 없지만, 손으로 단계를 이어 칠 때는 빨리 친다.
 * 명령은 항상 `</dev/null` 을 붙인다 — 없으면 CLI 가 입력을 기다리며 멈춘다.

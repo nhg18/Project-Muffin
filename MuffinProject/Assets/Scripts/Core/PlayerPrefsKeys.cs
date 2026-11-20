@@ -26,11 +26,5 @@ namespace Chapchu.Core
         public const string SfxOn = "SfxOn";
         public const string BgmOn = "BgmOn";
         public const string InviteNoticeOn = "InviteNoticeOn";
-
-        /// <summary>기기에 저장한 원격 카드 데이터의 확인값 — 마지막으로 받아 쓴 것 (26-card-data 6-1). 없으면 저장본이 없다</summary>
-        public const string CardDataHash = "CardDataHash";
-
-        /// <summary>그 저장본을 받은 앱 버전 — 앱이 업데이트되면 옛 저장본으로 물러나지 않는다 (26 8절)</summary>
-        public const string CardDataAppVersion = "CardDataAppVersion";
     }
 }
