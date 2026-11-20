@@ -14,13 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
   id: 1017
   cardName: "\uC9C0\uC625\uCC38\uB9C8\uB3C4"
-  cardImage: {fileID: 21300000, guid: a0e5b9ab0a469524c9bf8512199d83dc, type: 3}
   type: 0
   targetType: 3
   targetCondition: 0
   grade: 3
-  description: "\uB098\uB97C \uBE80 \uBAA8\uB450\uC5D0\uAC8C 40 \uD53C\uD574\uB97C
-    \uC900\uB2E4"
+  description: "\uC0C1\uB300 \uBAA8\uB450\uC5D0\uAC8C 40 \uD53C\uD574\uB97C \uC900\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0

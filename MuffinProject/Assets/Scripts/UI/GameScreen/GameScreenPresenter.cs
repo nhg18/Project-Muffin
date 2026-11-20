@@ -52,6 +52,9 @@ namespace Chapchu.UI.GameScreen
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
         private Coroutine _playing;
 
+        // 덱의 카드 그림 — 게임 화면이 떠 있는 동안 붙들어 둔다. 판 도중에는 불러오지 않는다 (26-card-data.md 6-3)
+        private List<Sprite> _cardArt;
+
         // 내가 뽑으면 카드 내용(OnMyCardDrawn, 나에게만)이 장수(OnCardDrawn, 전원)보다 먼저 온다 — 둘을 한 단계로 묶는다.
         private bool _hasPendingMyCard;
         private int _pendingCardInstanceId;
@@ -64,6 +67,9 @@ namespace Chapchu.UI.GameScreen
         {
             if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
+
+            if (cardDeck != null)
+                _cardArt = cardDeck.LoadArt();
 
             if (menu == null)
                 menu = FindFirstObjectByType<GameMenuPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때

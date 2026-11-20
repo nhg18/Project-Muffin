@@ -11,5 +11,8 @@
 
         /// <summary>카드별 연출 프리팹, 이름 = 연출 컴포넌트 이름. 재생할 때만 불러온다 (10-ui 5-1).</summary>
         public const string CardFx = "CardFx/";
+
+        /// <summary>카드 앞면 그림, 이름 = 카드 ID. 필요할 때만 불러온다 — CardData.LoadArt (26-card-data 3절 #3).</summary>
+        public const string CardArt = "CardArt/";
     }
 }
