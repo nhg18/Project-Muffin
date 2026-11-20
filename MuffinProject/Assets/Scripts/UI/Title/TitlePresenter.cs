@@ -398,9 +398,8 @@ namespace Chapchu.UI.Title
 
             PlayerPrefs.Save();
 
-            // 카드 데이터 받기(26-card-data)가 아직 없어 늘 거짓이다 — 붙으면 그 결과로
             EndLoading();
-            AnalyticsRecorder.RecordLobbyReached(_loadSeconds, _firstRun, false);
+            AnalyticsRecorder.RecordLobbyReached(_loadSeconds, _firstRun, CardDataService.Instance.DownloadedThisRun);
             StartCoroutine(LeaveForLobbyRoutine());
         }
 

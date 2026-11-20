@@ -22,7 +22,7 @@ namespace Chapchu.Cards
         public CardSheetEntry[] cards;
 
         // 문구의 값 자리 — {0} {1} … (26 7-2 「값 자리」)
-        private static readonly Regex SlotPattern = new Regex(@"\{(\d+)\}");
+        private static readonly Regex SlotPattern = new Regex(@"\{([0-9]+)\}");
 
         /// <summary>
         /// 파일 내용의 확인값 (SHA-256, 소문자 16진수). 줄바꿈(CRLF · LF)과 BOM 은 빼고 센다 —
@@ -95,17 +95,17 @@ namespace Chapchu.Cards
         /// </summary>
         public static bool TryApply(CardSheetEntry entry, CardData data, out string error)
         {
-            if (!Enum.TryParse(entry.type, out CardType type) || type != data.type)
+            if (!TryParseName(entry.type, out CardType type) || type != data.type)
                 return Fail(entry, $"종류 「{entry.type}」 — 빌드는 {data.type}", out error);
 
-            if (!Enum.TryParse(entry.target, out TargetType target))
+            if (!TryParseName(entry.target, out TargetType target))
                 return Fail(entry, $"대상 「{entry.target}」 를 모른다", out error);
 
             TargetCondition condition = TargetCondition.None;
-            if (!string.IsNullOrEmpty(entry.targetCondition) && !Enum.TryParse(entry.targetCondition, out condition))
+            if (!string.IsNullOrEmpty(entry.targetCondition) && !TryParseName(entry.targetCondition, out condition))
                 return Fail(entry, $"대상 후보 조건 「{entry.targetCondition}」 를 모른다", out error);
 
-            if (!Enum.TryParse(entry.grade, out CardGrade grade))
+            if (!TryParseName(entry.grade, out CardGrade grade))
                 return Fail(entry, $"등급 「{entry.grade}」 를 모른다", out error);
 
             if (string.IsNullOrEmpty(entry.name))
@@ -147,8 +147,7 @@ namespace Chapchu.Cards
             string failed = null;
             text = SlotPattern.Replace(template ?? "", match =>
             {
-                int index = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-                if (index < values.Count)
+                if (int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index < values.Count)
                     return values[index];
 
                 failed = $"문구의 값 자리 {match.Value} — 효과 값은 {values.Count}개";
@@ -225,6 +224,17 @@ namespace Chapchu.Cards
             }
 
             return false;
+        }
+
+        // enum 이름이 정확히 맞을 때만 — Enum.TryParse 는 숫자("4") · 쉼표 목록("OneOther, Self")도 받는다
+        private static bool TryParseName<T>(string raw, out T value) where T : struct, Enum
+        {
+            value = default;
+            if (raw == null || !Enum.IsDefined(typeof(T), raw))
+                return false;
+
+            value = (T)Enum.Parse(typeof(T), raw);
+            return true;
         }
 
         private static string Normalize(string json)

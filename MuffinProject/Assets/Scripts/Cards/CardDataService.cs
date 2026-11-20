@@ -45,6 +45,9 @@ namespace Chapchu.Cards
         /// <summary>카드 데이터 파일을 받는 중 — 로비가 로딩 글을 「받는 중…」 으로 바꾼다 (26 6-5).</summary>
         public bool IsDownloading { get; private set; }
 
+        /// <summary>이번 실행에 카드 데이터 파일을 받아서 얹었다 — 분석 lobbyReached 의 cardDataDownloaded (27).</summary>
+        public bool DownloadedThisRun { get; private set; }
+
         /// <summary>서버가 정한 카드 데이터를 쓰지 못하고 있다 (받기 실패 · 앱이 모르는 데이터) — 방 버전이 다를 때의 안내를 가른다 (26 7-6).</summary>
         public bool IsBehind
         {
@@ -74,14 +77,6 @@ namespace Chapchu.Cards
 
             // 에디터는 지난 플레이의 사본이 에셋에 남아 있을 수 있다 — 늘 빌드 기본본에서 시작한다
             deck.ClearPatch();
-        }
-
-        protected override void OnDestroy()
-        {
-            if (Instance == this && deck != null)
-                deck.ClearPatch();
-
-            base.OnDestroy();
         }
 
         /// <summary>
@@ -154,67 +149,73 @@ namespace Chapchu.Cards
             }
 
             IsDownloading = true;
-            float deadline = Time.realtimeSinceStartup + TotalBudgetSeconds;
-            float serverWait = 0f;
-            for (int attempt = 0; attempt < MaxAttempts; attempt++)
+            try
             {
-                if (attempt > 0)
+                float deadline = Time.realtimeSinceStartup + TotalBudgetSeconds;
+                float serverWait = 0f;
+                for (int attempt = 0; attempt < MaxAttempts; attempt++)
                 {
-                    float wait = serverWait > 0f ? serverWait : RetryWaitSeconds[attempt - 1] * UnityEngine.Random.Range(1f - RetryJitter, 1f + RetryJitter);
-                    if (Time.realtimeSinceStartup + wait >= deadline)
+                    if (attempt > 0)
+                    {
+                        float wait = serverWait > 0f ? serverWait : RetryWaitSeconds[attempt - 1] * UnityEngine.Random.Range(1f - RetryJitter, 1f + RetryJitter);
+                        if (Time.realtimeSinceStartup + wait >= deadline)
+                            break;
+
+                        yield return new WaitForSecondsRealtime(wait);
+                    }
+
+                    float left = deadline - Time.realtimeSinceStartup;
+                    if (left <= 0f)
                         break;
 
-                    yield return new WaitForSecondsRealtime(wait);
-                }
-
-                float left = deadline - Time.realtimeSinceStartup;
-                if (left <= 0f)
-                    break;
-
-                using (UnityWebRequest request = UnityWebRequest.Get(target.Url))
-                {
-                    request.timeout = Mathf.Max(1, Mathf.CeilToInt(Mathf.Min(RequestTimeoutSeconds, left)));
-                    UnityWebRequestAsyncOperation sending = request.SendWebRequest();
-                    bool tooBig = false;
-                    while (!sending.isDone)
+                    using (UnityWebRequest request = UnityWebRequest.Get(target.Url))
                     {
-                        if (request.downloadedBytes > MaxFileBytes)
+                        request.timeout = Mathf.Max(1, Mathf.CeilToInt(Mathf.Min(RequestTimeoutSeconds, left)));
+                        UnityWebRequestAsyncOperation sending = request.SendWebRequest();
+                        bool tooBig = false;
+                        while (!sending.isDone)
                         {
-                            tooBig = true;
-                            request.Abort();
+                            if (request.downloadedBytes > MaxFileBytes)
+                            {
+                                tooBig = true;
+                                request.Abort();
+                                break;
+                            }
+
+                            yield return null;
+                        }
+
+                        // 프레임 사이에 다 받았으면 루프 안에서 크기를 못 봤다 — 한 번 더 본다
+                        if (tooBig || request.downloadedBytes > MaxFileBytes)
+                        {
+                            Reject(target, $"파일이 {MaxFileBytes / 1024}KB 를 넘는다");
                             break;
                         }
 
-                        yield return null;
+                        if (request.result == UnityWebRequest.Result.Success)
+                        {
+                            Accept(target, request.downloadHandler.text);
+                            break;
+                        }
+
+                        Debug.LogWarning($"[{nameof(CardDataService)}] 카드 데이터 받기 실패 ({attempt + 1}/{MaxAttempts}) — {request.responseCode} {request.error}");
+
+                        // 없는 파일 · 거절(4xx)은 다시 해도 같다. 시간 초과 · 너무 많음은 다시 시도한다
+                        bool clientError = request.responseCode >= 400 && request.responseCode < 500;
+                        if (clientError && request.responseCode != TooManyRequests && request.responseCode != RequestTimeout)
+                        {
+                            _rejectedHash = target.Hash;
+                            break;
+                        }
+
+                        serverWait = request.responseCode == TooManyRequests && float.TryParse(request.GetResponseHeader("Retry-After"), out float seconds) ? seconds : 0f;
                     }
-
-                    if (tooBig)
-                    {
-                        Reject(target, $"파일이 {MaxFileBytes / 1024}KB 를 넘는다");
-                        break;
-                    }
-
-                    if (request.result == UnityWebRequest.Result.Success)
-                    {
-                        Accept(target, request.downloadHandler.text);
-                        break;
-                    }
-
-                    Debug.LogWarning($"[{nameof(CardDataService)}] 카드 데이터 받기 실패 ({attempt + 1}/{MaxAttempts}) — {request.responseCode} {request.error}");
-
-                    // 없는 파일 · 거절(4xx)은 다시 해도 같다. 시간 초과 · 너무 많음은 다시 시도한다
-                    bool clientError = request.responseCode >= 400 && request.responseCode < 500;
-                    if (clientError && request.responseCode != TooManyRequests && request.responseCode != RequestTimeout)
-                    {
-                        _rejectedHash = target.Hash;
-                        break;
-                    }
-
-                    serverWait = request.responseCode == TooManyRequests && float.TryParse(request.GetResponseHeader("Retry-After"), out float seconds) ? seconds : 0f;
                 }
             }
-
-            IsDownloading = false;
+            finally
+            {
+                IsDownloading = false;
+            }
         }
 
         // 받은 내용이 확인값과 맞고 이 빌드가 쓸 수 있으면 얹고 저장한다
@@ -232,6 +233,7 @@ namespace Chapchu.Cards
                 return;
             }
 
+            DownloadedThisRun = true;
             Debug.Log($"[{nameof(CardDataService)}] 카드 데이터 받음 — {target.Version}번 {Short(target.Hash)}");
             Save(target.Hash, json);
         }
