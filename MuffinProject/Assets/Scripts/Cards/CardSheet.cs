@@ -21,8 +21,8 @@ namespace Chapchu.Cards
     {
         public CardSheetEntry[] cards;
 
-        // 문구의 값 자리 — {0} {1} … (26 7-2 「값 자리」)
-        private static readonly Regex SlotPattern = new Regex(@"\{([0-9]+)\}");
+        // 문구의 값 자리 — {0} {1} … (26 7-2 「값 자리」). \d 는 전각 숫자도 잡는다 — ASCII 가 아니면 TryRenderText 가 거절한다
+        private static readonly Regex SlotPattern = new Regex(@"\{(\d+)\}");
 
         /// <summary>
         /// 파일 내용의 확인값 (SHA-256, 소문자 16진수). 줄바꿈(CRLF · LF)과 BOM 은 빼고 센다 —
