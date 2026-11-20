@@ -49,6 +49,8 @@ public static class MultiTest
     private const string WarnMessageField = "warnMessage";
     private const string LeaveClickedMethod = "HandleLeaveClicked";        // RoomPresenter — 「나가기」 (혼자면 확인 없이 나간다)
     private const string RoomLastLogField = "lastLineText";                // RoomLogView — 접힌 로그의 최근 한 줄
+    private const string RoomLogLinesField = "_lines";                     // RoomLogView — 로그 줄 전부 (RoomHostState)
+    private const string ToastMessageField = "messageText";                // MessageToast — 토스트 글 (RoomHostState)
     private const string PanelChapchuField = "_isChapchu";                 // MyPanelPresenter — 내 찹츄 상태 (찹츄 자리 「찹츄 완료」)
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
@@ -1144,6 +1146,36 @@ public static class MultiTest
     }
 
     public static string InRoom() => "OK 방 안 " + PhotonNetwork.InRoom + " · " + SceneManager.GetActiveScene().name;
+
+    /// <summary>
+    /// 방 화면의 방장 표시 한 줄 (migrate room — 위임, 08-room 5절 #5): 믿는 방장 · 시작 자리(버튼 · 안내 · 시작 중) · 빈 칸 「봇 추가」 · (방장) 칸 이름 · 접힌 로그 · 떠 있는 토스트.
+    /// 방 화면이 아니면 WAIT.
+    /// </summary>
+    public static string RoomHostState()
+    {
+        RoomPresenter presenter = Object.FindFirstObjectByType<RoomPresenter>();
+        if (presenter == null || !PhotonNetwork.InRoom)
+            return "WAIT 방 화면 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        RoomStartView start = Object.FindFirstObjectByType<RoomStartView>();
+        string startState = IsShown(start, "startButton") ? "버튼" : IsShown(start, "waitPanel") ? "안내" : IsShown(start, "startingPanel") ? "시작 중" : "없음";
+
+        bool canAddBot = false;
+        var hosts = new List<string>();
+        foreach (RoomSlotView slot in (RoomSlotView[])typeof(RoomPresenter).GetField("slots", Private).GetValue(presenter))
+        {
+            canAddBot |= IsShown(slot, "addBotButton");
+            if (IsShown(slot, "hostTag"))
+                hosts.Add(ReadText(slot, SlotNameField));
+        }
+
+        // 퇴장 · 방장 교체 줄은 어느 쪽이 먼저 올지 정해져 있지 않다 (RoomPresenter) — 최근 3줄을 본다
+        var lines = (List<TMP_Text>)typeof(RoomLogView).GetField(RoomLogLinesField, Private).GetValue(Object.FindFirstObjectByType<RoomLogView>());
+        MessageToast toast = Object.FindFirstObjectByType<MessageToast>();
+        return "OK 방장 " + NetworkManager.IsTrustedMaster + " · 시작 " + startState + " · 봇 추가 " + canAddBot
+            + " · (방장) 칸 「" + string.Join(", ", hosts) + "」 · 로그 「" + string.Join(" | ", lines.Skip(Math.Max(0, lines.Count - 3)).Select(line => line.text))
+            + "」 · 토스트 「" + (toast == null ? "" : ReadText(toast, ToastMessageField)) + "」";
+    }
 
     public static string WarningPopupText()
     {
