@@ -26,7 +26,7 @@ namespace Chapchu.EditorTools
         private static readonly Vector2 WindowSize = new Vector2(420f, 170f);
 
         private bool _applied;
-        private bool _failed; // 눌렀는데도 반영되지 않았다
+        private bool _failed; // 눌렀는데도 반영되지 않았다, 또는 지난 패치가 카드를 다 얹지 못했다 (Deck_Main 의 확인값이 비었다)
 
         [InitializeOnLoadMethod]
         private static void CheckOnLoad()
@@ -54,12 +54,26 @@ namespace Chapchu.EditorTools
         // 자동 실행(배치 모드)에는 누를 사람이 없고, 플레이 중에는 에셋을 고치지 않는다. 클론(ParrelSync)은 원본 프로젝트의 에셋을 같이 쓴다 — 원본에서 한다
         private static void OpenIfPending()
         {
-            if (Application.isBatchMode || ClonesManager.IsClone() || EditorApplication.isPlayingOrWillChangePlaymode || CardImporter.IsApplied())
+            if (Application.isBatchMode || ClonesManager.IsClone() || EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
+
+            // 이미 반영돼 있다(패치된 에셋이 같이 들어왔다) — 새로 띄우지 않고, 열려 있는 창의 경고만 내린다
+            if (CardImporter.IsApplied())
+            {
+                RefreshOpen();
+                return;
+            }
 
             CardPatchWindow window = GetWindow<CardPatchWindow>(true, WindowTitle);
             window.minSize = WindowSize;
             window.Refresh();
+        }
+
+        /// <summary>열려 있는 창이 있으면 상태를 다시 읽는다 — 창 밖(메뉴 · pull)에서 반영 상태가 바뀌었을 때. 창을 새로 띄우거나 앞으로 가져오지 않는다.</summary>
+        public static void RefreshOpen()
+        {
+            if (HasOpenInstances<CardPatchWindow>())
+                GetWindow<CardPatchWindow>(true, WindowTitle, false).Refresh();
         }
 
         private void OnEnable() => Refresh();
@@ -95,6 +109,8 @@ namespace Chapchu.EditorTools
             _applied = CardImporter.IsApplied();
             if (_applied)
                 _failed = false;
+            else if (CardImporter.HasFailed()) // 메뉴로 한 패치 · 창을 다시 연 뒤에도 실패가 남는다 (26-card-data.md 8절)
+                _failed = true;
 
             Repaint();
         }

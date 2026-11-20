@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Threading.Tasks;
 using Chapchu.Account;
 using Chapchu.Core;
 using Chapchu.Network;
@@ -200,16 +199,7 @@ namespace Chapchu.UI.Lobby
                 yield break;
 
             _configReadAt = Time.realtimeSinceStartup;
-            Task fetch = ServerConfig.FetchAsync();
-            float waited = 0f;
-            while (!fetch.IsCompleted && waited < ServerConfig.FetchTimeoutSeconds)
-            {
-                waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
-                yield return null;
-            }
-
-            if (!fetch.IsCompleted || fetch.IsFaulted)
-                Debug.LogWarning($"[{nameof(LobbyRoomRequester)}] 설정 값 읽기 실패 — 지난 값으로 간다: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");
+            yield return ServerConfig.FetchRoutine();
         }
 
         private static void ReturnToTitle() => SceneManager.LoadScene(ScenePaths.Title);

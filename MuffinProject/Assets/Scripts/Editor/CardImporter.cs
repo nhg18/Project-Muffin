@@ -44,9 +44,23 @@ namespace Chapchu.EditorTools
         /// <summary>path 가 카드 데이터 파일(cards.json)인지 — 파일이 새로 들어오면 패치 알림 창이 확인한다.</summary>
         public static bool IsCardSheet(string path) => path == JsonPath;
 
+        /// <summary>지난 패치가 카드를 다 얹지 못했는지 — 그때 Deck_Main 의 확인값을 비워 둔다 (26-card-data.md 8절).</summary>
+        public static bool HasFailed()
+        {
+            DeckData deck = AssetDatabase.LoadAssetAtPath<DeckData>(DeckPath);
+            return deck != null && string.IsNullOrEmpty(deck.dataHash);
+        }
+
         [MenuItem(MenuPath)]
         public static void Import()
         {
+            // 플레이 중에는 고치지 않는다 — 게임이 읽고 있는 카드 에셋이 실행 중에 바뀐다 (26-card-data.md 5절). 창 버튼 · 메뉴가 여기서 같이 막힌다
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                Debug.LogWarning($"[{nameof(CardImporter)}] 플레이 중에는 패치하지 않는다 — 플레이를 끝낸 뒤 다시 누르기");
+                return;
+            }
+
             if (!File.Exists(JsonPath))
             {
                 Debug.LogError($"[{nameof(CardImporter)}] {JsonPath} 가 없다");
@@ -132,6 +146,7 @@ namespace Chapchu.EditorTools
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[{nameof(CardImporter)}] 카드 {sheet.cards.Length}종 (새로 {created} · 바뀜 {changed} · 실패 {failed}) · Deck_Main {entries.Sum(e => e.count)}장 · 확인값 {deck.dataHash}");
+            CardPatchWindow.RefreshOpen(); // 메뉴로 패치해도 열려 있는 창이 옛 상태로 남지 않게
         }
 
         // enum 이름이 정확히 맞을 때만 — CardSheet 의 이름 읽기와 같은 기준 (숫자 · 쉼표 목록은 받지 않는다)
