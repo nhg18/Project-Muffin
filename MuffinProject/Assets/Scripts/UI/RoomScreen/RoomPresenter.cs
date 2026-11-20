@@ -81,6 +81,9 @@ namespace Chapchu.UI.RoomScreen
         private int[] _bots = Array.Empty<int>();
         private readonly BotLevel[] _botLevels = new BotLevel[BotRoster.MaxBots];
 
+        // 방장 교체 로그 줄 — PUN 은 방장 교체를 앞 방장 퇴장보다 먼저 알린다. 퇴장 줄 뒤에 쓰려고 미뤄 둔다 (없으면 다음 프레임에)
+        private string _pendingHostLog;
+
         private readonly struct Seat
         {
             public readonly int ActorNumber;
@@ -193,6 +196,7 @@ namespace Chapchu.UI.RoomScreen
             if (!_initialized || _isLeaving || !PhotonNetwork.InRoom)
                 return;
 
+            FlushHostLog();
             SyncRoomOptions();
 
             // Android 뒤로가기 · PC Esc (16-room-ui-full 3절 #12)
@@ -354,7 +358,16 @@ namespace Chapchu.UI.RoomScreen
         private void HandlePlayerLeft(Player player)
         {
             log.Add(string.Format(LeftLogFormat, DisplayName(player.NickName)));
+            FlushHostLog();
             Refresh();
+        }
+
+        private void FlushHostLog()
+        {
+            if (_pendingHostLog == null) return;
+
+            log.Add(_pendingHostLog);
+            _pendingHostLog = null;
         }
 
         private void HandleMasterClientSwitched(Player newMaster)
@@ -365,7 +378,7 @@ namespace Chapchu.UI.RoomScreen
 
             if (newMaster != null)
             {
-                log.Add(string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName)));
+                _pendingHostLog = string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName));
                 if (newMaster.IsLocal)
                     PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
             }
