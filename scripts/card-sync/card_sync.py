@@ -383,7 +383,9 @@ def effect_values(e):
 
 
 def render_text(template, values):
-    """값 자리를 효과 값으로 채운 글. 값이 모자라면 None."""
+    """값 자리를 효과 값으로 채운 글. 값이 모자라거나 번호가 ASCII 숫자가 아니면(앱이 거절한다) None."""
+    if not all(s.isascii() for s in SLOT.findall(template)):
+        return None
     try:
         return SLOT.sub(lambda m: values[int(m.group(1))], template)
     except IndexError:
@@ -394,7 +396,7 @@ def read_values(template, text, values):
     """노션 문구를 값 자리 틀에 맞춰 읽는다. 글이 틀과 같고 숫자만 다르면 새 값 목록, 아니면 None.
     정수이던 값에 소수가 오면 None — 효과 칸의 형이 달라 Unity 가 못 읽는다."""
     parts = SLOT.split(template)   # [글, 번호, 글, 번호, …, 글]
-    if len(parts) == 1:
+    if len(parts) == 1 or not all(p.isascii() for p in parts[1::2]):
         return None
     pattern = "".join(re.escape(p) if i % 2 == 0 else f"({NUMBER})" for i, p in enumerate(parts))
     m = re.fullmatch(pattern, text)

@@ -53,7 +53,9 @@ def check(text):
             problems.append(f"카드 {c['id']}: 이름이 비었다")
         values = effect_values(c)
         for slot in SLOT.findall(c.get("text") or ""):
-            if int(slot) >= len(values):
+            if not slot.isascii():   # 전각 숫자 등 — 앱은 읽지 못해 파일을 버린다
+                problems.append(f"카드 {c['id']}: 문구의 값 자리 {{{slot}}} — ASCII 숫자가 아니다")
+            elif int(slot) >= len(values):
                 problems.append(f"카드 {c['id']}: 문구의 값 자리 {{{slot}}} — 효과 값은 {len(values)}개")
     if len(text.encode("utf-8")) > MAX_BYTES:
         problems.append(f"파일이 {MAX_BYTES // 1024}KB 를 넘는다")

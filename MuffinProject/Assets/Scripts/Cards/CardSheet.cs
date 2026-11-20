@@ -147,7 +147,13 @@ namespace Chapchu.Cards
             string failed = null;
             text = SlotPattern.Replace(template ?? "", match =>
             {
-                if (int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index < values.Count)
+                if (!int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int index))
+                {
+                    failed = $"문구의 값 자리 {match.Value} — 번호를 읽을 수 없다 (ASCII 숫자가 아니거나 너무 크다)";
+                    return match.Value;
+                }
+
+                if (index < values.Count)
                     return values[index];
 
                 failed = $"문구의 값 자리 {match.Value} — 효과 값은 {values.Count}개";
