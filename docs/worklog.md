@@ -61,6 +61,23 @@
 
 ---
 
+## 2026-11-21 · git-flow — release · hotfix · 버전 태그 (`docs/git-flow-release-hotfix`)
+
+### 결정 (PM, 2026-11-21 팀 교육)
+- git-flow 로 간다: `main`(배포 · 태그 필수) · `release/*` · `develop` · `feature/*` · `fix/*` · `hotfix/*` + 우리만의 `docs/*`.
+- 테스트 빌드(내부 점검 · 비공개 테스트)도 「배포」 다 (A 안) — 빌드마다 release → main, `v0.n.0` 태그.
+- 버그 수정 브랜치 이름은 `bugfix/` 가 아니라 `fix/` 그대로 (커밋 type `fix` 와 짝).
+
+### 한 것
+- skill `git-workflow` 다시 씀: 브랜치 표 · release · hotfix 순서(merge commit 으로 머지, main 머지 커밋에 `v<버전>` 태그, develop 으로 되돌리기) · 리뷰 비교 기준 `REVIEW_BASE`.
+- 교육 내용에서 고친 것: release 는 버전마다 만들고 지우는 `release/<버전>`, release · hotfix 는 main 과 develop 둘 다에 머지, 베타 중 버그는 release 에서 고침, main 에는 develop 을 바로 머지하지 않음.
+- `versioning.md` 「태그」 절 · 「올리는 순서」, `CLAUDE.md` Git 줄.
+
+### 다음 할 일
+- `unity-ci.yml` 의 CI 는 아직 없는 `test_build` 브랜치로 가는 PR 에서만 돈다 — release · hotfix → main PR 로 바꿀지 PM 확인 (태그 push → 서명 AAB 는 그대로 맞음).
+
+---
+
 ## 2026-11-21 · 카드 패치는 빌드 패치 — 원격 패치를 걷어내고 「카드 패치하기」 창 (`feature/card-data`, PR #200) — **버튼 · 창 · 빌드 검사는 같은 날 걷어냄 (위)**
 
 ### 결정 (PM, 2026-11-20)
