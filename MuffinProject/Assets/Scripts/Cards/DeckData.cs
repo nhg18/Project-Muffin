@@ -135,8 +135,11 @@ namespace Chapchu.Cards
             var assets = new Dictionary<int, CardData>();
             foreach (Entry entry in entries)
             {
-                if (entry.card != null)
-                    assets[entry.card.id] = entry.card;
+                if (entry.card == null)
+                    continue;
+
+                CheckId(assets, entry.card); // 겹치면 뒤의 것만 남는다 — 앞 카드가 조용히 빠지지 않게 알린다
+                assets[entry.card.id] = entry.card;
             }
 
             var applied = new List<Entry>();
@@ -151,7 +154,8 @@ namespace Chapchu.Cards
                 assets.Remove(line.id);
                 CardData copy = Instantiate(asset);
                 copy.name = asset.name;
-                copy.hideFlags = HideFlags.DontSave;
+                // 저장만 막는다 — DontSave 의 DontUnloadUnusedAsset 까지 붙이면 플레이를 끝내도 거둬지지 않고 쌓인다 (26 6-1)
+                copy.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                 if (CardSheet.TryApply(line, copy, out error))
                 {
                     applied.Add(new Entry { card = copy, count = line.count });

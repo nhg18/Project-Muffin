@@ -257,6 +257,7 @@ namespace Chapchu.DebugTools
                 Caster = me.Anchor,
                 Targets = new[] { other.Anchor },
                 CardId = data.id,
+                Card = data,
                 CardName = data.cardName,
                 CardArt = data.LoadArt(),
                 CardBack = cardBack,
