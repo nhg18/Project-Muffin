@@ -2044,6 +2044,19 @@ public static class MultiTest
             Check(t.Tick().OfType<GameEnded>().Any(), "체인 처리 뒤 처치 승리");
         }
 
+        // 대소동(새 판) 체인 중에 나가서 1명 — 새 판을 열지 않고 처치 승리 (07 3절 「판정 시점」 — 체인이 끝난 뒤)
+        {
+            var t = new ChainTable();
+            t.Server.RemovePlayer(t.O2);
+            Card restart = t.Give(t.Turn, id => new Card(id, 1012, CardType.Action, TargetType.None, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t.PlayCard(t.Turn, restart);
+            Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대소동 체인 중에 상대가 나감 → 아직");
+            List<GameEvent> events = t.Run(ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve + 1);
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
+                "혼자 남으면 새 판 대신 처치 승리 (" + Summary(ended) + ")");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
