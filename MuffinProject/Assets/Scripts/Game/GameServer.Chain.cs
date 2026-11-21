@@ -240,7 +240,10 @@ namespace Chapchu.Game
                     effect.Apply(this, entry);
                     SettleChapchu(); // 효과 하나가 끝난 뒤의 손패로 자동 선언 (07 4.1)
                     if (_restartPending)
+                    {
+                        CheckElimination(); // 체인 중에 나가 한 명만 남았다 — 새 판 · 턴 지연 전에 처치 승리 (07 3절)
                         return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
+                    }
                     if (IsChoosing)
                         return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
                 }
@@ -251,7 +254,10 @@ namespace Chapchu.Game
             DiscardChain();
             double settled = FireTraps(settleAt); // 체인이 끝난 뒤 함정 — 설치한 순서대로 (04 9.2)
             if (_restartPending)
+            {
+                CheckElimination(); // 함정의 대소동 — 위와 같다
                 return;
+            }
             DelayTurnUntil(settled);
             CheckDeathPending(settled);           // HP 가 0 이 되는 연출(4 단계) · 함정 뒤부터 대응 5초 (06 8절)
             CheckElimination();                   // 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
