@@ -98,7 +98,7 @@ public static class MultiTest
     private const string BubbleLogKey = "MultiTest.BubbleLog"; // ArmBubbleLog 가 본 말풍선 (에디터마다 따로)
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
-    private const double ReactionSeconds = 5, TurnSeconds = 30; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
+    private const double ReactionSeconds = 5, TurnSeconds = 15; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
     private const double BotTurnSeconds = 9; // 보통 봇이 수를 두는 가장 늦은 때 — 고민되는 수 5.5초 + 망설임 2.5초 = 8초에 여유 (18-bot.md 4절 · 7-7)
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
@@ -1521,13 +1521,13 @@ public static class MultiTest
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "마감 시각 → 6");
         }
 
-        // 6. 처리 중 턴 제한 시간은 멈춘다 — 29초에 내도 30초에 넘어가지 않는다 (03-turn.md 4절)
+        // 6. 처리 중 턴 제한 시간은 멈춘다 — 마감 1초 전에 내도 마감에 넘어가지 않는다 (03-turn.md 4절, 15초)
         {
             var t = new ChainTable();
             t.At(TurnSeconds - 1);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(TurnSeconds + 0.5);
-            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "30초가 지나도 턴 유지");
+            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "턴 제한 시간이 지나도 턴 유지");
             t.At(TurnSeconds - 1 + ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             Check(t.Hp(t.O1) == 80, "체인 처리");
@@ -1640,6 +1640,21 @@ public static class MultiTest
             Check(!askedAgain || !Resolved(t.Tick()), "새 반응 시간 — 앞의 스킵은 이어지지 않는다" + (askedAgain ? "" : " (그 사람이 낼 것이 없어 확인 생략)"));
         }
 
+        // 내 카드에는 카운터를 낼 수 없다 — 낸 사람에게는 묻지도 않는다. 내 카운터 위에도 같다 (04-card 7절 「사용 조건」 5)
+        {
+            var t = new ChainTable();
+            t.GiveCard(t.O1, ChainTable.Negate); // O1 은 무효 카운터 두 장
+            IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
+            Check(played.OfType<CountersUsable>().Any() && played.OfType<CountersUsable>().All(a => a.Actor != t.Turn), "카드를 낸 사람에게는 묻지 않는다");
+            t.At(opens + 0.5);
+            Check(t.Code(t.Counter(t.Turn, ChainTable.Negate)) == RejectCode.CannotReact, "내 행동 카드에 내 카운터 → 9");
+            IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
+            Check(counter.OfType<CardPlayed>().Any() && counter.OfType<CountersUsable>().All(a => a.Actor != t.O1), "카운터를 낸 사람에게는 그 카운터에 낼 것을 묻지 않는다");
+            t.At(opens + 0.5 + opens + 0.5);
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.CannotReact, "내 카운터에 내 카운터 → 9");
+            Check(t.Counter(t.Turn, ChainTable.Negate).OfType<CardPlayed>().Any(), "남의 카운터에는 낼 수 있다 — 처음 카드를 낸 사람도");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
@@ -1675,10 +1690,11 @@ public static class MultiTest
             Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
             Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
-            t.At(100);
+            double myTurn = startsAt + 6; // O2 의 턴 1초째 — 턴 제한 시간(15초) 안에 내야 대상 판정까지 간다
+            t.At(myTurn);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
             t.Play(t.O2, ChainTable.Hit, t.Turn);
-            t.At(100 + ChainTable.Reveal + 0.5);
+            t.At(myTurn + ChainTable.Reveal + 0.5);
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotAlive, "죽은 사람의 카운터 → 10");
         }
 
@@ -2028,6 +2044,35 @@ public static class MultiTest
             Check(t.Tick().OfType<GameEnded>().Any(), "체인 처리 뒤 처치 승리");
         }
 
+        // 대소동(새 판) 체인 중에 나가서 1명 — 새 판을 열지 않고 처치 승리 (07 3절 「판정 시점」 — 체인이 끝난 뒤)
+        {
+            var t = new ChainTable();
+            t.Server.RemovePlayer(t.O2);
+            Card restart = t.Give(t.Turn, id => new Card(id, 1012, CardType.Action, TargetType.None, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t.PlayCard(t.Turn, restart);
+            Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대소동 체인 중에 상대가 나감 → 아직");
+            List<GameEvent> events = t.Run(ChainTable.Reveal + 0.5); // 물을 사람이 없어 등장 연출 뒤 바로 처리 — 후처리 연출 · 턴 넘김(+1.28초) 전
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
+                "혼자 남으면 새 판 대신 처치 승리 — 체인 처리 직후, 연출 · 턴 넘김을 기다리지 않는다 (" + Summary(ended) + ")");
+            events = t.Server.RemovePlayer(t.Turn).ToList();
+            events.AddRange(t.Run(t.Now + ChainTable.Resolve + 1));
+            Check(!events.OfType<GameEnded>().Any() && !events.OfType<GameRestarted>().Any(), "끝난 뒤에는 남은 사람이 나가도 무승부 · 새 판이 없다");
+        }
+        // 함정이 부른 대소동도 같다 — 때린 사람이 체인 중에 나가 1명이면 새 판 대신 처치 승리
+        {
+            var t = new ChainTable();
+            t.Server.RemovePlayer(t.O2);
+            t.SetTrapCard(t.O1, id => new Card(id, 903, CardType.Trap, TargetType.Self, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged));
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(1);
+            t.Server.RemovePlayer(t.Turn);
+            List<GameEvent> events = t.Run(t.Now + 12);
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(events.OfType<TrapActivated>().Any() && ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
+                "함정의 대소동 + 체인 중 이탈 → 새 판 대신 처치 승리");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
@@ -2122,6 +2167,30 @@ public static class MultiTest
             Check(traps.Count == 1 && traps[0].CardId == ChainTable.TrapDying && t.TrapCount(t.O1) == 1 && t.Hp(t.Turn) == 100, "HP 0 → 본인 사망 대기 함정만 발동 · 피해 받은 후 함정은 남음");
             Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1), "함정 뒤 사망 대기");
             Check(t.Run(60).OfType<PlayerDied>().Any(e => e.Actor == t.O1), "사망 대기가 끝나면 최종 사망");
+        }
+
+        // 6. 같은 사건에 맞는 함정은 모두 발동한다 — 한 사람이 여러 장이어도, 한 장당 한 번 (04 6절 「발동 조건」 · 「여러 함정 동시 발동」, 2026-11-18)
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
+            Check(traps.Count == 2 && traps.All(e => e.Actor == t.O1 && e.Targets.SequenceEqual(new[] { t.Turn })) && t.TrapCount(t.O1) == 0 && t.Hp(t.Turn) == 80,
+                $"한 번 맞은 O1 의 함정 두 장이 모두 발동 · 대상 = 피해를 준 사람 (함정 {traps.Count}장 · ♥{t.Hp(t.Turn)})");
+        }
+        {
+            // 사건이 둘이면(때린 사람이 다름) 함정마다 다른 사건부터 쓴다 — 때린 두 사람에게 한 장씩. 문서에 정해진 순서는 없다 — 앞서부터 이렇게 돌던 동작을 그대로 둔 것
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            Card hitToo = t.Give(t.O2, id => new Card(id, 901, CardType.Counter, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(2);
+            t.Counter(t.O2, hitToo, t.O1);
+            List<TrapActivated> traps = t.Run(t.Now + 20).OfType<TrapActivated>().ToList();
+            Check(traps.Count == 2 && t.Hp(t.Turn) == 90 && t.Hp(t.O2) == 90, $"두 사람에게 맞은 O1 의 함정 두 장 → 때린 두 사람에게 한 장씩 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O2)})");
         }
 
         // 7. 나감 → 설치한 함정도 버림 더미로
@@ -3441,6 +3510,15 @@ public static class MultiTest
             t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterChapchuGiven, 0, new SetChapChuEffect { subject = EffectSubject.Target })),
             t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1),
             t => t.State(t.O1).IsChapchu && t.State(t.Turn).IsChapchu);
+        {
+            // 같은 사건에 맞는 함정은 사람이 달라도 모두 발동한다 (04 6절 「여러 함정 동시 발동」) — 한 번의 뽑기에 O1 · O2 의 T14
+            var t = new ChainTable();
+            foreach (int owner in new[] { t.O1, t.O2 })
+                t.SetTrapCard(owner, Trp(TargetType.TriggerSource, TrapTrigger.AfterDrewMany, 2, new DiscardEffect { subject = EffectSubject.Target, count = 1 }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new DrawEffect { subject = EffectSubject.Self, count = 2 })));
+            int fired = t.Run(t.Now + 40).OfType<TrapActivated>().Count();
+            Check(fired == 2 && t.HandCount(t.Turn) == 6 + 2 - 2, $"T14 한 번의 뽑기에 두 사람의 함정이 모두 발동 (함정 {fired}장)");
+        }
         {
             // T15 — 턴 스킵된 뒤 → 다음 실제 턴에 추가 드로우
             var t = new ChainTable();

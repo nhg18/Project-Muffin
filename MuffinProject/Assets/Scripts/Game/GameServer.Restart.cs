@@ -35,6 +35,11 @@ namespace Chapchu.Game
         {
             if (_restartPending)
             {
+                // 대소동 체인 중에 나가 한 명만 남았다 — 체인 뒤로 미룬 처치 승리 판정(Remove)을 새 판보다 먼저 한다 (07 3절)
+                CheckElimination();
+                if (_gameOver)
+                    return true;
+
                 Restart();
                 return true;
             }
