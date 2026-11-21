@@ -10,6 +10,7 @@ namespace Chapchu.Cards
     /// 덱 구성 1개 (에셋, 05-deck.md 8절) — 어떤 카드를 몇 장 넣는가. 카드가 무엇인지(CardData)와 몇 장인지는 다른 질문이라 나눈다.
     /// 게임에 나오는 카드는 전부 덱에서 나오므로, 화면이 종류 ID 로 카드를 찾는 사전도 이것이다 (GetCard).
     /// 덱 구성(카드별 매수)은 미정 — 지금 에셋 값은 임시.
+    /// 값의 원본은 cards.json 이다 — 「카드 패치하기」 가 이 에셋을 다시 짠다. 손으로 고치면 다음 패치가 되돌린다 (26-card-data.md 7-2).
     /// </summary>
     [CreateAssetMenu(fileName = "Deck_", menuName = "CardSystem/Deck Data")]
     public class DeckData : ScriptableObject
@@ -23,6 +24,9 @@ namespace Chapchu.Cards
 
         [Header("카드별 매수")]
         public List<Entry> entries = new List<Entry>();
+
+        [Tooltip("이 덱을 만든 카드 데이터 파일(cards.json)의 확인값 — 「카드 패치하기」 가 적는다. 파일이 바뀌었는데 아직 패치하지 않았는지를 이 값으로 가른다 (26-card-data.md 7-3). 손으로 고치지 않는다.")]
+        public string dataHash;
 
         private Dictionary<int, CardData> _byId;
 
@@ -72,6 +76,26 @@ namespace Chapchu.Cards
             }
 
             return cards;
+        }
+
+        /// <summary>
+        /// 덱에 든 카드 종류의 그림을 전부 불러온다 (26 6-3) — 장수가 아니라 종류 수만큼. 게임 화면이 열릴 때 한 번 부른다.
+        /// 돌려준 목록을 들고 있는 동안 그림이 메모리에 남고, 놓으면 다음 씬 전환 때 내려간다.
+        /// </summary>
+        public List<Sprite> LoadArt()
+        {
+            var art = new List<Sprite>();
+            foreach (Entry entry in entries)
+            {
+                if (entry.card == null || entry.count <= 0)
+                    continue;
+
+                Sprite sprite = entry.card.LoadArt();
+                if (sprite != null)
+                    art.Add(sprite);
+            }
+
+            return art;
         }
 
         // 종류 ID 가 0(새로 만든 에셋의 기본값)이거나 다른 카드와 겹치면 알린다 — 규칙(Card)과 화면(GetCard)이 서로 다른 카드를 보게 된다 (09-network.md 7절).

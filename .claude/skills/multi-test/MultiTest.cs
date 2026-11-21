@@ -85,7 +85,7 @@ public static class MultiTest
     private const string ServerNextTrapSetOrderField = "_nextTrapSetOrder";
     private const string ServerDeckListField = "_deck";                    // GameServer — 덱
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
-    private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 카드 가져오기)
+    private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 카드 패치하기)
 
     private const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
     private const string SlotNameField = "nameText";     // RoomSlotView — 이름표 글자

@@ -363,9 +363,57 @@ def writable(b, depth=0):
 
 # ── 저장소 (cards.json · 11-card-list 1-1) ────────────────────────────
 
+# 문구의 값 자리 — cards.json 의 문구는 수치를 {0} {1} 로 쓰고, 값은 효과 args 가 갖는다 (26-card-data 7-2).
+# 노션 문구에는 숫자가 그대로 적혀 있으므로, 값 자리를 채운 글과 견준다.
+SLOT = re.compile(r"\{(\d+)\}")
+NUMBER = r"\d+(?:\.\d+)?"
+ARG_NUMBER = re.compile(rf'=\s*({NUMBER})\s*(?=[,"])')
+
+
+def effect_values(e):
+    """카드 한 줄의 효과 값 — args 에 적힌 숫자를 적힌 순서대로 (Unity CardSheet 와 같은 규칙)."""
+    out = []
+    for fx in e.get("effects") or []:
+        for pair in (fx.get("args") or "").split(","):
+            if "=" in pair:
+                v = pair.split("=", 1)[1].strip()
+                if re.fullmatch(NUMBER, v):
+                    out.append(v)
+    return out
+
+
+def render_text(template, values):
+    """값 자리를 효과 값으로 채운 글. 값이 모자라거나 번호가 ASCII 숫자가 아니면(앱이 거절한다) None."""
+    if not all(s.isascii() for s in SLOT.findall(template)):
+        return None
+    try:
+        return SLOT.sub(lambda m: values[int(m.group(1))], template)
+    except IndexError:
+        return None
+
+
+def read_values(template, text, values):
+    """노션 문구를 값 자리 틀에 맞춰 읽는다. 글이 틀과 같고 숫자만 다르면 새 값 목록, 아니면 None.
+    정수이던 값에 소수가 오면 None — 효과 칸의 형이 달라 Unity 가 못 읽는다."""
+    parts = SLOT.split(template)   # [글, 번호, 글, 번호, …, 글]
+    if len(parts) == 1 or not all(p.isascii() for p in parts[1::2]):
+        return None
+    pattern = "".join(re.escape(p) if i % 2 == 0 else f"({NUMBER})" for i, p in enumerate(parts))
+    m = re.fullmatch(pattern, text)
+    if not m:
+        return None
+    new, seen = list(values), {}
+    for idx, got in zip((int(p) for p in parts[1::2]), m.groups()):
+        if idx >= len(new) or seen.setdefault(idx, got) != got or ("." in got) != ("." in new[idx]):
+            return None
+        new[idx] = got
+    return new
+
 def sync_repo(repo, cards, reworked=(), write=True):
-    """확정 카드의 이름 · 문구 · 장수 · 등급 · 종류를 cards.json 과 11-card-list 에 맞춘다.
+    """확정 카드의 이름 · 문구 · 장수 · 등급 · 종류 · 효과 값을 cards.json 과 11-card-list 에 맞춘다.
     cards.json 에 이미 있는 카드만 고친다 — 새 카드는 효과를 만들어야 하므로 사람이 넣는다.
+    문구: 값 자리를 채운 글이 노션과 같으면 그대로 둔다. 숫자만 다르면 효과 값(args)을 고친다 — 문구와 효과가 따로 놀지 않는다.
+    글이 다르면 노션 글을 그대로 넣고(값 자리가 풀린다) 알린다.
     돌려주는 값: 바뀐 카드 줄 목록 (PR 본문용)."""
     path = os.path.join(repo, CARDS_JSON)
     raw = open(path, encoding="utf-8").read()
@@ -376,21 +424,36 @@ def sync_repo(repo, cards, reworked=(), write=True):
         c = by_id.get(e["id"])
         if not c:
             continue
-        want = {"name": c["name"], "text": c["text"], "count": c["count"],
+        want = {"name": c["name"], "count": c["count"],
                 "grade": GRADE_ENUM.get(c["grade"], e["grade"]), "type": c["type"] or e["type"]}
         diff = {k: (e[k], v) for k, v in want.items() if v is not None and e.get(k) != v}
-        if not diff:
+        values = effect_values(e)
+        new_values, unslotted = None, False
+        if c["text"] is not None and render_text(e["text"], values) != c["text"]:
+            new_values = read_values(e["text"], c["text"], values)
+            if new_values is None:
+                diff["text"] = (e["text"], c["text"])
+                unslotted = bool(SLOT.search(e["text"]))
+        if not diff and new_values is None:
             continue
         # 줄 모양(한 카드 = 몇 줄)을 지키려고 문자열로 고친다
         start = raw.index(f'"id": {e["id"]},')
-        end = raw.index("}", raw.index('"effects"', start))
-        block = raw[start:end]
+        effects_at = raw.index('"effects"', start)
+        end = raw.index("\n    }", effects_at)   # 카드 한 줄의 끝
+        block, effects = raw[start:effects_at], raw[effects_at:end]
         for k, (_, v) in diff.items():
             val = json.dumps(v, ensure_ascii=False)
             block = re.sub(rf'"{k}": (?:"(?:[^"\\]|\\.)*"|\d+)', lambda m: f'"{k}": {val}', block, count=1)
-        raw = raw[:start] + block + raw[end:]
-        warn = " ⚠ 능력 변경 — 효과(에셋)도 고쳐야 함" if e["id"] in reworked else ""
-        changed.append(f"- {e['id']} {c['name']}{warn}: " + " · ".join(f"{k} {a!r} → {b!r}" for k, (a, b) in diff.items()))
+        notes = [f"{k} {a!r} → {b!r}" for k, (a, b) in diff.items()]
+        if new_values is not None:
+            it = iter(new_values)
+            effects = ARG_NUMBER.sub(lambda m: m.group(0).replace(m.group(1), next(it)), effects)
+            notes.append("효과 값 " + " · ".join(f"{a} → {b}" for a, b in zip(values, new_values) if a != b))
+        raw = raw[:start] + block + effects + raw[end:]
+        warn = " ⚠ 능력 변경 — 효과 구성(에셋) · 값(cards.json args)도 확인" if e["id"] in reworked else ""
+        if unslotted:
+            warn += " ⚠ 문구의 글이 바뀌어 값 자리가 풀림 — 값 자리({0})를 다시 넣기"
+        changed.append(f"- {e['id']} {c['name']}{warn}: " + " · ".join(notes))
         if write:
             update_card_list(repo, e["id"], c)
     if changed and write:
@@ -692,7 +755,8 @@ def main():
         open(args.pr_body, "w", encoding="utf-8").write(
             "노션 카드 DB 의 확정 카드에 맞춰 `cards.json` · `11-card-list` 1-1 을 고쳤어요 (카드 정리 봇).\n\n"
             + "\n".join(changed)
-            + "\n\n머지한 뒤 Unity 에서 `Chapchu/카드 가져오기` 를 한 번 돌려 카드 에셋에 반영해 주세요. "
+            + "\n\n**머지한 뒤** `develop` 을 받아 Unity 를 열면 「카드 패치」 창이 떠요 — `카드 패치하기` 를 누르고, 바뀐 카드 에셋 · `Deck_Main` 을 커밋해 주세요 "
+              "(패치하지 않은 채로는 빌드가 되지 않아요 — `26-card-data` 7-3). "
               "1-2 카드별 규칙 글은 봇이 고치지 않아요 — 문구 · 수치가 본문에도 적혀 있으면 함께 봐 주세요.\n")
 
 
