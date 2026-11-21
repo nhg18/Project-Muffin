@@ -49,7 +49,7 @@ namespace Chapchu.Game
         // 연속 시간 초과 횟수 — 직접 뽑기 · 카드 사용으로 턴을 끝내면 0. GameServer.TimeoutLimit 번째에 강제 퇴장 (03-turn.md 4절).
         public int TimeoutStreak;
 
-        // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 10장이 아니게 되면 즉시 해제 (07-win-condition.md 7절).
+        // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 선언 뒤 장수는 보지 않는다 — 그 사람의 턴이 시작될 때 10장이 아니면 풀린다 (07-win-condition.md 4.2 · 4.3).
         public bool IsChapchu;
 
         // 게임에서 빠진 턴 번호 — 최종 사망했거나 나간 때 한 번만 적는다 (07-win-condition.md 11-3 순위). 남아 있으면 0.
