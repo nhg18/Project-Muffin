@@ -76,14 +76,18 @@ namespace Chapchu.Cards
         /// <summary>
         /// 게임에 쓸 카드를 장마다 만든다 (05-deck.md 3절 1 · 2). 장 번호(InstanceId)는 1부터 (09-network.md 7절).
         /// 방장이 게임 시작 때 한 번 부른다. 효과 목록은 복사해 넘긴다 — 에셋 리스트를 규칙과 공유하지 않는다.
+        /// 플레이 밖(에디터의 규칙 시험 · 봇 측정)에서도 게임과 같은 값 파일의 값으로 만든다 — 그때 만든 사본은 카드를 만든 뒤 바로 버린다.
+        /// 카드(Card)는 카드 정의를 쥐지 않으므로 사본이 씬 · 에셋에 물릴 일이 없다 (26 6-1).
         /// </summary>
         public List<Card> CreateCards()
         {
             var cards = new List<Card>();
             var byId = new Dictionary<int, CardData>();
             int nextInstanceId = 1;
+            bool temporary = sheet != null && !Application.isPlaying;
+            List<Entry> source = temporary ? ApplySheet() : ActiveEntries;
 
-            foreach (Entry entry in ActiveEntries)
+            foreach (Entry entry in source)
             {
                 if (entry.card == null)
                     continue;
@@ -97,6 +101,15 @@ namespace Chapchu.Cards
                 for (int i = 0; i < entry.count; i++)
                     cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects, reactsTo, data.revealSeconds, data.resolveSeconds, data.trapTrigger, data.triggerValue, data.reactCondition,
                         data.targetCondition));
+            }
+
+            if (temporary)
+            {
+                foreach (Entry entry in source)
+                {
+                    if (entry.card != null && IsCopy(entry.card))
+                        DestroyImmediate(entry.card);
+                }
             }
 
             return cards;
@@ -164,7 +177,10 @@ namespace Chapchu.Cards
 
                 // 실패한 사본은 반쯤 바뀌어 있다 — 버리고 에셋 값을 쓴다. 장수는 파일대로
                 Debug.LogError($"[{nameof(DeckData)}] {error} — 이 카드는 에셋 값으로 간다", asset);
-                Destroy(copy);
+                if (Application.isPlaying)
+                    Destroy(copy);
+                else
+                    DestroyImmediate(copy);
                 applied.Add(new Entry { card = asset, count = line.count });
             }
 
@@ -174,6 +190,9 @@ namespace Chapchu.Cards
 
             return applied;
         }
+
+        // ApplySheet 가 만든 사본인지 — 에셋에는 저장 막는 표시가 없다
+        private static bool IsCopy(CardData data) => (data.hideFlags & HideFlags.DontSaveInEditor) != 0;
 
         // 종류 ID 가 0(새로 만든 에셋의 기본값)이거나 다른 카드와 겹치면 알린다 — 규칙(Card)과 화면(GetCard)이 서로 다른 카드를 보게 된다 (09-network.md 7절).
         private void CheckId(Dictionary<int, CardData> byId, CardData data)
