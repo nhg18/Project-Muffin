@@ -30,7 +30,7 @@ namespace Chapchu.EditorTools
         private const string BackgroundCanvasName = "BackgroundCanvas";
         private const float BackgroundPlaneDistance = 50f; // 테이블 면(카메라 거리 약 14.85)보다 멀리
         private const string CushionTexturePath = "Assets/Sprites/UI/Hud/table_cushion.png";
-        private static readonly Vector2 CushionCenter = new Vector2(960f, 620f); // 시안 TABLE 가운데 — 3D 층의 카드 내는 자리와 같은 점
+        private static readonly Vector2 CushionCenter = new Vector2(960f, 620f); // 시안 TABLE 가운데 (덱 · 버림과 같은 줄)
         private static readonly Vector2 CushionSize = new Vector2(1120f, 560f);
         private const string RegularFontPath = "Assets/Fonts/GlaMuri/Galmuri11.ttf";
         private const string BoldFontPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold.ttf";
@@ -99,9 +99,11 @@ namespace Chapchu.EditorTools
         public static void Build()
         {
             _backCardPrefab = null;
-            if (GameObject.Find(CanvasName) != null)
+            // 카메라 · 레이어를 바꾸기 전에 확인한다 — 하나라도 있으면 아무것도 건드리지 않는다.
+            foreach (string existing in new[] { CanvasName, BackgroundCanvasName, TableBuilder.TableName })
             {
-                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {CanvasName} 가 이미 있다. 덮어쓰지 않는다 — 지우고 다시 실행할 것.");
+                if (GameObject.Find(existing) == null) continue;
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 씬에 {existing} 가 이미 있다. 덮어쓰지 않는다 — 지우고 다시 실행할 것.");
                 return;
             }
 
@@ -409,7 +411,7 @@ namespace Chapchu.EditorTools
         {
             RectTransform root = NewRect("RoomCodeTag", parent);
             TopLeft(root, EdgeX, EdgeTop + 14f, 200f, 52f);
-            root.localRotation = Quaternion.Euler(0f, 0f, 2f); // CSS rotate −2° = 시계 방향
+            root.localRotation = Quaternion.Euler(0f, 0f, 2f); // CSS rotate −2° = 반시계 = Unity z +2
             Image fill = RoundBox(root, Ink, 4f, 14f, White);
             HorizontalLayout(root, new RectOffset(20, 20, 0, 0), 12f, TextAnchor.MiddleLeft, true, true);
             root.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -1827,7 +1829,7 @@ namespace Chapchu.EditorTools
 
         #region 손패 (uGUI 카드 — 카드 이펙트 씬용)
 
-        // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역. 드롭 영역은 그 위(28 + 336)부터 (10-ui.md 2-1 「손패」).
+        // 손패 카드 226 × 336 — 카드 틀 이미지(820 × 1222) 비율, 높이는 손패 영역 (10-ui.md 2-1 「손패」).
         private static readonly Vector2 HandCardSize = new Vector2(226f, 336f);
         private const float HandAreaBottom = 28f;
         internal const string ActionCardFramePath = "Assets/Sprites/Cards/Frames/ActionCard.png";
