@@ -2526,8 +2526,18 @@ public static class MultiTest
                     t.At(2);
                     t.Counter(t.O1, calm);
                     var events = t.Run(20);
-                    Check(t.Hp(t.O1) == 10 && t.State(t.O1).Life == LifeState.Alive && !events.Any(e => e.GetType().Name.Contains("DeathPending")) && events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp == 0),
-                        $"2001 침착 — HP 10 · 20 피해 → 0 → 10 회복, 사망 대기 없음 (♥{t.Hp(t.O1)})");
+                    Check(t.Hp(t.O1) == 0 && events.Any(e => e.GetType().Name.Contains("DeathPending")) && !events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp > 0),
+                        $"2001 침착 — HP 10 · 20 피해 → 0 이면 회복 없이 사망 대기 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 21);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 11 && !events.Any(e => e.GetType().Name.Contains("DeathPending")), $"2001 침착 — HP 21 · 20 피해 → 1 → 10 회복 (♥{t.Hp(t.O1)})");
                 }
                 {
                     var t = new ChainTable();

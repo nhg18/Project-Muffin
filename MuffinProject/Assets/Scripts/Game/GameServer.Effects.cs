@@ -61,11 +61,11 @@ namespace Chapchu.Game
             ApplyHealRaw(actor, amount);
         }
 
-        /// <summary>entry 의 효과를 다 적용한 직후의 회복 (2001 침착) — 사망 대기 판정은 체인 뒤라, HP 0 이어도 여기서 1 이상이 되면 사망 대기가 아니다 (04 7절).</summary>
+        /// <summary>entry 의 효과를 다 적용한 직후의 회복 (2001 침착). 그 전에 HP 가 0 이 된 사람은 회복하지 않는다 — 그대로 사망 대기로 간다 (사용자 2026-11-21, 04 7절).</summary>
         internal void ApplyHealAfter(ChainEntry entry)
         {
             foreach (KeyValuePair<int, int> pair in entry.HealAfter)
-                if (IsInGame(pair.Key))
+                if (IsInGame(pair.Key) && _players[pair.Key].Hp > 0)
                     ApplyHealRaw(pair.Key, pair.Value);
         }
 
