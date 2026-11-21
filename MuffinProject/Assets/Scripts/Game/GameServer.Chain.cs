@@ -157,9 +157,10 @@ namespace Chapchu.Game
         }
 
         // actor 가 손패의 card 를 카운터로 top 에 낼 수 있는가 (대상 확정 전) — PlayCounter 와 AddCountersUsable 이 같이 쓴다.
-        // 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11).
+        // 내가 낸 카드(행동 · 카운터)에는 낼 수 없다 (04 7절 「사용 조건」 5). 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11).
         private bool CanPlayCounter(int actor, Card card, ChainEntry top) =>
             card.Type == CardType.Counter
+            && top.User != actor
             && (_players[actor].Life != LifeState.DeathPending || card.Condition == ReactCondition.WouldKillMe)
             && CanReactTo(card, actor, top);
 

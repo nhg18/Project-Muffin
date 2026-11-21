@@ -1640,6 +1640,21 @@ public static class MultiTest
             Check(!askedAgain || !Resolved(t.Tick()), "새 반응 시간 — 앞의 스킵은 이어지지 않는다" + (askedAgain ? "" : " (그 사람이 낼 것이 없어 확인 생략)"));
         }
 
+        // 내 카드에는 카운터를 낼 수 없다 — 낸 사람에게는 묻지도 않는다. 내 카운터 위에도 같다 (04-card 7절 「사용 조건」 5)
+        {
+            var t = new ChainTable();
+            t.GiveCard(t.O1, ChainTable.Negate); // O1 은 무효 카운터 두 장
+            IReadOnlyList<GameEvent> played = t.Play(t.Turn, ChainTable.Hit, t.O1);
+            Check(played.OfType<CountersUsable>().Any() && played.OfType<CountersUsable>().All(a => a.Actor != t.Turn), "카드를 낸 사람에게는 묻지 않는다");
+            t.At(opens + 0.5);
+            Check(t.Code(t.Counter(t.Turn, ChainTable.Negate)) == RejectCode.CannotReact, "내 행동 카드에 내 카운터 → 9");
+            IReadOnlyList<GameEvent> counter = t.Counter(t.O1, ChainTable.Negate);
+            Check(counter.OfType<CardPlayed>().Any() && counter.OfType<CountersUsable>().All(a => a.Actor != t.O1), "카운터를 낸 사람에게는 그 카운터에 낼 것을 묻지 않는다");
+            t.At(opens + 0.5 + opens + 0.5);
+            Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.CannotReact, "내 카운터에 내 카운터 → 9");
+            Check(t.Counter(t.Turn, ChainTable.Negate).OfType<CardPlayed>().Any(), "남의 카운터에는 낼 수 있다 — 처음 카드를 낸 사람도");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
