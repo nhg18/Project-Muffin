@@ -58,12 +58,12 @@
 ## 버전이 다르면 매칭되지 않는다
 
 * 접속할 때 이 값을 Photon `GameVersion` 으로 보낸다 (`PhotonConnection.Connect`). PATCH 만 달라도 나뉜다 (2026-11-12). 테스트 때는 모두 같은 빌드 이름인지 확인한다.
-* **카드도 같다** — 카드는 빌드에 들어 있어, 버전이 같으면 카드가 같다. 그래서 카드가 바뀐 빌드는 버전을 올린다 (위 「출시 뒤」 · `systems/26-card-data.md` 3절 #9).
+* **카드도 같다** — 카드 값 파일(`cards.json`)이 빌드에 들어 있어, 버전이 같으면 카드가 같다. 그래서 카드가 바뀐 빌드는 버전을 올린다 (위 「출시 뒤」 · `systems/26-card-data.md` 3절 #9).
 * 출시 뒤 옛 버전은 Remote Config `minVersion` 으로 막는다 (`systems/23-login.md` 7-6). 새 버전이 Play · App Store **둘 다** 올라간 뒤에 `minVersion` 을 새 버전으로 올린다 — 그 사이에는 옛 · 새 버전끼리 따로 매칭된다.
 
 ## 올리는 순서
 
-1. 카드가 바뀌었으면 Unity 에서 「카드 패치하기」 를 누르고 바뀐 카드 에셋을 develop 에 커밋한다 — 하지 않았으면 빌드가 실패한다 (`systems/26-card-data.md` 7-3).
+1. 카드 값은 따로 할 일이 없다 — 머지된 `cards.json` 이 빌드에 같이 들어가고 게임이 읽는다 (`systems/26-card-data.md` 7-3). 새 카드가 있으면 그 카드의 에셋이 커밋돼 있는지만 본다. 값 파일이 틀리면 빌드가 실패한다 (`systems/26-card-data.md` 8절).
 2. 위 표로 버전 · code 를 정하고, PM 이 `release/<버전>` 을 develop 에서 딴다 (급한 버그만이면 `hotfix/<버전>` 을 main 에서).
 3. 그 브랜치에서 Player Settings `Version` · `Bundle Version Code` · iOS `Build` 를 바꾸고 따로 커밋.
 4. 그 브랜치로 빌드해 확인한다. 나온 버그는 그 브랜치에서 고친다.

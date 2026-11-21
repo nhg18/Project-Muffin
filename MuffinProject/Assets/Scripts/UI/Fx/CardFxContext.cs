@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Chapchu.Cards;
 using UnityEngine;
 
 namespace Chapchu.UI.Fx
@@ -24,6 +25,9 @@ namespace Chapchu.UI.Fx
 
         /// <summary>카드 ID (11-card-list).</summary>
         public int CardId;
+
+        /// <summary>카드 정의 — 덱이 값 파일을 얹은 사본 (DeckData · 26-card-data 6-1). 연출이 보여 주는 수치는 여기서 읽는다. 비어 있으면 연출 프리팹이 쥔 카드 에셋 값.</summary>
+        public CardData Card;
 
         /// <summary>카드 이름 — 컷인 제목.</summary>
         public string CardName;

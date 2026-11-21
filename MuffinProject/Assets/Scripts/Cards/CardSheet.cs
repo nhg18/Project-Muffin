@@ -2,19 +2,16 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
-using Chapchu.Cards;
 using Chapchu.Game;
 using Chapchu.Game.Effects;
 using UnityEngine;
 
-namespace Chapchu.EditorTools
+namespace Chapchu.Cards
 {
     /// <summary>
-    /// 카드 데이터 파일(cards.json) 한 벌 — 읽기 · 확인값 · 카드 정의에 얹기. 기준: docs/systems/26-card-data.md 7-2
-    /// 에디터에서만 쓴다 — 「카드 패치하기」(CardImporter)가 이 파일을 카드 에셋에 얹고, 게임은 에셋만 읽는다. 값의 원본은 이 파일 하나다.
+    /// 카드 데이터 파일(cards.json) 한 벌 — 읽기 · 카드 정의에 얹기. 기준: docs/systems/26-card-data.md 7-2
+    /// 값의 원본은 이 파일 하나다. 게임이 플레이를 시작할 때 카드 정의의 사본에 얹고 (DeckData), 「카드 가져오기」(Editor/CardImporter)가 같은 코드로 에셋에 얹는다.
     /// 파일이 바꿀 수 있는 것: 이름 · 문구 · 대상 · 대상 후보 조건 · 등급 · 장수 · 효과 값. 카드 종류 · 효과의 종류와 순서는 에셋이 정한다.
     /// </summary>
     [Serializable]
@@ -24,22 +21,6 @@ namespace Chapchu.EditorTools
 
         // 문구의 값 자리 — {0} {1} … (26 7-2 「값 자리」). \d 는 전각 숫자도 잡는다 — ASCII 가 아니면 TryRenderText 가 거절한다
         private static readonly Regex SlotPattern = new Regex(@"\{(\d+)\}");
-
-        /// <summary>
-        /// 파일 내용의 확인값 (SHA-256, 소문자 16진수). 줄바꿈(CRLF · LF)과 BOM 은 빼고 센다 —
-        /// 같은 파일이 저장소 줄바꿈 정책에 따라 다른 값이 되지 않게.
-        /// </summary>
-        public static string HashOf(string json)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(Normalize(json));
-            using (SHA256 sha = SHA256.Create())
-            {
-                var builder = new StringBuilder(64);
-                foreach (byte b in sha.ComputeHash(bytes))
-                    builder.Append(b.ToString("x2"));
-                return builder.ToString();
-            }
-        }
 
         /// <summary>파일을 읽는다. 모양이 틀리면 false 와 이유.</summary>
         public static bool TryParse(string json, out CardSheet sheet, out string error)
@@ -92,7 +73,7 @@ namespace Chapchu.EditorTools
 
         /// <summary>
         /// 파일의 카드 한 줄을 카드 정의에 얹는다. 종류 · 효과의 종류와 순서가 정의와 다르면 얹지 않고 false —
-        /// 그런 변경은 에셋 · 코드를 사람이 고친다 (26 3절 #9). 실패하면 data 가 반쯤 바뀌어 있을 수 있다 — 사본에 얹고, 실패하면 사본을 버린다.
+        /// 그런 변경은 에셋 · 코드를 사람이 고친다 (26 3절 #10). 실패하면 data 가 반쯤 바뀌어 있을 수 있다 — 사본에 얹고, 실패하면 사본을 버린다.
         /// </summary>
         public static bool TryApply(CardSheetEntry entry, CardData data, out string error)
         {
