@@ -87,6 +87,8 @@ namespace Chapchu.Game
                 w.Ints(e.DamageToHeal);
                 w.Ints(e.HealToDamage);
                 w.Map(e.DamageReduction);
+                w.Int(e.DamageReductionAll);
+                w.Map(e.HealAfter);
                 w.Map(e.SurviveAt);
                 w.Ints(e.ProtectTraps);
                 w.Map(e.Rolled.ToDictionary(pair => IndexOfEffect(e.Card, pair.Key), pair => pair.Value)); // 효과는 그 카드의 몇 번째인지로
@@ -262,6 +264,8 @@ namespace Chapchu.Game
                 e.DamageToHeal.UnionWith(r.Ints());
                 e.HealToDamage.UnionWith(r.Ints());
                 r.Map(e.DamageReduction);
+                e.DamageReductionAll = r.Int();
+                r.Map(e.HealAfter);
                 r.Map(e.SurviveAt);
                 e.ProtectTraps.UnionWith(r.Ints());
                 var rolled = new Dictionary<int, int>();

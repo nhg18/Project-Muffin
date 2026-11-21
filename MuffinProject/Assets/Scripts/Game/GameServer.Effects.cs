@@ -22,6 +22,7 @@ namespace Chapchu.Game
 
             if (entry.DamageReduction.TryGetValue(actor, out int reduce))
                 amount -= reduce;
+            amount -= entry.DamageReductionAll; // 받는 사람 모두 (2001)
 
             if (amount <= 0)
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
@@ -58,6 +59,14 @@ namespace Chapchu.Game
             }
 
             ApplyHealRaw(actor, amount);
+        }
+
+        /// <summary>entry 의 효과를 다 적용한 직후의 회복 (2001 침착) — 사망 대기 판정은 체인 뒤라, HP 0 이어도 여기서 1 이상이 되면 사망 대기가 아니다 (04 7절).</summary>
+        internal void ApplyHealAfter(ChainEntry entry)
+        {
+            foreach (KeyValuePair<int, int> pair in entry.HealAfter)
+                if (IsInGame(pair.Key))
+                    ApplyHealRaw(pair.Key, pair.Value);
         }
 
         private void ApplyHealRaw(int actor, int amount)

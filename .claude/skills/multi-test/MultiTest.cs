@@ -417,6 +417,14 @@ public static class MultiTest
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
             CardView card = FindHandCard(instances[counter]);
+            // 방장이 「지금 낼 수 있다」 고 알려 준 카운터만 화면 경로로 — 실제 카운터는 반응 조건이 있어 손에 있어도 못 낼 수 있다 (11-card-list 1-3)
+            HandView handView = Object.FindFirstObjectByType<HandView>();
+            bool usable = handView != null && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Contains(instances[counter]);
+            if (!usable)
+            {
+                server.RequestPlayCounter(instances[counter], new int[0]);
+                return "OK P" + me + " 반응 시간에 카운터 (지금 낼 수 없는 카운터 — 거절 기대)";
+            }
             if (card != null && targetType != TargetType.OneOther && targetType != TargetType.TwoOthers)
             {
                 var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
@@ -2281,8 +2289,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2 };
-            Check(ids.Length == 51 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 51장 (행동 45 + 카운터 묶음 1 의 6, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3 };
+            Check(ids.Length == 54 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 54장 (행동 45 + 카운터 묶음 1 · 2 의 9, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -2290,8 +2298,87 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 51)
+            if (ids.Length == 54)
             {
+                // ── 카운터 묶음 2 (11-card-list 1-3) — 2001 침착 ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 95);
+                    Card calm = t.Give(t.O2, Real(2001)); // 대상이 아닌 사람도 낼 수 있다
+                    Card mine = t.Give(t.Turn, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2001 내 카드에는 거절 9");
+                    t.Counter(t.O2, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.Hp(t.O2) == 100, $"2001 침착 — 20 − 20 = 0 피해 · 낸 사람 95 → 100 (최대 100) (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 50);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 40, $"2001 침착 — 40 − 20 = 20 피해 뒤 10 회복 (50 → 40) (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 10 && t.State(t.O1).Life == LifeState.Alive && !events.Any(e => e.GetType().Name.Contains("DeathPending")) && events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp == 0),
+                        $"2001 침착 — HP 10 · 20 피해 → 0 → 10 회복, 사망 대기 없음 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 50);
+                    Card calm = t.Give(t.O2, Real(2001));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, calm);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 50, $"2001 침착이 무효되면 감소 · 회복 없음 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1002)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, calm)) == RejectCode.CannotReact, "2001 피해 없는 카드(1002)에는 거절 9");
+                }
+                {
+                    // 고르기로 멈췄다 이어 가는 카드 — 고른 피해도 줄고, 회복은 그 카드가 끝난 뒤
+                    var t = new ChainTable();
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    bool asked = t.RunUntil<ChoiceStarted>(30) != null;
+                    int paused = t.Hp(t.O1);
+                    t.Server.Choose(t.O1, 1);
+                    t.Run(t.Now + 1);
+                    Check(asked && paused == 100 && t.Hp(t.O1) == 50, $"2001 침착 — 1019 고르는 동안 회복 없음(♥{paused}) · 80 − 20 = 60 피해 뒤 10 회복 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    // 받는 사람 모두 — 전원 피해 메모리 카드에 실제 침착
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 90);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    Card wave = t.Give(t.Turn, id => new Card(id, 902, CardType.Action, TargetType.AllOthers, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 30 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+                    t.PlayCard(t.Turn, wave);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 90 && t.Hp(t.O2) == 90, $"2001 침착 — 전원 30 피해를 받는 사람 모두 20 씩 감소 (낸 사람 90 − 10 + 10 · 다른 사람 100 − 10) (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
                 // ── 카운터 묶음 1 (11-card-list 1-3) — 2003 진짜 할거야? · 2014 알아 · 2016 칼집 ──
                 {
                     var t = new ChainTable();
@@ -3611,6 +3698,22 @@ public static class MultiTest
             var t = new ChainTable();
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Choice), t.O1);
             Same(t, "고르기 중 (1019) — 처리 중인 카드 · 고르는 사람");
+            {
+                // 아래 카드 표시 「피해 감소 (모두)」 · 「처리 직후 회복」 (2001 침착) 이 남은 채 고르기로 멈춘 순간
+                var m = new ChainTable();
+                Card calm = m.Give(m.O1, id => new Card(id, 2001, CardType.Counter, TargetType.None,
+                    new CardEffect[] { new ReduceDamageEffect { amount = 20, everyone = true }, new HealAfterBelowEffect { amount = 10 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                m.PlayCard(m.Turn, m.Give(m.Turn, Choice), m.O1);
+                m.At(2);
+                m.Counter(m.O1, calm);
+                Check(m.RunUntil<ChoiceStarted>(30) != null, "침착이 걸린 1019 — 고르기가 열림");
+                Same(m, "고르기 중 — 아래 카드 표시 「피해 감소 (모두)」 · 「처리 직후 회복」 (2001)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.O1, 1);
+                copy.Tick();
+                int hp = ((PlayerState)((System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(copy))[m.O1]).Hp;
+                Check(hp == 50, $"되살린 방장이 표시대로 처리 — 80 − 20 = 60 피해 뒤 10 회복 (♥{hp})");
+            }
 
             GameServer clone = Clone(t, out _);
             clone.Choose(t.O1, 1);

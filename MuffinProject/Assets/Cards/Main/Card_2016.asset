@@ -40,6 +40,7 @@ MonoBehaviour:
       type: {class: ReduceDamageEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data:
         amount: 40
+        everyone: 0
     - rid: 4532118140694036559
       type: {class: DrawEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data:

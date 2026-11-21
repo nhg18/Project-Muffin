@@ -140,6 +140,13 @@
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
       "effects": [ { "type": "ReduceDamageEffect", "args": "amount=40" }, { "type": "DrawEffect", "args": "subject=Self, count=1" } ]
+    },
+    {
+      "id": 2001, "name": "침착", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "방금 나온 행동 카드의 피해를 20 줄이고, 나는 HP를 10 회복한다",
+      "art": "",
+      "reactsTo": "Action", "reactCondition": "HasDamage",
+      "effects": [ { "type": "ReduceDamageEffect", "args": "amount=20, everyone=true" }, { "type": "HealAfterBelowEffect", "args": "amount=10" } ]
     }
   ]
 }

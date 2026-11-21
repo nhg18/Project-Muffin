@@ -27,6 +27,10 @@ namespace Chapchu.Game
         public readonly HashSet<int> DamageToHeal = new HashSet<int>();                     // C03
         public readonly HashSet<int> HealToDamage = new HashSet<int>();                     // C09
         public readonly Dictionary<int, int> DamageReduction = new Dictionary<int, int>(); // C10 — 받는 사람 → 줄일 양
+        /// <summary>이 카드의 피해를 받는 사람 모두 — 각각 이만큼 줄인다 (2001 침착, 04 7절 「피해 감소 (모두)」).</summary>
+        public int DamageReductionAll;
+        /// <summary>이 카드의 효과를 다 적용한 직후에 회복할 사람 → 양 (2001 침착의 회복, 04 7절 「아래 카드 처리 직후의 효과」).</summary>
+        public readonly Dictionary<int, int> HealAfter = new Dictionary<int, int>();
         public readonly Dictionary<int, int> SurviveAt = new Dictionary<int, int>();       // C11 — 받는 사람 → 남길 HP
         public readonly HashSet<int> ProtectTraps = new HashSet<int>();                     // C12 — 함정 주인
 

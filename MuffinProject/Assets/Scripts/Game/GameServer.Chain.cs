@@ -190,6 +190,7 @@ namespace Chapchu.Game
                 case ReactCondition.DestroysMyTrap: return top.User != me && AffectedBy(top, EffectTag.DestroyTrap).Contains(me);
                 case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
+                case ReactCondition.HasDamage:      return AffectedBy(top, EffectTag.Damage).Any();
                 default:                            return false;
             }
         }
@@ -248,6 +249,7 @@ namespace Chapchu.Game
                         return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
                 }
 
+                ApplyHealAfter(entry); // 이 카드의 처리가 끝난 직후의 회복 (2001)
                 _resolving.RemoveAt(0);
             }
 

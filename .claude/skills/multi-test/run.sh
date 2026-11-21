@@ -667,9 +667,10 @@ compare_screens() {
     done
     [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
     # 카운터 카드를 냈으면 행동 카드가 무효, 아니면 거절 (CounterProbe) — 코드 8(카운터 카드가 아니다), 또는 아무도 낼 카운터가 없어
-    # 반응 시간이 0초로 닫힌 뒤라 코드 6(반응 시간 아님, 04-card 8절)
-    local pattern='내 요청 거절 — 코드 [68]' what='카운터 요청 거절 (코드 6 · 8)'
-    if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — '; what='카운터로 행동 카드 무효'; fi
+    # 반응 시간이 0초로 닫힌 뒤라 코드 6(반응 시간 아님, 04-card 8절). 손의 카운터가 그 카드에 낼 수 없는 것이면 코드 9(반응 조건)
+    local pattern='내 요청 거절 — 코드 [689]' what='카운터 요청 거절 (코드 6 · 8 · 9)'
+    # 실제 카운터(11-card-list 1-3)는 무효만 하지 않는다 — 무효(카드 무효) · 쓴 사람 손패로(2003) · 피해 감소(2001 · 2016 — 카운터 카드가 처리된 줄)
+    if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — \| 손패로 반환\| 카드 처리 — 카드 20[0-9][0-9] '; what='카운터 카드가 방장에게 받아들여져 처리됨 (무효 · 반환 · 감소)'; fi
     total=0
     for project in "${EDITORS[@]}"; do
         count=$(console_lines "$project" | grep -c "\[GameDebugInput\].*$pattern")
