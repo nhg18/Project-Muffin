@@ -37,6 +37,12 @@ namespace Chapchu.UI.GameScreen
                 underCards[i].SetActive(i < under);
         }
 
-        public void OnPointerClick(PointerEventData eventData) => DrawClicked?.Invoke();
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            // 우클릭은 취소 입력 (10-ui.md 9절) — 왼쪽(터치)만 드로우.
+            if (eventData.button != PointerEventData.InputButton.Left) return;
+
+            DrawClicked?.Invoke();
+        }
     }
 }

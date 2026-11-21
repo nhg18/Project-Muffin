@@ -21,14 +21,23 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float wideFontSize;
 
         [Header("색 (HUD v2)")]
+        [Tooltip("보통일 때 띠 색 (파랑).")]
         [SerializeField] private Color normalBand = new Color32(0x00, 0x9d, 0xff, 0xFF);
+        [Tooltip("보통일 때 카드 면 색.")]
         [SerializeField] private Color normalFace = Color.white;
+        [Tooltip("보통일 때 숫자 색.")]
         [SerializeField] private Color normalInk = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("9장 · 11장 이상(찹츄가 가깝다)일 때 띠 색 (주황).")]
         [SerializeField] private Color nearBand = new Color32(0xff, 0x9f, 0x1a, 0xFF);
+        [Tooltip("9장 · 11장 이상일 때 카드 면 색.")]
         [SerializeField] private Color nearFace = new Color32(0xff, 0xf1, 0xe0, 0xFF);
+        [Tooltip("9장 · 11장 이상일 때 숫자 색.")]
         [SerializeField] private Color nearInk = new Color32(0xb3, 0x3f, 0x00, 0xFF);
+        [Tooltip("정확히 10장일 때 띠 색 (분홍).")]
         [SerializeField] private Color tenBand = new Color32(0xff, 0x4f, 0x8b, 0xFF);
+        [Tooltip("정확히 10장일 때 카드 면 색.")]
         [SerializeField] private Color tenFace = new Color32(0xff, 0xe3, 0xee, 0xFF);
+        [Tooltip("정확히 10장일 때 숫자 색.")]
         [SerializeField] private Color tenInk = new Color32(0xc8, 0x19, 0x5a, 0xFF);
 
         private float _baseFontSize;

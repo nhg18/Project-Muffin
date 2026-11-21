@@ -168,11 +168,10 @@ namespace Chapchu.UI.GameScreen
 
         private void Hover(Vector2 position)
         {
+            // 창 밖 · HUD 위는 손패를 내린다 (10-ui.md 4절) — 올라온 손패가 덮는 HUD 는 그동안 레이를 막지 않아 여기 걸리지 않는다
             bool inWindow = position.x >= 0f && position.y >= 0f && position.x <= Screen.width && position.y <= Screen.height;
-            if (!inWindow)
+            if (!inWindow || IsOverHud(position))
                 _view.ClearPointer(true);
-            else if (IsOverHud(position))
-                _view.ClearPointer(false);
             else
                 _view.SetPointer(position);
         }
