@@ -37,7 +37,9 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private RectTransform rule;
 
         [Header("그림")]
+        [Tooltip("조준경 선 색 (시안 svg stroke).")]
         [SerializeField] private Color strokeColor = new Color32(0xee, 0xf3, 0xff, 0xff);
+        [Tooltip("조준경 가운데 점 색.")]
         [SerializeField] private Color dotColor = new Color32(0xff, 0x46, 0x54, 0xff);
         [Tooltip("조준경 둘레 빛 (시안 drop-shadow 6px).")]
         [SerializeField] private Color haloColor = new Color(140f / 255f, 180f / 255f, 1f, 0.8f);
@@ -53,6 +55,7 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private float gap = 17.3f;
 
         [Header("시간 (시안 aim-tag 애니메이션)")]
+        [Tooltip("전체 길이 (초, 시안 aim-tag 2.3s).")]
         [SerializeField] private float duration = 2.3f;
         [Tooltip("전체 진행에 거는 이징 (cubic-bezier).")]
         [SerializeField] private Vector4 easing = new Vector4(0.2f, 0.7f, 0.2f, 1f);
