@@ -43,6 +43,22 @@ develop            ← 개발 중인 것을 모은다
 * 태그 이름: 배포 = `v<버전>` (예: `v0.2.0`), 접은 작업 = `archive/<이름>`.
 * 찬반 리뷰(`/prepush`)는 develop 과 비교한다. release · hotfix 와 거기서 딴 `fix/*` 는 비교 기준을 바꿔 돌린다 — `REVIEW_BASE=origin/main` 또는 `REVIEW_BASE=origin/release/<버전>`.
 
+## CI · CD (`.github/workflows/unity-ci.yml`)
+
+Unity 빌드는 오래 걸리고(무료 러너로 한 번에 수십 분) 라이선스 좌석을 쓴다. 그래서 **내보낼 코드가 지나가는 길에만** 둔다 (2026-11-22 PM 결정).
+
+| 언제 | 무엇 | 왜 |
+| --- | --- | --- |
+| PR → `release/*` · `hotfix/*` · `main` | Android 빌드 검사. **통과해야 머지**(필수 검사) | 내보낼 브랜치에 깨진 빌드가 들어가지 않게 |
+| push → `release/*` · `hotfix/*` | 확인용 APK 빌드 → 아티팩트 | release · hotfix 확인 단계(위 순서 2)에서 기기에 깔아 본다 |
+| `v*` 태그 push | 서명된 AAB (CD) → 아티팩트. Play Console 내부 테스트 트랙 올리기는 나중에 붙인다 | 배포 빌드 = 태그 커밋 (`docs/versioning.md` 「태그」) |
+| `develop` | 하루 한 번 밤 빌드 (schedule) — 그날 바뀐 것이 없으면 건너뛴다 | feature PR 마다 돌리면 비싸다. 깨진 날을 하루 안에 안다 |
+| 수동 | `workflow_dispatch` | 아무 브랜치나 필요할 때 |
+
+* `docs/**` · `*.md` 만 바꾼 것은 돌지 않는다.
+* feature · fix · docs PR(→ develop)에는 Unity 빌드를 돌리지 않는다 — 대신 `/prepush` 리뷰와 skill `multi-test` 가 막는다.
+* **지금 파일과 다르다** — 지금 yaml 은 원격에 없는 `test_build` 브랜치로 가는 PR 에만 돌아, PR 검사가 한 번도 돈 적이 없다. 위 표대로 고치는 것은 따로 브랜치를 따서 `/prepush` 를 거쳐 넣는다 (2026-11-22 기준 미반영).
+
 ## 그 밖의 규칙
 
 * 접은 작업은 브랜치 대신 `archive/<이름>` 태그로 원격에 남기고 브랜치는 지운다 (예: `archive/upgrade-unity6`).
