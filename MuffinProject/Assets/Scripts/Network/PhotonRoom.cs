@@ -317,7 +317,7 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 방장 전환시 호출되는 콜백 함수
-        /// 방장 이탈 처리(방 해체 · 결과 화면 로비로 — 08-room.md 5절 #5)는 화면이 통지를 받아 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
+        /// 방 대기 · 결과 화면에서는 위임 (08-room.md 5절 #5 · 07 11절) — 화면이 통지를 받아 다시 그린다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {

@@ -29,8 +29,8 @@ namespace Chapchu.UI.RoomScreen
         private const string CountFormat = "{0} / {1}";
         private const string EnteredLogFormat = "{0}님이 입장했어요.";
         private const string LeftLogFormat = "{0}님이 퇴장했어요.";
-        private const string DisbandedTitle = "방이 사라졌어요";
-        private const string DisbandedText = "방장이 나가서 방이 사라졌어요.";
+        private const string HostChangedLogFormat = "{0}님이 방장이 되었어요.";
+        private const string BecameHostToastFormat = "방장이 되었어요. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string PublicLog = "공개로 변경";
         private const string PrivateLog = "비공개로 변경";
         private const string BotAddedLogFormat = "봇 {0} 추가";
@@ -80,6 +80,9 @@ namespace Chapchu.UI.RoomScreen
         private bool _wasOpen;
         private int[] _bots = Array.Empty<int>();
         private readonly BotLevel[] _botLevels = new BotLevel[BotRoster.MaxBots];
+
+        // 방장 교체 로그 줄 — PUN 은 방장 교체를 앞 방장 퇴장보다 먼저 알린다. 퇴장 줄 뒤에 쓰려고 미뤄 둔다 (없으면 다음 프레임에)
+        private string _pendingHostLog;
 
         private readonly struct Seat
         {
@@ -193,6 +196,7 @@ namespace Chapchu.UI.RoomScreen
             if (!_initialized || _isLeaving || !PhotonNetwork.InRoom)
                 return;
 
+            FlushHostLog();
             SyncRoomOptions();
 
             // Android 뒤로가기 · PC Esc (16-room-ui-full 3절 #12)
@@ -354,17 +358,32 @@ namespace Chapchu.UI.RoomScreen
         private void HandlePlayerLeft(Player player)
         {
             log.Add(string.Format(LeftLogFormat, DisplayName(player.NickName)));
+            FlushHostLog();
             Refresh();
+        }
+
+        private void FlushHostLog()
+        {
+            if (_pendingHostLog == null) return;
+
+            log.Add(_pendingHostLog);
+            _pendingHostLog = null;
         }
 
         private void HandleMasterClientSwitched(Player newMaster)
         {
-            // 방 대기 중에 방장이 나갔다 — 방 해체: 남은 사람은 모두 로비로, 도착해서 사유를 알린다 (08-room.md 5절 #5, PM 2026-11-19)
+            // 방 대기 중에 방장이 나갔다 — 위임: 방장 표시 · 시작 자리 · 봇 편집 · 공개 토글이 새 방장 기준으로 바뀐다 (08-room.md 5절 #5, PM 2026-11-20)
             if (_isLeaving)
                 return;
 
-            PopupManager.Instance.ShowWarningOnNextScene(DisbandedTitle, DisbandedText);
-            Leave();
+            if (newMaster != null)
+            {
+                _pendingHostLog = string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName));
+                if (newMaster.IsLocal)
+                    PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
+            }
+
+            Refresh();
         }
 
         private void HandleBotsChanged(int[] numbers)
