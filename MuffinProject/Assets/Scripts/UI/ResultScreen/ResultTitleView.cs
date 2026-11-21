@@ -31,6 +31,8 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float titleStartScale = 0.3f;
         [Tooltip("제목이 튀어나오기까지 · 제 크기가 되는 시간 · 나타나는 시간 (초).")]
         [SerializeField] private Vector3 titleTiming = new Vector3(0.15f, 0.6f, 0.3f);
+        [Tooltip("제목이 튀어나올 때 제 크기를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float titleOvershoot = 2f;
         [Tooltip("알약이 떠오르기까지 · 떠오르는 시간 (초).")]
         [SerializeField] private Vector2 pillsTiming = new Vector2(0.55f, 0.4f);
         [Tooltip("알약이 떠오르기 시작하는 깊이 — 제자리보다 이만큼 아래 (시안 fadeup 20).")]
@@ -64,7 +66,7 @@ namespace Chapchu.UI.ResultScreen
         {
             title.localScale = Vector3.one * titleStartScale;
             titleGroup.alpha = 0f;
-            title.DOScale(1f, titleTiming.y).SetDelay(titleTiming.x).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+            title.DOScale(1f, titleTiming.y).SetDelay(titleTiming.x).SetEase(Ease.OutBack, titleOvershoot).SetLink(gameObject);
             titleGroup.DOFade(1f, titleTiming.z).SetDelay(titleTiming.x).SetLink(gameObject);
 
             ResultPodiumView.Rise(pills, pillsGroup, pillsTiming.x, pillsTiming.y, riseDistance);

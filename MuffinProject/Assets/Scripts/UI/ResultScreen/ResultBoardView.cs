@@ -43,9 +43,13 @@ namespace Chapchu.UI.ResultScreen
         {
             if (panel == null || closeButton == null || headers == null || rowArea == null || rowPrefab == null)
                 Debug.LogError($"[{nameof(ResultBoardView)}] 참조 중 비어 있는 것이 있습니다.", this);
-
-            closeButton.onClick.AddListener(() => CloseClicked?.Invoke());
         }
+
+        private void OnEnable() => closeButton.onClick.AddListener(HandleCloseClicked);
+
+        private void OnDisable() => closeButton.onClick.RemoveListener(HandleCloseClicked);
+
+        private void HandleCloseClicked() => CloseClicked?.Invoke();
 
         /// <summary>머리 줄 — 사람은 순위 순.</summary>
         public void ShowPlayers(IReadOnlyList<string> names, IReadOnlyList<Color> colors, int meIndex)
