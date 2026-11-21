@@ -6,17 +6,15 @@ using Chapchu.Cards;
 using Chapchu.Game;
 using Chapchu.Game.Effects;
 using UnityEditor;
-using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace Chapchu.EditorTools
 {
     /// <summary>
-    /// 카드 패치하기 (11-card-list.md 0절 · 26-card-data.md 7-2 · 7-3) — cards.json 의 카드마다 Card_{ID}.asset 을 만들거나 고치고, 장수대로 Deck_Main 을 다시 짠다.
-    /// 이름 · 종류 · 대상 · 대상 후보 조건 · 문구 · 등급 · 장수 · 효과 값을 매번 파일 값으로 덮는다 — 값의 원본은 cards.json 이다.
+    /// 카드 가져오기 (11-card-list.md 0절 · 26-card-data.md 7-3) — cards.json 의 카드마다 Card_{ID}.asset 을 만들거나 고치고, 장수대로 Deck_Main 을 다시 짠다.
+    /// **새 카드를 넣을 때** 쓴다: 에셋을 만들고 Deck_Main 의 목록에 넣는다. 값만 바뀐 것은 누르지 않아도 된다 — 게임이 플레이를 시작할 때 파일 값을 얹는다 (DeckData).
+    /// 누르면 이름 · 종류 · 대상 · 대상 후보 조건 · 문구 · 등급 · 장수 · 효과 값을 파일 값으로 덮어, 인스펙터에 보이는 에셋 값도 파일과 같아진다.
     /// 효과의 종류와 순서는 에셋이 정한다: 에셋에 효과가 하나도 없을 때만 파일의 종류대로 처음 만들고, 그 뒤로 파일과 다르면 그 카드는 실패로 알린다.
-    /// 다 맞으면 Deck_Main 에 파일의 확인값을 적는다 — 파일이 바뀌었는데 아직 패치하지 않았는지를 이 값으로 가른다 (IsApplied).
     /// cards.json 에는 구현할 카드(노션 확정 + 효과가 만들어진 카드)만 적는다.
     /// </summary>
     public static class CardImporter
@@ -26,38 +24,13 @@ namespace Chapchu.EditorTools
         private const string DeckPath = Folder + "/Deck_Main.asset";
         private const string ArtFolder = "Assets/Resources/CardArt"; // ResourcePaths.CardArt
 
-        public const string MenuPath = "Chapchu/카드 패치하기";
-
-        /// <summary>
-        /// cards.json 이 카드 에셋에 반영돼 있는지 — Deck_Main 에 적힌 확인값이 파일의 확인값과 같은가. 파일이 없으면 반영할 것이 없다.
-        /// 에셋을 손으로 고친 것은 잡지 못한다 — 다음 패치가 되돌린다.
-        /// </summary>
-        public static bool IsApplied()
-        {
-            if (!File.Exists(JsonPath))
-                return true;
-
-            DeckData deck = AssetDatabase.LoadAssetAtPath<DeckData>(DeckPath);
-            return deck != null && deck.dataHash == CardSheet.HashOf(File.ReadAllText(JsonPath));
-        }
-
-        /// <summary>path 가 카드 데이터 파일(cards.json)인지 — 파일이 새로 들어오면 패치 알림 창이 확인한다.</summary>
-        public static bool IsCardSheet(string path) => path == JsonPath;
-
-        /// <summary>지난 패치가 카드를 다 얹지 못했는지 — 그때 Deck_Main 의 확인값을 비워 둔다 (26-card-data.md 8절).</summary>
-        public static bool HasFailed()
-        {
-            DeckData deck = AssetDatabase.LoadAssetAtPath<DeckData>(DeckPath);
-            return deck != null && string.IsNullOrEmpty(deck.dataHash);
-        }
-
-        [MenuItem(MenuPath)]
+        [MenuItem("Chapchu/카드 가져오기")]
         public static void Import()
         {
-            // 플레이 중에는 고치지 않는다 — 게임이 읽고 있는 카드 에셋이 실행 중에 바뀐다 (26-card-data.md 5절). 창 버튼 · 메뉴가 여기서 같이 막힌다
+            // 플레이 중에는 고치지 않는다 — 게임이 사본을 만든 카드 에셋이 실행 중에 바뀐다
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                Debug.LogWarning($"[{nameof(CardImporter)}] 플레이 중에는 패치하지 않는다 — 플레이를 끝낸 뒤 다시 누르기");
+                Debug.LogWarning($"[{nameof(CardImporter)}] 플레이 중에는 가져오지 않는다 — 플레이를 끝낸 뒤 다시 누르기");
                 return;
             }
 
@@ -140,13 +113,11 @@ namespace Chapchu.EditorTools
                 AssetDatabase.CreateAsset(deck, DeckPath);
             }
             deck.entries = entries;
-            // 하나라도 못 얹었으면 에셋이 파일과 다르다 — 확인값을 비워, 패치가 끝난 척하지 않게
-            deck.dataHash = failed == 0 ? CardSheet.HashOf(json) : "";
+            deck.sheet = AssetDatabase.LoadAssetAtPath<TextAsset>(JsonPath); // 게임이 플레이를 시작할 때 이 파일 값을 얹는다 (DeckData)
             EditorUtility.SetDirty(deck);
 
             AssetDatabase.SaveAssets();
-            Debug.Log($"[{nameof(CardImporter)}] 카드 {sheet.cards.Length}종 (새로 {created} · 바뀜 {changed} · 실패 {failed}) · Deck_Main {entries.Sum(e => e.count)}장 · 확인값 {deck.dataHash}");
-            CardPatchWindow.RefreshOpen(); // 메뉴로 패치해도 열려 있는 창이 옛 상태로 남지 않게
+            Debug.Log($"[{nameof(CardImporter)}] 카드 {sheet.cards.Length}종 (새로 {created} · 바뀜 {changed} · 실패 {failed}) · Deck_Main {entries.Sum(e => e.count)}장");
         }
 
         // enum 이름이 정확히 맞을 때만 — CardSheet 의 이름 읽기와 같은 기준 (숫자 · 쉼표 목록은 받지 않는다)
@@ -189,21 +160,6 @@ namespace Chapchu.EditorTools
             }
 
             return (CardEffect)Activator.CreateInstance(type);
-        }
-    }
-
-    /// <summary>
-    /// cards.json 을 카드 에셋에 반영하지 않은 채로는 빌드하지 않는다 — 카드 패치가 빠진 빌드가 나가지 않게 (26-card-data.md 7-3).
-    /// 스스로 패치하지는 않는다: 바뀐 에셋을 사람이 보고 커밋해야 저장소와 빌드가 같아진다.
-    /// </summary>
-    public class CardPatchBuildCheck : IPreprocessBuildWithReport
-    {
-        public int callbackOrder => 0;
-
-        public void OnPreprocessBuild(BuildReport report)
-        {
-            if (!CardImporter.IsApplied())
-                throw new BuildFailedException($"cards.json 이 카드 에셋에 반영되지 않았다 — Unity 메뉴 {CardImporter.MenuPath} 를 누르고, 바뀐 카드 에셋 · Deck_Main 을 커밋한 뒤 다시 빌드한다 (26-card-data.md 7-3)");
         }
     }
 }
