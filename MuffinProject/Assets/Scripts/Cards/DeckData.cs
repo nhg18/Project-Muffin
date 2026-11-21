@@ -48,7 +48,7 @@ namespace Chapchu.Cards
                 if (sheet == null || !Application.isPlaying)
                     return entries;
 
-                return _applied ??= ApplySheet();
+                return _applied ??= ApplySheet(null);
             }
         }
 
@@ -85,7 +85,7 @@ namespace Chapchu.Cards
             var byId = new Dictionary<int, CardData>();
             int nextInstanceId = 1;
             bool temporary = sheet != null && !Application.isPlaying;
-            List<Entry> source = temporary ? ApplySheet() : ActiveEntries;
+            List<Entry> source = temporary ? ApplySheet(null) : ActiveEntries;
 
             foreach (Entry entry in source)
             {
@@ -104,15 +104,22 @@ namespace Chapchu.Cards
             }
 
             if (temporary)
-            {
-                foreach (Entry entry in source)
-                {
-                    if (entry.card != null && IsCopy(entry.card))
-                        DestroyImmediate(entry.card);
-                }
-            }
+                DestroyCopies(source);
 
             return cards;
+        }
+
+        /// <summary>
+        /// 값 파일이 이 덱의 카드 에셋에 그대로 얹히는지 본다 — 틀린 곳마다 한 줄, 다 맞으면 빈 목록 (26 8절).
+        /// 빌드할 때 쓴다: 게임은 틀린 카드를 에셋 값으로 돌리고 에러만 남기는데, 기기에서는 그 에러가 보이지 않는다.
+        /// </summary>
+        public List<string> FindSheetProblems()
+        {
+            var problems = new List<string>();
+            if (sheet != null)
+                DestroyCopies(ApplySheet(problems));
+
+            return problems;
         }
 
         /// <summary>
@@ -137,11 +144,12 @@ namespace Chapchu.Cards
 
         // 값 파일을 카드 정의의 사본에 얹는다 (26 6-1 · 8절). 순서는 파일 순서 — 같은 빌드끼리 장 번호(InstanceId)가 같아야 방장 이주가 된다 (09-network.md 9.1).
         // 카드 한 줄이 틀리면 그 카드만 에셋 값으로 간다. 파일을 읽지 못하면 전부 에셋 값으로 간다. 어느 쪽이든 에러로 알린다 — 같은 빌드는 모두 같은 결과다.
-        private List<Entry> ApplySheet()
+        // problems 를 주면 틀린 곳을 에러로 남기지 않고 거기에 담는다 (빌드 검사).
+        private List<Entry> ApplySheet(List<string> problems)
         {
             if (!CardSheet.TryParse(sheet.text, out CardSheet parsed, out string error))
             {
-                Debug.LogError($"[{nameof(DeckData)}] {sheet.name}: {error} — 에셋 값으로 간다", this);
+                Report(problems, $"{sheet.name}: {error}", "에셋 값으로 간다", this);
                 return entries;
             }
 
@@ -160,7 +168,7 @@ namespace Chapchu.Cards
             {
                 if (!assets.TryGetValue(line.id, out CardData asset))
                 {
-                    Debug.LogError($"[{nameof(DeckData)}] 카드 {line.id}: {name} 에 카드 에셋이 없다 — 덱에서 빠진다. 새 카드는 「카드 가져오기」 로 에셋을 만든다 (26-card-data.md 7-3)", this);
+                    Report(problems, $"카드 {line.id}: {name} 에 카드 에셋이 없다", "덱에서 빠진다. 새 카드는 「카드 가져오기」 로 에셋을 만든다 (26-card-data.md 7-3)", this);
                     continue;
                 }
 
@@ -176,7 +184,7 @@ namespace Chapchu.Cards
                 }
 
                 // 실패한 사본은 반쯤 바뀌어 있다 — 버리고 에셋 값을 쓴다. 장수는 파일대로
-                Debug.LogError($"[{nameof(DeckData)}] {error} — 이 카드는 에셋 값으로 간다", asset);
+                Report(problems, error, "이 카드는 에셋 값으로 간다", asset);
                 if (Application.isPlaying)
                     Destroy(copy);
                 else
@@ -191,8 +199,27 @@ namespace Chapchu.Cards
             return applied;
         }
 
+        // 틀린 곳을 알린다 — 게임에서는 「무엇이 틀렸나 — 그래서 어떻게 되나」 를 에러로 남기고, 빌드 검사에는 무엇이 틀렸나만 담는다
+        private static void Report(List<string> problems, string what, string then, UnityEngine.Object context)
+        {
+            if (problems != null)
+                problems.Add(what);
+            else
+                Debug.LogError($"[{nameof(DeckData)}] {what} — {then}", context);
+        }
+
         // ApplySheet 가 만든 사본인지 — 에셋에는 저장 막는 표시가 없다
         private static bool IsCopy(CardData data) => (data.hideFlags & HideFlags.DontSaveInEditor) != 0;
+
+        // 플레이 밖에서 잠깐 만든 사본을 버린다 — 에디터에 쌓이지 않게
+        private static void DestroyCopies(List<Entry> applied)
+        {
+            foreach (Entry entry in applied)
+            {
+                if (entry.card != null && IsCopy(entry.card))
+                    DestroyImmediate(entry.card);
+            }
+        }
 
         // 종류 ID 가 0(새로 만든 에셋의 기본값)이거나 다른 카드와 겹치면 알린다 — 규칙(Card)과 화면(GetCard)이 서로 다른 카드를 보게 된다 (09-network.md 7절).
         private void CheckId(Dictionary<int, CardData> byId, CardData data)
