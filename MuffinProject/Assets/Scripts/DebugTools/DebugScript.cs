@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using Chapchu.Network;
+﻿using Chapchu.Network;
 using Chapchu.Network.Events;
 using Photon.Pun;
 using Photon.Realtime;
@@ -9,7 +6,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using Chapchu.Core;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 
 namespace Chapchu.DebugTools
 {
@@ -30,6 +26,12 @@ namespace Chapchu.DebugTools
                 Debug.LogError($"[{nameof(DebugScript)}] {nameof(joinButton)} 참조가 비어 있습니다.", this);
         }
 
+        private void OnEnable()
+        {
+            RoomEvents.OnJoinedRoom += HandleJoinedRoom;
+            joinButton.onClick.AddListener(HandleJoinClicked);
+        }
+
         private void Start()
         {
             // 돌아갈 씬 · 시작할 게임 씬은 로비에 들어온 순간 정한다.
@@ -38,23 +40,17 @@ namespace Chapchu.DebugTools
 
             if (!NetworkManager.IsConnected)
                 NetworkManager.Instance.Connect();
-        
-            NetworkManager.Instance.SetNickname(nickname);
-        
-            joinButton.onClick.AddListener(ClickJoinButton);
-        }
 
-        private void OnEnable()
-        {
-            RoomEvents.OnJoinedRoom += HandleJoinedRoom;
+            NetworkManager.Instance.SetNickname(nickname);
         }
 
         private void OnDisable()
         {
             RoomEvents.OnJoinedRoom -= HandleJoinedRoom;
+            joinButton.onClick.RemoveListener(HandleJoinClicked);
         }
-    
-        private void ClickJoinButton()
+
+        private void HandleJoinClicked()
         {
             if (!PhotonNetwork.IsConnectedAndReady)
             {

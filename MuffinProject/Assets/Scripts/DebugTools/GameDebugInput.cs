@@ -30,6 +30,13 @@ namespace Chapchu.DebugTools
 
         private void Awake()
         {
+            // 출시 빌드에선 끈다 — 디버그 키 · 손패 로그는 개발 빌드에서만 (CODE_CONVENTION 7절)
+            if (!Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
+
             if (server == null)
                 Debug.LogError($"[{nameof(GameDebugInput)}] {nameof(server)} 참조가 비어 있습니다.", this);
         }
