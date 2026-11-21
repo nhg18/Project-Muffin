@@ -98,7 +98,7 @@ public static class MultiTest
     private const string BubbleLogKey = "MultiTest.BubbleLog"; // ArmBubbleLog 가 본 말풍선 (에디터마다 따로)
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
-    private const double ReactionSeconds = 5, TurnSeconds = 30; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
+    private const double ReactionSeconds = 5, TurnSeconds = 15; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
     private const double BotTurnSeconds = 9; // 보통 봇이 수를 두는 가장 늦은 때 — 고민되는 수 5.5초 + 망설임 2.5초 = 8초에 여유 (18-bot.md 4절 · 7-7)
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
@@ -1521,13 +1521,13 @@ public static class MultiTest
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotReactionTime, "마감 시각 → 6");
         }
 
-        // 6. 처리 중 턴 제한 시간은 멈춘다 — 29초에 내도 30초에 넘어가지 않는다 (03-turn.md 4절)
+        // 6. 처리 중 턴 제한 시간은 멈춘다 — 마감 1초 전에 내도 마감에 넘어가지 않는다 (03-turn.md 4절, 15초)
         {
             var t = new ChainTable();
             t.At(TurnSeconds - 1);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(TurnSeconds + 0.5);
-            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "30초가 지나도 턴 유지");
+            Check(!t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.Turn, "턴 제한 시간이 지나도 턴 유지");
             t.At(TurnSeconds - 1 + ChainTable.Reveal + ReactionSeconds);
             t.Tick();
             Check(t.Hp(t.O1) == 80, "체인 처리");
@@ -1675,10 +1675,11 @@ public static class MultiTest
             Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
             Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
-            t.At(100);
+            double myTurn = startsAt + 6; // O2 의 턴 1초째 — 턴 제한 시간(15초) 안에 내야 대상 판정까지 간다
+            t.At(myTurn);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
             t.Play(t.O2, ChainTable.Hit, t.Turn);
-            t.At(100 + ChainTable.Reveal + 0.5);
+            t.At(myTurn + ChainTable.Reveal + 0.5);
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotAlive, "죽은 사람의 카운터 → 10");
         }
 
