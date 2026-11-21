@@ -8,6 +8,7 @@
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
+#   run.sh counter cost                 위에 이어 2021 으르렁의 대가 — 고르기 판의 카드 칸을 눌러 1장 버림
 #   run.sh counter                      메인 + 클론: 방장에게 실제 카운터(2003)를 쥐여 줌 → 화면에서 냄 → 막힌 카드는 쓴 사람 손패로 · 화면 = 방장
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
@@ -849,11 +850,12 @@ run_skip() {
 # 실제 카운터 (11-card-list 1-3): 클론의 턴에 방장에게 2003 을 쥐여 주고 클론이 방장에게 행동 카드를 낸다 → 방장이 화면에서 카운터
 # → 막힌 카드는 클론 손패로 · 두 화면의 손패 장수가 방장 값과 같다.
 run_counter() {
-    local out project
+    local out project arm="arm"
+    [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 1장 고르기까지
     enter_game 2 || return
     log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
     for _ in $(seq 1 20); do
-        out=$(call "$MAIN" ReactionSkipProbe arm)
+        out=$(call "$MAIN" ReactionSkipProbe $arm)
         case "$out" in
             OK*) break ;;
             FAIL*) fail "$out"; return ;;
@@ -870,6 +872,25 @@ run_counter() {
     log "  $out"
     case "$out" in OK*) ;; *) fail "카운터 내기: $out"; return ;; esac
     if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
+    if [ "$arm" = "arm2021" ]; then
+        log "▶ 대가 — 고르기 판에 내 손패가 카드 칸으로 뜨고, 누르면 그 카드가 버려진다 (다른 화면은 「고르는 중」)"
+        for _ in $(seq 1 60); do
+            out=$(call "$MAIN" ReactionSkipProbe cost)
+            case "$out" in
+                WAIT*) sleep 0.5 ;;
+                SHOT*) if [ -n "${SHOT_DIR:-}" ]; then for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/cost_$(name_of "$project").png")"; done; fi ;;
+                *) break ;;
+            esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대가 고르기: $out"; return ;; esac
+        for _ in $(seq 1 20); do
+            out=$(call "$MAIN" ReactionSkipProbe costdone)
+            case "$out" in WAIT*) sleep 0.5 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대가 결과: $out" ;; esac
+    fi
     for _ in $(seq 1 20); do
         out=$(call "$MAIN" ReactionSkipProbe countered)
         case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
@@ -1270,7 +1291,7 @@ case "${1:-}" in
     gaepan)  shift; run_gaepan "$@" ;;
     timeout) shift; run_timeout ;;
     skip)    shift; run_skip ;;
-    counter) shift; run_counter ;;
+    counter) shift; run_counter "$@" ;;
     aim)     shift; run_aim "$@" ;;
     fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;

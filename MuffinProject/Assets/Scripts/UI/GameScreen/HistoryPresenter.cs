@@ -48,6 +48,7 @@ namespace Chapchu.UI.GameScreen
         private const string ChoiceDamageText = "목표 조준 — 피해 받기";
         private const string ChoiceLeftText = "목표 조준 — 나가서 불발";
         private const string ChoiceTimeoutSuffix = " (시간 초과 · 무작위)";
+        private const string CostTimeoutText = "버릴 카드를 안 골라 무작위로 버렸어요";
         private const string MinusFormat = "−{0}";
         private const string PlusFormat = "+{0}";
         private const string TargetSeparator = " · ";
@@ -227,8 +228,16 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>1019 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
-        public void ShowChoiceMade(int actor, int option, bool timedOut)
+        public void ShowChoiceMade(int actor, int option, bool timedOut, int kind)
         {
+            // 손패에서 1장 버리기(카운터의 대가)는 뒤따르는 버림 줄이 적는다 — 시간 초과로 무작위였을 때만 알린다
+            if (kind == Chapchu.Game.ChoiceKind.HandCard)
+            {
+                if (timedOut)
+                    Add(new HistoryEntry { Actor = actor, Text = CostTimeoutText, Icon = HistoryIcon.Card });
+                return;
+            }
+
             string text = option < 0 ? ChoiceLeftText : option == 0 ? ChoiceDiscardText : ChoiceDamageText;
             Add(new HistoryEntry { Actor = actor, Text = timedOut ? text + ChoiceTimeoutSuffix : text, Icon = HistoryIcon.Card });
         }

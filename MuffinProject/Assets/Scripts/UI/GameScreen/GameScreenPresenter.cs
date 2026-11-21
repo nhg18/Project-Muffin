@@ -558,15 +558,15 @@ namespace Chapchu.UI.GameScreen
         private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
 
         // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
-        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind)
         {
             if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
                 return;
             Enqueue(() => { reactionTimer.ShowChoosing(string.Format(ChoosingFormat, PlayerLook.NameOf(actor)), startsAt, deadline); return null; });
         }
 
-        private void HandleChoiceMade(int actor, int option, bool timedOut) =>
-            Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut); return null; });
+        private void HandleChoiceMade(int actor, int option, bool timedOut, int kind) =>
+            Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut, kind); return null; });
 
         // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
         private void HandleGaepanChanged(int caster, int left, bool again) =>

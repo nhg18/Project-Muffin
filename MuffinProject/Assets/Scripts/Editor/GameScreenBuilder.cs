@@ -169,7 +169,7 @@ namespace Chapchu.EditorTools
             sheets.gameObject.AddComponent<SafeArea>();
             LogSheetView log = BuildLogSheet(sheets);
             BuildMenuSheet(sheets, menu);
-            BuildChoicePopup(sheets, TableBuilder.FindServer(nameof(ChoicePopupPresenter)));
+            ChoicePopupPresenter choicePopup = BuildChoicePopup(sheets, TableBuilder.FindServer(nameof(ChoicePopupPresenter)));
 
             // 찹츄 선언 연출 — 모든 것 위 (프로토타입 v2 #vfx z 58 > 서랍 45). 입력을 막지 않는다
             ChapchuShoutView chapchuShout = BuildChapchuShout(canvasRect, center);
@@ -177,6 +177,7 @@ namespace Chapchu.EditorTools
             // 올라온 손패가 덮는 HUD — 덮인 동안 눌리지 않게 CanvasGroup 을 넘긴다
             var coveredHud = new Object[] { myPanel.gameObject.AddComponent<CanvasGroup>(), chapchu.gameObject.AddComponent<CanvasGroup>() };
             HandPresenter hand = TableBuilder.BuildHand(table, deck, discardPile, seats, gameDeck, playLine, topLayer, handReveal, coveredHud);
+            Wire(choicePopup, ("hand", hand.GetComponentInChildren<HandView>(true))); // 「손패에서 1장」 고르기가 내 손패를 읽는다
             ChainCardsPresenter chainCards = TableBuilder.BuildChainCards(table, discardPile, seats, ownerTag, gameDeck, topLayer);
             MyTrapsPresenter myTraps = TableBuilder.BuildTrapSlots(table, seats, chainCards.transform.Find("ShowSpot"), gameDeck);
 
@@ -1448,9 +1449,106 @@ namespace Chapchu.EditorTools
             Wire(view, ("panel", panel.gameObject), ("titleText", title), ("secondsText", seconds), ("descText", desc),
                 ("firstButton", first), ("firstLabel", first.GetComponentInChildren<TMP_Text>(true)),
                 ("secondButton", second), ("secondLabel", second.GetComponentInChildren<TMP_Text>(true)));
+            BuildChoiceCards(view, pop.Body, row);
             var presenter = root.gameObject.AddComponent<ChoicePopupPresenter>();
             Wire(presenter, ("server", server));
-            return presenter;
+            return presenter; // hand 는 손패를 만든 뒤에 잇는다 (AddChoiceCards 가 하는 것과 같다)
+        }
+
+        // 고르기 판의 카드 칸 자리 + 칸 원본 (10-ui.md 5절 「고르기 판 — 손패에서 1장」, 2013 · 2021 의 대가). 버튼 줄 위에 둔다 — 둘 중 하나만 켠다.
+        // 칸: 종류 색 테두리(둥근 12) + 흰 면, 안은 비율로 — 이름(위 18%) · 그림(38%) · 문구(아래 38%). 글자는 칸 크기에 맞춰 줄어든다.
+        private static void BuildChoiceCards(ChoicePopupView view, RectTransform body, RectTransform buttonsRow)
+        {
+            RectTransform cards = NewRect("Cards", body);
+            cards.SetSiblingIndex(buttonsRow.GetSiblingIndex());
+            GridLayoutGroup grid = cards.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(150f, 210f);
+            grid.spacing = new Vector2(16f, 16f);
+            grid.childAlignment = TextAnchor.UpperCenter;
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 5;
+
+            RectTransform tile = NewRect("Tile", cards);
+            Image frame = tile.gameObject.AddComponent<Image>();
+            frame.sprite = Round;
+            frame.type = Image.Type.Sliced;
+            frame.pixelsPerUnitMultiplier = 64f / 12f;
+            frame.color = Act;
+            frame.raycastTarget = true;
+            Button button = tile.gameObject.AddComponent<Button>();
+            button.targetGraphic = frame;
+            Image face = RoundImage("Face", tile, White, 8f);
+            Stretch(face.rectTransform, 5f, 5f, 5f, 5f);
+
+            TMP_Text name = NewText("Name", face.transform, "카드 이름", 22f, Ink, true);
+            Fill((RectTransform)name.transform, 0.06f, 0.80f, 0.94f, 0.98f);
+            AutoSize(name, 10f, 22f);
+            Image art = NewImage("Art", face.transform, White);
+            art.preserveAspect = true;
+            Fill(art.rectTransform, 0.08f, 0.42f, 0.92f, 0.79f);
+            TMP_Text desc = NewText("Desc", face.transform, "카드 문구", 16f, Ink, false);
+            desc.textWrappingMode = TextWrappingModes.Normal;
+            Fill((RectTransform)desc.transform, 0.06f, 0.04f, 0.94f, 0.40f);
+            AutoSize(desc, 8f, 16f);
+
+            var tileView = tile.gameObject.AddComponent<ChoiceCardTile>();
+            Wire(tileView, ("button", button), ("frame", frame), ("nameText", name), ("art", art), ("descText", desc));
+            tile.gameObject.SetActive(false);
+            cards.gameObject.SetActive(false);
+
+            Wire(view, ("buttonsRow", buttonsRow.gameObject), ("cardsGrid", grid), ("tileTemplate", tileView));
+        }
+
+        // 부모 안에서 비율로 자리를 잡는다 (왼쪽 · 아래 · 오른쪽 · 위, 0 ~ 1) — 부모 크기가 바뀌면 같이 바뀐다
+        private static void Fill(RectTransform rect, float left, float bottom, float right, float top)
+        {
+            rect.anchorMin = new Vector2(left, bottom);
+            rect.anchorMax = new Vector2(right, top);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void AutoSize(TMP_Text text, float min, float max)
+        {
+            text.enableAutoSizing = true;
+            text.fontSizeMin = min;
+            text.fontSizeMax = max;
+        }
+
+        /// <summary>열린 씬의 고르기 판에 카드 칸(「손패에서 1장」 고르기)을 더하고 손패를 잇는다 — 다시 조립하지 않으므로 사람이 고친 씬은 그대로다. 이미 있으면 아무것도 하지 않는다.</summary>
+        [MenuItem("Chapchu/Game Screen/Add Choice Cards")]
+        public static void AddChoiceCards()
+        {
+            ChoicePopupView view = Object.FindFirstObjectByType<ChoicePopupView>(FindObjectsInactive.Include);
+            ChoicePopupPresenter presenter = view != null ? view.GetComponent<ChoicePopupPresenter>() : null;
+            HandView hand = Object.FindFirstObjectByType<HandView>(FindObjectsInactive.Include);
+            Transform buttons = view != null ? FindDeep(view.transform, "Buttons") : null;
+            if (presenter == null || hand == null || buttons == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 ChoicePopup(Buttons) · HandView 가 없다.");
+                return;
+            }
+
+            if (FindDeep(view.transform, "Cards") != null)
+            {
+                Debug.Log($"[{nameof(GameScreenBuilder)}] 고르기 판에 카드 칸이 이미 있다.");
+                return;
+            }
+
+            _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
+            _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
+            BuildChoiceCards(view, (RectTransform)buttons.parent, (RectTransform)buttons);
+            Wire(presenter, ("hand", hand));
+            EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 고르기 판에 카드 칸을 더함 — 씬을 저장할 것.");
+        }
+
+        private static Transform FindDeep(Transform root, string name)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                if (child.name == name)
+                    return child;
+            return null;
         }
 
         // 설정 서랍 (「게임 나가기」만 — 배경 음악 · 효과음은 다음 작업) + 나가기 확인 팝업 (시안 .pop2.bad)

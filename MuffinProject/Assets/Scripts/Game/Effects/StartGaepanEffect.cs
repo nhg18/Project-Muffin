@@ -10,6 +10,8 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class StartGaepanEffect : CardEffect
     {
+        internal override bool BoardWide => true;
+
         // 18-bot.md 7-3 「개판 시작」
         private const int BotMinHpLead = 20;   // 내 HP − 상대 최저 HP 가 이 이상
         private const int BotMinHandLead = 2;  // 내 손패 − 상대 최소 손패가 이 이상

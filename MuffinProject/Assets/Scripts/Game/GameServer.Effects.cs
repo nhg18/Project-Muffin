@@ -127,6 +127,16 @@ namespace Chapchu.Game
             DiscardCards(actor, PickRandom(_players[actor].Hand, count), source);
         }
 
+        /// <summary>손패의 그 한 장을 버림 더미로 — 본인이 고른 대가 (2013 · 2021). 손패에 없으면 아무 일도 없다.</summary>
+        internal void DiscardFromHand(int actor, int cardInstanceId)
+        {
+            if (!InGame(actor))
+                return;
+            Card card = _players[actor].Hand.Find(c => c.InstanceId == cardInstanceId);
+            if (card != null)
+                DiscardCards(actor, new List<Card> { card }, actor);
+        }
+
         private void DiscardCards(int actor, List<Card> cards, int source)
         {
             if (cards.Count == 0)

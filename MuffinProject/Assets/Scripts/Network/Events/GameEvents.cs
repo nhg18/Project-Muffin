@@ -40,8 +40,8 @@ namespace Chapchu.Network.Events
         public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (1007 짖기: 다음 실제 턴 · 이번 턴 · 없음)
         public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (1023). 비면 끝, 그동안 찹츄 승리 없음
         public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (1012)
-        public static event Action<int, int, int, int, int, double, double> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline — 대상이 고르기 시작 (1019). 그동안 게임 · 턴 시간 멈춤
-        public static event Action<int, int, bool> OnChoiceMade;             // actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (1019)
+        public static event Action<int, int, int, int, int, double, double, int> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline, kind(ChoiceKind) — 대상이 고르기 시작 (1019). 그동안 게임 · 턴 시간 멈춤
+        public static event Action<int, int, bool, int> OnChoiceMade;        // kind(ChoiceKind) 가 끝에 — actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (1019)
         public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대소동으로 지움), again 이면 다시 써서 처음부터 (1021)
         public static event Action<int, bool, int, int[], int[], int[]> OnGaepanJudged; // loser, byHp, value, tied, actors, values — 개판 판정 공개 (살아 있던 사람 · 기준 값). GaepanJudgeSeconds 뒤 loser 의 HP 0 (1021)
         public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (1012)
@@ -94,8 +94,8 @@ namespace Chapchu.Network.Events
         public static void RaiseWaitChanged(int[] casters) => OnWaitChanged?.Invoke(casters);
         public static void RaiseGameRestarted(int user, int count, int[] order) => OnGameRestarted?.Invoke(user, count, order);
         public static void RaiseFalloutChanged(int n, int turns) => OnFalloutChanged?.Invoke(n, turns);
-        public static void RaiseChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => OnChoiceStarted?.Invoke(actor, user, cardId, handCount, damage, startsAt, deadline);
-        public static void RaiseChoiceMade(int actor, int option, bool timedOut) => OnChoiceMade?.Invoke(actor, option, timedOut);
+        public static void RaiseChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind) => OnChoiceStarted?.Invoke(actor, user, cardId, handCount, damage, startsAt, deadline, kind);
+        public static void RaiseChoiceMade(int actor, int option, bool timedOut, int kind) => OnChoiceMade?.Invoke(actor, option, timedOut, kind);
         public static void RaiseGaepanChanged(int caster, int left, bool again) => OnGaepanChanged?.Invoke(caster, left, again);
         public static void RaiseGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => OnGaepanJudged?.Invoke(loser, byHp, value, tied, actors, values);
         public static void RaiseChapchuWinHeld(int actorNumber) => OnChapchuWinHeld?.Invoke(actorNumber);

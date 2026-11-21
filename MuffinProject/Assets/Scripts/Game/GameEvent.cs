@@ -680,8 +680,12 @@
         public double StartsAt { get; }
         public double Deadline { get; }
 
-        public ChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        /// <summary>고르기 종류 (ChoiceKind) — 0 선택지 둘(1019) · 1 손패에서 1장 버리기(2013 · 2021 의 대가).</summary>
+        public int Kind { get; }
+
+        public ChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind = ChoiceKind.Options)
         {
+            Kind = kind;
             Actor = actor;
             User = user;
             CardId = cardId;
@@ -690,6 +694,13 @@
             StartsAt = startsAt;
             Deadline = deadline;
         }
+    }
+
+    /// <summary>고르기 종류 — 알림에 int 로 실린다 (09-network.md).</summary>
+    public static class ChoiceKind
+    {
+        public const int Options = 0;  // 선택지 둘 중 하나 (1019 목표 조준)
+        public const int HandCard = 1; // 내 손패에서 1장 골라 버리기 (2013 새치기 · 2021 으르렁의 대가, 11-card-list 1-3)
     }
 
     /// <summary>
@@ -701,8 +712,12 @@
         public int Option { get; }
         public bool TimedOut { get; }
 
-        public ChoiceMade(int actor, int option, bool timedOut)
+        /// <summary>고르기 종류 (ChoiceKind). 손패에서 1장 버리기면 Option 은 0(버렸다) · -1(불발) — 버린 카드는 뒤따르는 버림 사건에 실린다.</summary>
+        public int Kind { get; }
+
+        public ChoiceMade(int actor, int option, bool timedOut, int kind = ChoiceKind.Options)
         {
+            Kind = kind;
             Actor = actor;
             Option = option;
             TimedOut = timedOut;

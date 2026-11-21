@@ -654,12 +654,12 @@ namespace Chapchu.Network
                         break;
 
                     case ChoiceStarted choice:
-                        Broadcast(nameof(RPC_OnChoiceStarted), choice.Actor, choice.User, choice.CardId, choice.HandCount, choice.Damage, choice.StartsAt, choice.Deadline);
+                        Broadcast(nameof(RPC_OnChoiceStarted), choice.Actor, choice.User, choice.CardId, choice.HandCount, choice.Damage, choice.StartsAt, choice.Deadline, choice.Kind);
                         break;
 
                     case ChoiceMade made:
-                        Broadcast(nameof(RPC_OnChoiceMade), made.Actor, made.Option, made.TimedOut);
-                        Debug.Log($"[{nameof(PunGameServer)}] P{made.Actor} 고르기 — {(made.Option < 0 ? "나가서 불발" : made.Option == 0 ? "손패 전부 버리기" : "피해 받기")}{(made.TimedOut ? " (시간 초과 무작위)" : "")}");
+                        Broadcast(nameof(RPC_OnChoiceMade), made.Actor, made.Option, made.TimedOut, made.Kind);
+                        Debug.Log($"[{nameof(PunGameServer)}] P{made.Actor} 고르기 — {(made.Option < 0 ? "나가서 불발" : made.Kind == ChoiceKind.HandCard ? "버릴 카드 1장" : made.Option == 0 ? "손패 전부 버리기" : "피해 받기")}{(made.TimedOut ? " (시간 초과 무작위)" : "")}");
                         break;
 
                     case GaepanJudged judged:
@@ -1094,17 +1094,17 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnChoiceStarted(int seq, int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, PhotonMessageInfo info)
+        private void RPC_OnChoiceStarted(int seq, int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseChoiceStarted(actor, user, cardId, handCount, damage, startsAt, deadline);
+                GameEvents.RaiseChoiceStarted(actor, user, cardId, handCount, damage, startsAt, deadline, kind);
         }
 
         [PunRPC]
-        private void RPC_OnChoiceMade(int seq, int actor, int option, bool timedOut, PhotonMessageInfo info)
+        private void RPC_OnChoiceMade(int seq, int actor, int option, bool timedOut, int kind, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseChoiceMade(actor, option, timedOut);
+                GameEvents.RaiseChoiceMade(actor, option, timedOut, kind);
         }
 
         [PunRPC]

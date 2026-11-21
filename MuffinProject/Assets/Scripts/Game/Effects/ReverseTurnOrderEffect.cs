@@ -9,6 +9,8 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class ReverseTurnOrderEffect : CardEffect
     {
+        internal override bool BoardWide => true;
+
         // 18-bot.md 7-3 「턴 방향 뒤집기」
         private const double BotTwoLeftScore = 28;      // 둘만 남았다 — 내 턴이 다시 온다
         private const double BotNextChapchuScore = 100; // 다음 차례가 찹츄 상태

@@ -307,7 +307,7 @@ namespace Chapchu.Game
             _choiceActor = r.Int();
             _choiceEntry = EntryAt(r.Int());
             int choiceEffect = r.Int();
-            _choiceEffect = _choiceEntry == null ? null : (DiscardOrDamageEffect)EffectAt(_choiceEntry.Card, choiceEffect);
+            _choiceEffect = _choiceEntry == null ? null : EffectAt(_choiceEntry.Card, choiceEffect);
             _choiceDeadline = r.Time();
             if ((_choiceActor != -1) != (_choiceEntry != null))
                 throw new InvalidOperationException("고르는 사람과 고르는 카드가 맞지 않는다");
@@ -394,10 +394,10 @@ namespace Chapchu.Game
 
             if (IsChoosing)
             {
-                _choiceDeadline = now + _choiceEffect.seconds;
+                _choiceDeadline = now + ChoiceSeconds;
                 if (!departed.Contains(_choiceActor))
                     _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
-                        _choiceEffect.amount, now, _choiceDeadline));
+                        _choiceEffect is DiscardOrDamageEffect option ? option.amount : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
             }
 
             if (IsGaepanJudging)

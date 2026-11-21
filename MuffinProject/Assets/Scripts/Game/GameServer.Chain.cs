@@ -192,6 +192,7 @@ namespace Chapchu.Game
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
                 case ReactCondition.HasDamage:      return AffectedBy(top, EffectTag.Damage).Any();
                 case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
+                case ReactCondition.AimedAtMe:      return top.Targets.Contains(me) && !top.Excluded.Contains(me) && !top.Card.Effects.Any(e => e.BoardWide);
                 default:                            return false;
             }
         }
