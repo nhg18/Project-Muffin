@@ -36,4 +36,4 @@ Unity 6 · Built-in 렌더 파이프라인 · C# 9 · Photon PUN2 · PC / Androi
 
 ## Git
 
-`main` ← `develop` ← 작업 브랜치. `develop` 머지는 PM 만 → skill `git-workflow`.
+git-flow: `main`(배포 · 태그) ← `release/*` · `hotfix/*`, `develop` ← 작업 브랜치. `main` · `release` · `develop` 머지는 PM 만 → skill `git-workflow`.

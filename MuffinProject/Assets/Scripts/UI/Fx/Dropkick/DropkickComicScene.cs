@@ -278,7 +278,9 @@ namespace Chapchu.UI.Fx.Dropkick
 
             int damageAmount = 0;
             _recoilAmount = 0;
-            foreach (CardEffect effect in card.effects)
+            // 수치는 덱이 값 파일을 얹은 사본에서 (26-card-data 6-1) — 프리팹의 card 는 에셋이라 값이 낡을 수 있다. 어느 카드인지 확인하는 데만 쓴다
+            CardData data = context.Fx.Card != null ? context.Fx.Card : card;
+            foreach (CardEffect effect in data.effects)
             {
                 if (effect is DamageEffect hit)
                     damageAmount = hit.amount;

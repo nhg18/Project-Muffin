@@ -67,7 +67,7 @@ namespace Chapchu.UI.Fx.Band
                 missing.Add(nameof(bubbleGroup));
             if (label == null)
                 missing.Add(nameof(label));
-            if (!TryReadRange(out _range))
+            if (!TryReadRange(card, out _range))
                 missing.Add(nameof(card) + " (뽑기 효과)");
             if (missing.Count > 0)
                 Debug.LogError($"[{nameof(RollNumberFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
@@ -89,6 +89,9 @@ namespace Chapchu.UI.Fx.Band
         private IEnumerator RollRoutine(CardFxContext context)
         {
             CardFxSeat seat = context.CasterSeat;
+            // 범위는 덱이 값 파일을 얹은 사본에서 (26-card-data 6-1) — 프리팹의 card 는 에셋이라 값이 낡을 수 있다. 사본이 없으면 Awake 에서 읽은 에셋 값
+            if (context.Card != null && TryReadRange(context.Card, out Vector2Int range))
+                _range = range;
             float pixelScale = context.Layer != null ? context.Layer.PixelScale : 1f;
             // 받은 장수 — 0 장도 결과다. 멈춘 뒤에 온 알림은 멈춘 숫자를 바꾼다
             int? drawn = null;
@@ -131,12 +134,12 @@ namespace Chapchu.UI.Fx.Band
         }
 
         // 카드 뽑기 효과의 장수 범위 (최소, 최대). 무작위 장수가 아니면 최소 = 최대
-        private bool TryReadRange(out Vector2Int range)
+        private static bool TryReadRange(CardData data, out Vector2Int range)
         {
             range = Vector2Int.zero;
-            if (card == null)
+            if (data == null)
                 return false;
-            foreach (CardEffect effect in card.effects)
+            foreach (CardEffect effect in data.effects)
             {
                 if (effect is DrawEffect draw && !draw.useTriggerAmount)
                 {

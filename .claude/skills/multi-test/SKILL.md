@@ -16,7 +16,7 @@ bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + �
 bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 자동 선언 → 두 화면 표시(선언 연출 포함) → 찹츄 승리 → 결과 화면 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
 bash .claude/skills/multi-test/run.sh timeout                     # 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째 강제 퇴장 → 클론은 로비 + 경고 팝업 · 메인은 결과 화면
 bash .claude/skills/multi-test/run.sh skip                        # 반응 시간의 스킵 버튼 — 방장에게 카운터를 쥐여 줌 → 「스킵」 버튼 켜짐(남은 초 없음) → 누르면 버튼 · 빛 꺼짐 → 그 뒤 카운터 거절(코드 6)
-bash .claude/skills/multi-test/run.sh migrate [fail|kick|room|result]            # 방장 이주 (09 9.1) — 메인 + 클론 + 봇 1. 방장(메인)이 나감 → 클론이 사본으로 이어받아 봇과 판을 잇는다 · 기록 「방장이 바뀌었어요」. fail = 사본 없이 나감 → 클론은 방으로 + 경고 팝업 · kick = 방장이 3턴 시간 초과로 강제 퇴장 → 이주 · room = 방 대기 중 방장 이탈 → 방 해체 · result = 결과 화면 방장 이탈 → 전원 로비
+bash .claude/skills/multi-test/run.sh migrate [fail|kick|room|result]            # 방장 이주 (09 9.1) — 메인 + 클론 + 봇 1. 방장(메인)이 나감 → 클론이 사본으로 이어받아 봇과 판을 잇는다 · 기록 「방장이 바뀌었어요」. fail = 사본 없이 나감 → 클론은 방으로 + 경고 팝업 · kick = 방장이 3턴 시간 초과로 강제 퇴장 → 이주 · room = 방 대기 중 방장 이탈 → 위임 (메인 + 클론 2: 새 방장 시작 버튼 · 봇 추가 · 토스트, 참가자 대기 안내 · 로그 「방장이 되었어요」 → 새 방장이 봇 넣고 시작) · result = 결과 화면 방장 이탈 → 위임 (메인 + 클론 2: 먼저 한 준비 유지 · 남은 둘 「한 판 더」 → 다음 판)
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디터마다 게임 뷰 PNG — 처음 나온 카드의 3 단계 확대(_zoom) · 반응 시간(_reaction · _later) + 턴이 끝난 뒤. 화면 눈 확인용 (MultiTest.ArmCardShots · Shot)
 ```
 
