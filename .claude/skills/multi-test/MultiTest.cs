@@ -2140,6 +2140,30 @@ public static class MultiTest
             Check(t.Run(60).OfType<PlayerDied>().Any(e => e.Actor == t.O1), "사망 대기가 끝나면 최종 사망");
         }
 
+        // 6. 같은 사건에 맞는 함정은 모두 발동한다 — 한 사람이 여러 장이어도, 한 장당 한 번 (04 6절 「발동 조건」 · 「여러 함정 동시 발동」, 2026-11-18)
+        {
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
+            Check(traps.Count == 2 && traps.All(e => e.Actor == t.O1 && e.Targets.SequenceEqual(new[] { t.Turn })) && t.TrapCount(t.O1) == 0 && t.Hp(t.Turn) == 80,
+                $"한 번 맞은 O1 의 함정 두 장이 모두 발동 · 대상 = 피해를 준 사람 (함정 {traps.Count}장 · ♥{t.Hp(t.Turn)})");
+        }
+        {
+            // 사건이 둘이면(때린 사람이 다름) 함정마다 다른 사건부터 쓴다 — 때린 두 사람에게 한 장씩. 문서에 정해진 순서는 없다 — 앞서부터 이렇게 돌던 동작을 그대로 둔 것
+            var t = new ChainTable();
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            Card hitToo = t.Give(t.O2, id => new Card(id, 901, CardType.Counter, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(2);
+            t.Counter(t.O2, hitToo, t.O1);
+            List<TrapActivated> traps = t.Run(t.Now + 20).OfType<TrapActivated>().ToList();
+            Check(traps.Count == 2 && t.Hp(t.Turn) == 90 && t.Hp(t.O2) == 90, $"두 사람에게 맞은 O1 의 함정 두 장 → 때린 두 사람에게 한 장씩 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O2)})");
+        }
+
         // 7. 나감 → 설치한 함정도 버림 더미로
         {
             var t = new ChainTable();
@@ -3457,6 +3481,15 @@ public static class MultiTest
             t => t.SetTrapCard(t.O1, Trp(TargetType.TriggerSource, TrapTrigger.AfterChapchuGiven, 0, new SetChapChuEffect { subject = EffectSubject.Target })),
             t => t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new SetChapChuEffect { subject = EffectSubject.Target })), t.O1),
             t => t.State(t.O1).IsChapchu && t.State(t.Turn).IsChapchu);
+        {
+            // 같은 사건에 맞는 함정은 사람이 달라도 모두 발동한다 (04 6절 「여러 함정 동시 발동」) — 한 번의 뽑기에 O1 · O2 의 T14
+            var t = new ChainTable();
+            foreach (int owner in new[] { t.O1, t.O2 })
+                t.SetTrapCard(owner, Trp(TargetType.TriggerSource, TrapTrigger.AfterDrewMany, 2, new DiscardEffect { subject = EffectSubject.Target, count = 1 }));
+            t.PlayCard(t.Turn, t.Give(t.Turn, Act(TargetType.Self, new DrawEffect { subject = EffectSubject.Self, count = 2 })));
+            int fired = t.Run(t.Now + 40).OfType<TrapActivated>().Count();
+            Check(fired == 2 && t.HandCount(t.Turn) == 6 + 2 - 2, $"T14 한 번의 뽑기에 두 사람의 함정이 모두 발동 (함정 {fired}장)");
+        }
         {
             // T15 — 턴 스킵된 뒤 → 다음 실제 턴에 추가 드로우
             var t = new ChainTable();
