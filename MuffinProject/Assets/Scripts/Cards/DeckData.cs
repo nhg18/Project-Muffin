@@ -68,7 +68,7 @@ namespace Chapchu.Cards
 
                 for (int i = 0; i < entry.count; i++)
                     cards.Add(new Card(nextInstanceId++, data.id, data.type, data.targetType, effects, reactsTo, data.revealSeconds, data.resolveSeconds, data.trapTrigger, data.triggerValue, data.reactCondition,
-                        data.targetCondition));
+                        data.targetCondition, data.uncounterable));
             }
 
             return cards;

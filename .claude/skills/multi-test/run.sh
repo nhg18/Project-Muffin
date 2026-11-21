@@ -8,6 +8,7 @@
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
+#   run.sh counter                      메인 + 클론: 방장에게 실제 카운터(2003)를 쥐여 줌 → 화면에서 냄 → 막힌 카드는 쓴 사람 손패로 · 화면 = 방장
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
@@ -844,6 +845,48 @@ run_skip() {
     done
 }
 
+# 실제 카운터 (11-card-list 1-3): 클론의 턴에 방장에게 2003 을 쥐여 주고 클론이 방장에게 행동 카드를 낸다 → 방장이 화면에서 카운터
+# → 막힌 카드는 클론 손패로 · 두 화면의 손패 장수가 방장 값과 같다.
+run_counter() {
+    local out project
+    enter_game 2 || return
+    log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
+    for _ in $(seq 1 20); do
+        out=$(call "$MAIN" ReactionSkipProbe arm)
+        case "$out" in
+            OK*) break ;;
+            FAIL*) fail "$out"; return ;;
+        esac
+        call "$MAIN" ExpireTurn >/dev/null
+        sleep 2
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "남의 턴이 오지 않았다: $out"; return ;; esac
+    for _ in $(seq 1 8); do
+        out=$(call "$MAIN" ReactionSkipProbe play)
+        case "$out" in WAIT*) sleep 0.3 ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "카운터 내기: $out"; return ;; esac
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
+    for _ in $(seq 1 20); do
+        out=$(call "$MAIN" ReactionSkipProbe countered)
+        case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "카운터 결과: $out" ;; esac
+    sleep 4
+    log "▶ 화면의 함정 칸 · 손패 장수가 방장 값과 같은가"
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" TableUiExpect)
+        log "  $(name_of "$project"): $out"
+        case "$out" in OK*) ;; *) fail "$(name_of "$project") 화면: $out" ;; esac
+    done
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
 # 시간 초과 (03-turn.md 4절): 방장이 클론의 턴만 실제 시간 초과로 끝낸다 (메인의 턴은 그냥 넘김) → 자동 뽑기 2번 → 3번째에 뽑지 않고 강제 퇴장
 # → 클론은 스스로 방을 나가 로비 + 경고 팝업 (22-popup-ui.md 3절), 메인은 혼자 남아 처치 승리 → 결과 화면.
 # 방장 이주 (09-network 9.1) — 메인(방장) + 클론(예비 방장) + 봇 1 (방장이 나가도 판이 남게).
@@ -1226,6 +1269,7 @@ case "${1:-}" in
     gaepan)  shift; run_gaepan "$@" ;;
     timeout) shift; run_timeout ;;
     skip)    shift; run_skip ;;
+    counter) shift; run_counter ;;
     aim)     shift; run_aim "$@" ;;
     fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;

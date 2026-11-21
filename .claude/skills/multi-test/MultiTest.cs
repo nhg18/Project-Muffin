@@ -1031,18 +1031,17 @@ public static class MultiTest
 
                 List<Card> all = server.Deck.CreateCards().ToList();
                 Card hit = all.FirstOrDefault(c => c.Type == CardType.Action && c.Target == TargetType.OneOther && c.TargetCondition == TargetCondition.None);
-                // 게임 덱(Deck_Main)에는 아직 카운터가 없다 — 시험 덱의 카운터 규칙을 빌리고, 화면에 그릴 수 있게 카드 번호는 게임 덱의 것(그 행동 카드)을 쓴다
-                DeckData testDeck = AssetDatabase.FindAssets("Deck_Default t:DeckData").Select(g => AssetDatabase.LoadAssetAtPath<DeckData>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault();
-                Card counter = testDeck == null ? null : testDeck.CreateCards().FirstOrDefault(c => c.Type == CardType.Counter && c.Target == TargetType.None
+                // 게임 덱(Deck_Main)의 실제 카운터 — 아무 행동 카드에 내는 것 (2003 진짜 할거야?, 11-card-list 1-3)
+                Card counter = all.FirstOrDefault(c => c.Type == CardType.Counter && c.Target == TargetType.None
                     && c.Condition == ReactCondition.Any && c.ReactsTo.Contains(CardType.Action));
                 if (hit == null || counter == null)
                     return "FAIL 덱에 맞는 행동 · 카운터 카드가 없다";
 
-                var mine = new Card(SkipProbeInstance, hit.CardId, counter.Type, counter.Target, counter.Effects, counter.ReactsTo, counter.RevealSeconds, counter.ResolveSeconds, counter.Trigger, counter.TriggerValue, counter.Condition, counter.TargetCondition);
+                var mine = new Card(SkipProbeInstance, counter.CardId, counter.Type, counter.Target, counter.Effects, counter.ReactsTo, counter.RevealSeconds, counter.ResolveSeconds, counter.Trigger, counter.TriggerValue, counter.Condition, counter.TargetCondition);
                 var forced = new Card(SkipProbeInstance + 1, hit.CardId, hit.Type, hit.Target, hit.Effects, hit.ReactsTo, hit.RevealSeconds, hit.ResolveSeconds, hit.Trigger, hit.TriggerValue, hit.Condition, hit.TargetCondition);
                 ((PlayerState)states[me]).Hand.Add(mine);
                 ((PlayerState)states[actor]).Hand.Add(forced);
-                Object.FindFirstObjectByType<HandPresenter>().GainCards(new[] { SkipProbeInstance }, new[] { hit.CardId }); // 화면 손패에도 그 카드를
+                Object.FindFirstObjectByType<HandPresenter>().GainCards(new[] { SkipProbeInstance }, new[] { counter.CardId }); // 화면 손패에도 그 카드를
 
                 IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, new[] { me });
                 bool asked = events.OfType<CountersUsable>().Any(u => u.Actor == me && u.CardInstanceIds.Contains(SkipProbeInstance));
@@ -1074,6 +1073,25 @@ public static class MultiTest
                     && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Count == 0;
                 return (label == "스킵" && glowing && !secondsShown && off ? "OK" : "FAIL") + " 버튼 「" + label + "」 · 낼 수 있는 카운터 표시 " + (glowing ? "켜짐" : "꺼짐")
                     + " · 남은 초 " + (secondsShown ? "보임" : "안 보임") + " → 누른 뒤 " + (off ? "버튼 · 빛 꺼짐" : "아직 켜져 있다");
+            }
+            case "play":
+            {
+                // 실제 카운터를 화면 경로(더블클릭과 같은 길)로 낸다 — 반응 시간이 열린 뒤
+                if (!skip.isActiveAndEnabled)
+                    return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
+                return UseFromHand(SkipProbeInstance) ? "OK P" + me + " 카운터를 화면에서 냄" : "WAIT 손패에 카운터가 아직 없다";
+            }
+            case "countered":
+            {
+                // 2003 — 막힌 행동 카드는 쓴 사람 손패로, 카운터는 버림 더미로, 나는 피해 없음 (11-card-list 1-3)
+                var discard = (List<Card>)typeof(GameServer).GetField("_discardPile", Private).GetValue(rules);
+                int actor = states.Keys.Cast<int>().First(a => a != me);
+                bool returned = ((PlayerState)states[actor]).Hand.Any(c => c.InstanceId == SkipProbeInstance + 1);
+                bool spent = discard.Any(c => c.InstanceId == SkipProbeInstance) && !((PlayerState)states[me]).Hand.Any(c => c.InstanceId == SkipProbeInstance);
+                if (!spent && FindHandCard(SkipProbeInstance) != null)
+                    return "WAIT 아직 처리 전";
+                int hp = ((PlayerState)states[me]).Hp;
+                return (returned && spent && hp == 100 ? "OK" : "FAIL") + " 막힌 카드 " + (returned ? "쓴 사람 손패로" : "돌아가지 않음") + " · 카운터 " + (spent ? "버림 더미" : "버려지지 않음") + " · 내 HP " + hp;
             }
             case "after":
             {
@@ -2263,17 +2281,72 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3 };
-            Check(ids.Length == 45 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 45장 (묶음 1 ~ 8, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2 };
+            Check(ids.Length == 51 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 51장 (행동 45 + 카운터 묶음 1 의 6, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
                 Card c = mainCards.First(x => x.CardId == cardId);
-                return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
+                return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 45)
+            if (ids.Length == 51)
             {
+                // ── 카운터 묶음 1 (11-card-list 1-3) — 2003 진짜 할거야? · 2014 알아 · 2016 칼집 ──
+                {
+                    var t = new ChainTable();
+                    Card c2003 = t.Give(t.O2, Real(2003)); // 대상이 아닌 사람도 낼 수 있다 (조건 없음)
+                    Card mine = t.Give(t.Turn, Real(2003));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2003 내 카드에는 카운터 거절 9 (04 7절 사용 조건 5)");
+                    t.Counter(t.O2, c2003);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.Hand(t.Turn).Contains(hit) && events.OfType<CardReturnedToHand>().Any(e => e.CardInstanceId == hit.InstanceId),
+                        "2003 진짜 할거야? — 행동 카드 무효 · 쓴 사람 손패로");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2003 = t.Give(t.O1, Real(2003));
+                    Card c2014 = t.Give(t.Turn, Real(2014));
+                    Card late = t.Give(t.O1, Real(2014));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, late)) == RejectCode.CannotReact, "2014 행동 카드에는 거절 9 (카운터에만 반응)");
+                    t.Counter(t.O1, c2003);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    IReadOnlyList<GameEvent> played = t.Counter(t.Turn, c2014);
+                    Check(!(played[0] is RequestRejected) && !played.OfType<CountersUsable>().Any(), "2014 알아 — 카운터에 냄 · 아무에게도 묻지 않는다 (막을 수 없음)");
+                    t.At(2 + 2 * ChainTable.Reveal + 0.2);
+                    int code = t.Code(t.Counter(t.O1, late));
+                    Check(code == RejectCode.CannotReact || code == RejectCode.NotReactionTime, $"2014 알아 위에는 카운터 거절 ({code})");
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 80 && !t.Hand(t.Turn).Contains(hit), "2014 알아 — 2003 무효 → 1001 적용 (♥80) · 반환 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2016 = t.Give(t.O1, Real(2016));
+                    Card other = t.Give(t.O2, Real(2016));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact, "2016 피해를 받지 않는 사람은 거절 9");
+                    int before = t.HandCount(t.O1);
+                    t.Counter(t.O1, c2016);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.HandCount(t.O1) == before, "2016 칼집 — 20 − 40 = 0 피해 · 1장 뽑기 (낸 1장 + 뽑은 1장)");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2016 = t.Give(t.O1, Real(2016));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1005)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, c2016);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 91, $"2016 칼집 — 1005 드롭킥 49 − 40 = 9 (♥{t.Hp(t.O1)})");
+                }
+
                 {
                     var t = new ChainTable();
                     t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);

@@ -119,6 +119,27 @@
       "text": "새 판을 시작한다. 이후 턴마다 모두 점점 커지는 피해를 받는다",
       "art": "Assets/Sprites/Cards/Art/1012.png",
       "effects": [ { "type": "RestartEffect", "args": "" } ]
+    },
+    {
+      "id": 2003, "name": "진짜 할거야?", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "방금 나온 행동 카드를 막는다. 막은 카드는 쓴 사람 손패로 돌아간다",
+      "art": "",
+      "reactsTo": "Action", "reactCondition": "Any",
+      "effects": [ { "type": "ReturnToHandEffect", "args": "" } ]
+    },
+    {
+      "id": 2014, "name": "알아", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Rare", "count": 2,
+      "text": "방금 나온 카운터를 막는다. 이 카드는 막을 수 없다",
+      "art": "",
+      "reactsTo": "Counter", "reactCondition": "Any", "uncounterable": true,
+      "effects": [ { "type": "NegateEffect", "args": "" } ]
+    },
+    {
+      "id": 2016, "name": "칼집", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "나에게 오는 피해를 40 줄이고 1장을 뽑는다",
+      "art": "",
+      "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
+      "effects": [ { "type": "ReduceDamageEffect", "args": "amount=40" }, { "type": "DrawEffect", "args": "subject=Self, count=1" } ]
     }
   ]
 }

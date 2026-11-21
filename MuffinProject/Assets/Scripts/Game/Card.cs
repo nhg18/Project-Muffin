@@ -104,6 +104,9 @@ namespace Chapchu.Game
         /// <summary>카운터 · 「카드 반응」 함정: 반응 조건 (04-card.md 7절).</summary>
         public ReactCondition Condition { get; }
 
+        /// <summary>이 카드가 체인 맨 위에 있으면 아무도 카운터를 낼 수 없다 (04-card.md 7절 사용 조건 6 — 2014 알아).</summary>
+        public bool Uncounterable { get; }
+
         /// <summary>연출 1 ~ 3 단계 길이(초). 반응 시간이 이만큼 뒤에 열린다 (04-card.md 8절 · 10-ui.md 5-1).</summary>
         public double RevealSeconds { get; }
 
@@ -113,8 +116,9 @@ namespace Chapchu.Game
         public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects,
             IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds,
             TrapTrigger trigger = TrapTrigger.None, int triggerValue = 0, ReactCondition condition = ReactCondition.Any,
-            TargetCondition targetCondition = TargetCondition.None)
+            TargetCondition targetCondition = TargetCondition.None, bool uncounterable = false)
         {
+            Uncounterable = uncounterable;
             InstanceId = instanceId;
             CardId = cardId;
             Type = type;

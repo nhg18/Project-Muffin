@@ -172,6 +172,10 @@ namespace Chapchu.Game
             if (!card.ReactsTo.Contains(top.Card.Type))
                 return false;
 
+            // 카운터는 내 카드 · 「막을 수 없는」 카드에 낼 수 없다 — 반응 조건과 관계없이 (04 7절 사용 조건 5 · 6)
+            if (card.Type == CardType.Counter && (top.User == me || top.Card.Uncounterable))
+                return false;
+
             switch (card.Condition)
             {
                 case ReactCondition.Any:            return true;

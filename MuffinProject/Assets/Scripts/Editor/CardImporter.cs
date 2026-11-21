@@ -15,6 +15,7 @@ namespace Chapchu.EditorTools
     /// 카드 가져오기 (11-card-list.md 0절) — cards.json 의 카드마다 Card_{ID}.asset 을 만들거나 고치고, 장수대로 Deck_Main 을 다시 짠다.
     /// 노션 속성과 1:1 인 값(이름 · 종류 · 대상 · 대상 후보 조건 · 문구 · 등급 · 장수)과 그림은 매번 덮는다.
     /// 효과는 에셋에 효과가 하나도 없을 때만 json 으로 처음 채운다 — 그 뒤로는 에셋(인스펙터)이 원본이다.
+    /// 카운터의 반응 종류 · 반응 조건 · 「막을 수 없음」 은 json 에 reactsTo 가 적힌 카드만 매번 덮는다.
     /// cards.json 에는 구현할 카드(노션 확정 + 효과가 만들어진 카드)만 적는다.
     /// </summary>
     public static class CardImporter
@@ -41,6 +42,9 @@ namespace Chapchu.EditorTools
             public int count;
             public string text;
             public string art;             // 그림 경로 (Assets/...), 비우면 그림 없음
+            public string reactsTo;        // 카운터: 반응하는 카드 종류 — CardType 이름을 쉼표로 (예: "Action, Counter"). 비우면 건드리지 않는다
+            public string reactCondition;  // 카운터: ReactCondition 이름, 비우면 Any
+            public bool uncounterable;     // 이 카드에는 카운터를 낼 수 없다 (2014)
             public EffectEntry[] effects;
         }
 
@@ -84,6 +88,14 @@ namespace Chapchu.EditorTools
                 data.grade = ParseEnum<CardGrade>(entry.grade, entry.id);
                 data.description = entry.text;
                 data.cardImage = string.IsNullOrEmpty(entry.art) ? null : LoadSprite(entry.art, entry.id);
+
+                // 카운터의 반응 종류 · 조건 — 비어 있으면 어디에도 못 내는 카드가 된다 (CardData.reactsTo). json 에 적힌 카드만 덮는다
+                if (!string.IsNullOrWhiteSpace(entry.reactsTo))
+                {
+                    data.reactsTo = entry.reactsTo.Split(',').Select(s => ParseEnum<CardType>(s.Trim(), entry.id)).ToList();
+                    data.reactCondition = string.IsNullOrEmpty(entry.reactCondition) ? ReactCondition.Any : ParseEnum<ReactCondition>(entry.reactCondition, entry.id);
+                    data.uncounterable = entry.uncounterable;
+                }
 
                 if (data.effects.Count == 0 && entry.effects != null && entry.effects.Length > 0)
                 {
