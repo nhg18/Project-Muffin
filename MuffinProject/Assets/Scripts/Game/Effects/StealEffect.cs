@@ -17,6 +17,7 @@ namespace Chapchu.Game.Effects
         internal override int BotHandGain(Bots.BotView view, int[] receivers) =>
             receivers.Where(actor => actor != view.Bot).Sum(actor => Math.Min(count, view.Server.HandCountOf(actor)));
         internal override EffectTag Tag => EffectTag.TakeHand;
+        internal override bool GainsHand => true;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry);
 
         internal override void Apply(GameServer server, ChainEntry entry)

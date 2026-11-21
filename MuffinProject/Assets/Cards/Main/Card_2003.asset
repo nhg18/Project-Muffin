@@ -37,4 +37,5 @@ MonoBehaviour:
     RefIds:
     - rid: 4532118140694036560
       type: {class: ReturnToHandEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
-      data: 
+      data:
+        to: 0

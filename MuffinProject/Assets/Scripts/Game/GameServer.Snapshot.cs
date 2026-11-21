@@ -81,7 +81,7 @@ namespace Chapchu.Game
                 w.Int(e.TriggerAmount);
                 w.Bool(e.Negated);
                 w.Int(e.NegatedBy);
-                w.Bool(e.ReturnToCaster);
+                w.Int(e.ReturnTo);
                 w.Bool(e.Returned);
                 w.Ints(e.Excluded);
                 w.Ints(e.DamageToHeal);
@@ -258,7 +258,7 @@ namespace Chapchu.Game
                 e.TriggerAmount = r.Int();
                 e.Negated = r.Bool();
                 e.NegatedBy = r.Int();
-                e.ReturnToCaster = r.Bool();
+                e.ReturnTo = r.Int();
                 e.Returned = r.Bool();
                 e.Excluded.UnionWith(r.Ints());
                 e.DamageToHeal.UnionWith(r.Ints());

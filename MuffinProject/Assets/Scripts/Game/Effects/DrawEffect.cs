@@ -37,6 +37,8 @@ namespace Chapchu.Game.Effects
         internal override int BotHandGain(Bots.BotView view, int[] receivers) =>
             subject == EffectSubject.Self && !useTriggerAmount && randomMax <= count ? count : 0;
 
+        internal override bool GainsHand => true;
+
         internal override void Prepare(GameServer server, ChainEntry entry)
         {
             if (randomMax > count)

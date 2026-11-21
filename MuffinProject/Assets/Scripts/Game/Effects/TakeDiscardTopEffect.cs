@@ -27,6 +27,7 @@ namespace Chapchu.Game.Effects
         }
 
         internal override int BotHandGain(Bots.BotView view, int[] receivers) => view.Server.DiscardTop != null ? 1 : 0;
+        internal override bool GainsHand => true;
 
         internal override void Apply(GameServer server, ChainEntry entry) => server.TakeDiscardTop(entry.User, entry);
     }

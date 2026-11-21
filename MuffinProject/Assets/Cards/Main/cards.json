@@ -147,6 +147,13 @@
       "art": "",
       "reactsTo": "Action", "reactCondition": "HasDamage",
       "effects": [ { "type": "ReduceDamageEffect", "args": "amount=20, everyone=true" }, { "type": "HealAfterBelowEffect", "args": "amount=10" } ]
+    },
+    {
+      "id": 2020, "name": "내 거야!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Rare", "count": 2,
+      "text": "방금 나온 손패 + 카드를 막고, 그 카드를 가져온다. 대신 나는 20 피해를 받는다",
+      "art": "",
+      "reactsTo": "Action", "reactCondition": "HasHandGain",
+      "effects": [ { "type": "ReturnToHandEffect", "args": "to=CounterUser" }, { "type": "DamageEffect", "args": "subject=Self, amount=20" } ]
     }
   ]
 }

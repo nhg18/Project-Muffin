@@ -41,6 +41,9 @@ namespace Chapchu.Game.Effects
         /// <summary>이 효과가 하는 일 (반응 조건 판정용, 04-card.md 7절).</summary>
         internal virtual EffectTag Tag => EffectTag.None;
 
+        /// <summary>「손패 +」 키워드의 효과인가 — 뽑기 · 가져오기 · 빼앗기 (11-card-list.md 5-1 · 5-3). 「손패 + 효과가 있다」 반응 조건(2020)이 본다.</summary>
+        internal virtual bool GainsHand => false;
+
         /// <summary>이 효과가 Tag 의 일을 하는 사람 — 처리 전에 미리 본다 (예: 피해를 받을 사람).</summary>
         internal virtual IEnumerable<int> Affected(GameServer server, ChainEntry entry) => Array.Empty<int>();
 

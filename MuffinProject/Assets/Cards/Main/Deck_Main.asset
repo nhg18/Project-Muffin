@@ -61,3 +61,5 @@ MonoBehaviour:
     count: 2
   - card: {fileID: 11400000, guid: 9f53e9eaf4d09654c823a33b923e10bd, type: 2}
     count: 3
+  - card: {fileID: 11400000, guid: 1dd5db12dee48864a899f365a8bf2022, type: 2}
+    count: 2

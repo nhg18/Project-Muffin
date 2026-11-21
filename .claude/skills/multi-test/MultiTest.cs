@@ -1096,7 +1096,9 @@ public static class MultiTest
                 int actor = states.Keys.Cast<int>().First(a => a != me);
                 bool returned = ((PlayerState)states[actor]).Hand.Any(c => c.InstanceId == SkipProbeInstance + 1);
                 bool spent = discard.Any(c => c.InstanceId == SkipProbeInstance) && !((PlayerState)states[me]).Hand.Any(c => c.InstanceId == SkipProbeInstance);
-                if (!spent && FindHandCard(SkipProbeInstance) != null)
+                // 체인이 아직 처리 전 — 덱에 실제 카운터가 있어 상대가 내 카운터에 낼 카드(알아)를 쥐고 있으면 반응 시간 5초를 다 기다린다
+                bool pending = ((System.Collections.ICollection)typeof(GameServer).GetField("_chain", Private).GetValue(rules)).Count > 0;
+                if (!spent && (pending || FindHandCard(SkipProbeInstance) != null))
                     return "WAIT 아직 처리 전";
                 int hp = ((PlayerState)states[me]).Hp;
                 return (returned && spent && hp == 100 ? "OK" : "FAIL") + " 막힌 카드 " + (returned ? "쓴 사람 손패로" : "돌아가지 않음") + " · 카운터 " + (spent ? "버림 더미" : "버려지지 않음") + " · 내 HP " + hp;
@@ -2289,8 +2291,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3 };
-            Check(ids.Length == 54 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 54장 (행동 45 + 카운터 묶음 1 · 2 의 9, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2 };
+            Check(ids.Length == 56 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 56장 (행동 45 + 카운터 11, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -2298,8 +2300,62 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 54)
+            if (ids.Length == 56)
             {
+                // ── 카운터 묶음 3 (11-card-list 1-3) — 2020 내 거야! ──
+                {
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O2, Real(2020)); // 대상이 아닌 사람도 낼 수 있다
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    int o1Hand = t.HandCount(t.O1), turnHand = t.HandCount(t.Turn) - 1, o2Hand = t.HandCount(t.O2);
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, grab);
+                    var events = t.Run(20);
+                    Check(t.HandCount(t.O1) == o1Hand && t.HandCount(t.Turn) == turnHand && t.Hand(t.O2).Contains(steal) && t.HandCount(t.O2) == o2Hand
+                          && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O2 && e.CardInstanceId == steal.InstanceId),
+                        "2020 내 거야! — 1002 무효(아무도 안 빼앗김) · 막은 카드는 낸 사람 손패로 (낸 1장 + 받은 1장)");
+                    Check(t.Hp(t.O2) == 80, $"2020 대가 20 피해 (♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O1, Real(2020));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, grab)) == RejectCode.CannotReact, "2020 손패 + 가 없는 카드(1001)에는 거절 9");
+                }
+                {
+                    var t = new ChainTable();
+                    int[] gain = { 1002, 1009, 1013, 1014, 1015, 1016 }, none = { 1001, 1004, 1005, 1006, 1011, 1017, 1018, 1019, 1020, 1045 };
+                    bool Gains(int cardId) => mainCards.First(c => c.CardId == cardId).Effects.Any(e => (bool)typeof(CardEffect).GetProperty("GainsHand", Private).GetValue(e));
+                    Check(gain.All(Gains) && !none.Any(Gains), "2020 「손패 +」 카드 = 1002 · 1009 · 1013 · 1014 · 1015 · 1016 (11-card-list 5-3) — 1018 무야호(손패 −)는 아니다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 20);
+                    Card grab = t.Give(t.O1, Real(2020));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    int o1Hand = t.HandCount(t.O1) - 1;
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, grab);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 20 && !t.Hand(t.O1).Contains(steal) && t.HandCount(t.O1) == o1Hand - 1, $"2020 내 거야! 가 무효되면 가져오기 · 대가 없음 · 1002 적용 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 20);
+                    Card grab = t.Give(t.O1, Real(2020));
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, grab);
+                    var events = t.Run(2 + ChainTable.Reveal + 8);
+                    Check(t.Hp(t.O1) == 0 && t.State(t.O1).Life == LifeState.DeathPending && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O1), "2020 대가로 HP 0 → 사망 대기 · 막은 카드는 받는다");
+                }
                 // ── 카운터 묶음 2 (11-card-list 1-3) — 2001 침착 ──
                 {
                     var t = new ChainTable();

@@ -71,7 +71,8 @@ namespace Chapchu.Game
         DestroysMyTrap, // 다른 사람이 낸 그 카드가 내 함정을 파괴한다 (C12)
         SkipsMe,        // 그 카드가 나에게 턴 스킵을 건다 (C13)
         GivesMeChapchu, // 다른 사람이 낸 그 카드가 나에게 찹츄를 준다 (C15)
-        HasDamage       // 그 카드에 피해 효과가 있다 — 누가 받든 (2001 침착, 04-card.md 7절 「피해 효과가 있다」)
+        HasDamage,      // 그 카드에 피해 효과가 있다 — 누가 받든 (2001 침착, 04-card.md 7절 「피해 효과가 있다」)
+        HasHandGain     // 그 카드에 「손패 +」 효과(뽑기 · 가져오기 · 빼앗기)가 있다 — 누가 받든 (2020 내 거야!, 04-card.md 7절 「손패 + 효과가 있다」)
     }
 
     /// <summary>

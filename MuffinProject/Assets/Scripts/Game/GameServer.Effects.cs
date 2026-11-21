@@ -375,8 +375,8 @@ namespace Chapchu.Game
                 below.Targets = new[] { target };
         }
 
-        /// <summary>손패로 반환 (C01) — 반응한 카드를 무효로 하고, 처리 때 버림 더미 대신 시전자 손패로.</summary>
-        internal void ReturnBelowToHand(ChainEntry entry)
+        /// <summary>손패로 반환 — 반응한 카드를 무효로 하고, 처리 때 버림 더미 대신 정한 사람 손패로 (쓴 사람 2003 · 이 카운터를 낸 사람 2020).</summary>
+        internal void ReturnBelowToHand(ChainEntry entry, ReturnReceiver to)
         {
             ChainEntry below = Below(entry);
             if (below == null)
@@ -384,7 +384,7 @@ namespace Chapchu.Game
 
             below.Negated = true;
             below.NegatedBy = entry.User;
-            below.ReturnToCaster = true;
+            below.ReturnTo = to == ReturnReceiver.CounterUser ? entry.User : below.User;
         }
 
         /// <summary>찹츄 이동(A20)에서 받을 사람이 빠졌을 때 — 지우는 쪽만 한다.</summary>

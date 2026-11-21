@@ -191,6 +191,7 @@ namespace Chapchu.Game
                 case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
                 case ReactCondition.HasDamage:      return AffectedBy(top, EffectTag.Damage).Any();
+                case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
                 default:                            return false;
             }
         }
@@ -283,17 +284,19 @@ namespace Chapchu.Game
                 _resumeAt = System.Math.Max(_resumeAt, at);
         }
 
-        // 무효된 카드 — 효과 없이, 체인이 끝나면 버림 더미로 (DiscardChain). 「손패로 반환」(C01)이면 시전자 손패로. 사건 기록: 카드 반환(T13)
+        // 무효된 카드 — 효과 없이, 체인이 끝나면 버림 더미로 (DiscardChain). 「손패로 반환」 이면 정해진 사람 손패로 (쓴 사람 2003 · 카운터를 낸 사람 2020).
+        // 사건 기록: 카드 반환(T13) — 쓴 사람에게 돌아갔을 때만
         private void ResolveNegated(ChainEntry entry)
         {
-            if (entry.ReturnToCaster && IsInGame(entry.User))
+            if (entry.ReturnTo != -1 && IsInGame(entry.ReturnTo))
             {
                 entry.Returned = true;
-                PlayerState caster = _players[entry.User];
-                caster.Hand.Add(entry.Card);
-                _events.Add(new CardReturnedToHand(entry.User, entry.Card.InstanceId, entry.Card.CardId, caster.Hand.Count));
-                OnHandChanged(entry.User);
-                RecordAfter(AfterKind.CardReturned, entry.User, entry.NegatedBy, 1);
+                PlayerState receiver = _players[entry.ReturnTo];
+                receiver.Hand.Add(entry.Card);
+                _events.Add(new CardReturnedToHand(entry.ReturnTo, entry.Card.InstanceId, entry.Card.CardId, receiver.Hand.Count));
+                OnHandChanged(entry.ReturnTo);
+                if (entry.ReturnTo == entry.User)
+                    RecordAfter(AfterKind.CardReturned, entry.User, entry.NegatedBy, 1);
                 return;
             }
 

@@ -25,6 +25,8 @@ namespace Chapchu.Game.Effects
             return receivers.Sum(actor => view.HandScore(actor, GameServer.InitialHandCount - view.Server.HandCountOf(actor)));
         }
 
+        internal override bool GainsHand => true;
+
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))

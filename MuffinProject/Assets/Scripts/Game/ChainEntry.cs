@@ -15,10 +15,11 @@ namespace Chapchu.Game
         /// <summary>함정이 쓰는 사건 값 — 「버려진 후」(T09)의 버려진 장수.</summary>
         public int TriggerAmount;
 
-        /// <summary>효과 전체가 무효화됐다 — 효과 없이 버림 더미로 (ReturnToCaster 면 시전자 손패로).</summary>
+        /// <summary>효과 전체가 무효화됐다 — 효과 없이 버림 더미로 (ReturnTo 가 있으면 그 사람 손패로).</summary>
         public bool Negated;
         public int NegatedBy = -1;
-        public bool ReturnToCaster; // C01
+        /// <summary>무효된 이 카드를 받을 사람 — 없으면 -1 (버림 더미로). 쓴 사람(2003 진짜 할거야?) · 카운터를 낸 사람(2020 내 거야!) (04 7절).</summary>
+        public int ReturnTo = -1;
         public bool Returned;       // 손패로 돌아갔다 — 버림 더미에 쌓지 않는다 (04 9.1)
 
         /// <summary>「본인에게만 무효화」 한 사람들 (C05 · C08 · C13 · C15). 효과를 받는 사람에서 뺀다.</summary>
