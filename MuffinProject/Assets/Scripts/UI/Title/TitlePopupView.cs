@@ -98,7 +98,7 @@ namespace Chapchu.UI.Title
         public void ShowUpdate() => Show(TitlePopup.Update, UpdateTitle, UpdateBody, alertIcon, LobbyStyle.Warn);
 
         /// <summary>점검 중 — 닫을 수 없다, 본문은 Remote Config 안내 문구 그대로 (23 7-6)</summary>
-        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, clockIcon, LobbyStyle.Warn);
+        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, alertIcon, LobbyStyle.Warn);
 
         public void ShowQuit() => Show(TitlePopup.Quit, QuitTitle, QuitBody, doorIcon, LobbyStyle.Band);
 
