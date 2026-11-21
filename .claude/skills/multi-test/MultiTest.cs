@@ -2051,10 +2051,26 @@ public static class MultiTest
             Card restart = t.Give(t.Turn, id => new Card(id, 1012, CardType.Action, TargetType.None, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve));
             t.PlayCard(t.Turn, restart);
             Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대소동 체인 중에 상대가 나감 → 아직");
-            List<GameEvent> events = t.Run(ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve + 1);
+            List<GameEvent> events = t.Run(ChainTable.Reveal + 0.5); // 물을 사람이 없어 등장 연출 뒤 바로 처리 — 후처리 연출 · 턴 넘김(+1.28초) 전
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
-                "혼자 남으면 새 판 대신 처치 승리 (" + Summary(ended) + ")");
+                "혼자 남으면 새 판 대신 처치 승리 — 체인 처리 직후, 연출 · 턴 넘김을 기다리지 않는다 (" + Summary(ended) + ")");
+            events = t.Server.RemovePlayer(t.Turn).ToList();
+            events.AddRange(t.Run(t.Now + ChainTable.Resolve + 1));
+            Check(!events.OfType<GameEnded>().Any() && !events.OfType<GameRestarted>().Any(), "끝난 뒤에는 남은 사람이 나가도 무승부 · 새 판이 없다");
+        }
+        // 함정이 부른 대소동도 같다 — 때린 사람이 체인 중에 나가 1명이면 새 판 대신 처치 승리
+        {
+            var t = new ChainTable();
+            t.Server.RemovePlayer(t.O2);
+            t.SetTrapCard(t.O1, id => new Card(id, 903, CardType.Trap, TargetType.Self, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged));
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(1);
+            t.Server.RemovePlayer(t.Turn);
+            List<GameEvent> events = t.Run(t.Now + 12);
+            GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+            Check(events.OfType<TrapActivated>().Any() && ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
+                "함정의 대소동 + 체인 중 이탈 → 새 판 대신 처치 승리");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
