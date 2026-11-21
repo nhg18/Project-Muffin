@@ -23,7 +23,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, int> OnEmptyDeckDamaged;             // actorNumber, amount — 빈 덱 피해, 체력은 뒤따르는 OnHpChanged
         public static event Action<int, double, double> OnDeathPending;      // actorNumber, startsAt, deadline — 사망 대기, 게임이 멈춘다
         public static event Action<int, int[], int> OnPlayerDied;            // actorNumber, cardIds, discardCount — 최종 사망, 손패 0. cardIds = 버림 더미에 들어간 순서(손패 → 함정)
-        public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
+        public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount, forced(강제 퇴장인지) — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
         public static event Action<int, int, int> OnTrapSet;                 // actorNumber, handCount, trapCount — 함정 설치 (종류는 OnMyTrapSet)
         public static event Action<int, int, int, int[], int> OnTrapActivated; // actorNumber, cardInstanceId, cardId, targets, trapCount — 공개 · 체인에 올라감
