@@ -14,6 +14,7 @@ namespace Chapchu.Game
         /// <summary>entry 의 피해 1건. 피해 → 회복 전환(C03) · 감소(C10) · 사망 방지(C11)를 계산한 뒤 한 번만 반영한다.</summary>
         internal void ApplyDamage(ChainEntry entry, int actor, int amount)
         {
+            amount = Scaled(entry, amount); // 2배가 먼저, 감소는 그 다음 (04 7절)
             if (entry.DamageToHeal.Contains(actor))
             {
                 ApplyHealRaw(actor, amount);
@@ -46,6 +47,7 @@ namespace Chapchu.Game
         /// <summary>entry 의 회복 1건. 회복 → 피해 전환(C09) 이면 같은 수치 피해. 사망 대기 · 사망한 사람은 일반 회복을 받지 않는다 (06 6절).</summary>
         internal void ApplyHeal(ChainEntry entry, int actor, int amount)
         {
+            amount = Scaled(entry, amount);
             if (entry.HealToDamage.Contains(actor))
             {
                 if (amount > 0)
@@ -173,13 +175,13 @@ namespace Chapchu.Game
         /// 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (1013 기억 삭제). 교환 · 재분배라 「버려진 후」 · 「여러 장 뽑은 후」 기록을 남기지 않는다
         /// — 훔침 · 버림에 반응하는 카드의 대상이 아니다 (11-card-list 1013).
         /// </summary>
-        internal void RedealHand(int actor)
+        internal void RedealHand(int actor, int count)
         {
             if (!IsInGame(actor))
                 return;
 
             DiscardCards(actor, _players[actor].Hand.ToList(), -1);
-            DrawCards(actor, InitialHandCount, null);
+            DrawCards(actor, count, null);
         }
 
         /// <summary>
@@ -213,7 +215,7 @@ namespace Chapchu.Game
             {
                 if (_players[target].Hand.Count == 0)
                     break;
-                StealRandom(target, receiver, 1);
+                StealRandom(target, receiver, Scaled(entry, 1));
             }
         }
 
@@ -420,6 +422,17 @@ namespace Chapchu.Game
         /// <summary>actor 가 그 카드의 손패 감소 효과로 잃을 장수 (처리 전 예측) — 손패가 handCount 장일 때. 효과가 여럿이면 더하되 손패를 넘지 않는다.</summary>
         internal int PredictHandLoss(ChainEntry entry, int actor, int handCount) =>
             Math.Min(handCount, entry.Card.Effects.Sum(e => e.PredictHandLoss(this, entry, actor, handCount)));
+
+        /// <summary>수치 2배 (2005 묻고 따블로 가) — 이 카운터가 무효로 한 카운터의 아래 카드(두 칸 아래)에 표시한다. 한 카드에 1회.</summary>
+        internal void DoubleTwoBelow(ChainEntry entry)
+        {
+            ChainEntry target = Below(entry)?.Below;
+            if (target != null)
+                target.Doubled = true;
+        }
+
+        /// <summary>그 카드의 적힌 숫자 n 을 지금 읽을 값 — 2배 표시가 있으면 2n. 피해 · 회복은 ApplyDamage · ApplyHeal 이, 장수는 효과가 부른다.</summary>
+        internal int Scaled(ChainEntry entry, int n) => entry != null && entry.Doubled ? n * 2 : n;
 
         /// <summary>찹츄 이동(A20)에서 받을 사람이 빠졌을 때 — 지우는 쪽만 한다.</summary>
         internal void ClearChapchuIfMoved(int from) => ClearChapchu(from);

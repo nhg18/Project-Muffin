@@ -17,7 +17,7 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             if (server.InGame(entry.User) && server.HandCountOf(entry.User) > 0)
-                server.BeginHandChoice(entry, this, entry.User);
+                server.BeginHandChoice(entry, this, entry.User, server.Scaled(entry, 1));
         }
 
         internal int BotPick(GameServer server, int bot)

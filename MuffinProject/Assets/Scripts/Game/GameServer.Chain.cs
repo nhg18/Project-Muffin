@@ -183,7 +183,7 @@ namespace Chapchu.Game
                 case ReactCondition.TargetsMe:      return top.User != me && top.Targets.Contains(me);
                 case ReactCondition.DamagesMe:      return AffectedBy(top, EffectTag.Damage).Contains(me);
                 case ReactCondition.WouldKillMe:
-                    int damage = top.Card.Effects.Sum(e => e.PredictDamage(this, top, me));
+                    int damage = Scaled(top, top.Card.Effects.Sum(e => e.PredictDamage(this, top, me)));
                     return damage > 0 && damage >= _players[me].Hp;
                 case ReactCondition.HealsOther:     return AffectedBy(top, EffectTag.Heal).Any(a => a != me);
                 case ReactCondition.TakesMyHand:    return AffectedBy(top, EffectTag.TakeHand).Contains(me);

@@ -17,7 +17,7 @@ namespace Chapchu.Game.Effects
 
         // 대상이 잃는 장수 = 받아 갈 사람 수 (손패가 모자라면 손패만큼)
         internal override int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) =>
-            Affected(server, entry).Contains(actor) ? Math.Min(handCount, server.ActorsInGame.Count(a => a != actor)) : 0;
+            Affected(server, entry).Contains(actor) ? Math.Min(handCount, server.ActorsInGame.Count(a => a != actor) * server.Scaled(entry, 1)) : 0;
 
         internal override bool BotWants(GameServer server, int bot, int[] receivers) => receivers.Length == 1 && receivers[0] != bot;
 

@@ -10,7 +10,7 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            server.MarkBelow(entry, below => below.HealAfter[entry.User] = (below.HealAfter.TryGetValue(entry.User, out int h) ? h : 0) + amount);
+            server.MarkBelow(entry, below => below.HealAfter[entry.User] = (below.HealAfter.TryGetValue(entry.User, out int h) ? h : 0) + server.Scaled(entry, amount));
         }
     }
 }

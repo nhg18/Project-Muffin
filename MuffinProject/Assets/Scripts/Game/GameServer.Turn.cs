@@ -68,6 +68,8 @@ namespace Chapchu.Game
                 if (now < _choiceDeadline)
                     return; // 대상이 고르는 중 (1019) — 게임 · 턴 시간이 멈춘다
                 FinishChoice(RandomChoice(), true); // 시간 초과 — 방장이 무작위 (11-card-list 1019 · 1-3)
+                if (IsChoosing)
+                    return; // 같은 고르기를 한 번 더 열었다 (2배가 된 대가)
             }
 
             if (IsGaepanJudging)

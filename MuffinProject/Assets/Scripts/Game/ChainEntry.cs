@@ -31,6 +31,9 @@ namespace Chapchu.Game
         /// </summary>
         public readonly Dictionary<int, int> HandLossBlocked = new Dictionary<int, int>();
 
+        /// <summary>이 카드의 적힌 숫자(피해 · 회복 · 장수)를 2배로 읽는다 (2005 묻고 따블로 가, 04 7절 「수치 2배」). 한 카드에 1회 — 두 번 걸려도 그대로다.</summary>
+        public bool Doubled;
+
         public readonly HashSet<int> DamageToHeal = new HashSet<int>();                     // C03
         public readonly HashSet<int> HealToDamage = new HashSet<int>();                     // C09
         public readonly Dictionary<int, int> DamageReduction = new Dictionary<int, int>(); // C10 — 받는 사람 → 줄일 양

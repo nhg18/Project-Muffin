@@ -90,6 +90,7 @@ namespace Chapchu.Game
                 w.Int(e.DamageReductionAll);
                 w.Map(e.HealAfter);
                 w.Map(e.HandLossBlocked);
+                w.Bool(e.Doubled);
                 w.Map(e.SurviveAt);
                 w.Ints(e.ProtectTraps);
                 w.Map(e.Rolled.ToDictionary(pair => IndexOfEffect(e.Card, pair.Key), pair => pair.Value)); // 효과는 그 카드의 몇 번째인지로
@@ -118,6 +119,7 @@ namespace Chapchu.Game
             w.Int(_choiceEntry == null ? -1 : entries.IndexOf(_choiceEntry));
             w.Int(_choiceEntry == null ? -1 : IndexOfEffect(_choiceEntry.Card, _choiceEffect));
             w.Time(_choiceDeadline);
+            w.Int(_choiceMore);
 
             // 덱
             w.Ints(Ids(_deck));
@@ -268,6 +270,7 @@ namespace Chapchu.Game
                 e.DamageReductionAll = r.Int();
                 r.Map(e.HealAfter);
                 r.Map(e.HandLossBlocked);
+                e.Doubled = r.Bool();
                 r.Map(e.SurviveAt);
                 e.ProtectTraps.UnionWith(r.Ints());
                 var rolled = new Dictionary<int, int>();
@@ -311,6 +314,7 @@ namespace Chapchu.Game
             int choiceEffect = r.Int();
             _choiceEffect = _choiceEntry == null ? null : EffectAt(_choiceEntry.Card, choiceEffect);
             _choiceDeadline = r.Time();
+            _choiceMore = r.Int();
             if ((_choiceActor != -1) != (_choiceEntry != null))
                 throw new InvalidOperationException("고르는 사람과 고르는 카드가 맞지 않는다");
 
@@ -399,7 +403,7 @@ namespace Chapchu.Game
                 _choiceDeadline = now + ChoiceSeconds;
                 if (!departed.Contains(_choiceActor))
                     _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
-                        _choiceEffect is DiscardOrDamageEffect option ? option.amount : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
+                        _choiceEffect is DiscardOrDamageEffect option ? Scaled(_choiceEntry, option.amount) : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
             }
 
             if (IsGaepanJudging)

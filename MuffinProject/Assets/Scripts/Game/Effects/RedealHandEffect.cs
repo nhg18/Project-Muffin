@@ -34,7 +34,7 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.HandLossReceiversOf(subject, entry))
-                server.RedealHand(actor);
+                server.RedealHand(actor, server.Scaled(entry, GameServer.InitialHandCount));
         }
     }
 }

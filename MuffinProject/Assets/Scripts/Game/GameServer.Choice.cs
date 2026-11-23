@@ -11,6 +11,7 @@ namespace Chapchu.Game
         private ChainEntry _choiceEntry;
         private CardEffect _choiceEffect; // DiscardOrDamageEffect(1019) 또는 ChooseDiscardEffect(2013 · 2021)
         private double _choiceDeadline;
+        private int _choiceMore;          // 이번 고르기 뒤에 같은 고르기를 더 할 횟수 — 2배가 된 대가(으르렁 1 → 2장)는 한 장씩 두 번 고른다
 
         internal bool IsChoosing => _choiceActor != -1;
         internal int ChoiceActor => _choiceActor;
@@ -24,13 +25,14 @@ namespace Chapchu.Game
             _choiceEntry = entry;
             _choiceEffect = effect;
             _choiceDeadline = now + effect.seconds;
-            _events.Add(new ChoiceStarted(actor, entry.User, entry.Card.CardId, _players[actor].Hand.Count, effect.amount, now, _choiceDeadline));
+            _events.Add(new ChoiceStarted(actor, entry.User, entry.Card.CardId, _players[actor].Hand.Count, Scaled(entry, effect.amount), now, _choiceDeadline));
         }
 
         /// <summary>손패에서 1장 골라 버리기를 연다 (ChooseDiscardEffect.Apply — 2013 · 2021 의 대가). 1019 와 같은 흐름 — 그동안 게임 시간이 멈춘다.</summary>
-        internal void BeginHandChoice(ChainEntry entry, ChooseDiscardEffect effect, int actor)
+        internal void BeginHandChoice(ChainEntry entry, ChooseDiscardEffect effect, int actor, int picks = 1)
         {
             double now = _clock();
+            _choiceMore = picks - 1;
             _choiceActor = actor;
             _choiceEntry = entry;
             _choiceEffect = effect;
@@ -76,12 +78,15 @@ namespace Chapchu.Game
             int actor = _choiceActor;
             ChainEntry entry = _choiceEntry;
             CardEffect effect = _choiceEffect;
+            int more = _choiceMore;
             ClearChoice();
 
-            if (effect is ChooseDiscardEffect)
+            if (effect is ChooseDiscardEffect pick)
             {
                 _events.Add(new ChoiceMade(actor, 0, timedOut, ChoiceKind.HandCard));
                 DiscardFromHand(actor, option);
+                if (more > 0 && InGame(actor) && _players[actor].Hand.Count > 0)
+                    BeginHandChoice(entry, pick, actor, more); // 남은 장수만큼 다시 연다
                 return;
             }
 
@@ -105,6 +110,7 @@ namespace Chapchu.Game
             _choiceEntry = null;
             _choiceEffect = null;
             _choiceDeadline = 0;
+            _choiceMore = 0;
         }
 
         /// <summary>봇이 고를 것 (18-bot 7-3, 프로토타입 v2).</summary>

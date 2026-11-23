@@ -168,6 +168,13 @@
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "LosesMyHand",
       "effects": [ { "type": "NegateHandLossEffect", "args": "" }, { "type": "DrawBlockedHandLossEffect", "args": "max=3" } ]
+    },
+    {
+      "id": 2005, "name": "묻고 따블로 가", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "방금 나온 카운터를 막고, 그 아래 카드의 수치를 2배로 만든다",
+      "art": "",
+      "reactsTo": "Counter", "reactCondition": "Any",
+      "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DoubleBelowEffect", "args": "" } ]
     }
   ]
 }

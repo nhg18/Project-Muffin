@@ -20,12 +20,12 @@ namespace Chapchu.Game.Effects
         internal override EffectTag Tag => EffectTag.TakeHand;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.HandLossReceiversOf(subject, entry);
         internal override int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) =>
-            Affected(server, entry).Contains(actor) ? Math.Min(count, handCount) : 0;
+            Affected(server, entry).Contains(actor) ? Math.Min(server.Scaled(entry, count), handCount) : 0;
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.HandLossReceiversOf(subject, entry))
-                server.DiscardRandom(actor, count, entry.User);
+                server.DiscardRandom(actor, server.Scaled(entry, count), entry.User);
         }
     }
 }
