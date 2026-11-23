@@ -14,6 +14,7 @@ namespace Chapchu.Game.Effects
         public int amount;
 
         internal override EffectTag Tag => EffectTag.Damage;
+        internal override bool IsRecoil => true;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Self, entry);
         internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;
 

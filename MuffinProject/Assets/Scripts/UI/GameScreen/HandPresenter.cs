@@ -77,6 +77,7 @@ namespace Chapchu.UI.GameScreen
 
         // 반응 시간 — 방장이 보낸 시각(서버 시각)과 낼 수 있는 내 카운터. 시각 안에서만 빛을 켠다.
         private readonly HashSet<int> _usableCounters = new HashSet<int>();
+        private int _chainTopTargets; // 체인 맨 위 카드의 대상 수 — 2015 가로채기가 그 수만큼 고른다 (04-card.md 11절)
         private double _reactionOpensAt;
         private bool _reactionPending; // 반응 시간이 정해졌고 아직 끝나지 않았다 (연출 중 포함) — 마감 시각은 오지 않는다
         private bool _holdSent;        // 이번 반응 시간에 「고민 중」 을 이미 보냈다 (04-card.md 8절 — 1회)
@@ -194,6 +195,9 @@ namespace Chapchu.UI.GameScreen
             _reactionPending = true;
             _holdSent = false;
         }
+
+        /// <summary>체인에 카드가 올랐다 (OnCardPlayed) — 그 카드의 대상 수를 기억한다.</summary>
+        public void NoteChainTop(int targetCount) => _chainTopTargets = targetCount;
 
         /// <summary>이번 반응 시간에 낼 수 있는 내 카운터 (OnMyCountersUsable) — 반응 시간이 열려 있는 동안 초록 빛.</summary>
         public void ShowUsableCounters(int[] cardInstanceIds)
@@ -495,6 +499,20 @@ namespace Chapchu.UI.GameScreen
                     break;
                 case TargetType.OneAny: // 나를 포함한 1명 — 내 패널도 고를 수 있다
                     StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, true));
+                    break;
+                case TargetType.OneNotDamaged when seatActor != 0: // 2018 물귀신 — 나를 뺀 1명. 고를 수 없는 사람이면 방장이 거절한다
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
+                case TargetType.OneNotDamaged:
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, false));
+                    break;
+                case TargetType.SameCountAny when seatActor != 0 && _chainTopTargets <= 1: // 2015 가로채기 — 아래 카드가 1명을 고르는 카드면 놓은 상대로
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
+                case TargetType.SameCountAny: // 아래 카드의 인원 수만큼 — 나 · 그 카드를 쓴 사람도 고를 수 있다
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, Mathf.Max(1, _chainTopTargets), true));
                     break;
                 default:
                     RequestPlay(card, Array.Empty<int>());

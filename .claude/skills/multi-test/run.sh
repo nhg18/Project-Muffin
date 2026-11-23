@@ -8,6 +8,7 @@
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
+#   run.sh counter pick                 2018 물귀신 — 카운터를 낼 때 화면에서 대상(상대 좌석)을 고름 → 나 · 고른 사람이 같은 피해
 #   run.sh counter cost                 위에 이어 2021 으르렁의 대가 — 고르기 판의 카드 칸을 눌러 1장 버림
 #   run.sh counter                      메인 + 클론: 방장에게 실제 카운터(2003)를 쥐여 줌 → 화면에서 냄 → 막힌 카드는 쓴 사람 손패로 · 화면 = 방장
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
@@ -852,6 +853,7 @@ run_skip() {
 run_counter() {
     local out project arm="arm"
     [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 1장 고르기까지
+    [ "${1:-}" = "pick" ] && arm="arm2018" # 2018 물귀신 — 낼 때 화면에서 대상 1명 고르기
     enter_game 2 || return
     log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
     for _ in $(seq 1 20); do
@@ -871,6 +873,15 @@ run_counter() {
     done
     log "  $out"
     case "$out" in OK*) ;; *) fail "카운터 내기: $out"; return ;; esac
+    if [ "$arm" = "arm2018" ]; then
+        log "▶ 대상 고르기 — 카운터를 내면 좌석 고르기가 열리고, 상대 좌석을 누르면 그 사람으로 나간다"
+        for _ in $(seq 1 8); do
+            out=$(call "$MAIN" ReactionSkipProbe pick)
+            case "$out" in WAIT*) sleep 0.2 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "카운터 대상 고르기: $out"; return ;; esac
+    fi
     if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
     if [ "$arm" = "arm2021" ]; then
         log "▶ 대가 — 고르기 판에 내 손패가 카드 칸으로 뜨고, 누르면 그 카드가 버려진다 (다른 화면은 「고르는 중」)"

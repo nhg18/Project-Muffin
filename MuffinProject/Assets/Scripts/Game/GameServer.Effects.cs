@@ -12,9 +12,12 @@ namespace Chapchu.Game
         // ── 체력 ──
 
         /// <summary>entry 의 피해 1건. 피해 → 회복 전환(C03) · 감소(C10) · 사망 방지(C11)를 계산한 뒤 한 번만 반영한다.</summary>
-        internal void ApplyDamage(ChainEntry entry, int actor, int amount)
+        internal void ApplyDamage(ChainEntry entry, int actor, int amount) =>
+            ApplyDamage(entry, actor, Scaled(entry, amount), entry.User, true); // 2배가 먼저, 감소는 그 다음 (04 7절)
+
+        // by = 피해를 준 사람. direct = 이 카드가 직접 준 피해 — 같이 받는 피해(2018)는 「쓰러뜨림」(1005)에 넣지 않는다.
+        private void ApplyDamage(ChainEntry entry, int actor, int amount, int by, bool direct)
         {
-            amount = Scaled(entry, amount); // 2배가 먼저, 감소는 그 다음 (04 7절)
             if (entry.DamageToHeal.Contains(actor))
             {
                 ApplyHealRaw(actor, amount);
@@ -32,8 +35,8 @@ namespace Chapchu.Game
             if (hp <= 0 && entry.SurviveAt.TryGetValue(actor, out int keep))
                 hp = Math.Max(1, keep);
 
-            CountDamage(actor, entry.User, -SetHp(actor, hp, entry.User));
-            if (hp <= 0)
+            CountDamage(actor, by, -SetHp(actor, hp, by));
+            if (hp <= 0 && direct)
                 entry.KnockedDown.Add(actor);
             if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
             {
@@ -41,7 +44,14 @@ namespace Chapchu.Game
                 _events.Add(new DeathAvoided(actor, _players[actor].Hp));
                 _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             }
-            RecordAfter(AfterKind.Damaged, actor, entry.User, amount);
+            RecordAfter(AfterKind.Damaged, actor, by, amount);
+
+            // 피해 같이 받기 (2018) — 내가 실제로 받은 양만큼 물귀신의 대상도. 물귀신에 걸린 표시(감소 등)는 그 카드 기준으로 본다
+            if (entry.DamageSharers.TryGetValue(actor, out ChainEntry share))
+            {
+                foreach (int other in ReceiversOf(EffectSubject.Target, share))
+                    ApplyDamage(share, other, amount, by, false);
+            }
         }
 
         /// <summary>entry 의 회복 1건. 회복 → 피해 전환(C09) 이면 같은 수치 피해. 사망 대기 · 사망한 사람은 일반 회복을 받지 않는다 (06 6절).</summary>
@@ -375,16 +385,26 @@ namespace Chapchu.Game
                 mark(below);
         }
 
-        /// <summary>대상 변경 (C02 · C04) — 대상 전체를 새 1명으로. toCaster 면 그 카드의 시전자, 아니면 이 카운터의 대상.</summary>
+        /// <summary>대상 변경 (C02 · C04 · 2015) — 대상 전체를 새 대상으로. toCaster 면 그 카드의 시전자, 아니면 이 카운터의 대상 모두. 남은 사람이 없으면 바꾸지 않는다.</summary>
         internal void RedirectBelow(ChainEntry entry, bool toCaster)
         {
             ChainEntry below = Below(entry);
             if (below == null)
                 return;
 
-            int target = toCaster ? below.User : (entry.Targets.Length > 0 ? entry.Targets[0] : -1);
-            if (target >= 0 && IsInGame(target))
-                below.Targets = new[] { target };
+            int[] targets = (toCaster ? new[] { below.User } : entry.Targets).Where(IsInGame).ToArray();
+            if (targets.Length > 0)
+                below.Targets = targets;
+        }
+
+        /// <summary>피해 같이 받기 (2018 물귀신) — 반응한 카드에 「이 카운터를 낸 사람이 받는 만큼 이 카운터의 대상도」 표시를 남긴다.</summary>
+        internal void ShareDamageBelow(ChainEntry entry) => MarkBelow(entry, below => below.DamageSharers[entry.User] = entry);
+
+        /// <summary>이 카운터를 낸 사람이 반응한 카드에서 받을 피해 (2배 뒤 · 감소 전 예측).</summary>
+        internal int PredictDamageBelow(ChainEntry entry)
+        {
+            ChainEntry below = Below(entry);
+            return below == null ? 0 : Scaled(below, below.Card.Effects.Sum(e => e.PredictDamage(this, below, entry.User)));
         }
 
         /// <summary>손패로 반환 — 반응한 카드를 무효로 하고, 처리 때 버림 더미 대신 정한 사람 손패로 (쓴 사람 2003 · 이 카운터를 낸 사람 2020).</summary>

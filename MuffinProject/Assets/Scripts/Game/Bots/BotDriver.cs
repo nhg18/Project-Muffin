@@ -580,10 +580,10 @@ namespace Chapchu.Game.Bots
             if (reactionOpen && top.User != bot && top.Targets.Contains(bot))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
-                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top)).OrderBy(c => c.CardId).FirstOrDefault();
+                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top) && CounterTargets(bot, c, top) != null).OrderBy(c => c.CardId).FirstOrDefault();
                 if (counter != null)
                 {
-                    int[] targets = counter.Target == TargetType.OneOther ? SortedOpponents(bot).Take(1).ToArray() : Array.Empty<int>();
+                    int[] targets = CounterTargets(bot, counter, top);
                     int instanceId = counter.InstanceId;
                     reaction = new Reaction(key, _server.ReactionOpensAt, $"7-4 나를 노린 카드 {top.Card.CardId} 에 카운터 → 카드 {counter.CardId} (#{instanceId})",
                         () => _server.PlayCounter(bot, instanceId, targets));
@@ -596,6 +596,27 @@ namespace Chapchu.Game.Bots
         }
 
         // 7-4 — 대상을 고르는 카운터의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
+        // 카운터의 대상 (18-bot.md 7-4) — 찹츄 → 손패 많은 → HP 낮은 상대 순. 고르지 않는 카드는 빈 배열, 고를 사람이 모자라면 null (그 카운터는 내지 않는다).
+        // 2015 가로채기는 나를 고르지 않는다. 2018 물귀신은 그 카드의 피해를 받지 않는 사람 중에서.
+        private int[] CounterTargets(int bot, Card counter, ChainEntry top)
+        {
+            switch (counter.Target)
+            {
+                case TargetType.OneOther:
+                    return SortedOpponents(bot).Take(1).ToArray();
+                case TargetType.OneNotDamaged:
+                    int[] candidates = _server.ShareCandidates(bot, top);
+                    int[] shared = SortedOpponents(bot).Where(candidates.Contains).Take(1).ToArray();
+                    return shared.Length == 1 ? shared : null;
+                case TargetType.SameCountAny:
+                    int count = GameServer.PickCount(top.Card.Target);
+                    int[] picked = SortedOpponents(bot).Take(count).ToArray();
+                    return count > 0 && picked.Length == count ? picked : null;
+                default:
+                    return Array.Empty<int>();
+            }
+        }
+
         private int[] SortedOpponents(int bot)
         {
             return _server.ActorsInGame

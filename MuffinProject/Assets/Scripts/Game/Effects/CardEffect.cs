@@ -47,6 +47,9 @@ namespace Chapchu.Game.Effects
         /// <summary>판 전체 상태를 바꾸는 효과인가 — 이런 효과의 카드는 「나를 노린 카드」 가 아니다 (대소동 · 기다려! · 개판 오분전 · 뒤로 돌아, 11-card-list 1-3).</summary>
         internal virtual bool BoardWide => false;
 
+        /// <summary>조건이 맞을 때만 쓴 사람에게 돌아오는 피해인가 (1005 드롭킥의 반동) — 「그 카드의 피해를 받고 있는 사람」 에 넣지 않는다 (2018 물귀신의 후보, 11-card-list 1-3).</summary>
+        internal virtual bool IsRecoil => false;
+
         /// <summary>이 효과가 Tag 의 일을 하는 사람 — 처리 전에 미리 본다 (예: 피해를 받을 사람).</summary>
         internal virtual IEnumerable<int> Affected(GameServer server, ChainEntry entry) => Array.Empty<int>();
 

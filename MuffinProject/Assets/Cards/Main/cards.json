@@ -175,6 +175,20 @@
       "art": "",
       "reactsTo": "Counter", "reactCondition": "Any",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DoubleBelowEffect", "args": "" } ]
+    },
+    {
+      "id": 2015, "name": "가로채기", "type": "Counter", "target": "SameCountAny", "targetCondition": "None", "grade": "Rare", "count": 1,
+      "text": "방금 나온 행동 카드의 대상을 다시 고른다",
+      "art": "",
+      "reactsTo": "Action", "reactCondition": "PicksTargets",
+      "effects": [ { "type": "RedirectEffect", "args": "toCaster=false" } ]
+    },
+    {
+      "id": 2018, "name": "물귀신", "type": "Counter", "target": "OneNotDamaged", "targetCondition": "None", "grade": "Fine", "count": 1,
+      "text": "나에게 오는 피해를 고른 1명도 같이 받는다",
+      "art": "",
+      "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
+      "effects": [ { "type": "ShareDamageEffect", "args": "" } ]
     }
   ]
 }

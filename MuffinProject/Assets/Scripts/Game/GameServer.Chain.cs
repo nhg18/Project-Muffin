@@ -60,7 +60,7 @@ namespace Chapchu.Game
             if (!CanPlayCounter(requester, card, top))
                 return Reject(requester, RejectCode.CannotReact);
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User);
+            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User, top: top);
             if (targets == null)
                 return Reject(requester, RejectCode.InvalidTarget);
 
@@ -161,7 +161,8 @@ namespace Chapchu.Game
         private bool CanPlayCounter(int actor, Card card, ChainEntry top) =>
             card.Type == CardType.Counter
             && (_players[actor].Life != LifeState.DeathPending || card.Condition == ReactCondition.WouldKillMe)
-            && CanReactTo(card, actor, top);
+            && CanReactTo(card, actor, top)
+            && (card.Target != TargetType.OneNotDamaged || ShareCandidates(actor, top).Length > 0); // 고를 사람이 없으면 낼 수 없다 (2018)
 
         /// <summary>
         /// 카운터 card 로 맨 위 카드 top 에 반응할 수 있는가 — 반응 대상 종류 + 반응 조건 (04-card.md 7절).
@@ -194,6 +195,7 @@ namespace Chapchu.Game
                 case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
                 case ReactCondition.AimedAtMe:      return top.Targets.Contains(me) && !top.Excluded.Contains(me) && !top.Card.Effects.Any(e => e.BoardWide);
                 // 장수는 이 카드를 낸 뒤의 내 손패로 센다 — 이 카드만 있으면(0장) 못 낸다 (11-card-list 1-3 「2019 안 놔!」)
+                case ReactCondition.PicksTargets:   return PickCount(top.Card.Target) > 0;
                 case ReactCondition.LosesMyHand:    return PredictHandLoss(top, me, _players[me].Hand.Count(c => !c.Equals(card))) > 0;
                 default:                            return false;
             }

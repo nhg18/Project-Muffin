@@ -70,6 +70,9 @@ namespace Chapchu.Game
             {
                 if (entries[i].Below != null && !entries.Contains(entries[i].Below))
                     entries.Add(entries[i].Below);
+                foreach (ChainEntry share in entries[i].DamageSharers.Values)
+                    if (!entries.Contains(share))
+                        entries.Add(share);
             }
 
             w.Int(entries.Count);
@@ -91,6 +94,7 @@ namespace Chapchu.Game
                 w.Map(e.HealAfter);
                 w.Map(e.HandLossBlocked);
                 w.Bool(e.Doubled);
+                w.Map(e.DamageSharers.ToDictionary(pair => pair.Key, pair => entries.IndexOf(pair.Value))); // 물귀신 카드는 번호로
                 w.Map(e.SurviveAt);
                 w.Ints(e.ProtectTraps);
                 w.Map(e.Rolled.ToDictionary(pair => IndexOfEffect(e.Card, pair.Key), pair => pair.Value)); // 효과는 그 카드의 몇 번째인지로
@@ -253,6 +257,7 @@ namespace Chapchu.Game
             int entryCount = r.Count();
             var entries = new List<ChainEntry>(entryCount);
             var belows = new int[entryCount];
+            var sharers = new Dictionary<int, int>[entryCount];
             for (int i = 0; i < entryCount; i++)
             {
                 Card card = CardOf(r.Int());
@@ -271,6 +276,8 @@ namespace Chapchu.Game
                 r.Map(e.HealAfter);
                 r.Map(e.HandLossBlocked);
                 e.Doubled = r.Bool();
+                sharers[i] = new Dictionary<int, int>();
+                r.Map(sharers[i]);
                 r.Map(e.SurviveAt);
                 e.ProtectTraps.UnionWith(r.Ints());
                 var rolled = new Dictionary<int, int>();
@@ -284,7 +291,11 @@ namespace Chapchu.Game
             }
             ChainEntry EntryAt(int index) => index == -1 ? null : entries[index];
             for (int i = 0; i < entryCount; i++)
+            {
                 entries[i].Below = EntryAt(belows[i]);
+                foreach (KeyValuePair<int, int> pair in sharers[i])
+                    entries[i].DamageSharers[pair.Key] = entries[pair.Value];
+            }
             void ReadEntries(List<ChainEntry> into)
             {
                 into.Clear();

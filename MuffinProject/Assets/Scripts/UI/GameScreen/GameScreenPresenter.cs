@@ -269,6 +269,7 @@ namespace Chapchu.UI.GameScreen
                 _chainCount++;
                 reactionTimer.Hide(); // 3 단계 동안은 숨는다 (시안 .g3big) — 새 반응 시간이 바로 뒤따라온다
                 hand.EndReaction();
+                hand.NoteChainTop(targets != null ? targets.Length : 0);
                 history.ShowCardPlayed(actorNumber, cardId, targets);
                 if (isMe)
                     myPanel.ShowHandCount(handCount);

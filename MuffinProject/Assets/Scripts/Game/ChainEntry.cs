@@ -41,6 +41,12 @@ namespace Chapchu.Game
         public int DamageReductionAll;
         /// <summary>이 카드의 효과를 다 적용한 직후에 회복할 사람 → 양 (2001 침착의 회복, 04 7절 「아래 카드 처리 직후의 효과」).</summary>
         public readonly Dictionary<int, int> HealAfter = new Dictionary<int, int>();
+        /// <summary>
+        /// 「피해 같이 받기」 — 이 카드의 피해를 받는 사람 → 그 사람이 낸 물귀신 (2018, 04 7절). 그 사람이 실제로 받은 양만큼 물귀신의 대상도 받는다.
+        /// 물귀신의 카드를 그대로 가리킨다 — 고른 사람이 물귀신에 건 표시(칼집의 감소 등)가 거기에 있다.
+        /// </summary>
+        public readonly Dictionary<int, ChainEntry> DamageSharers = new Dictionary<int, ChainEntry>();
+
         public readonly Dictionary<int, int> SurviveAt = new Dictionary<int, int>();       // C11 — 받는 사람 → 남길 HP
         public readonly HashSet<int> ProtectTraps = new HashSet<int>();                     // C12 — 함정 주인
 
