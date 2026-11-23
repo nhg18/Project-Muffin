@@ -13,7 +13,11 @@ namespace Chapchu.Game.Effects
     public sealed class ShareFromTargetEffect : CardEffect
     {
         internal override EffectTag Tag => EffectTag.TakeHand;
-        internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry);
+        internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.HandLossReceiversOf(EffectSubject.Target, entry);
+
+        // 대상이 잃는 장수 = 받아 갈 사람 수 (손패가 모자라면 손패만큼)
+        internal override int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) =>
+            Affected(server, entry).Contains(actor) ? Math.Min(handCount, server.ActorsInGame.Count(a => a != actor)) : 0;
 
         internal override bool BotWants(GameServer server, int bot, int[] receivers) => receivers.Length == 1 && receivers[0] != bot;
 
@@ -37,7 +41,7 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            foreach (int target in server.ReceiversOf(EffectSubject.Target, entry))
+            foreach (int target in server.HandLossReceiversOf(EffectSubject.Target, entry))
                 server.ShareFromTarget(target, entry);
         }
     }

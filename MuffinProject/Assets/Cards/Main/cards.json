@@ -161,6 +161,13 @@
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DiscardEffect", "args": "subject=Target, count=2" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
+    },
+    {
+      "id": 2019, "name": "안 놔!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
+      "text": "나에게 오는 손패 감소를 막고, 그만큼(최대 3장) 뽑는다",
+      "art": "",
+      "reactsTo": "Action, Counter", "reactCondition": "LosesMyHand",
+      "effects": [ { "type": "NegateHandLossEffect", "args": "" }, { "type": "DrawBlockedHandLossEffect", "args": "max=3" } ]
     }
   ]
 }

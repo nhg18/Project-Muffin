@@ -193,6 +193,8 @@ namespace Chapchu.Game
                 case ReactCondition.HasDamage:      return AffectedBy(top, EffectTag.Damage).Any();
                 case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
                 case ReactCondition.AimedAtMe:      return top.Targets.Contains(me) && !top.Excluded.Contains(me) && !top.Card.Effects.Any(e => e.BoardWide);
+                // 장수는 이 카드를 낸 뒤의 내 손패로 센다 — 이 카드만 있으면(0장) 못 낸다 (11-card-list 1-3 「2019 안 놔!」)
+                case ReactCondition.LosesMyHand:    return PredictHandLoss(top, me, _players[me].Hand.Count(c => !c.Equals(card))) > 0;
                 default:                            return false;
             }
         }
@@ -327,5 +329,9 @@ namespace Chapchu.Game
             IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets;
             return receivers.Where(actor => !entry.Excluded.Contains(actor) && IsInGame(actor)).ToArray();
         }
+
+        /// <summary>손패 감소 효과(빼앗기 · 버리기 · 주기)를 받을 사람 — ReceiversOf 에서 「손패 − 내 몫 무효」(2019) 한 사람을 더 뺀다.</summary>
+        internal int[] HandLossReceiversOf(EffectSubject subject, ChainEntry entry) =>
+            ReceiversOf(subject, entry).Where(actor => !entry.HandLossBlocked.ContainsKey(actor)).ToArray();
     }
 }

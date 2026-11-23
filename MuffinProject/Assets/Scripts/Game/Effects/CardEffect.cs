@@ -52,5 +52,11 @@ namespace Chapchu.Game.Effects
 
         /// <summary>actor 가 이 효과로 받을 피해 (감소 · 전환 전) — 「그 피해로 사망」(C11) 판정용.</summary>
         internal virtual int PredictDamage(GameServer server, ChainEntry entry, int actor) => 0;
+
+        /// <summary>
+        /// actor 가 이 효과로 잃을 손패 장수 — 손패가 handCount 장일 때 (「내 손패가 준다」 반응 조건 · 2019 안 놔! 의 뽑을 장수, 11-card-list 2-2 #17).
+        /// 손패 감소 효과(빼앗기 · 버리기 · 주기)만 답한다. 대상이 고르는 선택지(1019)는 0 이다.
+        /// </summary>
+        internal virtual int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) => 0;
     }
 }

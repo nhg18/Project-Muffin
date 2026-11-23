@@ -397,6 +397,30 @@ namespace Chapchu.Game
             below.ReturnTo = to == ReturnReceiver.CounterUser ? entry.User : below.User;
         }
 
+        /// <summary>
+        /// 손패 − 내 몫 무효 (2019 안 놔!) — 반응한 카드의 손패 감소 효과에서 이 카운터를 낸 사람만 뺀다.
+        /// 잃을 뻔한 장수는 지금(이 카운터를 처리할 때)의 손패로 세어 함께 남긴다.
+        /// </summary>
+        internal void BlockHandLossBelow(ChainEntry entry)
+        {
+            ChainEntry below = Below(entry);
+            if (below == null || !IsInGame(entry.User) || below.HandLossBlocked.ContainsKey(entry.User))
+                return;
+
+            below.HandLossBlocked[entry.User] = PredictHandLoss(below, entry.User, _players[entry.User].Hand.Count);
+        }
+
+        /// <summary>이 카운터를 낸 사람이 반응한 카드에서 막은 손패 장수 (BlockHandLossBelow 가 센 값). 막지 않았으면 0.</summary>
+        internal int BlockedHandLoss(ChainEntry entry)
+        {
+            ChainEntry below = Below(entry);
+            return below != null && below.HandLossBlocked.TryGetValue(entry.User, out int count) ? count : 0;
+        }
+
+        /// <summary>actor 가 그 카드의 손패 감소 효과로 잃을 장수 (처리 전 예측) — 손패가 handCount 장일 때. 효과가 여럿이면 더하되 손패를 넘지 않는다.</summary>
+        internal int PredictHandLoss(ChainEntry entry, int actor, int handCount) =>
+            Math.Min(handCount, entry.Card.Effects.Sum(e => e.PredictHandLoss(this, entry, actor, handCount)));
+
         /// <summary>찹츄 이동(A20)에서 받을 사람이 빠졌을 때 — 지우는 쪽만 한다.</summary>
         internal void ClearChapchuIfMoved(int from) => ClearChapchu(from);
 

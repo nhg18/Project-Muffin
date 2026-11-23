@@ -25,6 +25,12 @@ namespace Chapchu.Game
         /// <summary>「본인에게만 무효화」 한 사람들 (C05 · C08 · C13 · C15). 효과를 받는 사람에서 뺀다.</summary>
         public readonly HashSet<int> Excluded = new HashSet<int>();
 
+        /// <summary>
+        /// 「손패 − 내 몫 무효」 한 사람 → 그때 잃을 뻔한 장수 (2019 안 놔!, 04 7절 「무효 (내 몫 · 손패 −)」).
+        /// 이 카드의 손패 감소 효과(빼앗기 · 버리기 · 주기)만 그 사람을 건너뛴다 — 피해 등 다른 효과는 그대로 받는다.
+        /// </summary>
+        public readonly Dictionary<int, int> HandLossBlocked = new Dictionary<int, int>();
+
         public readonly HashSet<int> DamageToHeal = new HashSet<int>();                     // C03
         public readonly HashSet<int> HealToDamage = new HashSet<int>();                     // C09
         public readonly Dictionary<int, int> DamageReduction = new Dictionary<int, int>(); // C10 — 받는 사람 → 줄일 양
