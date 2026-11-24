@@ -25,7 +25,13 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.HandLossReceiversOf(EffectSubject.Target, entry))
-                server.StealRandom(actor, entry.User, server.Scaled(entry, count));
+            {
+                // 반사(2002)된 몫은 방향이 뒤집힌다 — 반사한 사람이 쓴 사람의 카드를 가져온다 (11-card-list 1-3)
+                if (actor == entry.User && entry.ReflectedBy != -1)
+                    server.StealRandom(entry.User, entry.ReflectedBy, server.Scaled(entry, count));
+                else
+                    server.StealRandom(actor, entry.User, server.Scaled(entry, count));
+            }
         }
     }
 }

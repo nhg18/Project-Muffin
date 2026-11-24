@@ -239,7 +239,7 @@ namespace Chapchu.Game
                     if (entry.Card.Type == CardType.Counter)
                         AddStat(entry.User, StatKind.CounterSuccess); // 무효화되지 않고 처리됐다 (07 11-4)
 
-                    int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
+                    int[] targets = TargetsOf(entry).Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
                 }
 
@@ -328,9 +328,13 @@ namespace Chapchu.Game
         /// <summary>효과를 받을 사람. 본인 무효화(Excluded)와 나간 사람을 뺀다 — 처리 전에 빠진 대상은 그 효과만 불발 (04 10절).</summary>
         internal int[] ReceiversOf(EffectSubject subject, ChainEntry entry)
         {
-            IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets;
+            IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : TargetsOf(entry);
             return receivers.Where(actor => !entry.Excluded.Contains(actor) && IsInGame(actor)).ToArray();
         }
+
+        /// <summary>그 카드의 대상을 지금 읽을 값 — 반사(2002)한 사람의 자리는 쓴 사람이다 (04 7절 「반사 (내 몫)」). 대상을 직접 읽는 효과는 이것을 쓴다.</summary>
+        internal int[] TargetsOf(ChainEntry entry) =>
+            entry.ReflectedBy == -1 ? entry.Targets : entry.Targets.Select(t => t == entry.ReflectedBy ? entry.User : t).ToArray();
 
         /// <summary>손패 감소 효과(빼앗기 · 버리기 · 주기)를 받을 사람 — ReceiversOf 에서 「손패 − 내 몫 무효」(2019) 한 사람을 더 뺀다.</summary>
         internal int[] HandLossReceiversOf(EffectSubject subject, ChainEntry entry) =>

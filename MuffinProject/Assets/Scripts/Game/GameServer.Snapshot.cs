@@ -94,6 +94,7 @@ namespace Chapchu.Game
                 w.Map(e.HealAfter);
                 w.Map(e.HandLossBlocked);
                 w.Bool(e.Doubled);
+                w.Int(e.ReflectedBy);
                 w.Map(e.DamageSharers.ToDictionary(pair => pair.Key, pair => entries.IndexOf(pair.Value))); // 물귀신 카드는 번호로
                 w.Map(e.SurviveAt);
                 w.Ints(e.ProtectTraps);
@@ -276,6 +277,7 @@ namespace Chapchu.Game
                 r.Map(e.HealAfter);
                 r.Map(e.HandLossBlocked);
                 e.Doubled = r.Bool();
+                e.ReflectedBy = r.Int();
                 sharers[i] = new Dictionary<int, int>();
                 r.Map(sharers[i]);
                 r.Map(e.SurviveAt);

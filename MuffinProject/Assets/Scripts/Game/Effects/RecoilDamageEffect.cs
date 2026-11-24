@@ -28,13 +28,14 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            if (entry.Targets.Length == 0 || entry.Targets.Any(entry.KnockedDown.Contains))
+            int[] targets = server.TargetsOf(entry); // 반사됐으면 실제로 받은 사람(쓴 사람) 기준 (11-card-list 1-3 「2002」)
+            if (targets.Length == 0 || targets.Any(entry.KnockedDown.Contains))
                 return;
-            if (!entry.Targets.Any(server.InGame))
+            if (!targets.Any(server.InGame))
                 return; // 대상이 빠졌다 — 판정할 상대가 없어 불발 (04 10절)
 
-            foreach (int actor in server.ReceiversOf(EffectSubject.Self, entry))
-                server.ApplyDamage(entry, actor, amount);
+            if (server.ReceiversOf(EffectSubject.Self, entry).Length > 0)
+                server.ApplyOwnDamage(entry, amount);
         }
     }
 }

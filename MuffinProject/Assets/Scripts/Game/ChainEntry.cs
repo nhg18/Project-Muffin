@@ -34,6 +34,12 @@ namespace Chapchu.Game
         /// <summary>이 카드의 적힌 숫자(피해 · 회복 · 장수)를 2배로 읽는다 (2005 묻고 따블로 가, 04 7절 「수치 2배」). 한 카드에 1회 — 두 번 걸려도 그대로다.</summary>
         public bool Doubled;
 
+        /// <summary>
+        /// 「반사 (내 몫)」 한 사람 — 없으면 -1 (2002 반사, 04 7절). 이 카드의 대상에서 그 사람 자리를 쓴 사람으로 읽는다 (GameServer.TargetsOf).
+        /// 2002 는 덱에 1장이라 한 카드에 한 명이다.
+        /// </summary>
+        public int ReflectedBy = -1;
+
         public readonly HashSet<int> DamageToHeal = new HashSet<int>();                     // C03
         public readonly HashSet<int> HealToDamage = new HashSet<int>();                     // C09
         public readonly Dictionary<int, int> DamageReduction = new Dictionary<int, int>(); // C10 — 받는 사람 → 줄일 양
