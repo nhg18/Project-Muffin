@@ -2793,6 +2793,21 @@ public static class MultiTest
                     Check(!BotCounters(1006) && BotCounters(1001), "봇 — 회복뿐인 카드(1006)에는 반사 · 으르렁을 내지 않고, 피해 카드(1001)에는 낸다");
                 }
 
+                {
+                    // 2021 으르렁 — 아래 카드를 쓴 사람이 반응 시간 중에 나가도 낼 수 있다: 무효 · 대가는 그대로, 벌칙만 없다 (사용자 2026-11-25)
+                    var t = new ChainTable();
+                    int hand = t.HandCount(t.O1);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Server.RemovePlayer(t.Turn);
+                    List<GameEvent> events = t.Counter(t.O1, growl).ToList();
+                    bool played = events.OfType<CardPlayed>().Any(e => e.CardId == 2021 && e.Targets.Length == 0);
+                    events.AddRange(t.Run(30));
+                    Check(played && events.OfType<CardNegated>().Any(e => e.CardId == 1001) && t.Hp(t.O1) == 100 && t.HandCount(t.O1) == hand - 1,
+                        $"2021 쓴 사람이 나간 뒤에도 낼 수 있다 — 무효 · 대가 1장, 벌칙 없음 (♥{t.Hp(t.O1)} · 손패 {hand}→{t.HandCount(t.O1)})");
+                }
+
                 // ── 카운터 묶음 8 (11-card-list 1-3 · 03-turn 7절) — 2013 새치기 ──
                 {
                     // 차례인 사람이 1001 을 O1 에게 내고 taker 가 새치기 — until 초까지 돌린 사건 (새치기를 낸 요청의 사건부터)

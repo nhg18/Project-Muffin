@@ -60,7 +60,11 @@ namespace Chapchu.Game
             if (!CanPlayCounter(requester, card, top))
                 return Reject(requester, RejectCode.CannotReact);
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User, top: top);
+            // 아래 카드를 쓴 사람이 그새 빠졌으면(나감 · 최종 사망) 그 사람을 대상으로 하는 카운터(2021 으르렁)는 대상 없이 나간다 —
+            // 무효 · 대가는 그대로, 쓴 사람에게 가는 벌칙만 없다 (11-card-list 1-3 2021, 사용자 2026-11-25)
+            int[] targets = card.Target == TargetType.TriggerSource && !IsInGame(top.User)
+                ? new int[0]
+                : ResolveTargets(requester, card.Target, requestedTargets, top.User, top: top);
             if (targets == null)
                 return Reject(requester, RejectCode.InvalidTarget);
 

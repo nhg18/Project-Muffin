@@ -35,8 +35,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject buttonsRow;
         [Tooltip("카드 칸을 늘어놓는 자리 (GridLayoutGroup) — 선택지 고르기일 때 끈다.")]
         [SerializeField] private GridLayoutGroup cardsGrid;
-        [Tooltip("카드 한 칸의 원본 — 꺼 둔 채로 두고 복제해 쓴다.")]
-        [SerializeField] private ChoiceCardTile tileTemplate;
+        [Tooltip("카드 한 칸의 프리팹 (Prefab/UI/GameScreen/ChoiceCardTile) — 손패 장수만큼 만들어 쓴다.")]
+        [SerializeField] private ChoiceCardTile tilePrefab;
 
         private readonly List<ChoiceCardTile> _tiles = new List<ChoiceCardTile>();
 
@@ -48,7 +48,7 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             if (panel == null || titleText == null || secondsText == null || descText == null || firstButton == null || firstLabel == null || secondButton == null || secondLabel == null
-                || buttonsRow == null || cardsGrid == null || tileTemplate == null)
+                || buttonsRow == null || cardsGrid == null || tilePrefab == null)
             {
                 Debug.LogError($"[{nameof(ChoicePopupView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
@@ -85,7 +85,7 @@ namespace Chapchu.UI.GameScreen
 
             while (_tiles.Count < cards.Count)
             {
-                ChoiceCardTile tile = Instantiate(tileTemplate, cardsGrid.transform);
+                ChoiceCardTile tile = Instantiate(tilePrefab, cardsGrid.transform);
                 tile.Clicked += id => CardPicked?.Invoke(id);
                 _tiles.Add(tile);
             }

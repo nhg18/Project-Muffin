@@ -1455,7 +1455,10 @@ namespace Chapchu.EditorTools
             return presenter; // hand 는 손패를 만든 뒤에 잇는다 (AddChoiceCards 가 하는 것과 같다)
         }
 
-        // 고르기 판의 카드 칸 자리 + 칸 원본 (10-ui.md 5절 「고르기 판 — 손패에서 1장」, 2013 · 2021 의 대가). 버튼 줄 위에 둔다 — 둘 중 하나만 켠다.
+        private const string ChoiceTilePrefabPath = HandCardPrefabFolder + "/ChoiceCardTile.prefab";
+
+        // 고르기 판의 카드 칸 자리 (10-ui.md 5절 「고르기 판 — 손패에서 1장」, 2013 · 2021 의 대가). 버튼 줄 위에 둔다 — 둘 중 하나만 켠다.
+        // 칸은 프리팹이다 (CODE_CONVENTION 10절 — 씬 안에 숨긴 템플릿을 두지 않는다). 없으면 만들어 저장한다.
         // 칸: 종류 색 테두리(둥근 12) + 흰 면, 안은 비율로 — 이름(위 18%) · 그림(38%) · 문구(아래 38%). 글자는 칸 크기에 맞춰 줄어든다.
         private static void BuildChoiceCards(ChoicePopupView view, RectTransform body, RectTransform buttonsRow)
         {
@@ -1468,7 +1471,19 @@ namespace Chapchu.EditorTools
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 5;
 
-            RectTransform tile = NewRect("Tile", cards);
+            cards.gameObject.SetActive(false);
+
+            Wire(view, ("buttonsRow", buttonsRow.gameObject), ("cardsGrid", grid), ("tilePrefab", EnsureChoiceTilePrefab(cards)));
+        }
+
+        // 칸 프리팹을 돌려준다 — 없으면 buildUnder 아래에 잠깐 만들어 프리팹으로 저장하고 씬에서는 지운다.
+        private static ChoiceCardTile EnsureChoiceTilePrefab(Transform buildUnder)
+        {
+            var saved = AssetDatabase.LoadAssetAtPath<ChoiceCardTile>(ChoiceTilePrefabPath);
+            if (saved != null)
+                return saved;
+
+            RectTransform tile = NewRect("ChoiceCardTile", buildUnder);
             Image frame = tile.gameObject.AddComponent<Image>();
             frame.sprite = Round;
             frame.type = Image.Type.Sliced;
@@ -1493,10 +1508,33 @@ namespace Chapchu.EditorTools
 
             var tileView = tile.gameObject.AddComponent<ChoiceCardTile>();
             Wire(tileView, ("button", button), ("frame", frame), ("nameText", name), ("art", art), ("descText", desc));
-            tile.gameObject.SetActive(false);
-            cards.gameObject.SetActive(false);
 
-            Wire(view, ("buttonsRow", buttonsRow.gameObject), ("cardsGrid", grid), ("tileTemplate", tileView));
+            EnsureHandCardPrefabFolder();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(tile.gameObject, ChoiceTilePrefabPath);
+            Object.DestroyImmediate(tile.gameObject);
+            return prefab.GetComponent<ChoiceCardTile>();
+        }
+
+        /// <summary>열린 씬의 고르기 판이 씬 안에 꺼 둔 칸 원본을 쓰고 있으면 프리팹으로 옮긴다 — 씬의 원본은 지우고 판에 프리팹을 잇는다. 씬을 저장할 것.</summary>
+        [MenuItem("Chapchu/Game Screen/Move Choice Tile To Prefab")]
+        public static void MoveChoiceTileToPrefab()
+        {
+            ChoicePopupView view = Object.FindFirstObjectByType<ChoicePopupView>(FindObjectsInactive.Include);
+            Transform cards = view != null ? FindDeep(view.transform, "Cards") : null;
+            if (cards == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬의 고르기 판에 카드 칸 자리(Cards)가 없다.");
+                return;
+            }
+
+            _regularFont = EnsureFontAsset(RegularFontPath, RegularFontAssetPath);
+            _boldFont = EnsureFontAsset(BoldFontPath, BoldFontAssetPath);
+            ChoiceCardTile prefab = EnsureChoiceTilePrefab(cards);
+            foreach (ChoiceCardTile old in cards.GetComponentsInChildren<ChoiceCardTile>(true))
+                Object.DestroyImmediate(old.gameObject);
+            Wire(view, ("tilePrefab", prefab));
+            EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
+            Debug.Log($"[{nameof(GameScreenBuilder)}] 고르기 판의 칸을 프리팹({ChoiceTilePrefabPath})으로 옮김 — 씬을 저장할 것.");
         }
 
         // 부모 안에서 비율로 자리를 잡는다 (왼쪽 · 아래 · 오른쪽 · 위, 0 ~ 1) — 부모 크기가 바뀌면 같이 바뀐다
