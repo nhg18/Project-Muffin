@@ -47,6 +47,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private DeckData cardDeck;
         [Tooltip("설정 · 나가기 — 강제 퇴장 · 판 중지 알림을 넘긴다. 비어 있으면 씬에서 찾는다.")]
         [SerializeField] private GameMenuPresenter menu;
+        [Tooltip("고르기 판 — 버려진 내 카드의 장 번호를 받은 자리에서 바로 넘긴다. 비어 있으면 씬에서 찾는다.")]
+        [SerializeField] private ChoicePopupPresenter choicePopup;
 
         // 단계 하나 = 영역에 값을 넣고, 기다릴 연출이 있으면 그 코루틴을 돌려준다 (없으면 null).
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
@@ -69,6 +71,11 @@ namespace Chapchu.UI.GameScreen
                 menu = FindFirstObjectByType<GameMenuPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때
             if (menu == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] {nameof(GameMenuPresenter)} 를 찾지 못했습니다 — 강제 퇴장 · 판 중지를 처리하지 못합니다.", this);
+
+            if (choicePopup == null)
+                choicePopup = FindFirstObjectByType<ChoicePopupPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때
+            if (choicePopup == null)
+                Debug.LogError($"[{nameof(GameScreenPresenter)}] {nameof(ChoicePopupPresenter)} 를 찾지 못했습니다 — 고르기 판이 버려진 카드를 걸러내지 못합니다.", this);
         }
 
         private void OnEnable()
@@ -207,6 +214,8 @@ namespace Chapchu.UI.GameScreen
             _hasPendingMyCard = true;
             _pendingCardInstanceId = cardInstanceId;
             _pendingCardId = cardId;
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId);
         }
 
         private void HandleCardDrawn(int actorNumber, int handCount, int deckCount)
@@ -235,6 +244,9 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleDeckRefilled(int deckCount)
         {
+            if (choicePopup != null)
+                choicePopup.ClearDiscarded(); // 버림 더미가 통째로 덱이 됐다 — 누가 뽑아 가도 번호가 남지 않게
+
             Enqueue(() =>
             {
                 deck.ShowDeckCount(deckCount);
@@ -395,6 +407,9 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds)
         {
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceIds);
+
             Enqueue(() =>
             {
                 hand.GainCards(cardInstanceIds, cardIds);
@@ -488,6 +503,8 @@ namespace Chapchu.UI.GameScreen
         private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
         {
             bool isMe = IsMe(actorNumber);
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId); // 누가 가져가든 버림 더미를 떠났다
 
             Enqueue(() =>
             {
@@ -526,7 +543,12 @@ namespace Chapchu.UI.GameScreen
 
         // 대소동 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
         // 새 HP · 손패 · 첫 턴은 뒤따르는 알림이 시작 때처럼 채운다. 기록은 이어진다. 컷인 · 테이블 빛 연출은 넣지 않는다 (사용자 2026-11-13).
-        private void HandleGameRestarted(int user, int count, int[] order) => Enqueue(() => GameRestartedRoutine(user, count, order));
+        private void HandleGameRestarted(int user, int count, int[] order)
+        {
+            if (choicePopup != null)
+                choicePopup.ClearDiscarded();
+            Enqueue(() => GameRestartedRoutine(user, count, order));
+        }
 
         private IEnumerator GameRestartedRoutine(int user, int count, int[] order)
         {
@@ -587,6 +609,8 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)
         {
             bool isMe = IsMe(actorNumber);
+            if (isMe && choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId); // 예전에 버려졌던 내 카드가 남의 손을 거쳐 돌아온 경우 (2020)
 
             Enqueue(() =>
             {
@@ -621,6 +645,8 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
         {
             bool isMe = IsMe(actorNumber);
+            if (isMe && choicePopup != null)
+                choicePopup.NoteDiscarded(cardInstanceIds);
 
             Enqueue(() => CardsToDiscardRoutine(actorNumber, isMe, handCount, cardIds, discardCount,
                 isMe ? hand.DiscardFromHandRoutine(cardInstanceIds) : null));

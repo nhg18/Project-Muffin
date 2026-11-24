@@ -57,11 +57,6 @@ namespace Chapchu.UI.GameScreen
             _view.CardPicked += HandlePicked;
             GameEvents.OnChoiceStarted += HandleChoiceStarted;
             GameEvents.OnChoiceMade += HandleChoiceMade;
-            GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
-            GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
-            GameEvents.OnMyCardsGained += HandleMyCardsGained;
-            GameEvents.OnDiscardTaken += HandleDiscardTaken;
-            GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
 
@@ -71,11 +66,6 @@ namespace Chapchu.UI.GameScreen
             _view.CardPicked -= HandlePicked;
             GameEvents.OnChoiceStarted -= HandleChoiceStarted;
             GameEvents.OnChoiceMade -= HandleChoiceMade;
-            GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
-            GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
-            GameEvents.OnMyCardsGained -= HandleMyCardsGained;
-            GameEvents.OnDiscardTaken -= HandleDiscardTaken;
-            GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
 
@@ -131,23 +121,18 @@ namespace Chapchu.UI.GameScreen
             Close();
         }
 
-        private void HandleCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
-        {
-            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
-                _discarded.UnionWith(cardInstanceIds);
-        }
+        // 아래 넷은 연출 큐(GameScreenPresenter)가 알림을 받은 자리에서 바로 부른다 — 큐 순서를 기다리지 않는다 (CODE_CONVENTION 9절).
+        /// <summary>내 손패의 카드가 버려졌다.</summary>
+        public void NoteDiscarded(int[] cardInstanceIds) => _discarded.UnionWith(cardInstanceIds);
 
-        private void HandleMyCardDrawn(int cardInstanceId, int cardId) => _discarded.Remove(cardInstanceId);
+        /// <summary>카드가 버림 더미를 떠났다 (드로우 · 버림 더미에서 가져감 · 손패로 반환).</summary>
+        public void NoteLeftDiscard(int cardInstanceId) => _discarded.Remove(cardInstanceId);
 
-        private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds) => _discarded.ExceptWith(cardInstanceIds);
+        /// <summary>카드들이 버림 더미를 떠나 내 손패로 들어왔다.</summary>
+        public void NoteLeftDiscard(int[] cardInstanceIds) => _discarded.ExceptWith(cardInstanceIds);
 
-        private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
-        {
-            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
-                _discarded.Remove(cardInstanceId);
-        }
-
-        private void HandleGameRestarted(int user, int count, int[] order) => _discarded.Clear();
+        /// <summary>버림 더미가 비었다 (덱 리필 · 대소동).</summary>
+        public void ClearDiscarded() => _discarded.Clear();
 
         // 고르기 요청이 거절됐다 (없는 장 번호 등) — 고르기는 방장에서 그대로 열려 있으니 마감 전이면 다시 연다
         private void HandleMyRequestRejected(int code)
