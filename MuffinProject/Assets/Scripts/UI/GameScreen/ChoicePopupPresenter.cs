@@ -32,6 +32,18 @@ namespace Chapchu.UI.GameScreen
         private double _deadline;
         private bool _open;
 
+        // 버림 알림은 왔지만 손패 화면(연출 큐)에서는 아직 안 빠졌을 수 있는 내 카드 — 고르기 칸에서 뺀다. 다시 손패로 들어오면 지운다.
+        private readonly HashSet<int> _discarded = new HashSet<int>();
+
+        // 고른 뒤 방장의 답(끝 알림 · 거절)을 기다리는 중 — 거절되면 마감 전까지 같은 고르기를 다시 연다
+        private bool _awaiting;
+        private int _user;
+        private int _cardId;
+        private int _handCount;
+        private int _damage;
+        private double _startsAt;
+        private int _kind;
+
         private void Awake()
         {
             _view = GetComponent<ChoicePopupView>();
@@ -45,6 +57,12 @@ namespace Chapchu.UI.GameScreen
             _view.CardPicked += HandlePicked;
             GameEvents.OnChoiceStarted += HandleChoiceStarted;
             GameEvents.OnChoiceMade += HandleChoiceMade;
+            GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
+            GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
+            GameEvents.OnMyCardsGained += HandleMyCardsGained;
+            GameEvents.OnDiscardTaken += HandleDiscardTaken;
+            GameEvents.OnGameRestarted += HandleGameRestarted;
+            GameEvents.OnMyRequestRejected += HandleMyRequestRejected;
         }
 
         private void OnDisable()
@@ -53,6 +71,12 @@ namespace Chapchu.UI.GameScreen
             _view.CardPicked -= HandlePicked;
             GameEvents.OnChoiceStarted -= HandleChoiceStarted;
             GameEvents.OnChoiceMade -= HandleChoiceMade;
+            GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
+            GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
+            GameEvents.OnMyCardsGained -= HandleMyCardsGained;
+            GameEvents.OnDiscardTaken -= HandleDiscardTaken;
+            GameEvents.OnGameRestarted -= HandleGameRestarted;
+            GameEvents.OnMyRequestRejected -= HandleMyRequestRejected;
         }
 
         private void Update()
@@ -66,6 +90,13 @@ namespace Chapchu.UI.GameScreen
             if (actor != PhotonNetwork.LocalPlayer.ActorNumber)
                 return;
 
+            _user = user;
+            _cardId = cardId;
+            _handCount = handCount;
+            _damage = damage;
+            _startsAt = startsAt;
+            _kind = kind;
+            _awaiting = false;
             _deadline = deadline;
             _open = true;
             int seconds = Mathf.RoundToInt((float)(deadline - startsAt));
@@ -76,7 +107,7 @@ namespace Chapchu.UI.GameScreen
                 foreach (CardView card in hand.Cards)
                 {
                     CardData data = server.Deck.GetCard(card.CardId);
-                    if (data == null)
+                    if (data == null || _discarded.Contains(card.InstanceId))
                         continue;
                     ids.Add(card.InstanceId);
                     cards.Add(data);
@@ -94,8 +125,38 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleChoiceMade(int actor, int option, bool timedOut, int kind)
         {
-            if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
-                Close();
+            if (actor != PhotonNetwork.LocalPlayer.ActorNumber)
+                return;
+            _awaiting = false;
+            Close();
+        }
+
+        private void HandleCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
+        {
+            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                _discarded.UnionWith(cardInstanceIds);
+        }
+
+        private void HandleMyCardDrawn(int cardInstanceId, int cardId) => _discarded.Remove(cardInstanceId);
+
+        private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds) => _discarded.ExceptWith(cardInstanceIds);
+
+        private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
+        {
+            if (actorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                _discarded.Remove(cardInstanceId);
+        }
+
+        private void HandleGameRestarted(int user, int count, int[] order) => _discarded.Clear();
+
+        // 고르기 요청이 거절됐다 (없는 장 번호 등) — 고르기는 방장에서 그대로 열려 있으니 마감 전이면 다시 연다
+        private void HandleMyRequestRejected(int code)
+        {
+            if (!_awaiting || code != RejectCode.NotChoosing)
+                return;
+            _awaiting = false;
+            if (PhotonNetwork.Time < _deadline)
+                HandleChoiceStarted(PhotonNetwork.LocalPlayer.ActorNumber, _user, _cardId, _handCount, _damage, _startsAt, _deadline, _kind);
         }
 
         private void HandlePicked(int option)
@@ -103,6 +164,7 @@ namespace Chapchu.UI.GameScreen
             if (!_open)
                 return;
             Close();
+            _awaiting = true;
             server.RequestChoose(option);
         }
 

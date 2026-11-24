@@ -10,7 +10,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 담는 순서가 바뀌면 올린다 — 다른 번호의 스냅샷은 되살리지 않는다 (앱 버전이 섞인 방)
-        private const int SnapshotVersion = 1;
+        private const int SnapshotVersion = 2;
 
         /// <summary>
         /// 상태가 바뀔 때마다 는다 — 전송 층이 「예비 방장에게 다시 보낼 때」 를 아는 값. 거절만 일어난 요청 · 매 프레임 미루는 마감은 올리지 않는다
