@@ -1232,6 +1232,18 @@ public static class MultiTest
         return count > 0 ? "OK 기록 「" + text + "」 " + count + "줄" : "WAIT 기록에 「" + text + "」 없음 (" + entries.Count + "줄)";
     }
 
+    /// <summary>기록 서랍에 그 글자가 든 줄이 있는가 — 카드 이름 · 사람 이름이 섞인 줄 (카운터 기록 줄).</summary>
+    public static string HistoryHasPart(string text)
+    {
+        HistoryPresenter history = Object.FindFirstObjectByType<HistoryPresenter>();
+        if (history == null)
+            return "WAIT 게임 화면 아님";
+
+        var entries = (List<HistoryEntry>)typeof(HistoryPresenter).GetField("_entries", Private).GetValue(history);
+        HistoryEntry found = entries.LastOrDefault(e => e.Text != null && e.Text.Contains(text));
+        return found != null ? "OK 기록 「" + found.Text + "」" : "WAIT 기록에 「" + text + "」 이 든 줄 없음 (" + entries.Count + "줄)";
+    }
+
     /// <summary>지금 방을 나간다 (어느 씬에서든).</summary>
     public static string LeaveRoomNow()
     {
@@ -2761,6 +2773,24 @@ public static class MultiTest
                     CardPlayed ghost = BotCounter(2018, out ChainTable g), grab = BotCounter(2015, out ChainTable r);
                     Check(ghost != null && ghost.CardId == 2018 && ghost.Targets.SequenceEqual(new[] { g.O2 }), "봇의 2018 물귀신 — 손패가 많은 상대를 고름");
                     Check(grab != null && grab.CardId == 2015 && grab.Targets.SequenceEqual(new[] { r.O2 }), "봇의 2015 가로채기 — 손패가 많은 상대에게 (나를 고르지 않는다)");
+
+                    // 나에게 이로운 효과뿐인 카드(1006 회복)에는 카운터를 내지 않는다 — 피해 카드에는 그대로 낸다 (18-bot 7-4, 사용자 2026-11-24)
+                    bool BotCounters(int actionId)
+                    {
+                        double now = 0;
+                        var t = new ChainTable(() => now);
+                        t.Hand(t.O1).RemoveAll(c => c.Type == CardType.Counter);
+                        t.Give(t.O1, Real(2002));
+                        t.Give(t.O1, Real(2021));
+                        t.SetHp(t.O1, 50);
+                        var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(actionId)), t.O1);
+                        var events = new List<GameEvent>();
+                        for (now = 0; now < ChainTable.Reveal + ReactionSeconds - 0.1; now += 0.1)
+                            events.AddRange(driver.Tick());
+                        return events.OfType<CardPlayed>().Any(e => e.Actor == t.O1);
+                    }
+                    Check(!BotCounters(1006) && BotCounters(1001), "봇 — 회복뿐인 카드(1006)에는 반사 · 으르렁을 내지 않고, 피해 카드(1001)에는 낸다");
                 }
 
                 // ── 카운터 묶음 8 (11-card-list 1-3 · 03-turn 7절) — 2013 새치기 ──

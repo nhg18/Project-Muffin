@@ -909,6 +909,16 @@ run_counter() {
     log "  $out"
     case "$out" in OK*) ;; *) fail "카운터 결과: $out" ;; esac
     sleep 4
+    # 카운터 기록 줄 (10-ui 6절) — 2003 「— 손패로 돌아감」 · 2018 「도 같은 피해」 · 2021 「 무효」
+    local line="— 손패로 돌아감"
+    [ "$arm" = "arm2018" ] && line="도 같은 피해"
+    [ "$arm" = "arm2021" ] && line=" 무효"
+    log "▶ 기록에 카운터가 한 일의 줄이 있는가"
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" HistoryHasPart "$line")
+        log "  $(name_of "$project"): $out"
+        case "$out" in OK*) ;; *) fail "$(name_of "$project") 기록: $out" ;; esac
+    done
     log "▶ 화면의 함정 칸 · 손패 장수가 방장 값과 같은가"
     for project in "${EDITORS[@]}"; do
         out=$(call "$project" TableUiExpect)

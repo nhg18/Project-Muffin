@@ -577,7 +577,8 @@ namespace Chapchu.Game.Bots
             }
 
             // 나를 대상으로 한 남의 카드가 체인 맨 위 — 카운터. 남끼리의 카드에는 끼지 않는다
-            if (reactionOpen && top.User != bot && top.Targets.Contains(bot))
+            // 나에게 이로운 효과뿐인 카드(회복만 — 1006 핥아주기)는 막지 않는다 (18-bot 7-4, 사용자 2026-11-24)
+            if (reactionOpen && top.User != bot && top.Targets.Contains(bot) && !IsOnlyHelpful(top.Card))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
                 Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top) && CounterTargets(bot, c, top) != null).OrderBy(c => c.CardId).FirstOrDefault();
@@ -594,6 +595,9 @@ namespace Chapchu.Game.Bots
             reaction = default;
             return false;
         }
+
+        // 7-4 — 효과가 모두 회복인 카드. 받는 쪽에 이롭기만 해서 봇이 카운터로 막지 않는다
+        private static bool IsOnlyHelpful(Card card) => card.Effects.Count > 0 && card.Effects.All(e => e.Tag == EffectTag.Heal);
 
         // 7-4 — 대상을 고르는 카운터의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
         // 카운터의 대상 (18-bot.md 7-4) — 찹츄 → 손패 많은 → HP 낮은 상대 순. 고르지 않는 카드는 빈 배열, 고를 사람이 모자라면 null (그 카운터는 내지 않는다).

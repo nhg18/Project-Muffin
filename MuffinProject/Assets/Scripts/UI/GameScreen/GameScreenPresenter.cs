@@ -457,6 +457,7 @@ namespace Chapchu.UI.GameScreen
                 CardData data = cardDeck.GetCard(cardId);
                 if (data != null)
                     screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
+                history.ShowCardResolved(actorNumber, cardId, targets);
                 LeaveChain();
                 return null;
             });
@@ -464,6 +465,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Enqueue(() =>
             {
+                history.ShowCardLeftChain(cardId);
                 LeaveChain();
                 return null;
             });
@@ -588,6 +590,7 @@ namespace Chapchu.UI.GameScreen
 
             Enqueue(() =>
             {
+                history.ShowCardLeftChain(cardId);
                 LeaveChain();
                 if (!isMe)
                 {
