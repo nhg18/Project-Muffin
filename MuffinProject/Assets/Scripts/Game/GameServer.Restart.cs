@@ -114,6 +114,7 @@ namespace Chapchu.Game
             _reversed = false;
             _extraTurnActor = -1;
             _heldNext = -1;
+            _turnTaker = -1;
             ResetGaepan(); // 개판도 처음으로 (사용자 2026-11-13)
             InitDeck(_allCards);
 

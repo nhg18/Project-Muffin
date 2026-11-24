@@ -196,6 +196,13 @@
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "ReflectEffect", "args": "" } ]
+    },
+    {
+      "id": 2013, "name": "새치기", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "방금 나온 행동 카드를 막고, 바로 내 턴이 된다. 대신 나는 1장 버린다",
+      "art": "",
+      "reactsTo": "Action", "reactCondition": "Any",
+      "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "TakeTurnEffect", "args": "" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
     }
   ]
 }

@@ -2361,8 +2361,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1 };
-            Check(ids.Length == 63 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 63장 (행동 45 + 카운터 18, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2 };
+            Check(ids.Length == 65 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 65장 (행동 45 + 카운터 20, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -2370,7 +2370,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 63)
+            if (ids.Length == 65)
             {
                 // ── 카운터 묶음 5 (11-card-list 1-3) — 2005 묻고 따블로 가 ──
                 // 차례인 사람의 행동 카드 ← O2 의 2003 진짜 할거야? ← O1 의 따블 → 2003 무효 · 행동 카드 2배. 20초까지 돌린 사건을 돌려준다
@@ -2761,6 +2761,144 @@ public static class MultiTest
                     CardPlayed ghost = BotCounter(2018, out ChainTable g), grab = BotCounter(2015, out ChainTable r);
                     Check(ghost != null && ghost.CardId == 2018 && ghost.Targets.SequenceEqual(new[] { g.O2 }), "봇의 2018 물귀신 — 손패가 많은 상대를 고름");
                     Check(grab != null && grab.CardId == 2015 && grab.Targets.SequenceEqual(new[] { r.O2 }), "봇의 2015 가로채기 — 손패가 많은 상대에게 (나를 고르지 않는다)");
+                }
+
+                // ── 카운터 묶음 8 (11-card-list 1-3 · 03-turn 7절) — 2013 새치기 ──
+                {
+                    // 차례인 사람이 1001 을 O1 에게 내고 taker 가 새치기 — until 초까지 돌린 사건 (새치기를 낸 요청의 사건부터)
+                    List<GameEvent> Cut(ChainTable x, int taker, double until)
+                    {
+                        Card cut = x.Give(taker, Real(2013));
+                        x.PlayCard(x.Turn, x.Give(x.Turn, Real(1001)), x.O1);
+                        x.At(2);
+                        List<GameEvent> events = x.Counter(taker, cut).ToList();
+                        events.AddRange(x.Run(until));
+                        return events;
+                    }
+                    string Starts(List<GameEvent> events) => string.Join(" ", events.OfType<TurnStarted>().Take(3).Select(e => e.Actor));
+                    {
+                        // 막고 · 대가 1장 · 바로 내 턴 · 그 뒤는 내 다음 사람부터 (원래 순서로 돌아가지 않는다)
+                        var t = new ChainTable();
+                        int hand = t.HandCount(t.O2);
+                        List<GameEvent> events = Cut(t, t.O2, 70);
+                        Check(events.OfType<CardPlayed>().Any(e => e.CardId == 2013) && events.OfType<CardNegated>().Any(e => e.CardId == 1001) && t.Hp(t.O1) == 100,
+                            $"2013 새치기 — 행동 카드를 막는다 (대상 ♥{t.Hp(t.O1)})");
+                        Check(events.OfType<ChoiceStarted>().Any(e => e.Actor == t.O2 && e.Kind == ChoiceKind.HandCard) && t.HandCount(t.O2) == hand - 1,
+                            $"2013 대가 — 손패 1장을 골라 버린다 (손패 {hand}→{t.HandCount(t.O2)})");
+                        Check(Starts(events) == $"{t.O2} {t.Turn} {t.O1}", $"2013 다음 턴은 새치기를 낸 사람 · 그 뒤는 그 사람 다음부터 (턴 {Starts(events)} · 기대 {t.O2} {t.Turn} {t.O1})");
+                    }
+                    {
+                        // 건너뛴 사람의 「다음 턴」 상태는 쓰이지 않고 남는다 — 다음 실제 차례에 쓰인다
+                        var t = new ChainTable();
+                        t.State(t.O1).SkipNextTurn = true;
+                        t.State(t.O1).BlockActionNextTurn = true;
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        bool kept = t.Server.CurrentTurnActor == t.O2 && t.State(t.O1).SkipNextTurn && t.State(t.O1).BlockActionNextTurn && !events.OfType<TurnSkipped>().Any();
+                        events = t.Run(70);
+                        Check(kept && events.OfType<TurnSkipped>().Any(e => e.Actor == t.O1) && !t.State(t.O1).SkipNextTurn && t.State(t.O1).BlockActionNextTurn,
+                            "2013 건너뛴 사람의 턴 스킵 · 행동 금지는 남는다 — 스킵은 다음 실제 차례에 쓰인다");
+                    }
+                    {
+                        // 바로 다음 사람이 내면 순서 그대로 · 역방향에서도 낸 사람의 다음부터
+                        var t = new ChainTable();
+                        List<GameEvent> events = Cut(t, t.O1, 70);
+                        var s = new ChainTable();
+                        typeof(GameServer).GetField("_reversed", Private).SetValue(s.Server, true); // 역방향 — 보통이면 Turn → O2 → O1
+                        List<GameEvent> back = Cut(s, s.O1, 70);
+                        Check(Starts(events) == $"{t.O1} {t.O2} {t.Turn}", $"2013 바로 다음 사람이 내면 순서 그대로 (턴 {Starts(events)})");
+                        Check(Starts(back) == $"{s.O1} {s.Turn} {s.O2}", $"2013 역방향 — 새치기를 낸 사람부터 역방향으로 (턴 {Starts(back)} · 기대 {s.O1} {s.Turn} {s.O2})");
+                    }
+                    {
+                        // 새치기 턴은 보통 턴 — 대가로 딱 10장이 되면 찹츄 선언, 내 턴이 시작되며 승리
+                        var t = new ChainTable();
+                        t.SetHandSize(t.O2, GameServer.ChapchuHandCount + 1); // + 새치기 → 내고 11장 → 대가 뒤 10장
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+                        Check(ended != null && ended.Winner == t.O2 && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(),
+                            $"2013 새치기 턴의 시작에 찹츄 판정 — 손패 10장이면 승리 (승자 P{ended?.Winner})");
+                    }
+                    {
+                        // 낸 사람에게 턴 스킵 — 새치기 턴이 건너뛰어지고(스킵은 쓰인다) 그 다음 사람에게
+                        var t = new ChainTable();
+                        t.State(t.O2).SkipNextTurn = true;
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        Check(events.OfType<TurnSkipped>().Any(e => e.Actor == t.O2) && !t.State(t.O2).SkipNextTurn && Starts(events) == $"{t.Turn}",
+                            $"2013 낸 사람에게 턴 스킵 — 건너뛰고 그 다음 사람 (턴 {Starts(events)} · 기대 {t.Turn})");
+                    }
+                    {
+                        // 새치기가 무효되면 버리기도 내 턴도 없다 · 내 카드 · 카운터 위에는 못 낸다
+                        var t = new ChainTable();
+                        int hand = t.HandCount(t.O2);
+                        Card cut = t.Give(t.O2, Real(2013)), mine = t.Give(t.Turn, Real(2013)), late = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        int own = t.Code(t.Counter(t.Turn, mine));
+                        List<GameEvent> events = t.Counter(t.O2, cut).ToList();
+                        t.At(2 + ChainTable.Reveal + 0.1);
+                        int onCounter = t.Code(t.Counter(t.Turn, late));
+                        events.AddRange(t.Counter(t.O1, ChainTable.Negate));
+                        events.AddRange(t.Run(40));
+                        Check(own == RejectCode.CannotReact && onCounter != 0, $"2013 내 카드 · 카운터 위에는 거절 (코드 {own} · {onCounter})");
+                        Check(events.OfType<CardNegated>().Any(e => e.CardId == 2013) && !events.OfType<ChoiceStarted>().Any() && t.HandCount(t.O2) == hand && t.Hp(t.O1) == 80
+                              && Starts(events).StartsWith($"{t.O1}"), $"2013 이 무효되면 버리기도 내 턴도 없다 (손패 {t.HandCount(t.O2)} · 대상 ♥{t.Hp(t.O1)} · 턴 {Starts(events)})");
+                    }
+                    {
+                        // 손패 0장이면 대가 없이 · 낸 사람이 턴 전에 나가면 그 자리의 다음 사람
+                        var t = new ChainTable();
+                        t.SetHandSize(t.O2, 0);
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        var s = new ChainTable();
+                        Card cut = s.Give(s.O2, Real(2013));
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                        s.At(2);
+                        s.Counter(s.O2, cut);
+                        bool choosing = s.RunUntil<ChoiceStarted>(30) != null;
+                        List<GameEvent> left = s.Server.RemovePlayer(s.O2).ToList();
+                        left.AddRange(s.Run(s.Now + 15));
+                        Check(!events.OfType<ChoiceStarted>().Any() && Starts(events).StartsWith($"{t.O2}"), $"2013 손패 0장 — 대가 없이 내 턴 (턴 {Starts(events)})");
+                        Check(choosing && Starts(left).StartsWith($"{s.Turn}"), $"2013 낸 사람이 턴 전에 나감 — 그 자리의 다음 사람 (턴 {Starts(left)} · 기대 {s.Turn})");
+                    }
+                    {
+                        // 막힌 사람의 턴 끝 처리(피폭)는 보통대로 — 그 뒤 새치기 턴
+                        var t = new ChainTable();
+                        typeof(GameServer).GetField("_restartCount", Private).SetValue(t.Server, 1); // 대소동 1번 뒤 — 턴이 끝날 때마다 피폭
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        int fallout = events.FindIndex(e => e is FalloutChanged), start = events.FindIndex(e => e is TurnStarted);
+                        Check(fallout >= 0 && fallout < start && Starts(events) == $"{t.O2}" && new[] { t.Turn, t.O1, t.O2 }.All(a => t.Hp(a) == 99),
+                            $"2013 막힌 사람의 턴 끝 피폭 뒤에 새치기 턴 (턴 {Starts(events)} · ♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                    }
+                    {
+                        // 개판 — 실제로 진행된 턴만 센다: O1 의 턴 · 새치기 턴(Turn) · O1 의 턴으로 한 바퀴 (O2 는 그 바퀴에 턴이 없다)
+                        var t = new ChainTable();
+                        t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1021)));
+                        t.RunUntilTurn(t.O1, t.Now + 30);
+                        Card cut = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.O1, t.Give(t.O1, Real(1001)), t.O2);
+                        t.At(t.Now + 2);
+                        List<GameEvent> events = t.Counter(t.Turn, cut).ToList();
+                        for (double end = t.Now + 80; t.Now < end && !events.OfType<GaepanChanged>().Any(g => g.Left == 4);)
+                            events.AddRange(t.Run(t.Now + 0.1));
+                        int lap = events.FindIndex(e => e is GaepanChanged g && g.Left == 4);
+                        string before = string.Join(" ", events.Take(lap < 0 ? 0 : lap).OfType<TurnStarted>().Select(e => e.Actor));
+                        Check(lap >= 0 && before == $"{t.Turn} {t.O1}", $"2013 + 1021 — 실제로 진행된 턴만 센다 (한 바퀴까지 시작된 턴 {before} · 기대 {t.Turn} {t.O1})");
+                    }
+                    {
+                        // 스킵으로 건너뛰어진 새치기 턴도 개판에서 1턴 — O1 의 턴 · 스킵된 새치기 턴 · O2 의 턴으로 한 바퀴
+                        var t = new ChainTable();
+                        t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1021)));
+                        t.RunUntilTurn(t.O1, t.Now + 30);
+                        t.State(t.Turn).SkipNextTurn = true;
+                        Card cut = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.O1, t.Give(t.O1, Real(1001)), t.O2);
+                        t.At(t.Now + 2);
+                        List<GameEvent> events = t.Counter(t.Turn, cut).ToList();
+                        for (double end = t.Now + 80; t.Now < end && !events.OfType<GaepanChanged>().Any(g => g.Left == 4);)
+                            events.AddRange(t.Run(t.Now + 0.1));
+                        int lap = events.FindIndex(e => e is GaepanChanged g && g.Left == 4);
+                        string before = string.Join(" ", events.Take(lap < 0 ? 0 : lap).OfType<TurnStarted>().Select(e => e.Actor));
+                        Check(lap >= 0 && events.OfType<TurnSkipped>().Any(e => e.Actor == t.Turn) && before == $"{t.O1}",
+                            $"2013 + 1021 — 스킵된 새치기 턴도 1턴으로 센다 (한 바퀴까지 시작된 턴 {before} · 기대 {t.O1})");
+                    }
                 }
 
                 // ── 카운터 묶음 7 (11-card-list 1-3) — 2002 반사 ──
@@ -4745,6 +4883,23 @@ public static class MultiTest
                 GameServer copy = Clone(m, out _);
                 copy.Choose(m.Turn, 1);
                 Check(DumpHp(copy, m.Turn) == 20 && DumpHp(copy, m.O1) == 100, $"되살린 방장이 표시대로 처리 — 쓴 사람이 80 (♥{DumpHp(copy, m.Turn)} · ♥{DumpHp(copy, m.O1)})");
+            }
+            {
+                // 턴 가로채기 (2013 새치기) 가 걸린 채 대가 고르기로 멈춘 순간 — 되살린 방장이 새치기 턴을 준다
+                var m = new ChainTable();
+                Card cut = m.Give(m.O2, id => new Card(id, 2013, CardType.Counter, TargetType.None,
+                    new CardEffect[] { new NegateEffect(), new TakeTurnEffect(), new ChooseDiscardEffect { seconds = 5 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                m.PlayCard(m.Turn, m.Give(m.Turn, id => new Card(id, 1001, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve)), m.O1);
+                m.At(2);
+                m.Counter(m.O2, cut);
+                Check(m.RunUntil<ChoiceStarted>(30) != null, "새치기의 대가 고르기가 열림 (2013)");
+                Same(m, "고르기 중 — 턴 가로채기가 걸림 (2013)");
+                GameServer copy = Clone(m, out _);
+                var after = copy.Choose(m.O2, m.Hand(m.O2)[0].InstanceId).ToList();
+                for (double end = m.Now + 15; m.Now < end && !after.OfType<TurnStarted>().Any(); m.At(m.Now + 0.1))
+                    after.AddRange(copy.Tick());
+                TurnStarted next = after.OfType<TurnStarted>().FirstOrDefault();
+                Check(next != null && next.Actor == m.O2, $"되살린 방장이 새치기 턴을 준다 (다음 턴 P{next?.Actor} · 기대 P{m.O2})");
             }
             {
                 // 손패에서 1장 고르기 (2013 · 2021 의 대가) 로 멈춘 순간

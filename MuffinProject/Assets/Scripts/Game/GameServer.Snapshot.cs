@@ -61,6 +61,7 @@ namespace Chapchu.Game
             w.Bool(_reversed);
             w.Int(_extraTurnActor);
             w.Int(_heldNext);
+            w.Int(_turnTaker);
 
             // 체인 — 카드 한 장(ChainEntry)을 번호로 바꿔 적는다. 세 목록 · 고르기 · 「아래 카드」 가 같은 것을 가리킨다
             List<ChainEntry> entries = _chainOrder.Concat(_chain).Concat(_resolving).Distinct().ToList();
@@ -251,6 +252,7 @@ namespace Chapchu.Game
             _reversed = r.Bool();
             _extraTurnActor = r.Int();
             _heldNext = r.Int();
+            _turnTaker = r.Int();
             if (CurrentTurnActor != -1 && !_players.ContainsKey(CurrentTurnActor))
                 throw new InvalidOperationException("턴 주인이 참가자가 아니다");
 
