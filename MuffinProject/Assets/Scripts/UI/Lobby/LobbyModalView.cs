@@ -158,7 +158,7 @@ namespace Chapchu.UI.Lobby
             RectTransform viewport = field.textViewport;
             viewport.offsetMax = new Vector2(kind == LobbyInputKind.Nickname ? -countInset : -viewport.offsetMin.x, viewport.offsetMax.y);
 
-            field.SetTextWithoutNotify(value);
+            field.SetTextWithoutNotify(kind == LobbyInputKind.Nickname ? NicknameValidator.TrimToWidth(value) : value);
             UpdateCount();
             SetInputError(string.Empty);
             UpdateDimmer();
