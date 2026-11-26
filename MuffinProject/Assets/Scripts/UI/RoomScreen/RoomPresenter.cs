@@ -199,6 +199,10 @@ namespace Chapchu.UI.RoomScreen
             FlushHostLog();
             SyncRoomOptions();
 
+            // 창이 떠 있는 동안 알림은 위쪽 HUD 줄 가운데 — 창 내용을 가리지 않게 (통합 v3.25)
+            if (PopupManager.Instance != null)
+                PopupManager.Instance.ToastOverHud = leaveConfirm.IsOpen || playerInfo.IsOpen;
+
             // Android 뒤로가기 · PC Esc (16-room-ui-full 3절 #12)
             if (Input.GetKeyDown(KeyCode.Escape))
                 HandleBackPressed();
