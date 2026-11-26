@@ -117,7 +117,7 @@ namespace Chapchu.UI.GameScreen
 
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _shownHp[actor] = hpValue;
+                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 방 · Player 속성은 남이 쓸 수 있다
 
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 _isMyTurn = IsMe(turnActorValue);
