@@ -1,5 +1,6 @@
 ﻿using System;
 using Chapchu.Game;
+using Chapchu.UI.Fx;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -115,6 +116,9 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>손패 장수 — 손패 카드 그림 + 「찹츄까지 n장」.</summary>
+        /// <summary>4 단계 공통 연출 자리 — 내 캐릭터 가운데에서 터지고, 캐릭터 · HUD 가 흔들리고, 손패 장수 칩이 톡 (시안 「4단계 공통 연출」).</summary>
+        public ResultFx.Seat FxSeat => new ResultFx.Seat(character.rectTransform, new[] { character.rectTransform, (RectTransform)transform }, (RectTransform)handBadge.transform, handBadge.Face);
+
         public void SetHandCount(int count)
         {
             handBadge.SetCount(count);

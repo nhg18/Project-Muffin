@@ -32,6 +32,9 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(HandCountBadgeView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
+        /// <summary>앞 카드의 면 — 4 단계 연출이 장수 칩을 잠깐 다른 색으로 톡 칠한다 (ResultFx).</summary>
+        public Graphic Face => face;
+
         public void SetCount(int count)
         {
             countText.SetText("{0}", count);

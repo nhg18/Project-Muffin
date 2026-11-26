@@ -1,5 +1,6 @@
 ﻿using Chapchu.Game;
 using Chapchu.Network;
+using Chapchu.UI.Fx;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -53,6 +54,9 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>HP — 막대는 최대 HP(GameServer.MaxHp) 대비 비율.</summary>
         public void ShowHp(int hp) => _view.SetHp(hp, GameServer.MaxHp);
+
+        /// <summary>4 단계 공통 연출 자리 (ResultFx).</summary>
+        public ResultFx.Seat FxSeat => _view.FxSeat;
 
         /// <summary>손패 장수 — 손패 카드 그림 · 「찹츄까지 n장」.</summary>
         public void ShowHandCount(int count)

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Chapchu.Cards;
 using Chapchu.Game;
 using Chapchu.Network.Events;
+using Chapchu.UI.Fx;
 using Photon.Pun;
 using UnityEngine;
 
@@ -47,6 +48,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ScreenFlashView screenFlash;
         [Tooltip("찹츄 선언 연출 — 집중선 + 큰 말풍선 (10-ui.md 5-2 #1).")]
         [SerializeField] private ChapchuShoutView chapchuShout;
+        [Tooltip("4 단계 공통 연출 — 피해 · 회복 · 카드 얻기 · 잃기 · 피폭 (10-ui.md 5-1 「4 단계 공통 연출」).")]
+        [SerializeField] private ResultFx resultFx;
+        [Tooltip("빼앗기 · 주고받기 — 잃는 사람의 「−n장」 뒤 얻는 사람의 「+n장」 까지 초 (시안 steal: 0.18초 + 카드가 건너가는 0.42초).")]
+        [SerializeField] private float handMoveSeconds = 0.6f;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
         [SerializeField] private DeckData cardDeck;
         [Tooltip("설정 · 나가기 — 강제 퇴장 · 판 중지 알림을 넘긴다. 비어 있으면 씬에서 찾는다.")]
@@ -72,9 +77,27 @@ namespace Chapchu.UI.GameScreen
         private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
         private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
 
+        // 4 단계 공통 연출 (10-ui.md 5-1). 재생한 기준의 HP — 바뀐 양으로 피해 · 회복을 고른다. 없으면 처음 HP(MaxHp).
+        private readonly Dictionary<int, int> _shownHp = new Dictionary<int, int>();
+        // 아래는 받은 기준 — 이벤트가 오는 순서로 정하고, 줄을 세울 때 단계에 담는다
+        private bool _resolving;       // 체인 처리 중 — 효과 적용(OnCardResolved)부터 체인이 버림 더미로 갈 때까지. 이때 뽑은 카드만 「+n장」
+        private HpSource _hpSource;    // 뒤따르는 HP 변화가 무엇에서 왔는지 — 다른 단계를 줄 세우면 보통으로 돌아간다
+        private int _gaepanLoser = -1; // 개판 판정의 HP 0 은 피해가 아니라 설정 (11-card-list 1021) — 연출 없이
+        private DrawBatch _drawBatch;  // 바로 앞에 줄 세운 단계가 효과로 뽑은 카드면 그 묶음 — 같은 사람이 이어 뽑으면 붙인다
+
+        private enum HpSource { Normal, Fallout, Quiet }
+
+        // 효과 하나로 여러 장을 뽑으면 한 장씩 오지만(OnCardDrawn) 「+n장」 은 마지막 장이 닿을 때 한 번 (시안 draw)
+        private sealed class DrawBatch
+        {
+            public int Actor;
+            public int Count;
+            public int Played;
+        }
+
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -199,6 +222,11 @@ namespace Chapchu.UI.GameScreen
             _hasPendingMyCard = false;
             _chainCount = 0;
             _pendingActors.Clear();
+            _shownHp.Clear();
+            _resolving = false;
+            _hpSource = HpSource.Normal;
+            _gaepanLoser = -1;
+            _drawBatch = null;
         }
 
         // 「뽑고 턴 끝」 버튼 — 재생한 상태로 매 프레임 (대상 선택은 큐 밖에서 열리고 닫힌다)
@@ -217,6 +245,13 @@ namespace Chapchu.UI.GameScreen
         private void HandleHpChanged(int actorNumber, int hp)
         {
             bool isMe = IsMe(actorNumber);
+            HpSource batchSource = _hpSource; // 피폭 · 새 판이면 뒤따르는 모두의 HP 가 같은 묶음
+            HpSource source = batchSource;
+            if (actorNumber == _gaepanLoser && hp == 0)
+            {
+                source = HpSource.Quiet;
+                _gaepanLoser = -1;
+            }
 
             Enqueue(() =>
             {
@@ -226,8 +261,27 @@ namespace Chapchu.UI.GameScreen
                     seats.ShowHp(actorNumber, hp);
                 turnOrder.ShowHp(actorNumber, hp);
                 history.ShowHpChanged(actorNumber, hp);
+                PlayHpResult(actorNumber, hp, source);
                 return null;
             });
+            _hpSource = batchSource;
+        }
+
+        // 4 단계 공통 연출 — 줄면 피해(피폭이면 자주), 늘면 회복. 양 = 재생한 HP 와의 차 (10-ui.md 5-1 · 5-2)
+        private void PlayHpResult(int actorNumber, int hp, HpSource source)
+        {
+            int before = _shownHp.TryGetValue(actorNumber, out int shown) ? shown : GameServer.MaxHp;
+            _shownHp[actorNumber] = hp;
+            int change = hp - before;
+            if (change == 0 || source == HpSource.Quiet || !TryGetFxSeat(actorNumber, out ResultFx.Seat seat))
+                return;
+
+            if (change > 0)
+                resultFx.Heal(seat, change);
+            else if (source == HpSource.Fallout)
+                resultFx.Zap(seat, -change);
+            else
+                resultFx.Hit(seat, -change);
         }
 
         private void HandleMyCardDrawn(int cardInstanceId, int cardId)
@@ -252,16 +306,39 @@ namespace Chapchu.UI.GameScreen
 
             _hasPendingMyCard = false;
 
+            // 효과로 뽑았으면(체인 처리 중) 묶음에 넣는다 — 턴의 뽑기 · 시간 초과 뽑기 · 새 판 배분은 4 단계가 아니다
+            DrawBatch batch = null;
+            if (_resolving)
+            {
+                batch = _drawBatch != null && _drawBatch.Actor == actorNumber ? _drawBatch : new DrawBatch { Actor = actorNumber };
+                batch.Count++;
+            }
+
             Enqueue(() =>
             {
                 deck.ShowDeckCount(deckCount);
                 history.ShowCardDrawn(actorNumber);
+                IEnumerator fly;
                 if (!isMe)
-                    return seats.DrawRoutine(actorNumber, handCount);
-
-                myPanel.ShowHandCount(handCount);
-                return hasCard ? hand.DrawRoutine(cardInstanceId, cardId) : null;
+                    fly = seats.DrawRoutine(actorNumber, handCount);
+                else
+                {
+                    myPanel.ShowHandCount(handCount);
+                    fly = hasCard ? hand.DrawRoutine(cardInstanceId, cardId) : null;
+                }
+                return batch == null ? fly : DrawnRoutine(fly, batch);
             });
+            _drawBatch = batch;
+        }
+
+        // 뽑은 카드가 닿은 뒤 — 묶음의 마지막 장이면 「+n장」
+        private IEnumerator DrawnRoutine(IEnumerator fly, DrawBatch batch)
+        {
+            if (fly != null)
+                yield return fly;
+            batch.Played++;
+            if (batch.Played == batch.Count && TryGetFxSeat(batch.Actor, out ResultFx.Seat seat))
+                resultFx.Gain(seat, batch.Count);
         }
 
         private void HandleDeckRefilled(int deckCount)
@@ -277,6 +354,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleTurnStarted(int actorNumber, double deadline)
         {
             bool isMyTurn = IsMe(actorNumber);
+            _resolving = false;
 
             Enqueue(() =>
             {
@@ -435,10 +513,25 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 ShowHandCount(from, fromHandCount);
-                ShowHandCount(to, toHandCount);
                 history.ShowHandCardsMoved(from, to, count);
-                return null;
+                if (count == 0)
+                {
+                    ShowHandCount(to, toHandCount);
+                    return null;
+                }
+                if (TryGetFxSeat(from, out ResultFx.Seat seat))
+                    resultFx.Lose(seat, count);
+                return CardsArriveRoutine(to, toHandCount, count);
             });
+        }
+
+        // 시안 steal — 잃는 사람 「−n장」 → 카드가 건너가는 사이 → 얻는 사람의 장수가 바뀌며 「+n장」
+        private IEnumerator CardsArriveRoutine(int actorNumber, int handCount, int count)
+        {
+            yield return new WaitForSeconds(handMoveSeconds);
+            ShowHandCount(actorNumber, handCount);
+            if (TryGetFxSeat(actorNumber, out ResultFx.Seat seat))
+                resultFx.Gain(seat, count);
         }
 
         private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds)
@@ -500,7 +593,8 @@ namespace Chapchu.UI.GameScreen
         // 효과 적용 · 무효화 — 카드는 그 자리에 남고, 체인이 끝나면 쓴 순서대로 버림 더미로 간다 (HandleChainDiscarded, 04-card.md 9.1). 4 · 5 단계 · 도장 연출은 여기에 넣는다 (10-ui.md 5-1).
         // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (1013).
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
-            => Enqueue(() =>
+        {
+            Enqueue(() =>
             {
                 CardData data = cardDeck.GetCard(cardId);
                 if (data != null)
@@ -509,6 +603,8 @@ namespace Chapchu.UI.GameScreen
                 LeaveChain();
                 return null;
             });
+            _resolving = true;
+        }
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Enqueue(() =>
@@ -520,11 +616,14 @@ namespace Chapchu.UI.GameScreen
 
         // 체인(또는 함정)의 카드들이 버림 더미에 쌓였다 — 쓴 순서대로 한 장씩 날아가, 마지막에 쓴 카드가 맨 위에 보인다 (04-card.md 9.1).
         private void HandleChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
-            => Enqueue(() =>
+        {
+            _resolving = false;
+            Enqueue(() =>
             {
                 history.ShowChainEnded();
                 return ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount);
             });
+        }
 
         private IEnumerator ChainCardsToDiscardRoutine(int[] cardInstanceIds, int[] cardIds, int discardCount)
         {
@@ -547,6 +646,8 @@ namespace Chapchu.UI.GameScreen
                     hand.TakeFromDiscard(cardInstanceId, cardId, discardPile.TopPosition);
                 ShowHandCount(actorNumber, handCount);
                 history.ShowDiscardTaken();
+                if (TryGetFxSeat(actorNumber, out ResultFx.Seat seat))
+                    resultFx.Gain(seat, 1);
                 if (topCardId > 0)
                     discardPile.Show(topCardId, discardCount);
                 else
@@ -582,7 +683,13 @@ namespace Chapchu.UI.GameScreen
 
         // 대소동 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
         // 새 HP · 손패 · 첫 턴은 뒤따르는 알림이 시작 때처럼 채운다. 기록은 이어진다. 컷인 · 테이블 빛 연출은 넣지 않는다 (사용자 2026-11-13).
-        private void HandleGameRestarted(int user, int count, int[] order) => Enqueue(() => GameRestartedRoutine(user, count, order));
+        // 새 판 — 체인은 처리 도중 버려져 ChainDiscarded 가 오지 않는다. 뒤따르는 HP 100 · 손패 배분은 4 단계가 아니다 (조용히)
+        private void HandleGameRestarted(int user, int count, int[] order)
+        {
+            _resolving = false;
+            Enqueue(() => GameRestartedRoutine(user, count, order));
+            _hpSource = HpSource.Quiet;
+        }
 
         private IEnumerator GameRestartedRoutine(int user, int count, int[] order)
         {
@@ -614,7 +721,19 @@ namespace Chapchu.UI.GameScreen
             discardPile.Clear();
         }
 
-        private void HandleFalloutChanged(int n, int turns) => Enqueue(() => { history.ShowFallout(n, turns); boardEffects.ShowFallout(n, turns); return null; });
+        // 피폭 (1012) — 턴이 끝나 피해가 들어가면(turns > 0) 화면 가장자리가 자주로 번지고, 뒤따르는 모두의 HP 변화는 자주 피해 (시안 fallout · zap)
+        private void HandleFalloutChanged(int n, int turns)
+        {
+            Enqueue(() =>
+            {
+                history.ShowFallout(n, turns);
+                boardEffects.ShowFallout(n, turns);
+                if (turns > 0)
+                    resultFx.FalloutGlow();
+                return null;
+            });
+            _hpSource = turns > 0 ? HpSource.Fallout : HpSource.Normal;
+        }
 
         // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
         private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
@@ -631,7 +750,11 @@ namespace Chapchu.UI.GameScreen
         private void HandleGaepanChanged(int caster, int left, bool again) =>
             Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); return gaepan.ChangedRoutine(left); });
 
-        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Enqueue(() => GaepanJudgedRoutine(loser, byHp, value, tied, actors, values));
+        private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
+        {
+            Enqueue(() => GaepanJudgedRoutine(loser, byHp, value, tied, actors, values));
+            _gaepanLoser = loser;
+        }
 
         private IEnumerator GaepanJudgedRoutine(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
@@ -680,6 +803,8 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 history.ShowCardsDiscarded(cardIds.Length);
+                if (TryGetFxSeat(actorNumber, out ResultFx.Seat seat))
+                    resultFx.Lose(seat, cardIds.Length);
                 return CardsToDiscardRoutine(actorNumber, isMe, handCount, cardIds, discardCount, isMe ? hand.DiscardFromHandRoutine(cardInstanceIds) : null);
             });
         }
@@ -812,8 +937,22 @@ namespace Chapchu.UI.GameScreen
             discardPile.Show(cardIds, discardCount);
         }
 
+        // 4 단계 공통 연출 자리 — 나는 내 HUD, 남은 좌석. 좌석이 없으면(나간 사람) false.
+        private bool TryGetFxSeat(int actorNumber, out ResultFx.Seat seat)
+        {
+            if (IsMe(actorNumber))
+            {
+                seat = myPanel.FxSeat;
+                return true;
+            }
+            return seats.TryGetFxSeat(actorNumber, out seat);
+        }
+
         private void Enqueue(Func<IEnumerator> step)
         {
+            // 받은 기준의 「바로 앞 단계」 표시는 다른 단계를 줄 세우면 끝난다 — 이어 가야 하는 처리기는 줄 세운 뒤 다시 넣는다
+            _hpSource = HpSource.Normal;
+            _drawBatch = null;
             _steps.Enqueue(step);
 
             if (_playing == null)
