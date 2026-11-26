@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Chapchu.UI.RoomScreen;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -223,6 +224,13 @@ namespace Chapchu.Core
             RaycastResult hit = _pointerHits[0];
             Selectable selectable = hit.gameObject.GetComponentInParent<Selectable>();
             if (selectable == null || !selectable.IsInteractable()) return;
+
+            // 누르고 있는 동안만 켜지는 버튼은 누르는 순간 반응하므로 소리도 그때 낸다
+            if (selectable.GetComponent<HoldButton>() != null)
+            {
+                Play(Sfx.Tap);
+                return;
+            }
 
             _pressed = selectable;
             _pressedCamera = hit.module != null ? hit.module.eventCamera : null;
