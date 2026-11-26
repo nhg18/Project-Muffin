@@ -44,8 +44,7 @@ namespace Chapchu.EditorTools
         private const float SeatHandScale = 0.7097f;     // 뒷면 카드(36 × 54)를 시안 키에 맞춘 배율 — 부채꼴 루트를 줄인다
         private static readonly Vector2 SeatWatchCenter = new Vector2(-127f, 199.7f); // 스톱워치 가운데 (x 는 발 가운데 기준)
         private static readonly Vector2 SeatShoutPoint = new Vector2(45f, 195.8f);    // 말풍선 아래 기준점 (x 는 발 가운데 기준)
-        private const float SeatLifeTagTop = 241.8f;     // 「사망 대기 n초」 · 「사망」 팻말 위끝 (가슴)
-        private static readonly Vector2 SeatSweat = new Vector2(36f, 155.8f);         // 땀방울 왼쪽 위 (x 는 발 가운데 기준)
+        private const float SeatLifeTagTop = 241.8f;     // 「사망」 팻말 위끝 (가슴)
         private static readonly Rect SeatTapArea = new Rect(-112f, -12f, 224f, 377f); // 탭 영역 (x 는 발 가운데 기준)
         private const float PlateWidth = 192f, PlateHeight = 140f, PlateBottom = 144f;
 
@@ -723,7 +722,7 @@ namespace Chapchu.EditorTools
 
         #region 상대 좌석
 
-        // 좌석 하나 (시안 상대 머리 위 .tftp · .char · .ring · .dtag · .sweat · .shout · .swatch) — 캐릭터 · 링 · 부채꼴 · 이름표 · 팻말 · 땀 · 말풍선 · 스톱워치 · 탭 영역 순.
+        // 좌석 하나 (시안 상대 머리 위 .tftp · .char · .ring · .dtag · .shout · .swatch) — 캐릭터 · 링 · 부채꼴 · 이름표 · 팻말 · 말풍선 · 스톱워치 · 탭 영역 순.
         // 고를 수 있는 동안 링 · 이름표 · 탭 영역만 가림판 위로 올린다 (OpponentSeatView.pickLayers). 캐릭터 · 부채꼴은 가림판 아래에서 어두워진다 —
         // 시안 화면은 3D 판(b3d)이 캐릭터 · 손패를 그려 가림판에 덮이고, 링(발밑 점선)은 캐릭터 발 앞에 그려진다.
         private static OpponentSeatView BuildSeatV3(RectTransform seat, int slot, DeckView deck, Transform referenceShout)
@@ -754,7 +753,7 @@ namespace Chapchu.EditorTools
 
             RectTransform plate = BuildPlateV3(seat, cx, slot, out PlateParts parts);
 
-            // 「사망 대기 n초」 · 「사망」 팻말 — 가슴, 높이 52 · 반지름 14 · 테 4 · 30 (시안 .dtag)
+            // 「사망」 팻말 — 가슴, 높이 52 · 반지름 14 · 테 4 · 30 (시안 .dtag)
             RectTransform lifeTag = NewRect("LifeTag", seat);
             Anchor(lifeTag, new Vector2(0f, 1f), new Vector2(0.5f, 1f), new Vector2(cx, -SeatLifeTagTop), new Vector2(200f, 52f));
             HorizontalLayout(lifeTag, new RectOffset(20, 20, 0, 0), 8f, TextAnchor.MiddleCenter, true, false);
@@ -762,14 +761,9 @@ namespace Chapchu.EditorTools
             UIShape lifeTagFill = NewShape("Fill", lifeTag, Warn, 14f, Line4, Ink);
             Stretch(lifeTagFill.rectTransform);
             lifeTagFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            TMP_Text lifeTagText = NewText("Text", lifeTag, "사망 대기 5초", 30f, Ink, true);
+            TMP_Text lifeTagText = NewText("Text", lifeTag, "사망", 30f, Ink, true);
             lifeTagText.rectTransform.sizeDelta = new Vector2(160f, 52f);
             lifeTag.gameObject.SetActive(false);
-
-            Image sweat = NewImage("Sweat", seat, White, Hud("icon_sweat"));
-            TopLeft(sweat.rectTransform, cx + SeatSweat.x, SeatSweat.y, 32f, 44f);
-            sweat.preserveAspect = true;
-            sweat.gameObject.SetActive(false);
 
             var shout = (RectTransform)seat.Find("Shout");
             if (shout == null)
@@ -791,7 +785,7 @@ namespace Chapchu.EditorTools
             TopLeft(tapArea.rectTransform, cx + SeatTapArea.x, SeatTapArea.y, SeatTapArea.width, SeatTapArea.height);
 
             int order = 0;
-            foreach (Transform part in new Transform[] { character.transform, ring, fan, plate, lifeTag, sweat.transform, shout, watch.transform, tapArea.transform })
+            foreach (Transform part in new Transform[] { character.transform, ring, fan, plate, lifeTag, shout, watch.transform, tapArea.transform })
                 part.SetSiblingIndex(order++);
 
             Canvas[] layers = { AddPickLayer(ring.gameObject), AddPickLayer(plate.gameObject), AddPickLayer(tapArea.gameObject) };
@@ -805,7 +799,7 @@ namespace Chapchu.EditorTools
                 ("nameOutlineMaterial", OutlineWhite), ("namePlainMaterial", BoldFont != null ? BoldFont.material : null), ("crown", parts.Crown), ("pickOutline", parts.PickOutline),
                 ("handBadge", parts.Badge), ("heart", parts.Heart), ("hpText", parts.HpText), ("hpBar", parts.HpBar), ("hpFill", parts.HpFill.rectTransform), ("hpFillGraphic", parts.HpFill),
                 ("grayMaterial", GrayMaterial), ("character", character), ("turnTimer", watch.gameObject), ("pickRing", ring.gameObject), ("shout", shout.gameObject), ("hand", hand),
-                ("lifeTag", lifeTag.gameObject), ("lifeTagFill", lifeTagFill), ("lifeTagText", lifeTagText), ("sweat", sweat.gameObject), ("tapArea", tapArea));
+                ("lifeTag", lifeTag.gameObject), ("lifeTagFill", lifeTagFill), ("lifeTagText", lifeTagText), ("tapArea", tapArea));
             WireArray(view, "pickLayers", layers);
             return view;
         }
@@ -830,7 +824,7 @@ namespace Chapchu.EditorTools
         }
 
         // 머리 위 이름표 (시안 .tftp) — 192 × 140, 아래 끝 144 에 붙여 위로 쌓는다: 이름 칸 44 · 틈 6 · 손패 카드 60 + 하트 HP 44 · 틈 6 · HP 막대 24.
-        // 이름 칸은 보통 투명(흰 테 글자), 턴 · 찹츄 · 사망 대기 · 겨눔이면 칠하고 바깥 잉크 선 4 (뷰). 겨눌 때 가운데를 축으로 1.1 배.
+        // 이름 칸은 보통 투명(흰 테 글자), 턴 · 찹츄 · 겨눔이면 칠하고 바깥 잉크 선 4 (뷰). 겨눌 때 가운데를 축으로 1.1 배.
         private static RectTransform BuildPlateV3(RectTransform seat, float cx, int slot, out PlateParts parts)
         {
             RectTransform plate = NewRect("Plate", seat);
