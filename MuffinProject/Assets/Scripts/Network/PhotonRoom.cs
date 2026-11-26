@@ -20,6 +20,7 @@ namespace Chapchu.Network
         private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
 
         private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+        private bool _creatingPublic; // 공개 방을 만드는 중 (빠른 시작이 방을 못 찾음) — 코드가 겹쳐 다시 만들 때도 같은 공개 여부로
 
         // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
         // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
@@ -67,7 +68,10 @@ namespace Chapchu.Network
             PhotonNetwork.LeaveRoom();
         }
     
-        public void CreateRoom()
+        /// <summary>
+        /// 방을 만든다. 「방 만들기」 는 비공개, 빠른 시작이 들어갈 방을 못 찾아 만드는 방은 공개 (08-room.md 5절 #7)
+        /// </summary>
+        public void CreateRoom(bool isPublic)
         {
             if (!PhotonConnection.ValidConnect)
             {
@@ -76,7 +80,8 @@ namespace Chapchu.Network
             }
 
             _creatingSolo = false;
-            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
+            _creatingPublic = isPublic;
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, isPublic, true);
             string code = RandomCode.GenerateRandomCode();
 
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
@@ -229,7 +234,7 @@ namespace Chapchu.Network
                     if (_creatingSolo)
                         CreateSoloRoom();
                     else
-                        CreateRoom();
+                        CreateRoom(_creatingPublic);
                     return;
             }
             RoomEvents.RaiseCreateRoomFailed(returnCode, message);
@@ -273,8 +278,8 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 방을 만든다: {message}");
-            CreateRoom();
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 공개 방을 만든다: {message}");
+            CreateRoom(isPublic: true);
         }
 
         public void OnPlayerEntered(Player player)
