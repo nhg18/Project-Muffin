@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-11-27 · 4 단계 공통 연출을 Unity 로 (`feature/stage4-common-fx`, `feature/ui-v3` 위)
+
+### 결정 (PM, 2026-11-27)
+- 「4단계 공통 연출」 시안(V2CdpFSigVdDAiP95CZiGJ, 게시본 1795328736-a07a)을 Unity 에 구현. 게임 화면 · 카드 연출 시험장 둘 다.
+
+### 한 것
+- `Scripts/UI/Fx/Result/` (새로) — `ResultFx`(피해 · 회복 · +n장 · −n장 · 피폭 · 가장자리 번짐), `InkStar`(별 글자 배경), `InkParticles`(입자 한 메시), `EdgeGlow`, `InkMesh`. 크기 · 입자 수 · 흔들림은 수치에 비례(HP 1~50, 장 1~6). 값은 시안 그대로, 시안 px × 1.56.
+- `GameScreenPresenter` — HP 가 줄면 피해(피폭 뒤면 자주 피해), 늘면 회복. 효과로 뽑은 카드는 묶어 「+n장」 한 번. 빼앗기 · 주고받기 = 잃는 사람 「−n장」 → 0.6초 → 얻는 사람 「+n장」. 버리기 「−n장」, 버림 더미 가져오기 「+1장」.
+- 연출 없음: 턴 뽑기 · 시간 초과 뽑기 · 새 판 배분 · 새 판 HP · 개판 판정의 HP 0.
+- `GameScene` 에 `ResultFx` 오브젝트(ScreenFlash 바로 위), `CardFxTestScene` 은 FxLayer 에 붙임. 시험장의 예전 `FxLayer.Hit/Heal` · `bigHitDamage` 는 걷어냄(FxLayer 자체는 그대로 — 3 단계 카드 연출이 쓴다).
+
+### 확인
+- 세 어셈블리 오프라인 컴파일 에러 0.
+- **실행은 안 했다** — 시험장 · 게임 화면에서 보는 것은 PM.
+
+### 남은 것
+- 소리(게임에 소리 체계가 아직 없음), HP 맞바꾸기 전용 연출(지금은 한쪽 피해 · 한쪽 회복), 「없음」(빗나감 이벤트가 없음), 판 효과 알약 연출.
+- `GameScreenBuilder` 는 `ResultFx` 를 만들지 않는다 — 씬에만 넣었다.
+- `10-ui` 5-1 의 빼앗기 · 얻기 모양 「미정」 줄 (PR #216).
+
+---
+
 ## 2026-11-22 · 틀린 값 파일 = 게임은 에셋 값으로, 빌드는 멈춘다 (`feature/card-sheet-runtime`, PR #205)
 
 ### 결정 (PM, 2026-11-22)
