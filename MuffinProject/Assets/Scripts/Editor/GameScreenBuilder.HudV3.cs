@@ -721,7 +721,8 @@ namespace Chapchu.EditorTools
         #region 상대 좌석
 
         // 좌석 하나 (시안 상대 머리 위 .tftp · .char · .ring · .dtag · .sweat · .shout · .swatch) — 캐릭터 · 링 · 부채꼴 · 이름표 · 팻말 · 땀 · 말풍선 · 스톱워치 · 탭 영역 순.
-        // 고를 수 있는 동안 캐릭터 · 링 · 부채꼴 · 이름표 · 탭 영역을 가림판 위로 올린다 (OpponentSeatView.pickLayers).
+        // 고를 수 있는 동안 링 · 이름표 · 탭 영역만 가림판 위로 올린다 (OpponentSeatView.pickLayers). 캐릭터 · 부채꼴은 가림판 아래에서 어두워진다 —
+        // 시안 화면은 3D 판(b3d)이 캐릭터 · 손패를 그려 가림판에 덮이고, 링(발밑 점선)은 캐릭터 발 앞에 그려진다.
         private static OpponentSeatView BuildSeatV3(RectTransform seat, int slot, DeckView deck, Transform referenceShout)
         {
             float cx = SeatFootX[slot];
@@ -790,7 +791,7 @@ namespace Chapchu.EditorTools
             foreach (Transform part in new Transform[] { character.transform, ring, fan, plate, lifeTag, sweat.transform, shout, watch.transform, tapArea.transform })
                 part.SetSiblingIndex(order++);
 
-            Canvas[] layers = { AddPickLayer(character.gameObject), AddPickLayer(ring.gameObject), AddPickLayer(fan.gameObject), AddPickLayer(plate.gameObject), AddPickLayer(tapArea.gameObject) };
+            Canvas[] layers = { AddPickLayer(ring.gameObject), AddPickLayer(plate.gameObject), AddPickLayer(tapArea.gameObject) };
             tapArea.gameObject.AddComponent<GraphicRaycaster>(); // 하위 캔버스의 탭은 그 캔버스의 레이캐스터가 받는다
 
             var view = seat.GetComponent<OpponentSeatView>();

@@ -90,7 +90,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject sweat;
         [Tooltip("좌석 전체를 덮는 투명 탭 영역. 대상 선택 중에만 레이캐스트를 켠다.")]
         [SerializeField] private Image tapArea;
-        [Tooltip("고를 수 있는 동안 가림판 위로 올리는 하위 캔버스 — 뒤에서 앞 순서 (캐릭터 · 링 · 부채꼴 · 이름표 · 탭 영역) (시안 .char.pick 31 · .tftp.pick 32 > .dimmer 30).")]
+        [Tooltip("고를 수 있는 동안 가림판 위로 올리는 하위 캔버스 — 뒤에서 앞 순서 (링 · 이름표 · 탭 영역). 캐릭터 · 부채꼴은 가림판 아래에서 어두워진다 (통합 화면 UI v3 화면: .ring 31 · .tftp.pick 32 > .dimmer 30, 캐릭터는 3D 판이 그려 덮인다).")]
         [SerializeField] private Canvas[] pickLayers;
 
         private bool _isTurn;
