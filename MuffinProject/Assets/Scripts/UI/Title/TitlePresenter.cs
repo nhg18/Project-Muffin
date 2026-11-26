@@ -5,7 +5,6 @@ using Chapchu.Account;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
-using Chapchu.UI.Popups;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -41,7 +40,6 @@ namespace Chapchu.UI.Title
         private const string SavingText = "닉네임 저장 중…";
         private const string CheckingAccountFormat = "{0} 계정 확인 중…";
         private const string SaveFailedText = "잠시 후 다시 시도해 주세요.";
-        private const string MaintenanceToastText = "점검이 끝나면 저절로 이어져요.";
         private const string ExternalLoginFailedCode = "ExternalLoginFailed";
 
         // 로그인 실패 — 거절(만료) · 그 밖 · Google · Apple ({0} = 방법 이름)
@@ -99,6 +97,7 @@ namespace Chapchu.UI.Title
         private float _loadingSince = -1f;   // 지금 떠 있는 로딩 묶음이 뜬 시각 — 떠 있지 않으면 음수
         private bool _titleViewRecorded;
         private bool _maintenanceRecorded;
+        private bool _maintenanceRecheck;    // 점검 「다시 확인」 을 눌렀다 — 30초를 기다리지 않고 바로 다시 읽는다
 
         private static bool IsApplePlatform => Application.platform == RuntimePlatform.IPhonePlayer;
 
@@ -292,7 +291,10 @@ namespace Chapchu.UI.Title
 
                 EndLoading();
                 popup.ShowMaintenance(ServerConfig.MaintenanceMessage);
-                yield return new WaitForSecondsRealtime(ServerConfig.MaintenanceRetrySeconds);
+                // 30초마다, 또는 「다시 확인」 을 누르면 바로 다시 읽는다 (20 7-9)
+                _maintenanceRecheck = false;
+                float retryAt = Time.realtimeSinceStartup + ServerConfig.MaintenanceRetrySeconds;
+                yield return new WaitUntil(() => _maintenanceRecheck || Time.realtimeSinceStartup >= retryAt);
                 yield return ServerConfig.FetchRoutine();
             }
 
@@ -397,10 +399,11 @@ namespace Chapchu.UI.Title
         {
             Scene title = gameObject.scene;
             screen.blocksRaycasts = false;
-            DisableSceneSingletons(title);
+            DisableEventSystems(title);
 
             AsyncOperation load = SceneManager.LoadSceneAsync(ScenePaths.Lobby, LoadSceneMode.Additive);
             yield return load;
+            DisableAudioListeners(title); // 로비 리스너가 생긴 뒤에 — 먼저 끄면 로드 동안 배경음 · 탭 소리가 끊긴다
             SceneManager.SetActiveScene(SceneManager.GetSceneByName(ScenePaths.Lobby));
 
             float elapsed = 0f;
@@ -415,16 +418,18 @@ namespace Chapchu.UI.Title
         }
 
         // 두 씬이 겹치는 동안 EventSystem · AudioListener 가 둘이 되지 않게 타이틀 것을 끈다
-        private static void DisableSceneSingletons(Scene scene)
+        private static void DisableEventSystems(Scene scene)
         {
             foreach (GameObject root in scene.GetRootGameObjects())
-            {
                 foreach (EventSystem eventSystem in root.GetComponentsInChildren<EventSystem>())
                     eventSystem.gameObject.SetActive(false);
+        }
 
+        private static void DisableAudioListeners(Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
                 foreach (AudioListener listener in root.GetComponentsInChildren<AudioListener>())
                     listener.enabled = false;
-            }
         }
 
         #endregion
@@ -573,12 +578,8 @@ namespace Chapchu.UI.Title
             Application.OpenURL(storeUrl);
         }
 
-        // 점검 「확인」 — 팝업은 그대로, 30초마다 다시 읽는 흐름이 풀리면 이어 간다
-        private void HandleMaintenanceAcknowledged()
-        {
-            if (PopupManager.Instance != null)
-                PopupManager.Instance.ShowToast(MaintenanceToastText);
-        }
+        // 점검 「다시 확인」 — 바로 다시 읽는다. 아직 점검이면 팝업이 그대로 남는다 (토스트 없음, 20 7-9)
+        private void HandleMaintenanceAcknowledged() => _maintenanceRecheck = true;
 
         private void HandleQuitConfirmed()
         {

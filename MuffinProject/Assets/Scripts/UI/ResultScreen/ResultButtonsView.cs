@@ -46,10 +46,10 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private ResultReadyDotView dotPrefab;
 
         [Header("색 (시안 :root)")]
-        [SerializeField] private Color ink = new Color32(0x5E, 0x50, 0x47, 0xFF);
-        [SerializeField] private Color yellow = new Color32(0xFF, 0xDC, 0x6E, 0xFF);
+        [SerializeField] private Color ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
+        [SerializeField] private Color yellow = new Color32(0xFF, 0xC1, 0x2E, 0xFF);
         [Tooltip("내가 준비했을 때의 「한 판 더」 면 색.")]
-        [SerializeField] private Color yellowHigh = new Color32(0xFF, 0xF1, 0xBD, 0xFF);
+        [SerializeField] private Color yellowHigh = new Color32(0xFF, 0xD7, 0x66, 0xFF);
         [Tooltip("꺼진 「한 판 더」 의 면 색.")]
         [SerializeField] private Color offFill = new Color32(0xF7, 0xF3, 0xED, 0xFF);
         [Tooltip("꺼진 「한 판 더」 의 테 · 그림자 색.")]

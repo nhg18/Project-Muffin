@@ -282,6 +282,10 @@ namespace Chapchu.UI.ResultScreen
             // 색종이는 승자 칸 위에서 — 무승부면 터뜨리지 않는다
             if (TryGetWinnerX(out float winnerX))
                 confetti.Play(winnerX);
+
+            // 내가 이겼거나 무승부(모두 1위)면 밝게 올라가는 소리, 졌으면 낮게 내려가는 소리 (임시 효과음)
+            bool won = _result.Reason == GameEndReason.Draw || PhotonNetwork.LocalPlayer.ActorNumber == _result.Winner;
+            SoundManager.Play(won ? Sfx.Win : Sfx.Lose);
         }
 
         #endregion

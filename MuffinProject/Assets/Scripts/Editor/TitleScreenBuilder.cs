@@ -20,10 +20,10 @@ namespace Chapchu.EditorTools
     public static class TitleScreenBuilder
     {
         private const string CanvasName = "TitleCanvas";
-        private const string FontPath = "Assets/Fonts/Jua/Jua-Regular.ttf";
-        private const string FontAssetPath = "Assets/Fonts/Jua/Jua SDF.asset";
-        private const string LogoFontAssetPath = "Assets/Fonts/Jua/Jua Logo SDF.asset";
-        private const string OutlineMaterialPath = "Assets/Fonts/Jua/Jua SDF - Outline.mat";
+        private const string FontPath = "Assets/Fonts/Taebaek/Taebaek.ttf"; // 통합 v3 (v3.20) — 제목 · 버튼 = 태백체
+        private const string FontAssetPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";
+        private const string LogoFontAssetPath = "Assets/Fonts/Taebaek/Taebaek Logo SDF.asset";
+        private const string OutlineMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Outline.mat";
         private const string ArtPath = "Assets/Sprites/UI/Background/bg_title.png"; // 16:9 키 아트 (12-title-ui 9-1)
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string RingSpritePath = "Assets/Sprites/UI/Common/timer_ring.png";

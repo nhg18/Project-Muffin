@@ -67,15 +67,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uD53C\uD574 0"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
+  m_sharedMaterial: {fileID: 525092245739306415, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.65882355, g: 0.61960787, b: 0.58431375, a: 1}
+  m_fontColor: {r: 0.43137255, g: 0.39215686, b: 0.36078431, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -206,7 +206,7 @@ MonoBehaviour:
   shape: 0
   radius: 22
   borderWidth: 4
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -290,7 +290,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -300,7 +300,7 @@ MonoBehaviour:
   shape: 1
   radius: 0
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -466,15 +466,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uBB3C\uC5B4\uB72F\uAE30 \uC7A5\uC778"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_fontColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

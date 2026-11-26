@@ -56,7 +56,6 @@ public static class MultiTest
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
     private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
     private const string HandCardsField = "_cards";                        // HandView — 손패의 카드들
-    private const string CardGlowField = "glow";                           // CardView — 「낼 수 있다」 빛
     private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
     private const string TrapPreviewField = "_preview";                    // MyTrapsPresenter — 크게 보기 중인 카드
     private const string TrapsOfField = "_trapsOf";                        // OpponentSeatsPresenter — actorNumber → 함정 칸
@@ -414,7 +413,7 @@ public static class MultiTest
 
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
 
-        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 초록 빛(방장이 알려 준 「낼 수 있는 카운터」)도 같이 본다
+        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 손패 뷰가 그 카드를 「낼 수 있는 카운터」(방장이 알려 준 것)로 알고 있는지도 같이 본다
         if (counter >= 0)
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
@@ -429,14 +428,14 @@ public static class MultiTest
             }
             if (card != null && targetType != TargetType.OneOther && targetType != TargetType.TwoOthers)
             {
-                var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
-                string glowLog = glow == null ? "빛 없음" : glow.activeSelf ? "초록 빛 켜짐" : "초록 빛 꺼짐";
+                bool listed = usable; // 위에서 본 「낼 수 있는 카운터」 표시
+                string usableLog = listed ? "낼 수 있는 카운터 표시 켜짐" : "낼 수 있는 카운터 표시 꺼짐";
                 // 스킵 버튼 — 낼 수 있는 카운터가 있으면 반응 시간 동안 알약이 「스킵」 으로 켜진다 (10-ui 5절)
                 ReactionTimerView pill = Object.FindFirstObjectByType<ReactionTimerView>();
                 var skip = pill == null ? null : (UnityEngine.UI.Button)typeof(ReactionTimerView).GetField(SkipButtonField, Private).GetValue(pill);
                 string skipLog = skip == null ? "스킵 버튼 없음" : skip.isActiveAndEnabled ? "스킵 버튼 켜짐 「" + ReadText(pill, PillLabelField) + "」" : "스킵 버튼 꺼짐";
                 UseFromHand(instances[counter]);
-                return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + glowLog + " · " + skipLog;
+                return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + usableLog + " · " + skipLog;
             }
         }
 
@@ -1152,24 +1151,19 @@ public static class MultiTest
                 CardView card = FindHandCard(SkipProbeInstance);
                 if (card == null)
                     return "WAIT 손패에 카운터가 아직 없다";
-                var glow = (GameObject)typeof(CardView).GetField(CardGlowField, Private).GetValue(card);
                 if (!skip.isActiveAndEnabled)
                     return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
 
                 string label = ReadText(pill, PillLabelField);
-                bool glowing = glow != null && glow.activeSelf;
-                // 시험용 카운터는 게임 덱의 행동 카드 모양으로 그려진다 — 행동 카드 프리팹에는 초록 빛 오브젝트가 없어 빛은 보지 못한다.
-                // 대신 손패 뷰가 그 카드를 「낼 수 있는 카운터」 로 알고 있는지 본다.
+                // 손패 뷰가 그 카드를 「낼 수 있는 카운터」 로 알고 있는지 본다 — 화면에서는 그 카드만 크고(1.1 배) 나머지는 흐려진다 (시안 v3.5)
                 HandView handView = Object.FindFirstObjectByType<HandView>();
-                bool listed = ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Contains(SkipProbeInstance);
-                if (glow == null)
-                    glowing = listed;
+                var usable = (HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView);
+                bool listed = usable.Contains(SkipProbeInstance);
                 bool secondsShown = ((TMP_Text)typeof(ReactionTimerView).GetField("secondsText", Private).GetValue(pill)).gameObject.activeInHierarchy;
                 skip.onClick.Invoke();
-                bool off = !skip.isActiveAndEnabled && !(glow != null && glow.activeSelf)
-                    && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Count == 0;
-                return (label == "스킵" && glowing && !secondsShown && off ? "OK" : "FAIL") + " 버튼 「" + label + "」 · 낼 수 있는 카운터 표시 " + (glowing ? "켜짐" : "꺼짐")
-                    + " · 남은 초 " + (secondsShown ? "보임" : "안 보임") + " → 누른 뒤 " + (off ? "버튼 · 빛 꺼짐" : "아직 켜져 있다");
+                bool off = !skip.isActiveAndEnabled && usable.Count == 0;
+                return (label == "스킵" && listed && !secondsShown && off ? "OK" : "FAIL") + " 버튼 「" + label + "」 · 낼 수 있는 카운터 표시 " + (listed ? "켜짐" : "꺼짐")
+                    + " · 남은 초 " + (secondsShown ? "보임" : "안 보임") + " → 누른 뒤 " + (off ? "버튼 · 표시 꺼짐" : "아직 켜져 있다");
             }
             case "cost":
             {

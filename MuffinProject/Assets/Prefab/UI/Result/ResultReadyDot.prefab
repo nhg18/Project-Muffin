@@ -258,7 +258,7 @@ MonoBehaviour:
   shape: 1
   radius: 0
   borderWidth: 3
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -296,5 +296,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.ResultScreen.ResultReadyDotView
   dot: {fileID: 7296768553386507836}
   cross: {fileID: 1206409932786997517}
-  ink: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  ink: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   goneColor: {r: 0.6039216, g: 0.5686275, b: 0.53333336, a: 1}

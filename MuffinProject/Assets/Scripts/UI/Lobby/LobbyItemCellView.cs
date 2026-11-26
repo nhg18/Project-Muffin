@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.UI.Fx;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,14 +7,16 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 격자 칸 한 개 — 꾸미기 칸(정사각) · 상점 칸(아래에 이름 + 값) · 충전 칸. 틀 색 = 등급.
-    /// 기준: 「통합 화면 UI v2」 로비 .cell · .cell.shopc · .cell.pack
+    /// 격자 칸 한 개 — 꾸미기 칸(정사각) · 상점 칸(아래에 이름 + 값) · 충전 칸 · 쿠폰 칸. 틀 색 = 등급.
+    /// 기준: 「통합 화면 UI v3」 로비 .cell · .cell.shopc · .cell.pack · .cell.coupon
     /// </summary>
     [RequireComponent(typeof(Button))]
     public class LobbyItemCellView : MonoBehaviour
     {
         private const string OnlyGachaText = "뽑기 전용";
         private const string PackPriceText = "₩ 미정";
+        private const string CouponName = "닉네임 변경";
+        private const string CouponOwnedFormat = "보유 {0}장";
         private const string PackNameFormat = "츄르 {0}";
         private const string BonusFormat = "+{0}";
 
@@ -30,7 +33,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject ownedStrip;
         [SerializeField] private GameObject shopInfo;
         [SerializeField] private TMP_Text nameText;
-        [SerializeField] private RoundBox priceBox;
+        [SerializeField] private UIShape priceBox;
         [SerializeField] private Image priceIcon;
         [SerializeField] private TMP_Text priceText;
         [SerializeField] private GameObject bonusTag;
@@ -38,6 +41,12 @@ namespace Chapchu.UI.Lobby
 
         [Tooltip("상점 칸에서 그림 자리 아래를 비우는 높이 (이름 + 값, 캔버스 px)")]
         [SerializeField] private float shopInfoHeight = 108f;
+
+        [Tooltip("값이 없는 꼬리표(「뽑기 전용」 · 「₩ 미정」) 점선 한 칸 길이 (캔버스 px)")]
+        [SerializeField] private float onlyDash = 12f;
+
+        [Tooltip("값이 없는 꼬리표 점선 사이 틈 (캔버스 px)")]
+        [SerializeField] private float onlyGap = 8f;
 
         [Tooltip("아이콘 크기 — 꾸미기 칸 (캔버스 px)")]
         [SerializeField] private float boxIconSize = 80f;
@@ -96,7 +105,10 @@ namespace Chapchu.UI.Lobby
             pictureGroup.alpha = item.IsOwned ? ownedShopAlpha : 1f;
             ownedStrip.SetActive(item.IsOwned);
             nameText.text = item.Slot == HubSlot.Character ? item.Name : LobbyHubData.SlotName(item.Slot);
-            SetPrice(currencyIcon, currencyIcon != null ? price : OnlyGachaText);
+            if (currencyIcon != null)
+                SetPrice(currencyIcon, price, false);
+            else
+                SetPrice(null, OnlyGachaText, true);
         }
 
         /// <summary>충전 칸 — 보너스가 있으면 오른쪽 위 꼬리표.</summary>
@@ -106,9 +118,18 @@ namespace Chapchu.UI.Lobby
             ShowPicture(false, false, churuIcon, null, packIconSize, false);
             iconImage.color = Color.white; // 재화 그림은 색이 박혀 있다
             nameText.text = string.Format(PackNameFormat, pack.Churu);
-            SetPrice(null, PackPriceText);
+            SetPrice(null, PackPriceText, true);
             bonusTag.SetActive(pack.Bonus > 0);
             bonusText.text = string.Format(BonusFormat, pack.Bonus);
+        }
+
+        /// <summary>닉네임 변경 쿠폰 칸 (상점 「기타」) — 몇 장이든 살 수 있어 「보유」 띠 없이 꼬리표에 보유 수 (17 7-7).</summary>
+        public void BindCoupon(string id, int owned, bool isSelected, Sprite ticketIcon)
+        {
+            Begin(id, LobbyStyle.CouponFrame, isSelected, true);
+            ShowPicture(false, false, ticketIcon, null, shopIconSize, false);
+            nameText.text = CouponName;
+            SetPrice(null, string.Format(CouponOwnedFormat, owned), false);
         }
 
         private void Begin(string id, Color frameColor, bool isSelected, bool isShop)
@@ -139,14 +160,16 @@ namespace Chapchu.UI.Lobby
             captionText.text = caption;
         }
 
-        private void SetPrice(Sprite currencyIcon, string text)
+        // 꼬리표 — 보통은 흰 바탕 · 잉크 실선, 값이 없으면(isOnly: 뽑기 전용 · ₩ 미정) 바탕 없이 흐린 점선 (시안 .price.only)
+        private void SetPrice(Sprite currencyIcon, string text, bool isOnly)
         {
-            bool hasPrice = currencyIcon != null;
-            priceIcon.gameObject.SetActive(hasPrice);
+            priceIcon.gameObject.SetActive(currencyIcon != null);
             priceIcon.sprite = currencyIcon;
             priceText.text = text;
-            priceText.color = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
-            priceBox.BorderColor = hasPrice ? LobbyStyle.Ink : LobbyStyle.Ink2;
+            priceText.color = isOnly ? LobbyStyle.Ink2 : LobbyStyle.Ink;
+            priceBox.color = isOnly ? Color.clear : Color.white;
+            priceBox.BorderColor = isOnly ? LobbyStyle.Ink2 : LobbyStyle.Ink;
+            priceBox.SetDash(isOnly ? onlyDash : 0f, isOnly ? onlyGap : 0f);
         }
 
         private void HandleClicked() => OnClicked?.Invoke(this);

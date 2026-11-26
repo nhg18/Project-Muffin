@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using Chapchu.Cards;
+using Chapchu.Game;
 using Chapchu.Network;
 using Photon.Pun;
+using TMPro;
 using UnityEngine;
 
 namespace Chapchu.UI.GameScreen
@@ -10,10 +12,13 @@ namespace Chapchu.UI.GameScreen
     /// 내 함정 칸 (04-card.md 6절 · 10-ui.md 2-1 「함정 칸」). 칸 수는 전원에게 가는 장수로, 어떤 함정인지는 나에게만 오는 내용(OnMyTrapSet · OnMyTrapRemoved)으로 안다.
     /// 설치한 칸을 탭하면 그 함정을 크게 보여 주고, 다음 탭에 닫는다 (시안 「내 함정 칸」). 발동은 입력이 없다 — 조건이 맞으면 방장이 한다 (04-card.md 6절 「발동 규칙」).
     /// 언제 넣고 빼는지는 GameScreenPresenter 가 연출 큐 순서로 부른다. 늦게 열린 화면은 장수만 복구한다 — 내용은 「내 카드 다시 받기」 가 화면에 이어지면.
+    /// 칸 아래 「내 함정 n/3」 (통합 화면 UI v3 .mytrap-lbl) 도 장수와 같이 바꾼다.
     /// </summary>
     [RequireComponent(typeof(TrapSlotsView))]
     public class MyTrapsPresenter : MonoBehaviour
     {
+        private const string CountFormat = "내 함정 {0}/{1}";
+
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 카드 종류 ID 로 카드 내용을 찾는다.")]
         [SerializeField] private DeckData deck;
         [Tooltip("크게 보기에 쓰는 함정 카드 프리팹 (HandView 와 같은 것).")]
@@ -22,6 +27,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Transform previewSpot;
         [Tooltip("크게 보기 카드를 체인 카드보다 카메라 쪽으로 띄우는 z.")]
         [SerializeField] private float previewZ = -0.6f;
+        [Tooltip("칸 아래 「내 함정 n/3」 글자 (HUD).")]
+        [SerializeField] private TMP_Text countLabel;
 
         // 칸 순서대로 — 설치한 순서. 인스턴스 ID 와 카드 종류 ID
         private readonly List<int> _instanceIds = new List<int>();
@@ -35,8 +42,8 @@ namespace Chapchu.UI.GameScreen
         {
             _view = GetComponent<TrapSlotsView>();
 
-            if (deck == null || trapCardPrefab == null || previewSpot == null)
-                Debug.LogError($"[{nameof(MyTrapsPresenter)}] {nameof(deck)} · {nameof(trapCardPrefab)} · {nameof(previewSpot)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (deck == null || trapCardPrefab == null || previewSpot == null || countLabel == null)
+                Debug.LogError($"[{nameof(MyTrapsPresenter)}] {nameof(deck)} · {nameof(trapCardPrefab)} · {nameof(previewSpot)} · {nameof(countLabel)} 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable() => _view.OnSlotClicked += HandleSlotClicked;
@@ -45,9 +52,10 @@ namespace Chapchu.UI.GameScreen
 
         private void Start()
         {
+            ShowCount(0);
             // 씬이 늦게 열렸을 때의 지금 장수 (09-network.md 6.1)
             if (PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(PlayerProps.TrapCount, out object count) && count is int countValue)
-                _view.SetCount(countValue);
+                ShowCount(countValue);
         }
 
         // 크게 보기는 다음 탭(어디든)에 닫는다. 터치는 마우스로 흉내 내므로 마우스 버튼만 본다.
@@ -67,8 +75,15 @@ namespace Chapchu.UI.GameScreen
                 _suppressClick = false;
         }
 
-        /// <summary>내 함정 칸 수 (OnTrapSet 등의 trapCount).</summary>
-        public void ShowCount(int trapCount) => _view.SetCount(trapCount);
+        /// <summary>내 함정 칸 수 (OnTrapSet 등의 trapCount) — 칸 · 「내 함정 n/3」.</summary>
+        public void ShowCount(int trapCount)
+        {
+            _view.SetCount(trapCount);
+            countLabel.SetText(CountFormat, _view.Count, _view.Capacity);
+        }
+
+        /// <summary>내 함정 칸이 다 찼다 — 손패의 함정을 「지금 낼 수 없는 카드」 로 보인다 (시안 v3.5).</summary>
+        public bool IsFull => _view.IsFull;
 
         /// <summary>다음에 설치되는 함정이 들어갈 칸의 자리.</summary>
         public Transform NextSlot => _view.SlotAnchor(_instanceIds.Count);
@@ -103,7 +118,7 @@ namespace Chapchu.UI.GameScreen
         {
             _instanceIds.Clear();
             _cardIds.Clear();
-            _view.SetCount(0);
+            ShowCount(0);
             HidePreview();
         }
 

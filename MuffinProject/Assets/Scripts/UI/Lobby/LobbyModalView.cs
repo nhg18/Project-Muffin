@@ -10,9 +10,20 @@ namespace Chapchu.UI.Lobby
     /// <summary>입력 창 종류 — 방 코드 · 새 닉네임 · 계정 삭제 확인(「삭제」 입력) · 개발자 모드 암호</summary>
     public enum LobbyInputKind { RoomCode, Nickname, DeleteAccount, DevPassword }
 
+    /// <summary>경고 · 확인 창의 종류 — 머리 띠 색 · 띠 아이콘 · 주 버튼 색 (시안 v3.24 .pu)</summary>
+    public enum LobbyWarnKind
+    {
+        /// <summary>알림 · 실패 — 주황 띠 「!」</summary>
+        Warn,
+        /// <summary>되묻기 — 민트 띠 「?」</summary>
+        Ask,
+        /// <summary>되돌릴 수 없는 일(차단 · 계정 삭제) — 빨강 띠 「!」 · 빨강 주 버튼</summary>
+        Danger,
+    }
+
     /// <summary>
-    /// 로비의 위층 창 — 입력 창(방 코드 · 닉네임 · 계정 삭제) · 경고 / 확인 창(주황 머리 띠) · 요청 중 표시. 다른 창 위에 뜬다.
-    /// 기준: 「통합 화면 UI v2」 로비 modalHTML · .loadbox, docs/systems/22-popup-ui.md
+    /// 로비의 위층 창 — 입력 창(방 코드 · 닉네임 · 계정 삭제) · 경고 / 확인 창(머리 띠 색 = 종류) · 요청 중 표시. 다른 창 위에 뜬다.
+    /// 기준: 「통합 화면 UI v3」 로비 modalHTML(.pu) · .loadbox, docs/systems/22-popup-ui.md
     /// </summary>
     public class LobbyModalView : MonoBehaviour
     {
@@ -25,7 +36,7 @@ namespace Chapchu.UI.Lobby
         private const string DeleteTitle = "삭제 확인";
         private const string DeletePlaceholder = "삭제";
         private const string DeleteSubmit = "삭제";
-        private const string DeleteMessage = "'삭제'를 입력하면 계정이 지워져요.";
+        private const string DeleteMessage = "「삭제」를 입력하면 계정이 지워져요.";
         private const string DevTitle = "개발자 모드";
         private const string DevPlaceholder = "암호";
         private const string DevSubmit = "확인";
@@ -42,6 +53,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button inputCloseButton;
         [SerializeField] private TMP_Text inputMessage;
         [SerializeField] private TMP_InputField field;
+        [SerializeField] private LayoutElement fieldSize;
         [SerializeField] private TMP_Text fieldPlaceholder;
         [SerializeField] private RoundBox fieldBox;
         [SerializeField] private TMP_Text countText;
@@ -51,7 +63,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private TMP_Text submitLabel;
         [SerializeField] private Sprite keyIcon;
         [SerializeField] private Sprite userIcon;
-        [SerializeField] private Sprite crossIcon;
+
+        [Tooltip("방 코드 입력칸 높이 (캔버스 px)")]
+        [SerializeField] private float codeFieldHeight = 104f;
+
+        [Tooltip("닉네임 · 삭제 입력칸 높이 (캔버스 px)")]
+        [SerializeField] private float textFieldHeight = 88f;
 
         [Tooltip("방 코드 입력칸의 글자 크기")]
         [SerializeField] private float codeFontSize = 52f;
@@ -67,12 +84,23 @@ namespace Chapchu.UI.Lobby
 
         [Header("경고 · 확인 창")]
         [SerializeField] private GameObject warnContent;
+        [Tooltip("머리 띠 — 색이 종류를 말한다 (경고 주황 · 확인 민트 · 위험 빨강).")]
+        [SerializeField] private Image warnBand;
+        [SerializeField] private Image warnIcon;
         [SerializeField] private TMP_Text warnTitle;
+        [Tooltip("본문 첫 문장 — 굵게.")]
         [SerializeField] private TMP_Text warnMessage;
+        [Tooltip("본문 나머지 — 흐린 둘째 줄. 없으면 숨긴다.")]
+        [SerializeField] private TMP_Text warnDetail;
         [SerializeField] private Button warnCancelButton;
         [SerializeField] private TMP_Text warnCancelLabel;
         [SerializeField] private Button warnOkButton;
+        [SerializeField] private RoundBox warnOkBox;
         [SerializeField] private TMP_Text warnOkLabel;
+        [Tooltip("경고 · 위험 띠 아이콘 「!」.")]
+        [SerializeField] private Sprite alertIcon;
+        [Tooltip("확인 띠 아이콘 「?」.")]
+        [SerializeField] private Sprite askIcon;
 
         [Header("요청 중")]
         [SerializeField] private GameObject loadingContent;
@@ -96,12 +124,13 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             if (dimmer == null || inputContent == null || inputBand == null || inputIcon == null || inputTitle == null || inputCloseButton == null
-                || inputMessage == null || field == null || fieldPlaceholder == null || fieldBox == null || countText == null || errorText == null
-                || submitButton == null || submitBox == null || submitLabel == null || keyIcon == null || userIcon == null || crossIcon == null)
+                || inputMessage == null || field == null || fieldSize == null || fieldPlaceholder == null || fieldBox == null || countText == null || errorText == null
+                || submitButton == null || submitBox == null || submitLabel == null || keyIcon == null || userIcon == null)
                 Debug.LogError($"[{nameof(LobbyModalView)}] 입력 창 참조가 비어 있습니다.", this);
 
-            if (warnContent == null || warnTitle == null || warnMessage == null || warnCancelButton == null || warnCancelLabel == null
-                || warnOkButton == null || warnOkLabel == null || loadingContent == null || loadingText == null)
+            if (warnContent == null || warnBand == null || warnIcon == null || warnTitle == null || warnMessage == null || warnDetail == null
+                || warnCancelButton == null || warnCancelLabel == null || warnOkButton == null || warnOkBox == null || warnOkLabel == null
+                || alertIcon == null || askIcon == null || loadingContent == null || loadingText == null)
                 Debug.LogError($"[{nameof(LobbyModalView)}] 경고 창 · 요청 중 참조가 비어 있습니다.", this);
         }
 
@@ -127,7 +156,8 @@ namespace Chapchu.UI.Lobby
 
         #region 입력 창
 
-        public void ShowInput(LobbyInputKind kind, string value = "")
+        /// <summary>입력 창. message 는 입력 칸 위 안내 줄 — 계정 삭제는 늘 정해진 줄, 그 밖은 주면 보인다 (닉네임 변경 쿠폰 줄, 17 5-2).</summary>
+        public void ShowInput(LobbyInputKind kind, string value = "", string message = null)
         {
             InputKind = kind;
             bool isCode = kind == LobbyInputKind.RoomCode;
@@ -136,15 +166,18 @@ namespace Chapchu.UI.Lobby
 
             inputContent.SetActive(true);
             inputBand.color = isDelete ? LobbyStyle.Hp : LobbyStyle.Band;
-            inputIcon.sprite = isCode || isDev ? keyIcon : isDelete ? crossIcon : userIcon;
+            inputIcon.sprite = isCode || isDev ? keyIcon : isDelete ? alertIcon : userIcon; // 계정 삭제 = 위험 창과 같은 「!」
             inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : isDev ? DevTitle : NicknameTitle;
-            inputMessage.gameObject.SetActive(isDelete);
-            inputMessage.text = DeleteMessage;
+            string note = isDelete ? DeleteMessage : message;
+            inputMessage.gameObject.SetActive(!string.IsNullOrEmpty(note));
+            inputMessage.text = note;
             fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : isDev ? DevPlaceholder : NicknamePlaceholder;
             submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : isDev ? DevSubmit : NicknameSubmit;
-            submitBox.FillColor = isDelete ? LobbyStyle.WarnFill : LobbyStyle.Turn;
+            submitLabel.color = isDelete ? Color.white : LobbyStyle.Ink;
+            submitBox.FillColor = isDelete ? LobbyStyle.Hp : LobbyStyle.Turn;
 
-            // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다
+            // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다 · 칸이 더 높다
+            fieldSize.minHeight = fieldSize.preferredHeight = isCode ? codeFieldHeight : textFieldHeight;
             // 암호는 ● 로 가린다
             field.contentType = isDev ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard;
             field.characterLimit = isCode ? RandomCode.Length : kind == LobbyInputKind.Nickname ? NicknameValidator.MaxLength : 0;
@@ -183,23 +216,36 @@ namespace Chapchu.UI.Lobby
         #region 경고 · 확인 · 요청 중
 
         /// <summary>
-        /// 경고 / 확인 창. cancelLabel 이 null 이면 버튼 하나(확인). 「확인」 쪽을 누르면 창을 닫고 onOk 를 부른다 — 취소는 닫기만.
+        /// 경고 / 확인 창. cancelLabel 이 null 이면 버튼 하나(확인). 오른쪽 주 버튼을 누르면 창을 닫고 onOk 를 부른다 — 왼쪽(취소 · 닫기)은 닫기만.
+        /// 본문은 첫 문장이 굵은 첫 줄, 나머지가 흐린 둘째 줄이 된다 (시안 .pu p.big + p).
         /// </summary>
-        public void ShowWarn(string title, string message, string okLabel = null, string cancelLabel = null, Action onOk = null)
+        public void ShowWarn(string title, string message, string okLabel = null, string cancelLabel = null, Action onOk = null,
+            LobbyWarnKind kind = LobbyWarnKind.Warn)
         {
             _onWarnOk = onOk;
             warnContent.SetActive(true);
+            warnBand.color = kind switch
+            {
+                LobbyWarnKind.Ask => LobbyStyle.Band,
+                LobbyWarnKind.Danger => LobbyStyle.Hp,
+                _ => LobbyStyle.Warn,
+            };
+            warnIcon.sprite = kind == LobbyWarnKind.Ask ? askIcon : alertIcon;
             warnTitle.text = title;
-            warnMessage.text = KeepWords(message);
+
+            (string first, string rest) = LobbyStyle.SplitMessage(message);
+            warnMessage.text = first;
+            warnDetail.gameObject.SetActive(rest.Length > 0);
+            warnDetail.text = rest;
+
+            bool isDanger = kind == LobbyWarnKind.Danger;
+            warnOkBox.FillColor = isDanger ? LobbyStyle.Hp : LobbyStyle.Turn;
+            warnOkLabel.color = isDanger ? Color.white : LobbyStyle.Ink;
             warnOkLabel.text = okLabel ?? DefaultOkText;
             warnCancelButton.gameObject.SetActive(cancelLabel != null);
             warnCancelLabel.text = cancelLabel;
             UpdateDimmer();
         }
-
-        // 줄을 띄어쓰기에서만 바꾼다 (시안 word-break: keep-all) — TMP 는 한글을 낱말 중간에서도 꺾는다
-        private static string KeepWords(string text)
-            => "<nobr>" + text.Replace(" ", "</nobr> <nobr>").Replace("\n", "</nobr>\n<nobr>") + "</nobr>";
 
         public void HideWarn()
         {

@@ -35,11 +35,13 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("올라온 손패 · 끄는 카드를 HUD 위에 그리는 층.")]
         [SerializeField] private TopCardLayerView topLayer;
 
-        [Header("내려간 손패 — 내 패널과 찹츄 버튼 사이")]
-        [Tooltip("화면 왼쪽 끝에서 손패가 시작되는 곳까지 (유닛) — 가장자리 32 + 내 패널 508 + 틈 24.")]
-        [SerializeField] private float leftReserved = 5.64f;
-        [Tooltip("화면 오른쪽 끝에서 손패가 끝나는 곳까지 (유닛) — 가장자리 32 + 찹츄 버튼 392 + 틈 28.")]
-        [SerializeField] private float rightReserved = 4.52f;
+        [Header("내려간 손패 — 내 HUD 옆 ~ 오른쪽 끝 (통합 화면 UI v3 handBox)")]
+        [Tooltip("안전 영역 왼쪽 끝에서 손패 상자가 시작되는 곳까지 (유닛) — 시안 (가장자리 16 + 내 HUD 192 + 틈 28) × 2.")]
+        [SerializeField] private float leftReserved = 4.72f;
+        [Tooltip("안전 영역 오른쪽 끝에서 손패 상자가 끝나는 곳까지 (유닛) — 시안 (가장자리 16 + 10) × 2.")]
+        [SerializeField] private float rightReserved = 0.52f;
+        [Tooltip("반응 시간 「스킵」 이 떠 있을 때만 오른쪽에서 더 비우는 폭 (유닛) — 시안 v3.8 (스킵 128 + 틈 12 − 10) × 2.")]
+        [SerializeField] private float skipReserved = 2.6f;
         [Tooltip("카드 사이 간격의 상한 (카드 폭 대비).")]
         [SerializeField] private float loweredSpacing = 0.5f;
         [Tooltip("맨 끝 카드의 기울기 — 한 장 늘 때마다 이만큼(도), 상한까지.")]
@@ -62,9 +64,9 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float raisedBottomGap = 0.18f;
 
         [Header("카드 상태 (카드 높이 · 폭 대비)")]
-        [Tooltip("고른 카드 · 반응 시간에 낼 수 있는 카운터가 더 올라오는 높이 — 올라온 손패에서.")]
+        [Tooltip("고른 카드가 더 올라오는 높이 — 올라온 손패에서.")]
         [SerializeField] private float pickLiftRaised = 0.1f;
-        [Tooltip("고른 카드 · 반응 시간에 낼 수 있는 카운터가 더 올라오는 높이 — 내려간 손패에서 (거의 다 보이게).")]
+        [Tooltip("고른 카드가 더 올라오는 높이 — 내려간 손패에서 (거의 다 보이게).")]
         [SerializeField] private float pickLiftLowered = 0.42f;
         [Tooltip("고른 카드 양옆 틈 — 내려간 손패에서 (카드 폭 대비).")]
         [SerializeField] private float pickGapLowered = 0.22f;
@@ -72,8 +74,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float hoverLift = 0.08f;
         [Tooltip("포인터 아래 카드의 배율.")]
         [SerializeField] private float hoverScale = 1.12f;
-        [Tooltip("반응 시간에 낼 수 있는 카운터의 배율.")]
-        [SerializeField] private float usableScale = 1.06f;
+        [Tooltip("지금 낼 수 있는 카드의 배율 (시안 v3.5 .can — 내 턴엔 흐리지 않은 카드, 반응 시간엔 낼 수 있는 카운터).")]
+        [SerializeField] private float playableScale = 1.1f;
+        [Tooltip("지금 낼 수 없는 카드의 배율 — 흐림과 함께 (시안 v3.5 .dim).")]
+        [SerializeField] private float unplayableScale = 0.86f;
 
         [Header("연출")]
         [Tooltip("카드가 자리를 옮기는 초 — 올리기 · 내리기 · 호버 · 드롭 실패 복귀.")]
@@ -86,12 +90,12 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float drawTilt = 40f;
 
         [Header("새 카드 보여 주기 (10-ui.md 2-1 「새 카드 보여 주기」 — 프로토타입 v2 revGeom × 2)")]
-        [Tooltip("보여 주는 영역의 위 끝 — 화면 위 끝에서 (유닛). 턴 띠 아래.")]
-        [SerializeField] private float showTopMargin = 1f;
+        [Tooltip("보여 주는 영역의 위 끝 — 화면 위 끝에서 (유닛). 상대 이름표 · HP 막대 아래 (통합 v3).")]
+        [SerializeField] private float showTopMargin = 1.6f;
         [Tooltip("보여 주는 영역의 아래 끝 — 올라온 손패(고른 카드 높이까지) 위로 띄우는 틈 (유닛).")]
         [SerializeField] private float showBottomGap = 0.28f;
-        [Tooltip("카드 아래에 남은 시간 막대 · 안내 글을 둘 높이 (유닛).")]
-        [SerializeField] private float showBarSpace = 0.8f;
+        [Tooltip("카드 위에 남은 시간 막대 · 안내 글을 둘 높이 (유닛) — 카드 아래(판 가운데)에는 낸 카드가 온다.")]
+        [SerializeField] private float showBarSpace = 1.1f;
         [Tooltip("카드 사이 가로 틈 (유닛).")]
         [SerializeField] private float showGapX = 0.44f;
         [Tooltip("카드 사이 세로 틈 (유닛).")]
@@ -128,9 +132,7 @@ namespace Chapchu.UI.GameScreen
         [Header("그리는 순서 — 카메라 쪽으로 당기는 거리 (유닛)")]
         [Tooltip("자리마다 z 간격 — 오른쪽 카드가 카메라 쪽. 겹친 곳은 깊이로 정렬된다.")]
         [SerializeField] private float cardDepthStep = 0.02f;
-        [Tooltip("반응 시간에 낼 수 있는 카운터를 앞에 그리는 거리 — 손패 15장(자리 간격 × 15 = 0.3)까지 순서가 지켜진다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.")]
-        [SerializeField] private float usableDepth = 0.3f;
-        [Tooltip("고른 카드를 앞에 그리는 거리 — 낼 수 있는 카운터보다 커야 한다.")]
+        [Tooltip("고른 카드를 앞에 그리는 거리 — 손패 15장(자리 간격 × 15 = 0.3)보다 커야 한다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.")]
         [SerializeField] private float selectedDepth = 0.34f;
         [Tooltip("포인터 아래 카드를 앞에 그리는 거리 — 고른 카드보다 커야 한다.")]
         [SerializeField] private float hoverDepth = 0.38f;
@@ -159,8 +161,12 @@ namespace Chapchu.UI.GameScreen
         private float _dragTilt;
         private float _lastDragX;
         private bool _armed;
+        private float _dragScale = 1f; // 끄는 카드의 배율 — 낼 수 없는 카드는 끄는 동안에도 작게 (시안 v3.5)
         private bool _revealed;        // 포인터가 손패에 올라와 있다
         private bool _reacting;
+        private bool _myTurn;          // 지금 낼 수 있는 카드를 가리는 판 상태 (SetPlayState)
+        private bool _busy;
+        private bool _trapsFull;
         private bool _wasRaised;
         private bool _onTop;           // 카드가 HUD 위 층에 있다 — 내려갈 때는 자리로 돌아간 뒤에 내린다
         private float _dropLayerAt = -1f;
@@ -253,17 +259,17 @@ namespace Chapchu.UI.GameScreen
         public bool IsShown(CardView card) => card != null && _shown.Contains(card);
 
         /// <summary>
-        /// 보여 주는 카드들을 화면 가운데 위쪽에 나란히 놓는다 — 장수에 맞춰 줄 수 · 크기를 정한다 (턴 띠 아래 ~ 올라온 손패 위, 카드가 가장 커지는 줄 수).
-        /// firstNew 번째부터는 새로 온 카드라 차례로 늦춰 보낸다. 돌려주는 값은 카드 묶음의 아래 끝 (월드 y) — 그 아래에 막대 · 안내 글을 둔다.
+        /// 보여 주는 카드들을 화면 가운데 위쪽에 나란히 놓는다 — 장수에 맞춰 줄 수 · 크기를 정한다 (상대 이름표 아래 막대 · 안내 글 자리 밑 ~ 올라온 손패 위, 카드가 가장 커지는 줄 수).
+        /// firstNew 번째부터는 새로 온 카드라 차례로 늦춰 보낸다. 돌려주는 값은 카드 묶음의 위 끝 (월드 y) — 그 위에 막대 · 안내 글을 둔다.
         /// </summary>
         public float LayoutShown(IReadOnlyList<CardView> cards, int firstNew)
         {
             int count = cards.Count;
             float cardWidth = CardWidth, cardHeight = CardHeight;
             Vector3 cameraPosition = _camera.transform.position;
-            float top = cameraPosition.y + ScreenHalfHeight - showTopMargin;
+            float top = cameraPosition.y + ScreenHalfHeight - showTopMargin - showBarSpace; // 카드 묶음의 위 끝
             float handTop = ScreenBottom + raisedBottomGap + cardHeight * (1f + pickLiftRaised) + showBottomGap;
-            float available = top - handTop - showBarSpace;
+            float available = top - handTop;
             float maxWidth = Mathf.Min(showMaxWidth, ScreenHalfWidth * 2f - showEdgeMargin * 2f);
 
             int rows = 1, perRow = count;
@@ -279,7 +285,6 @@ namespace Chapchu.UI.GameScreen
                 perRow = per;
             }
 
-            float blockHeight = rows * cardHeight * scale + (rows - 1) * showGapY;
             for (int i = 0; i < count; i++)
             {
                 int row = i / perRow, column = i - row * perRow;
@@ -299,7 +304,7 @@ namespace Chapchu.UI.GameScreen
                 t.DOScale(size, showEnterDuration).SetDelay(delay).SetEase(Ease.OutQuart).SetLink(cards[i].gameObject);
             }
 
-            return top - blockHeight;
+            return top;
         }
 
         /// <summary>손패 평면 위 월드 y → 캔버스 좌표 y (화면 가운데가 0, 위가 +) — 캔버스 100px = 1 유닛 (10-ui.md 2-1 「3D 층 구현」).</summary>
@@ -318,7 +323,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 반응 시간 — 이 인스턴스 ID 의 카드(낼 수 있는 카운터)는 빛나며 올라오고 나머지는 어두워진다 (10-ui.md 5절). null 이면 반응 시간이 아니다.
+        /// 반응 시간 — 이 인스턴스 ID 의 카드(낼 수 있는 카운터)는 커지고 나머지는 흐려지며 작아진다 (시안 v3.5, 색 강조 없음). null 이면 반응 시간이 아니다.
         /// </summary>
         public void ShowReaction(ICollection<int> usableInstanceIds)
         {
@@ -326,6 +331,20 @@ namespace Chapchu.UI.GameScreen
             _usable.Clear();
             if (usableInstanceIds != null)
                 _usable.UnionWith(usableInstanceIds);
+            Layout();
+        }
+
+        /// <summary>
+        /// 지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴인지, 연출 · 체인이 진행 중인지, 내 함정 칸이 다 찼는지.
+        /// 내 턴엔 카운터 · 칸이 찬 함정이 흐려지며 작아지고, 진행 중이 아니면 나머지가 커진다. 판정이 아니라 표시 — 내면 방장이 판정한다.
+        /// </summary>
+        public void SetPlayState(bool myTurn, bool busy, bool trapsFull)
+        {
+            if (_myTurn == myTurn && _busy == busy && _trapsFull == trapsFull) return;
+
+            _myTurn = myTurn;
+            _busy = busy;
+            _trapsFull = trapsFull;
             Layout();
         }
 
@@ -583,38 +602,37 @@ namespace Chapchu.UI.GameScreen
             for (int i = 0; i < _laidOut.Count; i++)
             {
                 CardView card = _laidOut[i];
-                bool usable = _reacting && _usable.Contains(card.InstanceId);
                 bool dragging = card == _dragging;
-                card.SetGlow(usable);
-                card.SetDimmed(_reacting && !usable && !dragging);
-                card.SetSelected(card == _selected || (dragging && _armed));
-                if (dragging) continue;
+                bool selected = card == _selected;
+                bool hovered = card == _hovered;
+                // 시안 v3.5 · v3.8 — 지금 낼 수 없는 카드는 흐리고 작게, 낼 수 있는 카드는 크게. 고르거나 포인터 아래 카드 · 끄는 카드는 원색으로 읽힌다
+                bool dim = IsUnplayable(card);
+                bool can = !dragging && CanPlay(dim);
+                card.SetDimmed(dim && !dragging && !selected && !hovered);
+                card.SetSelected(selected || (dragging && _armed));
+                card.SetHovered(hovered);
+                float stateScale = selected || hovered ? 1f : can ? playableScale : dim ? unplayableScale : 1f;
+                if (dragging)
+                {
+                    _dragScale = stateScale;
+                    continue;
+                }
 
                 Vector3 slot = _slots[i];
-                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = 1f, Lift = i * cardDepthStep, TiltX = restTilt };
+                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = stateScale, Lift = i * cardDepthStep, TiltX = restTilt };
                 if (raised)
                     pose.Center.y += cardHeight / 2f + raisedBottomGap;
 
-                float pickLift = cardHeight * (raised ? pickLiftRaised : pickLiftLowered);
-                if (card == _selected)
+                if (selected)
                 {
-                    pose.Center.y += pickLift;
+                    pose.Center.y += cardHeight * (raised ? pickLiftRaised : pickLiftLowered);
                     pose.Lift += selectedDepth;
                 }
-
-                if (card == _hovered && card != _selected)
+                else if (hovered)
                 {
                     pose.Center.y += cardHeight * hoverLift;
                     pose.Scale *= hoverScale;
                     pose.Lift += hoverDepth;
-                }
-                else if (usable && card != _selected)
-                {
-                    // 낼 수 있는 카운터는 내려간 손패에서도 쑥 올라와 다 보인다
-                    pose.Center.y += pickLift;
-                    pose.Scale *= usableScale;
-                    if (!raised)
-                        pose.Lift += usableDepth;
                 }
 
                 MoveTo(card, pose);
@@ -622,6 +640,14 @@ namespace Chapchu.UI.GameScreen
 
             SyncRaised(raised);
         }
+
+        // 지금 낼 수 없는 카드 (시안 v3.5 dim) — 반응 시간엔 낼 수 있는 카운터 말고 전부, 내 턴엔 카운터 · 칸이 다 찬 함정. 대상 고르는 중(잠김)에는 가리지 않는다.
+        private bool IsUnplayable(CardView card) => _reacting
+            ? !_usable.Contains(card.InstanceId)
+            : _myTurn && !IsLocked && (card.Type == CardType.Counter || (card.Type == CardType.Trap && _trapsFull));
+
+        // 지금 낼 수 있는 카드 (시안 v3.5 can) — 반응 시간엔 낼 수 있는 카운터, 내 턴엔 흐리지 않은 카드 (연출 · 체인이 진행 중이 아닐 때).
+        private bool CanPlay(bool unplayable) => _reacting ? !unplayable : _myTurn && !IsLocked && !_busy && !unplayable;
 
         // 원호 위의 자리 n 개 — x · y(카드 가운데, 화면 아래 끝이 기준) · 시계 방향 각도. 프로토타입 v2 baseSlots · handSlots 와 같은 식.
         // 화면 아래 가상의 중심점을 기준으로 놓아 기울기와 높이가 늘 맞물린다. selected 번째 카드를 골랐으면 그 양옆에 틈을 벌리고, 넘치면 나머지 간격을 좁힌다.
@@ -633,11 +659,11 @@ namespace Chapchu.UI.GameScreen
             float cardWidth = CardWidth;
             float halfWidth = ScreenHalfWidth;
             float cameraX = _camera.transform.position.x;
-            // 내 패널 · 찹츄 버튼은 SafeArea 안에 있으니 노치 폭만큼 더 비운다 (15-screen 5 · 7절)
+            // 내 HUD · 스킵은 SafeArea 안에 있다 — 노치 · 펀치홀로 밀린 만큼 손패 상자도 민다 (시안 handBox 의 gL · gR)
             Rect safe = Screen.safeArea;
             float unitsPerPixel = Screen.width > 0 ? halfWidth * 2f / Screen.width : 0f;
-            float left = cameraX - halfWidth + leftReserved + safe.xMin * unitsPerPixel;
-            float right = cameraX + halfWidth - rightReserved - (Screen.width - safe.xMax) * unitsPerPixel;
+            float left = cameraX - halfWidth + safe.xMin * unitsPerPixel + leftReserved;
+            float right = cameraX + halfWidth - (Screen.width - safe.xMax) * unitsPerPixel - rightReserved - (_reacting ? skipReserved : 0f);
 
             float centerX = raised ? cameraX : (left + right) / 2f;
             float maxSpan = raised
@@ -712,7 +738,7 @@ namespace Chapchu.UI.GameScreen
         // 끄는 카드는 트윈 없이 바로 — 포인터를 따라 똑바로 선 채 좌우로만 기운다.
         private void PlaceDragged()
         {
-            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = 1f, Lift = dragDepth, TiltX = 0f };
+            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = _dragScale, Lift = dragDepth, TiltX = 0f };
             ToTransform(pose, out Vector3 position, out Quaternion rotation, out float scale);
             Transform t = _dragging.transform;
             t.localPosition = position;
@@ -799,7 +825,7 @@ namespace Chapchu.UI.GameScreen
 
         private static void ClearMarks(CardView card)
         {
-            card.SetGlow(false);
+            card.SetHovered(false);
             card.SetSelected(false);
             card.SetDimmed(false);
         }

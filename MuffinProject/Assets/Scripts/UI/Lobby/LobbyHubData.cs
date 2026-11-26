@@ -163,6 +163,14 @@ namespace Chapchu.UI.Lobby
         public int KillWins => 7;
         public int ChapchuWins => 5;
 
+        // 레벨 · 경험치 — 시안의 자리 확인용 값. 무엇으로 얻는지 · 레벨별 필요량은 레벨 시스템 미정 (17 12절 #14)
+        public int Level => 7;
+        public int Xp => 340;
+        public int XpNext => 500;
+
+        // 닉네임 변경 쿠폰 — 처음 1장 무료 (17 5-2) · 상점 「기타」 에서 더 산다 (17 7-7). 쓰면 줄고 7일 쿨다운이 붙는 것은 서버가 정한다 (24 3-4)
+        public int NicknameCoupons { get; private set; } = 1;
+
         public List<HubPerson> Friends { get; } = new List<HubPerson>();
         public List<HubPerson> RequestsIn { get; } = new List<HubPerson>();
         public List<HubPerson> RequestsOut { get; } = new List<HubPerson>();
@@ -243,6 +251,9 @@ namespace Chapchu.UI.Lobby
             }
         }
 
+        /// <summary>닉네임 변경 쿠폰 1장 값 — 뼈다귀 또는 츄르, 고른 재화로 (24 4-7, 시안 값)</summary>
+        public static int CouponPrice(HubCurrency currency) => currency == HubCurrency.Bone ? 500 : 20;
+
         #endregion
 
         #region 아이템 · 재화
@@ -288,6 +299,18 @@ namespace Chapchu.UI.Lobby
 
             Add(currency, -amount);
             item.IsOwned = true;
+            return true;
+        }
+
+        /// <summary>닉네임 변경 쿠폰 1장을 산다 — 몇 장이든 살 수 있다 (24 3-4). 재화가 모자라면 false.</summary>
+        public bool BuyCoupon(HubCurrency currency)
+        {
+            int price = CouponPrice(currency);
+            if (Balance(currency) < price)
+                return false;
+
+            Add(currency, -price);
+            NicknameCoupons++;
             return true;
         }
 

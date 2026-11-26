@@ -6,13 +6,17 @@ using UnityEngine.UI;
 
 namespace Chapchu.UI.Lobby
 {
+    /// <summary>상점 「아이템」 탭 안의 소탭 — 캐릭터 · 이펙트 · 기타(닉네임 변경 쿠폰, 17 7-7)</summary>
+    public enum LobbyShopItemTab { Character, Effect, Etc }
+
     /// <summary>
-    /// 오른쪽 판의 아이템 격자 — 꾸미기(슬롯 탭 5) · 상점 아이템(캐릭터 · 이펙트) · 츄르 충전. 머리 띠 탭 · 격자 · 아래 버튼.
+    /// 오른쪽 판의 아이템 격자 — 꾸미기(슬롯 탭 5) · 상점 아이템(캐릭터 · 이펙트 · 기타) · 츄르 충전. 머리 띠 탭 · 격자 · 아래 버튼.
     /// 무엇을 골랐는지는 프레젠터가 들고, 여기는 받은 대로 그린다.
-    /// 기준: 「통합 화면 UI v2」 로비 renderPane · shopPane · boxGetBtn
+    /// 기준: 「통합 화면 UI v3」 로비 renderPane · shopPane · boxGetBtn
     /// </summary>
     public class LobbyItemPaneView : MonoBehaviour
     {
+        private const string CouponCellId = "coupon";
         private const string EquipText = "장착";
         private const string EquippedText = "장착 중";
         private const string GetText = "얻으러 가기";
@@ -26,7 +30,7 @@ namespace Chapchu.UI.Lobby
         private const string NoneCaption = "없음";
         private const string DefaultCaption = "기본";
 
-        private static readonly string[] ShopTabNames = { "캐릭터", "이펙트" };
+        private static readonly string[] ShopTabNames = { "캐릭터", "이펙트", "기타" };
 
         [SerializeField] private GameObject content;
         [SerializeField] private LobbyTabView[] tabs;
@@ -53,6 +57,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Image footPriceIcon;
         [SerializeField] private TMP_Text footPriceText;
 
+        [Tooltip("주 버튼 왼쪽의 흰 버튼 — 쿠폰을 뼈다귀로 살 때만 보인다 (주 버튼은 츄르)")]
+        [SerializeField] private Button footAltButton;
+        [SerializeField] private TMP_Text footAltLabel;
+        [SerializeField] private Image footAltPriceIcon;
+        [SerializeField] private TMP_Text footAltPriceText;
+
         [Header("아이콘")]
         [SerializeField] private Sprite boneIcon;
         [SerializeField] private Sprite churuIcon;
@@ -64,10 +74,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Sprite cardIcon;
         [SerializeField] private Sprite sparkIcon;
         [SerializeField] private Sprite noneIcon;
+        [SerializeField] private Sprite ticketIcon;
 
         public event Action<int> OnTabSelected;
         public event Action<string> OnCellClicked;
         public event Action OnFootClicked;
+        public event Action OnFootAltClicked;
 
         private void Awake()
         {
@@ -75,11 +87,12 @@ namespace Chapchu.UI.Lobby
                 Debug.LogError($"[{nameof(LobbyItemPaneView)}] 탭 · 격자 참조가 비어 있습니다.", this);
 
             if (footNote == null || footNoteText == null || footNoteIcon == null || footNoteAmount == null
-                || footButton == null || footIcon == null || footLabel == null || footPriceIcon == null || footPriceText == null)
+                || footButton == null || footIcon == null || footLabel == null || footPriceIcon == null || footPriceText == null
+                || footAltButton == null || footAltLabel == null || footAltPriceIcon == null || footAltPriceText == null)
                 Debug.LogError($"[{nameof(LobbyItemPaneView)}] 아래 줄 참조가 비어 있습니다.", this);
 
             if (boneIcon == null || churuIcon == null || shopIcon == null || giftIcon == null || shirtIcon == null
-                || enterIcon == null || ghostIcon == null || cardIcon == null || sparkIcon == null || noneIcon == null)
+                || enterIcon == null || ghostIcon == null || cardIcon == null || sparkIcon == null || noneIcon == null || ticketIcon == null)
                 Debug.LogError($"[{nameof(LobbyItemPaneView)}] 아이콘 참조가 비어 있습니다.", this);
         }
 
@@ -90,6 +103,7 @@ namespace Chapchu.UI.Lobby
             foreach (LobbyItemCellView cell in cells)
                 cell.OnClicked += HandleCellClicked;
             footButton.onClick.AddListener(HandleFootClicked);
+            footAltButton.onClick.AddListener(HandleFootAltClicked);
         }
 
         private void OnDisable()
@@ -99,6 +113,7 @@ namespace Chapchu.UI.Lobby
             foreach (LobbyItemCellView cell in cells)
                 cell.OnClicked -= HandleCellClicked;
             footButton.onClick.RemoveListener(HandleFootClicked);
+            footAltButton.onClick.RemoveListener(HandleFootAltClicked);
         }
 
         public void Hide() => content.SetActive(false);
@@ -153,12 +168,12 @@ namespace Chapchu.UI.Lobby
         }
 
         /// <summary>상점 아이템 — 캐릭터 · 이펙트 탭. selected 가 없으면 「구매」 가 꺼져 있다.</summary>
-        public void ShowShop(LobbyHubData data, bool effects, HubItem selected)
+        public void ShowShop(LobbyHubData data, LobbyShopItemTab tab, HubItem selected)
         {
-            ShowTabs(ShopTabNames.Length, effects ? 1 : 0, index => ShopTabNames[index]);
+            ShowTabs(ShopTabNames.Length, (int)tab, index => ShopTabNames[index]);
             grid.cellSize = shopCellSize;
 
-            List<HubItem> items = data.ShopItems(effects);
+            List<HubItem> items = data.ShopItems(tab == LobbyShopItemTab.Effect);
             for (int i = 0; i < cells.Length; i++)
             {
                 cells[i].gameObject.SetActive(i < items.Count);
@@ -178,6 +193,30 @@ namespace Chapchu.UI.Lobby
                 SetFoot(ToGachaText, true, giftIcon);
             else
                 SetFoot(BuyPriceFormat, true, null, CurrencyIcon(priceCurrency), LobbyStyle.Number(price));
+        }
+
+        /// <summary>
+        /// 상점 「기타」 — 닉네임 변경 쿠폰 한 칸. 고르면 구매 버튼 둘(왼쪽 흰 버튼 뼈다귀 · 주 버튼 츄르), 안 고르면 꺼진 「구매」 (17 7-7).
+        /// </summary>
+        public void ShowCoupon(LobbyHubData data, bool isSelected)
+        {
+            ShowTabs(ShopTabNames.Length, (int)LobbyShopItemTab.Etc, index => ShopTabNames[index]);
+            grid.cellSize = shopCellSize;
+            for (int i = 0; i < cells.Length; i++)
+                cells[i].gameObject.SetActive(i == 0);
+            cells[0].BindCoupon(CouponCellId, data.NicknameCoupons, isSelected, ticketIcon);
+
+            if (!isSelected)
+            {
+                SetFoot(BuyText, false);
+                return;
+            }
+
+            SetFoot(BuyPriceFormat, true, null, churuIcon, LobbyStyle.Number(LobbyHubData.CouponPrice(HubCurrency.Churu)));
+            footAltButton.gameObject.SetActive(true);
+            footAltLabel.text = BuyPriceFormat;
+            footAltPriceIcon.sprite = boneIcon;
+            footAltPriceText.text = LobbyStyle.Number(LobbyHubData.CouponPrice(HubCurrency.Bone));
         }
 
         /// <summary>츄르 충전 — 탭 대신 안내 한 줄.</summary>
@@ -219,6 +258,7 @@ namespace Chapchu.UI.Lobby
         private void SetFoot(string label, bool isEnabled, Sprite icon = null, Sprite priceIcon = null, string price = null)
         {
             footNote.SetActive(false);
+            footAltButton.gameObject.SetActive(false);
             footLabel.text = label;
             footIcon.gameObject.SetActive(icon != null);
             footIcon.sprite = icon;
@@ -244,5 +284,7 @@ namespace Chapchu.UI.Lobby
         private void HandleCellClicked(LobbyItemCellView cell) => OnCellClicked?.Invoke(cell.Id);
 
         private void HandleFootClicked() => OnFootClicked?.Invoke();
+
+        private void HandleFootAltClicked() => OnFootAltClicked?.Invoke();
     }
 }

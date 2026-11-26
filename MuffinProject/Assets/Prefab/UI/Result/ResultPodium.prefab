@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -238,7 +238,7 @@ MonoBehaviour:
   shape: 0
   radius: 18
   borderWidth: 5
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -322,7 +322,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -332,7 +332,7 @@ MonoBehaviour:
   shape: 0
   radius: 7
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -424,15 +424,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: 100
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_fontColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -627,7 +627,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -713,7 +713,7 @@ MonoBehaviour:
   shape: 0
   radius: 22
   borderWidth: 5
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -879,15 +879,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uD0C8\uB77D \xB7 1\uD134"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.9254902, g: 0.41960785, b: 0.3647059, a: 1}
+  m_fontColor: {r: 0.9254902, g: 0.23137255, b: 0.2745098, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1178,7 +1178,7 @@ MonoBehaviour:
   shape: 0
   radius: 22
   borderWidth: 4
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -1269,15 +1269,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uB098\uAC10"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.65882355, g: 0.61960787, b: 0.58431375, a: 1}
+  m_fontColor: {r: 0.43137255, g: 0.39215686, b: 0.36078431, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1407,8 +1407,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 4
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: c487e04eeae4b994da2d77088d6846ec, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 780531a958924af7b3e4c1bc58bf3f28, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1564,8 +1564,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uB098"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1782,7 +1782,7 @@ MonoBehaviour:
   shape: 0
   radius: 8
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -1844,7 +1844,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2064,18 +2064,18 @@ MonoBehaviour:
   outTilt: 7
   outDrop: 6
   podiumColors:
-  - {r: 1, g: 0.87058824, b: 0.47058824, a: 1}
+  - {r: 1, g: 0.75686275, b: 0.18039216, a: 1}
   - {r: 0.95686275, g: 0.96862745, b: 0.99607843, a: 1}
   - {r: 0.99215686, g: 0.9098039, b: 0.8235294, a: 1}
   - {r: 1, g: 0.9882353, b: 0.96862745, a: 1}
   podiumHighlightColors:
-  - {r: 1, g: 0.9490196, b: 0.7764706, a: 1}
+  - {r: 1, g: 0.84313725, b: 0.4, a: 1}
   - {r: 1, g: 1, b: 1, a: 1}
   - {r: 1, g: 0.95686275, b: 0.9098039, a: 1}
   - {r: 1, g: 1, b: 1, a: 1}
-  ink: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
-  muted: {r: 0.65882355, g: 0.61960787, b: 0.58431375, a: 1}
-  danger: {r: 0.9254902, g: 0.41960785, b: 0.3647059, a: 1}
+  ink: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
+  muted: {r: 0.43137255, g: 0.39215686, b: 0.36078431, a: 1}
+  danger: {r: 0.9254902, g: 0.23137255, b: 0.2745098, a: 1}
   outBorder: {r: 0.70980394, g: 0.6784314, b: 0.6392157, a: 1}
   outBone: {r: 0.9372549, g: 0.9098039, b: 0.87058824, a: 1}
   outCharacter: {r: 0.82, g: 0.81, b: 0.8, a: 0.92}
@@ -2226,8 +2226,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uACF5\uB3D9"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2363,15 +2363,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uD50C\uB808\uC774\uC5B4"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_fontColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2491,7 +2491,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2575,8 +2575,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uC900\uBE44"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2846,8 +2846,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uCC39\uCE04 \uC2B9\uB9AC!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: c487e04eeae4b994da2d77088d6846ec, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 780531a958924af7b3e4c1bc58bf3f28, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2975,7 +2975,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2985,7 +2985,7 @@ MonoBehaviour:
   shape: 0
   radius: 9
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -3088,7 +3088,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3286,7 +3286,7 @@ MonoBehaviour:
   shape: 0
   radius: 16
   borderWidth: 4
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -3378,7 +3378,7 @@ MonoBehaviour:
   shape: 1
   radius: 0
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -3440,7 +3440,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3524,15 +3524,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uC900\uBE44!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_fontColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -3662,7 +3662,7 @@ MonoBehaviour:
   shape: 0
   radius: 26
   borderWidth: 6
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -4039,15 +4039,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uD50C\uB808\uC774\uC5B4\uC5D0\uAC8C \uB2F9\uD568"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
+  m_sharedMaterial: {fileID: 525092245739306415, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.6039216, g: 0.56078434, b: 0.52156866, a: 1}
+  m_fontColor: {r: 0.43137255, g: 0.39215686, b: 0.36078431, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -4265,7 +4265,7 @@ MonoBehaviour:
   shape: 0
   radius: 14
   borderWidth: 6
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -4422,7 +4422,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4432,7 +4432,7 @@ MonoBehaviour:
   shape: 0
   radius: 22
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -4682,7 +4682,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4855,7 +4855,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4865,7 +4865,7 @@ MonoBehaviour:
   shape: 0
   radius: 8
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -5355,8 +5355,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uB098"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
-  m_sharedMaterial: {fileID: 5123903259464430255, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
+  m_sharedMaterial: {fileID: 6558318809634035320, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

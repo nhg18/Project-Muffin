@@ -8,9 +8,9 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 로비 홈 — 프로필 칩 · 아래 왼쪽 줄(퀘스트 · 꾸미기 · 상점) · 플레이 묶음. 섹션으로 가면 0.2초에 사라진다.
+    /// 로비 홈 — 프로필 칩(닉네임 · 레벨 줄) · 아래 왼쪽 줄(퀘스트 · 꾸미기 · 상점) · 플레이 묶음. 섹션으로 가면 0.2초에 사라진다.
     /// 플레이 묶음의 작은 버튼 셋(혼자 하기 · 방 만들기 · 코드로 참가)은 개발자 모드에서만 풀린다 — 평소엔 자물쇠 · 꺼진 모양 (14-lobby-ui 5절).
-    /// 기준: 「통합 화면 UI v2」 로비 #home
+    /// 기준: 「통합 화면 UI v3」 로비 #home, docs/systems/17-lobby-ui-full.md 4-1
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class LobbyHomeView : MonoBehaviour
@@ -18,7 +18,9 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button profileButton;
         [SerializeField] private TMP_Text nicknameText;
         [SerializeField] private LayoutElement nicknameSize;
-        [SerializeField] private TMP_Text codeText;
+        [SerializeField] private TMP_Text levelText;
+        [SerializeField] private RectTransform xpFill;
+        [SerializeField] private TMP_Text xpText;
         [SerializeField] private Button questButton;
         [SerializeField] private GameObject questBadge;
         [SerializeField] private TMP_Text questBadgeText;
@@ -57,7 +59,7 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             _group = GetComponent<CanvasGroup>();
-            if (profileButton == null || nicknameText == null || nicknameSize == null || codeText == null
+            if (profileButton == null || nicknameText == null || nicknameSize == null || levelText == null || xpFill == null || xpText == null
                 || questButton == null || questBadge == null || questBadgeText == null || decoButton == null || shopButton == null)
                 Debug.LogError($"[{nameof(LobbyHomeView)}] 칩 · 아래 줄 참조가 비어 있습니다.", this);
 
@@ -110,11 +112,18 @@ namespace Chapchu.UI.Lobby
             _group.DOKill();
         }
 
-        public void SetProfile(string nickname, string friendCode)
+        public void SetProfile(string nickname)
         {
             nicknameText.text = nickname;
             nicknameSize.preferredWidth = Mathf.Min(nicknameText.GetPreferredValues(nickname).x, nicknameMaxWidth);
-            codeText.text = friendCode;
+        }
+
+        /// <summary>레벨 줄 — 「Lv.{n}」 · 경험치 막대 · 「{현재} / {다음 레벨까지 총량}」</summary>
+        public void SetLevel(int level, int xp, int xpNext)
+        {
+            levelText.text = $"Lv.{level}";
+            xpFill.anchorMax = new Vector2(xpNext > 0 ? Mathf.Clamp01((float)xp / xpNext) : 0f, 1f);
+            xpText.text = $"{xp} / {xpNext}";
         }
 
         /// <summary>퀘스트 배지 = 받을 수 있는 보상 수.</summary>

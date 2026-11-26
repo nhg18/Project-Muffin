@@ -5,6 +5,7 @@ using System.Linq;
 using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.Network.Events;
+using Chapchu.UI.Fx;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -121,10 +122,12 @@ namespace Chapchu.UI.GameScreen
                 string nickname = PlayerLook.NameOf(actor);
                 // 매치 방의 봇은 사람과 똑같이 닉네임만 (18-bot.md 8-2, PM 2026-11-26)
                 seat.SetNickname(BotRoster.IsBot(actor) && !BotRoster.IsMatchRoom ? string.Format(BotNicknameFormat, nickname) : nickname);
-                seat.SetColor(PlayerLook.SeatColors[seatIndex - 1]);
+                seat.SetLife(LifeState.Alive);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
                 seat.SetTargetable(false);
+                seat.SetSkip(false); // 다음 턴 스킵은 스냅샷에 없다 — 다음 알림부터
+                seat.SetBlocked(BotRoster.TryGetPublic(actor, PlayerProps.ActionBlock, out object block) && block is byte blockValue && blockValue != (byte)ActionBlock.None);
 
                 // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
@@ -138,6 +141,10 @@ namespace Chapchu.UI.GameScreen
 
                 if (BotRoster.TryGetPublic(actor, PlayerProps.TrapCount, out object trapCount) && trapCount is int trapCountValue)
                     traps.SetCount(trapCountValue);
+
+                // 사망 대기는 보이지 않는다 (10-ui.md 2-1) — 최종 사망만
+                if (BotRoster.TryGetPublic(actor, PlayerProps.LifeState, out object life) && life is byte lifeValue && lifeValue == (byte)LifeState.Dead)
+                    seat.SetLife((LifeState)lifeValue);
             }
 
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
@@ -182,6 +189,17 @@ namespace Chapchu.UI.GameScreen
             return true;
         }
 
+        /// <summary>상대의 4 단계 공통 연출 자리 (ResultFx). 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetFxSeat(int actorNumber, out ResultFx.Seat fxSeat)
+        {
+            fxSeat = default;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            fxSeat = seat.FxSeat;
+            return true;
+        }
+
         /// <summary>상대 좌석의 손 자리(화면 좌표) — 그 사람이 낸 카드가 출발하고, 손패로 돌아가는 카드가 닿는다. 좌석이 없으면(나 · 나간 사람) false.</summary>
         public bool TryGetHandScreenPoint(int actorNumber, out Vector2 screenPoint)
         {
@@ -214,14 +232,42 @@ namespace Chapchu.UI.GameScreen
             yield return new WaitForSeconds(dealInterval);
         }
 
-        /// <summary>상대의 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 띠 · 말풍선. 해제되면 바로 사라진다 (10-ui.md 7절).</summary>
+        /// <summary>행동 카드 금지 (OnActionBlockChanged, 1007 짖기) — 이름표 옆 「행동 금지」. 좌석이 없는 사람이면 무시.</summary>
+        public void ShowBlocked(int actorNumber, bool blocked)
+        {
+            if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                seat.SetBlocked(blocked);
+        }
+
+        /// <summary>다음 턴 스킵 (OnTurnSkipMarked → OnTurnSkipped) — 이름표 옆 「스킵」. 좌석이 없는 사람이면 무시.</summary>
+        public void ShowSkipMarked(int actorNumber, bool marked)
+        {
+            if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                seat.SetSkip(marked);
+        }
+
+        /// <summary>상대의 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 이름 칸 · 말풍선. 해제되면 바로 사라진다 (10-ui.md 7절).</summary>
         public void ShowChapchu(int actorNumber, bool isChapchu)
         {
             if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
                 seat.SetChapchu(isChapchu);
         }
 
-        /// <summary>턴 주인의 좌석에만 노란 머리 띠 · 발밑 타원. 내 턴이면 모두 끈다. 대상을 고르는 중에 내 턴이 끝나면 선택을 취소한다 (10-ui.md 6절).</summary>
+        /// <summary>
+        /// 살아 있음 · 최종 사망 (OnDeathAvoided · OnPlayerDied, 06-health.md) — 이름표 · 캐릭터 팻말. 좌석이 없는 사람(나 · 나간 사람)이면 무시.
+        /// 사망 대기는 보이지 않는 상태라 받지 않는다 (10-ui.md 2-1).
+        /// </summary>
+        public void ShowLife(int actorNumber, LifeState life)
+        {
+            if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                seat.SetLife(life);
+
+            // 최종 사망 — 손패 · 설치 함정은 버림 더미로 가고 「함정 슬롯 0」 으로 보인다 (06-health 9절, 시안: 사망이면 빈 칸)
+            if (life == LifeState.Dead && _trapsOf.TryGetValue(actorNumber, out TrapSlotsView traps))
+                traps.SetCount(0);
+        }
+
+        /// <summary>턴 주인의 좌석에만 노란 이름 칸 · 스톱워치. 내 턴이면 모두 끈다. 대상을 고르는 중에 내 턴이 끝나면 선택을 취소한다 (10-ui.md 6절).</summary>
         public void ShowTurn(int turnActorNumber)
         {
             foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
