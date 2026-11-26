@@ -2576,8 +2576,13 @@ public static class MultiTest
                     t.Counter(t.Turn, dbl2);
                     ChoiceStarted first = t.RunUntil<ChoiceStarted>(40);
                     int turnAfterPenalty = t.HandCount(t.Turn);
+                    double firstDeadline = t.Server.OpenChoiceDeadline();
+                    t.Run(t.Now + 1); // 두 고르기의 마감이 달라지게
                     var again = first != null ? t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId).ToList() : new List<GameEvent>();
                     bool second = again.OfType<ChoiceStarted>().Any(c => c.Actor == t.O1 && c.Kind == ChoiceKind.HandCard);
+                    // 앞 고르기에 보낸 늦은 요청(그 고르기의 마감을 실어 온다)은 두 번째 고르기의 답으로 받지 않는다
+                    bool staleRefused = second && t.Code(t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId, firstDeadline)) == RejectCode.NotChoosing && t.HandCount(t.O1) == 2;
+                    Check(staleRefused, $"2배가 된 대가 — 앞 고르기에 보낸 늦은 요청은 거절(코드 20) · 손패 그대로({t.HandCount(t.O1)})");
                     var rest = second ? t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId).ToList() : new List<GameEvent>();
                     rest.AddRange(t.Run(t.Now + 10));
                     Check(first != null && turnAfterPenalty == 1 && second && !rest.OfType<ChoiceStarted>().Any() && t.HandCount(t.O1) == 1 && t.Hp(t.O1) == 100,
@@ -5830,4 +5835,14 @@ public static class MultiTest
         Chapchu.Network.Events.GameEvents.OnCardPlayed += onPlayed;
         return "OK 카드 스크린샷 대기 → " + prefix + "_zoom.png · _reaction.png · _later.png";
     }
+}
+
+// 시험이 고르기 요청을 「지금 열린 고르기의 답」 으로 보내게 한다 — GameServer.Choose 는 답하는 고르기의 마감을 함께 받는다 (앞 고르기에 보낸 늦은 요청 거절).
+public static class MultiTestChoice
+{
+    public static double OpenChoiceDeadline(this GameServer server) =>
+        (double)typeof(GameServer).GetField("_choiceDeadline", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(server);
+
+    public static IReadOnlyList<GameEvent> Choose(this GameServer server, int requester, int option) =>
+        server.Choose(requester, option, server.OpenChoiceDeadline());
 }

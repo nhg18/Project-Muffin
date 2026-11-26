@@ -42,6 +42,8 @@
 
 **대상 선택 중 체인 카드 흐리게 (사용자 2026-11-27)** — 대상을 고르는 카운터(2015 · 2018)는 체인에 카드가 놓인 채로 고르는데, 좌석 위에 그려지는 체인 카드가 고를 상대를 가렸다 (탭은 원래 지나가 좌석에 닿았다). 대상을 고르는 동안 체인 층 전체를 불투명도 25% 로 (0.15초, 값은 내 제안을 사용자가 승인) — `TopCardLayerView.SetChainFaded` · `HandPresenter.PlayWithTargetsRoutine` · `10-ui` 6절. 「아래로 치우기」 안은 버렸다 (아래는 손패 자리 · 5초 안에 오가는 이동). 확인: `counter pick`(불투명도 0.25 → 고른 뒤 1.00 · SHOT_DIR 이 있으면 `pick_*.png`) · `counter reflect` · `counter cost` · `ui` 통과. **못 본 것**: 고르는 바로 그 순간의 스크린샷(찍힌 것은 고른 직후 되돌아오는 중) · 4인 좌석 · 모바일.
 
+**네 번째 리뷰 (2026-11-27)** — 2배가 된 대가(으르렁 2장)에서 첫 고르기가 시간 초과로 끝난 뒤 도착한 요청이 두 번째 고르기의 답으로 받아들여지던 것 → 고르기 요청에 그 고르기의 마감을 실어 보내고 다르면 거절(`c1885fc2`, `GameServer.Choose(requester, option, deadline)` · `RPC_RequestChoose` 인자 추가). 빌더의 `Fill` 은 `AnchorBox` 로 합침. 리뷰가 못 건드린 것을 작성 세션이 맞췄다: `MultiTest.cs`(2인자 호출은 확장 메서드 `MultiTestChoice.Choose` 가 지금 열린 고르기의 마감을 넣는다 · 늦은 요청 거절 1줄) · `09-network`(코드 20 · 요청 인자). 확인: `rules` 448(전부터 있던 5건만 실패) · `counter cost` · `counter pick` · `solo` · `migrate`.
+
 **다음 할 일** — push 전 리뷰(`prepush.sh`) → push → PR. `multi 2` 의 남은 실패 두 가지를 볼지. 노션 카드 DB 의 2002 문구 · 규칙은 사용자(PM)가 고친다.
 
 ## 2026-11-23 ~ 24 · 카운터 묶음 4 · 5 · 6 · 7 · 8 — 2019 · 2005 · 2015 · 2018 · 2002 · 2013 (`feature/counter-basics`)
