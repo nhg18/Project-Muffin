@@ -534,12 +534,12 @@ namespace Chapchu.EditorTools
             return chip;
         }
 
-        // 설정(톱니) 버튼 — 우상 (32, 22) · 76 × 76. 서랍 · 팝업은 BuildMenuSheet 가 Sheets 층에 만든다.
+        // 설정(톱니) 버튼 — 우상 (32, 22) · 76 × 76 동그라미 (통합 화면 UI v3 #b-set). 서랍 · 팝업은 BuildMenuSheet 가 Sheets 층에 만든다.
         private static GameMenuView BuildGearButton(RectTransform parent)
         {
             RectTransform root = NewRect("Menu", parent);
             TopRight(root, EdgeX, EdgeTop + 2f, 76f, 76f);
-            Button gear = BuildButton("GearButton", root, 76f, 76f, White, 22f, null, 0f, Ink, Hud("icon_gear"), 34f);
+            Button gear = BuildButton("GearButton", root, 76f, 76f, White, GearRadius, null, 0f, Ink, Hud("icon_gear"), 34f);
             Stretch((RectTransform)gear.transform);
 
             var view = root.gameObject.AddComponent<GameMenuView>();
@@ -1701,7 +1701,7 @@ namespace Chapchu.EditorTools
             HorizontalLayout(root, new RectOffset(label != null ? 28 : 0, label != null ? 28 : 0, 0, 0), 12f, TextAnchor.MiddleCenter, true, false);
 
             Image shadowImage = RoundImage("Shadow", root, Ink, radius);
-            Stretch(shadowImage.rectTransform, 0f, -shadow, 0f, shadow);
+            Stretch(shadowImage.rectTransform, 0f, shadow, 0f, -shadow); // 아래로 (시안 .btn box-shadow 0 3px 0)
             shadowImage.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             Image fill = RoundBox(root, Ink, 5f, radius, fillColor, true);
 
