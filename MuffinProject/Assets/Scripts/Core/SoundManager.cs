@@ -42,6 +42,8 @@ namespace Chapchu.Core
         // 앞부분을 예약해 틀 때까지의 여유. 예약해야 반복 부분이 빈틈 없이 이어진다
         private const double BgmScheduleLeadSeconds = 0.1;
         private const int SfxVoices = 8;
+        // 같은 효과음이 이 안에 또 오면 새로 울리지 않는다 — 여러 좌석이 한꺼번에 맞을 때 같은 파일이 겹쳐 커지지 않게
+        private const float SfxRepeatGapSeconds = 0.05f;
 
         // 배경음을 트는 화면 (PM 2026-11-27). 방 · 게임 · 결과에서는 멈춘다
         private static readonly string[] BgmScenes = { ScenePaths.Title, ScenePaths.Lobby };
@@ -69,6 +71,7 @@ namespace Chapchu.Core
         [SerializeField] private SfxEntry[] sfx;
 
         private readonly Dictionary<Sfx, SfxEntry> _sfx = new();
+        private readonly Dictionary<Sfx, (float time, AudioSource voice)> _lastSfx = new();
         private readonly List<RaycastResult> _pointerHits = new();
         private AudioSource[] _voices;
         private int _nextVoice;
@@ -183,11 +186,22 @@ namespace Chapchu.Core
         {
             if (!IsSfxOn || !_sfx.TryGetValue(id, out SfxEntry entry) || entry.clip == null) return;
 
+            float volume = entry.volume * Mathf.Clamp01(volumeScale);
+
+            // 방금 울린 같은 소리가 아직 나고 있으면 겹치지 않고, 더 큰 쪽 음량만 따른다
+            if (_lastSfx.TryGetValue(id, out var last) && Time.unscaledTime - last.time < SfxRepeatGapSeconds
+                && last.voice.isPlaying && last.voice.clip == entry.clip)
+            {
+                last.voice.volume = Mathf.Max(last.voice.volume, volume);
+                return;
+            }
+
             AudioSource voice = NextVoice();
             voice.clip = entry.clip;
-            voice.volume = entry.volume * Mathf.Clamp01(volumeScale);
+            voice.volume = volume;
             voice.pitch = 1f + UnityEngine.Random.Range(-entry.pitchJitter, entry.pitchJitter);
             voice.Play();
+            _lastSfx[id] = (Time.unscaledTime, voice);
         }
 
         // 쉬고 있는 소스 — 다 울리는 중이면 가장 오래전에 쓴 것
