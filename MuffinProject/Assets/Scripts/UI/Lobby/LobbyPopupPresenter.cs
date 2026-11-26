@@ -243,7 +243,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleSfxChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.SfxOn, isOn);
 
-        private void HandleBgmChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+        private void HandleBgmChanged(bool isOn)
+        {
+            SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.RefreshBgm();
+        }
 
         private void HandleInviteNoticeChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.InviteNoticeOn, isOn);
 
