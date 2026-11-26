@@ -22,6 +22,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>칸 수 (3) — 「내 함정 n/3」 의 분모.</summary>
         public int Capacity => slots.Length;
 
+        /// <summary>칸이 다 찼다.</summary>
+        public bool IsFull => Count >= Capacity;
+
         private void Awake()
         {
             if (slots == null || slots.Length == 0 || slots.Any(slot => slot == null))

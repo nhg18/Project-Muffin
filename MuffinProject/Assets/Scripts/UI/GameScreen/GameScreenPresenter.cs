@@ -67,7 +67,7 @@ namespace Chapchu.UI.GameScreen
         // 화면에 재생한 기준으로 체인에 남은 카드 수 — 0 이 되면 반응 타이머를 숨긴다. 연출 큐 단계 안에서만 바꾼다.
         private int _chainCount;
 
-        // 「뽑고 턴 끝」 버튼의 조건 — 재생한 기준. 연출 큐 단계 안에서만 바꾼다.
+        // 「뽑고 턴 끝」 버튼 · 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) 의 조건 — 재생한 기준. 연출 큐 단계 안에서만 바꾼다.
         private bool _isMyTurn;
         private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
         private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
@@ -837,11 +837,21 @@ namespace Chapchu.UI.GameScreen
                 }
 
                 if (step != null)
+                {
+                    ShowHandPlayState(true);
                     yield return Guarded(step);
+                }
             }
 
             _playing = null;
+            ShowHandPlayState(false);
         }
+
+        // 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) — 연출이 있는 단계를 재생하는 동안 · 체인이 남은 동안 · 사망 대기 동안은 진행 중이라 커지지 않는다.
+        // 이번 턴에 카드를 이미 냈으면(메인 행동 끝) 턴이 넘어갈 때까지 커지지 않는다 — 「뽑고 턴 끝」 버튼과 같은 조건 (03-turn.md 3절).
+        // 큐가 빌 때와 연출 단계를 시작할 때만 고친다 — 단계 사이마다 고치면 연달아 오는 단계 사이에 카드가 잠깐 커졌다 줄어든다.
+        private void ShowHandPlayState(bool stepRunning) =>
+            hand.ShowPlayState(_isMyTurn, stepRunning || _chainCount > 0 || _myMainActionDone || _pendingActors.Count > 0, myTraps.IsFull);
 
         // 연출 코루틴을 직접 돌린다 — 안쪽 코루틴(yield return IEnumerator)까지 MoveNext 를 감싸, 예외가 나면 그 단계를 끝낸다
         private IEnumerator Guarded(IEnumerator step)

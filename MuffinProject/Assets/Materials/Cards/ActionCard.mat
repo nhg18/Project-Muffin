@@ -8,13 +8,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: ActionCard
-  m_Shader: {fileID: 4800000, guid: 3c2edf4b37fd448458ca8f501420a3b2, type: 3}
+  m_Shader: {fileID: 4800000, guid: affa77e60d8b5df45b8a80890ff62543, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _HASTEX_ON
-  - _OPAQUE_ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -31,23 +29,26 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Cutoff: 0.5
-    - _Foil: 0
-    - _Glare: 0.6
     - _Grade: 0
-    - _GradeOffset: 0
-    - _GradeSpeed: 0
-    - _Gray: 0
-    - _HasTex: 1
-    - _Opaque: 1
-    - _Outline: 4.61
-    - _Pad: 13.83
-    - _Radius: 9.22
+    - _InkWidth: 3
+    - _Mark: 0
+    - _MarkWidth: 12
+    - _StarUnit: 1.25
+    - _ThickStep: 2.05
     m_Colors:
-    - _CardRect: {r: -0.061194688, g: -0.041160714, b: 1.0611947, a: 1.0411607}
-    - _OutlineColor: {r: 0, g: 0.6156863, b: 1, a: 1}
-    - _PawColor: {r: 0, g: 0.616, b: 1, a: 0.7}
-    - _PawPaper: {r: 0.965, g: 0.941, b: 0.906, a: 1}
-    - _Size: {r: 253.66, g: 363.66, b: 0, a: 0}
+    - _Face: {r: 113, g: 168, b: 3.08, a: 0}
+    - _Filter: {r: 1, g: 1, b: 1, a: 0}
+    - _InkColor: {r: 0.169, g: 0.157, b: 0.337, a: 1}
+    - _InkWobble: {r: 0.02, g: 1.6, b: 0, a: 0}
+    - _MarkColor: {r: 1, g: 0.824, b: 0.247, a: 0.9}
+    - _MarkWobble: {r: 0.03, g: 3.4, b: 0, a: 0}
+    - _Paper: {r: 126.97, g: 181.97, b: 13.77, a: 0}
+    - _Size: {r: 292.0867, g: 414.1416, b: 0, a: 0}
+    - _Star1: {r: 101.33959, g: 192.4458, b: 1, a: 0}
+    - _Star2: {r: 134.3518, g: 134.2154, b: 0.6, a: 0}
+    - _Star3: {r: -134.8246, g: 134.2154, b: 0.75, a: 0}
+    - _Thick1: {r: 0.945, g: 0.922, b: 0.882, a: 1}
+    - _Thick2: {r: 0.902, g: 0.863, b: 0.796, a: 1}
+    - _Thick3: {r: 0.847, g: 0.792, b: 0.706, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
