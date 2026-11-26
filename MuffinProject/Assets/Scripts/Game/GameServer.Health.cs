@@ -20,7 +20,7 @@ namespace Chapchu.Game
             if (amount <= 0)
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
 
-            CountDamage(actor, source, -SetHp(actor, _players[actor].Hp - amount));
+            CountDamage(actor, source, -SetHp(actor, _players[actor].Hp - amount, source));
             RecordDamage(actor, source);
         }
 

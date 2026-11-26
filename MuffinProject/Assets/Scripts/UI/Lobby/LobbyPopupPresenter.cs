@@ -12,7 +12,10 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyPopupPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        // 주 버튼은 하는 일 그대로 (22 1-1 · 3절 로비)
+        private const string UnfriendOkText = "삭제";
+        private const string BlockOkText = "차단";
+        private const string UnblockOkText = "해제";
         private const string CancelText = "취소";
         private const string UnfriendTitle = "친구 삭제";
         private const string UnfriendMessageFormat = "{0}님을 친구에서 삭제할까요?";
@@ -22,9 +25,9 @@ namespace Chapchu.UI.Lobby
         private const string UnblockMessage = "차단을 해제할까요? 친구로 돌아오지는 않아요.";
         private const string GuestText = "게스트";
         private const string AccountText = "계정";
-        private const string LoginNoteFormat = "{0} 계정으로 로그인";
         private const string LoginNameFormat = "{0} 로그인";
         private const string CopiedToast = "친구 코드를 복사했어요.";
+        private const string FriendLimitToast = "친구는 50명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -214,7 +217,7 @@ namespace Chapchu.UI.Lobby
         {
             HidePopups();
             EnterPopupScreen(AnalyticsRecorder.ScreenName.Profile);
-            profile.Show(NetworkManager.Nickname, Data, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
+            profile.Show(NetworkManager.Nickname, Data, IsAccountLogin ? string.Format(LoginNameFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
 
@@ -253,7 +256,7 @@ namespace Chapchu.UI.Lobby
 
         private void HandleUnblockRequested(HubPerson person)
         {
-            modal.ShowWarn(UnblockTitle, UnblockMessage, OkText, CancelText, () =>
+            modal.ShowWarn(UnblockTitle, UnblockMessage, UnblockOkText, CancelText, () =>
             {
                 Data.Blocked.Remove(person);
                 if (settings.IsBlockListOpen)
@@ -286,7 +289,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendAccepted(HubPerson request)
         {
-            Data.Accept(request);
+            if (!Data.Accept(request))
+            {
+                fx.Toast(FriendLimitToast);
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.ShowTab(LobbyFriendsTab.Friends);
             friends.Flash(request.Nickname);
@@ -307,14 +315,19 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendRequestRequested(HubSearchResult result)
         {
-            Data.Request(result);
+            if (!Data.Request(result))
+            {
+                fx.Toast(FriendLimitToast);
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.Refresh();
         }
 
         private void HandleUnfriendRequested(HubPerson friend)
         {
-            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), UnfriendOkText, CancelText, () =>
             {
                 Data.Friends.Remove(friend);
                 friends.Refresh();
@@ -323,7 +336,7 @@ namespace Chapchu.UI.Lobby
 
         private void HandleBlockRequested(HubPerson friend)
         {
-            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), BlockOkText, CancelText, () =>
             {
                 Data.Block(friend);
                 if (invite.Inviter == friend.Nickname)

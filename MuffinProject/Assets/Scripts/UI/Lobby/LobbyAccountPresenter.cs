@@ -13,11 +13,11 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyAccountPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        private const string DeleteOkText = "삭제"; // 주 버튼은 하는 일 그대로 (22 1-1 · 3절 로비)
         private const string CancelText = "취소";
         private const string RenamingText = "바꾸는 중…";
         private const string RenamedToast = "닉네임을 바꿨어요.";
-        private const string RenameFailedTitle = "닉네임 변경 실패";
+        private const string RenameFailedTitle = "변경 실패";
         private const string DeleteTitle = "계정 삭제";
         private const string DeleteMessage = "계정을 삭제할까요? 친구 · 통계 · 보유 아이템이 모두 지워지고 되돌릴 수 없어요.";
         private const string DeleteWord = "삭제";
@@ -56,11 +56,16 @@ namespace Chapchu.UI.Lobby
         private void HandleNicknameChangeRequested()
         {
             _nicknameRejectCount = 0;
+
+            // 금칙어 목록을 다시 읽는다 — 기다리지 않고, 못 받으면 마지막 값으로 검사한다 (23 8-1 · 4절)
+            if (AccountService.IsSignedIn)
+                ServerConfig.FetchAsync().ContinueWith(task => task.Exception, TaskContinuationOptions.OnlyOnFaulted);
+
             modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
         }
 
         private void HandleDeleteAccountRequested()
-            => modal.ShowWarn(DeleteTitle, DeleteMessage, OkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
+            => modal.ShowWarn(DeleteTitle, DeleteMessage, DeleteOkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
 
         // 입력 창은 방 코드에도 쓰인다 — 닉네임 · 계정 삭제일 때만 받는다
         private void HandleInputSubmitted(LobbyInputKind kind, string value)

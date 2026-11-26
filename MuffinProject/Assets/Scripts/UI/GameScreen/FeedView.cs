@@ -85,6 +85,18 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
+        /// <summary>맨 위 칩을 같은 항목으로 다시 채운다 (수치가 뒤늦게 붙었을 때). 칩이 없으면 새로 넣는다.</summary>
+        public void RefreshLatest(HistoryEntry entry, string actorName, Color actorInk)
+        {
+            if (_chips.Count == 0)
+            {
+                Push(entry, actorName, actorInk);
+                return;
+            }
+
+            _chips[0].Fill(entry, actorName, actorInk, CardColor(entry.CardType));
+        }
+
         /// <summary>기록 서랍이 열려 있는 동안 숨긴다.</summary>
         public void SetVisible(bool visible) => gameObject.SetActive(visible);
 

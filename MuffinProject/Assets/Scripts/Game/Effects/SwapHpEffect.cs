@@ -10,11 +10,13 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class SwapHpEffect : CardEffect
     {
+        private const double BotHpGapWeight = 1.5; // 18-bot.md 7-3 — (대상 HP − 내 HP) × 1.5
+
         internal override bool BotWants(GameServer server, int bot, int[] receivers) => receivers.Length == 1 && server.PlayerHp(receivers[0]) > server.PlayerHp(bot);
 
         // 내가 얻는 HP + 상대가 잃는 HP 의 절반
         internal override double BotScore(Bots.BotView view, int[] receivers) =>
-            receivers.Length == 1 ? (view.Server.PlayerHp(receivers[0]) - view.MyHp) * 1.5 : 0;
+            receivers.Length == 1 ? (view.Server.PlayerHp(receivers[0]) - view.MyHp) * BotHpGapWeight : 0;
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {

@@ -38,7 +38,8 @@ namespace Chapchu.UI.GameScreen
                 Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
                 if (room.TryGetValue(RoomProps.WaitCasters, out object wait) && wait is int[] casters)
                     _waitCasters = Known(casters);
-                if (room.TryGetValue(RoomProps.Fallout, out object fallout) && fallout is int[] values && values.Length == 2)
+                if (room.TryGetValue(RoomProps.Fallout, out object fallout) && fallout is int[] values && values.Length == 2
+                    && values[0] >= 1 && values[1] >= 0) // 남이 잠깐 바꾼 값은 거른다 (09-network.md 13절 #8)
                 {
                     _falloutN = values[0];
                     _falloutTurns = values[1];

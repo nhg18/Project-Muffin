@@ -30,6 +30,8 @@ namespace Chapchu.Core
         {
             if (Instance != null && Instance != this)
             {
+                // 꺼 두면 OnEnable(콜백 등록) · Start · Update 가 사본에서 돌지 않는다
+                enabled = false;
                 Destroy(gameObject);
                 return;
             }

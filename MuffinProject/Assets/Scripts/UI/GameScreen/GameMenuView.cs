@@ -33,19 +33,19 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
-            gearButton.onClick.AddListener(ToggleSheet);
-            closeButton.onClick.AddListener(CloseSheet);
-            exitButton.onClick.AddListener(OpenConfirm);
-            confirmCancelButton.onClick.AddListener(CloseConfirm);
+            gearButton.onClick.AddListener(HandleGearClicked);
+            closeButton.onClick.AddListener(HandleCloseClicked);
+            exitButton.onClick.AddListener(HandleExitClicked);
+            confirmCancelButton.onClick.AddListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.AddListener(HandleExitConfirmed);
         }
 
         private void OnDisable()
         {
-            gearButton.onClick.RemoveListener(ToggleSheet);
-            closeButton.onClick.RemoveListener(CloseSheet);
-            exitButton.onClick.RemoveListener(OpenConfirm);
-            confirmCancelButton.onClick.RemoveListener(CloseConfirm);
+            gearButton.onClick.RemoveListener(HandleGearClicked);
+            closeButton.onClick.RemoveListener(HandleCloseClicked);
+            exitButton.onClick.RemoveListener(HandleExitClicked);
+            confirmCancelButton.onClick.RemoveListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.RemoveListener(HandleExitConfirmed);
         }
 
@@ -56,7 +56,14 @@ namespace Chapchu.UI.GameScreen
             gearFill.color = Color.white;
         }
 
-        private void ToggleSheet()
+        // PC Esc 로도 서랍을 닫는다 (10-ui.md 9절 「설정 버튼」). 확인 팝업은 버튼으로만 닫는다.
+        private void Update()
+        {
+            if (sheet.activeSelf && Input.GetKeyDown(KeyCode.Escape))
+                CloseSheet();
+        }
+
+        private void HandleGearClicked()
         {
             bool open = !sheet.activeSelf;
             sheet.SetActive(open);
@@ -69,14 +76,16 @@ namespace Chapchu.UI.GameScreen
             gearFill.color = Color.white;
         }
 
+        private void HandleCloseClicked() => CloseSheet();
+
         // 서랍을 닫고 확인 팝업으로 바꾼다 (시안). 바탕을 눌러도 닫히지 않는다.
-        private void OpenConfirm()
+        private void HandleExitClicked()
         {
             CloseSheet();
             confirm.SetActive(true);
         }
 
-        private void CloseConfirm() => confirm.SetActive(false);
+        private void HandleConfirmCancelClicked() => confirm.SetActive(false);
 
         private void HandleExitConfirmed()
         {

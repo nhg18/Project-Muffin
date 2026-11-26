@@ -56,15 +56,24 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject cardIcon;
         [Tooltip("머리 위 값 표 템플릿 (비활성) — 자식: Body(Fill · Text · LowBadge).")]
         [SerializeField] private RectTransform tagTemplate;
+        [Tooltip("머리 위 값 표 글자 크기.")]
         [SerializeField] private float tagFontSize = 48f;
+        [Tooltip("꼴찌 표 글자 크기 — 화면 끝 여백도 이 크기로 잰다.")]
         [SerializeField] private float lowTagFontSize = 69f;
 
+        [Tooltip("정해진 팻말 · 꼴찌 표의 글자 색 (크림).")]
         [SerializeField] private Color cream = new Color32(0xFF, 0xFC, 0xF6, 0xFF);
+        [Tooltip("뒤집히는 팻말 · 보통 표의 글자 색 (잉크).")]
         [SerializeField] private Color ink = new Color32(0x2B, 0x1E, 0x1A, 0xFF);
+        [Tooltip("HP 로 정해진 팻말 면 · 꼴찌 표 면 · 뒤집히는 동안 하트 색 (분홍).")]
         [SerializeField] private Color pink = new Color32(0xFF, 0x5C, 0x8A, 0xFF);
+        [Tooltip("정해진 팻말의 하트 색 (노랑).")]
         [SerializeField] private Color yellow = new Color32(0xFF, 0xE2, 0x7A, 0xFF);
+        [Tooltip("뒤집히는 동안 HP 면 팻말 색.")]
         [SerializeField] private Color hpFill = new Color32(0xFF, 0xE0, 0xEA, 0xFF);
+        [Tooltip("뒤집히는 동안 카드 면 팻말 색.")]
         [SerializeField] private Color cardFill = new Color32(0xE3, 0xF0, 0xFF, 0xFF);
+        [Tooltip("카드로 정해진 팻말 면 색 (파랑).")]
         [SerializeField] private Color cardOnFill = new Color32(0x4E, 0x9B, 0xEA, 0xFF);
 
         private readonly List<GameObject> _tags = new List<GameObject>();

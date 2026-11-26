@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Chapchu.Game.Effects
 {
-    /// <summary>받는 사람에게 찹츄 부여 (SetChapChu — T16). 손패가 정확히 10장이 아니면 붙지 않는다 (07 7절).</summary>
+    /// <summary>받는 사람에게 찹츄 부여 (SetChapChu — T16). 손패 장수를 보지 않는다 — 그 사람의 턴이 시작될 때 판정한다 (07 4.3 · 7절).</summary>
     [Serializable]
     public sealed class SetChapChuEffect : CardEffect
     {

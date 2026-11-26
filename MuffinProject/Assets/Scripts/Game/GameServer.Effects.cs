@@ -63,8 +63,8 @@ namespace Chapchu.Game
         private void ApplyHealRaw(int actor, int amount)
         {
             PlayerState player = _players[actor];
-            if (amount <= 0 || player.Life != LifeState.Alive)
-                return;
+            if (amount <= 0 || player.Life != LifeState.Alive || player.Hp <= 0)
+                return; // HP 0 에서 일반 회복은 불발 — 사망 대기 등록 전(같은 체인)도 같다 (06 15절)
 
             int hp = Math.Min(MaxHp, player.Hp + amount);
             if (hp != player.Hp)
@@ -91,6 +91,8 @@ namespace Chapchu.Game
                 player.Life = LifeState.Alive;
                 _events.Add(new DeathAvoided(actor, player.Hp));
                 _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
+                if (!_turnOrder.Any(a => _players[a].Life == LifeState.DeathPending))
+                    _deathDeadline = -1; // 남은 사망 대기자가 없다 — 게임을 멈추지 않는다 (06 8절)
             }
         }
 
@@ -102,14 +104,18 @@ namespace Chapchu.Game
             if (count <= 0 || !IsInGame(actor))
                 return;
 
+            int drawn = 0;
             for (int i = 0; i < count; i++)
             {
-                if (DrawOne(actor) && entry != null)
+                if (!DrawOne(actor))
+                    continue;
+                drawn++;
+                if (entry != null)
                     AddStat(actor, StatKind.Drawn); // 다시 받기(113 — entry 없음)는 뽑기로 세지 않는다
             }
 
-            if (entry != null)
-                RecordAfter(AfterKind.DrewCards, actor, entry.User, count);
+            if (entry != null && drawn > 0)
+                RecordAfter(AfterKind.DrewCards, actor, entry.User, drawn); // 실제로 뽑은 장수 — 빈 덱 피해는 뽑기가 아니다 (04 6절)
         }
 
         /// <summary>손패에서 무작위 count 장을 버림 더미로 (05 7절). 다른 사람의 효과면 「버려진 후」(T09) 기록.</summary>
@@ -134,8 +140,8 @@ namespace Chapchu.Game
                 RecordAfter(AfterKind.Discarded, actor, source, cards.Count);
         }
 
-        /// <summary>from 의 손패에서 무작위 count 장을 to 에게 (A04 · T08). 「훔쳐진 후」(T08) 기록.</summary>
-        internal void StealRandom(int from, int to, int count)
+        /// <summary>from 의 손패에서 무작위 count 장을 to 에게 (A04 · T08). source = 카드를 쓴 사람 — 남이면 「훔쳐진 후」(T08) 기록 (04 6절 「내가 만든 일은 조건이 되지 않는다」).</summary>
+        internal void StealRandom(int from, int to, int count, int source)
         {
             if (from == to || !IsInGame(to))
                 return;
@@ -147,7 +153,8 @@ namespace Chapchu.Game
             MoveHandCards(from, to, cards);
             AddStat(to, StatKind.Stolen, cards.Count);
             AddStat(from, StatKind.Lost, cards.Count);
-            RecordAfter(AfterKind.Stolen, from, to, cards.Count);
+            if (source >= 0 && source != from)
+                RecordAfter(AfterKind.Stolen, from, source, cards.Count);
         }
 
         /// <summary>
@@ -186,7 +193,7 @@ namespace Chapchu.Game
 
         /// <summary>
         /// 대상 손패에서 나머지 모두가 1장씩 가져간다 (1018 무야호). 받는 순서는 쓴 사람부터 턴 진행 방향 — 카드가 떨어지면 거기서 끝 (11-card-list 1018).
-        /// 가져가기는 훔침이라 「훔쳐진 후」 기록이 남는다.
+        /// 가져가기는 훔침이라 「훔쳐진 후」 기록이 남는다 — 한 사람은 카드를 쓴 사람, 대상이 쓴 사람 자신이면 남지 않는다.
         /// </summary>
         internal void ShareFromTarget(int target, ChainEntry entry)
         {
@@ -194,7 +201,7 @@ namespace Chapchu.Game
             {
                 if (_players[target].Hand.Count == 0)
                     break;
-                StealRandom(target, receiver, 1);
+                StealRandom(target, receiver, 1, entry.User);
             }
         }
 
@@ -318,9 +325,10 @@ namespace Chapchu.Game
         internal void GiveChapchu(int actor, int source)
         {
             PlayerState player = _players[actor];
-            if (!player.IsChapchu && player.Life == LifeState.Alive)
-                SetChapchu(actor, true);
+            if (player.IsChapchu || player.Life != LifeState.Alive)
+                return; // 바뀐 것이 없다 — 사건 없음 (04 6절)
 
+            SetChapchu(actor, true);
             if (source >= 0 && source != actor)
                 RecordAfter(AfterKind.ChapchuGiven, actor, source, 1);
         }
@@ -395,7 +403,7 @@ namespace Chapchu.Game
 
         private List<Card> PickRandom(List<Card> source, int count)
         {
-            var pool = source.ToList();
+            List<Card> pool = source.ToList();
             Shuffle(pool);
             return pool.Take(Math.Max(0, Math.Min(count, pool.Count))).ToList();
         }
