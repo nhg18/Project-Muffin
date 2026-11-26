@@ -115,7 +115,7 @@ namespace Chapchu.Game
 
         /// <summary>봇이 고를 것 (18-bot 7-3, 프로토타입 v2).</summary>
         internal int BotChoiceOption(int bot) =>
-            _choiceEffect is ChooseDiscardEffect pick ? pick.BotPick(this, bot) : _choiceEffect is DiscardOrDamageEffect option ? option.BotOption(this, bot) : 0;
+            _choiceEffect is ChooseDiscardEffect pick ? pick.BotPick(this, bot) : _choiceEffect is DiscardOrDamageEffect option ? option.BotOption(this, _choiceEntry, bot) : 0;
 
         /// <summary>지금 고르기가 손패에서 1장 고르기인가 (봇 로그용).</summary>
         internal bool IsChoosingHandCard => IsChoosing && IsHandChoice;

@@ -195,7 +195,7 @@ namespace Chapchu.Game
                 case ReactCondition.DestroysMyTrap: return top.User != me && AffectedBy(top, EffectTag.DestroyTrap).Contains(me);
                 case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
-                case ReactCondition.HasDamage:      return AffectedBy(top, EffectTag.Damage).Any();
+                case ReactCondition.HasDamage:      return top.Card.Effects.Any(e => e.Tag == EffectTag.Damage);
                 case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
                 case ReactCondition.AimedAtMe:      return top.Targets.Contains(me) && !top.Excluded.Contains(me) && !top.Card.Effects.Any(e => e.BoardWide);
                 // 장수는 이 카드를 낸 뒤의 내 손패로 센다 — 이 카드만 있으면(0장) 못 낸다 (11-card-list 1-3 「2019 안 놔!」)

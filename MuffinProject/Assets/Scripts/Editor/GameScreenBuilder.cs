@@ -1465,11 +1465,7 @@ namespace Chapchu.EditorTools
             RectTransform cards = NewRect("Cards", body);
             cards.SetSiblingIndex(buttonsRow.GetSiblingIndex());
             GridLayoutGroup grid = cards.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(150f, 210f);
-            grid.spacing = new Vector2(16f, 16f);
-            grid.childAlignment = TextAnchor.UpperCenter;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 5;
+            grid.childAlignment = TextAnchor.UpperCenter; // 칸 크기 · 간격 · 한 줄 칸 수는 ChoicePopupView.ShowCards 가 열 때마다 정한다
 
             cards.gameObject.SetActive(false);
 
