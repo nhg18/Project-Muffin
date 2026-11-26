@@ -285,6 +285,7 @@ namespace Chapchu.EditorTools
             RoundGearButton(safeArea);
             SplitTargetAskName(center);
             BuildReactionSkipV3(canvasRect, safeArea);
+            CenterMenuSheetV3(canvasRect);
 
             // 그리는 순서 — 기록 · 턴 순서 · 메뉴 < 내 캐릭터 · 링 · 스톱워치 · 「!」 · 「찹츄까지」 · 내 HUD · 스킵. 가운데는 좌석 · 판 위 HUD < 가림판 < 대상 안내
             OrderChildren(safeArea, "History", "TurnOrder", "Menu", "MyCharacter", "MyPickRing", "MyTurnTimer", "MyBang", "Goal", "MyHud", "SkipButton");
@@ -332,6 +333,64 @@ namespace Chapchu.EditorTools
             bang.gameObject.SetActive(false);
 
             Wire(timer, ("skipCornerButton", button), ("bang", bang));
+        }
+
+        // 인게임 설정 = 화면 가운데 작은 판 + 바탕 어둡게 (시안 v3.25 .gset · .popdim). 오른쪽 위 서랍(MenuSheet)을 MenuPop 에 담아 옮긴다.
+        // 팝업 한 규격 (× 2): 판 폭 780 · 머리 글자 36 · 몸통 안여백 32 · 판 아래 실행 버튼 높이 88 · 글자 36. 바탕은 탭을 먹고 눌러도 닫히지 않는다.
+        // 효과음 · 배경음 스위치는 넣지 않는다 — 게임에 소리가 아직 없다. 이미 MenuPop 이 있으면 옮기기는 건너뛰고 크기 · 닫기 버튼만 맞춘다.
+        private static void CenterMenuSheetV3(RectTransform canvasRect)
+        {
+            var menu = canvasRect.GetComponentInChildren<GameMenuView>(true);
+            var sheets = (RectTransform)canvasRect.Find("Sheets");
+            var pop = sheets != null ? (RectTransform)sheets.Find("MenuPop") : null;
+            var frame = (RectTransform)(pop != null ? pop.Find("MenuSheet") : sheets != null ? sheets.Find("MenuSheet") : null);
+            if (menu == null || frame == null)
+            {
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 열린 씬에 GameMenuView · Sheets/MenuSheet 가 없다 — 설정 판을 옮기지 못했다.");
+                return;
+            }
+
+            if (pop == null)
+            {
+                pop = NewRect("MenuPop", sheets);
+                Stretch(pop);
+                pop.SetSiblingIndex(frame.GetSiblingIndex());
+                Image dim = NewImage("PopDim", pop, Dim, null, true);
+                Anchor(dim.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6000f, 6000f));
+
+                frame.SetParent(pop, false);
+                Anchor(frame, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(780f, frame.sizeDelta.y));
+                frame.gameObject.SetActive(true);
+                pop.gameObject.SetActive(false);
+                Wire(menu, ("sheet", pop.gameObject));
+            }
+
+            // 닫기(×) — 판 오른쪽 위 모서리에 걸친다 (시안 .btn.x right −10 · top −12). v2 는 LayoutElement 를 하나 더 붙여 판 아래 한 줄로 끼어 있었다
+            Transform close = frame.Find("CloseButton");
+            if (close != null)
+            {
+                foreach (LayoutElement element in close.GetComponents<LayoutElement>())
+                    element.ignoreLayout = true;
+                Anchor((RectTransform)close, Vector2.one, new Vector2(1f, 1f), new Vector2(20f, 24f), new Vector2(60f, 60f));
+            }
+
+            var title = FindIn<TMP_Text>(frame, "Head/Title");
+            if (title != null)
+                title.fontSize = 36f;
+            var body = FindIn<VerticalLayoutGroup>(frame, "Body");
+            if (body != null)
+            {
+                body.padding = new RectOffset(32, 32, 32, 32);
+                body.spacing = 24f;
+            }
+            var exit = FindIn<LayoutElement>(frame, "Body/ExitButton");
+            if (exit != null)
+            {
+                exit.preferredHeight = 88f;
+                var label = FindIn<TMP_Text>(exit.transform, "Label");
+                if (label != null)
+                    label.fontSize = 36f;
+            }
         }
 
         #region 낸 카드 기록 (왼쪽 위)

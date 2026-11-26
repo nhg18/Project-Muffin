@@ -1329,7 +1329,8 @@ namespace Chapchu.EditorTools
 
             close = BuildButton("CloseButton", frame.Root, 60f, 60f, White, 30f, null, 0f, Ink, Hud("icon_x"), 20f, 4f);
             Anchor((RectTransform)close.transform, Vector2.one, new Vector2(1f, 1f), new Vector2(20f, 24f), new Vector2(60f, 60f));
-            close.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            // BuildButton 이 붙인 LayoutElement 로 뺀다 — 하나를 더 붙이면 레이아웃은 「빼지 않음」 쪽을 따라 판 아래 한 줄로 끼어든다
+            close.GetComponent<LayoutElement>().ignoreLayout = true;
 
             VerticalLayoutGroup body = frame.Body.gameObject.AddComponent<VerticalLayoutGroup>();
             body.padding = new RectOffset(24, 20, 20, 20);
