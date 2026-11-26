@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-27 · `develop` 받기 → push · PR (`feature/counter-basics`)
+
+**한 것**
+- 충돌만 풀린 채 멈춰 있던 `origin/develop` 머지를 커밋했다 (`4c4d71c1`). 머지로 깨진 곳 1건 — `ChoiceCardTile` 이 없어진 `CardData.cardImage` 를 읽던 것 → `LoadArt()` (develop 의 「그림은 필요할 때 불러온다」, `26-card-data` 3절 #3).
+- 멈춘 클론 에디터(`MuffinProject_clone_0`, 메인 스레드 1시간 반 무응답 · 저장 안 한 씬 없음)를 닫았다.
+
+**확인** — 머지한 코드로 `rules` 전부 통과 (전부터 있던 5건도 develop 쪽 수정으로 사라졌다) · `solo` 통과.
+
+**확인하지 못한 것**
+- **클론이 필요한 시나리오 전부** (`counter` · `counter pick` · `counter cost` · `counter reflect` · `migrate` · `multi 2`) — 다시 연 클론이 시작 단계(라이선스 확인 직후)에서 멈춰 CLI 에 붙지 않는다. 화면에 확인 창이 떠 있는 것으로 보인다 (내 추정 — 화면을 보지 못했다). 사람이 클론 창을 확인한 뒤 다시 돌린다.
+- develop 의 「체인 끝 일괄 확정 · 사망 대기 대응 5초 삭제」 와 카운터 12장이 네트워크 화면에서 맞는지는 위 까닭으로 `rules` · `solo` 로만 봤다.
+
+**남은 것** — `git stash` 의 「develop 머지 전 미커밋 카드 에셋 20개」 는 그대로 두었다. 머지한 에셋과 견주면 `cardImage`(없어진 필드) · `uncounterable: 0` 줄 차이라 Unity 가 다시 저장하면 생기는 값이다 — 버릴지는 사용자가 정한다. 디버그 단축키 stash · 작업 폴더의 `Fonts/` · `ProjectSettings.asset` 도 손대지 않았다.
+
 ## 2026-11-26 · 2002 반사 규칙 변경 — 「내 몫 되돌리기」 → 「막고 내가 다시 쓴다」 (`feature/counter-basics`)
 
 **push · PR 은 아직 안 했다 — 사용자 지시 대기.** 아래 2026-11-23 ~ 24 항목의 「이어받기」(prepush → push → PR · `develop` 받기 · 미커밋 에셋)는 그대로 남아 있다.
