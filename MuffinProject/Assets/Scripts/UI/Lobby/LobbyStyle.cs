@@ -56,5 +56,23 @@ namespace Chapchu.UI.Lobby
 
         /// <summary>천 단위 쉼표 (시안 toLocaleString)</summary>
         public static string Number(int value) => value.ToString("N0");
+
+        /// <summary>
+        /// 창 본문을 굵은 첫 문장 · 흐린 나머지로 나눈다 (시안 .pu p.big + p). 첫 문장은 「?」 「.」 뒤에 띄어쓰기가 오는 곳까지 — 없으면 전부, 나머지는 빈 글.
+        /// 둘 다 줄을 띄어쓰기에서만 바꾼다 (시안 word-break: keep-all) — TMP 는 한글을 낱말 중간에서도 꺾는다.
+        /// </summary>
+        public static (string First, string Others) SplitMessage(string message)
+        {
+            for (int i = 0; i < message.Length - 1; i++)
+            {
+                if ((message[i] == '?' || message[i] == '.') && char.IsWhiteSpace(message[i + 1]))
+                    return (KeepWords(message.Substring(0, i + 1)), KeepWords(message.Substring(i + 1).Trim()));
+            }
+
+            return (KeepWords(message), string.Empty);
+        }
+
+        private static string KeepWords(string text)
+            => text.Length == 0 ? string.Empty : "<nobr>" + text.Replace(" ", "</nobr> <nobr>").Replace("\n", "</nobr>\n<nobr>") + "</nobr>";
     }
 }

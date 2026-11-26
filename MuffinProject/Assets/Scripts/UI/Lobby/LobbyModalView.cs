@@ -217,11 +217,10 @@ namespace Chapchu.UI.Lobby
             warnIcon.sprite = kind == LobbyWarnKind.Ask ? askIcon : alertIcon;
             warnTitle.text = title;
 
-            int split = FirstSentenceEnd(message);
-            warnMessage.text = KeepWords(split < 0 ? message : message.Substring(0, split + 1));
-            string detail = split < 0 ? string.Empty : message.Substring(split + 1).Trim();
-            warnDetail.gameObject.SetActive(detail.Length > 0);
-            warnDetail.text = KeepWords(detail);
+            (string first, string rest) = LobbyStyle.SplitMessage(message);
+            warnMessage.text = first;
+            warnDetail.gameObject.SetActive(rest.Length > 0);
+            warnDetail.text = rest;
 
             bool isDanger = kind == LobbyWarnKind.Danger;
             warnOkBox.FillColor = isDanger ? LobbyStyle.Hp : LobbyStyle.Turn;
@@ -231,19 +230,6 @@ namespace Chapchu.UI.Lobby
             warnCancelLabel.text = cancelLabel;
             UpdateDimmer();
         }
-
-        // 첫 문장의 끝 — 「?」 「.」 뒤에 띄어쓰기가 오는 첫 자리. 없으면 -1 (시안 m.msg.search(/[?.](?=\s)/))
-        private static int FirstSentenceEnd(string text)
-        {
-            for (int i = 0; i < text.Length - 1; i++)
-                if ((text[i] == '?' || text[i] == '.') && char.IsWhiteSpace(text[i + 1]))
-                    return i;
-            return -1;
-        }
-
-        // 줄을 띄어쓰기에서만 바꾼다 (시안 word-break: keep-all) — TMP 는 한글을 낱말 중간에서도 꺾는다
-        private static string KeepWords(string text)
-            => "<nobr>" + text.Replace(" ", "</nobr> <nobr>").Replace("\n", "</nobr>\n<nobr>") + "</nobr>";
 
         public void HideWarn()
         {
