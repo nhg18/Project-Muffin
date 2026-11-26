@@ -36128,6 +36128,7 @@ MonoBehaviour:
   cardBack: {fileID: 21300000, guid: 6c6d3da36f0471547afc349c85010741, type: 3}
   character: {fileID: -7354470638215815053, guid: 599b26570ad96994687ba4d688c4e2b3, type: 3}
   postTailSeconds: 0.6
+  skipCardIds: fd030000
 --- !u!1 &1617752807
 GameObject:
   m_ObjectHideFlags: 0

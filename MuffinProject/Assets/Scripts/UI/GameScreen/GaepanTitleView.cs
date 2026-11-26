@@ -8,7 +8,7 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 개판 오분전 시작 제목 (프로토타입 v2 개판 컷인의 .gp-title · .gp-five — 1021). 큰 스티커 글자 두 줄이 하나씩 튀어나오고 「N 바퀴 동안」 발바닥 도장이 찍힌다.
     /// 컷인 장면(눈밭을 달리는 강아지 떼)은 넣지 않는다 — 제목 · 도장만 (사용자 2026-11-13). 시간표는 시안에서 장면이 먼저 나오던 1.35초를 당겼다.
-    /// 쓴 카드의 후처리 시간(Card_1021 resolveSeconds 7.16초 = 1.28 + 3 단계 3.08 + 이 제목 2.8)이 이 길이를 담는다. 길이를 바꾸면 그 값도 같이 바꾼다.
+    /// 쓴 카드의 후처리 시간(Card_1021 resolveSeconds 3초) 안에 끝난다. 게임 화면은 1021 의 3 단계 컷인을 재생하지 않는다 (CardFxPresenter.skipCardIds — 이 제목과 같은 제목 · 도장이 들어 있다).
     /// </summary>
     public class GaepanTitleView : MonoBehaviour
     {

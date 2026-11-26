@@ -22,6 +22,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Sprite character;
         [Tooltip("개판 등급 4 단계가 결과를 보인 뒤 연출을 지울 때까지 (초) — 칼질 꼬리가 사라지는 시간.")]
         [SerializeField] private float postTailSeconds = 0.6f;
+        [Tooltip("게임 화면에서 3 단계를 재생하지 않는 카드 ID. 1021 개판 오분전 = 시작 제목(GaepanTitleView)만 보이고 시안의 컷인 장면은 없다 (10-ui.md 2-1 「개판 시작 제목」, 사용자 2026-11-13) — 컷인에도 같은 제목 · 도장이 들어 있다. 이펙트 시험장은 그대로 재생한다.")]
+        [SerializeField] private int[] skipCardIds = { 1021 };
 
         private void Awake()
         {
@@ -35,6 +37,9 @@ namespace Chapchu.UI.GameScreen
         /// </summary>
         public IEnumerator PlayRoutine(CardData card, CardFxSeat caster, IReadOnlyList<CardFxSeat> targets, IReadOnlyList<CardFxSeat> seats, IReadOnlyList<CardFxSeat> receivers)
         {
+            if (System.Array.IndexOf(skipCardIds, card.id) >= 0)
+                yield break;
+
             CardFx fx = null;
             yield return CardFxLoader.CreateRoutine(CardFxLoader.NameOf(card.id), fxLayer.transform, created => fx = created, false);
             if (fx == null)
