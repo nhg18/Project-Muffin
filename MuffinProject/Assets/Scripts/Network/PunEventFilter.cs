@@ -20,7 +20,7 @@ namespace Chapchu.Network
 
         private static Action<EventData> _punOnEvent;
         private static object _installedOn; // 바꿔 끼운 NetworkingClient — PUN 이 새로 만들면 다시 끼운다
-        private static readonly HashSet<int> _loggedSenders = new HashSet<int>(); // 경고는 보낸 사람마다 처음 한 번만 — 쏟아붓는 이벤트마다 로그를 쓰지 않게
+        private static readonly HashSet<int> LoggedSenders = new HashSet<int>(); // 경고는 보낸 사람마다 처음 한 번만 — 쏟아붓는 이벤트마다 로그를 쓰지 않게
 
         /// <summary>PUN 의 이벤트 처리를 걸러 주는 처리로 바꿔 끼운다. 여러 번 불러도 한 번만.</summary>
         public static void Install()
@@ -30,7 +30,7 @@ namespace Chapchu.Network
             MethodInfo method = typeof(PhotonNetwork).GetMethod("OnEvent", BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(EventData) }, null);
             if (method == null)
             {
-                Debug.LogError("[PunEventFilter] PhotonNetwork.OnEvent 를 찾지 못했다 — PUN 버전이 바뀌었으면 이 파일을 고친다. 이벤트를 거르지 않는다");
+                Debug.LogError($"[{nameof(PunEventFilter)}] PhotonNetwork.OnEvent 를 찾지 못했다 — PUN 버전이 바뀌었으면 이 파일을 고친다. 이벤트를 거르지 않는다");
                 return;
             }
 
@@ -42,14 +42,14 @@ namespace Chapchu.Network
         }
 
         /// <summary>방을 들어오거나 나갈 때 — actorNumber 는 방마다 다시 매겨지므로 경고 기록을 비운다.</summary>
-        public static void ResetLog() => _loggedSenders.Clear();
+        public static void ResetLog() => LoggedSenders.Clear();
 
         private static void Filter(EventData photonEvent)
         {
             if (Array.IndexOf(Blocked, photonEvent.Code) >= 0)
             {
-                if (_loggedSenders.Add(photonEvent.Sender))
-                    Debug.LogWarning($"[PunEventFilter] 쓰지 않는 PUN 이벤트를 버림 — 코드 {photonEvent.Code}, 보낸 사람 {photonEvent.Sender} (이 사람의 다음 것은 적지 않는다)");
+                if (LoggedSenders.Add(photonEvent.Sender))
+                    Debug.LogWarning($"[{nameof(PunEventFilter)}] 쓰지 않는 PUN 이벤트를 버림 — 코드 {photonEvent.Code}, 보낸 사람 {photonEvent.Sender} (이 사람의 다음 것은 적지 않는다)");
                 return;
             }
 

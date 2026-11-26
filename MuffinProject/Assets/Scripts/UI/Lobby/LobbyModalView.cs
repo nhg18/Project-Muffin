@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 namespace Chapchu.UI.Lobby
 {
-    /// <summary>입력 창 종류 — 방 코드 · 새 닉네임 · 계정 삭제 확인(「삭제」 입력)</summary>
-    public enum LobbyInputKind { RoomCode, Nickname, DeleteAccount }
+    /// <summary>입력 창 종류 — 방 코드 · 새 닉네임 · 계정 삭제 확인(「삭제」 입력) · 개발자 모드 암호</summary>
+    public enum LobbyInputKind { RoomCode, Nickname, DeleteAccount, DevPassword }
 
     /// <summary>
     /// 로비의 위층 창 — 입력 창(방 코드 · 닉네임 · 계정 삭제) · 경고 / 확인 창(주황 머리 띠) · 요청 중 표시. 다른 창 위에 뜬다.
@@ -20,12 +20,15 @@ namespace Chapchu.UI.Lobby
         private const string CodePlaceholder = "방 코드";
         private const string CodeSubmit = "참가";
         private const string NicknameTitle = "새 닉네임";
-        private const string NicknamePlaceholder = "닉네임";
+        private const string NicknamePlaceholder = "새 닉네임";
         private const string NicknameSubmit = "변경";
-        private const string DeleteTitle = "계정 삭제";
+        private const string DeleteTitle = "삭제 확인";
         private const string DeletePlaceholder = "삭제";
         private const string DeleteSubmit = "삭제";
         private const string DeleteMessage = "'삭제'를 입력하면 계정이 지워져요.";
+        private const string DevTitle = "개발자 모드";
+        private const string DevPlaceholder = "암호";
+        private const string DevSubmit = "확인";
         private const string CountFormat = "{0} / {1}";
         private const string DefaultOkText = "확인";
 
@@ -129,18 +132,21 @@ namespace Chapchu.UI.Lobby
             InputKind = kind;
             bool isCode = kind == LobbyInputKind.RoomCode;
             bool isDelete = kind == LobbyInputKind.DeleteAccount;
+            bool isDev = kind == LobbyInputKind.DevPassword;
 
             inputContent.SetActive(true);
             inputBand.color = isDelete ? LobbyStyle.Hp : LobbyStyle.Band;
-            inputIcon.sprite = isCode ? keyIcon : isDelete ? crossIcon : userIcon;
-            inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : NicknameTitle;
+            inputIcon.sprite = isCode || isDev ? keyIcon : isDelete ? crossIcon : userIcon;
+            inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : isDev ? DevTitle : NicknameTitle;
             inputMessage.gameObject.SetActive(isDelete);
             inputMessage.text = DeleteMessage;
-            fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : NicknamePlaceholder;
-            submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : NicknameSubmit;
+            fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : isDev ? DevPlaceholder : NicknamePlaceholder;
+            submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : isDev ? DevSubmit : NicknameSubmit;
             submitBox.FillColor = isDelete ? LobbyStyle.WarnFill : LobbyStyle.Turn;
 
             // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다
+            // 암호는 ● 로 가린다
+            field.contentType = isDev ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard;
             field.characterLimit = isCode ? RandomCode.Length : kind == LobbyInputKind.Nickname ? NicknameValidator.MaxLength : 0;
             field.textComponent.alignment = isCode ? TextAlignmentOptions.Center : TextAlignmentOptions.Left;
             field.textComponent.fontSize = isCode ? codeFontSize : textFontSize;

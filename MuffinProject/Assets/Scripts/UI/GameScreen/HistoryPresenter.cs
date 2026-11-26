@@ -39,16 +39,19 @@ namespace Chapchu.UI.GameScreen
         private const string GaepanAgainText = "개판 오분전 다시 처음부터!";
         private const string GaepanLeftFormat = "개판 오분전: {0}바퀴 남음";
         private const string GaepanJudgeFormat = "개판 오분전 종료: 기준 {0} 꼴찌 — {1}{2} → 즉시 사망";
+        private const string GaepanJudgeTiedFormat = "개판 오분전 종료: 기준 {0} 꼴찌 — {1}{2} · 동점 {3} 중 무작위 → 즉시 사망";
         private const string GaepanHpValueFormat = "(HP {0})";
         private const string GaepanCardValueFormat = "({0}장)";
-        private const string GaepanTiedFormat = " · 동점 {0} 중 무작위";
         private const string GaepanByHp = "HP";
         private const string GaepanByCard = "손패";
         private const string NameSeparator = ", ";
         private const string ChoiceDiscardText = "목표 조준 — 손패 전부 버리기";
         private const string ChoiceDamageText = "목표 조준 — 피해 받기";
         private const string ChoiceLeftText = "목표 조준 — 나가서 불발";
-        private const string ChoiceTimeoutSuffix = " (시간 초과 · 무작위)";
+        private const string ChoiceDiscardTimeoutText = "목표 조준 — 손패 전부 버리기 (시간 초과 · 무작위)";
+        private const string ChoiceDamageTimeoutText = "목표 조준 — 피해 받기 (시간 초과 · 무작위)";
+        private const string ChoiceLeftTimeoutText = "목표 조준 — 나가서 불발 (시간 초과 · 무작위)";
+        private const string UnknownCardFormat = "카드 {0}";
         private const string CostTimeoutText = "버릴 카드를 안 골라 무작위로 버렸어요";
         // 카운터가 한 일 (10-ui.md 5절 「카운터 기록 줄」, 사용자 2026-11-24). {0} = 카드 이름 · 사람 이름 · 수치
         private const string NegatedFormat = "{0} 무효";
@@ -105,7 +108,7 @@ namespace Chapchu.UI.GameScreen
             // 변화량의 기준 — 지금 HP 스냅샷 (봇의 값은 방 속성에 있다, 18-bot.md 9절)
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _lastHp[actor] = hpValue;
+                    _lastHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 남이 잠깐 바꾼 값일 수 있다 (09-network.md 13절 #8)
 
             // 씬이 늦게 열려 첫 턴 이벤트를 놓쳤을 때 — 턴 주인이 이미 있으면 게임이 진행 중이라 그 뒤 뽑기는 기록한다
             _turnStarted = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomProps.TurnActor);
@@ -133,7 +136,7 @@ namespace Chapchu.UI.GameScreen
         public void ShowCardPlayed(int actorNumber, int cardId, int[] targets)
         {
             CardData data = deck.GetCard(cardId);
-            string cardName = data != null ? data.cardName : $"카드 {cardId}";
+            string cardName = data != null ? data.cardName : string.Format(UnknownCardFormat, cardId);
             if (data == null || data.type != CardType.Counter)
                 _chain.Clear(); // 카운터가 아니면 새 체인의 첫 카드다
             _chain.Add((actorNumber, cardId));
@@ -213,7 +216,7 @@ namespace Chapchu.UI.GameScreen
                 && latest.Targets != null && latest.Targets.Contains(actorNumber))
             {
                 latest.Value = value;
-                feed.Push(latest, PlayerLook.NameOf(latest.Actor), PlayerLook.InkOf(latest.Actor)); // 칩도 수치가 붙은 모양으로 — 앞 칩은 밀려난다
+                feed.RefreshLatest(latest, PlayerLook.NameOf(latest.Actor), PlayerLook.InkOf(latest.Actor)); // 맨 위 칩도 수치가 붙은 모양으로 — 새 칩을 더하지 않는다
                 RefreshLogIfOpen();
                 return;
             }
@@ -285,16 +288,19 @@ namespace Chapchu.UI.GameScreen
                 Add(new HistoryEntry { Actor = caster, Text = GaepanAgainText, Icon = HistoryIcon.Card });
             if (started)
                 Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanStartFormat, left), Icon = HistoryIcon.Card });
-            else
+            else if (left > 0) // 0 은 판정 직전 — 판정 줄이 따로 적는다
                 Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanLeftFormat, left), Icon = HistoryIcon.Card });
         }
 
         /// <summary>개판 오분전 판정 (1021) — 기준 · 꼴찌 · 동점. HP 0 은 뒤따르는 HP 변화가 적는다.</summary>
         public void ShowGaepanJudged(int loser, bool byHp, int value, int[] tied)
         {
-            string tiedText = tied.Length > 1 ? string.Format(GaepanTiedFormat, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf))) : "";
             string valueText = string.Format(byHp ? GaepanHpValueFormat : GaepanCardValueFormat, value);
-            Add(new HistoryEntry { Actor = loser, Text = string.Format(GaepanJudgeFormat, byHp ? GaepanByHp : GaepanByCard, PlayerLook.NameOf(loser), valueText) + tiedText, Icon = HistoryIcon.Card });
+            string by = byHp ? GaepanByHp : GaepanByCard;
+            string text = tied.Length > 1
+                ? string.Format(GaepanJudgeTiedFormat, by, PlayerLook.NameOf(loser), valueText, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf)))
+                : string.Format(GaepanJudgeFormat, by, PlayerLook.NameOf(loser), valueText);
+            Add(new HistoryEntry { Actor = loser, Text = text, Icon = HistoryIcon.Card });
         }
 
         /// <summary>1019 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
@@ -308,8 +314,10 @@ namespace Chapchu.UI.GameScreen
                 return;
             }
 
-            string text = option < 0 ? ChoiceLeftText : option == 0 ? ChoiceDiscardText : ChoiceDamageText;
-            Add(new HistoryEntry { Actor = actor, Text = timedOut ? text + ChoiceTimeoutSuffix : text, Icon = HistoryIcon.Card });
+            string text = option < 0 ? (timedOut ? ChoiceLeftTimeoutText : ChoiceLeftText)
+                : option == 0 ? (timedOut ? ChoiceDiscardTimeoutText : ChoiceDiscardText)
+                : timedOut ? ChoiceDamageTimeoutText : ChoiceDamageText;
+            Add(new HistoryEntry { Actor = actor, Text = text, Icon = HistoryIcon.Card });
         }
 
         /// <summary>찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023).</summary>

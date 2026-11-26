@@ -5,6 +5,7 @@
 #   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
+#   run.sh match                      메인 혼자: 랜덤 매칭 → 매치 방 → 15초 뒤 봇 3 채워 스스로 시작 → 봇 닉네임
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
@@ -232,6 +233,7 @@ run_ui() {
     prepare "$TITLE_SCENE"
     log "▶ UI 흐름"
     until_ok "$MAIN" Ui title &&
+    until_ok "$MAIN" Ui "devmode|${CHAPCHU_DEV_PASSWORD:-}" &&
     until_ok "$MAIN" Ui bad-code &&
     until_ok "$MAIN" Ui warning &&
     until_ok "$MAIN" Ui create &&
@@ -480,6 +482,36 @@ run_full() {
 }
 
 # 사람 1 + 봇 3 (18-bot.md 10절): 혼자 하기 → 봇 제거 · 다시 추가 → 시작 → 체력을 낮춰 한 판 끝까지 → 결과 화면(봇이 스스로 준비) → 한 판 더 → 새 판(봇 · 난이도 · 비공개 그대로) → 끝 → 로비로
+# 매치 (08-room 4절) — 메인 혼자 랜덤 매칭 → 매치 방(코드 · 토글 · 시작 버튼 없음, 남은 초) → 15초 뒤 봇 3 이 채워져 스스로 시작
+run_match() {
+    EDITORS=("$MAIN")
+    log "▶ 준비 — 메인 혼자"
+    prepare "$LOBBY_SCENE"
+    log "▶ 랜덤 매칭 → 매치 방"
+    until_ok "$MAIN" Match || return
+    wait_scene RoomScene || return
+    until_ok "$MAIN" ExpectMatchRoom || return
+    log "▶ 15초 뒤 빈자리 봇 → 방 칸 · 로그에도 봇 표시 없음"
+    local out=""
+    for _ in $(seq 1 60); do   # 봇을 채운 뒤 시작까지 1.5초뿐 — 쉬지 않고 묻는다
+        out=$(call "$MAIN" MatchRoomFilled)
+        case "$out" in WAIT*) ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "매치 방 화면: $out" ;; esac
+    until_ok "$MAIN" ExpectBots "1,2,3" 1 True || return
+    log "▶ 스스로 시작"
+    wait_scene GameScene || return
+    log "  $(call "$MAIN" BotNames)"
+    case "$(call "$MAIN" BotNames)" in OK*) ;; *) fail "봇 닉네임이 「봇 N」 이거나 겹친다" ;; esac
+    sleep 2
+    log "  $(call "$MAIN" NoBotMark)"
+    case "$(call "$MAIN" NoBotMark)" in OK*) ;; *) fail "매치 방 게임 화면에 봇 표시가 있다" ;; esac
+    sleep 2
+    log "▶ 판정"
+    check_errors "$MAIN"
+}
+
 run_solo() {
     local hp="${1:-30}" line bots
     EDITORS=("$MAIN")
@@ -1054,46 +1086,83 @@ run_migrate() {
     check_errors "$clone"
 }
 
-# 방장이 나간 뒤 남은 사람(클론)이 방 밖으로 나와 경고 팝업을 보는가 — 방 해체 · 결과 화면 방장 이탈
-expect_disbanded() {
-    local clone="$1" out
-    for _ in $(seq 1 20); do
-        out=$(call "$clone" WarningPopupText)
-        case "$out" in OK*) break ;; esac
-        sleep 1
-    done
-    log "  $(name_of "$clone"): $out · $(call "$clone" InRoom)"
-    [ "$out" = "OK 방이 사라졌어요 / 방장이 나가서 방이 사라졌어요." ] || fail "방장이 나간 뒤의 경고 팝업이 다르다: $out"
-    call "$clone" InRoom | grep -q '방 안 False' || fail "$(name_of "$clone") 이 아직 방에 있다"
-    check_errors "$clone"
+# 방장이 나간 뒤 남은 사람이 경고 팝업 없이 방에 남아 있는가 — 위임 (08-room 5절 #5 · 07 11절, PM 2026-11-20)
+expect_stayed() {
+    local project="$1" scene="$2" out
+    out=$(call "$project" InRoom); log "  $(name_of "$project"): $out"
+    [ "$out" = "OK 방 안 True · $scene" ] || fail "$(name_of "$project") 이 $scene 에 남아 있지 않다: $out"
+    out=$(call "$project" WarningPopupText)
+    case "$out" in OK*) fail "$(name_of "$project") 에 경고 팝업이 떴다: $out" ;; esac
 }
 
-# migrate room — 방 대기 중 방장이 나감 → 방 해체 (08-room 5절 #5)
+# migrate room — 방 대기 중 방장이 나감 → 위임: 새 방장(먼저 들어온 클론)은 시작 버튼 · 봇 추가 · 토스트, 남은 참가자는 대기 안내. 둘 다 「방장이 되었어요」 로그
 run_migrate_room() {
-    local project clone
-    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0"); clone="${EDITORS[1]}"
-    log "▶ 준비 — 클라이언트 2개"
+    local project heir other out hostName=""
+    EDITORS=("$MAIN" "$ROOT/MuffinProject_clone_0" "$ROOT/MuffinProject_clone_1"); heir="${EDITORS[1]}"; other="${EDITORS[2]}"
+    log "▶ 준비 — 클라이언트 3개"
     prepare "$LOBBY_SCENE"
     for project in "${EDITORS[@]}"; do until_ok "$project" Join || return; sleep 2; done
-    until_ok "$MAIN" RoomCount 2 || return
+    until_ok "$MAIN" RoomCount 3 || return
     wait_scene RoomScene || return
     log "▶ 방 대기 중 방장(메인)이 나감"
     log "  메인: $(call "$MAIN" LeaveRoomNow)"
-    expect_disbanded "$clone"
+    # EDITORS 는 그대로 둔다 — 뒷정리(cleanup)가 메인의 플레이도 멈춰야 한다
+
+    # 새 방장 — 토스트는 몇 초 뒤 닫히므로 로그 줄이 보이자마자 같이 읽는다
+    for _ in $(seq 1 20); do
+        out=$(call "$heir" RoomHostState)
+        [[ "$out" == *"방장이 되었어요."* ]] && break
+        sleep 1
+    done
+    log "  $(name_of "$heir"): $out"
+    [[ "$out" == "OK 방장 True · 시작 버튼 · 봇 추가 True · "* ]] || fail "새 방장 화면이 방장 기준이 아니다"
+    [[ "$out" == *"님이 방장이 되었어요."* ]] || fail "새 방장 로그에 「방장이 되었어요」 가 없다"
+    [[ "$out" == *"토스트 「방장이 되었어요. 2명 이상이면 시작할 수 있어요.」"* ]] || fail "새 방장 토스트가 없거나 다르다"
+    hostName=$(printf '%s' "$out" | sed -E 's/.*\(방장\) 칸 「([^」]*)」.*/\1/')
+    [ -n "$hostName" ] || fail "새 방장 화면에 (방장) 칸이 없다"
+
+    # 남은 참가자 — 방장 칸이 새 방장으로 옮겨 가고, 토스트는 보지 않는다
+    for _ in $(seq 1 20); do
+        out=$(call "$other" RoomHostState)
+        [[ "$out" == *"방장이 되었어요."* ]] && break
+        sleep 1
+    done
+    log "  $(name_of "$other"): $out"
+    [[ "$out" == "OK 방장 False · 시작 안내 · 봇 추가 False · (방장) 칸 「$hostName」 · "* ]] || fail "참가자 화면의 방장 표시가 새 방장(「$hostName」)과 다르다"
+    [[ "$out" == *"$hostName님이 방장이 되었어요."* ]] || fail "참가자 로그에 「$hostName님이 방장이 되었어요.」 가 없다"
+    [[ "$out" == *"토스트 「」" ]] || fail "참가자에게 방장 토스트가 떴다"
+
+    log "▶ 새 방장이 봇을 넣고 시작한다 (권한 이어받기)"
+    until_ok "$heir" AddBot || return
+    until_ok "$heir" StartGame 2 || return
+    for project in "$heir" "$other"; do wait_scene_one "$project" GameScene || return; done
+    for project in "${EDITORS[@]}"; do check_errors "$project"; done
 }
 
-# migrate result — 결과 화면에서 방장이 나감 → 전원 로비로 (07 11절)
+# migrate result — 결과 화면에서 방장이 나감 → 위임: 새 방장이 준비 · 마감을 이어받아 남은 둘이 「한 판 더」 로 다음 판에 간다 (07 11절)
 run_migrate_result() {
-    local clone
-    enter_game 2 || return
-    clone="${EDITORS[1]}"
+    local heir other project
+    enter_game 3 || return
+    heir="${EDITORS[1]}"; other="${EDITORS[2]}"
     until_ok "$MAIN" SetAllHp 5 || return
-    play_to_end 2 || return
+    play_to_end 3 || return
     wait_scene ResultScene || return
-    sleep 3
+    log "▶ 클론 하나가 먼저 준비 — 방장이 바뀌어도 준비가 남아야 한다"
+    until_ok "$heir" ResultTap again || return
+    sleep 2
     log "▶ 결과 화면에서 방장(메인)이 나감"
     log "  메인: $(call "$MAIN" LeaveRoomNow)"
-    expect_disbanded "$clone"
+    sleep 4
+    for project in "$heir" "$other"; do
+        expect_stayed "$project" ResultScene
+        log "  $(name_of "$project"): $(call "$project" ResultState)"
+    done
+    call "$heir" ResultState | grep -q '=준비' || fail "방장이 바뀐 뒤 먼저 한 준비가 사라졌다"
+    call "$other" ResultState | grep -q '한 판 더 켜짐' || fail "방장이 바뀐 뒤 「한 판 더」 가 꺼졌다"
+    log "▶ 남은 사람이 준비 → 새 방장이 카운트다운 → 다음 판"
+    until_ok "$other" ResultTap again || return
+    for project in "$heir" "$other"; do wait_scene_one "$project" GameScene || return; done
+    for project in "${EDITORS[@]}"; do check_errors "$project"; done
 }
 
 # migrate kick — 방장이 3턴 연속 시간 초과로 강제 퇴장 → 클론이 이어받아 봇과 판을 잇는다 (03-turn 4절 · 09 9.1)
@@ -1318,6 +1387,7 @@ case "${1:-}" in
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;
     solo)  shift; run_solo "$@" ;;
+    match) shift; run_match ;;
     chapchu) shift; run_chapchu "$@" ;;
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;

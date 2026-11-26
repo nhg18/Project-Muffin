@@ -44,7 +44,7 @@
 * 필수 참조가 비어 있으면 `Awake` 에서 `Debug.LogError` 로 어느 참조인지 알린다. 조용히 넘어가지 않는다.
 * 생명주기: `Awake` 자기 초기화 · `OnEnable`/`OnDisable` 이벤트 구독/해제(`+=` 와 `-=` 는 항상 짝) · `Start` 다른 오브젝트 참조. `OnEnable` 에서 다른 `Instance` 에 접근하지 않는다.
 * 필드는 private, 밖에 보일 것은 읽기 전용 프로퍼티나 메서드로 연다. 순수 데이터(ScriptableObject · struct) 는 public 필드로 둬도 된다.
-* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다.
+* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다. 예외: `AnalyticsRecorder.CurrentScreen` — 씬을 넘어 이어지는 「지금 화면」 하나이고 쓰기는 그 클래스 안에서만. 프로젝트는 Domain Reload 가 켜져 있어 플레이할 때마다 처음 값으로 돌아간다 (끄면 이 예외를 다시 본다).
 * UI 는 화면 영역 하나에 컴포넌트 하나. 한 파일이 길어지면 화면을 그리는 코드와 네트워크 · 규칙을 아는 코드로 나눈다.
 
 ## 5. 수치와 문자열
@@ -52,7 +52,7 @@
 * 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
 * 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
 * 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
-* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 장식은 `PlayPostRoutine`. 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
+* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 연출은 `PlayPostRoutine` — **개판 등급 카드만** 쓴다 (10-ui 5-1 「4 단계 공통 연출」). 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`, 빼앗기 · 얻기 등 결과별 공통 연출)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
 * 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
 ## 6. 네트워크
@@ -65,7 +65,7 @@
 ## 7. 시간과 로그
 
 * 지연 · 연출은 코루틴 또는 DOTween. `async void` 금지 (hook 이 막는다). `Invoke("Method")` · `SendMessage` 금지.
-* 로그는 `Debug.Log($"[{nameof(ClassName)}] ...")`. 어느 클라이언트인지 알아야 할 때는 닉네임을 넣는다. `Update` 안에서는 로그하지 않는다.
+* 로그는 `Debug.Log($"[{nameof(ClassName)}] ...")`. 어느 클라이언트인지 알아야 할 때는 닉네임을 넣는다. **매 프레임 로그하지 않는다** — `Update` 안이라도 사건(상태가 바뀐 순간)에 한 번 쓰는 로그는 된다. 같은 사건이 되풀이될 수 있으면 보낸 사람마다 한 번만 쓴다 (예: `RoomGuard` 의 되돌림 경고).
 * 예외를 빈 `catch` 로 삼키지 않는다.
 * 비공개 정보(손패 · 함정 내용, 덱 순서)는 개발 빌드에서만 로그한다 — `if (Debug.isDebugBuild)`. 출시 빌드의 로그 파일은 그 기기 주인이 읽을 수 있다 (`09-network` 13절 #13).
 
@@ -81,7 +81,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 * 게임 상태(덱 · 손패 · 버림 더미 · HP · 처리 체인 · 처리 ID)는 객체 하나에 모은다. 방장 이주(`09-network` 9절)를 나중에 붙일 수 있게 하기 위해서다.
 * 규칙은 요청을 검증하고, 상태를 바꾸고, **일어난 일 목록**을 돌려준다. 누구에게 무엇을 보낼지(전체 · 소유자만)는 네트워크 계층이 정한다.
 * 난수와 시간은 밖에서 받는다. 반응 · 턴 타이머는 네트워크 계층이 재고 만료를 규칙에 알린다.
-* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다.
+* 카드 효과는 `Game` 의 `[Serializable]` 순수 C# 클래스로 만들고, 카드 정의 ScriptableObject(`Scripts/Cards/`)에 `[SerializeReference]` 목록으로 조립한다. 카드마다 클래스를 만들지 않는다. 효과 추가 메뉴는 에디터 스크립트로 만든다. 효과의 **값**(피해량 · 장수)은 `cards.json` 이 원본이다 — 게임이 플레이를 시작할 때 카드 정의의 사본에 얹는다. 에셋에서 고친 값은 게임에 나오지 않는다. `cards.json` 으로 바꿀 값은 효과 클래스의 public `int` · `float` · `bool` · enum 필드로 둔다 (`26-card-data` 7-2).
   * 효과 클래스는 `Scripts/Game/Effects/` 에 `종류 + Effect` 이름으로 (`DamageEffect`). 에셋에 클래스 이름 · 네임스페이스로 저장되므로 만든 뒤에는 바꾸지 않는다 — 바꾸면 그 효과가 에셋에서 빈다.
   * 효과는 같은 종류의 카드 여러 장이 한 인스턴스를 같이 쓴다. 실행 중에 필드를 바꾸지 않는다.
 * 네트워크로는 카드 ID · 인스턴스 ID(`int`)만 보낸다. ScriptableObject 에 실행 중 상태를 저장하지 않는다.
@@ -95,7 +95,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 
 | 시안 | Unity |
 | --- | --- |
-| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. 카드 그림은 `Sprites/Cards/Art/<카드 ID>.png`, 카드 틀 · 뒷면 · 빈 칸은 `Sprites/Cards/Frames/`, 캐릭터 그림은 `Sprites/Characters/`(노션 원본 그대로, 잘라 쓸 곳은 스프라이트 영역으로), 그 밖에는 `Sprites/UI/<화면>/`. 배경은 그림 한 장(`Sprites/UI/Background/`) — 그라데이션 · 무늬를 따로 겹치지 않는다. 여러 화면이 같이 쓰는 아이콘은 `Common` |
+| 카드 아트 · 캐릭터 · 배경 그림 · 아이콘 | 스프라이트. 카드 그림은 `Resources/CardArt/<카드 ID>.png` — 카드 정의가 그림을 쥐지 않고 카드 번호로 찾는다(`CardData.LoadArt`, `26-card-data` 3절 #3). 카드 틀 · 뒷면 · 빈 칸은 `Sprites/Cards/Frames/`, 캐릭터 그림은 `Sprites/Characters/`(노션 원본 그대로, 잘라 쓸 곳은 스프라이트 영역으로), 그 밖에는 `Sprites/UI/<화면>/`. 배경은 **그라데이션**(`Common` 의 띠 스프라이트 + 색) **+ 무늬 타일 하나까지**, 또는 **그림 한 장**(`Sprites/UI/Background/`). 그 밖의 겹침은 두지 않는다 (`15-screen` 3절 #6). 여러 화면이 같이 쓰는 아이콘은 `Common` |
 | 박스 · 둥근 모서리 · 테두리 (`border` · `border-radius`) | `Sprites/UI/Common/` 의 9-slice(`ui_round64` · `ui_ring_*`) + `Image.color`. 반지름 · 두께가 다르면 `Common` 에 한 장 더 만든다. 화면마다 박스 이미지를 따로 만들지 않는다. 테두리와 채움이 같이 있는 상자는 `UI/Fx/UIShape` 한 컴포넌트(면 + 테두리를 한 메시, 빌더 `ShapeBox`)로 그린다 — 오브젝트를 테두리 · 채움 둘로 나누지 않는다. 둘로 나누면 판을 흐리게 할 때(`CanvasGroup`) 테두리가 면 너머로 비친다. 빌더의 `RoundBox`(테두리 · 채움 두 오브젝트)는 옛 방식 — 그 상자를 고칠 때 `ShapeBox` 로 바꾼다. 타원 · 점선 테(`border-style: dashed`)도 `UIShape` |
 | 단색 · 반투명 판 (`background` · `opacity`) | 같은 공용 스프라이트에 색 · 알파만 바꾼다. 색 공간이 Gamma 라 시안 값을 그대로 쓴다. 반투명 판은 한 장으로 — 같은 판을 두 장 겹치면 알파가 짙어진다 (85% 두 장 = 약 98%) |
 | 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. 모양을 따라 번지는 그림자(타원 판의 바닥 그림자 등)는 `UIShape` 의 번짐(`feather`). 시안 · 문서의 「번짐」(CSS blur)은 `feather` 에 **× 2** 로 넣는다 — blur 는 가장자리 안팎으로 그만큼 번지는 가우스, `feather` 는 투명해지는 전체 폭(안팎 절반씩). uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |

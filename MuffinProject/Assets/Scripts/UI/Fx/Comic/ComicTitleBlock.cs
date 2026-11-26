@@ -53,6 +53,25 @@ namespace Chapchu.UI.Fx.Comic
 
         private ComicStamp TitleStamp => _titleStamp != null ? _titleStamp : _titleStamp = title.GetComponent<ComicStamp>();
 
+        private void Awake()
+        {
+            if (band == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(band)} 가 비었다");
+            if (title == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(title)} 가 비었다");
+            if (tagBox == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagBox)} 가 비었다");
+            if (tagLabel == null)
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagLabel)} 가 비었다");
+            if (tagGroup == null)
+            {
+                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagGroup)} 가 비었다");
+                return;
+            }
+            var tagRect = (RectTransform)tagGroup.transform;
+            _tagRestX = tagRect.anchoredPosition.x;
+        }
+
         /// <summary>제목 · 한마디 · 색을 넣고 자리를 다시 잡는다 (시안 titleSprite · tagSprite). 에디터에서도 부를 수 있다 (프리팹 미리 보기).</summary>
         public void SetTexts(string titleText, string tagText, Color accent, Color deep)
         {
@@ -100,25 +119,6 @@ namespace Chapchu.UI.Fx.Comic
             tagGroup.alpha = ComicKit.Cl(k * tagFade);
             var tagRect = (RectTransform)tagGroup.transform;
             tagRect.anchoredPosition = new Vector2(_tagRestX + ComicKit.Lerp(TagSlide, 0f, ComicKit.Eo(k)), tagRect.anchoredPosition.y);
-        }
-
-        private void Awake()
-        {
-            if (band == null)
-                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(band)} 가 비었다");
-            if (title == null)
-                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(title)} 가 비었다");
-            if (tagBox == null)
-                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagBox)} 가 비었다");
-            if (tagLabel == null)
-                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagLabel)} 가 비었다");
-            if (tagGroup == null)
-            {
-                Debug.LogError($"[{nameof(ComicTitleBlock)}] {name} 의 {nameof(tagGroup)} 가 비었다");
-                return;
-            }
-            var tagRect = (RectTransform)tagGroup.transform;
-            _tagRestX = tagRect.anchoredPosition.x;
         }
     }
 }

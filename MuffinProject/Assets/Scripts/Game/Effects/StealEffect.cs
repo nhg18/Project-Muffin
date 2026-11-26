@@ -25,7 +25,7 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.HandLossReceiversOf(EffectSubject.Target, entry))
-                server.StealRandom(actor, entry.User, server.Scaled(entry, count));
+                server.StealRandom(actor, entry.User, server.Scaled(entry, count), entry.User);
         }
     }
 }

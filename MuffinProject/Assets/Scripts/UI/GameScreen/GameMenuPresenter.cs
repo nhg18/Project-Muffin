@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using Chapchu.Core;
+using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Popups;
@@ -12,7 +13,7 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 「게임 나가기」 — 방을 나가고(NetworkManager) 나간 것이 확정되면(RoomEvents.OnLeftRoom) 로비로 (08-room.md 6절, 2026-11-07 사용자 결정: 나가기는 항상 로비).
     /// 3턴 연속 시간 초과로 방장이 나를 내보내면 같은 길로 나가고, 로비에 도착해 경고 팝업을 띄운다 (03-turn.md 10절 · 22-popup-ui.md 3절).
-    /// 끊김(튕김) 뒤 재접속은 이후 작업 — 그때 이 흐름(스스로 나가기)과 끊김을 구분한다 (02-player.md 6절 미정).
+    /// 끊김(튕김) 뒤 재접속은 이후 작업 — 그때 이 흐름(스스로 나가기)과 끊김을 구분한다 (02-player.md 6절 확정 · 09-network 재접속 절, 구현 전).
     /// </summary>
     [RequireComponent(typeof(GameMenuView))]
     public class GameMenuPresenter : MonoBehaviour
@@ -21,7 +22,7 @@ namespace Chapchu.UI.GameScreen
         private const string ForcedOutTitle = "방에서 나왔어요";
         private const string HaltedTitle = "방으로 돌아왔어요";
         private const string HaltedText = "게임을 이어갈 수 없어 방으로 돌아왔어요.";
-        private const string ForcedOutText = "3턴 동안 행동하지 않아 게임에서 나왔어요.";
+        private const string ForcedOutTextFormat = "{0}턴 동안 행동하지 않아 게임에서 나왔어요."; // {0} = GameServer.TimeoutLimit (25 7-4 #3)
 
         private GameMenuView _view;
 
@@ -62,7 +63,7 @@ namespace Chapchu.UI.GameScreen
 
             Debug.Log($"[{nameof(GameMenuPresenter)}] 3턴 연속 시간 초과로 강제 퇴장 — 방을 나간다", this);
             if (PopupManager.Instance != null)
-                PopupManager.Instance.ShowWarningOnNextScene(ForcedOutTitle, ForcedOutText);
+                PopupManager.Instance.ShowWarningOnNextScene(ForcedOutTitle, string.Format(ForcedOutTextFormat, GameServer.TimeoutLimit));
             StartCoroutine(LeaveRoomNextFrame());
         }
 

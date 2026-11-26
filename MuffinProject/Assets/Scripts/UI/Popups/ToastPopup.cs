@@ -22,12 +22,12 @@ namespace Chapchu.UI.Popups
                 Close();
         }
 
-        protected override void OnOpen()
+        protected override void HandleOpened()
         {
             _autoClose = StartCoroutine(AutoCloseRoutine());
         }
 
-        protected override void OnClose()
+        protected override void HandleClosed()
         {
             if (_autoClose == null) return;
             StopCoroutine(_autoClose);

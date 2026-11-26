@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Threading.Tasks;
 using Chapchu.Account;
+using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.UI.Title;
 using UnityEngine;
@@ -8,21 +9,24 @@ using UnityEngine;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 닉네임 변경 · 계정 삭제 — 프로필 · 설정 창에서 시작해 입력 창으로 받는다. 닉네임은 서버(AccountService)에 저장한다.
+    /// 닉네임 변경 · 계정 삭제 · 개발자 모드 — 프로필 · 설정 창에서 시작해 입력 창으로 받는다. 닉네임은 서버(AccountService)에 저장한다.
     /// 기준: docs/systems/17-lobby-ui-full.md 5-2 · 12-title-ui.md 4-2 · 23-login.md 6-4 · 8절
     /// </summary>
     public class LobbyAccountPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        private const string DeleteOkText = "삭제"; // 주 버튼은 하는 일 그대로 (22 1-1 · 3절 로비)
         private const string CancelText = "취소";
         private const string RenamingText = "바꾸는 중…";
         private const string RenamedToast = "닉네임을 바꿨어요.";
-        private const string RenameFailedTitle = "닉네임 변경 실패";
+        private const string RenameFailedTitle = "변경 실패";
         private const string DeleteTitle = "계정 삭제";
         private const string DeleteMessage = "계정을 삭제할까요? 친구 · 통계 · 보유 아이템이 모두 지워지고 되돌릴 수 없어요.";
         private const string DeleteWord = "삭제";
         private const string DeleteWordError = "'삭제'라고 똑같이 입력해야 지워져요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
+        private const string DevOnToast = "개발자 모드를 켰어요.";
+        private const string DevOffToast = "개발자 모드를 껐어요.";
+        private const string DevWrongError = "암호가 맞지 않아요.";
 
         [SerializeField] private LobbyPresenter lobby;
         [SerializeField] private LobbyHomeView home;
@@ -43,6 +47,7 @@ namespace Chapchu.UI.Lobby
         {
             profile.OnChangeRequested += HandleNicknameChangeRequested;
             settings.OnDeleteAccountRequested += HandleDeleteAccountRequested;
+            settings.OnDevModeRequested += HandleDevModeRequested;
             modal.OnInputSubmitted += HandleInputSubmitted;
         }
 
@@ -50,17 +55,23 @@ namespace Chapchu.UI.Lobby
         {
             profile.OnChangeRequested -= HandleNicknameChangeRequested;
             settings.OnDeleteAccountRequested -= HandleDeleteAccountRequested;
+            settings.OnDevModeRequested -= HandleDevModeRequested;
             modal.OnInputSubmitted -= HandleInputSubmitted;
         }
 
         private void HandleNicknameChangeRequested()
         {
             _nicknameRejectCount = 0;
+
+            // 금칙어 목록을 다시 읽는다 — 기다리지 않고, 못 받으면 마지막 값으로 검사한다 (23 8-1 · 4절)
+            if (AccountService.IsSignedIn)
+                ServerConfig.FetchAsync().ContinueWith(task => task.Exception, TaskContinuationOptions.OnlyOnFaulted);
+
             modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
         }
 
         private void HandleDeleteAccountRequested()
-            => modal.ShowWarn(DeleteTitle, DeleteMessage, OkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
+            => modal.ShowWarn(DeleteTitle, DeleteMessage, DeleteOkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
 
         // 입력 창은 방 코드에도 쓰인다 — 닉네임 · 계정 삭제일 때만 받는다
         private void HandleInputSubmitted(LobbyInputKind kind, string value)
@@ -69,6 +80,35 @@ namespace Chapchu.UI.Lobby
                 SubmitNickname(value);
             else if (kind == LobbyInputKind.DeleteAccount)
                 SubmitDeleteAccount(value);
+            else if (kind == LobbyInputKind.DevPassword)
+                SubmitDevPassword(value);
+        }
+
+        // 켜져 있으면 바로 끈다. 꺼져 있으면 암호를 묻는다 (14-lobby-ui 5절)
+        private void HandleDevModeRequested()
+        {
+            if (!DevMode.IsOn)
+            {
+                modal.ShowInput(LobbyInputKind.DevPassword);
+                return;
+            }
+
+            DevMode.TurnOff();
+            home.SetDevMode(false);
+            fx.Toast(DevOffToast);
+        }
+
+        private void SubmitDevPassword(string password)
+        {
+            if (!DevMode.TryTurnOn(password))
+            {
+                modal.SetInputError(DevWrongError);
+                return;
+            }
+
+            modal.HideInput();
+            home.SetDevMode(true);
+            fx.Toast(DevOnToast);
         }
 
         // 타이틀과 같은 검사 (12-title-ui 4-2 · 금칙어 23 8절) → 통과하면 서버 저장 (17 5-2)

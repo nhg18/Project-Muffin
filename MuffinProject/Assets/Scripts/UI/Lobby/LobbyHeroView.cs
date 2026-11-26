@@ -46,9 +46,14 @@ namespace Chapchu.UI.Lobby
         [Tooltip("보유하지 않은 카드 뒷면 미리보기의 불투명도 (0 ~ 1) — 뒷면 그림이 없어 옅게 보인다")]
         [SerializeField] private float unownedCardAlpha = 0.25f;
 
+        [Tooltip("장착할 때 캐릭터가 톡 튀기 시작하는 크기 (1 = 원래 크기)")]
+        [SerializeField] private float popScale = 0.94f;
+
         private Vector2 _cardOrigin;
         private bool _isSilhouette;
         private Sequence _replay;
+
+        private Color BaseColor => _isSilhouette ? LobbyStyle.Silhouette : Color.white;
 
         public event Action OnClicked;
 
@@ -78,7 +83,7 @@ namespace Chapchu.UI.Lobby
         }
 
         /// <summary>장착 — 캐릭터가 톡 튄다.</summary>
-        public void Pop() => UIJuice.Pop(character.rectTransform, 0.94f);
+        public void Pop() => UIJuice.Pop(character.rectTransform, popScale);
 
         /// <summary>입장 연출 자리 — 0.3초에 나타난다.</summary>
         public void PlayEnter()
@@ -117,8 +122,6 @@ namespace Chapchu.UI.Lobby
                 .AppendInterval(replaySeconds * cardPhaseRatios.y)
                 .Append(cardPreviewGroup.DOFade(0f, replaySeconds * cardPhaseRatios.z));
         }
-
-        private Color BaseColor => _isSilhouette ? LobbyStyle.Silhouette : Color.white;
 
         private void StopReplay()
         {

@@ -77,3 +77,4 @@ MonoBehaviour:
     count: 1
   - card: {fileID: 11400000, guid: 790bd8ba65ecd8548bffad96d5d1a107, type: 2}
     count: 2
+  sheet: {fileID: 4900000, guid: b5bc381f71aa40d4f8b411c8fa221a8a, type: 3}

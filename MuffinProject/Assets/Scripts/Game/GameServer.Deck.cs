@@ -9,6 +9,10 @@ namespace Chapchu.Game
         internal const int InitialHandCount = 5;
         // 턴 뽑기(메인 행동) 장수 — 손패가 찹츄 장수 − 1 이면 1장만 뽑아 딱 맞게 한다 (05-deck.md 4절, 2026-11-11). 카드 효과 뽑기는 효과의 장수 그대로.
         public const int TurnDrawCount = 2;
+        internal const int LastDrawCount = 1; // 손패가 찹츄 장수 − 1 일 때 (05-deck.md 4절)
+
+        // 턴 뽑기 장수 — 방장 판정과 봇 점수가 함께 쓴다 (05-deck.md 4절)
+        internal static int TurnDrawCountFor(int handCount) => handCount == ChapchuHandCount - 1 ? LastDrawCount : TurnDrawCount;
 
         private readonly List<Card> _deck = new List<Card>();
         private readonly List<Card> _discardPile = new List<Card>();
@@ -38,7 +42,7 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotYourTurn);
 
             _players[requester].TimeoutStreak = 0; // 직접 턴을 끝냈다 (03-turn.md 4절)
-            DrawForTurn(requester, _players[requester].Hand.Count == ChapchuHandCount - 1 ? 1 : TurnDrawCount);
+            DrawForTurn(requester, TurnDrawCountFor(_players[requester].Hand.Count));
             return TakeEvents();
         }
 

@@ -58,7 +58,7 @@ namespace Chapchu.UI.GameScreen
             double now = PhotonNetwork.Time;
             if (now < _opensAt)
             {
-                _view.ShowSoon();
+                _view.ShowSoon(_label);
                 return;
             }
 

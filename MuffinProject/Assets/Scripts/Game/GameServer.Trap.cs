@@ -57,12 +57,14 @@ namespace Chapchu.Game
         }
 
         // 행동(체인) · 턴 끝 피폭 · 턴 스킵이 끝난 뒤 — 그사이 생긴 사건에 맞는 함정을 모두 자동 발동한다 (04 6절 · 9.2, 2026-11-15 PM).
+        // 같은 사건에 맞는 함정이 여럿이면 사람이 달라도 · 한 사람이 여러 장이어도 모두 발동한다 — 함정 한 장은 한 번만 (04 6절 「여러 함정 동시 발동」, 2026-11-18).
         // 발동할 함정은 지금 정하고, 설치한 순서대로 한 장씩: 공개 → 효과 → 버림 더미. 카운터 · 반응 시간은 없다.
         // 함정의 효과로 생긴 사건은 다른 함정을 부르지 않는다 — 끝나면 사건 기록을 비운다.
         // at = 앞 연출이 끝나는 시각. 마지막 함정의 연출이 끝나는 시각을 돌려준다 (발동한 것이 없으면 at 그대로).
         private double FireTraps(double at)
         {
             var fired = new List<(int Owner, Card Trap, AfterRecord After)>();
+            var taken = new List<AfterRecord>(); // 앞 함정이 이미 쓴 사건 — 맞는 사건이 여럿이면 함정마다 다른 사건부터 쓴다 (FindAfterRecord)
             foreach (int owner in _turnOrder)
             {
                 if (!IsInGame(owner))
@@ -82,11 +84,11 @@ namespace Chapchu.Game
                     if (dying || !IsAfterTrigger(trap.Trigger))
                         continue;
 
-                    AfterRecord after = FindAfterRecord(owner, trap);
+                    AfterRecord after = FindAfterRecord(owner, trap, taken);
                     if (after == null)
                         continue;
 
-                    _afterRecords.Remove(after); // 사건 한 번에 함정 한 번
+                    taken.Add(after);
                     fired.Add((owner, trap, after));
                 }
             }

@@ -273,7 +273,7 @@ namespace Chapchu.UI.Title
         // 최소 버전 · 점검 — 네트워크 서버 접속 전에 읽는다. 읽지 못하면 마지막 값으로 진행 (23 7-6)
         private IEnumerator ConfigRoutine()
         {
-            yield return FetchConfig();
+            yield return ServerConfig.FetchRoutine();
             if (ServerConfig.NeedsUpdate)
             {
                 AnalyticsRecorder.RecordTitleBlocked(AnalyticsRecorder.TitleBlockReason.Update);
@@ -293,19 +293,11 @@ namespace Chapchu.UI.Title
                 EndLoading();
                 popup.ShowMaintenance(ServerConfig.MaintenanceMessage);
                 yield return new WaitForSecondsRealtime(ServerConfig.MaintenanceRetrySeconds);
-                yield return FetchConfig();
+                yield return ServerConfig.FetchRoutine();
             }
 
             popup.Hide();
             Connect();
-        }
-
-        private static IEnumerator FetchConfig()
-        {
-            Task fetch = ServerConfig.FetchAsync();
-            yield return Wait(fetch, ServerConfig.FetchTimeoutSeconds);
-            if (!Succeeded(fetch))
-                Debug.LogWarning($"[{nameof(TitlePresenter)}] 설정 값 읽기 실패 — 마지막 값으로 진행: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");
         }
 
         // 결과는 ConnectionEvents 로 온다 (시안 connect)

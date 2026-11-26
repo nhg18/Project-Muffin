@@ -108,7 +108,7 @@ namespace Chapchu.UI.GameScreen
             numberText.text = Mathf.Max(0, left).ToString();
             Dial(left, true);
 
-            var numberRect = numberText.rectTransform;
+            RectTransform numberRect = numberText.rectTransform;
             numberRect.DOKill();
             numberRect.localScale = Vector3.one * numberPopScale;
             numberRect.localRotation = Quaternion.Euler(0f, 0f, numberPopAngle);
@@ -152,7 +152,7 @@ namespace Chapchu.UI.GameScreen
                 segment.color = off ? segmentOff : segmentOn;
                 if (off && !wasOff && animate)
                 {
-                    var rect = segment.rectTransform;
+                    RectTransform rect = segment.rectTransform;
                     rect.DOKill();
                     rect.localScale = Vector3.one * segmentPopScale;
                     DOTween.Sequence().SetTarget(rect)
@@ -193,7 +193,7 @@ namespace Chapchu.UI.GameScreen
             foreach (float angle in ringAngles)
                 ring.Append(clock.DOLocalRotate(new Vector3(0f, 0f, angle), step));
             ring.AppendInterval(ringSeconds - step * ringAngles.Length);
-            _ring = ring.SetLoops(-1);
+            _ring = ring.SetLoops(-1).SetLink(clock.gameObject);
         }
 
         private void KillTweens()

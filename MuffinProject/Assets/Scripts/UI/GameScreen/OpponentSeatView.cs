@@ -11,7 +11,7 @@ namespace Chapchu.UI.GameScreen
     /// 머리 띠 색 = 상태 (턴 노랑 > 찹츄 분홍 > 보통 민트). 값을 받아 표시만 한다.
     /// 어느 플레이어(actorNumber)의 좌석인지는 모른다 — 대응은 OpponentSeatsPresenter 가 한다 (02-player.md 3절).
     /// 탭은 대상 선택 중(SetTargetable)에만 받는다 — 평소에는 탭 영역의 레이캐스트를 꺼서 덱 등 겹치는 입력을 가리지 않는다.
-    /// 캐릭터 그림은 아직 없다(기능 8P) — 자리만 두고 스프라이트를 끼운다. 사망 · 사망 대기 표시는 기능 7 에서.
+    /// 캐릭터 그림은 아직 없다(기능 8P) — 자리만 두고 스프라이트를 끼운다. 최종 사망 표시는 기능 7 에서 — 사망 대기는 표시하지 않는다 (02-player.md 5절).
     /// </summary>
     public class OpponentSeatView : MonoBehaviour, IPointerClickHandler
     {

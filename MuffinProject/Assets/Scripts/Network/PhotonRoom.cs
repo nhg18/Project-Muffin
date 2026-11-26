@@ -19,7 +19,17 @@ namespace Chapchu.Network
 
         private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
 
-        private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+        /// <summary>매치 방이 생긴 뒤 빈자리를 봇으로 채우고 시작할 때까지 (초) — 08-room.md 4절 「매치」</summary>
+        public const double MatchWaitSeconds = 15;
+
+        private enum CreatingKind { Room, Solo, Match }
+
+        private CreatingKind _creating; // 만드는 중인 방 종류 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+
+        // 랜덤 매칭은 매치 방에만 들어간다 — 개발자 모드로 만든 공개 방에 모르는 사람이 들어가지 않게
+        private static readonly ExitGames.Client.Photon.Hashtable MatchFilter = new ExitGames.Client.Photon.Hashtable { [RoomProps.Match] = true };
+
+        private bool _creatingPublic; // 만드는 방의 공개 여부 — 코드가 겹쳐 다시 만들 때도 같게
 
         // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
         // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
@@ -59,7 +69,7 @@ namespace Chapchu.Network
                 RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
                 return;
             }
-            PhotonNetwork.JoinRandomRoom();
+            PhotonNetwork.JoinRandomRoom(MatchFilter, 0);
         }
     
         public void LeaveRoom()
@@ -67,7 +77,10 @@ namespace Chapchu.Network
             PhotonNetwork.LeaveRoom();
         }
     
-        public void CreateRoom()
+        /// <summary>
+        /// 방을 만든다. 「방 만들기」 는 비공개 — 방장이 방 안에서 공개로 바꿀 수 있다 (08-room.md 5절 #7). 빠른 시작이 방을 못 찾으면 이것이 아니라 매치 방(CreateMatchRoom)
+        /// </summary>
+        public void CreateRoom(bool isPublic)
         {
             if (!PhotonConnection.ValidConnect)
             {
@@ -75,8 +88,33 @@ namespace Chapchu.Network
                 return;
             }
 
-            _creatingSolo = false;
+            _creating = CreatingKind.Room;
+            _creatingPublic = isPublic;
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, isPublic, true);
+            string code = RandomCode.GenerateRandomCode();
+
+            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 매치 방 (08-room.md 4절 「매치」) — 랜덤 매칭이 들어갈 방이 없을 때 만든다. 공개 고정.
+        /// 시작 시각은 방에 들어온 뒤 방장이 적는다 — 방 밖에서 읽은 PhotonNetwork.Time 은 방 안의 서버 시각과 맞지 않는다 (RoomPresenter).
+        /// </summary>
+        private void CreateMatchRoom()
+        {
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
+            _creating = CreatingKind.Match;
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
+            options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                [RoomProps.Match] = true,
+            };
+            options.CustomRoomPropertiesForLobby = new[] { RoomProps.Match };
             string code = RandomCode.GenerateRandomCode();
 
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
@@ -94,7 +132,7 @@ namespace Chapchu.Network
                 return;
             }
 
-            _creatingSolo = true;
+            _creating = CreatingKind.Solo;
             int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers - bots.Length, false, true);
             options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.Bots] = bots, [RoomProps.Solo] = true };
@@ -226,10 +264,12 @@ namespace Chapchu.Network
             {
                 // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
                 case ErrorCode.GameIdAlreadyExists:
-                    if (_creatingSolo)
+                    if (_creating == CreatingKind.Solo)
                         CreateSoloRoom();
+                    else if (_creating == CreatingKind.Match)
+                        CreateMatchRoom();
                     else
-                        CreateRoom();
+                        CreateRoom(_creatingPublic);
                     return;
             }
             RoomEvents.RaiseCreateRoomFailed(returnCode, message);
@@ -273,8 +313,8 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 방을 만든다: {message}");
-            CreateRoom();
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 매치 방을 만든다: {message}");
+            CreateMatchRoom();
         }
 
         public void OnPlayerEntered(Player player)
@@ -317,7 +357,7 @@ namespace Chapchu.Network
 
         /// <summary>
         /// 방장 전환시 호출되는 콜백 함수
-        /// 방장 이탈 처리(방 해체 · 결과 화면 로비로 — 08-room.md 5절 #5)는 화면이 통지를 받아 한다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
+        /// 방 대기 · 결과 화면에서는 위임 (08-room.md 5절 #5 · 07 11절) — 화면이 통지를 받아 다시 그린다. 봇 목록은 새 방장이 이어받는다 (18-bot.md 9절).
         /// </summary>
         public void OnMasterClientSwitched(Player newMasterClient)
         {

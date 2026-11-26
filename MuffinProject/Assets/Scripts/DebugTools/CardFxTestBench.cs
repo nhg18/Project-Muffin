@@ -149,7 +149,7 @@ namespace Chapchu.DebugTools
             replayButton.navigation = new Navigation { mode = Navigation.Mode.None };
             resetButton.navigation = new Navigation { mode = Navigation.Mode.None };
 
-            foreach (DeckData.Entry entry in cardDeck.entries)
+            foreach (DeckData.Entry entry in cardDeck.Entries)
             {
                 if (entry.card != null && !_cards.Contains(entry.card))
                     _cards.Add(entry.card);
@@ -257,8 +257,9 @@ namespace Chapchu.DebugTools
                 Caster = me.Anchor,
                 Targets = new[] { other.Anchor },
                 CardId = data.id,
+                Card = data,
                 CardName = data.cardName,
-                CardArt = data.cardImage,
+                CardArt = data.LoadArt(),
                 CardBack = cardBack,
                 Character = character,
                 CasterSeat = me,

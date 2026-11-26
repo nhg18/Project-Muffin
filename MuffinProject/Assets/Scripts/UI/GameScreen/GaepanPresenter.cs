@@ -30,7 +30,8 @@ namespace Chapchu.UI.GameScreen
 
         private void Start()
         {
-            if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Gaepan, out object value) && value is int[] gaepan && gaepan.Length == 2 && gaepan[1] > 0)
+            if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Gaepan, out object value) && value is int[] gaepan && gaepan.Length == 2
+                && gaepan[1] >= 1 && gaepan[1] <= GameServer.GaepanRounds) // 남이 잠깐 바꾼 값은 거른다 (09-network.md 13절 #8)
                 hud.Show(gaepan[1], GameServer.GaepanRounds);
         }
 

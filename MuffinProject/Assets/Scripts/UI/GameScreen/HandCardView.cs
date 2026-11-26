@@ -60,8 +60,9 @@ namespace Chapchu.UI.GameScreen
             descriptionText.text = data.description;
 
             // 그림이 아직 없는 카드가 있다 — 그림 칸만 비워 둔다.
-            artImage.sprite = data.cardImage;
-            artImage.enabled = data.cardImage != null;
+            Sprite art = data.LoadArt();
+            artImage.sprite = art;
+            artImage.enabled = art != null;
 
             gameObject.name = $"HandCard_{instanceId}_{data.id}";
         }

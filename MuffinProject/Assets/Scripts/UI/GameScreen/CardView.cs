@@ -174,7 +174,7 @@ namespace Chapchu.UI.GameScreen
             nameText.text = data.cardName;
             descriptionText.text = FormatDescription(data.description);
             BalanceDescriptionLines();
-            SetArt(data.cardImage);
+            SetArt(data.LoadArt());
 
             _grade = data.grade;
             _gradeOffset = Random.value; // 카드마다 반짝이는 때가 다르게

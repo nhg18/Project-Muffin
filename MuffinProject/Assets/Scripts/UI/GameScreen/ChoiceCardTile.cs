@@ -46,8 +46,9 @@ namespace Chapchu.UI.GameScreen
             frame.color = data.type == CardType.Counter ? counterColor : data.type == CardType.Trap ? trapColor : actionColor;
             nameText.text = data.cardName;
             descText.text = data.description;
-            art.sprite = data.cardImage;
-            art.enabled = data.cardImage != null;
+            Sprite sprite = data.LoadArt();
+            art.sprite = sprite;
+            art.enabled = sprite != null;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, int> OnEmptyDeckDamaged;             // actorNumber, amount — 빈 덱 피해, 체력은 뒤따르는 OnHpChanged
         public static event Action<int, double, double> OnDeathPending;      // actorNumber, startsAt, deadline — 사망 대기, 게임이 멈춘다
         public static event Action<int, int[], int> OnPlayerDied;            // actorNumber, cardIds, discardCount — 최종 사망, 손패 0. cardIds = 버림 더미에 들어간 순서(손패 → 함정)
-        public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
+        public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount, forced(강제 퇴장인지) — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
         public static event Action<int, int, int> OnTrapSet;                 // actorNumber, handCount, trapCount — 함정 설치 (종류는 OnMyTrapSet)
         public static event Action<int, int, int, int[], int> OnTrapActivated; // actorNumber, cardInstanceId, cardId, targets, trapCount — 공개 · 체인에 올라감
@@ -58,7 +58,7 @@ namespace Chapchu.Network.Events
         public static event Action<int> OnMyTrapRemoved;                     // cardInstanceId — 내 함정 칸에서 빠짐 (손패로 반환 · 빼앗김)
         public static event Action<int[], int[]> OnMyCardsGained;            // cardInstanceIds, cardIds — 내 손패로 들어옴 (훔침 · 교환 · 함정 반환)
         public static event Action<int[]> OnMyCardsLost;                     // cardInstanceIds — 내 손패에서 나감 (훔쳐짐 · 교환)
-        public static event Action<int[]> OnMyCountersUsable;                // cardInstanceIds — 지금 열리는 반응 시간에 낼 수 있는 내 카운터 (OnReactionStarted 바로 뒤, 없으면 안 온다)
+        public static event Action<int[]> OnMyCountersUsable;                // cardInstanceIds — 지금 열리는 반응 시간에 낼 수 있는 내 카운터 (OnReactionStarted 바로 뒤, 반응 시간마다 꼭 온다 — 없으면 빈 목록)
         public static event Action<int[], int[], int[], int[]> OnMySync;     // 손패 인스턴스 ID · 카드 ID, 함정 인스턴스 ID · 카드 ID — RequestMySync 의 답 (지금 내 비공개 카드 전부)
 
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);

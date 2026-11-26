@@ -1,7 +1,7 @@
 # 스토어 출시 준비 — Google Play · App Store
 
 **작성일**: 2026-09-26 (조사 기준일도 같음. 스토어 규정은 자주 바뀌므로 기능 13 시작 때 다시 확인)
-**최근 갱신**: 2026-11-07 — 결정 1 · 3 · 5 · 6 · 8 확정, 패키지 ID 보류, **결정 9 연령 등급** 신설(조사 기준일 2026-11-07, 2-1절) → 같은 날 **A 안 확정** → 같은 날 동의 체크를 약관마다 + 「모두 동의하기」 로 (PM)
+**최근 갱신**: 2026-11-26 — 결정 4: 심사자 혼자 플레이 = 「랜덤 매칭」 의 봇 채우기 (15초 뒤 사람 1 + 봇 3, PM) · 8절 숨은 개발자 모드 확인 항목. 이전: 2026-11-07 — 결정 1 · 3 · 5 · 6 · 8 확정, 패키지 ID 보류, **결정 9 연령 등급** 신설(조사 기준일 2026-11-07, 2-1절) → 같은 날 **A 안 확정** → 같은 날 동의 체크를 약관마다 + 「모두 동의하기」 로 (PM)
 **출시 목표**: `1.0.0` 2027-02-04 ([`development-plan.md`](development-plan.md) 기능 13)
 **범위**: 오래 걸리는 외부 준비 · 결정할 것 · 비용 · 스토어 요건. 게임 기능 개발은 다루지 않는다.
 
@@ -14,7 +14,7 @@
 3. **계정 명의는 개인으로 확정 (2026-11-07, 결정 1).** 그래서 구글의 **테스터 12명 × 14일 비공개 테스트가 의무**다. 팀 밖 테스터가 필요하고, **12월 초에 모집을 끝내고 12/12(`0.5.0`)에 테스트를 시작**한다. 역산한 마지노선은 1/6.
 4. **PUN 무료 20 CCU는 개발 전용이라 출시에 못 쓴다.** 출시 때 100 CCU 요금제($95, 1회 결제로 12개월)를 산다.
 5. **출시 `1.0` 은 무료 · 광고 없음 (2026-11-06, 결정 2).** 사업자등록 · 통신판매업 · Apple 유료 앱 계약은 출시에 필요 없다. 사업 단계(출시 → 서비스(무료) → 사업화)는 노션 「창업」 8절.
-6. **Apple 심사자는 혼자 게임을 해본다.** 4인 온라인 전용 게임은 "상대가 없어 진행 불가"로 거절(2.1)될 위험이 있다. 대응 방식은 기획 결정이다 → 결정 4.
+6. **Apple 심사자는 혼자 게임을 해본다.** 4인 온라인 전용 게임은 "상대가 없어 진행 불가"로 거절(2.1)될 위험이 있다. 대응 방식은 기획 결정이다 → 결정 4: 로비 「랜덤 매칭」 이 15초 뒤 빈자리를 봇으로 채워 시작한다 (2026-11-26).
 7. **연령 등급 (결정 9, A 안 확정 2026-11-07)**: 한국에는 「7세」 등급이 없다(전체 · 12 · 15 · 청불). `1.0` 은 **스토어 등급 전체이용가(Apple 4+ 또는 9+ — 설문 답대로) + 앱 안 「만 14세 이상」 자기 확인**(이용약관 동의 체크의 문구에 넣는다). **만 14세 미만**은 개인정보보호법상 법정대리인 동의가 필요해 받지 않는다(7 ~ 13세는 보호자 동의 흐름을 만드는 사업화 단계에서 재검토). Google 타깃 연령 13세 이상 선언, Apple Kids 카테고리 미사용. 무료 재화 상자는 확률형 아이템 법정 표시 대상이 **아니다**(직·간접 유상만). 상세 2-1절.
 8. **iPhone 전용 · EU 제외 · PUN 유지**로 확정 (2026-11-07, 결정 5 · 6 · 8). iPad 스크린샷 · DSA 트레이더 신고 · Fusion 전환은 하지 않는다.
 
@@ -47,7 +47,7 @@
 | 1 | **계정 명의** — **확정 (2026-11-07): 개인** | 본명이 판매자로 표시된다. 구글은 **12명 × 14일 비공개 테스트 의무** → 1절 「12월 초」 줄. (버린 안: 조직 — Apple 은 법인만, D-U-N-S 필요) | 완료 |
 | 2 | **수익화** — **확정 (2026-11-06): 출시 `1.0` 은 없음.** 유료 · 광고는 사업 3단계(노션 「창업」 8절, 2027-06 이후)에서 다시 결정하고, 그때 아래 요건이 생긴다. **무료 재화로만 여는 상자 가챠는 `1.0` 에 있다** ([`systems/24-currency-quest.md`](systems/24-currency-quest.md)) | 없음: 사업자등록 없이 무료 앱으로 출시할 수 있다. 인앱결제: Apple 유료 앱 계약 · 은행 · 미국 세금 양식(W-8BEN), 사업자등록 · 통신판매업 신고(구글 "업체")가 필요하고, 한국 개발자는 사업자 정보가 스토어에 공개된다. **확률형**: 게임산업법 33조 2항(2024-03-22 시행)은 **직·간접 유상** 아이템만 대상 → 무료 재화 전용 상자는 법정 표시 의무 **없음**. 두 스토어의 확률 공개 정책도 **"from a purchase"(유상 구매)** 가 조건이다. 그래도 상자 화면에 확률을 항상 표시한다(24 3-3 #7). 유료화하면 법정 양식 + 2025-08-01 시행 개정법(거짓 · 누락 표시 손해 3배 배상 · 입증책임 전환)이 붙는다. 광고: 광고 ID 신고, iOS 추적 동의(ATT) | 출시: 완료 · 3단계 진입 전 재결정 |
 | 3 | **로그인 방식** — **확정 (2026-11-07)**: [`systems/23-login.md`](systems/23-login.md) — **게스트 자동 + 선택 연동(Google · Apple)** · 앱 안 계정 삭제 · 웹 삭제 요청 페이지 | 계정이 생기므로 **앱 안 삭제 기능** 필수(Apple 은 자동 생성 게스트 계정도 해당), 구글은 **웹 삭제 요청 링크**도 요구 → 1절 12/12 준비물. Apple 연동이 있으므로 Sign in with Apple 포함(4.8), 한국 개발자는 서버 알림 엔드포인트 필수(2026-01-01~). 연령 확인은 결정 9 가 정한다 | 완료 (문서) · 구현 기능 12 |
-| 4 | **심사자 혼자 플레이** | **① 봇 상대로 확정** (2026-11-06, PM) — 기획은 [`systems/18-bot.md`](systems/18-bot.md). 사람 1 + 봇 1~3 으로 한 판을 끝까지 돌린다. 봇 1단계 완료 날짜는 `development-plan` 8B. (버린 안 ②: 심사 메모 + 시연 영상 + 심사 기간 서버 유지) | 완료 (결정) · 구현 12/26 전 |
+| 4 | **심사자 혼자 플레이** | **① 봇 상대로 확정** (2026-11-06, PM) — 기획은 [`systems/18-bot.md`](systems/18-bot.md). **2026-11-26 (PM): 매치의 봇 채우기로 푼다** — 심사자는 로비 주 버튼 「랜덤 매칭」 하나로 **사람 1 + 봇 3** 판을 끝까지 돌린다. 동접자가 없으면 15초 기다린 뒤 빈자리를 봇이 채우고 시작한다 ([`systems/08-room.md`](systems/08-room.md) 4절 「매치」). 「혼자 하기」 는 개발자 모드 도구라 심사자 길이 아니다. 봇 1단계 완료 날짜는 `development-plan` 8B · 8M. (버린 안 ②: 심사 메모 + 시연 영상 + 심사 기간 서버 유지) | 완료 (결정) · 구현 12/26 전 |
 | 5 | **iPad 지원** — **확정 (2026-11-07): iPhone 전용** | iPad 13" 스크린샷 · 4:3 배치 검토가 없어진다. 출시 빌드 설정(7절)에서 Target Device = iPhone | 완료 |
 | 6 | **EU 배포** — **확정 (2026-11-07): EU 제외** | DSA 트레이더 신고 · 주소 · 전화번호 공개가 없어진다. App Store Connect 배포 국가에서 EU 27개국을 뺀다 | 완료 |
 | 7 | **Unity 6 LTS 업그레이드 시점** | **완료** — 2026-10-31 에 6000.3.27f1 로 올렸다 (선택지 ①) | 완료 |
@@ -148,17 +148,16 @@
 | 서비스 | 쓰는 곳 | 무료 | 넘으면 |
 | --- | --- | --- | --- |
 | Photon PUN | 멀티 | 20 CCU (개발용) · 100 CCU 요금제(위 표) | 20 · 100 CCU 는 **접속을 막는다** (과금 없음). 500 CCU 이상 유료만 초과를 허용하고 다음 청구서에 붙인다 — 단가는 구독 계약에만 있다 (8절) |
-| UGS Authentication · Remote Config | 로그인 · 설정 값 · 카드 데이터 버전 | 과금 없음 | — |
+| UGS Authentication · Remote Config | 로그인 · 설정 값 | 과금 없음 | — |
 | UGS Cloud Save | 닉네임 · 장착 · 보유 · 통계 · 재화 | 매달 저장 5GiB · 쓰기 100만 회 · 읽기 100만 회 | 저장 1GiB 당 $0.50 · 쓰기 1만 회당 $0.025 · 읽기 1만 회당 $0.009 |
 | UGS Cloud Code | 닉네임 검사 · 판 결과 보고 · 보상 · 상자 (`23` 7-1) | 매달 호출 100만 회 · 실행 20시간 · 응답 1GiB | 호출 100만 회당 $1.50. Cloud Code 안에서 Cloud Save 를 부르면 둘 다 과금된다 |
-| UGS CCD | 카드 데이터 파일 (`systems/26-card-data.md`) | 매달 전송 50GB (올리기 포함) · 저장 무료 | 1GB 당 $0.08 |
 | GitHub Actions | 카드 정리 봇 · CI | 공개 저장소의 기본 러너 무료 | — |
 | 노션 API · KIPRIS Plus | 봇 · 이름 점검 | 과금 없음 (요청 제한만 — 노션 평균 초당 3회) | — |
 
 * **UGS 예산 알림은 알리기만 한다.** 금액에 닿아도 서비스가 멈추지 않고 계속 과금된다. 설정은 Administration › Finance and Billing › Budget Alerts, 조직 Owner 만, 집계는 최대 하루 늦다. 무료 한도 알림(75% · 100%)은 따로 온다.
-* 무료 한도를 넘었는데 **결제 정보가 없으면** UGS 서비스 · API 가 전부 막힌다. CCD 는 무료로 써도 결제 카드 등록을 요구한다 — 카드를 등록하면 막히는 대신 과금된다 (추론).
-* 우리 쪽 안전장치는 `systems/26-card-data.md` 7-8 — 버전이 바뀔 때만 받기 · 다시 시도 횟수 제한 · 올리기 전 크기 검사 · 원격 카드 끄기 스위치 · Cloud Code 한 판 한 번 · 예산 알림 + 월 1회 확인 · **한도가 정해진 결제 카드**.
-* 카드 데이터 예상 전송량: 유저 1만 명 × 월 4회 패치 × 0.5MB ≈ 20GB (무료 안). 카드 그림까지 CCD 로 전부 받게 하면 1만 명 × 150MB ≈ 1.5TB → 월 약 $120 — 그래서 그림은 빌드에 둔다 (`26` 3절 #4).
+* 무료 한도를 넘었는데 **결제 정보가 없으면** UGS 서비스 · API 가 전부 막힌다. 결제 카드를 등록해 두면 막히는 대신 과금된다 (추론).
+* 우리 쪽 안전장치 (확정 · 추천안, 2026-11-19): Cloud Code 호출은 한 판에 한 번 (`23` 7-1 · `24` 2절) · Unity 대시보드 예산 알림 **월 $5 · $20 · $50** + 무료 한도 알림(75% · 100%) + 월 1회 사용량 확인, 받는 사람 = PM · UGS 에 결제 카드를 등록할 때는 **월 한도 10만 원**으로 정한 카드.
+* 카드 데이터 · 카드 그림은 빌드에 둔다 — 서버(UGS CCD)에서 받게 하지 않는다 (2026-11-20 PM, `systems/26-card-data.md` 3절 #4 · #9). 그림까지 서버에서 받으면 1만 명 × 150MB ≈ 1.5TB → 월 약 $120.
 
 ---
 
@@ -263,7 +262,7 @@
 | 등급 설문 답변 — **2-1 ① · ② 표가 초안** | IARC · Apple | 기획 (완료 · 결정 9 뒤 확정) |
 | 앱 안 「만 14세 이상」 확인 체크 — 이용약관 동의 체크의 문구 (결정 9 A 안 → `20-title-ui-full` 7-11 · `23-login` 7-5) | 첫 실행 동의 화면 | 기획 · UI |
 | **출시 전 법률 자문 1회** — 「만 14세 이상」 자기 확인 체크의 충분성 · 거짓 체크 때 사업자 책임 범위 · **청소년보호법 24조(16세 미만 친권자 동의)의 적용 제외 해당 여부**(2-1-2) · 약관 「14세 미만 이용 불가」 문구 (결정 9 비고 · 8절) | 출시 전 (심사 제출 ~1/25 전) | PM |
-| 심사자용 플레이 안내 (결정 4) | Apple 심사 메모 · 구글 앱 접근 권한 | 기획 |
+| 심사자용 플레이 안내 (결정 4) — 「랜덤 매칭」 을 누르고 15초 기다리면 봇 3 과 한 판이 시작된다는 한 줄 | Apple 심사 메모 · 구글 앱 접근 권한 | 기획 |
 | 카드 이름 · 그림 IP 점검 통과 (6-1) | 양쪽 스토어 신고 대비 | 기획 · 디자인 |
 
 ### 6-1. 카드 이름 · 그림 점검 (2026-11-06 · 이름 자동 점검 2026-11-18)
@@ -310,11 +309,12 @@
 - 인앱결제가 통신판매업 신고의 "거래"에 해당하는지, 세금 처리 → 세무사
 - 확률형 아이템 면제 기준 — 「게임물을 제작 · 배급 · 제공하는 자 모두가 **최근 3년간 연평균 매출액 1억 원 이하**인 중소기업」으로 확인(2026-11-07). `1.0` 은 무료 재화 전용이라 면제와 무관하게 대상 밖. 유료화 때 "3년" 산정 시점만 다시 확인
 - **Apple 설문 「만화 · 판타지 폭력」의 간헐적 / 빈번 판정** — 카드 공격이 매 턴 있어 심사자가 「빈번」(13+ · KR-12)으로 볼 수 있다. 심사 메모에 "피해는 숫자 감소, 피 · 상해 묘사 없음"을 적고, 거절되면 GRAC 자체등급분류(전체이용가) RCN 으로 덮어쓰기 검토
+- **숨은 개발자 모드와 Apple 가이드라인 2.3.1** — 출시 빌드에도 설정 「정보」 의 버전 글자 5번 + 암호로 여는 개발자 모드가 있다 (`systems/17-lobby-ui-full.md` 5-4, 2026-11-26 PM). 2.3.1 은 숨은 · 문서에 없는 기능을 금지한다. 심사 메모에 적을지, 출시 빌드에서의 동작을 바꿀지 PM 확인 (미정)
 - **Google Play 타깃 재평가** — 치와와 아트가 아동 대상으로 읽혀 13세 미만 포함을 요구받을 수 있음. 요구받으면 Families 정책 범위(광고 없음 · 기기 식별자 전송 여부 · Photon/UGS SDK) 확인
 - **「만 14세 이상」 자기 확인 체크의 충분성** — 가이드라인은 「합리적 장치」를 권장하지 기준을 못 박지 않는다. 분쟁 사례 없음. → 출시 전 법률 자문 1회를 6절 준비물로 올렸다 (2026-11-07, 결정 9 A 안)
 - Apple 회비 공식 원화가, 계정 가입 소요 시간
 - Photon 500 CCU 이상의 초과 단가 — 공개 가격표에 없고 「구독 계약에 정한 값」 으로만 나온다. 첫 초과 뒤 48시간 안에 플랜을 올리지 않으면 상한이 걸릴 수 있다 (2026-11-19 확인). 우리 100 CCU 요금제는 초과를 막으므로 500 CCU 로 올릴 때 계약서를 본다
-- ~~UGS Remote Config 값 크기 · CCD 저장 용량~~ — 2026-11-19 확인: Remote Config 설정 하나 5MB · 문자열 65,535자, CCD 저장 · 파일 크기 한도는 공식 문서에 없음 (`systems/26-card-data.md` 4절)
+- ~~UGS Remote Config 값 크기 · CCD 저장 용량~~ — 2026-11-19 확인: Remote Config 설정 하나 5MB · 문자열 65,535자. CCD 는 2026-11-20 에 쓰지 않기로 했다 (`systems/26-card-data.md` 7-4)
 
 ---
 
@@ -366,10 +366,9 @@
 - Photon 요금: https://www.photonengine.com/pun/pricing · https://forum.photonengine.com/discussion/16907/can-i-publish-a-game-that-uses-the-20-ccu-free-license-model · https://blog.photonengine.com/new-free-100-ccu-for-photon-fusion-and-quantum-games/
 - Photon 개인정보: https://www.photonengine.com/terms/gdpr
 - Photon 초과(burst) 정책: https://doc.photonengine.com/photon/current/pricing
-- UGS 가격 (Authentication · Remote Config · Cloud Save · Cloud Code · CCD): https://unity.com/products/gaming-services/pricing · Cloud Code 비용: https://docs.unity.com/en-us/cloud-code/scripts/reference/cost · CCD 과금 방식: https://support.unity.com/hc/en-us/articles/35114118738324-CCD-How-does-the-Cloud-Content-Delivery-pricing-model-work
+- UGS 가격 (Authentication · Remote Config · Cloud Save · Cloud Code): https://unity.com/products/gaming-services/pricing · Cloud Code 비용: https://docs.unity.com/en-us/cloud-code/scripts/reference/cost
 - UGS 예산 알림: https://docs.unity.com/cloud/en-us/billing/budget · 결제 정보 없이 무료 한도 초과: https://docs.unity.com/en-us/services/pricing-and-billing
 - Remote Config 크기 (설정 5MB · 문자열 65,535자): https://services.docs.unity.com/remote-config-admin/ · 5MB 를 늘릴 계획 없음: https://discussions.unity.com/t/increate-remote-config-limit-of-5mb/938743 · 옛 값 1만 자: https://docs.unity3d.com/Packages/com.unity.services.apis@1.0/api/Unity.Services.Apis.Admin.RemoteConfig.JsonSetting.html
-- CCD 한도 (업로드 크기 제한 없음 · 한 번에 200개): https://docs.unity.com/en-us/oas-content-delivery-management/1.0.0 · https://docs.unity.com/en-us/ccd/faq
 - 노션 API 요청 제한: https://developers.notion.com/reference/request-limits
 - 확률형 아이템: https://www.korea.kr/news/policyNewsView.do?newsId=148924297 · https://www.etnews.com/20250806000278 · 정의(직·간접 유상) · 1억 원 면제 · 2025-08-01 개정 시행: https://www.korea.kr/multi/visualNewsView.do?newsId=148924522 · https://factrace.kr/issues/loot-box-disclosure-2026 · https://www.newspost.kr/news/articleView.html?idxno=216334
 - 만 14세 미만 · 법정대리인 동의: 개인정보 보호법 22조의2 https://casenote.kr/법령/개인정보_보호법/제22조의2 · 동의 확인 방법 https://www.privacy.go.kr/front/contents/cntntsView.do?contsNo=75 · 아동 · 청소년 개인정보 보호 가이드라인(2022-07-22) https://www.korea.kr/news/policyNewsView.do?newsId=148903862 · https://www.kimchang.com/ko/insights/detail.kc?sch_section=4&idx=25475 · 보호 연령 확대 구상(기본계획, 법 아님) https://www.korea.kr/news/policyNewsView.do?newsId=148903393 · 2026-09-11 시행 개정 요지 https://datalaw.kr/guides/pipa-2026-amendment/

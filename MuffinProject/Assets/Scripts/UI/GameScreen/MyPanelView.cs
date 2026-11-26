@@ -96,7 +96,7 @@ namespace Chapchu.UI.GameScreen
             RefreshBand();
         }
 
-        /// <summary>찹츄 선언 상태 — 왕관 + 분홍 머리 띠 (기능 8 에서 쓴다).</summary>
+        /// <summary>찹츄 선언 상태 — 왕관 + 분홍 머리 띠.</summary>
         public void SetChapchu(bool declared)
         {
             _chapchu = declared;

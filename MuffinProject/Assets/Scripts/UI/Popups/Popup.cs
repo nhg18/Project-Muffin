@@ -14,14 +14,14 @@ namespace Chapchu.UI.Popups
         public void Close() => PopupManager.Instance.Close(this);
 
         // PopupManager 전용 — 생성 직후 · 파괴 직전에 한 번씩 불린다.
-        internal void NotifyOpened() => OnOpen();
-        internal void NotifyClosed() => OnClose();
+        internal void NotifyOpened() => HandleOpened();
+        internal void NotifyClosed() => HandleClosed();
 
-        protected virtual void OnOpen()
+        protected virtual void HandleOpened()
         {
         }
 
-        protected virtual void OnClose()
+        protected virtual void HandleClosed()
         {
         }
     }

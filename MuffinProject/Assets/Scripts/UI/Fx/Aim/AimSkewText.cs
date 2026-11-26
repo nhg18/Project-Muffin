@@ -19,7 +19,7 @@ namespace Chapchu.UI.Fx.Aim
         private void OnEnable()
         {
             _text = GetComponent<TMP_Text>();
-            _text.OnPreRenderText += Skew;
+            _text.OnPreRenderText += HandlePreRenderText;
             _text.ForceMeshUpdate();
         }
 
@@ -27,11 +27,11 @@ namespace Chapchu.UI.Fx.Aim
         {
             if (_text == null)
                 return;
-            _text.OnPreRenderText -= Skew;
+            _text.OnPreRenderText -= HandlePreRenderText;
             _text.ForceMeshUpdate();
         }
 
-        private void Skew(TMP_TextInfo info)
+        private void HandlePreRenderText(TMP_TextInfo info)
         {
             float k = Mathf.Tan(angle * Mathf.Deg2Rad);
             float middle = _text.rectTransform.rect.center.y;
