@@ -1583,7 +1583,7 @@ public static class MultiTest
         var names = new (string raw, string shown)[]
         {
             ("배고픈찹츄42", "배고픈찹츄42"), ("Player#2", "Player#2"), ("<b>방장</b><size=200>", "b방장/bsize=200"),
-            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength)),
+            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength / 2)), // 한글은 폭 2 (12-title 4-2)
             (new string('a', NicknameValidator.MaxLength - 1) + "\U0001F600", new string('a', NicknameValidator.MaxLength - 1)),
         };
         var badNames = names.Where(n => NicknameValidator.ForDisplay(n.raw) != n.shown).Select(n => NicknameValidator.ForDisplay(n.raw)).ToList();
@@ -2685,12 +2685,12 @@ public static class MultiTest
                     events = t.Run(t.Now + 3);
                     Check(started && !t.Server.IsGameOver && events.OfType<ChapchuWinHeld>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).IsChapchu,
                         "1023 기다려! — 찹츄 상태로 턴이 와도 이기지 않는다 · 찹츄는 그대로");
-                    events = t.Run(t.Now + 31); // O1 시간 초과 → O2
-                    events.AddRange(t.Run(t.Now + 31)); // O2 시간 초과 → 건 사람
+                    events = t.Run(t.Now + TurnSeconds + 1); // O1 시간 초과 → O2
+                    events.AddRange(t.Run(t.Now + TurnSeconds + 1)); // O2 시간 초과 → 건 사람
                     int endAt = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
                     int turnAt = events.FindIndex(e => e is TurnStarted ts && ts.Actor == t.Turn);
                     Check(endAt >= 0 && turnAt > endAt, "1023 건 사람의 다음 턴이 시작되기 전에 끝난다");
-                    GameEnded ended = t.Run(t.Now + 31).OfType<GameEnded>().FirstOrDefault();
+                    GameEnded ended = t.Run(t.Now + TurnSeconds + 1).OfType<GameEnded>().FirstOrDefault(); // 건 사람 시간 초과 → O1 턴 시작에 판정
                     Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu, "1023 끝난 뒤 다음 자기 턴에 다시 판정 → 찹츄 승리");
                 }
                 {
@@ -4126,11 +4126,11 @@ public static class MultiTest
             Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1 && Sum(t, StatKind.ChapchuDeclared) == 1, "뽑아 10장 → 찹츄 선언 1");
         }
 
-        // 10. 112 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
+        // 10. 1012 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
         {
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
-            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 112) : null;
-            Check(big != null, "Deck_Main 에 112 대소동이 있다");
+            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 1012) : null;
+            Check(big != null, "Deck_Main 에 1012 대소동이 있다");
             if (big != null)
             {
                 var t = new ChainTable();
@@ -4140,7 +4140,7 @@ public static class MultiTest
                     big.Trigger, big.TriggerValue, big.Condition, big.TargetCondition)));
                 events.AddRange(t.Run(t.Now + 3));
                 Check(events.OfType<GameRestarted>().Any() && t.Hp(t.O1) == 100 && Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20
-                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "112 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
+                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "1012 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
                 Check(Sum(t, StatKind.Healed) == 0 && Sum(t, StatKind.Drawn) == 0, "새 판의 HP 100 · 다시 받은 손패는 회복 · 드로우가 아니다");
             }
         }
