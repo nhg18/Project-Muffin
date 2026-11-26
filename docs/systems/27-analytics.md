@@ -1,6 +1,6 @@
 # 27. 운영 지표 · 분석 이벤트
 
-**최종 수정일**: 2026-11-22 (5-1 `connectionLost` · `reconnectAttempt` — 끊김 · 다시 연결 기록. 5-3 `matchId` = 방장이 판 시작 때 만드는 무작위 ID — PM). 2026-11-21 (5절 `lobbyReached.cardDataDownloaded` 는 늘 거짓 · 8절 — 같은 앱 버전끼리 매칭 · 11절 #4, `26-card-data` 7-4). 2026-11-20 (6절 수집은 UGS 준비 뒤 · 로그인 전에 켠다 — 첫 실행 `signInFailed` 도 남기려고, PM). 이전: 2026-11-19 (5-5 `screenViewed` · `lobbyReached` 추가 · PM 전체 승인 · 플레이 기록 동의를 따로 받기 · UGS 무료 범위 확인)
+**최종 수정일**: 2026-11-26 (5-3 `matchStarted.quickStart` = 매치 방인가 — 빠른 시작 방이 매치 방으로 바뀜, `08-room` 4절). 2026-11-22 (5-1 `connectionLost` · `reconnectAttempt` — 끊김 · 다시 연결 기록. 5-3 `matchId` = 방장이 판 시작 때 만드는 무작위 ID — PM). 2026-11-21 (5절 `lobbyReached.cardDataDownloaded` 는 늘 거짓 · 8절 — 같은 앱 버전끼리 매칭 · 11절 #4, `26-card-data` 7-4). 2026-11-20 (6절 수집은 UGS 준비 뒤 · 로그인 전에 켠다 — 첫 실행 `signInFailed` 도 남기려고, PM). 이전: 2026-11-19 (5-5 `screenViewed` · `lobbyReached` 추가 · PM 전체 승인 · 플레이 기록 동의를 따로 받기 · UGS 무료 범위 확인)
 **분류**: MVP (`1.0` 포함 — 기능 13 출시와 함께)
 **출처**: 2026-11-19 PM 질문 「구글 앱 등록만으로는 통계를 못 본다 — 직접 만들어야 하나」 → 초안 → 같은 날 PM **전체 승인**, 「약관 동의 뒤 수집 동의 하나 더」 · 튜토리얼 이벤트는 나중.
 **범위**: 팀이 보는 **운영 지표**(DAU · 리텐션 · 이탈 지점 · 카드 사용률)를 무엇을 · 언제 · 누가 보내는가. 플레이어에게 보이는 전적은 이 문서가 아니다 — `07-win-condition` 11-6 (Cloud Save).
@@ -81,7 +81,7 @@
 
 | 이벤트 | 보내는 때 | 보내는 사람 | 값 | 질문 |
 | --- | --- | --- | --- | --- |
-| `matchStarted` | 판 시작 (덱을 나눌 때) | **방장** | `matchId` · `humans` · `bots` · `botEasy` · `botNormal` · `botHard` (난이도별 봇 수) · `quickStart` (빠른 시작 방인가) · `matchIndexInRoom` (이 방에서 몇 번째 판) | 봇 판 비율 · 같은 방에서 이어 하는가(재대전율) |
+| `matchStarted` | 판 시작 (덱을 나눌 때) | **방장** | `matchId` · `humans` · `bots` · `botEasy` · `botNormal` · `botHard` (난이도별 봇 수) · `quickStart` (매치 방인가 — `08-room` 4절 「매치」. 2026-11-26 빠른 시작 방을 대체) · `matchIndexInRoom` (이 방에서 몇 번째 판) | 봇 판 비율 · 같은 방에서 이어 하는가(재대전율) |
 | `matchEnded` | 「게임 종료 요약」을 보낼 때 (`07` 11-4) | **방장** | `matchId` · `turns` · `durationSeconds` · `winType` (`kill` · `chapchu` · `draw`) · `winnerIsBot` · `leavers` (도중에 빠진 사람 수) · `reconnects` (재접속 횟수 합) | 한 판이 몇 분인가 · 승리 방식 비율 · 봇이 너무 이기나 |
 | `matchCardStats` | `matchEnded` 바로 뒤, **이 판에 한 번 이상 나온 카드 종류마다 1개** | **방장** | `matchId` · `cardId` · `plays` (낸 횟수) · `playersUsed` (낸 사람 수) · `winnerUsed` (승자가 냈나) | 카드별 사용률 · 이 카드를 낸 사람이 이기는 비율 (밸런스) |
 | `myMatchResult` | 「게임 종료 요약」을 받았을 때 (끝까지 있었던 판) | 해당 플레이어 (사람만) | `matchId` · `rank` · `won` · `winType` · `survivedTurns` · `damageDealt` · `kills` · `cardsPlayed` · `timeouts` (내 턴 시간 초과 횟수, `03`) · `chapchuDeclares` | 첫 판 · 첫 열 판의 승률 (처음 하는 사람이 너무 지나) · 15초 타이머가 짧은가 |
