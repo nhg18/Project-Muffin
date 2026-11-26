@@ -144,7 +144,7 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
-        /// <summary>살아 있음 · 사망 대기 · 최종 사망 (06-death.md) — HP 자리 · 캐릭터.</summary>
+        /// <summary>살아 있음 · 사망 대기 · 최종 사망 (06-death.md) — HP 자리 · 캐릭터 · 최종 사망이면 「찹츄까지」 칩을 숨긴다.</summary>
         public void SetLife(LifeState life)
         {
             _life = life;
@@ -187,6 +187,8 @@ namespace Chapchu.UI.GameScreen
             turnTimer.SetActive(_isMyTurn && _life != LifeState.Dead);
             character.color = _life == LifeState.Dead ? deadCharacterColor : _life == LifeState.DeathPending ? pendingCharacterColor : Color.white;
             character.rectTransform.localScale = Vector3.one * (_isMyTurn && alive ? turnCharacterScale : 1f);
+            // 최종 사망이면 「찹츄까지 n장」 칩(goalFill 의 부모 = 칩 전체)을 숨긴다 — 더 모을 수 없다. 사망 대기는 살아날 수 있어 둔다
+            goalFill.transform.parent.gameObject.SetActive(_life != LifeState.Dead);
         }
 
         private void RefreshHp(int maxHp)
