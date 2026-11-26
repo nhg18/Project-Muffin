@@ -136,7 +136,7 @@ namespace Chapchu.UI.GameScreen
         public void ShowCardPlayed(int actorNumber, int cardId, int[] targets)
         {
             CardData data = deck.GetCard(cardId);
-            string cardName = data != null ? data.cardName : string.Format(UnknownCardFormat, cardId);
+            string cardName = NameOfCard(cardId);
             if (data == null || data.type != CardType.Counter)
                 _chain.Clear(); // 카운터가 아니면 새 체인의 첫 카드다
             _chain.Add((actorNumber, cardId));
@@ -200,7 +200,7 @@ namespace Chapchu.UI.GameScreen
         private string NameOfCard(int cardId)
         {
             CardData data = deck.GetCard(cardId);
-            return data != null ? data.cardName : $"카드 {cardId}";
+            return data != null ? data.cardName : string.Format(UnknownCardFormat, cardId);
         }
 
         /// <summary>HP 가 바뀌었다 — 바로 앞 카드 사용의 대상이면 그 줄에 수치로, 아니면 「HP −n」 한 줄.</summary>

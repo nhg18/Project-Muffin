@@ -328,6 +328,8 @@ namespace Chapchu.Game
             _choiceEntry = EntryAt(r.Int());
             int choiceEffect = r.Int();
             _choiceEffect = _choiceEntry == null ? null : EffectAt(_choiceEntry.Card, choiceEffect);
+            if (_choiceEffect != null && !(_choiceEffect is DiscardOrDamageEffect) && !(_choiceEffect is ChooseDiscardEffect))
+                throw new InvalidOperationException("고르기 효과가 아닌 효과를 고르는 중으로 되살릴 수 없다");
             _choiceDeadline = r.Time();
             _choiceMore = r.Int();
             if ((_choiceActor != -1) != (_choiceEntry != null))

@@ -225,7 +225,7 @@ namespace Chapchu.UI.GameScreen
             if (_counterTargeting)
             {
                 _counterTargeting = false; // PlayWithTargetsRoutine 이 이것을 보고 고른 대상을 버린다
-                seats.CancelTargetSelection();
+                seats.CancelSelection();
             }
         }
 
