@@ -12,7 +12,7 @@ namespace Chapchu.UI.ResultScreen
         [Tooltip("나간 사람의 가위표.")]
         [SerializeField] private GameObject cross;
 
-        [SerializeField] private Color ink = new Color32(0x5E, 0x50, 0x47, 0xFF);
+        [SerializeField] private Color ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
         [Tooltip("나간 사람의 테 · 가위표 색.")]
         [SerializeField] private Color goneColor = new Color32(0x9A, 0x91, 0x88, 0xFF);
 

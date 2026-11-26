@@ -75,7 +75,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.65882355, g: 0.61960787, b: 0.58431375, a: 1}
+  m_fontColor: {r: 0.43137255, g: 0.39215686, b: 0.36078431, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -206,7 +206,7 @@ MonoBehaviour:
   shape: 0
   radius: 22
   borderWidth: 4
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -290,7 +290,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
   m_Material: {fileID: 0}
-  m_Color: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_Color: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -300,7 +300,7 @@ MonoBehaviour:
   shape: 1
   radius: 0
   borderWidth: 0
-  borderColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  borderColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   dash: 0
   gap: 0
   feather: 1
@@ -474,7 +474,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.36862746, g: 0.3137255, b: 0.2784314, a: 1}
+  m_fontColor: {r: 0.16470588, g: 0.14117647, b: 0.1254902, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

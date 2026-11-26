@@ -230,18 +230,18 @@ namespace Chapchu.UI.ResultScreen
         [Tooltip("순위별 시상대 면 색 — 1 · 2 · 3 · 4위.")]
         [SerializeField] private Color[] podiumColors =
         {
-            new Color32(0xFF, 0xDE, 0x78, 0xFF), new Color32(0xF4, 0xF7, 0xFE, 0xFF), new Color32(0xFD, 0xE8, 0xD2, 0xFF), new Color32(0xFF, 0xFC, 0xF7, 0xFF),
+            new Color32(0xFF, 0xC1, 0x2E, 0xFF), new Color32(0xF4, 0xF7, 0xFE, 0xFF), new Color32(0xFD, 0xE8, 0xD2, 0xFF), new Color32(0xFF, 0xFC, 0xF7, 0xFF),
         };
         [Tooltip("순위별 시상대 밝은 띠 색 — 1 · 2 · 3 · 4위.")]
         [SerializeField] private Color[] podiumHighlightColors =
         {
-            new Color32(0xFF, 0xF2, 0xC6, 0xFF), Color.white, new Color32(0xFF, 0xF4, 0xE8, 0xFF), Color.white,
+            new Color32(0xFF, 0xD7, 0x66, 0xFF), Color.white, new Color32(0xFF, 0xF4, 0xE8, 0xFF), Color.white,
         };
-        [SerializeField] private Color ink = new Color32(0x5E, 0x50, 0x47, 0xFF);
+        [SerializeField] private Color ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
         [Tooltip("흐린 글자 — 나간 사람의 이름 · 탈락한 사람의 HP 숫자.")]
-        [SerializeField] private Color muted = new Color32(0xA8, 0x9E, 0x95, 0xFF);
+        [SerializeField] private Color muted = new Color32(0x6E, 0x64, 0x5C, 0xFF);
         [Tooltip("HP 가 낮을 때의 숫자 색.")]
-        [SerializeField] private Color danger = new Color32(0xEC, 0x6B, 0x5D, 0xFF);
+        [SerializeField] private Color danger = new Color32(0xEC, 0x3B, 0x46, 0xFF);
         [Tooltip("탈락한 사람의 HP 판 테 색.")]
         [SerializeField] private Color outBorder = new Color32(0xB5, 0xAD, 0xA3, 0xFF);
         [Tooltip("탈락한 사람의 빈 뼈다귀 색.")]
