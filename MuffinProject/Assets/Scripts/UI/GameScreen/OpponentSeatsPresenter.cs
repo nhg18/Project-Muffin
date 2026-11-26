@@ -5,6 +5,7 @@ using System.Linq;
 using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.Network.Events;
+using Chapchu.UI.Fx;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -188,6 +189,17 @@ namespace Chapchu.UI.GameScreen
                 return false;
 
             screenPoint = seat.CharacterScreenPoint;
+            return true;
+        }
+
+        /// <summary>상대의 4 단계 공통 연출 자리 (ResultFx). 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetFxSeat(int actorNumber, out ResultFx.Seat fxSeat)
+        {
+            fxSeat = default;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            fxSeat = seat.FxSeat;
             return true;
         }
 

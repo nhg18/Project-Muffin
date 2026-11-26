@@ -15,8 +15,8 @@ namespace Chapchu.DebugTools
     /// 카드 연출 시험장 (CardFxTestScene, RPG 스킬 시험장처럼). 덱의 카드가 모두 손패로 깔리고, 누르면 그 카드의 연출
     /// (Resources/CardFx/Card_{카드 ID})을 게임과 같은 순서로 튼다 (10-ui 5-1):
     /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임 → 3 단계(<see cref="CardFx.PlayRoutine"/>) →
-    /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(맞음 · 회복) → 장식이 끝나고 900ms → 버림 더미로.
-    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값과 HP 맞바꾸기(SwapHpEffect)로 흉내 내고, 뽑기(DrawEffect)는 장수만 알린다 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
+    /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(<see cref="ResultFx"/> — 맞음 · 회복 · +n장, 게임 화면과 같은 것) → 장식이 끝나고 900ms → 버림 더미로.
+    /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값과 HP 맞바꾸기(SwapHpEffect)로 흉내 내고, 뽑기(DrawEffect)는 「+n장」 과 장수 알림 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
     /// 자리는 둘 — 나(낸 사람) · 상대(대상). 연출 프리팹이 없는 카드는 3 단계 없이 결과만.
     /// 키: Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>. 자동 확인(run.sh fx)은 <see cref="PlayCard"/> 로 튼다.
     /// </summary>
@@ -34,8 +34,6 @@ namespace Chapchu.DebugTools
         [SerializeField] private Sprite cardBack;
         [Tooltip("캐릭터 그림 — 컷인에 나오는 강아지.")]
         [SerializeField] private Sprite character;
-        [Tooltip("한 번에 이만큼 이상 줄면 큰 피해 연출 (10-ui 5-2 「큰 피해(30 이상)」, 시안 hit 의 big — 파편 40 · 번짐 · 판 흔들림 14).")]
-        [Min(1)] [SerializeField] private int bigHitDamage = 30;
 
         [Header("재생 속도")]
         [Tooltip("모든 카드 연출의 배속 (Time.timeScale). 1 = 원래 속도. 플레이 중에 바꿔도 바로 적용된다.")]
@@ -55,6 +53,8 @@ namespace Chapchu.DebugTools
         [SerializeField] private RectTransform discardPile;
         [Tooltip("연출 레이어. 화면 전체를 덮고, 연출 프리팹 · 날아가는 카드도 여기에 만든다.")]
         [SerializeField] private FxLayer fxLayer;
+        [Tooltip("4 단계 공통 연출 — 맞음 · 회복 · +n장 (게임 화면과 같은 것). 수치에 비례해 커진다.")]
+        [SerializeField] private ResultFx resultFx;
         [SerializeField] private FxDummySeat caster;
         [SerializeField] private FxDummySeat target;
         [SerializeField] private TMP_Text captionText;
@@ -104,6 +104,7 @@ namespace Chapchu.DebugTools
             Check(playSpot, nameof(playSpot));
             Check(discardPile, nameof(discardPile));
             Check(fxLayer, nameof(fxLayer));
+            Check(resultFx, nameof(resultFx));
             Check(caster, nameof(caster));
             Check(target, nameof(target));
             Check(captionText, nameof(captionText));
@@ -303,15 +304,18 @@ namespace Chapchu.DebugTools
             context.NotifyHpChanged(other, otherBefore, otherDummy.Hp);
         }
 
-        // 뽑기 결과 흉내 — DrawEffect.Prepare 처럼 무작위 장수면 count ~ randomMax 에서 정하고 받는 사람마다 알린다. 함정 사건 값(useTriggerAmount)은 없어서 건너뛴다
-        private static void NotifyDrawn(CardFxContext context, DrawEffect draw)
+        // 뽑기 결과 흉내 — DrawEffect.Prepare 처럼 무작위 장수면 count ~ randomMax 에서 정하고 받는 사람마다 「+n장」 · 알림. 함정 사건 값(useTriggerAmount)은 없어서 건너뛴다
+        private void NotifyDrawn(CardFxContext context, DrawEffect draw)
         {
             if (draw.useTriggerAmount)
                 return;
             int count = draw.randomMax > draw.count ? Random.Range(draw.count, draw.randomMax + 1) : draw.count;
             IReadOnlyList<CardFxSeat> seats = draw.subject == EffectSubject.Self ? new[] { context.CasterSeat } : context.TargetSeats;
             foreach (CardFxSeat seat in seats)
+            {
+                resultFx.Gain(FxSeatOf(seat), count);
                 context.NotifyCardsDrawn(seat, count);
+            }
         }
 
         private void Apply(CardFxContext context, HashSet<CardFxSeat> shown, RectTransform onlyAnchor, EffectSubject subject, int delta)
@@ -331,12 +335,15 @@ namespace Chapchu.DebugTools
                 if (change == 0)
                     continue;
                 if (change < 0)
-                    fxLayer.Hit(seat.Anchor, -change, -change >= bigHitDamage);
+                    resultFx.Hit(FxSeatOf(seat), -change);
                 else
-                    fxLayer.Heal(seat.Anchor, change);
+                    resultFx.Heal(FxSeatOf(seat), change);
                 context.NotifyHpChanged(seat, before, dummy.Hp);
             }
         }
+
+        // 시험장 자리 — 캐릭터 자리에서 터지고 그 자리가 흔들린다. 손패 장수 칩은 없다
+        private static ResultFx.Seat FxSeatOf(CardFxSeat seat) => new ResultFx.Seat(seat.Anchor, new[] { seat.Anchor });
 
         // 시안 playCard 의 착지: 흰 고리 · 파편 16
         private void Land(RectTransform card)

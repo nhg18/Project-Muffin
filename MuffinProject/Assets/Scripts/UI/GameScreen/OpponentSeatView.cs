@@ -124,6 +124,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>캐릭터 가운데(화면 좌표) — 1021 판정 표가 뜨는 자리.</summary>
         public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
 
+        /// <summary>4 단계 공통 연출 자리 — 캐릭터 가운데에서 터지고, 캐릭터 · 이름표가 흔들리고, 손패 장수 칩이 톡 (시안 「4단계 공통 연출」).</summary>
+        public ResultFx.Seat FxSeat => new ResultFx.Seat(character.rectTransform, new[] { character.rectTransform, plate }, (RectTransform)handBadge.transform, handBadge.Face);
+
         /// <summary>손패 장수 — 손패 카드 그림과 뒷면 부채꼴을 같이 맞춘다.</summary>
         public void SetHandCount(int count)
         {
