@@ -20,9 +20,9 @@ namespace Chapchu.UI.Lobby
         private const string CodePlaceholder = "방 코드";
         private const string CodeSubmit = "참가";
         private const string NicknameTitle = "새 닉네임";
-        private const string NicknamePlaceholder = "닉네임";
+        private const string NicknamePlaceholder = "새 닉네임";
         private const string NicknameSubmit = "변경";
-        private const string DeleteTitle = "계정 삭제";
+        private const string DeleteTitle = "삭제 확인";
         private const string DeletePlaceholder = "삭제";
         private const string DeleteSubmit = "삭제";
         private const string DeleteMessage = "'삭제'를 입력하면 계정이 지워져요.";

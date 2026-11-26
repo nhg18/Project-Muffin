@@ -29,5 +29,13 @@ namespace Chapchu.Core
 
         /// <summary>개발자 모드 (1 = 켬, 없으면 끔). 이 기기에만 저장한다 (DevMode)</summary>
         public const string DevMode = "DevMode";
+
+        /// <summary>
+        /// UGS Authentication 이 기기에 남기는 키 (SDK 소유 — 우리가 쓰지 않고 지우기만 한다).
+        /// 실제 키 = {클라우드 프로젝트 ID}{UgsAuthPrefix}{이름}
+        /// </summary>
+        public const string UgsAuthPrefix = ".default.unity.services.authentication.";
+        public const string UgsAuthSessionToken = "session_token";
+        public const string UgsAuthPlayerId = "player_id";
     }
 }

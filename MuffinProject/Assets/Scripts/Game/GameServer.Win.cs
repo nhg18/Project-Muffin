@@ -50,9 +50,10 @@ namespace Chapchu.Game
         }
 
         // 처치 승리 · 무승부 (07 3절). 체인 · 사망 대기가 모두 끝난 뒤에만 판정한다.
+        // 고르기(1019)로 멈춘 처리도 체인 중이다 — 이어 간 처리 끝(ContinueResolve)에서 다시 판정한다.
         private void CheckElimination()
         {
-            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsDeathPending)
+            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsResolvePaused || IsChoosing || IsDeathPending)
                 return;
 
             int[] remaining = _turnOrder.Where(IsInGame).ToArray();

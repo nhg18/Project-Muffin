@@ -452,8 +452,9 @@ namespace Chapchu.Network
             var playerProps = new Dictionary<int, Hashtable>();
             bool onlyRejected = true; // 거절만 있으면 지금 값이 바뀌지 않았다 — 스냅샷을 방 전원에게 쓰지 않는다
 
-            foreach (GameEvent gameEvent in events)
+            for (int i = 0; i < events.Count; i++)
             {
+                GameEvent gameEvent = events[i];
                 onlyRejected &= gameEvent is RequestRejected;
                 switch (gameEvent)
                 {
@@ -490,11 +491,11 @@ namespace Chapchu.Network
 
                     case ReactionStarted reaction:
                         Broadcast(nameof(RPC_OnReactionStarted), reaction.OpensAt); // 마감은 보내지 않는다 (09-network.md 3절)
+                        SendCountersUsable(events, i + 1);
                         break;
 
-                    case CountersUsable usable:
-                        SendTo(usable.Actor, nameof(RPC_OnMyCountersUsable), usable.CardInstanceIds); // 손패 내용 — 본인만 (09 3절)
-                        break;
+                    case CountersUsable _:
+                        break; // 바로 앞 ReactionStarted 에서 함께 보냈다 (SendCountersUsable)
 
                     case CardResolved resolved:
                         Broadcast(nameof(RPC_OnCardResolved), resolved.Actor, resolved.CardInstanceId, resolved.CardId, resolved.Targets, resolved.DiscardCount);
@@ -790,6 +791,20 @@ namespace Chapchu.Network
                 return; // 이미 나간 사람 · 봇 (봇은 접속자가 아니다 — 비공개 내용은 아무에게도 가지 않는다)
 
             photonView.RPC(rpcName, player, WithSeq(parameters));
+        }
+
+        // 반응 시간마다 「낼 수 있는 내 카운터」 를 방의 모두에게 보낸다 — 없는 사람은 빈 목록 (09-network.md 3 · 5절).
+        // 가진 사람에게만 보내면 나머지 사람의 처리 번호가 비어, 누가 카운터를 쥐었는지 셀 수 있다 (04-card 결정 #8).
+        // 방장은 ReactionStarted 바로 뒤에 CountersUsable 을 가진 사람마다 붙여 낸다 (GameServer.AddCountersUsable).
+        private void SendCountersUsable(IReadOnlyList<GameEvent> events, int from)
+        {
+            var usable = new Dictionary<int, int[]>();
+            for (int i = from; i < events.Count && events[i] is CountersUsable counters; i++)
+                usable[counters.Actor] = counters.CardInstanceIds;
+
+            foreach (Player player in PhotonNetwork.PlayerList)
+                SendTo(player.ActorNumber, nameof(RPC_OnMyCountersUsable),
+                    usable.TryGetValue(player.ActorNumber, out int[] ids) ? ids : System.Array.Empty<int>());
         }
 
         private object[] WithSeq(object[] parameters)

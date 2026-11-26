@@ -29,6 +29,8 @@ namespace Chapchu.Network
         // 랜덤 매칭은 매치 방에만 들어간다 — 개발자 모드로 만든 공개 방에 모르는 사람이 들어가지 않게
         private static readonly ExitGames.Client.Photon.Hashtable MatchFilter = new ExitGames.Client.Photon.Hashtable { [RoomProps.Match] = true };
 
+        private bool _creatingPublic; // 만드는 방의 공개 여부 — 코드가 겹쳐 다시 만들 때도 같게
+
         // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
         // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
         private int[] _hostBots;
@@ -75,7 +77,10 @@ namespace Chapchu.Network
             PhotonNetwork.LeaveRoom();
         }
     
-        public void CreateRoom()
+        /// <summary>
+        /// 방을 만든다. 「방 만들기」 는 비공개 — 방장이 방 안에서 공개로 바꿀 수 있다 (08-room.md 5절 #7). 빠른 시작이 방을 못 찾으면 이것이 아니라 매치 방(CreateMatchRoom)
+        /// </summary>
+        public void CreateRoom(bool isPublic)
         {
             if (!PhotonConnection.ValidConnect)
             {
@@ -84,7 +89,8 @@ namespace Chapchu.Network
             }
 
             _creating = CreatingKind.Room;
-            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
+            _creatingPublic = isPublic;
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, isPublic, true);
             string code = RandomCode.GenerateRandomCode();
 
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
@@ -263,7 +269,7 @@ namespace Chapchu.Network
                     else if (_creating == CreatingKind.Match)
                         CreateMatchRoom();
                     else
-                        CreateRoom();
+                        CreateRoom(_creatingPublic);
                     return;
             }
             RoomEvents.RaiseCreateRoomFailed(returnCode, message);

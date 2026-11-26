@@ -99,13 +99,15 @@ namespace Chapchu.UI.Lobby
             ShowSecondary(UnblockText, true);
         }
 
-        /// <summary>검색 결과 — 닉네임이 겹칠 수 있어 친구 코드를 같이 보인다.</summary>
-        public void BindSearch(HubSearchResult result)
+        /// <summary>검색 결과 — 닉네임이 겹칠 수 있어 친구 코드를 같이 보인다. canRequest 가 false(친구 한도)면 「요청」 이 꺼진다.</summary>
+        public void BindSearch(HubSearchResult result, bool canRequest = true)
         {
             Begin(null, result, result.Nickname);
             codeText.gameObject.SetActive(true);
             codeText.text = result.Code;
-            if (result.Relation == HubRelation.None)
+            if (result.Relation == HubRelation.None && !canRequest)
+                ShowSecondary(RequestText, false);
+            else if (result.Relation == HubRelation.None)
                 ShowPrimary(RequestText);
             else if (result.Relation == HubRelation.Sent && result.IsJustSent)
                 ShowSecondary(SentText, false);

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Title
 {
     /// <summary>
-    /// 닉네임 입력 한 줄 — 16자 제한 · "n / 16" 카운터 · 에러 칩 · 빨간 테 · 포커스 노란 테두리. 검증은 TitlePresenter 가 한다.
+    /// 닉네임 입력 한 줄 — 폭 16 제한 · "n / 16" 카운터(n = 폭) · 에러 칩 · 빨간 테 · 포커스 노란 테두리. 검증은 TitlePresenter 가 한다.
     /// 기준: 「통합 화면 UI v2」 타이틀 .nick · .errslot
     /// </summary>
     public class NicknameFieldView : MonoBehaviour
@@ -70,9 +70,7 @@ namespace Chapchu.UI.Title
         /// <summary>값만 바꾸고 에러를 지운다.</summary>
         public void SetText(string text)
         {
-            text ??= string.Empty;
-            if (text.Length > NicknameValidator.MaxLength)
-                text = text.Substring(0, NicknameValidator.MaxLength);
+            text = NicknameValidator.TrimToWidth(text);
 
             inputField.SetTextWithoutNotify(text);
             UpdateCount(text);
@@ -95,8 +93,16 @@ namespace Chapchu.UI.Title
         }
 
         // 입력이 바뀌면 에러가 바로 사라진다 (12-title-ui 3절 #3)
+        // 폭 16 을 넘는 끝은 잘라 입력 자체를 막는다 (12-title-ui 4-2) — characterLimit 는 글자 수라 한글을 못 막는다
         private void HandleValueChanged(string text)
         {
+            string trimmed = NicknameValidator.TrimToWidth(text);
+            if (trimmed != text)
+            {
+                text = trimmed;
+                inputField.SetTextWithoutNotify(text);
+            }
+
             UpdateCount(text);
             ClearError();
         }
@@ -107,7 +113,7 @@ namespace Chapchu.UI.Title
 
         private void HandleSubmitted(string _) => OnSubmitted?.Invoke();
 
-        // IME 조합 중인 글자는 text 에 들어오지 않으므로 조합이 끝난 글자 기준으로 센다.
-        private void UpdateCount(string text) => countText.text = $"{text.Length} / {NicknameValidator.MaxLength}";
+        // IME 조합 중인 글자는 text 에 들어오지 않으므로 조합이 끝난 글자 기준으로 센다. n = 폭 (20-title-ui-full 7-6)
+        private void UpdateCount(string text) => countText.text = $"{NicknameValidator.GetWidth(text)} / {NicknameValidator.MaxLength}";
     }
 }

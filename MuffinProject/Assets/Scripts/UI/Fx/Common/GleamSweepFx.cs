@@ -17,8 +17,11 @@ namespace Chapchu.UI.Fx.Common
         [Tooltip("켜질 때 붉은 빛 투명도.")]
         [Range(0f, 1f)]
         [SerializeField] private float glowAlpha = 1f;
-        [Tooltip("훑는 시간 (ms). 앞 70% 동안 움직이고 사라진다.")]
+        [Tooltip("훑는 시간 (ms). 앞 moveRatio 만큼 움직이고 사라진다.")]
         [SerializeField] private float sweepMs = 300f;
+        [Tooltip("훑는 시간 중 띠가 움직이는 비율 — 나머지는 사라진 채 기다린다.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float moveRatio = 0.7f;
         [Tooltip("띠가 출발 · 도착하는 위치 (빛 높이 대비, 위 + · 아래 -).")]
         [SerializeField] private float sweepReach = 1.2f;
 
@@ -47,9 +50,9 @@ namespace Chapchu.UI.Fx.Common
             rect.anchoredPosition = new Vector2(0f, height * sweepReach);
             SetAlpha(gleam, 1f);
             DOTween.Sequence().SetLink(gameObject)
-                .Append(rect.DOAnchorPosY(-height * sweepReach, Seconds(sweepMs * 0.7f)))
+                .Append(rect.DOAnchorPosY(-height * sweepReach, Seconds(sweepMs * moveRatio)))
                 .Append(gleam.DOFade(0f, 0f))
-                .AppendInterval(Seconds(sweepMs * 0.3f));
+                .AppendInterval(Seconds(sweepMs * (1f - moveRatio)));
         }
     }
 }

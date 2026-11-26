@@ -55,6 +55,7 @@ namespace Chapchu.UI.Lobby
         private readonly List<LobbyPersonRowView> _rows = new List<LobbyPersonRowView>();
         private LobbyHubData _data;
         private List<HubSearchResult> _results;
+        private string _lastQuery; // 마지막으로 결과가 나온 검색어 — 추가 탭으로 올 때 관계를 다시 계산한다
         private HubPerson _menuTarget;
         private int _used;
 
@@ -117,6 +118,7 @@ namespace Chapchu.UI.Lobby
         {
             _data = data;
             _results = null;
+            _lastQuery = null;
             searchField.text = string.Empty;
             content.SetActive(true);
             ShowTab(tab ?? (data.RequestsIn.Count > 0 ? LobbyFriendsTab.Requests : LobbyFriendsTab.Friends));
@@ -131,6 +133,11 @@ namespace Chapchu.UI.Lobby
         public void ShowTab(LobbyFriendsTab tab)
         {
             Tab = tab;
+
+            // 다른 탭에서 수락 · 취소 · 삭제 · 차단했을 수 있다 — 지금 관계로 다시 찾는다 (Refresh 에서는 안 한다: 방금 보낸 「요청됨」 이 지워지지 않게)
+            if (tab == LobbyFriendsTab.Add && _lastQuery != null)
+                _results = _data.Search(_lastQuery);
+
             scroll.verticalNormalizedPosition = 1f;
             Refresh();
         }
@@ -171,8 +178,9 @@ namespace Chapchu.UI.Lobby
                     if (_results == null)
                         break;
 
+                    bool canRequest = !_data.IsFriendListFull;
                     foreach (HubSearchResult result in _results)
-                        NextRow().BindSearch(result);
+                        NextRow().BindSearch(result, canRequest);
                     ShowEmpty(_results.Count == 0, NoResultText);
                     break;
             }
@@ -268,6 +276,7 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _results = results;
+            _lastQuery = searchField.text;
             Refresh();
         }
 

@@ -12,6 +12,10 @@ namespace Chapchu.UI.Popups
     /// </summary>
     public class PopupManager : SingletonPersistent<PopupManager>
     {
+        // 토스트 아래 여백 (22-popup-ui.md 5-3). 기본은 MessageToast 프리팹 자리 48.
+        private const float DefaultToastBottom = 48f;
+        private const float GameToastBottom = 212f;
+
         [SerializeField] private RectTransform modalLayer;
         [SerializeField] private RectTransform nonModalLayer;
         [SerializeField] private RectTransform toastLayer;
@@ -111,6 +115,9 @@ namespace Chapchu.UI.Popups
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             CloseAll();
+            // 22-popup-ui.md 5-3: 토스트는 아래 48, 게임 화면만 손패 위 아래 212. 프리팹이 이미 48 위에 있으니 차이만큼 레이어 바닥을 올린다.
+            float toastBottom = scene.name == ScenePaths.Game ? GameToastBottom : DefaultToastBottom;
+            toastLayer.offsetMin = new Vector2(toastLayer.offsetMin.x, toastBottom - DefaultToastBottom);
             if (_warningOnNextScene == null)
                 return;
 

@@ -22,7 +22,7 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(EffectSubject.Target, entry))
-                server.StealRandom(actor, entry.User, count);
+                server.StealRandom(actor, entry.User, count, entry.User);
         }
     }
 }

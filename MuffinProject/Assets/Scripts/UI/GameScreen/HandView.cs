@@ -630,8 +630,11 @@ namespace Chapchu.UI.GameScreen
             float cardWidth = CardWidth;
             float halfWidth = ScreenHalfWidth;
             float cameraX = _camera.transform.position.x;
-            float left = cameraX - halfWidth + leftReserved;
-            float right = cameraX + halfWidth - rightReserved;
+            // 내 패널 · 찹츄 버튼은 SafeArea 안에 있으니 노치 폭만큼 더 비운다 (15-screen 5 · 7절)
+            Rect safe = Screen.safeArea;
+            float unitsPerPixel = Screen.width > 0 ? halfWidth * 2f / Screen.width : 0f;
+            float left = cameraX - halfWidth + leftReserved + safe.xMin * unitsPerPixel;
+            float right = cameraX + halfWidth - rightReserved - (Screen.width - safe.xMax) * unitsPerPixel;
 
             float centerX = raised ? cameraX : (left + right) / 2f;
             float maxSpan = raised
