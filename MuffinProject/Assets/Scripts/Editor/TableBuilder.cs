@@ -50,14 +50,15 @@ namespace Chapchu.EditorTools
         // 틀의 발바닥 배지 — 틀 그림(820 × 1222) 위의 원 (121, 117) r 109 (시안 .card .bdg). 그림 칸이 이 자리를 뚫어 배지가 그림 위로 온다.
         private static readonly Vector3 BadgeCircle = new Vector3(121f / 820f, 117f / 1222f, 109f / 820f); // x · 위에서 y · 반지름 (틀 폭 · 높이 대비)
 
-        // 글자 (캔버스 px) — 시안 크기 × 글꼴 size-adjust (태백체 .85 · Pretendard .96). 이름 14 px · 긴 이름 11.5 px · 설명 10.5 px · 그림 준비 중 6.6 cqw.
+        // 글자 (캔버스 px) — 시안 CSS 크기 그대로. 이름 14 px · 긴 이름 11.5 px · 설명 10.5 px · 그림 준비 중 6.6 cqw.
+        //   시안 @font-face 의 size-adjust (태백체 .85 · Pretendard .96)는 글꼴 에셋의 Scale 이 맡는다 — 자간 · 줄 높이(TMP em)는 글자 크기 기준이라 Scale 과 상관없다.
         private const string NameFontPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";                  // 이름 · 그림 준비 중 = 태백체 (시안 --f-d)
         private const string DescriptionFontPath = "Assets/Fonts/Pretendard/Pretendard Bold SDF.asset"; // 설명 = Pretendard 700 (시안 --f-b)
-        private const float NameFontPx = 24.45f, NameFontMinPx = 11f, DescriptionFontPx = 20.71f, DescriptionFontMinPx = 11f; // 긴 이름(11.5 px) 크기는 CardView
-        private const float NameCharacterSpacing = -1.18f;   // 자간 −.01 em (글자 크기 14 px 기준 → 실제 크기 기준 ÷ .85, TMP 단위 em ÷ 100)
-        private const float DescriptionLineHeightPx = 28.04f; // 줄 높이 1.3 × 10.5 px — size-adjust 와 상관없이 글자 크기 기준
+        private const float NameFontPx = 28.76f, NameFontMinPx = 13f, DescriptionFontPx = 21.57f, DescriptionFontMinPx = 11.5f; // 긴 이름(11.5 px) 크기는 CardView
+        private const float NameCharacterSpacing = -1f;      // 자간 −.01 em (TMP 단위 em ÷ 100)
+        private const float DescriptionLineHeightPx = 28.04f; // 줄 높이 1.3 × 10.5 px
         private const string PendingLabel = "그림 준비 중";
-        private const float PendingFontPx = 12.68f;          // 6.6 cqw (카드 폭 1 % = 2.26 px) × .85
+        private const float PendingFontPx = 14.92f;          // 6.6 cqw (카드 폭 1 % = 2.26 px)
         private const float PendingTextYPx = -23.55f;         // 그림 칸 가운데에서 — 발바닥 21 % · 틈 2.2 cqw · 글자 줄을 세로 가운데로 쌓은 자리
         private static readonly Color PendingGray = new Color32(0x8A, 0x86, 0xA6, 0xFF); // 그림 준비 중 글자 — 회보라에 종류 색 45 % (시안)
 
@@ -849,9 +850,9 @@ namespace Chapchu.EditorTools
             text.richText = true;
             text.characterSpacing = 0f;
             SetFontSize(text, DescriptionFontPx, DescriptionFontMinPx);
-            // 줄 높이 — 글꼴의 기본 줄 높이에 더할 몫 (TMP 단위 em ÷ 100)
+            // 줄 높이 — 글꼴의 기본 줄 높이(글꼴 Scale 이 곱해진다)에 더할 몫 (TMP 단위 em ÷ 100)
             var face = text.font.faceInfo;
-            text.lineSpacing = (DescriptionLineHeightPx / DescriptionFontPx - face.lineHeight / face.pointSize) * 100f;
+            text.lineSpacing = (DescriptionLineHeightPx / DescriptionFontPx - face.lineHeight / face.pointSize * face.scale) * 100f;
             text.overflowMode = TextOverflowModes.Ellipsis;
             return text;
         }

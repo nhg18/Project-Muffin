@@ -52,8 +52,8 @@ namespace Chapchu.UI.GameScreen
         [Header("이름 (시안 .card .nm)")]
         [Tooltip("이름이 이 글자 수보다 길면 작은 크기로 (시안 .nm.long — 4 자보다 길 때).")]
         [SerializeField] private int longNameLength = 4;
-        [Tooltip("긴 이름의 글자 크기 (TMP — 시안 11.5 px × 태백체 size-adjust .85). 짧은 이름은 프리팹의 이름 글자 크기.")]
-        [SerializeField] private float longNameFontSize = 2.008f;
+        [Tooltip("긴 이름의 글자 크기 (TMP — 시안 11.5 px, size-adjust 는 글꼴 에셋 Scale). 짧은 이름은 프리팹의 이름 글자 크기.")]
+        [SerializeField] private float longNameFontSize = 2.363f;
 
         [Header("그림자 (시안 .card::before box-shadow) — 쉴 때는 그림자 머티리얼 값")]
         [Tooltip("포인터 아래 카드 (시안 .card.hov 0 15px 22px .36).")]
