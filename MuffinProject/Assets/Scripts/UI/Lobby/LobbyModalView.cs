@@ -226,7 +226,7 @@ namespace Chapchu.UI.Lobby
         private void UpdateDimmer() => dimmer.SetActive(IsAnyOpen);
 
         private void UpdateCount()
-            => countText.text = string.Format(CountFormat, field.text.Length, NicknameValidator.MaxLength);
+            => countText.text = string.Format(CountFormat, NicknameValidator.GetWidth(field.text), NicknameValidator.MaxLength);
 
         private void Submit()
         {
@@ -242,6 +242,14 @@ namespace Chapchu.UI.Lobby
         {
             if (InputKind == LobbyInputKind.RoomCode && text != text.ToUpperInvariant())
                 field.SetTextWithoutNotify(text.ToUpperInvariant());
+
+            // 닉네임은 폭 16 을 넘는 끝을 잘라 입력 자체를 막는다 (12-title-ui 4-2) — characterLimit 는 글자 수라 한글을 못 막는다
+            if (InputKind == LobbyInputKind.Nickname)
+            {
+                string trimmed = NicknameValidator.TrimToWidth(text);
+                if (trimmed != text)
+                    field.SetTextWithoutNotify(trimmed);
+            }
 
             UpdateCount();
             SetInputError(string.Empty);

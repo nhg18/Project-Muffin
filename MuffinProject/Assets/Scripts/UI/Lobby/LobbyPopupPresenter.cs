@@ -27,7 +27,7 @@ namespace Chapchu.UI.Lobby
         private const string AccountText = "계정";
         private const string LoginNameFormat = "{0} 로그인";
         private const string CopiedToast = "친구 코드를 복사했어요.";
-        private const string FriendLimitToast = "친구는 50명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
+        private const string FriendLimitToastFormat = "친구는 {0}명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -291,7 +291,7 @@ namespace Chapchu.UI.Lobby
         {
             if (!Data.Accept(request))
             {
-                fx.Toast(FriendLimitToast);
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
                 return;
             }
 
@@ -317,7 +317,7 @@ namespace Chapchu.UI.Lobby
         {
             if (!Data.Request(result))
             {
-                fx.Toast(FriendLimitToast);
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
                 return;
             }
 
