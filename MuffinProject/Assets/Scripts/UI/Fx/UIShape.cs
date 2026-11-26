@@ -47,6 +47,16 @@ namespace Chapchu.UI.Fx
             }
         }
 
+        /// <summary>테를 점선 · 실선으로 바꿀 때 (예: 상점 값 꼬리표 「뽑기 전용」) — dash 0 이면 실선. 바뀔 때만 다시 그린다.</summary>
+        public void SetDash(float newDash, float newGap)
+        {
+            if (dash == newDash && gap == newGap)
+                return;
+            dash = newDash;
+            gap = newGap;
+            SetVerticesDirty();
+        }
+
         /// <summary>코드에서 모양을 정할 때 (빌더) — 값을 넣고 다시 그린다.</summary>
         public void Set(ShapeKind newShape, float newRadius, float newBorderWidth, Color newBorderColor, float newFeather = 1f, float newDash = 0f, float newGap = 0f)
         {

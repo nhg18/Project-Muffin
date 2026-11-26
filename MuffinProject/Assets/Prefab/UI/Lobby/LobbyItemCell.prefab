@@ -204,12 +204,14 @@ MonoBehaviour:
   ownedStrip: {fileID: 4760063771096278845}
   shopInfo: {fileID: 5667325575680411866}
   nameText: {fileID: 552358693728268649}
-  priceBox: {fileID: 5925384540223119432}
+  priceBox: {fileID: 4646402973309215189}
   priceIcon: {fileID: 8929787018224738905}
   priceText: {fileID: 979566977067691358}
   bonusTag: {fileID: 1808395552200063257}
   bonusText: {fileID: 7941628077792245578}
   shopInfoHeight: 96
+  onlyDash: 12
+  onlyGap: 8
   boxIconSize: 80
   shopIconSize: 72
   packIconSize: 92
@@ -1885,8 +1887,8 @@ GameObject:
   - component: {fileID: 7070189595726701054}
   - component: {fileID: 3164732049141086295}
   - component: {fileID: 7928708011382050243}
-  - component: {fileID: 5925384540223119432}
   - component: {fileID: 5250438580587562079}
+  - component: {fileID: 4646402973309215189}
   m_Layer: 5
   m_Name: Price
   m_TagString: Untagged
@@ -1961,30 +1963,6 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &5925384540223119432
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4640696559874050436}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c035e9856dbd6a4d97638d8516ac768, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.RoundBox
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  sprite: {fileID: 21300000, guid: f6c6446553339cd49acbf341005ecad4, type: 3}
-  radius: 12
-  borderWidth: 4
-  borderColor: {r: 0.16470589, g: 0.14117648, b: 0.1254902, a: 1}
 --- !u!222 &5250438580587562079
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1993,6 +1971,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4640696559874050436}
   m_CullTransparentMesh: 1
+--- !u!114 &4646402973309215189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4640696559874050436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55abb3461116154469cbc474bfbd9db9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.UIShape
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  shape: 0
+  radius: 12
+  borderWidth: 4
+  borderColor: {r: 0.16470589, g: 0.14117648, b: 0.1254902, a: 1}
+  dash: 0
+  gap: 0
+  feather: 1
 --- !u!1 &4760063771096278845
 GameObject:
   m_ObjectHideFlags: 0
