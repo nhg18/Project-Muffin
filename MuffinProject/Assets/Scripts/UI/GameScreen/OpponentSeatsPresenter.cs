@@ -119,7 +119,8 @@ namespace Chapchu.UI.GameScreen
 
                 seat.gameObject.SetActive(true);
                 string nickname = PlayerLook.NameOf(actor);
-                seat.SetNickname(BotRoster.IsBot(actor) ? string.Format(BotNicknameFormat, nickname) : nickname);
+                // 매치 방의 봇은 사람과 똑같이 닉네임만 (18-bot.md 8-2, PM 2026-11-26)
+                seat.SetNickname(BotRoster.IsBot(actor) && !BotRoster.IsMatchRoom ? string.Format(BotNicknameFormat, nickname) : nickname);
                 seat.SetColor(PlayerLook.SeatColors[seatIndex - 1]);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);

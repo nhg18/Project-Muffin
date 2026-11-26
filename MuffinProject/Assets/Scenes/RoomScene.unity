@@ -11597,6 +11597,7 @@ MonoBehaviour:
   startButton: {fileID: 1106257009}
   disabledReason: {fileID: 1791681716}
   waitPanel: {fileID: 1497420437}
+  waitText: {fileID: 621643760}
   waitPaws:
   - {fileID: 889081540}
   - {fileID: 1801155877}

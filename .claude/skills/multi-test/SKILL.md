@@ -12,6 +12,7 @@ bash .claude/skills/multi-test/run.sh rules [인원=4] [턴=8]      # 규칙 계
 bash .claude/skills/multi-test/run.sh ui                          # 한 클라이언트 UI 흐름 — 1분
 bash .claude/skills/multi-test/run.sh multi [클라이언트=2] [턴=4]  # 메인 + 클론 — 2~3분 (클론을 새로 열면 더)
 bash .claude/skills/multi-test/run.sh full [클라이언트=2] [HP=20]   # 한 판 끝까지 — 체력을 낮춰 시작 → 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
+bash .claude/skills/multi-test/run.sh match                        # 매치 — 랜덤 매칭 → 매치 방(코드 · 토글 · 시작 버튼 없음, 남은 초) → 15초 뒤 봇 3 이 채워 스스로 시작 → 봇 닉네임
 bash .claude/skills/multi-test/run.sh solo [HP=30]                 # 혼자 + 봇 3 — 혼자 하기 → 봇 제거 · 추가 · 난이도 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 bash .claude/skills/multi-test/run.sh chapchu [클라이언트=2]        # 뽑기만 → 손패 10장 자동 선언 → 두 화면 표시(선언 연출 포함) → 찹츄 승리 → 결과 화면 (4~5분, SHOT_DIR 이 있으면 첫 선언 뒤 스크린샷)
 bash .claude/skills/multi-test/run.sh timeout                     # 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째 강제 퇴장 → 클론은 로비 + 경고 팝업 · 메인은 결과 화면
@@ -35,6 +36,7 @@ SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디�
 | 반응 시간 · 스킵 버튼 (`GameServer.Chain` · `ReactionTimer*` · `HandPresenter`) | `rules` → `skip` → `multi 2` |
 | 찹츄 자동 선언 · 찹츄 표시 (내 패널 · 좌석 · 턴 띠 · 선언 연출) | `chapchu 2` |
 | 봇 (`Game/Bots` · `BotRoster` · 방의 봇 추가 · 제거) | `rules` (Bot 시나리오) → `solo` |
+| 랜덤 매칭 · 매치 방 (`PhotonRoom.CreateMatchRoom` · `RoomPresenter` 매치 방 · 봇 닉네임) | `match` |
 
 평소엔 2클라이언트, 기능을 마칠 때만 4클라이언트 (에디터 4개는 무겁다).
 

@@ -628,6 +628,67 @@ public static class MultiTest
         return "OK 혼자 하기 요청";
     }
 
+    /// <summary>디버그 로비에서 랜덤 매칭 — 매치 방이 없으면 새로 만든다 (08-room 4절 「매치」).</summary>
+    public static string Match()
+    {
+        if (Object.FindFirstObjectByType<DebugScript>() == null)
+            return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer)
+            return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
+
+        NetworkManager.Instance.JoinRandomRoom();
+        return "OK 랜덤 매칭 요청";
+    }
+
+    /// <summary>매치 방 화면 — 매치 방 · 시작 시각 · 방 코드 카드 숨김 · 대기 글에 남은 초.</summary>
+    public static string ExpectMatchRoom()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        var start = Object.FindFirstObjectByType<RoomStartView>();
+        var code = Object.FindFirstObjectByType<RoomCodeCardView>(FindObjectsInactive.Include);
+        if (start == null || code == null)
+            return "WAIT 방 화면 아님";
+
+        var text = (TMP_Text)typeof(RoomStartView).GetField("waitText", Private).GetValue(start);
+        bool at = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.MatchStartAt, out object value) && value is double;
+        string state = "매치 " + BotRoster.IsMatchRoom + " · 시각 " + at + " · 코드 카드 " + code.gameObject.activeInHierarchy + " · 글 「" + text.text.Replace("\n", " / ") + "」";
+        return BotRoster.IsMatchRoom && at && !code.gameObject.activeInHierarchy && text.gameObject.activeInHierarchy && text.text.Contains("찾는 중")
+            ? "OK " + state : "WAIT " + state;
+    }
+
+    /// <summary>매치 방의 봇은 사람과 똑같이 보인다 — 화면에 「봇」 이 든 글이 없다 (18-bot 4절 · 8-2).</summary>
+    public static string NoBotMark()
+    {
+        var marked = Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
+            .Where(t => t.gameObject.activeInHierarchy && t.text.Contains("봇")).Select(t => t.name + "「" + t.text + "」").ToArray();
+        return (marked.Length == 0 ? "OK " : "FAIL ") + SceneManager.GetActiveScene().name + " 봇 표시 " + (marked.Length == 0 ? "없음" : string.Join(" · ", marked));
+    }
+
+    /// <summary>매치 방 화면에 봇이 채워진 순간 — 칸 · 로그에 「봇」 이 없는가. 이미 게임 화면이면 FAIL (잡지 못함).</summary>
+    public static string MatchRoomFilled()
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        if (scene != "RoomScene")
+            return "FAIL 방 화면을 지나침 (" + scene + ")";
+        if (BotRoster.MemberCount < NetworkManager.MaxPlayers)
+            return "WAIT 인원 " + BotRoster.MemberCount;
+
+        string names = string.Join(" · ", Object.FindObjectsByType<RoomSlotView>(FindObjectsSortMode.None)
+            .Select(slot => ((TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot)).text));
+        return NoBotMark() + " · 칸 " + names + " · 로그 「" + ReadText(Object.FindFirstObjectByType<RoomLogView>(), RoomLastLogField) + "」";
+    }
+
+    /// <summary>봇 닉네임 — 「봇 N」 이 아니고 서로 다르다 (18-bot 4절).</summary>
+    public static string BotNames()
+    {
+        string[] names = BotRoster.Numbers.Select(n => BotRoster.NicknameOf(BotRoster.ActorOf(n))).ToArray();
+        bool ok = names.Length > 0 && names.Distinct().Count() == names.Length && names.All(n => !n.StartsWith("봇 "));
+        return (ok ? "OK " : "FAIL ") + "봇 닉네임 " + string.Join(" · ", names);
+    }
+
     /// <summary>방의 봇 목록 · 정원 · 공개 여부가 기대와 같을 때까지 WAIT. bots = "1,2,3" 처럼.</summary>
     public static string ExpectBots(string bots, string maxPlayers, string visible)
     {
@@ -658,7 +719,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var button = (UnityEngine.UI.Button)typeof(RoomSlotView).GetField(SlotButtonField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
             if (!button.interactable)
                 return "FAIL 봇 " + number + " 칸이 눌리지 않는다";
@@ -687,7 +748,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var tag = (TMP_Text)typeof(RoomSlotView).GetField(SlotBotTagField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
 
             // 꼬리표가 켜져 있고 · 글자가 맞고 · 글자가 꼬리표 밖으로 넘치지 않는다
@@ -1269,8 +1330,11 @@ public static class MultiTest
 
     public static string ChoiceResult() => SessionState.GetString(ChoiceResultKey, "WAIT 준비 안 됨");
 
+    // step 은 「이름」 또는 「이름|값」 (devmode|암호)
     public static string Ui(string step)
     {
+        string arg = step.Contains("|") ? step.Substring(step.IndexOf('|') + 1) : "";
+        step = step.Contains("|") ? step.Substring(0, step.IndexOf('|')) : step;
         string scene = SceneManager.GetActiveScene().name;
         switch (step)
         {
@@ -1355,6 +1419,8 @@ public static class MultiTest
                 Call(presenter, CreateRoomRequestedMethod);
                 return "OK 방 만들기";
             }
+            case "devmode":
+                return DevModeCheck(arg);
             case "leave":
             {
                 RoomPresenter room = Object.FindFirstObjectByType<RoomPresenter>();
@@ -1368,6 +1434,67 @@ public static class MultiTest
             default:
                 return "OK " + scene;
         }
+    }
+
+    // 개발자 모드 (14-lobby-ui 3절 #6 · 17 5-4) — 잠김 → 버전 글자 5번 → 암호 창 → 틀림 → (암호가 있으면) 맞음 → 풀림 → 다시 5번 → 잠김.
+    // 암호는 저장소에 두지 않는다 — run.sh 가 환경 변수 CHAPCHU_DEV_PASSWORD 로 넘긴다. 없으면 맞는 암호 단계는 건너뛴다
+    private static string DevModeCheck(string password)
+    {
+        var home = Object.FindFirstObjectByType<LobbyHomeView>();
+        var settings = Object.FindFirstObjectByType<LobbySettingsPopupView>(FindObjectsInactive.Include);
+        var modal = Object.FindFirstObjectByType<LobbyModalView>(FindObjectsInactive.Include);
+        var account = Object.FindFirstObjectByType<LobbyAccountPresenter>();
+        if (home == null || settings == null || modal == null || account == null)
+            return "WAIT 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        string Locks()
+        {
+            var parts = new List<string>();
+            foreach (string name in new[] { "solo", "create", "code" })
+            {
+                var button = (UnityEngine.UI.Button)typeof(LobbyHomeView).GetField(name + "Button", Private).GetValue(home);
+                var icon = (UnityEngine.UI.Image)typeof(LobbyHomeView).GetField(name + "Icon", Private).GetValue(home);
+                parts.Add(name + (button.interactable ? "=열림" : "=잠김") + "(" + icon.sprite.name + ")");
+            }
+            return string.Join(" ", parts);
+        }
+
+        void TapVersion()
+        {
+            for (int i = 0; i < 5; i++)
+                Call(settings, "HandleVersionClicked");
+        }
+
+        Chapchu.Core.DevMode.TurnOff();
+        home.SetDevMode(false);
+        string locked = Locks();
+        if (locked.Contains("열림") || !locked.Contains("icon_lock"))
+            return "FAIL 개발자 모드 꺼짐인데 " + locked;
+
+        TapVersion();
+        if (!modal.IsInputOpen || modal.InputKind != LobbyInputKind.DevPassword)
+            return "FAIL 버전 글자 5번에 암호 창이 뜨지 않음";
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, "틀린-암호" });
+        string error = ((TMP_Text)typeof(LobbyModalView).GetField("errorText", Private).GetValue(modal)).text;
+        if (!modal.IsInputOpen || error.Length == 0 || Chapchu.Core.DevMode.IsOn)
+            return "FAIL 틀린 암호가 받아들여짐 (창 " + modal.IsInputOpen + " · 오류 「" + error + "」)";
+
+        if (string.IsNullOrEmpty(password))
+        {
+            modal.HideInput();
+            return "OK 잠김 " + locked + " · 암호 창 · 틀린 암호 「" + error + "」 (맞는 암호 단계는 건너뜀 — CHAPCHU_DEV_PASSWORD 없음)";
+        }
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, password });
+        string opened = Locks();
+        if (modal.IsInputOpen || !Chapchu.Core.DevMode.IsOn || opened.Contains("잠김") || opened.Contains("icon_lock"))
+            return "FAIL 맞는 암호 뒤 " + opened;
+
+        TapVersion();
+        string relocked = Locks();
+        bool off = !Chapchu.Core.DevMode.IsOn && !relocked.Contains("열림");
+        return (off ? "OK " : "FAIL ") + "잠김 → 틀림 「" + error + "」 → 풀림 " + opened + " → 다시 5번 → " + relocked;
     }
 
     // ── 규칙 계층만 (네트워크 없음) ──
@@ -1456,7 +1583,7 @@ public static class MultiTest
         var names = new (string raw, string shown)[]
         {
             ("배고픈찹츄42", "배고픈찹츄42"), ("Player#2", "Player#2"), ("<b>방장</b><size=200>", "b방장/bsize=200"),
-            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength)),
+            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength / 2)), // 한글은 폭 2 (12-title 4-2)
             (new string('a', NicknameValidator.MaxLength - 1) + "\U0001F600", new string('a', NicknameValidator.MaxLength - 1)),
         };
         var badNames = names.Where(n => NicknameValidator.ForDisplay(n.raw) != n.shown).Select(n => NicknameValidator.ForDisplay(n.raw)).ToList();
@@ -2558,12 +2685,12 @@ public static class MultiTest
                     events = t.Run(t.Now + 3);
                     Check(started && !t.Server.IsGameOver && events.OfType<ChapchuWinHeld>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).IsChapchu,
                         "1023 기다려! — 찹츄 상태로 턴이 와도 이기지 않는다 · 찹츄는 그대로");
-                    events = t.Run(t.Now + 31); // O1 시간 초과 → O2
-                    events.AddRange(t.Run(t.Now + 31)); // O2 시간 초과 → 건 사람
+                    events = t.Run(t.Now + TurnSeconds + 1); // O1 시간 초과 → O2
+                    events.AddRange(t.Run(t.Now + TurnSeconds + 1)); // O2 시간 초과 → 건 사람
                     int endAt = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
                     int turnAt = events.FindIndex(e => e is TurnStarted ts && ts.Actor == t.Turn);
                     Check(endAt >= 0 && turnAt > endAt, "1023 건 사람의 다음 턴이 시작되기 전에 끝난다");
-                    GameEnded ended = t.Run(t.Now + 31).OfType<GameEnded>().FirstOrDefault();
+                    GameEnded ended = t.Run(t.Now + TurnSeconds + 1).OfType<GameEnded>().FirstOrDefault(); // 건 사람 시간 초과 → O1 턴 시작에 판정
                     Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu, "1023 끝난 뒤 다음 자기 턴에 다시 판정 → 찹츄 승리");
                 }
                 {
@@ -3999,11 +4126,11 @@ public static class MultiTest
             Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1 && Sum(t, StatKind.ChapchuDeclared) == 1, "뽑아 10장 → 찹츄 선언 1");
         }
 
-        // 10. 112 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
+        // 10. 1012 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
         {
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
-            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 112) : null;
-            Check(big != null, "Deck_Main 에 112 대소동이 있다");
+            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 1012) : null;
+            Check(big != null, "Deck_Main 에 1012 대소동이 있다");
             if (big != null)
             {
                 var t = new ChainTable();
@@ -4013,7 +4140,7 @@ public static class MultiTest
                     big.Trigger, big.TriggerValue, big.Condition, big.TargetCondition)));
                 events.AddRange(t.Run(t.Now + 3));
                 Check(events.OfType<GameRestarted>().Any() && t.Hp(t.O1) == 100 && Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20
-                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "112 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
+                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "1012 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
                 Check(Sum(t, StatKind.Healed) == 0 && Sum(t, StatKind.Drawn) == 0, "새 판의 HP 100 · 다시 받은 손패는 회복 · 드로우가 아니다");
             }
         }
