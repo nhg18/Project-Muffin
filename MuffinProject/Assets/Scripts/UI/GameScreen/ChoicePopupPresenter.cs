@@ -150,7 +150,7 @@ namespace Chapchu.UI.GameScreen
                 return;
             Close();
             _awaiting = true;
-            server.RequestChoose(option);
+            server.RequestChoose(option, _deadline);
         }
 
         private void Close()

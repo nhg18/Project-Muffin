@@ -561,7 +561,8 @@ namespace Chapchu.Game.Bots
                 // 1019 목표 조준의 대상 — 반응처럼 난이도의 반응 시간 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
                 int option = _server.BotChoiceOption(bot);
                 string what = _server.IsChoosingHandCard ? $"대가로 버릴 카드 #{option}" : option == 0 ? "손패 전부 버리기" : "피해 받기";
-                reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"7-4 고르기 → {what}", () => _server.Choose(bot, option));
+                double deadline = _server.ChoiceDeadline;
+                reaction = new Reaction($"choice:{deadline}", now, $"7-4 고르기 → {what}", () => _server.Choose(bot, option, deadline));
                 return true;
             }
 

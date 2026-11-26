@@ -54,12 +54,17 @@ namespace Chapchu.Game
 
         /// <summary>
         /// 고르기 요청 (1019 — 0 손패 전부 버리기 · 1 피해 받기 / 손패에서 1장 — 버릴 카드의 장 번호). 고르는 사람만, 고르는 중에만.
+        /// deadline 은 답하는 고르기의 마감 (ChoiceStarted 로 받은 값) — 지금 열린 고르기의 것이 아니면 거절한다.
         /// </summary>
-        public IReadOnlyList<GameEvent> Choose(int requester, int option)
+        public IReadOnlyList<GameEvent> Choose(int requester, int option, double deadline)
         {
             if (_gameOver)
                 return Reject(requester, RejectCode.GameOver);
             if (!IsChoosing || requester != _choiceActor)
+                return Reject(requester, RejectCode.NotChoosing);
+
+            // 앞 고르기에 보낸 늦은 요청 — 같은 고르기를 연달아 열 때(2배가 된 대가) 다음 고르기의 답으로 받지 않는다
+            if (deadline != _choiceDeadline)
                 return Reject(requester, RejectCode.NotChoosing);
             if (IsHandChoice ? !_players[requester].Hand.Exists(c => c.InstanceId == option) : option < 0 || option > 1)
                 return Reject(requester, RejectCode.NotChoosing);

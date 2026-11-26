@@ -1492,14 +1492,14 @@ namespace Chapchu.EditorTools
             Stretch(face.rectTransform, 5f, 5f, 5f, 5f);
 
             TMP_Text name = NewText("Name", face.transform, "카드 이름", 22f, Ink, true);
-            Fill((RectTransform)name.transform, 0.06f, 0.80f, 0.94f, 0.98f);
+            AnchorBox((RectTransform)name.transform, 0.06f, 0.80f, 0.94f, 0.98f);
             AutoSize(name, 10f, 22f);
             Image art = NewImage("Art", face.transform, White);
             art.preserveAspect = true;
-            Fill(art.rectTransform, 0.08f, 0.42f, 0.92f, 0.79f);
+            AnchorBox(art.rectTransform, 0.08f, 0.42f, 0.92f, 0.79f);
             TMP_Text desc = NewText("Desc", face.transform, "카드 문구", 16f, Ink, false);
             desc.textWrappingMode = TextWrappingModes.Normal;
-            Fill((RectTransform)desc.transform, 0.06f, 0.04f, 0.94f, 0.40f);
+            AnchorBox((RectTransform)desc.transform, 0.06f, 0.04f, 0.94f, 0.40f);
             AutoSize(desc, 8f, 16f);
 
             var tileView = tile.gameObject.AddComponent<ChoiceCardTile>();
@@ -1531,15 +1531,6 @@ namespace Chapchu.EditorTools
             Wire(view, ("tilePrefab", prefab));
             EditorSceneManager.MarkSceneDirty(view.gameObject.scene);
             Debug.Log($"[{nameof(GameScreenBuilder)}] 고르기 판의 칸을 프리팹({ChoiceTilePrefabPath})으로 옮김 — 씬을 저장할 것.");
-        }
-
-        // 부모 안에서 비율로 자리를 잡는다 (왼쪽 · 아래 · 오른쪽 · 위, 0 ~ 1) — 부모 크기가 바뀌면 같이 바뀐다
-        private static void Fill(RectTransform rect, float left, float bottom, float right, float top)
-        {
-            rect.anchorMin = new Vector2(left, bottom);
-            rect.anchorMax = new Vector2(right, top);
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
         }
 
         private static void AutoSize(TMP_Text text, float min, float max)
