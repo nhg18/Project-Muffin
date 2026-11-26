@@ -191,7 +191,9 @@ namespace Chapchu.UI.GameScreen
         public void ShowReaction(double opensAt)
         {
             FinishShow(); // 카운터를 낼 손패 · 체인 카드를 가리지 않게
-            EndReaction();
+            // 목록 · 빛만 버린다 — 연출 중에 미리 연 카운터 대상 선택은 취소하지 않는다 (04-card.md 8절). 취소는 EndReaction 이 한다
+            _usableCounters.Clear();
+            SetGlowOff();
             _reactionOpensAt = opensAt;
             _reactionPending = true;
             _holdSent = false;
