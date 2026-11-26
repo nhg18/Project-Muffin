@@ -101,7 +101,7 @@ namespace Chapchu.Network
         public static int ActorOf(int number) => ActorBase + number;
         public static bool IsBot(int actorNumber) => actorNumber > ActorBase;
 
-        // 봇 닉네임 (18-bot.md 4절) — 사람 닉네임처럼 보이는 이름 + 화면이 붙이는 「봇」 표시
+        // 봇 닉네임 (18-bot.md 4절) — 사람 닉네임처럼 보이는 이름. 「봇」 표시는 매치 방이 아닐 때만 화면이 붙인다
         private static readonly string[] BotNames =
         {
             "모찌", "호두", "두부", "보리", "깨비", "감자", "꿀떡", "말랑이",
@@ -109,7 +109,7 @@ namespace Chapchu.Network
         };
 
         /// <summary>
-        /// 봇의 닉네임 (18-bot.md 4절). 방 코드 · 봇 번호로 정해 모든 기기에서 같고, 한 방의 봇 셋은 서로 다르다. 「봇」 표기는 화면이 붙인다.
+        /// 봇의 닉네임 (18-bot.md 4절). 방 코드 · 봇 번호로 정해 모든 기기에서 같고, 한 방의 봇 셋은 서로 다르다. 「봇」 표기는 매치 방이 아닐 때만 화면이 붙인다.
         /// string.GetHashCode 는 실행기마다 달라질 수 있어 직접 센다.
         /// </summary>
         public static string NicknameOf(int actorNumber)
