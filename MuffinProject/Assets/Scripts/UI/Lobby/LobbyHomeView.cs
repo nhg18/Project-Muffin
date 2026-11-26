@@ -1,6 +1,5 @@
 ﻿using System;
 using DG.Tweening;
-using Chapchu.UI.Title;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -72,9 +71,8 @@ namespace Chapchu.UI.Lobby
             if (!soloLocked)
                 return;
 
-            soloButton.interactable = false;
             soloIcon.sprite = lockSprite;
-            soloButton.GetComponent<PressableButton>().SetDimmed(true);
+            LobbyStyle.SetEnabled(soloButton, false);
         }
 
         private void OnEnable()
