@@ -22,6 +22,7 @@ namespace Chapchu.UI.RoomScreen
     /// 방 화면의 뷰들과 네트워크 · 씬 전환을 잇는다. Scripts/UI/RoomScreen 에서 네트워크를 아는 유일한 파일이다.
     /// 칸 · 인원 · 공개 여부 · 시작 자리는 방 상태가 바뀔 때마다 Refresh 한 곳에서 다시 그린다.
     /// 매치 방(랜덤 매칭)은 방 코드 · 공개 토글 · 봇 편집 · 「게임 시작」 이 없고, 시각이 지나면 방장이 빈자리를 봇으로 채워 시작한다.
+    /// 매치 방의 봇은 사람과 똑같이 보인다 — 꼬리표 · 흐린 색 · 「봇」 로그가 없다 (18-bot.md 4절, PM 2026-11-26).
     /// 기준 문서: docs/systems/16-room-ui-full.md, docs/systems/08-room.md 4 · 5절, docs/systems/18-bot.md 5 · 8-1절
     /// </summary>
     public class RoomPresenter : MonoBehaviour
@@ -38,7 +39,7 @@ namespace Chapchu.UI.RoomScreen
         private const string BotRemovedLogFormat = "봇 {0} 제거";
 
         // 매치 방 (08-room.md 4절 「매치」 · 16-room-ui-full.md 7-7)
-        private const string MatchSearchingFormat = "같이 할 사람 찾는 중… {0}초\n빈자리는 봇이 채워요.";
+        private const string MatchSearchingFormat = "같이 할 사람 찾는 중…\n{0}초";
         private const string MatchFilledText = "다 모였어요!\n곧 시작해요.";
         private const double MatchFullStartSeconds = 3;  // 사람 4명이 다 차면 이만큼 뒤 시작 — 누가 모였는지 보이게
         private const double MatchJoinGraceSeconds = 3;  // 마감 직전에 들어온 사람도 방을 이만큼은 본다
@@ -275,9 +276,9 @@ namespace Chapchu.UI.RoomScreen
             {
                 if (i >= _seats.Count)
                     slots[i].ShowEmpty(canAddBot);
-                else if (_seats[i].IsBot)
+                else if (_seats[i].IsBot && !isMatch)
                     slots[i].ShowBot(_seats[i].Nickname, string.Format(BotTagFormat, LevelName(BotRoster.LevelOf(_seats[i].ActorNumber - BotRoster.ActorBase))), canEditBots);
-                else
+                else // 사람 — 매치 방의 봇도 사람 칸으로
                     slots[i].ShowPlayer(_seats[i].Nickname, _seats[i].ActorNumber == room.MasterClientId, _seats[i].ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber);
             }
 
@@ -490,10 +491,12 @@ namespace Chapchu.UI.RoomScreen
 
         private void HandleBotsChanged(int[] numbers)
         {
+            // 매치 방의 봇은 사람처럼 「입장 · 퇴장」 으로 적는다
+            bool isMatch = BotRoster.IsMatchRoom;
             foreach (int number in numbers.Except(_bots))
-                log.Add(string.Format(BotAddedLogFormat, BotName(number)));
+                log.Add(string.Format(isMatch ? EnteredLogFormat : BotAddedLogFormat, BotName(number)));
             foreach (int number in _bots.Except(numbers))
-                log.Add(string.Format(BotRemovedLogFormat, BotName(number)));
+                log.Add(string.Format(isMatch ? LeftLogFormat : BotRemovedLogFormat, BotName(number)));
 
             // 난이도 로그는 계속 있던 봇만 — 새로 든 봇은 「추가」 한 줄로 충분하다
             foreach (int number in numbers)
@@ -574,8 +577,9 @@ namespace Chapchu.UI.RoomScreen
 
             Seat seat = _seats[Array.IndexOf(slots, slot)];
 
-            // 봇 칸은 방장에게만 눌린다 — 난이도를 다음 것으로 (18-bot.md 8-1). 칸은 바로, 로그는 OnBotsChanged 에서
-            if (seat.IsBot)
+            // 봇 칸은 방장에게만 눌린다 — 난이도를 다음 것으로 (18-bot.md 8-1). 칸은 바로, 로그는 OnBotsChanged 에서.
+            // 매치 방의 봇은 사람 칸처럼 정보 판을 연다
+            if (seat.IsBot && !BotRoster.IsMatchRoom)
             {
                 int number = seat.ActorNumber - BotRoster.ActorBase;
                 int next = (Array.IndexOf(BotLevelCycle, BotRoster.LevelOf(number)) + 1) % BotLevelCycle.Length;

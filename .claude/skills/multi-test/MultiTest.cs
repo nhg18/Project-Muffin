@@ -659,6 +659,28 @@ public static class MultiTest
             ? "OK " + state : "WAIT " + state;
     }
 
+    /// <summary>매치 방의 봇은 사람과 똑같이 보인다 — 화면에 「봇」 이 든 글이 없다 (18-bot 4절 · 8-2).</summary>
+    public static string NoBotMark()
+    {
+        var marked = Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
+            .Where(t => t.gameObject.activeInHierarchy && t.text.Contains("봇")).Select(t => t.name + "「" + t.text + "」").ToArray();
+        return (marked.Length == 0 ? "OK " : "FAIL ") + SceneManager.GetActiveScene().name + " 봇 표시 " + (marked.Length == 0 ? "없음" : string.Join(" · ", marked));
+    }
+
+    /// <summary>매치 방 화면에 봇이 채워진 순간 — 칸 · 로그에 「봇」 이 없는가. 이미 게임 화면이면 FAIL (잡지 못함).</summary>
+    public static string MatchRoomFilled()
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        if (scene != "RoomScene")
+            return "FAIL 방 화면을 지나침 (" + scene + ")";
+        if (BotRoster.MemberCount < NetworkManager.MaxPlayers)
+            return "WAIT 인원 " + BotRoster.MemberCount;
+
+        string names = string.Join(" · ", Object.FindObjectsByType<RoomSlotView>(FindObjectsSortMode.None)
+            .Select(slot => ((TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot)).text));
+        return NoBotMark() + " · 칸 " + names + " · 로그 「" + ReadText(Object.FindFirstObjectByType<RoomLogView>(), RoomLastLogField) + "」";
+    }
+
     /// <summary>봇 닉네임 — 「봇 N」 이 아니고 서로 다르다 (18-bot 4절).</summary>
     public static string BotNames()
     {

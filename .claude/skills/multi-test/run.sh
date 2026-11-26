@@ -488,11 +488,22 @@ run_match() {
     until_ok "$MAIN" Match || return
     wait_scene RoomScene || return
     until_ok "$MAIN" ExpectMatchRoom || return
-    log "▶ 15초 뒤 빈자리 봇 → 스스로 시작"
-    wait_scene GameScene || return
+    log "▶ 15초 뒤 빈자리 봇 → 방 칸 · 로그에도 봇 표시 없음"
+    local out=""
+    for _ in $(seq 1 60); do   # 봇을 채운 뒤 시작까지 1.5초뿐 — 쉬지 않고 묻는다
+        out=$(call "$MAIN" MatchRoomFilled)
+        case "$out" in WAIT*) ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "매치 방 화면: $out" ;; esac
     until_ok "$MAIN" ExpectBots "1,2,3" 1 True || return
+    log "▶ 스스로 시작"
+    wait_scene GameScene || return
     log "  $(call "$MAIN" BotNames)"
     case "$(call "$MAIN" BotNames)" in OK*) ;; *) fail "봇 닉네임이 「봇 N」 이거나 겹친다" ;; esac
+    sleep 2
+    log "  $(call "$MAIN" NoBotMark)"
+    case "$(call "$MAIN" NoBotMark)" in OK*) ;; *) fail "매치 방 게임 화면에 봇 표시가 있다" ;; esac
     sleep 2
     log "▶ 판정"
     check_errors "$MAIN"
