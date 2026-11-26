@@ -61,7 +61,7 @@ namespace Chapchu.UI.GameScreen
             if (!forced || NetworkManager.Instance == null || PhotonNetwork.LocalPlayer == null || actorNumber != PhotonNetwork.LocalPlayer.ActorNumber)
                 return;
 
-            Debug.Log($"[{nameof(GameMenuPresenter)}] 3턴 연속 시간 초과로 강제 퇴장 — 방을 나간다", this);
+            Debug.Log($"[{nameof(GameMenuPresenter)}] {GameServer.TimeoutLimit}턴 연속 시간 초과로 강제 퇴장 — 방을 나간다", this);
             if (PopupManager.Instance != null)
                 PopupManager.Instance.ShowWarningOnNextScene(ForcedOutTitle, string.Format(ForcedOutTextFormat, GameServer.TimeoutLimit));
             StartCoroutine(LeaveRoomNextFrame());

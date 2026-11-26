@@ -65,7 +65,7 @@ namespace Chapchu.UI.Lobby
 
             // 금칙어 목록을 다시 읽는다 — 기다리지 않고, 못 받으면 마지막 값으로 검사한다 (23 8-1 · 4절)
             if (AccountService.IsSignedIn)
-                ServerConfig.FetchAsync().ContinueWith(task => task.Exception, TaskContinuationOptions.OnlyOnFaulted);
+                StartCoroutine(ServerConfig.FetchRoutine());
 
             modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
         }

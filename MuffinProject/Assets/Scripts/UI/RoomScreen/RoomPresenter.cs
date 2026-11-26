@@ -429,8 +429,13 @@ namespace Chapchu.UI.RoomScreen
             if (!BotRoster.IsMatchRoom || !NetworkManager.IsTrustedMaster)
                 return;
 
+            // 시각이 아직 없으면 미루지 않는다 — 15초 시각은 UpdateMatch 가 먼저 적는다
+            double at = MatchStartAt;
+            if (at <= 0)
+                return;
+
             double earliest = PhotonNetwork.Time + MatchJoinGraceSeconds;
-            if (MatchStartAt < earliest)
+            if (at < earliest)
                 SetMatchStartAt(earliest);
         }
 
