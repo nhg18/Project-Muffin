@@ -82,6 +82,7 @@ namespace Chapchu.UI.GameScreen
         private bool _reactionPending; // 반응 시간이 정해졌고 아직 끝나지 않았다 (연출 중 포함) — 마감 시각은 오지 않는다
         private bool _holdSent;        // 이번 반응 시간에 「고민 중」 을 이미 보냈다 (04-card.md 8절 — 1회)
         private bool _glowing;
+        private bool _counterTargeting; // 카운터의 대상을 고르는 중 — 반응 시간이 끝나면 선택을 취소한다 (10-ui.md 6절)
 
         // 새로 들어와 크게 보여 주는 중인 카드 묶음 — 손패(HandView)에는 이미 들어 있고 자리만 따로다. 판정과 상관없는 연출.
         private readonly List<CardView> _showing = new List<CardView>();
@@ -207,12 +208,18 @@ namespace Chapchu.UI.GameScreen
             SetGlowOff(); // 다음 Update 에서 새 목록으로 다시 켠다
         }
 
-        /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다.</summary>
+        /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다. 카운터의 대상을 고르는 중이었으면 선택을 취소한다 — 요청은 가지 않는다 (10-ui.md 6절).</summary>
         public void EndReaction()
         {
             _usableCounters.Clear();
             _reactionPending = false;
             SetGlowOff();
+
+            if (_counterTargeting)
+            {
+                _counterTargeting = false; // PlayWithTargetsRoutine 이 이것을 보고 고른 대상을 버린다
+                seats.CancelTargetSelection();
+            }
         }
 
         private void SetGlowOff()
@@ -530,8 +537,16 @@ namespace Chapchu.UI.GameScreen
             topLayer.Set(card, true);
             ShowAtTargetSpot(card);
 
+            bool isCounter = deck.GetCard(card.CardId)?.type == CardType.Counter;
+            _counterTargeting = isCounter;
+
             int[] targets = null;
             yield return seats.SelectTargetsRoutine(cardName, targetCount, includeMe, picked => targets = picked);
+
+            // 카운터의 대상을 고르는 사이 반응 시간이 끝났다 (EndReaction) — 같은 프레임에 다 골랐어도 요청하지 않는다
+            if (isCounter && !_counterTargeting)
+                targets = null;
+            _counterTargeting = false;
 
             if (card == null) // 고르는 사이 손패에서 빠져 지워졌다 (강제 버림 · 사망)
             {

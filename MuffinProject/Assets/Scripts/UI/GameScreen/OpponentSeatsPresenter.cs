@@ -312,7 +312,10 @@ namespace Chapchu.UI.GameScreen
             seat.SetTargetable(false);
         }
 
-        private void HandleCancelClicked()
+        private void HandleCancelClicked() => CancelTargetSelection();
+
+        /// <summary>대상 선택을 취소한다 — 안내 바의 「취소」 · 카운터의 대상을 고르는 중에 반응 시간이 끝남 (HandPresenter). 고르는 중이 아니면 아무 일도 없다.</summary>
+        public void CancelTargetSelection()
         {
             if (_selecting)
                 _selectCancelled = true;
