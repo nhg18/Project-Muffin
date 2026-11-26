@@ -424,6 +424,7 @@ namespace Chapchu.UI.Fx
             DOTween.Kill(id, true);
             Graphic face = seat.ChipFace;
             Color baseColor = face != null ? face.color : Color.white;
+            Color written = baseColor; // 이 트윈이 마지막에 칠한 색 — 면이 이와 다르면 그사이 배지가 장수 상태색을 새로 칠한 것
             Vector3 baseScale = chip.localScale;
             DOVirtual.Float(0f, 1f, chipPopSeconds, t =>
             {
@@ -431,12 +432,21 @@ namespace Chapchu.UI.Fx
                 float f = p < chipPopPeak ? p / chipPopPeak : 1f - (p - chipPopPeak) / (1f - chipPopPeak);
                 chip.localScale = baseScale * Mathf.Lerp(1f, chipPopScale, f);
                 if (face != null)
-                    face.color = Color.Lerp(baseColor, flash, f);
+                {
+                    if (face.color != written)
+                        baseColor = face.color;
+                    written = Color.Lerp(baseColor, flash, f);
+                    face.color = written;
+                }
             }).SetEase(Ease.Linear).SetId(id).SetLink(chip.gameObject).OnKill(() =>
             {
                 chip.localScale = baseScale;
                 if (face != null)
+                {
+                    if (face.color != written)
+                        baseColor = face.color;
                     face.color = baseColor;
+                }
             });
         }
 

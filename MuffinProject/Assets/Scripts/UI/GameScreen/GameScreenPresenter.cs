@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Cards;
 using Chapchu.Game;
+using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Fx;
 using Photon.Pun;
@@ -108,6 +109,21 @@ namespace Chapchu.UI.GameScreen
                 menu = FindFirstObjectByType<GameMenuPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때
             if (menu == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] {nameof(GameMenuPresenter)} 를 찾지 못했습니다 — 강제 퇴장 · 판 중지를 처리하지 못합니다.", this);
+        }
+
+        // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값 (09-network.md 6.1) — 피해 · 회복 양의 기준 HP, 내 턴인지. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
+        private void Start()
+        {
+            if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
+
+            foreach (int actor in PlayerLook.OrderedActors())
+                if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
+                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 방 · Player 속성은 남이 쓸 수 있다
+
+            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
+                _isMyTurn = IsMe(turnActorValue);
+            if (_playing == null)
+                ShowHandPlayState(false);
         }
 
         private void OnEnable()
@@ -719,6 +735,7 @@ namespace Chapchu.UI.GameScreen
             hand.EndReaction();
             reactionTimer.Hide();
             _chainCount = 0;
+            _pendingActors.Clear(); // 죽은 사람 · 사망 대기 중인 사람도 새 판에서 다시 산다 (11-card-list 1012)
 
             myTraps.Clear();
             myTraps.ShowCount(0);
@@ -727,6 +744,7 @@ namespace Chapchu.UI.GameScreen
             turnOrder.ShowDirection(false);
             foreach (int actor in order)
             {
+                ShowLife(actor, LifeState.Alive);
                 turnOrder.ShowChapchu(actor, false);
                 ShowSkipMarked(actor, false);
                 ShowBlocked(actor, false);
