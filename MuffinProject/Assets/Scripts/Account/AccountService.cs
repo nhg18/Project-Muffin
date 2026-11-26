@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
+using Unity.Services.CloudCode;
 using Unity.Services.CloudSave;
 using Unity.Services.CloudSave.Models;
+using Unity.Services.CloudSave.Models.Data.Player;
 using Unity.Services.Core;
 
 namespace Chapchu.Account
@@ -18,8 +20,62 @@ namespace Chapchu.Account
         Rejected,
     }
 
+    /// <summary>내 닉네임 · 변경 쿠폰 · 쿨다운 (23 3절 #5 · 7-8). 서버가 쓴 값을 읽은 것이다.</summary>
+    public sealed class NicknameState
+    {
+        /// <summary>쿠폰 칸이 없을 때의 장수 — 계정 생성 때 1장 무료 (23 7-8)</summary>
+        public const int FreeCoupons = 1;
+
+        /// <summary>바꾼 뒤 다시 바꿀 수 없는 시간 — 7일 (23 4절)</summary>
+        public static readonly TimeSpan Cooldown = TimeSpan.FromHours(168);
+
+        public NicknameState(string nickname, int coupons, long changedAtMs, string legacyNickname)
+        {
+            Nickname = nickname;
+            Coupons = coupons;
+            ChangedAtMs = changedAtMs;
+            LegacyNickname = legacyNickname;
+        }
+
+        /// <summary>서버에 정해진 닉네임. 아직 없으면 null — 처음 정하기 (쿠폰 · 쿨다운 없음)</summary>
+        public string Nickname { get; }
+
+        public int Coupons { get; }
+
+        /// <summary>마지막으로 바꾼 때 (유닉스 ms). 한 번도 안 바꿨으면 0 — 처음 정하기는 세지 않는다</summary>
+        public long ChangedAtMs { get; }
+
+        /// <summary>2026-11-26 전에 클라이언트가 직접 쓴 옛 닉네임 — 처음 정하기 창에 미리 채운다. 없으면 null</summary>
+        public string LegacyNickname { get; }
+
+        /// <summary>다시 바꿀 수 있을 때까지 남은 시간. 바꿀 수 있으면 0 이하</summary>
+        public TimeSpan CooldownLeft(DateTimeOffset now)
+            => ChangedAtMs <= 0 ? TimeSpan.Zero : DateTimeOffset.FromUnixTimeMilliseconds(ChangedAtMs) + Cooldown - now;
+    }
+
+    /// <summary>Cloud Code 「닉네임 저장」 의 답 (server/cloud-code/SetNickname.js). Result 는 아래 상수 중 하나.</summary>
+    public sealed class NicknameSave
+    {
+        public const string Ok = "ok";
+        public const string Same = "same";
+        public const string Invalid = "invalid";
+        public const string Banned = "banned";
+        public const string Taken = "taken";
+        public const string CooldownLeft = "cooldown";
+        public const string NoCoupon = "noCoupon";
+        public const string Error = "error";
+
+        public string Result { get; set; }
+        public string Nickname { get; set; }
+        public int Coupons { get; set; }
+        public long ChangedAt { get; set; }
+
+        /// <summary>Result 가 cooldown 일 때 남은 초</summary>
+        public long RemainingSeconds { get; set; }
+    }
+
     /// <summary>
-    /// UGS 계정 창구 — 게스트(익명) 로그인 · 세션 복원 · 닉네임(Cloud Save). 기준 문서: docs/systems/23-login.md 6절 · 7-4
+    /// UGS 계정 창구 — 게스트(익명) 로그인 · 세션 복원 · 닉네임(Cloud Save 읽기 · Cloud Code 쓰기). 기준 문서: docs/systems/23-login.md 6절 · 7-4 · 7-8
     /// 상태는 UGS 쪽 싱글톤이 갖고, 여기는 부르는 길만 모은다. 동의 전에는 부르지 않는다 (23 3절 #9).
     /// </summary>
     public static class AccountService
@@ -78,21 +134,52 @@ namespace Chapchu.Account
                 return;
 
             _signIn = null; // 돌고 있던 요청은 버린 계정의 것 — 다음 로그인은 새로 부른다
+            Nickname = null;
             AuthenticationService.Instance.SignOut(true);
         }
 
-        /// <summary>서버에 저장된 닉네임. 없으면 null.</summary>
-        public static async Task<string> LoadNicknameAsync()
+        /// <summary>마지막으로 읽거나 저장한 내 닉네임 · 쿠폰 · 변경 시각. 로그인 전이거나 아직 못 읽었으면 null.</summary>
+        public static NicknameState Nickname { get; private set; }
+
+        /// <summary>
+        /// 내 닉네임 · 변경 쿠폰 · 마지막 변경 시각을 보호 칸(서버만 쓴다)에서 읽는다 (23 7-8). 결과는 Nickname 에도 남는다.
+        /// 보호 칸에 닉네임이 없으면 2026-11-26 전에 클라이언트가 직접 쓴 옛 칸을 LegacyNickname 으로 읽는다 — 처음 정하기 창에 미리 채울 값.
+        /// </summary>
+        public static async Task<NicknameState> LoadNicknameAsync()
         {
-            Dictionary<string, Item> items = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { CloudKeys.Nickname });
-            return items.TryGetValue(CloudKeys.Nickname, out Item item) ? item.Value.GetAs<string>() : null;
+            var keys = new HashSet<string> { CloudKeys.Nickname, CloudKeys.NicknameCoupons, CloudKeys.NicknameChangedAt };
+            Dictionary<string, Item> items = await CloudSaveService.Instance.Data.Player.LoadAsync(keys, new LoadOptions(new ProtectedReadAccessClassOptions()));
+
+            string nickname = items.TryGetValue(CloudKeys.Nickname, out Item name) ? name.Value.GetAs<string>() : null;
+            int coupons = items.TryGetValue(CloudKeys.NicknameCoupons, out Item count) ? count.Value.GetAs<int>() : NicknameState.FreeCoupons;
+            long changedAt = items.TryGetValue(CloudKeys.NicknameChangedAt, out Item time) ? time.Value.GetAs<long>() : 0L;
+
+            string legacy = null;
+            if (string.IsNullOrEmpty(nickname))
+            {
+                Dictionary<string, Item> old = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { CloudKeys.Nickname });
+                legacy = old.TryGetValue(CloudKeys.Nickname, out Item oldName) ? oldName.Value.GetAs<string>() : null;
+            }
+
+            Nickname = new NicknameState(string.IsNullOrEmpty(nickname) ? null : nickname, coupons, changedAt, string.IsNullOrEmpty(legacy) ? null : legacy);
+            return Nickname;
         }
 
         /// <summary>
-        /// 닉네임 저장. 23 8-3 은 Cloud Code 가 금칙어를 다시 검사한 뒤 쓰도록 정했지만, Cloud Code 가 아직 없어 클라이언트가 직접 쓴다.
+        /// 닉네임 정하기 · 바꾸기 — Cloud Code 「닉네임 저장」 만 쓴다 (23 7-8 · 8-3). 서버가 길이 · 문자 · 금칙어 · 중복 · 쿠폰 · 쿨다운을 다시 본다.
+        /// 거절은 예외가 아니라 결과 값으로 온다. 성공하면 Nickname 도 바꾼다. 연결 문제는 예외.
         /// </summary>
-        public static Task SaveNicknameAsync(string nickname)
-            => CloudSaveService.Instance.Data.Player.SaveAsync(new Dictionary<string, object> { { CloudKeys.Nickname, nickname } });
+        public static async Task<NicknameSave> SetNicknameAsync(string nickname)
+        {
+            var args = new Dictionary<string, object> { { "nickname", nickname } };
+            NicknameSave save = await CloudCodeService.Instance.CallEndpointAsync<NicknameSave>(CloudKeys.SetNicknameScript, args);
+            if (save.Result == NicknameSave.Ok)
+                Nickname = new NicknameState(save.Nickname, save.Coupons, save.ChangedAt, null);
+            else if (save.Result == NicknameSave.Same && Nickname != null) // 시간이 넘은 지난 요청이 이미 저장했다
+                Nickname = new NicknameState(nickname, Nickname.Coupons, Nickname.ChangedAtMs, null);
+
+            return save;
+        }
 
         /// <summary>실패를 화면 갈래로 나눈다. 시간 초과(exception null)는 Network.</summary>
         public static SignInFailure Classify(Exception exception)

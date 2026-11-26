@@ -124,7 +124,8 @@ namespace Chapchu.UI.Lobby
 
         #region 입력 창
 
-        public void ShowInput(LobbyInputKind kind, string value = "")
+        /// <summary>입력 창. message 는 입력 칸 위 안내 줄 — 계정 삭제는 늘 정해진 줄, 그 밖은 주면 보인다 (닉네임 변경 쿠폰 줄, 17 5-2).</summary>
+        public void ShowInput(LobbyInputKind kind, string value = "", string message = null)
         {
             InputKind = kind;
             bool isCode = kind == LobbyInputKind.RoomCode;
@@ -134,8 +135,9 @@ namespace Chapchu.UI.Lobby
             inputBand.color = isDelete ? LobbyStyle.Hp : LobbyStyle.Band;
             inputIcon.sprite = isCode ? keyIcon : isDelete ? crossIcon : userIcon;
             inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : NicknameTitle;
-            inputMessage.gameObject.SetActive(isDelete);
-            inputMessage.text = DeleteMessage;
+            string note = isDelete ? DeleteMessage : message;
+            inputMessage.gameObject.SetActive(!string.IsNullOrEmpty(note));
+            inputMessage.text = note;
             fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : NicknamePlaceholder;
             submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : NicknameSubmit;
             submitBox.FillColor = isDelete ? LobbyStyle.WarnFill : LobbyStyle.Turn;
