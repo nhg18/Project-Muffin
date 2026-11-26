@@ -20,7 +20,6 @@ namespace Chapchu.UI.GameScreen
         private const string GoalFormat = "찹츄까지 <size={1}><color=#{2}>{0}</color></size> 장";   // 시안 .mgoal — 「찹츄까지 n장」, 글자 사이 틈(gap 4 × 2)은 빈칸으로
         private const string GoalOverFormat = "10장에서 <size={1}><color=#{2}>+{0}</color></size>"; // 10장을 넘으면
         private const string GoalTenText = "찹츄!";
-        private const string PendingHpText = "대기";
         private const string DeadHpText = "사망";
         private const int ChapchuCount = GameServer.ChapchuHandCount;
 
@@ -40,7 +39,7 @@ namespace Chapchu.UI.GameScreen
 
         [Header("HP · 손패")]
         [SerializeField] private TMP_Text hpText;
-        [Tooltip("사망 · 대기 글자 크기.")]
+        [Tooltip("「사망」 글자 크기.")]
         [SerializeField] private float lifeHpFontSize = 48f;
         [SerializeField] private RectTransform hpFill;
         [SerializeField] private Graphic hpFillGraphic;
@@ -48,7 +47,7 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("HP 가 이 값 이하면 수치를 빨강으로 (시안: 20).")]
         [SerializeField] private int lowHpThreshold = 20;
         [SerializeField] private HandCountBadgeView handBadge;
-        [Tooltip("내 캐릭터 — 사망 · 사망 대기면 흐리게.")]
+        [Tooltip("내 캐릭터 — 사망이면 흐리게.")]
         [SerializeField] private Image character;
         [Tooltip("내 턴 캐릭터 배율 — 발밑 기준 (시안 .char.turn 1.05).")]
         [SerializeField] private float turnCharacterScale = 1.05f;
@@ -57,6 +56,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Graphic goalFill;
         [SerializeField] private TMP_Text goalText;
         [SerializeField] private GameObject goalCrown;
+        [Tooltip("내게 걸린 효과 알약 — 행동 금지 · 스킵 (PM 2026-11-27).")]
+        [SerializeField] private StatusChipsView status;
         [Tooltip("「찹츄까지 n장」 의 숫자 크기 (시안 .mgoal b 18 × 2).")]
         [SerializeField] private float goalNumberSize = 36f;
 
@@ -72,7 +73,6 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Color hpMidColor = new Color32(0xff, 0x9f, 0x1a, 0xFF);
         [SerializeField] private Color hpLowColor = new Color32(0xec, 0x3b, 0x46, 0xFF);
         [SerializeField] private Color deadCharacterColor = new Color(0.8f, 0.8f, 0.8f, 0.45f);
-        [SerializeField] private Color pendingCharacterColor = new Color(0.62f, 0.62f, 0.62f, 1f);
 
         [Header("대상 선택")]
         [Tooltip("나를 고를 수 있을 때 내 발밑 빨간 점선 타원 (상대 좌석의 것과 같다).")]
@@ -96,7 +96,7 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             if (nicknameText == null || nicknameLayout == null || turnTag == null || turnTagFill == null || turnTagText == null || turnTagCrown == null || turnTimer == null
-                || hpText == null || hpFill == null || hpFillGraphic == null || handBadge == null || character == null || goalFill == null || goalText == null || goalCrown == null
+                || hpText == null || hpFill == null || hpFillGraphic == null || handBadge == null || character == null || goalFill == null || goalText == null || goalCrown == null || status == null
                 || pickRing == null || pickOutline == null || tapArea == null || pickLayers == null || pickLayers.Length == 0)
                 Debug.LogError($"[{nameof(MyPanelView)}] 참조 중 비어 있는 것이 있습니다.", this);
             else
@@ -148,10 +148,18 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
-        /// <summary>살아 있음 · 사망 대기 · 최종 사망 (06-death.md) — HP 자리 · 캐릭터 · 최종 사망이면 「찹츄까지」 칩을 숨긴다.</summary>
+        /// <summary>행동 카드 금지 (1007 짖기) — 「행동 금지」 알약.</summary>
+        public void SetBlocked(bool blocked) => status.SetBlocked(blocked);
+
+        /// <summary>다음 턴 스킵 — 「스킵」 알약. 스킵된 턴이 지나가면 뗀다 (10-ui.md 3절).</summary>
+        public void SetSkip(bool skip) => status.SetSkip(skip);
+
+        /// <summary>살아 있음 · 최종 사망 (06-health.md) — HP 자리 · 캐릭터 · 최종 사망이면 「찹츄까지」 칩을 숨긴다. 사망 대기는 살아 있을 때와 같다 — HP 0 만 (10-ui.md 2-1).</summary>
         public void SetLife(LifeState life)
         {
             _life = life;
+            if (life == LifeState.Dead)
+                status.Clear();
             Refresh();
             RefreshHp(GameServer.MaxHp);
         }
@@ -182,29 +190,28 @@ namespace Chapchu.UI.GameScreen
 
         private void Refresh()
         {
-            bool alive = _life == LifeState.Alive;
+            bool alive = _life != LifeState.Dead;
             turnTag.SetActive(alive && (_chapchu || _isMyTurn));
             turnTagFill.color = _chapchu ? chapchuColor : turnColor;
             turnTagText.text = _chapchu ? ChapchuTagText : TurnTagText;
             turnTagText.color = _chapchu ? Color.white : ink;
             turnTagCrown.SetActive(_chapchu);
             turnTimer.SetActive(_isMyTurn && _life != LifeState.Dead);
-            character.color = _life == LifeState.Dead ? deadCharacterColor : _life == LifeState.DeathPending ? pendingCharacterColor : Color.white;
+            character.color = _life == LifeState.Dead ? deadCharacterColor : Color.white;
             character.rectTransform.localScale = Vector3.one * (_isMyTurn && alive ? turnCharacterScale : 1f);
-            // 최종 사망이면 「찹츄까지 n장」 칩(goalFill 의 부모 = 칩 전체)을 숨긴다 — 더 모을 수 없다. 사망 대기는 살아날 수 있어 둔다
+            // 최종 사망이면 「찹츄까지 n장」 칩(goalFill 의 부모 = 칩 전체)을 숨긴다 — 더 모을 수 없다
             goalFill.transform.parent.gameObject.SetActive(_life != LifeState.Dead);
         }
 
         private void RefreshHp(int maxHp)
         {
             bool dead = _life == LifeState.Dead;
-            bool pending = _life == LifeState.DeathPending;
-            int shown = dead || pending ? 0 : _hp;
+            int shown = dead ? 0 : _hp;
             float fraction = maxHp > 0 ? (float)shown / maxHp : 0f;
 
-            hpText.text = dead ? DeadHpText : pending ? PendingHpText : _hp.ToString();
-            hpText.fontSize = dead || pending ? lifeHpFontSize : _hpFontSize;
-            hpText.color = !dead && !pending && _hp > 0 && _hp <= lowHpThreshold ? hpLowInk : ink;
+            hpText.text = dead ? DeadHpText : _hp.ToString();
+            hpText.fontSize = dead ? lifeHpFontSize : _hpFontSize;
+            hpText.color = !dead && _hp > 0 && _hp <= lowHpThreshold ? hpLowInk : ink;
             hpFill.sizeDelta = new Vector2(maxFillWidth * fraction, hpFill.sizeDelta.y);
             int percent = Mathf.RoundToInt(fraction * 100f);
             hpFillGraphic.color = percent > 50 ? hpHighColor : percent > 20 ? hpMidColor : hpLowColor;

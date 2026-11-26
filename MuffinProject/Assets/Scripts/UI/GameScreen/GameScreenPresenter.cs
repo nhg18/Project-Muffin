@@ -19,12 +19,11 @@ namespace Chapchu.UI.GameScreen
     /// · 곧 씬이 바뀌는 알림의 경고 예약과 방 나가기 (내 강제 퇴장 · 판 중지 — GameMenuPresenter 를 받은 자리에서 바로 부른다).
     /// 체인: 카드가 나오면(OnCardPlayed) ChainCardsPresenter 가 크게 보여 주고, 반응 시간(OnReactionStarted)이 오면 그 아래에 반응 타이머. 처리 결과가 오면 카드를 치우고 체인이 비면 타이머를 숨긴다 (10-ui.md 5절).
     /// 버림 더미: 버림이 생기는 일(효과 적용 · 무효화 · 강제 버림 · 함정 파괴 · 사망 · 나감)마다 내 카드가 있으면 더미로 보낸 뒤 맨 위 카드 · 장수를 바꾼다 (10-ui.md 2-1 「버림 더미」).
-    /// 사망 대기(06-death.md): 좌석 · 내 HUD · 턴 순서에 「대기」, 턴 타이머는 멈춘 초에 선다. 이어지면(OnTurnResumed) 다시 센다.
+    /// 사망 대기(06-health.md 8절): 보이지 않는 상태라 좌석 · 내 HUD 는 HP 0 그대로 (10-ui.md 2-1). 게임이 멈춰 턴 순서 알약은 멈춤, 턴 타이머는 멈춘 초에 선다. 이어지면(OnTurnResumed) 다시 센다.
     /// 「뽑고 턴 끝」 버튼은 재생한 기준으로 내 턴 · 메인 행동 전 · 체인 없음 · 대상 선택 아님 · 사망 대기 없음일 때만 보인다 (통합 화면 UI v3 .drawbtn). 표시만 — 판정은 방장.
     /// </summary>
     public class GameScreenPresenter : MonoBehaviour
     {
-        private const string ChoosingFormat = "{0} 고르는 중";
         private const string MyChapchuShout = "찹츄!";            // 10-ui.md 5-2 #1 — 내가 선언했을 때
         private const string OtherChapchuShoutFormat = "{0} 찹츄!"; // 남이 선언했을 때. {0} = 이름
 
@@ -44,6 +43,8 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("체인에 올라간 카드 — 낸 카드를 모든 화면에 크게 보여 주고 처리되면 버림 더미로.")]
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
+        [Tooltip("카드 효과 고르기 판 (1019) — 남이 고를 때도 같은 판을 연출 큐 순서대로.")]
+        [SerializeField] private ChoicePopupPresenter choicePopup;
         [SerializeField] private MyTrapsPresenter myTraps;
         [Tooltip("카드 연출 3 단계(카드별 능력 발동) · 개판 등급 4 단계 — 효과가 적용된 카드의 연출을 그때 불러와 화면 전체에 (10-ui.md 5-1).")]
         [SerializeField] private CardFxPresenter cardFx;
@@ -101,7 +102,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || choicePopup == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -111,6 +112,21 @@ namespace Chapchu.UI.GameScreen
                 menu = FindFirstObjectByType<GameMenuPresenter>(FindObjectsInactive.Include); // 씬에 아직 연결하지 않았을 때
             if (menu == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] {nameof(GameMenuPresenter)} 를 찾지 못했습니다 — 강제 퇴장 · 판 중지를 처리하지 못합니다.", this);
+        }
+
+        // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값 (09-network.md 6.1) — 피해 · 회복 양의 기준 HP, 내 턴인지. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
+        private void Start()
+        {
+            if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
+
+            foreach (int actor in PlayerLook.OrderedActors())
+                if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
+                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 방 · Player 속성은 남이 쓸 수 있다
+
+            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
+                _isMyTurn = IsMe(turnActorValue);
+            if (_playing == null)
+                ShowHandPlayState(false);
         }
 
         private void OnEnable()
@@ -730,11 +746,29 @@ namespace Chapchu.UI.GameScreen
         // 방장이 바뀌었다 — 기록에 한 줄만 (팝업 없음, 09-network.md 9.1)
         private void HandleMasterClientSwitched(Photon.Realtime.Player newMaster) => Enqueue(() => { history.ShowHostChanged(); return null; });
 
-        private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); return null; });
+        // 다음 턴 스킵 — 걸린 동안 이름표 옆 「스킵」, 스킵된 턴이 지나가면 뗀다 (10-ui.md 3절 「턴 스킵 표시」)
+        private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); ShowSkipMarked(actorNumber, false); return null; });
 
-        private void HandleTurnSkipMarked(int actorNumber) => Enqueue(() => { history.ShowTurnSkipMarked(actorNumber); return null; });
+        private void HandleTurnSkipMarked(int actorNumber) => Enqueue(() => { history.ShowTurnSkipMarked(actorNumber); ShowSkipMarked(actorNumber, true); return null; });
 
-        private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });
+        // 행동 카드 금지 (1007 짖기) — 다음 턴 · 이번 턴 동안 이름표 옆 「행동 금지」
+        private void HandleActionBlockChanged(int actorNumber, ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); ShowBlocked(actorNumber, state != ActionBlock.None); return null; });
+
+        private void ShowSkipMarked(int actorNumber, bool marked)
+        {
+            if (IsMe(actorNumber))
+                myPanel.ShowSkipMarked(marked);
+            else
+                seats.ShowSkipMarked(actorNumber, marked);
+        }
+
+        private void ShowBlocked(int actorNumber, bool blocked)
+        {
+            if (IsMe(actorNumber))
+                myPanel.ShowBlocked(blocked);
+            else
+                seats.ShowBlocked(actorNumber, blocked);
+        }
 
         private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); boardEffects.ShowWait(casters); return null; });
 
@@ -759,6 +793,7 @@ namespace Chapchu.UI.GameScreen
             hand.EndReaction();
             reactionTimer.Hide();
             _chainCount = 0;
+            _pendingActors.Clear(); // 죽은 사람 · 사망 대기 중인 사람도 새 판에서 다시 산다 (11-card-list 1012)
 
             myTraps.Clear();
             myTraps.ShowCount(0);
@@ -767,7 +802,10 @@ namespace Chapchu.UI.GameScreen
             turnOrder.ShowDirection(false);
             foreach (int actor in order)
             {
+                ShowLife(actor, LifeState.Alive);
                 turnOrder.ShowChapchu(actor, false);
+                ShowSkipMarked(actor, false);
+                ShowBlocked(actor, false);
                 if (IsMe(actor))
                     continue;
                 seats.ShowChapchu(actor, false);
@@ -794,16 +832,28 @@ namespace Chapchu.UI.GameScreen
             _hpSource = turns > 0 ? HpSource.Fallout : HpSource.Normal;
         }
 
-        // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 반응 타이머 자리에 「{이름} 고르는 중」 (사용자 2026-11-13)
+        // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 같은 판을 누를 수 없게 — 고르는 사람의 손패 · 재생한 HP 로 (PM 2026-11-27)
         private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
         {
-            if (actor == PhotonNetwork.LocalPlayer.ActorNumber)
+            if (IsMe(actor))
                 return;
-            Enqueue(() => { reactionTimer.ShowChoosing(string.Format(ChoosingFormat, PlayerLook.NameOf(actor)), startsAt, deadline); return null; });
+            Enqueue(() =>
+            {
+                reactionTimer.Hide();
+                choicePopup.ShowWatching(actor, user, cardId, handCount, _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp, damage, startsAt, deadline);
+                return null;
+            });
         }
 
-        private void HandleChoiceMade(int actor, int option, bool timedOut) =>
-            Enqueue(() => { reactionTimer.Hide(); history.ShowChoiceMade(actor, option, timedOut); return null; });
+        // 골랐다 — 남이 골랐으면 고른 카드가 튀어나온 뒤 기록 줄 (내 판은 ChoicePopupPresenter 가 바로 닫는다)
+        private void HandleChoiceMade(int actor, int option, bool timedOut) => Enqueue(() => ChoiceMadeRoutine(actor, option, timedOut));
+
+        private IEnumerator ChoiceMadeRoutine(int actor, int option, bool timedOut)
+        {
+            reactionTimer.Hide();
+            yield return choicePopup.PickRoutine(actor, option);
+            history.ShowChoiceMade(actor, option, timedOut);
+        }
 
         // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
         private void HandleGaepanChanged(int caster, int left, bool again) =>
@@ -883,13 +933,13 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 사망 대기 (06-death.md) — 게임이 멈춘다. 좌석 · 내 HUD · 턴 순서에 「대기」, 턴 타이머는 지금 초에 선다.
+        // 사망 대기 (06-health.md 8절) — 게임이 멈춘다. 사람에게는 보이지 않는 상태라(10-ui.md 2-1) 좌석 · 내 HUD 는 그대로 두고, 턴 순서 알약은 멈춤 · 턴 타이머는 지금 초에 선다.
         private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
         {
             Enqueue(() =>
             {
                 _pendingActors.Add(actorNumber);
-                ShowLife(actorNumber, LifeState.DeathPending, deadline);
+                turnOrder.ShowLife(actorNumber, LifeState.DeathPending);
                 turnTimer.ShowPaused();
                 return null;
             });
@@ -911,7 +961,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        private void ShowLife(int actorNumber, LifeState life, double deadline = 0)
+        private void ShowLife(int actorNumber, LifeState life)
         {
             if (life == LifeState.Dead)
                 _deadActors.Add(actorNumber);
@@ -920,7 +970,7 @@ namespace Chapchu.UI.GameScreen
             if (IsMe(actorNumber))
                 myPanel.ShowLife(life);
             else
-                seats.ShowLife(actorNumber, life, deadline);
+                seats.ShowLife(actorNumber, life);
             turnOrder.ShowLife(actorNumber, life);
         }
 

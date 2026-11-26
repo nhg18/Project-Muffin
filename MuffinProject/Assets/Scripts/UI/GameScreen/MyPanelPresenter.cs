@@ -41,6 +41,9 @@ namespace Chapchu.UI.GameScreen
             if (me.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                 ShowHandCount(handCountValue);
 
+            // 다음 턴 스킵은 스냅샷에 없다 — 다음 알림부터
+            ShowBlocked(me.CustomProperties.TryGetValue(PlayerProps.ActionBlock, out object block) && block is byte blockValue && blockValue != (byte)ActionBlock.None);
+
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
             if (room.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 ShowTurn(turnActorValue == me.ActorNumber);
@@ -68,6 +71,12 @@ namespace Chapchu.UI.GameScreen
         /// <summary>턴이 바뀌었다 — 「나의 턴」 이름표 · 스톱워치.</summary>
         public void ShowTurn(bool isMyTurn) => _view.SetMyTurn(isMyTurn);
 
+        /// <summary>행동 카드 금지 (OnActionBlockChanged, 1007 짖기) — 걸린 동안 「행동 금지」.</summary>
+        public void ShowBlocked(bool blocked) => _view.SetBlocked(blocked);
+
+        /// <summary>다음 턴 스킵 (OnTurnSkipMarked → OnTurnSkipped) — 걸린 동안 「스킵」.</summary>
+        public void ShowSkipMarked(bool marked) => _view.SetSkip(marked);
+
         /// <summary>내 찹츄 상태 (OnChapchuChanged) — 분홍 「찹츄!」 이름표. 손패가 10장이 아니어도 남고, 내 턴 시작 판정에서 무효가 되면 바로 돌아간다 (10-ui.md 7절).</summary>
         public void ShowChapchu(bool isChapchu)
         {
@@ -75,7 +84,7 @@ namespace Chapchu.UI.GameScreen
             _view.SetChapchu(isChapchu);
         }
 
-        /// <summary>내 생사 (OnDeathPending · OnDeathAvoided · OnPlayerDied) — HP 자리 「대기」 · 「사망」.</summary>
+        /// <summary>내 생사 (OnDeathAvoided · OnPlayerDied) — HP 자리 「사망」. 사망 대기는 보이지 않는다 (10-ui.md 2-1).</summary>
         public void ShowLife(LifeState life) => _view.SetLife(life);
     }
 }
