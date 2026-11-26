@@ -12,17 +12,8 @@ namespace Chapchu.Game
         // ── 체력 ──
 
         /// <summary>entry 의 피해 1건. 피해 → 회복 전환(C03) · 감소(C10) · 사망 방지(C11)를 계산한 뒤 한 번만 반영한다.</summary>
-        /// <remarks>반사(2002)로 쓴 사람에게 돌아간 피해는 반사한 사람이 준 것이다 (11-card-list 1-3 「2002」).</remarks>
         internal void ApplyDamage(ChainEntry entry, int actor, int amount) =>
-            ApplyDamage(entry, actor, Scaled(entry, amount), DealerOf(entry, actor), true); // 2배가 먼저, 감소는 그 다음 (04 7절)
-
-        /// <summary>쓴 사람이 자기 카드로 받는 피해 1건 (1005 의 반동) — 반사가 걸려 있어도 준 사람은 쓴 사람이다.</summary>
-        internal void ApplyOwnDamage(ChainEntry entry, int amount) =>
-            ApplyDamage(entry, entry.User, Scaled(entry, amount), entry.User, true);
-
-        // 그 카드의 피해를 actor 에게 준 사람 — 쓴 사람. 반사돼 쓴 사람이 받는 것이면 반사한 사람.
-        private static int DealerOf(ChainEntry entry, int actor) =>
-            entry.ReflectedBy != -1 && actor == entry.User ? entry.ReflectedBy : entry.User;
+            ApplyDamage(entry, actor, Scaled(entry, amount), entry.User, true); // 2배가 먼저, 감소는 그 다음 (04 7절)
 
         // by = 피해를 준 사람. direct = 이 카드가 직접 준 피해 — 같이 받는 피해(2018)는 「쓰러뜨림」(1005)에 넣지 않는다.
         private void ApplyDamage(ChainEntry entry, int actor, int amount, int by, bool direct)
@@ -59,7 +50,7 @@ namespace Chapchu.Game
             if (entry.DamageSharers.TryGetValue(actor, out ChainEntry share))
             {
                 foreach (int other in ReceiversOf(EffectSubject.Target, share))
-                    ApplyDamage(share, other, amount, share.ReflectedBy != -1 ? DealerOf(share, other) : by, false); // 물귀신이 반사됐으면 낸 사람이 한 번 더 — 준 사람은 반사한 사람
+                    ApplyDamage(share, other, amount, by, false);
             }
         }
 
@@ -401,13 +392,18 @@ namespace Chapchu.Game
             if (below == null)
                 return;
 
-            int[] targets = (toCaster ? new[] { below.User } : TargetsOf(entry)).Where(IsInGame).ToArray(); // 가로채기가 반사됐으면 새 대상의 그 자리는 가로채기를 낸 사람
+            int[] targets = (toCaster ? new[] { below.User } : entry.Targets).Where(IsInGame).ToArray();
             if (targets.Length > 0)
                 below.Targets = targets;
         }
 
-        /// <summary>반사 (2002) — 반응한 카드에서 이 카운터를 낸 사람의 몫을 그 카드를 쓴 사람에게 돌린다.</summary>
-        internal void ReflectBelow(ChainEntry entry) => MarkBelow(entry, below => below.ReflectedBy = entry.User);
+        /// <summary>반사 (2002) — 반응한 카드를 무효로 하고, 그 카드가 처리될 차례에 이 카운터를 낸 사람이 다시 쓰게 표시한다 (RecastOf).</summary>
+        internal void ReflectBelow(ChainEntry entry) => MarkBelow(entry, below =>
+        {
+            below.Negated = true;
+            below.NegatedBy = entry.User;
+            below.ReflectedBy = entry.User;
+        });
 
         /// <summary>피해 같이 받기 (2018 물귀신) — 반응한 카드에 「이 카운터를 낸 사람이 받는 만큼 이 카운터의 대상도」 표시를 남긴다.</summary>
         internal void ShareDamageBelow(ChainEntry entry) => MarkBelow(entry, below => below.DamageSharers[entry.User] = entry);

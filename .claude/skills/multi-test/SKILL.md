@@ -18,6 +18,7 @@ bash .claude/skills/multi-test/run.sh timeout                     # 클론의 �
 bash .claude/skills/multi-test/run.sh skip                        # 반응 시간의 스킵 버튼 — 방장에게 카운터를 쥐여 줌 → 「스킵」 버튼 켜짐(남은 초 없음) → 누르면 버튼 · 빛 꺼짐 → 그 뒤 카운터 거절(코드 6)
 bash .claude/skills/multi-test/run.sh counter pick                # 2018 물귀신 — 대상을 고르는 카운터: 화면에서 내면 좌석 고르기가 열림 → 상대 좌석을 누름 → 나 · 고른 사람이 같은 피해
 bash .claude/skills/multi-test/run.sh counter cost                # 2021 으르렁 — 위와 같이 낸 뒤 대가: 고르기 판에 내 손패가 카드 칸으로 → 한 칸 누름 → 그 카드가 버려짐 (SHOT_DIR 이 있으면 cost_*.png)
+bash .claude/skills/multi-test/run.sh counter reflect             # 2002 반사 — 화면에서 내면 막힌 카드는 버림 더미로 · 쓴 사람만 피해 · 기록 줄 「반사! →」
 bash .claude/skills/multi-test/run.sh counter                     # 실제 카운터 — 방장에게 2003 진짜 할거야? 를 쥐여 줌 → 클론이 행동 카드 → 방장이 화면에서 카운터 → 막힌 카드는 쓴 사람 손패로 · 두 화면 손패 장수 = 방장 값
 bash .claude/skills/multi-test/run.sh migrate [fail|kick|room|result]            # 방장 이주 (09 9.1) — 메인 + 클론 + 봇 1. 방장(메인)이 나감 → 클론이 사본으로 이어받아 봇과 판을 잇는다 · 기록 「방장이 바뀌었어요」. fail = 사본 없이 나감 → 클론은 방으로 + 경고 팝업 · kick = 방장이 3턴 시간 초과로 강제 퇴장 → 이주 · room = 방 대기 중 방장 이탈 → 방 해체 · result = 결과 화면 방장 이탈 → 전원 로비
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디터마다 게임 뷰 PNG — 처음 나온 카드의 3 단계 확대(_zoom) · 반응 시간(_reaction · _later) + 턴이 끝난 뒤. 화면 눈 확인용 (MultiTest.ArmCardShots · Shot)

@@ -194,7 +194,7 @@
       "id": 2002, "name": "반사", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
       "text": "나에게 오는 효과를 쓴 사람에게 되돌린다",
       "art": "",
-      "reactsTo": "Action, Counter", "reactCondition": "AimedAtMe",
+      "reactsTo": "Action", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "ReflectEffect", "args": "" } ]
     },
     {

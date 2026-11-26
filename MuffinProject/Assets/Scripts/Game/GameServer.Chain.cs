@@ -236,14 +236,18 @@ namespace Chapchu.Game
                     if (entry.Negated)
                     {
                         _resolving.RemoveAt(0);
-                        ResolveNegated(entry);
+                        ChainEntry recast = RecastOf(entry);
+                        if (recast != null)
+                            _resolving.Insert(0, recast); // 반사 — 무효 알림 대신, 반사한 사람이 다시 쓴 카드로 이어서 처리한다
+                        else
+                            ResolveNegated(entry);
                         continue;
                     }
 
                     if (entry.Card.Type == CardType.Counter)
                         AddStat(entry.User, StatKind.CounterSuccess); // 무효화되지 않고 처리됐다 (07 11-4)
 
-                    int[] targets = TargetsOf(entry).Where(t => !entry.Excluded.Contains(t)).ToArray();
+                    int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
                 }
 
@@ -293,6 +297,37 @@ namespace Chapchu.Game
                 _resumeAt = System.Math.Max(_resumeAt, at);
         }
 
+        // 반사(2002)된 카드를 반사한 사람이 다시 쓴 것 — 없으면(반사가 아니다 · 반사한 사람이 그새 빠졌다) null (04 7절 「반사」 · 11-card-list 1-3).
+        // 카드의 조건(대상 후보 · 행동 금지 · 내 턴)은 따지지 않고, 반응 시간도 다시 열지 않는다 — 막으려면 반사를 막는다.
+        // 대상: 1명 카드(고르든 자동이든)는 원래 쓴 사람, 전원 카드는 반사한 사람 기준 전원. 원래 쓴 사람이 빠졌으면 받는 사람이 없어 불발이다.
+        // 체인의 카드 순서(_chainOrder)에는 넣지 않는다 — 카드는 원래 것 한 장으로 버림 더미에 간다. 「행동 카드 사용」 지표에도 세지 않는다.
+        private ChainEntry RecastOf(ChainEntry entry)
+        {
+            int by = entry.ReflectedBy;
+            if (by == -1 || !IsInGame(by))
+                return null;
+
+            int[] targets;
+            switch (entry.Card.Target)
+            {
+                case TargetType.OneOther:
+                case TargetType.TwoOthers:
+                case TargetType.OneAny:
+                case TargetType.MostHand:
+                case TargetType.NextPlayer:
+                    targets = new[] { entry.User };
+                    break;
+                default:
+                    targets = ResolveTargets(by, entry.Card.Target, null, fromHand: false) ?? new int[0];
+                    break;
+            }
+
+            var recast = new ChainEntry(entry.Card, by, targets) { Below = entry.Below };
+            foreach (CardEffect effect in entry.Card.Effects)
+                effect.Prepare(this, recast);
+            return recast;
+        }
+
         // 무효된 카드 — 효과 없이, 체인이 끝나면 버림 더미로 (DiscardChain). 「손패로 반환」 이면 정해진 사람 손패로 (쓴 사람 2003 · 카운터를 낸 사람 2020).
         // 사건 기록: 카드 반환(T13) — 쓴 사람에게 돌아갔을 때만
         private void ResolveNegated(ChainEntry entry)
@@ -332,13 +367,9 @@ namespace Chapchu.Game
         /// <summary>효과를 받을 사람. 본인 무효화(Excluded)와 나간 사람을 뺀다 — 처리 전에 빠진 대상은 그 효과만 불발 (04 10절).</summary>
         internal int[] ReceiversOf(EffectSubject subject, ChainEntry entry)
         {
-            IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : TargetsOf(entry);
+            IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets;
             return receivers.Where(actor => !entry.Excluded.Contains(actor) && IsInGame(actor)).ToArray();
         }
-
-        /// <summary>그 카드의 대상을 지금 읽을 값 — 반사(2002)한 사람의 자리는 쓴 사람이다 (04 7절 「반사 (내 몫)」). 대상을 직접 읽는 효과는 이것을 쓴다.</summary>
-        internal int[] TargetsOf(ChainEntry entry) =>
-            entry.ReflectedBy == -1 ? entry.Targets : entry.Targets.Select(t => t == entry.ReflectedBy ? entry.User : t).ToArray();
 
         /// <summary>손패 감소 효과(빼앗기 · 버리기 · 주기)를 받을 사람 — ReceiversOf 에서 「손패 − 내 몫 무효」(2019) 한 사람을 더 뺀다.</summary>
         internal int[] HandLossReceiversOf(EffectSubject subject, ChainEntry entry) =>

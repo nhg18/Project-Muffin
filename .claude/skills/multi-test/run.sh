@@ -586,11 +586,12 @@ run_multi() {
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ActIfMyTurn)
             case "$out" in
-                OK*)   log "  $(name_of "$project"): $out"; acted=1; done_rounds=$((done_rounds + 1)); sleep 2; break ;;
+                OK*)   log "  $(name_of "$project"): $out"; acted=1; done_rounds=$((done_rounds + 1)); break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return ;;
             esac
         done
         # 처음 카드가 나온 뒤 한 번 — 연출(1.46초) 뒤 반응 시간에 남의 턴 클라이언트가 카운터 요청 (04-card.md 7 · 8절)
+        # 카드를 낸 뒤의 쉼(2초)은 이 요청 뒤에 둔다 — 요청 하나(script.run)가 1.5초 넘게 걸려, 쉬고 나서 보내면 반응 시간 5초를 넘겨 코드 6 으로 거절된다 (2026-11-26)
         if [ $acted -eq 1 ] && [ $probed -eq 0 ] && printf '%s' "$out" | grep -q '카드'; then
             for project in "${EDITORS[@]}"; do
                 out=$(call "$project" CounterProbe)
@@ -600,6 +601,7 @@ run_multi() {
                 esac
             done
         fi
+        [ $acted -eq 1 ] && sleep 2
         [ $acted -eq 0 ] && sleep 1
     done
     PROBED=$probed
@@ -854,6 +856,7 @@ run_counter() {
     local out project arm="arm"
     [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 1장 고르기까지
     [ "${1:-}" = "pick" ] && arm="arm2018" # 2018 물귀신 — 낼 때 화면에서 대상 1명 고르기
+    [ "${1:-}" = "reflect" ] && arm="arm2002" # 2002 반사 — 막고 내가 쓴 사람에게 다시 쓴다
     enter_game 2 || return
     log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
     for _ in $(seq 1 20); do
@@ -913,6 +916,7 @@ run_counter() {
     local line="— 손패로 돌아감"
     [ "$arm" = "arm2018" ] && line="도 같은 피해"
     [ "$arm" = "arm2021" ] && line=" 무효"
+    [ "$arm" = "arm2002" ] && line="반사! →"
     log "▶ 기록에 카운터가 한 일의 줄이 있는가"
     for project in "${EDITORS[@]}"; do
         out=$(call "$project" HistoryHasPart "$line")

@@ -581,7 +581,7 @@ namespace Chapchu.Game.Bots
             if (reactionOpen && top.User != bot && top.Targets.Contains(bot) && !IsOnlyHelpful(top.Card))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
-                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top) && CounterTargets(bot, c, top) != null).OrderBy(c => c.CardId).FirstOrDefault();
+                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top) && WantsReflect(bot, c, top) && CounterTargets(bot, c, top) != null).OrderBy(c => c.CardId).FirstOrDefault();
                 if (counter != null)
                 {
                     int[] targets = CounterTargets(bot, counter, top);
@@ -598,6 +598,22 @@ namespace Chapchu.Game.Bots
 
         // 7-4 — 효과가 모두 회복인 카드. 받는 쪽에 이롭기만 해서 봇이 카운터로 막지 않는다
         private static bool IsOnlyHelpful(Card card) => card.Effects.Count > 0 && card.Effects.All(e => e.Tag == EffectTag.Heal);
+
+        // 7-4 — 반사(2002)는 맨 위 카드를 내가 쓴 사람에게 다시 쓰는 것이다 (사용자 2026-11-26). 반사가 아닌 카운터는 언제나 true.
+        // HP 를 서로 바꾸는 카드(1011)는 반사해도 결과가 같아 내지 않는다. 반동이 있는 카드(1005)는 쓴 사람이 그 피해로 쓰러질 때만 낸다 — 못 쓰러뜨리면 반동을 내가 받는다
+        private bool WantsReflect(int bot, Card counter, ChainEntry top)
+        {
+            if (!counter.Effects.Any(e => e is ReflectEffect))
+                return true;
+            if (top.Card.Effects.Any(e => e is SwapHpEffect))
+                return false;
+            if (!top.Card.Effects.Any(e => e.IsRecoil))
+                return true;
+
+            var recast = new ChainEntry(top.Card, bot, new[] { top.User });
+            int damage = top.Card.Effects.Where(e => !e.IsRecoil).Sum(e => e.PredictDamage(_server, recast, top.User));
+            return damage >= _server.PlayerHp(top.User);
+        }
 
         // 7-4 — 대상을 고르는 카운터의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
         // 카운터의 대상 (18-bot.md 7-4) — 찹츄 → 손패 많은 → HP 낮은 상대 순. 고르지 않는 카드는 빈 배열, 고를 사람이 모자라면 null (그 카운터는 내지 않는다).
