@@ -1013,6 +1013,23 @@ public static class MultiTest
     //   after = 버튼 · 초록 빛이 꺼졌는지, 스킵한 뒤의 카운터가 거절되는지(방장 규칙에 직접)
     private const string SkipProbeKey = "MultiTest.SkipProbeCard";
     private const int SkipProbeInstance = 95000;
+    private const string PickShotKey = "MultiTest.PickShot";
+
+    /// <summary>counter pick 의 「pick」 단계가 좌석을 누르기 직전(대상 고르는 중)의 게임 뷰를 이 파일로 찍게 한다.</summary>
+    public static string ArmPickShot(string path)
+    {
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        SessionState.SetString(PickShotKey, path);
+        return "OK 대상 고르는 중 스크린샷 → " + path;
+    }
+
+    private static float ChainLayerAlpha()
+    {
+        TopCardLayerView layer = Object.FindFirstObjectByType<TopCardLayerView>();
+        if (layer == null) return -1f;
+        return ((UnityEngine.UI.RawImage)typeof(TopCardLayerView).GetField("chainImage", Private).GetValue(layer)).color.a;
+    }
+
     public static string ReactionSkipProbe(string step)
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
@@ -1132,6 +1149,12 @@ public static class MultiTest
                     return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
                 return UseFromHand(SkipProbeInstance) ? "OK P" + me + " 카운터를 화면에서 냄" : "WAIT 손패에 카운터가 아직 없다";
             }
+            case "pickclosed":
+            {
+                // 대상 고르기가 끝나면 체인 층(낸 카드)의 불투명도가 돌아온다 (10-ui.md 6절)
+                float alpha = ChainLayerAlpha();
+                return alpha < 0.99f ? "WAIT 체인 층 불투명도 " + alpha.ToString("0.00") : "OK 대상 고르기 끝 — 체인 층 불투명도 " + alpha.ToString("0.00");
+            }
             case "pick":
             {
                 // 대상을 고르는 카운터 (2018) — 손패에서 내면 대상 고르기가 열린다 → 상대 좌석을 누른다
@@ -1142,8 +1165,18 @@ public static class MultiTest
                 var seatOf = (Dictionary<int, OpponentSeatView>)typeof(OpponentSeatsPresenter).GetField("_seatOf", Private).GetValue(seats);
                 if (!seatOf.TryGetValue(other, out OpponentSeatView seat))
                     return "FAIL P" + other + " 의 좌석이 없다";
+                // 고르는 동안 체인 층(낸 카드)이 흐려져 상대 좌석을 가리지 않는다 (10-ui.md 6절). 한 번 부름에 같이 본다 — 반응 시간이 짧다
+                float faded = ChainLayerAlpha();
+                if (faded > 0.26f)
+                    return "WAIT 체인 층 불투명도 " + faded.ToString("0.00");
+                string shot = SessionState.GetString(PickShotKey, "");
+                if (shot != "")
+                {
+                    SessionState.EraseString(PickShotKey);
+                    ScreenCapture.CaptureScreenshot(shot); // 이 프레임 끝에 찍힌다 — 고르기가 아직 열려 있다
+                }
                 typeof(OpponentSeatsPresenter).GetMethod("HandleSeatClicked", Private).Invoke(seats, new object[] { seat });
-                return "OK 대상 고르기가 열림 → P" + other + " 의 좌석을 누름";
+                return "OK 대상 고르기가 열림 · 체인 층 불투명도 " + faded.ToString("0.00") + " → P" + other + " 의 좌석을 누름";
             }
             case "countered":
             {

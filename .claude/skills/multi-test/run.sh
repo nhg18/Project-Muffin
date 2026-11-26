@@ -858,6 +858,7 @@ run_counter() {
     [ "${1:-}" = "pick" ] && arm="arm2018" # 2018 물귀신 — 낼 때 화면에서 대상 1명 고르기
     [ "${1:-}" = "reflect" ] && arm="arm2002" # 2002 반사 — 막고 내가 쓴 사람에게 다시 쓴다
     enter_game 2 || return
+    if [ "$arm" = "arm2018" ] && [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$MAIN" ArmPickShot "$SHOT_DIR/pick_$(name_of "$MAIN").png")"; fi
     log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
     for _ in $(seq 1 20); do
         out=$(call "$MAIN" ReactionSkipProbe $arm)
@@ -884,6 +885,12 @@ run_counter() {
         done
         log "  $out"
         case "$out" in OK*) ;; *) fail "카운터 대상 고르기: $out"; return ;; esac
+        for _ in $(seq 1 8); do
+            out=$(call "$MAIN" ReactionSkipProbe pickclosed)
+            case "$out" in WAIT*) sleep 0.2 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대상 고른 뒤 체인 카드 되돌리기: $out"; return ;; esac
     fi
     if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
     if [ "$arm" = "arm2021" ]; then

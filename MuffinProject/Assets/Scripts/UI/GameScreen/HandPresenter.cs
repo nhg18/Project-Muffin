@@ -539,6 +539,7 @@ namespace Chapchu.UI.GameScreen
             _view.SetLocked(true);
             _view.Hold(card);
             topLayer.Set(card, true);
+            topLayer.SetChainFaded(true); // 체인의 카드가 상대 좌석을 가리지 않게 (10-ui.md 6절)
             ShowAtTargetSpot(card);
 
             bool isCounter = deck.GetCard(card.CardId)?.type == CardType.Counter;
@@ -547,6 +548,7 @@ namespace Chapchu.UI.GameScreen
 
             int[] targets = null;
             yield return seats.SelectTargetsRoutine(cardName, targetCount, includeMe, picked => targets = picked);
+            topLayer.SetChainFaded(false);
 
             // 카운터의 대상을 고르는 사이 반응 시간이 끝났다 (EndReaction) — 같은 프레임에 다 골랐어도 요청하지 않는다
             if (isCounter && !_counterTargeting)
