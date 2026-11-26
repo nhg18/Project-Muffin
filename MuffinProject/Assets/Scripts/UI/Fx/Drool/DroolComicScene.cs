@@ -11,7 +11,7 @@ namespace Chapchu.UI.Fx.Drool
     /// 오른쪽 위 「+N」. 카드를 뺏긴 쪽 창엔 「-1」 표와 땀.
     /// 상대 창 수 = 낸 사람이 아닌 사람 수(<see cref="ComicContext.Others"/>, 많아야 셋 · 모르면 셋 — 시안은 늘 셋을 그린다), 얼굴은 <see cref="CardFxContext.Character"/> (사람마다 그림이 생기기 전까지 모두 같다).
     /// 4 단계 장식은 없다 (시안 FXA 군침이 싹 도노 s4 = 카드 옮기기뿐 — 게임 화면 몫).
-    /// 연출 길이 2.46초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 2.46초 (3 단계만) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// </summary>
     public class DroolComicScene : ComicScene
     {

@@ -11,9 +11,9 @@ namespace Chapchu.UI.Fx.Wait
     /// <summary>
     /// 기다려!(카드 1023) 만화 컷인 장면 — 다들 「찹츄!」 외치려는 순간 앞발 하나로 스읍! (시안 CI2.SC["기다려!"]).
     /// 분홍 꽃가루 속에서 나머지 사람들(얼굴 원)이 들썩이며 차례로 「찹츄!」 말풍선을 띄운다 → 0.36 초 쓴 사람의 큰 앞발이 아래에서 솟는다 →
-    /// 0.5 초 판이 빨갛게 바뀌고(햇살 · 집중선) 흰 고리가 퍼진다 → 「스읍!」 → 말풍선이 차례로 「…」 으로 줄고 얼굴마다 「승리 불가」 표가 붙는다.
+    /// 0.5 초 판이 빨갛게 바뀌고(햇살 · 집중선) 흰 고리가 퍼진다 → 말풍선이 차례로 「…」 으로 줄고 얼굴마다 「승리 불가」 표가 붙는다.
     /// 4 단계 = 쓴 사람에게 「기다려!」 말풍선 + 0.5 초 (시안 FXA 기다려! s4, 「승리 불가」 상태 글자는 게임 화면 몫이라 뺐다).
-    /// 연출 길이 2.86초 (3 단계 2.36초 + 4 단계 0.5초) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 2.86초 (3 단계 2.36초 + 4 단계 0.5초) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// 얼굴 그림은 모두 <see cref="CardFxContext.Character"/> 의 얼굴 칸 — 자리마다 얼굴 그림이 생기면 그것으로 바꾼다.
     /// 기준 문서: docs/systems/11-card-list.md 1023 기다려! · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
     /// </summary>
@@ -24,42 +24,49 @@ namespace Chapchu.UI.Fx.Wait
         // 시안 bubble: 꼬리 뿌리의 테를 덮는 안쪽 타원 = 테 안쪽 반 + 0.5 px 더 들인다
         private const float BubbleCoverInset = 0.5f;
         // 시안 paw 모양 자료 (손바닥 가운데 기준 설계 px — 조절할 값이 아니라 그림 모양이라 Inspector 에 열지 않는다)
-        // 털 결: 2차 조절점 = 시작 + (d, 20), 끝 = 시작 + (0.4d, 50)
-        private const float PawFurBend = 20f;
-        private const float PawFurLength = 50f;
-        private const float PawFurEnd = 0.4f;
-        private const float PawPalmShineTilt = -0.3f;
-
-        // 팔 테두리: 시작 · 3차 곡선(조절점 둘 + 끝) · 선 끝 · 3차 곡선(조절점 둘 + 끝)
-        private static readonly Vector2[] PawArm =
-        {
-            new Vector2(-118f, 40f), new Vector2(-132f, 240f), new Vector2(-120f, 520f), new Vector2(-104f, 900f),
-            new Vector2(104f, 900f), new Vector2(120f, 520f), new Vector2(132f, 240f), new Vector2(118f, 40f),
-        };
-        // 손바닥 타원 반지름
-        private static readonly Vector2 PawPalm = new Vector2(165f, 150f);
-        // 털 결 넷 (시작 x, 시작 y, 휘는 쪽 d)
-        private static readonly Vector3[] PawFur =
-        {
-            new Vector3(-150f, 40f, 30f), new Vector3(150f, 40f, -30f), new Vector3(-118f, 260f, 24f), new Vector3(118f, 300f, -24f),
-        };
-        // 큰 발바닥: 시작 + 3차 곡선 넷 (조절점 둘 + 끝)
-        private static readonly Vector2[] PawPad =
-        {
-            new Vector2(0f, -6f),
-            new Vector2(60f, -28f), new Vector2(106f, 20f), new Vector2(92f, 62f),
-            new Vector2(80f, 104f), new Vector2(30f, 96f), new Vector2(0f, 92f),
-            new Vector2(-30f, 96f), new Vector2(-80f, 104f), new Vector2(-92f, 62f),
-            new Vector2(-106f, 20f), new Vector2(-60f, -28f), new Vector2(0f, -6f),
-        };
-        // 발가락 넷 (x, y, 기울기) · 반지름 · 광택 (어긋남 x, y, 반지름 x, y) · 손바닥 광택 (x, y, 반지름 x, y)
+        // 떨림: rng(77) 로 윤곽 점마다 J(·, 3), 팔 x 에 J(0, 4) 더
+        private const int PawSeed = 77;
+        private const float PawJitter = 3f;
+        private const float PawArmJitter = 4f;
+        // 팔: x = ±(104 + 18·sin·0.6), y 900 ↔ 120 (아홉 점)
+        private const float PawArmX = 104f;
+        private const float PawArmBulge = 18f * 0.6f;
+        private const float PawArmTop = 120f;
+        private const float PawArmBottom = 900f;
+        // 손바닥 호: (cos a · 158, −sin a · 130 + 30), 왼쪽 a = π·1.02 → −0.5, 오른쪽 a = 0.48 → −0.5 (열한 점)
+        private static readonly Vector2 PawPalm = new Vector2(158f, 130f);
+        private const float PawPalmY = 30f;
+        private const float PawPalmLeft = Mathf.PI * 1.02f;
+        private const float PawPalmRight = 0.48f;
+        private const float PawPalmSweep = 0.5f;
+        // 발가락 넷 (x, y, 반지름) — 윤곽은 a0 → a1 (왼쪽 둘 π·1.05 → −π·0.15, 오른쪽 둘 π·1.15 → −π·0.05), 높이 1.08 배
         private static readonly Vector3[] PawToes =
         {
-            new Vector3(-112f, -56f, 0.5f), new Vector3(-42f, -104f, 0.15f), new Vector3(42f, -104f, -0.15f), new Vector3(112f, -56f, -0.5f),
+            new Vector3(-118f, -58f, 40f), new Vector3(-44f, -112f, 44f), new Vector3(44f, -112f, 44f), new Vector3(118f, -58f, 40f),
         };
-        private static readonly Vector2 PawToe = new Vector2(32f, 40f);
-        private static readonly Vector4 PawToeShine = new Vector4(-8f, -12f, 9f, 13f);
-        private static readonly Vector4 PawPalmShine = new Vector4(-30f, 18f, 26f, 14f);
+        private const float PawToeTall = 1.08f;
+        // 발가락 젤리 기울기 (크기는 반지름의 0.62 × 0.72, 6 아래)
+        private static readonly float[] PawBeanTilt = { 0.4f, 0.12f, -0.12f, -0.4f };
+        // 먹 그림자: (4, 6) 어긋나 1.035 × 1.02 배
+        private static readonly Vector2 PawInkOffset = new Vector2(4f, 6f);
+        private static readonly Vector2 PawInkScale = new Vector2(1.035f, 1.02f);
+        // 큰 발바닥 젤리: 시작 + 3차 곡선 넷 (조절점 둘 + 끝)
+        private static readonly Vector2[] PawPad =
+        {
+            new Vector2(0f, -4f),
+            new Vector2(46f, -30f), new Vector2(104f, 10f), new Vector2(92f, 58f),
+            new Vector2(84f, 96f), new Vector2(40f, 100f), new Vector2(0f, 88f),
+            new Vector2(-40f, 100f), new Vector2(-84f, 96f), new Vector2(-92f, 58f),
+            new Vector2(-104f, 10f), new Vector2(-46f, -30f), new Vector2(0f, -4f),
+        };
+        // 발가락 사이 갈라진 선 셋 (시작 x, y, 끝 x, y)
+        private static readonly Vector4[] PawSplits =
+        {
+            new Vector4(-82f, -70f, -72f, -30f), new Vector4(0f, -92f, 0f, -48f), new Vector4(82f, -70f, 72f, -30f),
+        };
+        // 타원 · 젤리를 다각형으로 볼 때의 점 수 (그 안으로 자를 때)
+        private const int ClipSides = 48;
+        private const int ClipCurveSteps = 12;
 
         /// <summary>나머지 사람 한 명의 그림 — 얼굴 원 · 말풍선 · 「승리 불가」 표.</summary>
         [Serializable]
@@ -104,8 +111,6 @@ namespace Chapchu.UI.Fx.Wait
         [SerializeField] private ComicSketch paw;
         [Tooltip("앞발이 막을 때 퍼지는 흰 고리.")]
         [SerializeField] private UIRing pawRing;
-        [Tooltip("「스읍!」 글자 (찍히기).")]
-        [SerializeField] private ComicStamp hushWord;
 
         [Header("때 (초)")]
         [Tooltip("앞발이 막는 때 — 판이 바뀐다 (초, 시안 0.5).")]
@@ -244,16 +249,26 @@ namespace Chapchu.UI.Fx.Wait
             new Color32(0xf6, 0xd9, 0xb8, 0xff),
             new Color32(0xf6, 0xe6, 0xc8, 0xff),
         };
-        [Tooltip("발바닥 색 (시안 #3a2626).")]
-        [SerializeField] private Color padColor = new Color32(0x3a, 0x26, 0x26, 0xff);
-        [Tooltip("발바닥 광택 (시안 rgba(255,255,255,.3)).")]
-        [SerializeField] private Color padShine = new Color(1f, 1f, 1f, 0.3f);
-        [Tooltip("앞발 테 두께 (설계 px, 시안 9).")]
-        [SerializeField] private float pawLine = 9f;
-        [Tooltip("털 결 선 두께 (설계 px, 시안 4).")]
+        [Tooltip("발바닥 젤리 색 (시안 #a8625c).")]
+        [SerializeField] private Color padColor = new Color32(0xa8, 0x62, 0x5c, 0xff);
+        [Tooltip("젤리 테 색 (시안 #6e3a36).")]
+        [SerializeField] private Color padEdge = new Color32(0x6e, 0x3a, 0x36, 0xff);
+        [Tooltip("젤리 위 분홍 빛 (시안 rgba(255,190,190,.45)).")]
+        [SerializeField] private Color padBlush = new Color(1f, 190f / 255f, 190f / 255f, 0.45f);
+        [Tooltip("큰 젤리 아래쪽 빗금 (시안 rgba(70,30,30,.25)).")]
+        [SerializeField] private Color padHatch = new Color(70f / 255f, 30f / 255f, 30f / 255f, 0.25f);
+        [Tooltip("발톱 색 (시안 #4a3a36).")]
+        [SerializeField] private Color clawColor = new Color32(0x4a, 0x3a, 0x36, 0xff);
+        [Tooltip("오른쪽 그늘 — 끝 색 (시안 rgba(120,70,30,.28), x −20 → 150 으로 짙어진다).")]
+        [SerializeField] private Color shadeColor = new Color(120f / 255f, 70f / 255f, 30f / 255f, 0.28f);
+        [Tooltip("그늘 연필 빗금 (시안 rgba(90,50,20,.32)).")]
+        [SerializeField] private Color shadeHatch = new Color(90f / 255f, 50f / 255f, 20f / 255f, 0.32f);
+        [Tooltip("왼쪽 위 밝은 빛 (시안 rgba(255,255,255,.18)).")]
+        [SerializeField] private Color pawShine = new Color(1f, 1f, 1f, 0.18f);
+        [Tooltip("앞발 테 두께 (설계 px, 시안 7).")]
+        [SerializeField] private float pawLine = 7f;
+        [Tooltip("털 삐침 선 두께 (설계 px, 시안 4).")]
         [SerializeField] private float furLine = 4f;
-        [Tooltip("털 결 진하기 (시안 0.3).")]
-        [SerializeField] private float furAlpha = 0.3f;
 
         [Header("흰 고리 (시안: 막고 0.32 초 동안 (420, 390) 에서 반지름 190 → 430 eo, 굵기 10·(1 − e) + 2, 진하기 1 − e)")]
         [Tooltip("고리가 사는 시간 (초, 시안 0.32).")]
@@ -266,12 +281,6 @@ namespace Chapchu.UI.Fx.Wait
         [SerializeField] private float ringWidth = 10f;
         [Tooltip("굵기 — 끝 (설계 px, 시안 2).")]
         [SerializeField] private float ringWidthMin = 2f;
-
-        [Header("「스읍!」")]
-        [Tooltip("찍히기 시작하는 때 (초, 시안 0.52).")]
-        [SerializeField] private float hushWordAt = 0.52f;
-        [Tooltip("찍히는 시간 (초, 시안 0.16).")]
-        [SerializeField] private float hushWordTime = 0.16f;
 
         [Header("4 단계")]
         [Tooltip("4 단계 장식 길이 (초, 시안 500ms).")]
@@ -301,8 +310,6 @@ namespace Chapchu.UI.Fx.Wait
                 Debug.LogError($"[{nameof(WaitComicScene)}] {name} 의 {nameof(paw)} 가 비었다");
             if (pawRing == null)
                 Debug.LogError($"[{nameof(WaitComicScene)}] {name} 의 {nameof(pawRing)} 가 비었다");
-            if (hushWord == null)
-                Debug.LogError($"[{nameof(WaitComicScene)}] {name} 의 {nameof(hushWord)} 가 비었다");
             for (int i = 0; i < people.Length; i++)
             {
                 Person person = people[i];
@@ -405,8 +412,6 @@ namespace Chapchu.UI.Fx.Wait
             {
                 ComicKit.SetAlpha(pawRing, 0f);
             }
-
-            hushWord.Apply((t - hushWordAt) / hushWordTime);
         }
 
         public override IEnumerator PostRoutine(ComicContext context)
@@ -536,58 +541,292 @@ namespace Chapchu.UI.Fx.Wait
         }
 
         // 시안 paw — 손바닥이 화면을 향한 큰 앞발 (손바닥 가운데 기준, 배율 · 기울기는 RectTransform). 모양 자료는 맨 위 Paw* 값.
+        // 떨리는 윤곽 → 먹 그림자 · 털색 → 오른쪽 그늘 · 연필 빗금 · 왼쪽 빛 (윤곽 안만) → 먹 테 → 발가락 사이 선 · 털 삐침 · 발톱 → 젤리 넷 · 큰 젤리.
+        // 떨림 난수는 시안과 같은 차례로 뽑는다 (rng(77) — 윤곽 · 빗금 · 갈라진 선 · 털 삐침 · 젤리).
         private void PaintPaw(ComicPen pen)
         {
-            // 팔: 왼쪽 위 → (3차 곡선) 왼쪽 아래 → 오른쪽 아래 → (3차 곡선) 오른쪽 위
-            pen.BeginPath();
-            pen.MoveTo(PawArm[0].x, PawArm[0].y);
-            pen.BezierCurveTo(PawArm[1].x, PawArm[1].y, PawArm[2].x, PawArm[2].y, PawArm[3].x, PawArm[3].y);
-            pen.LineTo(PawArm[4].x, PawArm[4].y);
-            pen.BezierCurveTo(PawArm[5].x, PawArm[5].y, PawArm[6].x, PawArm[6].y, PawArm[7].x, PawArm[7].y);
-            pen.ClosePath();
-            pen.Fill(_fur);
-            pen.Stroke(ComicKit.Ink, pawLine);
+            var random = new ComicRandom(PawSeed);
+            float Jitter(float value, float spread) => value + (random.Next() - 0.5f) * spread;
 
-            // 손바닥
-            pen.BeginPath();
-            pen.Ellipse(0f, 0f, PawPalm.x, PawPalm.y, 0f, 0f, ComicKit.Tau);
-            pen.Fill(_fur);
-            pen.Stroke(ComicKit.Ink, pawLine);
-
-            // 털 결 — 시안 quadraticCurveTo(a + d, b + 20, a + 0.4d, b + 50) 를 같은 3차 곡선으로 (조절점 = 끝점 + ⅔·(2차 조절점 − 끝점))
-            pen.Save();
-            pen.Alpha = furAlpha;
-            foreach (Vector3 fur in PawFur)
+            // 윤곽 점: 팔 왼쪽 → 손바닥 → 발가락 넷 → 손바닥 → 팔 오른쪽 (시안 add — 인자의 J 가 먼저, 그다음 x · y 의 J)
+            var outline = new List<Vector2>();
+            void Add(float x, float y)
             {
-                Vector2 from = new Vector2(fur.x, fur.y), bend = from + new Vector2(fur.z, PawFurBend), to = from + new Vector2(fur.z * PawFurEnd, PawFurLength);
-                Vector2 c1 = from + (bend - from) * 2f / 3f, c2 = to + (bend - to) * 2f / 3f;
+                float px = Jitter(x, PawJitter);
+                float py = Jitter(y, PawJitter);
+                outline.Add(new Vector2(px, py));
+            }
+            for (int i = 0; i <= 8; i++)
+            {
+                float v = i / 8f;
+                float x = -PawArmX - PawArmBulge * Mathf.Sin(v * Mathf.PI) + Jitter(0f, PawArmJitter);
+                Add(x, PawArmBottom - v * (PawArmBottom - PawArmTop));
+            }
+            for (int i = 0; i <= 10; i++)
+            {
+                float a = PawPalmLeft - i / 10f * PawPalmSweep;
+                Add(Mathf.Cos(a) * PawPalm.x, -Mathf.Sin(a) * PawPalm.y + PawPalmY);
+            }
+            for (int k = 0; k < PawToes.Length; k++)
+            {
+                Vector3 toe = PawToes[k];
+                float a0 = Mathf.PI * (k < 2 ? 1.05f : 1.15f), a1 = Mathf.PI * (k < 2 ? -0.15f : -0.05f);
+                for (int i = 0; i <= 9; i++)
+                {
+                    float a = a0 + (a1 - a0) * i / 9f;
+                    Add(toe.x + Mathf.Cos(a) * toe.z, toe.y - Mathf.Abs(Mathf.Sin(a)) * toe.z * PawToeTall);
+                }
+            }
+            for (int i = 0; i <= 10; i++)
+            {
+                float a = PawPalmRight - i / 10f * PawPalmSweep;
+                Add(Mathf.Cos(a) * PawPalm.x, -Mathf.Sin(a) * PawPalm.y + PawPalmY);
+            }
+            for (int i = 0; i <= 8; i++)
+            {
+                float v = i / 8f;
+                float x = PawArmX + PawArmBulge * Mathf.Sin((1f - v) * Mathf.PI) + Jitter(0f, PawArmJitter);
+                Add(x, PawArmTop + v * (PawArmBottom - PawArmTop));
+            }
+
+            // 먹 그림자(조금 크게 어긋나 테 두께가 고르지 않게) → 털색
+            pen.Save();
+            pen.Translate(PawInkOffset.x, PawInkOffset.y);
+            pen.Scale(PawInkScale.x, PawInkScale.y);
+            OutlinePath(pen, outline);
+            pen.Fill(ComicKit.Ink);
+            pen.Restore();
+            OutlinePath(pen, outline);
+            pen.Fill(_fur);
+
+            // 그늘: 오른쪽으로 짙어지는 털색 + 연필 빗금 + 왼쪽 위 빛 (시안은 윤곽으로 잘라 그린다)
+            Color shadeFrom = shadeColor;
+            shadeFrom.a = 0f;
+            OutlinePath(pen, outline);
+            pen.FillLinear(-20f, 0f, 150f, 0f, shadeFrom, shadeColor);
+            for (int i = 0; i < 26; i++)
+            {
+                float y = Jitter(-40f + i * 36f, 8f);
+                var from = new Vector2(Jitter(60f, 10f), y + 40f);
+                var to = new Vector2(Jitter(120f, 10f), y);
+                StrokeInside(pen, from, to, outline, shadeHatch, 3f);
+            }
+            FillPolygon(pen, ClipPolygon(outline, EllipsePolygon(new Vector2(-70f, -20f), new Vector2(70f, 110f), -0.3f)), pawShine);
+
+            // 테 먹선 한 번 더 (떨림)
+            OutlinePath(pen, outline);
+            pen.Stroke(ComicKit.Ink, pawLine);
+
+            // 발가락 사이 갈라진 선
+            foreach (Vector4 split in PawSplits)
+            {
                 pen.BeginPath();
-                pen.MoveTo(from.x, from.y);
-                pen.BezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
+                pen.MoveTo(split.x, split.y);
+                var at = new Vector2(split.x, split.y);
+                QuadTo(pen, ref at, new Vector2(Jitter(split.x, 8f), (split.y + split.w) / 2f), new Vector2(split.z, split.w));
+                pen.Stroke(ComicKit.Ink, 5f);
+            }
+
+            // 털 삐침: 팔 양옆 · 손목
+            for (int i = 0; i < 14; i++)
+            {
+                float side = i % 2 == 1 ? 1f : -1f;
+                float y = Jitter(160f + i * 48f, 10f);
+                float x = side * Jitter(106f, 6f);
+                float tipX = x + side * (14f + random.Next() * 10f);
+                float tipY = y - 10f - random.Next() * 8f;
+                pen.BeginPath();
+                pen.MoveTo(x, y);
+                pen.LineTo(tipX, tipY);
+                pen.LineTo(x + side * 2f, y - 18f);
                 pen.Stroke(ComicKit.Ink, furLine);
             }
-            pen.Restore();
 
-            // 큰 발바닥: 위 가운데에서 3차 곡선 넷으로 한 바퀴
+            // 발톱
+            foreach (Vector3 toe in PawToes)
+            {
+                pen.BeginPath();
+                var at = new Vector2(toe.x - 7f, toe.y - toe.z * 0.95f);
+                pen.MoveTo(at.x, at.y);
+                QuadTo(pen, ref at, new Vector2(toe.x, toe.y - toe.z * 1.45f), new Vector2(toe.x + 6f, toe.y - toe.z * 0.95f));
+                pen.ClosePath();
+                pen.Fill(clawColor);
+            }
+
+            // 발가락 젤리: 고르지 않은 콩 모양
+            for (int k = 0; k < PawToes.Length; k++)
+            {
+                Vector3 toe = PawToes[k];
+                float rx = toe.z * 0.62f, ry = toe.z * 0.72f;
+                pen.Save();
+                pen.Translate(toe.x, toe.y + 6f);
+                pen.Rotate(PawBeanTilt[k]);
+                pen.BeginPath();
+                for (int i = 0; i <= 20; i++)
+                {
+                    float a = i / 20f * ComicKit.Tau;
+                    float scale = 1f + 0.07f * Mathf.Sin(a * 3f + toe.x) + (random.Next() - 0.5f) * 0.04f;
+                    float x = Mathf.Cos(a) * rx * scale, y = Mathf.Sin(a) * ry * scale;
+                    if (i == 0)
+                        pen.MoveTo(x, y);
+                    else
+                        pen.LineTo(x, y);
+                }
+                pen.ClosePath();
+                pen.Fill(padColor);
+                pen.Stroke(padEdge, 5f);
+                pen.BeginPath();
+                pen.Ellipse(-rx * 0.2f, -ry * 0.25f, rx * 0.45f, ry * 0.35f, 0f, 0f, ComicKit.Tau);
+                pen.Fill(padBlush);
+                pen.Restore();
+            }
+
+            // 큰 젤리 + 분홍 빛 · 아래쪽 빗금 (젤리 안만)
             pen.BeginPath();
             pen.MoveTo(PawPad[0].x, PawPad[0].y);
             for (int i = 1; i + 2 < PawPad.Length; i += 3)
                 pen.BezierCurveTo(PawPad[i].x, PawPad[i].y, PawPad[i + 1].x, PawPad[i + 1].y, PawPad[i + 2].x, PawPad[i + 2].y);
+            pen.ClosePath();
             pen.Fill(padColor);
-
-            // 발가락 넷 + 광택
-            foreach (Vector3 toe in PawToes)
-            {
-                pen.BeginPath();
-                pen.Ellipse(toe.x, toe.y, PawToe.x, PawToe.y, toe.z, 0f, ComicKit.Tau);
-                pen.Fill(padColor);
-                pen.BeginPath();
-                pen.Ellipse(toe.x + PawToeShine.x, toe.y + PawToeShine.y, PawToeShine.z, PawToeShine.w, toe.z, 0f, ComicKit.Tau);
-                pen.Fill(padShine);
-            }
-            pen.BeginPath();
-            pen.Ellipse(PawPalmShine.x, PawPalmShine.y, PawPalmShine.z, PawPalmShine.w, PawPalmShineTilt, 0f, ComicKit.Tau);
-            pen.Fill(padShine);
+            pen.Stroke(padEdge, 6f);
+            List<Vector2> pad = PadPolygon();
+            FillPolygon(pen, ClipPolygon(pad, EllipsePolygon(new Vector2(-30f, 22f), new Vector2(46f, 26f), -0.25f)), padBlush);
+            for (int i = 0; i < 8; i++)
+                StrokeInside(pen, new Vector2(-80f + i * 22f, 90f), new Vector2(-60f + i * 22f, 40f), pad, padHatch, 2f);
         }
+
+        // 시안 path(): 점 사이 가운데를 지나는 2차 곡선으로 매끄럽게 한 바퀴
+        private static void OutlinePath(ComicPen pen, List<Vector2> points)
+        {
+            pen.BeginPath();
+            Vector2 at = points[0];
+            pen.MoveTo(at.x, at.y);
+            for (int i = 1; i < points.Count - 1; i++)
+                QuadTo(pen, ref at, points[i], (points[i] + points[i + 1]) / 2f);
+            Vector2 last = points[points.Count - 1];
+            pen.LineTo(last.x, last.y);
+            pen.ClosePath();
+        }
+
+        // 시안 quadraticCurveTo 를 같은 3차 곡선으로 (조절점 = 끝점 + ⅔·(2차 조절점 − 끝점))
+        private static void QuadTo(ComicPen pen, ref Vector2 at, Vector2 control, Vector2 to)
+        {
+            Vector2 c1 = at + (control - at) * 2f / 3f, c2 = to + (control - to) * 2f / 3f;
+            pen.BezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
+            at = to;
+        }
+
+        private static void FillPolygon(ComicPen pen, List<Vector2> polygon, Color color)
+        {
+            if (polygon.Count < 3)
+                return;
+            pen.BeginPath();
+            pen.MoveTo(polygon[0].x, polygon[0].y);
+            for (int i = 1; i < polygon.Count; i++)
+                pen.LineTo(polygon[i].x, polygon[i].y);
+            pen.ClosePath();
+            pen.Fill(color);
+        }
+
+        // 큰 젤리 곡선을 점으로 (빗금 · 빛을 젤리 안으로 자를 때)
+        private static List<Vector2> PadPolygon()
+        {
+            var points = new List<Vector2>();
+            for (int i = 1; i + 2 < PawPad.Length; i += 3)
+            {
+                Vector2 p0 = PawPad[i - 1], c1 = PawPad[i], c2 = PawPad[i + 1], p1 = PawPad[i + 2];
+                for (int step = 0; step < ClipCurveSteps; step++)
+                {
+                    float t = (float)step / ClipCurveSteps, u = 1f - t;
+                    points.Add(u * u * u * p0 + 3f * u * u * t * c1 + 3f * u * t * t * c2 + t * t * t * p1);
+                }
+            }
+            return points;
+        }
+
+        private static List<Vector2> EllipsePolygon(Vector2 center, Vector2 radius, float tilt)
+        {
+            var points = new List<Vector2>(ClipSides);
+            float cos = Mathf.Cos(tilt), sin = Mathf.Sin(tilt);
+            for (int i = 0; i < ClipSides; i++)
+            {
+                float a = (float)i / ClipSides * ComicKit.Tau;
+                float x = Mathf.Cos(a) * radius.x, y = Mathf.Sin(a) * radius.y;
+                points.Add(center + new Vector2(x * cos - y * sin, x * sin + y * cos));
+            }
+            return points;
+        }
+
+        // 다각형(오목해도 된다)을 볼록 다각형 clip 안으로 자른다 (Sutherland–Hodgman — 시안 clip() 대신)
+        private static List<Vector2> ClipPolygon(List<Vector2> subject, List<Vector2> clip)
+        {
+            Vector2 middle = Vector2.zero;
+            foreach (Vector2 point in clip)
+                middle += point;
+            middle /= clip.Count;
+            var output = new List<Vector2>(subject);
+            for (int e = 0; e < clip.Count && output.Count > 0; e++)
+            {
+                Vector2 a = clip[e], b = clip[(e + 1) % clip.Count];
+                float inside = Cross(b - a, middle - a);
+                var input = output;
+                output = new List<Vector2>(input.Count);
+                for (int i = 0; i < input.Count; i++)
+                {
+                    Vector2 p = input[i], q = input[(i + 1) % input.Count];
+                    float dp = Cross(b - a, p - a), dq = Cross(b - a, q - a);
+                    bool pIn = dp * inside >= 0f, qIn = dq * inside >= 0f;
+                    if (pIn)
+                        output.Add(p);
+                    if (pIn != qIn)
+                        output.Add(p + (q - p) * (dp / (dp - dq)));
+                }
+            }
+            return output;
+        }
+
+        // 선분 중 다각형 안에 든 조각만 긋는다 (시안 clip() 안의 stroke)
+        private static void StrokeInside(ComicPen pen, Vector2 from, Vector2 to, List<Vector2> polygon, Color color, float width)
+        {
+            var cuts = new List<float> { 0f, 1f };
+            Vector2 d = to - from;
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                Vector2 a = polygon[i], e = polygon[(i + 1) % polygon.Count] - a;
+                float denominator = Cross(d, e);
+                if (Mathf.Abs(denominator) < 1e-6f)
+                    continue;
+                float t = Cross(a - from, e) / denominator, u = Cross(a - from, d) / denominator;
+                if (t > 0f && t < 1f && u >= 0f && u <= 1f)
+                    cuts.Add(t);
+            }
+            cuts.Sort();
+            for (int i = 0; i + 1 < cuts.Count; i++)
+            {
+                float t0 = cuts[i], t1 = cuts[i + 1];
+                if (t1 - t0 < 1e-4f || !Contains(polygon, from + d * ((t0 + t1) / 2f)))
+                    continue;
+                Vector2 p = from + d * t0, q = from + d * t1;
+                pen.BeginPath();
+                pen.MoveTo(p.x, p.y);
+                pen.LineTo(q.x, q.y);
+                pen.Stroke(color, width);
+            }
+        }
+
+        // 점이 다각형 안인가 (짝홀 규칙)
+        private static bool Contains(List<Vector2> polygon, Vector2 point)
+        {
+            bool inside = false;
+            for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+            {
+                Vector2 a = polygon[i], b = polygon[j];
+                if ((a.y > point.y) != (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x)
+                    inside = !inside;
+            }
+            return inside;
+        }
+
+        private static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
     }
 }

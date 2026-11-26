@@ -460,7 +460,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4314293074587201701, guid: 1781ed1680fb90a429af73f8428fe4ed, type: 3}
       propertyPath: m_Name
-      value: Card_116
+      value: Card_1016
       objectReference: {fileID: 0}
     - target: {fileID: 8190960916226672364, guid: 1781ed1680fb90a429af73f8428fe4ed, type: 3}
       propertyPath: m_Pivot.x

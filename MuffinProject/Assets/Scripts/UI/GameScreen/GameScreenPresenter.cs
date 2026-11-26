@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Cards;
 using Chapchu.Game;
+using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Fx;
 using Photon.Pun;
@@ -44,6 +45,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
         [SerializeField] private MyTrapsPresenter myTraps;
+        [Tooltip("카드 연출 3 단계(카드별 능력 발동) · 개판 등급 4 단계 — 효과가 적용된 카드의 연출을 그때 불러와 화면 전체에 (10-ui.md 5-1).")]
+        [SerializeField] private CardFxPresenter cardFx;
         [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 1013).")]
         [SerializeField] private ScreenFlashView screenFlash;
         [Tooltip("찹츄 선언 연출 — 집중선 + 큰 말풍선 (10-ui.md 5-2 #1).")]
@@ -76,6 +79,7 @@ namespace Chapchu.UI.GameScreen
         private bool _isMyTurn;
         private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
         private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
+        private readonly HashSet<int> _deadActors = new HashSet<int>();    // 재생한 기준으로 죽은 사람 — 카드 연출에 넘기는 「판에 남은 사람」 에서 뺀다
 
         // 4 단계 공통 연출 (10-ui.md 5-1). 재생한 기준의 HP — 바뀐 양으로 피해 · 회복을 고른다. 없으면 처음 HP(MaxHp).
         private readonly Dictionary<int, int> _shownHp = new Dictionary<int, int>();
@@ -97,7 +101,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -590,20 +594,75 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 효과 적용 · 무효화 — 카드는 그 자리에 남고, 체인이 끝나면 쓴 순서대로 버림 더미로 간다 (HandleChainDiscarded, 04-card.md 9.1). 4 · 5 단계 · 도장 연출은 여기에 넣는다 (10-ui.md 5-1).
-        // 효과가 적용되는 카드에 화면 덮기가 있으면 덮고 시작한다 — 기다리지 않아 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (1013).
+        // 효과 적용 · 무효화 — 카드는 그 자리에 남고, 체인이 끝나면 쓴 순서대로 버림 더미로 간다 (HandleChainDiscarded, 04-card.md 9.1). 도장 연출은 여기에 넣는다 (10-ui.md 5-1).
+        // 효과 적용이면 3 단계(카드별 연출, 개판 등급은 카드만의 4 단계까지)를 끝까지 재생한 뒤 다음 단계(뒤따르는 결과 = 4 단계 공통 연출)로.
+        // 화면 덮기가 있으면 3 단계 뒤 덮고 기다리지 않는다 — 뒤따르는 효과(새 손패)가 걷히는 사이 보인다 (1013).
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
         {
             Enqueue(() =>
             {
-                CardData data = cardDeck.GetCard(cardId);
-                if (data != null)
-                    screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
                 history.ShowCardResolved(cardInstanceId);
                 LeaveChain();
-                return null;
+                CardData data = cardDeck.GetCard(cardId);
+                return data != null ? CardResolvedRoutine(data, actorNumber, targets) : null;
             });
             _resolving = true;
+        }
+
+        private IEnumerator CardResolvedRoutine(CardData data, int caster, int[] targets)
+        {
+            List<CardFxSeat> fxSeats = CreateFxSeats();
+            CardFxSeat casterSeat = fxSeats.Find(seat => seat.Actor == caster);
+            if (casterSeat != null)
+            {
+                var targetSeats = new List<CardFxSeat>();
+                foreach (int target in targets)
+                {
+                    CardFxSeat seat = fxSeats.Find(other => other.Actor == target);
+                    if (seat != null)
+                        targetSeats.Add(seat);
+                }
+                yield return cardFx.PlayRoutine(data, casterSeat, targetSeats, fxSeats, ReceiversOf(fxSeats, casterSeat, targetSeats));
+            }
+            screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
+        }
+
+        // 카드 연출이 아는 사람들 — 판에 남은 사람(재생한 기준), 좌석 순서(나 먼저). HP 는 재생한 기준(결과가 적용되기 전)
+        private List<CardFxSeat> CreateFxSeats()
+        {
+            var fxSeats = new List<CardFxSeat>();
+            foreach (int actor in PlayerLook.OrderedActors())
+            {
+                if (_deadActors.Contains(actor) || !TryGetFxSeat(actor, out ResultFx.Seat seat))
+                    continue;
+                fxSeats.Add(new CardFxSeat
+                {
+                    Actor = actor,
+                    Anchor = seat.Body,
+                    Name = PlayerLook.NameOf(actor),
+                    Color = PlayerLook.ColorOf(actor),
+                    Hp = _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp,
+                    IsMe = IsMe(actor),
+                });
+            }
+            return fxSeats;
+        }
+
+        // 카드를 한 장씩 받는 사람 (1018 무야호 — 쓴 사람부터 턴 순서대로, 대상은 빼고). 대상 손패가 모자라 덜 받는 경우는 결과가 오기 전이라 모른다 — 모두 받는 것으로 그린다.
+        // 턴 순서 = 좌석 순서, 역방향이면 거꾸로 (03-turn.md 6절 #4). 받는 사람을 정하는 카드가 아니면 연출이 쓰지 않는다.
+        private static List<CardFxSeat> ReceiversOf(List<CardFxSeat> fxSeats, CardFxSeat caster, List<CardFxSeat> targets)
+        {
+            bool reversed = PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDirection, out object value) && value is bool reversedValue && reversedValue;
+            int start = fxSeats.IndexOf(caster);
+            var receivers = new List<CardFxSeat>();
+            for (int i = 0; i < fxSeats.Count; i++)
+            {
+                int index = reversed ? start - i : start + i;
+                CardFxSeat seat = fxSeats[(index % fxSeats.Count + fxSeats.Count) % fxSeats.Count];
+                if (!targets.Contains(seat))
+                    receivers.Add(seat);
+            }
+            return receivers;
         }
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
@@ -854,6 +913,10 @@ namespace Chapchu.UI.GameScreen
 
         private void ShowLife(int actorNumber, LifeState life, double deadline = 0)
         {
+            if (life == LifeState.Dead)
+                _deadActors.Add(actorNumber);
+            else
+                _deadActors.Remove(actorNumber);
             if (IsMe(actorNumber))
                 myPanel.ShowLife(life);
             else

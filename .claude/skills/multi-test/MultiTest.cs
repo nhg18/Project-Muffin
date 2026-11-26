@@ -4349,6 +4349,8 @@ public static class MultiTest
     /// <summary>
     /// 다음에 그 카드의 연출 3 단계가 시작되면(CardFxTestBench.PlayingCardId) 그 시작부터 ms 마다 게임 뷰를 찍는다 —
     /// prefix + "_0500.png" 처럼 (prefix "-" 면 찍지 않고 시작만 기록). msCsv = "300,800,1500". 3 단계가 끝난 뒤의 시각(4 단계)도 적을 수 있다. 한 번만.
+    /// 시각은 게임 시간(Time.time — 배속이 걸린 연출 시간)으로 잰다. 에디터가 뒤에 있거나 바빠 프레임이 느리면 게임 시간이 벽시계보다 덜 흐르므로
+    /// 벽시계로 재면 장면의 더 앞부분이 찍힌다.
     /// </summary>
     public static string ArmFxShots(string prefix, string cardId, string msCsv)
     {
@@ -4373,7 +4375,7 @@ public static class MultiTest
             if (startedAt < 0)
             {
                 if (bench.PlayingCardId != id) return;
-                startedAt = EditorApplication.timeSinceStartup - (Time.time - bench.PlayingSince) / Mathf.Max(0.01f, Time.timeScale);
+                startedAt = bench.PlayingSince;
                 SessionState.SetString(FxSeenKey, cardId); // 짧은 3 단계는 CLI 로 물어보는 사이에 끝난다 — 본 것을 남긴다
             }
 
@@ -4383,7 +4385,7 @@ public static class MultiTest
                 return;
             }
 
-            if ((EditorApplication.timeSinceStartup - startedAt) * 1000 < times[taken] / Mathf.Max(0.01f, Time.timeScale)) return;
+            if ((Time.time - startedAt) * 1000 < times[taken]) return;
             if (prefix != "-")
                 ScreenCapture.CaptureScreenshot(prefix + "_" + times[taken].ToString("0000") + ".png");
             taken++;
@@ -4403,6 +4405,44 @@ public static class MultiTest
             return "SEEN " + cardId;
         }
         return bench.IsBusy ? "BUSY" : "OK IDLE";
+    }
+
+    /// <summary>
+    /// 게임 판에서 그 카드의 연출 3 단계가 시작되면(연출 프리팹 Card_{id} 가 판에 생기면) 그 뒤 ms 마다 게임 뷰를 찍는다 — prefix + "_0500.png" 처럼. 한 번만.
+    /// 효과 적용 알림(OnCardResolved)이 아니라 연출이 실제로 뜬 때를 잰다 — 알림은 화면 줄(앞 단계 연출)보다 먼저 온다.
+    /// 시각은 게임 시간으로 잰다 (ArmFxShots 와 같은 까닭). ForceCard 와 함께 쓴다.
+    /// </summary>
+    public static string ArmGameFxShots(string prefix, string cardId, string msCsv)
+    {
+        if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
+
+        string name = "Card_" + cardId;
+        int[] times = msCsv.Split(',').Select(t => int.Parse(t.Trim())).OrderBy(t => t).ToArray();
+        float startedAt = -1f;
+        int taken = 0;
+        SessionState.EraseString(FxSeenKey);
+        EditorApplication.CallbackFunction tick = null;
+        tick = () =>
+        {
+            if (!EditorApplication.isPlaying || taken >= times.Length)
+            {
+                EditorApplication.update -= tick;
+                return;
+            }
+
+            if (startedAt < 0f)
+            {
+                if (!Object.FindObjectsByType<Chapchu.UI.Fx.CardFx>(FindObjectsSortMode.None).Any(fx => fx.name.StartsWith(name))) return;
+                startedAt = Time.time;
+                SessionState.SetString(FxSeenKey, cardId);
+            }
+
+            if ((Time.time - startedAt) * 1000 < times[taken]) return;
+            ScreenCapture.CaptureScreenshot(prefix + "_" + times[taken].ToString("0000") + ".png");
+            taken++;
+        };
+        EditorApplication.update += tick;
+        return "OK 게임 판 연출 스크린샷 대기 → " + prefix + "_<ms>.png (" + msCsv + ")";
     }
 
     public static string ArmCardShots(string prefix)

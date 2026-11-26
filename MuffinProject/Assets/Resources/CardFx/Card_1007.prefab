@@ -1237,7 +1237,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5309229204546499258, guid: 85539b2b17f745a4b899b4cca0373328, type: 3}
       propertyPath: m_Name
-      value: Card_107
+      value: Card_1007
       objectReference: {fileID: 0}
     - target: {fileID: 6351112218128708573, guid: 85539b2b17f745a4b899b4cca0373328, type: 3}
       propertyPath: m_Color.b

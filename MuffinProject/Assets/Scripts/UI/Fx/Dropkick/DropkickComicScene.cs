@@ -10,15 +10,17 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Dropkick
 {
     /// <summary>
-    /// 드롭킥(카드 1005) 만화 컷인 장면 — 도움닫기 → 날아차기 → 퍽!! (시안 CI2.SC["드롭킥"]).
-    /// 0 ~ 0.44 초 옆에서 본 컷: 맞는 쪽이 「!?」 하고 땀을 흘리는 사이, 쓴 쪽이 오른쪽에서 달려와 0.26 초에 뛰어올라 잔상을 남기며 두 발부터 날아든다.
-    /// 0.44 초 맞는 순간: 햇살 무늬 · 집중선 위로 카드 그림(스티커)이 크게 들이받고 「퍽!!」 → 0.6 초 「-N」 (N = 카드 데이터 DamageEffect 양, 시안은 -25).
+    /// 드롭킥(카드 1005) 만화 컷인 장면 — 도움닫기 → 날아차기 → 맞는 순간, 어두운 핏빛 (시안 CI2.SC["드롭킥"]).
+    /// 0 ~ 0.44 초 옆에서 본 컷: 맞는 쪽이 땀을 흘리는 사이, 쓴 쪽이 오른쪽에서 달려와 0.26 초에 뛰어올라 잔상을 남기며 두 발부터 날아든다.
+    /// 0.44 초 맞는 순간: 햇살 무늬 · 집중선 위로 카드 그림(스티커)이 크게 들이받고 화면 가장자리가 어두워진다(비네트) →
+    /// 0.6 초 「-N」 이 커다랗게 나타나 떨리며 박힌다 (N = 카드 데이터 DamageEffect 양) → 0.86 초 쓴 쪽 땀 (시안 「차는 쪽도 아프긴 하다」).
+    /// 시안은 제목 · 「-N」 · 「반동 -N」 을 거칠게 긁은 글자 그림(dk_title · dk_dmg · dk_rec.png)으로 쓰는데 그 그림은 시안 파일에 없다 — 글자(ComicWord)로 그리고 박히는 움직임만 시안 dimg 를 따른다.
     /// 맞는 순간 마무리(시안 FINISH 드롭킥 — 맞은 쪽 자리에서 주황 · 흰 줄 빛 14)는 3 단계가 끝난 그 순간(시안 s3 의 fin)이라 4 단계 첫 줄에서 튼다.
     /// 4 단계 = 맞은 쪽이 쓰러지지 않았으면 0.55 초 뒤 쓴 쪽에 「으악!」 말풍선 (시안 FXA 드롭킥 s4 — 피해 숫자 · 「쓰러짐」 상태 글자는 부르는 쪽 몫)과
     /// 「반동 -N」 표 + 땀 (N = 카드 데이터 RecoilDamageEffect 양). 시안은 이 표를 3 단계 0.86 초에 늘 보였지만, 반동은 못 쓰러뜨렸을 때만이라
     /// 결과를 아는 4 단계로 옮겼다 (PM 결정 2026-11-15) — 모양 · 튀어나오기는 시안 그대로, 자리는 쓴 쪽 자리 위.
     /// 쓰러졌는지는 4 단계 결과 알림(<see cref="CardFxContext.OnHpChanged"/>)으로 안다 — 알림이 없으면 못 쓰러뜨린 것으로 본다 (시안 기본값).
-    /// 연출 길이 3.26초 (3 단계 2.36초 + 4 단계 0.9초) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 3.26초 (3 단계 2.36초 + 4 단계 0.9초) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// </summary>
     public class DropkickComicScene : ComicScene
     {
@@ -27,6 +29,8 @@ namespace Chapchu.UI.Fx.Dropkick
         // 시안 「-25」 · 「반동 -10」 꼴 — 숫자는 카드 데이터
         private const string DamageFormat = "-{0}";
         private const string RecoilFormat = "반동 -{0}";
+        // 시안 fillRect(−500, −500, W + 1000, H + 1000) 를 다 덮는 반지름 (설계 px)
+        private const float VignetteReach = 1600f;
 
         [Header("카드")]
         [Tooltip("이 카드 데이터 — 「-N」 은 DamageEffect 양, 「반동 -N」 은 RecoilDamageEffect 양.")]
@@ -41,8 +45,6 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private ComicDog target;
         [Tooltip("맞는 쪽 땀 둘 (큰 것 · 작은 것).")]
         [SerializeField] private ComicSweat[] sweats = new ComicSweat[2];
-        [Tooltip("「!?」 글자 (찍히기).")]
-        [SerializeField] private ComicStamp surprise;
         [Tooltip("잔상 넷 — 가장 먼 것부터 (그리는 순서, 시안 g = 4 → 1). 진하기는 각자의 CanvasGroup.")]
         [SerializeField] private ComicDog[] afterimages = new ComicDog[4];
         [Tooltip("차는 쪽 강아지.")]
@@ -59,19 +61,17 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private ComicFocusLines focusLines;
         [Tooltip("카드 그림 스티커.")]
         [SerializeField] private ComicSticker sticker;
-        [Tooltip("맞닿은 곳의 터짐 별 (흰색).")]
+        [Tooltip("맞닿은 곳의 터짐 별.")]
         [SerializeField] private ComicBurst burst;
-        [Tooltip("「퍽!!」 글자 (찍히기).")]
-        [SerializeField] private ComicStamp pow;
-        [Tooltip("「-N」 찍히기.")]
-        [SerializeField] private ComicStamp damage;
-        [Tooltip("「-N」 글자 — 카드 데이터 피해 양을 넣는다.")]
+        [Tooltip("화면 가장자리를 어둡게 (장면이 그린다).")]
+        [SerializeField] private ComicSketch vignette;
+        [Tooltip("「-N」 글자 — 카드 데이터 피해 양을 넣는다. 박히는 움직임은 장면이 한다 (시안 dimg).")]
         [SerializeField] private ComicWord damageText;
         [Tooltip("「반동 -N」 표 본 — 장면 안에서는 늘 꺼 두고, 4 단계에 게임 화면 위로 복제한다 (기울기 · 상자 · 글자, 시안 label). 상자는 자식 ComicSketch 하나 (장면이 그린다).")]
         [SerializeField] private RectTransform recoilLabel;
         [Tooltip("「반동 -N」 표 글자 — 상자 너비가 이 글자 폭을 따른다.")]
         [SerializeField] private TMP_Text recoilText;
-        [Tooltip("「반동 -N」 옆 땀 본 — 표와 함께 4 단계에 복제한다 (표와의 거리는 장면 안 자리 그대로).")]
+        [Tooltip("쓴 쪽 땀 — 3 단계 0.86 초에 이 자리(시안 1150, 330)에 나타나고, 4 단계에는 「반동 -N」 표와 함께 게임 화면 위로 복제한다 (표와의 거리는 장면 안 자리 그대로).")]
         [SerializeField] private ComicSweat recoilSweat;
 
         [Header("때 (초)")]
@@ -109,10 +109,6 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private Vector2 sweatAt = new Vector2(0.18f, 0.26f);
         [Tooltip("땀이 나타나는 시간 (초, 시안 0.1).")]
         [SerializeField] private float sweatFade = 0.1f;
-        [Tooltip("「!?」 이 찍히기 시작하는 때 (초, 시안 0.16 — 큰 땀이 보일 때부터 그린다).")]
-        [SerializeField] private float surpriseAt = 0.16f;
-        [Tooltip("「!?」 이 찍히는 시간 (초, 시안 0.12).")]
-        [SerializeField] private float surpriseTime = 0.12f;
 
         [Header("차는 쪽 (시안: 0.26 초 동안 1180 → 800 달리고, 0.18 초 동안 뛰어올라 330 날아든다)")]
         [Tooltip("달리는 시간 (초, 시안 0.26).")]
@@ -163,20 +159,38 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private int sunburstRays = 22;
         [Tooltip("햇살 무늬 반지름 (설계 px, 시안 2400).")]
         [SerializeField] private float sunburstRadius = 2400f;
-        [Tooltip("햇살 무늬 색 — 홀수 조각 (시안 #ffd23a).")]
-        [SerializeField] private Color sunburstOdd = new Color32(0xff, 0xd2, 0x3a, 0xff);
-        [Tooltip("햇살 무늬 색 — 짝수 조각 (시안 #ffb02e).")]
-        [SerializeField] private Color sunburstEven = new Color32(0xff, 0xb0, 0x2e, 0xff);
+        [Tooltip("햇살 무늬 색 — 홀수 조각 (시안 #3b0b0a).")]
+        [SerializeField] private Color sunburstOdd = new Color32(0x3b, 0x0b, 0x0a, 0xff);
+        [Tooltip("햇살 무늬 색 — 짝수 조각 (시안 #1c0506).")]
+        [SerializeField] private Color sunburstEven = new Color32(0x1c, 0x05, 0x06, 0xff);
         [Tooltip("터짐 별이 퍼지는 시간 (초, 시안 0.3).")]
         [SerializeField] private float burstTime = 0.3f;
         [Tooltip("터짐 별 처음 반지름 (설계 px, 시안 60 · 45).")]
         [SerializeField] private Vector2 burstFrom = new Vector2(60f, 45f);
         [Tooltip("터짐 별 끝 반지름 — 터짐 별 오브젝트의 반지름과 같게 둔다 (설계 px, 시안 190 · 140).")]
         [SerializeField] private Vector2 burstTo = new Vector2(190f, 140f);
-        [Tooltip("「퍽!!」 이 찍히는 시간 (초, 시안 0.16).")]
-        [SerializeField] private float powTime = 0.16f;
-        [Tooltip("「-N」 이 찍히기 시작하는 때 · 찍히는 시간 (초, 시안 0.6 · 0.16).")]
-        [SerializeField] private Vector2 damageAt = new Vector2(0.6f, 0.16f);
+        [Tooltip("비네트 가운데 (설계 px, 시안 640, 360).")]
+        [SerializeField] private Vector2 vignetteCenter = new Vector2(640f, 360f);
+        [Tooltip("비네트 — 이 반지름 안은 맑고 · 이 반지름부터 끝 색 (설계 px, 시안 200 · 820).")]
+        [SerializeField] private Vector2 vignetteRadius = new Vector2(200f, 820f);
+        [Tooltip("비네트 끝 색 (시안 rgba(0, 0, 0, .6)).")]
+        [SerializeField] private Color vignetteColor = new Color(0f, 0f, 0f, 0.6f);
+
+        [Header("「-N」 박히기 (시안 dimg(dk_dmg, 300, 250, 200, (t − 0.6) / 0.14))")]
+        [Tooltip("「-N」 이 박히기 시작하는 때 · 박히는 시간 (초, 시안 0.6 · 0.14).")]
+        [SerializeField] private Vector2 damageAt = new Vector2(0.6f, 0.14f);
+        [Tooltip("「-N」 자리 — 글자 기준점 (설계 px, 시안 300, 250).")]
+        [SerializeField] private Vector2 damagePosition = new Vector2(300f, 250f);
+        [Tooltip("처음 크기 배율 — 1 로 줄어든다 (시안 1.5).")]
+        [SerializeField] private float damageFrom = 1.5f;
+        [Tooltip("줄어들 때 지나치는 정도 (시안 back 1.4).")]
+        [SerializeField] private float damageOvershoot = 1.4f;
+        [Tooltip("나타나는 빠르기 — 박히는 시간의 1 / 이것 만에 다 보인다 (시안 5).")]
+        [SerializeField] private float damageFade = 5f;
+        [Tooltip("처음 떨림 — 옆 폭 (설계 px, 시안 10) · 떨리는 동안 (박히는 시간 비율, 시안 0.6).")]
+        [SerializeField] private Vector2 damageShake = new Vector2(10f, 0.6f);
+        [Tooltip("쓴 쪽 땀이 나타나기 시작하는 때 (초, 시안 0.86 — 「반동 -N」 표가 튀어나오는 시간 동안 진해진다).")]
+        [SerializeField] private float recoilSweatAt = 0.86f;
 
         [Header("「반동 -N」 표 (시안 label(1070, 440, {size 44, rot 0.08, sc back(rk, 2.2)}) + 땀 — 4 단계에 쓴 쪽 자리 위)")]
         [Tooltip("표가 튀어나오는 시간 — 땀도 이 시간에 진해진다 (초, 시안 rk = (t − 0.86) / 0.16 의 0.16).")]
@@ -220,8 +234,6 @@ namespace Chapchu.UI.Fx.Dropkick
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(speedLines)} 가 비었다");
             if (target == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(target)} 가 비었다");
-            if (surprise == null)
-                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(surprise)} 가 비었다");
             if (kicker == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(kicker)} 가 비었다");
             if (kickerShadow == null)
@@ -236,12 +248,10 @@ namespace Chapchu.UI.Fx.Dropkick
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(sticker)} 가 비었다");
             if (burst == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(burst)} 가 비었다");
-            if (pow == null)
-                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(pow)} 가 비었다");
+            if (vignette == null)
+                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(vignette)} 가 비었다");
             if (card == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(card)} 가 비었다");
-            if (damage == null)
-                Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(damage)} 가 비었다");
             if (damageText == null)
                 Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(damageText)} 가 비었다");
             if (recoilLabel == null)
@@ -275,6 +285,7 @@ namespace Chapchu.UI.Fx.Dropkick
             target.Key = context.TargetKey;
             speedLines.Painter = PaintSpeedLines;
             sunburst.Painter = PaintSunburst;
+            vignette.Painter = PaintVignette;
 
             int damageAmount = 0;
             _recoilAmount = 0;
@@ -295,6 +306,7 @@ namespace Chapchu.UI.Fx.Dropkick
             recoilLabel.gameObject.SetActive(false);
             ComicKit.SetAlpha(recoilSweat, 0f);
             sunburst.Redraw();
+            vignette.Redraw();
         }
 
         public override void Draw(float t, ComicContext context)
@@ -356,7 +368,6 @@ namespace Chapchu.UI.Fx.Dropkick
 
             ComicKit.SetAlpha(sweats[0], ComicKit.Cl((t - sweatAt.x) / sweatFade));
             ComicKit.SetAlpha(sweats[1], ComicKit.Cl((t - sweatAt.y) / sweatFade));
-            surprise.Apply(t > sweatAt.x ? (t - surpriseAt) / surpriseTime : 0f);
 
             float run = ComicKit.Cl(t / runTime), jump = ComicKit.Cl((t - runTime) / jumpTime);
             float x = ComicKit.Lerp(runX.x, runX.y, ComicKit.Eo(run)) - ComicKit.Eo(jump) * jumpReach;
@@ -402,8 +413,23 @@ namespace Chapchu.UI.Fx.Dropkick
                 ComicKit.SetAlpha(burst, 1f - e * e);
             }
 
-            pow.Apply(imp / powTime);
-            damage.Apply((t - damageAt.x) / damageAt.y);
+            DrawDamage(t);
+            ComicKit.SetAlpha(recoilSweat, ComicKit.Cl((t - recoilSweatAt) / recoilPop));
+        }
+
+        // 시안 dimg: 1.5 배로 나타나 튕기듯 제 크기로 줄며 박힌다 — 처음 동안은 옆으로 떨린다
+        private void DrawDamage(float t)
+        {
+            float k = (t - damageAt.x) / damageAt.y;
+            damageText.enabled = k > 0f;
+            if (k <= 0f)
+                return;
+            float scale = ComicKit.Lerp(damageFrom, 1f, ComicKit.Back(ComicKit.Cl(k), damageOvershoot));
+            float shake = k < damageShake.y ? (Random.value - 0.5f) * damageShake.x * (1f - k / damageShake.y) : 0f;
+            var rect = (RectTransform)damageText.transform;
+            ComicKit.Place(rect, damagePosition.x + shake, damagePosition.y);
+            rect.localScale = new Vector3(scale, scale, 1f);
+            ComicKit.SetAlpha(damageText, ComicKit.Cl(k * damageFade));
         }
 
         // 「반동 -N」 표 + 땀을 게임 화면(FxLayer) 쓴 쪽 자리 위에 복제해 시안 label 처럼 튀어나오게 — 「으악!」 말풍선과 같이 떠 있다 사라진다
@@ -491,6 +517,14 @@ namespace Chapchu.UI.Fx.Dropkick
                 pen.ClosePath();
                 pen.Fill(i % 2 == 1 ? sunburstOdd : sunburstEven);
             }
+        }
+
+        // 시안 createRadialGradient(640, 360, 200, 640, 360, 820) 으로 화면 전체: 200 안은 맑고 820 밖은 끝 색 — 흔들려도 가장자리가 드러나지 않게 더 멀리까지 덮는다
+        private void PaintVignette(ComicPen pen)
+        {
+            var clear = new Color(vignetteColor.r, vignetteColor.g, vignetteColor.b, 0f);
+            pen.FillRing(vignetteCenter.x, vignetteCenter.y, vignetteRadius.x, vignetteRadius.y, clear, vignetteColor);
+            pen.FillRing(vignetteCenter.x, vignetteCenter.y, vignetteRadius.y, VignetteReach, vignetteColor, vignetteColor);
         }
 
         // 시안 label: 그림자 판 + 흰 판 + 먹 테 (글자는 TMP)

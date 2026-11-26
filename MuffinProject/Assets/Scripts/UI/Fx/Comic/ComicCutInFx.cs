@@ -144,7 +144,7 @@ namespace Chapchu.UI.Fx.Comic
         {
             background.color = _scene.Background;
             string title = string.IsNullOrEmpty(_scene.Title) ? context.CardName : _scene.Title;
-            titleBlock.SetTexts(title, _scene.Tagline, _scene.Accent, _scene.Deep);
+            titleBlock.SetTexts(title, _scene.Tagline, _scene.Accent, _scene.Deep, _scene.Light, !_scene.NoBand, _scene.PlainTag);
             foreach (ComicCard card in stage.GetComponentsInChildren<ComicCard>(true))
             {
                 if (card.Back == null)

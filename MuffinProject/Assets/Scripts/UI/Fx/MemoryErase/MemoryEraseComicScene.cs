@@ -1,22 +1,25 @@
 ﻿using System;
 using Chapchu.UI.Fx.Comic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.MemoryErase
 {
     /// <summary>
     /// 기억 삭제(카드 1013) 만화 컷인 장면 — 불빛 한 번에 다들 손패를 버리고 새로 다섯 장 (시안 CI2.SC["기억 삭제"]).
-    /// 검은 양복 강아지(카드 그림 스티커)가 기억 지우개를 들고 튀어 들어온다 → 0.36 초부터 렌즈가 반짝 → 0.5 초 「딸깍」 →
+    /// 어두운 회색 판(옅은 세로줄)에 검은 양복 강아지(카드 그림 스티커)가 기억 지우개를 들고 튀어 들어온다 → 0.36 초부터 렌즈가 반짝 →
     /// 0.56 초 그림 속 불빛이 켜지며 기계 둘레가 크게 빛난다(빛 · 빛줄기 · 고리 · 화면 번쩍) → 나머지 사람들(얼굴 원 + 손패 다섯 장)이 어두워지며 어지럽고,
     /// 손패가 빛가루로 흩어진 뒤 새 다섯 장이 위에서 떨어진다.
     /// 4 단계 장식은 없다 (시안 FXA 기억 삭제 s4 = 손패 옮기기뿐 — 게임 화면 몫).
-    /// 연출 길이 2.56초 (3 단계) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 2.56초 (3 단계) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// 얼굴 그림은 모두 <see cref="CardFxContext.Character"/> 의 얼굴 칸 — 자리마다 얼굴 그림이 생기면 그것으로 바꾼다.
     /// 기준 문서: docs/systems/11-card-list.md 1013 기억 삭제 · docs/systems/10-ui.md 5-1 (3 · 4 단계 연출).
     /// </summary>
     public class MemoryEraseComicScene : ComicScene
     {
+        private const float StripeMargin = 500f;
+
         /// <summary>나머지 사람 한 명의 그림 — 얼굴 원 · 손패 · 빛가루.</summary>
         [Serializable]
         public class Person
@@ -38,41 +41,33 @@ namespace Chapchu.UI.Fx.MemoryErase
         }
 
         [Header("그림 (그리는 순서)")]
-        [Tooltip("배경에 떠 있는 빛 (장면이 그린다, FxAdditive).")]
-        [SerializeField] private ComicSketch backgroundLights;
+        [Tooltip("배경의 옅은 세로줄 (장면이 그린다).")]
+        [FormerlySerializedAs("backgroundLights")]
+        [SerializeField] private ComicSketch backgroundStripes;
         [Tooltip("쓰는 쪽 — 불 꺼진 카드 그림 스티커 (시안 E02N).")]
         [SerializeField] private ComicSticker agent;
-        [Tooltip("렌즈 반짝 (장면이 그린다, 색 = 시안 #dfe3ff).")]
+        [Tooltip("렌즈 반짝 (장면이 그린다, 색 = 시안 #eaf6ff).")]
         [SerializeField] private ComicSketch lensSparkle;
         [Tooltip("불 켜진 카드 그림 — 스티커 위에 겹친다 (시안 SPA.e02).")]
         [SerializeField] private Image litArt;
         [Tooltip("기계 둘레 빛 + 빛줄기 (장면이 그린다, FxAdditive).")]
         [SerializeField] private ComicSketch flashLight;
-        [Tooltip("퍼지는 고리 둘 (색 = 시안 #e6e9ff).")]
+        [Tooltip("퍼지는 고리 둘 (색 = 시안 #ecf7ff).")]
         [SerializeField] private UIRing[] flashRings = new UIRing[2];
-        [Tooltip("「딸깍」 글자 (찍히기).")]
-        [SerializeField] private ComicStamp clickWord;
         [Tooltip("나머지 사람들 (위부터, 시안 최대 3 명).")]
         [SerializeField] private Person[] people = new Person[3];
-        [Tooltip("화면 번쩍 (FxAdditive, 색 = 시안 rgba(225, 220, 255)).")]
+        [Tooltip("화면 번쩍 (FxAdditive, 색 = 시안 rgba(236, 248, 255)).")]
         [SerializeField] private Graphic whiteOut;
 
-        [Header("배경 빛 (시안: rng(21) 로 26 개, x = R·W, y = R·H·0.8, 반지름 20 + R·50, 진하기 0.18)")]
-        [Tooltip("씨앗 (시안 rng(21)).")]
-        [SerializeField] private int lightSeed = 21;
-        [Tooltip("빛 수 (시안 26).")]
-        [SerializeField] private int lightCount = 26;
-        [Tooltip("빛이 놓이는 높이 — 판 높이 비율 (시안 0.8).")]
-        [SerializeField] private float lightHeight = 0.8f;
-        [Tooltip("빛 반지름 — 최소 · 더하는 폭 (설계 px, 시안 20 · 50).")]
-        [SerializeField] private Vector2 lightRadius = new Vector2(20f, 50f);
-        [Tooltip("빛 색 — 차례로 돌아가며 (알파 = 진하기, 시안 120,140,255 · 255,200,120 · 200,120,255 · 0.18).")]
-        [SerializeField] private Color[] lightColors =
-        {
-            new Color(120f / 255f, 140f / 255f, 1f, 0.18f),
-            new Color(1f, 200f / 255f, 120f / 255f, 0.18f),
-            new Color(200f / 255f, 120f / 255f, 1f, 0.18f),
-        };
+        [Header("배경 세로줄 (시안: x = −40 부터 46 마다 폭 3, 흰색 진하기 0.06)")]
+        [Tooltip("첫 줄 x (설계 px, 시안 −40).")]
+        [SerializeField] private float stripeStart = -40f;
+        [Tooltip("줄 간격 (설계 px, 시안 46).")]
+        [SerializeField] private float stripeGap = 46f;
+        [Tooltip("줄 폭 (설계 px, 시안 3).")]
+        [SerializeField] private float stripeWidth = 3f;
+        [Tooltip("줄 색 (알파 = 진하기, 시안 흰색 0.06).")]
+        [SerializeField] private Color stripeColor = new Color(1f, 1f, 1f, 0.06f);
 
         [Header("쓰는 쪽 (시안: 0.26 초에 −200 → 470 으로 튀어 들어온다, back 1.6)")]
         [Tooltip("튀어 들어오는 시간 (초, 시안 0.26).")]
@@ -108,7 +103,7 @@ namespace Chapchu.UI.Fx.MemoryErase
         [Tooltip("안쪽 꼭짓점 반지름 비율 (시안 0.18).")]
         [SerializeField] private float sparkleInner = 0.18f;
 
-        [Header("딸깍 — 불이 켜진다")]
+        [Header("불이 켜진다")]
         [Tooltip("불이 켜지는 때 (초, 시안 0.56).")]
         [SerializeField] private float flashAt = 0.56f;
         [Tooltip("켜진 그림이 다 보이는 동안 (초, 시안 0.08).")]
@@ -117,12 +112,6 @@ namespace Chapchu.UI.Fx.MemoryErase
         [SerializeField] private float litFade = 3.2f;
         [Tooltip("켜진 그림을 그리지 않는 진하기 (시안 0.01).")]
         [SerializeField] private float litMin = 0.01f;
-        [Tooltip("「딸깍」이 찍히기 시작하는 때 (초, 시안 0.5).")]
-        [SerializeField] private float clickAt = 0.5f;
-        [Tooltip("「딸깍」이 찍히는 시간 (초, 시안 0.14).")]
-        [SerializeField] private float clickTime = 0.14f;
-        [Tooltip("「딸깍」 자리 — 불빛 가운데에서 (설계 px, 시안 +40, −200).")]
-        [SerializeField] private Vector2 clickOffset = new Vector2(40f, -200f);
 
         [Header("기계 둘레 빛 (시안: 진하기 0.32·exp(−3.4τ), 반지름 140 → 460 eo(τ/0.4))")]
         [Tooltip("빛이 잦아드는 빠르기 (시안 exp(−τ·3.4)).")]
@@ -131,8 +120,8 @@ namespace Chapchu.UI.Fx.MemoryErase
         [SerializeField] private float glowGrowTime = 0.4f;
         [Tooltip("빛 반지름 — 처음 · 끝 (설계 px, 시안 140 → 460).")]
         [SerializeField] private Vector2 glowRadius = new Vector2(140f, 460f);
-        [Tooltip("빛 색 (알파 = 진하기, 시안 190,180,255 · 0.32).")]
-        [SerializeField] private Color glowColor = new Color(190f / 255f, 180f / 255f, 1f, 0.32f);
+        [Tooltip("빛 색 (알파 = 진하기, 시안 225,246,255 · 0.32).")]
+        [SerializeField] private Color glowColor = new Color(225f / 255f, 246f / 255f, 1f, 0.32f);
 
         [Header("빛줄기 (시안: 12 갈래, 길이 120 → 760, 반각 0.035 + 0.02·(i%2), 가운데 0.34 → 끝 0)")]
         [Tooltip("빛줄기 수 (시안 12).")]
@@ -146,7 +135,7 @@ namespace Chapchu.UI.Fx.MemoryErase
         [Tooltip("하나 걸러 더하는 반각 (라디안, 시안 0.02).")]
         [SerializeField] private float rayHalfWidthStep = 0.02f;
         [Tooltip("빛줄기 색 — 뿌리 (알파 = 진하기, 시안 225,220,255 · 0.34).")]
-        [SerializeField] private Color rayColor = new Color(225f / 255f, 220f / 255f, 1f, 0.34f);
+        [SerializeField] private Color rayColor = new Color(236f / 255f, 248f / 255f, 1f, 0.34f);
 
         [Header("고리 (시안: 0.12 초 간격 둘, 0.5 초 동안 반지름 60 → 620, 굵기 6·(1 − q) + 2, 진하기 0.8·(1 − q))")]
         [Tooltip("고리 사이 (초, 시안 0.12).")]
@@ -234,7 +223,7 @@ namespace Chapchu.UI.Fx.MemoryErase
         [Tooltip("빛가루 반지름 (설계 px, 시안 8).")]
         [SerializeField] private float dustRadius = 8f;
         [Tooltip("빛가루 색 (알파 = 진하기, 시안 200,200,255 · 0.6).")]
-        [SerializeField] private Color dustColor = new Color(200f / 255f, 200f / 255f, 1f, 0.6f);
+        [SerializeField] private Color dustColor = new Color(215f / 255f, 242f / 255f, 1f, 0.6f);
 
         private int _count;
         private float _flash;
@@ -245,8 +234,8 @@ namespace Chapchu.UI.Fx.MemoryErase
 
         private void Awake()
         {
-            if (backgroundLights == null)
-                Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(backgroundLights)} 가 비었다");
+            if (backgroundStripes == null)
+                Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(backgroundStripes)} 가 비었다");
             if (agent == null)
                 Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(agent)} 가 비었다");
             if (lensSparkle == null)
@@ -255,8 +244,6 @@ namespace Chapchu.UI.Fx.MemoryErase
                 Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(litArt)} 가 비었다");
             if (flashLight == null)
                 Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(flashLight)} 가 비었다");
-            if (clickWord == null)
-                Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(clickWord)} 가 비었다");
             if (whiteOut == null)
                 Debug.LogError($"[{nameof(MemoryEraseComicScene)}] {name} 의 {nameof(whiteOut)} 가 비었다");
             for (int i = 0; i < flashRings.Length; i++)
@@ -267,7 +254,7 @@ namespace Chapchu.UI.Fx.MemoryErase
             for (int i = 0; i < people.Length; i++)
                 CheckPerson(i);
 
-            backgroundLights.Painter = PaintBackgroundLights;
+            backgroundStripes.Painter = PaintBackgroundStripes;
             lensSparkle.Painter = PaintSparkle;
             flashLight.Painter = PaintFlashLight;
             for (int i = 0; i < people.Length; i++)
@@ -295,7 +282,7 @@ namespace Chapchu.UI.Fx.MemoryErase
                 if (shown)
                     ComicKit.ShowFace(person.picture, art, faceArea, missingFace);
             }
-            backgroundLights.Redraw();
+            backgroundStripes.Redraw();
         }
 
         public override void Draw(float t, ComicContext context)
@@ -326,7 +313,7 @@ namespace Chapchu.UI.Fx.MemoryErase
                 ComicKit.SetAlpha(lensSparkle, 0f);
             }
 
-            // 딸깍! 하는 순간 그림 속 불빛이 켜졌다가 서서히 꺼진다
+            // 켜는 순간 그림 속 불빛이 켜졌다가 서서히 꺼진다
             float on = !lit ? 0f : _flash < litHold ? 1f : Mathf.Exp(-(_flash - litHold) * litFade);
             ComicKit.SetAlpha(litArt, on > litMin ? on : 0f);
 
@@ -334,8 +321,6 @@ namespace Chapchu.UI.Fx.MemoryErase
             flashLight.Redraw();
             for (int r = 0; r < flashRings.Length; r++)
                 DrawRing(flashRings[r], (_flash - r * ringGap) / ringLife);
-
-            clickWord.Apply((t - clickAt) / clickTime, _light + clickOffset - clickWord.RestPosition);
 
             // 나머지 모두: 멍해지고 → 손패가 흩어지고 → 새 다섯 장
             _remain = !lit ? 1f : 1f - ComicKit.Cl((_flash - scatterAt) / scatterTime);
@@ -432,15 +417,15 @@ namespace Chapchu.UI.Fx.MemoryErase
             ComicKit.SetAlpha(ring, (1f - q) * ringAlpha);
         }
 
-        private void PaintBackgroundLights(ComicPen pen)
+        private void PaintBackgroundStripes(ComicPen pen)
         {
-            var random = new ComicRandom(lightSeed);
-            for (int i = 0; i < lightCount; i++)
-            {
-                float x = random.Next() * ComicKit.Width, y = random.Next() * ComicKit.Height * lightHeight;
-                float r = lightRadius.x + random.Next() * lightRadius.y;
-                PaintGlow(pen, x, y, r, lightColors[i % lightColors.Length]);
-            }
+            if (stripeGap <= 0f)
+                return;
+            // 시안: 화면 위아래 밖 500 까지 (흔들려도 끝이 보이지 않게)
+            pen.BeginPath();
+            for (float x = stripeStart; x < ComicKit.Width - stripeStart; x += stripeGap)
+                pen.Rect(x, -StripeMargin, stripeWidth, ComicKit.Height + StripeMargin * 2f);
+            pen.Fill(stripeColor);
         }
 
         // 시안 glow(x, y, r, a, col) — 가운데 col · a 에서 반지름 끝 투명으로

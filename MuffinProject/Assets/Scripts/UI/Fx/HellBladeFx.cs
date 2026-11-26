@@ -8,7 +8,8 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx
 {
     /// <summary>
-    /// 「지옥참마도」 연출의 시간표. 컷인(칼 뽑기 → 눈 → 絶 → 난도질 → 마지막 일섬 → 납도) 뒤, 대상 자리에서 마무리 칼질과 결과.
+    /// 「지옥참마도」 연출의 시간표. 3 단계 = 컷인(칼 뽑기 → 눈 → 絶 → 난도질 → 마지막 일섬 → 납도, 4.15초),
+    /// 4 단계 = 대상 자리마다 마무리 칼질(약 0.4초) 뒤 공통 피해 연출 — 개판 등급의 카드별 4 단계 (10-ui 5-1, 2026-11-17 에 3 단계에서 옮김).
     /// 컷인은 이 카드만의 장면(<see cref="CutInSceneStep"/> — 그림 애니메이션 컷 하나)과, 그 위에 겹치는 공통 이펙트 프리팹(Prefab/UI/CardFx/Common)으로 이루어진다.
     /// 컷인 · 마무리 아래 켜진 조각을 시작 시각 순(같으면 장면 먼저, 그다음 계층 위부터)으로 재생한다 — 이펙트 프리팹을 놓으면 그 시각에 나오고, 끄면 빠진다.
     /// 시간 · 크기 · 색은 아티팩트 「찹츄 카드 이펙트」 의 SPECIAL · FINISH 지옥참마도와 같다. 효과음은 아직 없다.
@@ -28,12 +29,10 @@ namespace Chapchu.UI.Fx
         [SerializeField] private CanvasGroup cutIn;
         [Tooltip("마무리 판. 이 아래의 이펙트가 대상마다 한 번씩 재생된다 (시각은 마무리 시작 기준).")]
         [SerializeField] private RectTransform finish;
-        [Tooltip("컷인이 끝나고 마무리가 시작할 때까지 (ms).")]
+        [Tooltip("컷인이 끝나고 마무리(4 단계)가 시작할 때까지 (ms).")]
         [SerializeField] private float finishDelayMs = 80f;
-        [Tooltip("마무리 시작부터 결과(피해 숫자 · 체력)를 보일 때까지 (ms).")]
+        [Tooltip("마무리 시작부터 결과(공통 피해 연출)를 보일 때까지 (ms) — 4 단계가 여기서 끝나고 남은 칼질 꼬리는 지울 때까지 이어진다.")]
         [SerializeField] private float impactMs = 420f;
-        [Tooltip("결과를 보인 뒤 카드를 치울 때까지 (ms).")]
-        [SerializeField] private float afterImpactMs = 900f;
 
         [Header("장면 판")]
         [SerializeField] private CanvasGroup shot;
@@ -102,17 +101,22 @@ namespace Chapchu.UI.Fx
             ResetState();
             FitCamera();
             yield return TimelineRoutine(_cutIn, context, null);
-            yield return new WaitForSeconds(finishDelayMs / 1000f);
+        }
 
+        public override bool HasPostStage => true;
+
+        // 대상 자리마다 한꺼번에 마무리 칼질 → impactMs 에 결과 (부르는 쪽이 이 루틴이 끝나면 공통 피해 연출을 보인다)
+        public override IEnumerator PlayPostRoutine(CardFxContext context)
+        {
+            yield return new WaitForSeconds(finishDelayMs / 1000f);
             if (context.Targets == null || context.Targets.Count == 0)
                 yield break;
 
             foreach (RectTransform target in context.Targets)
-            {
                 StartCoroutine(TimelineRoutine(_finish, context, target));
-                StartCoroutine(ImpactRoutine(context, target));
-            }
-            yield return new WaitForSeconds((impactMs + afterImpactMs) / 1000f);
+            yield return new WaitForSeconds(impactMs / 1000f);
+            foreach (RectTransform target in context.Targets)
+                context.Impact?.Invoke(target);
         }
 
         public override IEnumerator PlayStepRoutine(CardFxStep step, CardFxContext context, bool showScenery)
@@ -139,12 +143,6 @@ namespace Chapchu.UI.Fx
             }
 
             yield return new WaitForSeconds((step.DurationMs + StepTailMs) / 1000f);
-        }
-
-        private IEnumerator ImpactRoutine(CardFxContext context, RectTransform target)
-        {
-            yield return new WaitForSeconds(impactMs / 1000f);
-            context.Impact?.Invoke(target);
         }
 
         // 화면보다 작은 그림(칼집 빛 · 눈빛처럼 장면 속 한 점에 붙은 이펙트)만 옮긴다. 화면을 덮는 판은 그대로

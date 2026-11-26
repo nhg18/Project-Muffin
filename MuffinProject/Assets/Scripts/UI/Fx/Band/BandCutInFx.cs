@@ -22,8 +22,8 @@ namespace Chapchu.UI.Fx.Band
 
     /// <summary>
     /// 띠 컷인 — 고급 등급 카드의 3 단계 (아티팩트 「찹츄 카드 이펙트 v2」 의 M 표 + rareCI mini + cutinFrame).
-    /// 판이 어두워지고 기운 띠가 미끄러져 들어온 뒤, 왼쪽에 카드 그림(없으면 캐릭터 동그라미 + 글자)이 날아와 움직이고
-    /// 말풍선 → 한마디 · 카드 이름 → 고리 → 효과 한 줄 순으로 뜨고, 끝에 판째 사라진다.
+    /// 판이 어두워지고 기운 띠가 미끄러져 들어온 뒤, 왼쪽에 카드 그림(틀 없이 오려 낸 캐릭터 — <see cref="BandArtCutOut"/>, 없으면 캐릭터 동그라미 + 글자)이 날아와 움직이고
+    /// 말풍선 → 한마디 · 카드 이름 → 고리 → 효과 한 줄 순으로 뜬 뒤 그림이 한 번 더 움직이고, 끝에 판째 사라진다.
     /// 카드마다 다른 것은 「카드 값」 아래 값뿐이다 — 카드 하나 더하기 = 틀 프리팹(Prefab/UI/CardFx/Band/BandCutIn)의 변형 Card_{ID} + 값.
     /// 4 단계 장식은 <see cref="post"/> 아래 조각(<see cref="CardFxStep"/>)을 시작 시각대로 재생한다 (없으면 바로 끝난다).
     /// </summary>
@@ -102,16 +102,9 @@ namespace Chapchu.UI.Fx.Band
         [Tooltip("켜면 띠 줄무늬가 흐르지 않는다 (시안 still).")]
         [SerializeField] private bool stillLines;
 
-        [Header("카드 그림 창")]
-        [Tooltip("그림을 창에 꽉 채운 뒤 더 키우는 배율 (1 = 창 너비에 맞춤).")]
-        [Min(1f)]
-        [SerializeField] private float artZoom = 1f;
-        [Tooltip("창에 보일 곳 — 그림 안 비율 (x 왼쪽 0 · y 위 0). 창보다 남는 쪽만 움직인다.")]
-        [SerializeField] private Vector2 artFocus = new Vector2(0.5f, 0.24f);
-
         [Header("시간표 (ms — 시안 mk · rareCI · cutinFrame)")]
         [Tooltip("컷인 길이 — 끝나기 fadeOutMs 전부터 판째 사라진다 (시안 SPECIAL_MS).")]
-        [SerializeField] private float lengthMs = 1150f;
+        [SerializeField] private float lengthMs = 1850f;
         [Tooltip("판째 사라지는 시간.")]
         [SerializeField] private float fadeOutMs = 240f;
         [Tooltip("컷인이 사라진 뒤 4 단계까지 (시안 special2 의 +80).")]
@@ -123,15 +116,17 @@ namespace Chapchu.UI.Fx.Band
         [Tooltip("그림이 날아오기 시작 · 날아오는 시간 (.ci-in).")]
         [SerializeField] private Vector2 characterTime = new Vector2(200f, 380f);
         [Tooltip("그림 움직임 시작 · 시간 (MV, ease-in-out).")]
-        [SerializeField] private Vector2 moveTime = new Vector2(300f, 420f);
+        [SerializeField] private Vector2 moveTime = new Vector2(380f, 560f);
         [Tooltip("말풍선 시작 · 시간.")]
-        [SerializeField] private Vector2 bubbleTime = new Vector2(380f, 900f);
+        [SerializeField] private Vector2 bubbleTime = new Vector2(520f, 900f);
         [Tooltip("한마디 · 카드 이름 시작 · 시간 (F.title).")]
-        [SerializeField] private Vector2 titleTime = new Vector2(520f, 380f);
+        [SerializeField] private Vector2 titleTime = new Vector2(760f, 380f);
         [Tooltip("고리 시작 · 시간 (ringAt, ease-out).")]
-        [SerializeField] private Vector2 ringTime = new Vector2(700f, 520f);
+        [SerializeField] private Vector2 ringTime = new Vector2(1050f, 620f);
         [Tooltip("효과 한 줄 시작 · 시간 (F.tag).")]
-        [SerializeField] private Vector2 tagTime = new Vector2(760f, 380f);
+        [SerializeField] private Vector2 tagTime = new Vector2(1150f, 380f);
+        [Tooltip("그림이 한 번 더 움직이는 시작 · 시간 (MV, ease-in-out).")]
+        [SerializeField] private Vector2 secondMoveTime = new Vector2(1400f, 520f);
         [Tooltip("줄무늬가 한 주기 흐르는 시간 (시안 ciLines .35s).")]
         [SerializeField] private float stripeLoopMs = 350f;
 
@@ -156,10 +151,10 @@ namespace Chapchu.UI.Fx.Band
         [Tooltip("날아오는 그림 칸 (.ci-in).")]
         [SerializeField] private RectTransform character;
         [SerializeField] private CanvasGroup characterGroup;
-        [Tooltip("카드 그림 틀 (.ci-art) — 그림이 있을 때 움직인다.")]
+        [Tooltip("카드 그림 칸 (.ci-art.ci-cut) — 그림이 있을 때 움직인다.")]
         [SerializeField] private RectTransform art;
-        [Tooltip("카드 그림 — 창 크기에 맞춰 잘라 보인다.")]
-        [SerializeField] private RawImage artPicture;
+        [Tooltip("오려 낸 카드 그림 (art 를 채운다).")]
+        [SerializeField] private BandArtCutOut artCutOut;
         [Tooltip("캐릭터 동그라미 (.ci-av) — 카드 그림이 없을 때 움직인다.")]
         [SerializeField] private RectTransform avatar;
         [SerializeField] private Image avatarPicture;
@@ -222,7 +217,7 @@ namespace Chapchu.UI.Fx.Band
             Check(character, nameof(character));
             Check(characterGroup, nameof(characterGroup));
             Check(art, nameof(art));
-            Check(artPicture, nameof(artPicture));
+            Check(artCutOut, nameof(artCutOut));
             Check(avatar, nameof(avatar));
             Check(avatarPicture, nameof(avatarPicture));
             Check(iconBadge, nameof(iconBadge));
@@ -279,6 +274,9 @@ namespace Chapchu.UI.Fx.Band
                 _pixelScale = context.Layer.PixelScale;
             ShowCard(context);
             ResetState();
+            // 오려 낸 그림을 만드는 동안 (일꾼 스레드, 한 프레임 ~ 몇 프레임) 기다린다 — 그림 없이 날아오지 않게
+            while (!artCutOut.IsReady)
+                yield return null;
             PlayTimeline();
             yield return new WaitForSeconds(Seconds(lengthMs + afterMs));
             cutIn.gameObject.SetActive(false);
@@ -348,8 +346,7 @@ namespace Chapchu.UI.Fx.Band
             iconBadge.gameObject.SetActive(!hasArt && !string.IsNullOrEmpty(icon));
             if (hasArt)
             {
-                artPicture.texture = context.CardArt.texture;
-                artPicture.uvRect = CoverUv(context.CardArt, artPicture.rectTransform.rect.size, artZoom, artFocus);
+                artCutOut.Build(context.CardArt, glowColor, _pixelScale);
                 return;
             }
 
@@ -409,6 +406,8 @@ namespace Chapchu.UI.Fx.Band
             }));
             _timeline.Insert(Seconds(ringTime.x), Animate(ringTime.y, EaseOut, RingOut, pose => Apply(ring, ringGroup, pose, Vector2.zero, _ringOrigin)));
             _timeline.Insert(Seconds(tagTime.x), Animate(tagTime.y, Linear, TagIn, pose => Apply(effectTag, effectTagGroup, pose, Vector2.one * _pixelScale, _effectTagOrigin)));
+            _timeline.Insert(Seconds(secondMoveTime.x), Animate(secondMoveTime.y, EaseInOut, moveKeys, pose => Apply(_moving, null,
+                new Pose(pose.At, pose.X, pose.Y, pose.ScaleX, pose.ScaleY, pose.Angle + moveAngle, pose.Alpha), moveUnit, moveOrigin)));
             _timeline.Insert(Seconds(lengthMs - fadeOutMs), Progress(fadeOutMs, Linear, p => cutIn.alpha = 1f - p));
 
             if (!stillLines && stripeLoopMs > 0f)
@@ -462,23 +461,6 @@ namespace Chapchu.UI.Fx.Band
                     return Pose.Lerp(poses[i], poses[i + 1], Mathf.InverseLerp(poses[i].At, poses[i + 1].At, progress));
             }
             return poses[poses.Length - 1];
-        }
-
-        // 카드 그림을 창에 꽉 채우고(cover) 배율만큼 더 키운 뒤, 보일 곳에 맞춰 자른 UV
-        private static Rect CoverUv(Sprite sprite, Vector2 window, float zoom, Vector2 focus)
-        {
-            Texture texture = sprite.texture;
-            // 묶이지 않은 스프라이트의 textureRect 는 투명한 가장자리를 잘라 낸 칸(Tight)이라 그림 전체 칸(rect)을 쓴다
-            Rect pixels = sprite.packed ? sprite.textureRect : sprite.rect;
-            var full = new Rect(pixels.x / texture.width, pixels.y / texture.height, pixels.width / texture.width, pixels.height / texture.height);
-            float spriteAspect = pixels.width / pixels.height;
-            float windowAspect = window.y > 0f ? window.x / window.y : 1f;
-            float width = (spriteAspect > windowAspect ? windowAspect / spriteAspect : 1f) / zoom;
-            float height = (spriteAspect > windowAspect ? 1f : spriteAspect / windowAspect) / zoom;
-            // focus 는 위가 0 — UV 는 아래가 0
-            float x = (1f - width) * Mathf.Clamp01(focus.x);
-            float y = (1f - height) * (1f - Mathf.Clamp01(focus.y));
-            return new Rect(full.x + x * full.width, full.y + y * full.height, width * full.width, height * full.height);
         }
 
         private static Pose Rest(float at) => new Pose(at, 0f, 0f, 1f, RestAngle, 1f);
