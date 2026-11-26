@@ -16,12 +16,12 @@ namespace Chapchu.Game.Effects
             subject == EffectSubject.Self ? view.SelfDamageScore(amount) : receivers.Sum(actor => view.DamageScore(actor, amount));
         internal override EffectTag Tag => EffectTag.Damage;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(subject, entry);
-        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;
+        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? entry.Scale(amount) : 0;
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))
-                server.ApplyDamage(entry, actor, amount);
+                server.ApplyDamage(entry, actor, entry.Scale(amount));
         }
     }
 }

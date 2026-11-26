@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Chapchu.Game.Effects
@@ -12,6 +13,9 @@ namespace Chapchu.Game.Effects
     public sealed class RedealHandEffect : CardEffect
     {
         public EffectSubject subject;
+
+        // 반응 조건의 일(Tag)은 없지만 받는 사람은 있다 — 「나를 노린 카드」(2002 반사)가 본다 (11-card-list 1-3)
+        internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(subject, entry);
 
         // 받는 사람마다 지금 장수 → 시작 장수. 찹츄 상대(알아챈 상대만, 7-7)가 없고 평균 손패도 시작 장수 이하면 쓰지 않는다
         internal override double BotScore(Bots.BotView view, int[] receivers)

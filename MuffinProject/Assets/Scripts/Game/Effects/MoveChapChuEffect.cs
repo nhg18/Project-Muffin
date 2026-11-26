@@ -24,6 +24,8 @@ namespace Chapchu.Game.Effects
                 return;
 
             int from = entry.Targets[0], to = entry.Targets[1];
+            if (entry.Reflected.Contains(to))
+                to = entry.User; // 2002 반사 — 받을 찹츄가 쓴 사람에게 간다
             if (entry.Excluded.Contains(to) || !server.InGame(to))
                 server.ClearChapchuIfMoved(from);
             else

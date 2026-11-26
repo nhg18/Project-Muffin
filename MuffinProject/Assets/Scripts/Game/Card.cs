@@ -70,7 +70,9 @@ namespace Chapchu.Game
         TakesMyHand,    // 그 카드가 내 손패를 훔치거나 버리게 한다 (C08)
         DestroysMyTrap, // 다른 사람이 낸 그 카드가 내 함정을 파괴한다 (C12)
         SkipsMe,        // 그 카드가 나에게 턴 스킵을 건다 (C13)
-        GivesMeChapchu  // 다른 사람이 낸 그 카드가 나에게 찹츄를 준다 (C15)
+        GivesMeChapchu, // 다른 사람이 낸 그 카드가 나에게 찹츄를 준다 (C15)
+        HasDamage,      // 그 카드에 피해 효과가 하나라도 있다 — 누가 받든 (2001 침착)
+        AimsAtMe        // 그 카드의 효과 중 하나라도 내가 받는다 — 판 전체 상태를 바꾸는 카드는 받는 사람이 없어 들지 않는다 (2002 반사)
     }
 
     /// <summary>
@@ -110,11 +112,15 @@ namespace Chapchu.Game
         /// <summary>연출 4 단계 + 버림 더미로 이동 길이(초). 체인 맨 아래 카드면 체인 처리 뒤 이만큼 지나 다음 턴 (04-card.md 8절).</summary>
         public double ResolveSeconds { get; }
 
+        /// <summary>막을 수 없는 카드 — 체인 맨 위에 있으면 아무도 카운터를 낼 수 없다 (04-card.md 7절 사용 조건 6 — 2014 알아).</summary>
+        public bool Unstoppable { get; }
+
         public Card(int instanceId, int cardId, CardType type, TargetType target, IReadOnlyList<CardEffect> effects,
             IReadOnlyList<CardType> reactsTo, double revealSeconds, double resolveSeconds,
             TrapTrigger trigger = TrapTrigger.None, int triggerValue = 0, ReactCondition condition = ReactCondition.Any,
-            TargetCondition targetCondition = TargetCondition.None)
+            TargetCondition targetCondition = TargetCondition.None, bool unstoppable = false)
         {
+            Unstoppable = unstoppable;
             InstanceId = instanceId;
             CardId = cardId;
             Type = type;

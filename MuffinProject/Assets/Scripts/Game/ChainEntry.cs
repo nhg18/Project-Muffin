@@ -30,6 +30,21 @@ namespace Chapchu.Game
         public readonly Dictionary<int, int> SurviveAt = new Dictionary<int, int>();       // C11 — 받는 사람 → 남길 HP
         public readonly HashSet<int> ProtectTraps = new HashSet<int>();                     // C12 — 함정 주인
 
+        /// <summary>받는 사람 모두의 피해를 이만큼 줄인다 — 카드 전체형 피해 감소 (2001 침착). 0 밑으로는 내려가지 않는다.</summary>
+        public int DamageReductionAll;
+
+        /// <summary>이 카드의 효과를 다 적용한 직후에 회복할 사람 → 양 (2001 침착의 덤, 04 7절 「아래 카드 처리 직후의 효과」).</summary>
+        public readonly Dictionary<int, int> HealAfter = new Dictionary<int, int>();
+
+        /// <summary>피해 · 회복 · 뽑기 · 빼앗기 · 버리기의 적힌 숫자를 2배로 (2005 묻고 따블로 가). 한 카드에 1회 — 두 번 걸려도 2배.</summary>
+        public bool Doubled;
+
+        /// <summary>자기 몫을 쓴 사람에게 되돌린 사람 (2002 반사). 받는 사람에서 이 사람 대신 쓴 사람이 받고, 빼앗기는 방향이 뒤집힌다.</summary>
+        public readonly HashSet<int> Reflected = new HashSet<int>();
+
+        /// <summary>적힌 숫자 n 을 이 카드의 표시대로 — 2배(2005)면 두 배. 피해 · 회복 · 뽑기 · 빼앗기 · 버리기 효과가 부른다.</summary>
+        public int Scale(int n) => Doubled ? n * 2 : n;
+
         /// <summary>낼 때 정한 값 — 효과 → 값 (1016 뽑을 장수). CardEffect.Prepare 가 채운다.</summary>
         public readonly Dictionary<Effects.CardEffect, int> Rolled = new Dictionary<Effects.CardEffect, int>();
 

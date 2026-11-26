@@ -22,6 +22,7 @@ namespace Chapchu.Game
 
             if (entry.DamageReduction.TryGetValue(actor, out int reduce))
                 amount -= reduce;
+            amount -= entry.DamageReductionAll; // 2001 침착 — 받는 사람 모두. 2배(2005)는 효과가 이미 곱해 왔다 — 2배 → 감소 순서 (04 7절)
 
             if (amount <= 0)
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
@@ -60,10 +61,11 @@ namespace Chapchu.Game
             ApplyHealRaw(actor, amount);
         }
 
-        private void ApplyHealRaw(int actor, int amount)
+        // fromZero — 같은 체인에서 HP 0 이 된 사람도 회복한다 (2001 침착의 「처리 직후 회복」만, 11-card-list 2001). 사망 대기 · 사망은 그래도 받지 않는다
+        private void ApplyHealRaw(int actor, int amount, bool fromZero = false)
         {
             PlayerState player = _players[actor];
-            if (amount <= 0 || player.Life != LifeState.Alive || player.Hp <= 0)
+            if (amount <= 0 || player.Life != LifeState.Alive || (player.Hp <= 0 && !fromZero))
                 return; // HP 0 에서 일반 회복은 불발 — 사망 대기 등록 전(같은 체인)도 같다 (06 15절)
 
             int hp = Math.Min(MaxHp, player.Hp + amount);

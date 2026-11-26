@@ -45,7 +45,7 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            int n = useTriggerAmount ? entry.TriggerAmount : entry.Rolled.TryGetValue(this, out int rolled) ? rolled : count;
+            int n = useTriggerAmount ? entry.TriggerAmount : entry.Scale(entry.Rolled.TryGetValue(this, out int rolled) ? rolled : count); // 굴린 장수(1016)도 2배 (11-card-list 4절 #12 제안)
             foreach (int actor in server.ReceiversOf(subject, entry))
                 server.DrawCards(actor, n, entry);
         }

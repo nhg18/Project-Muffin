@@ -93,6 +93,27 @@ namespace Chapchu.Cards
             if (string.IsNullOrEmpty(entry.name))
                 return Fail(entry, "이름이 비었다", out error);
 
+            // 반응 값 (카운터 · 「카드 반응」 함정) — 적은 줄만 얹는다. 빼면 에셋 값 그대로
+            List<CardType> reactsTo = null;
+            if (entry.reactsTo != null && entry.reactsTo.Length > 0)
+            {
+                reactsTo = new List<CardType>();
+                foreach (string raw in entry.reactsTo)
+                {
+                    if (!TryParseName(raw, out CardType reacted))
+                        return Fail(entry, $"반응하는 종류 「{raw}」 를 모른다", out error);
+                    reactsTo.Add(reacted);
+                }
+            }
+
+            ReactCondition? reactCondition = null;
+            if (!string.IsNullOrEmpty(entry.reactCondition))
+            {
+                if (!TryParseName(entry.reactCondition, out ReactCondition parsed))
+                    return Fail(entry, $"반응 조건 「{entry.reactCondition}」 를 모른다", out error);
+                reactCondition = parsed;
+            }
+
             int effectCount = entry.effects?.Length ?? 0;
             if (effectCount != data.effects.Count)
                 return Fail(entry, $"효과 {effectCount}개 — 에셋은 {data.effects.Count}개", out error);
@@ -116,6 +137,13 @@ namespace Chapchu.Cards
             data.targetCondition = condition;
             data.grade = grade;
             data.description = text;
+            if (reactsTo != null)
+            {
+                data.reactsTo = reactsTo;
+                data.unstoppable = entry.unstoppable; // 반응하는 종류를 적은 줄에서만 — 다른 줄은 빠진 값(false)과 「아니다」 를 가릴 수 없다
+            }
+            if (reactCondition.HasValue)
+                data.reactCondition = reactCondition.Value;
             error = null;
             return true;
         }
@@ -252,6 +280,9 @@ namespace Chapchu.Cards
         public string grade;           // CardGrade 이름
         public int count;              // 덱에 들어가는 장수. 0 이면 덱에서 빠진다
         public string text;            // 카드 문구. 수치는 값 자리({0})로 쓴다
+        public string[] reactsTo;      // 카운터 · 「카드 반응」 함정: 반응하는 CardType 이름들. 빼면 에셋 값 그대로 (04-card.md 7절)
+        public string reactCondition;  // ReactCondition 이름. 빼면 에셋 값 그대로
+        public bool unstoppable;       // 막을 수 없는 카드 (2014 알아) — reactsTo 를 적은 줄에서만 읽는다
         public CardSheetEffect[] effects;
     }
 

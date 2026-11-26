@@ -10,6 +10,8 @@ namespace Chapchu.Game.Effects
     {
         public EffectSubject subject;
         public int amount;
+        // 켜면 지금 회복하지 않고, 반응한 카드(바로 아래)의 효과를 다 적용한 직후에 회복한다 — 2001 침착 (04-card.md 7절 「아래 카드 처리 직후의 효과」)
+        public bool afterBelow;
 
         // 18-bot 7-1 — 내 회복은 HP 가 낮을수록 값지다. 상대를 회복시키면 감점 (1006 은 그래서 나에게 쓴다)
         internal override double BotScore(Bots.BotView view, int[] receivers) =>
@@ -19,8 +21,14 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
+            int heal = entry.Scale(amount);
             foreach (int actor in server.ReceiversOf(subject, entry))
-                server.ApplyHeal(entry, actor, amount);
+            {
+                if (afterBelow && entry.Below != null)
+                    entry.Below.HealAfter[actor] = (entry.Below.HealAfter.TryGetValue(actor, out int queued) ? queued : 0) + heal;
+                else
+                    server.ApplyHeal(entry, actor, heal);
+            }
         }
     }
 }

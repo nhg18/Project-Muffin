@@ -15,7 +15,7 @@ namespace Chapchu.Game.Effects
 
         internal override EffectTag Tag => EffectTag.Damage;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Self, entry);
-        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;
+        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? entry.Scale(amount) : 0;
 
         // 18-bot 7-3 (사용자 2026-11-13): 쓰러뜨릴 수 있으면 먼저 쓴다 (피해 효과의 쓰러뜨림 점수). 못 쓰러뜨리는데 내 HP 가 amount 이하면 쓰지 않는다 (반동으로 내가 쓰러진다)
         internal override bool BotWants(GameServer server, int bot, int[] receivers) =>
@@ -33,7 +33,7 @@ namespace Chapchu.Game.Effects
                 return; // 대상이 빠졌다 — 판정할 상대가 없어 불발 (04 10절)
 
             foreach (int actor in server.ReceiversOf(EffectSubject.Self, entry))
-                server.ApplyDamage(entry, actor, amount);
+                server.ApplyDamage(entry, actor, entry.Scale(amount)); // 2배(2005)면 반동도 2배 (11-card-list 4절 #12 제안)
         }
     }
 }

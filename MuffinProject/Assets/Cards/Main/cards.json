@@ -99,6 +99,36 @@
       "id": 1012, "name": "대소동", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
       "text": "새 판을 시작한다. 이후 턴마다 모두 점점 커지는 피해를 받는다",
       "effects": [ { "type": "RestartEffect", "args": "" } ]
+    },
+    {
+      "id": 2001, "name": "침착", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "방금 나온 행동 카드의 피해를 {0} 줄이고, 나는 HP를 {1} 회복한다",
+      "reactsTo": [ "Action" ], "reactCondition": "HasDamage", "unstoppable": false,
+      "effects": [ { "type": "ReduceDamageEffect", "args": "amount=20, allReceivers=true" }, { "type": "HealEffect", "args": "subject=Self, amount=10, afterBelow=true" } ]
+    },
+    {
+      "id": 2002, "name": "반사", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
+      "text": "나에게 오는 효과를 쓴 사람에게 되돌린다",
+      "reactsTo": [ "Action", "Counter" ], "reactCondition": "AimsAtMe", "unstoppable": false,
+      "effects": [ { "type": "ReflectEffect", "args": "" } ]
+    },
+    {
+      "id": 2003, "name": "진짜 할거야?", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "방금 나온 행동 카드를 막는다. 막은 카드는 쓴 사람 손패로 돌아간다",
+      "reactsTo": [ "Action" ], "reactCondition": "Any", "unstoppable": false,
+      "effects": [ { "type": "ReturnToHandEffect", "args": "" } ]
+    },
+    {
+      "id": 2005, "name": "묻고 따블로 가", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "방금 나온 카운터를 막고, 그 아래 카드의 수치를 2배로 만든다",
+      "reactsTo": [ "Counter" ], "reactCondition": "Any", "unstoppable": false,
+      "effects": [ { "type": "NegateEffect", "args": "selfOnly=false" }, { "type": "DoubleEffect", "args": "" } ]
+    },
+    {
+      "id": 2014, "name": "알아", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Rare", "count": 2,
+      "text": "방금 나온 카운터를 막는다. 이 카드는 막을 수 없다",
+      "reactsTo": [ "Counter" ], "reactCondition": "Any", "unstoppable": true,
+      "effects": [ { "type": "NegateEffect", "args": "selfOnly=false" } ]
     }
   ]
 }

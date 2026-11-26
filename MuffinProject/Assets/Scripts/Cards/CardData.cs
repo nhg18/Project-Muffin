@@ -49,6 +49,9 @@ namespace Chapchu.Cards
         [Tooltip("카운터 · 「카드 반응」 함정: 반응 조건 (04-card.md 7절 「반응 조건」).")]
         public ReactCondition reactCondition;
 
+        [Tooltip("막을 수 없는 카드 — 체인 맨 위에 있으면 아무도 카운터를 낼 수 없다 (04-card.md 7절 사용 조건 6 — 2014 알아).")]
+        public bool unstoppable;
+
         [Header("연출 시간 (10-ui.md 5-1) — 방장이 반응 · 턴 시각 계산에 쓴다. 연출 길이를 바꾸면 같이 바꾼다")]
         [Tooltip("2 ~ 3 단계(카드 이펙트 · 가운데 확대) 초 — 1 단계는 없다 (2026-11-11). 반응 시간이 이 뒤에 열린다.")]
         [Min(0)] public float revealSeconds = 1f;

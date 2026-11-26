@@ -21,8 +21,13 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
+            int n = entry.Scale(count);
             foreach (int actor in server.ReceiversOf(EffectSubject.Target, entry))
-                server.StealRandom(actor, entry.User, count, entry.User);
+                server.StealRandom(actor, entry.User, n, entry.User); // 되돌린 대상(2002 반사)의 자리는 쓴 사람 자신이라 여기서는 아무 일도 없다
+
+            // 2002 반사 — 빼앗기는 방향이 뒤집힌다: 되돌린 사람이 쓴 사람의 카드를 가져온다 (11-card-list 2002)
+            foreach (int actor in entry.Targets.Where(t => entry.Reflected.Contains(t) && !entry.Excluded.Contains(t) && server.InGame(t)))
+                server.StealRandom(entry.User, actor, n, actor);
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Chapchu.Game.Effects
 
         internal override EffectTag Tag => EffectTag.Damage; // 고르기 전에는 피해일 수 있다 — 「나에게 피해」 반응 조건은 받는 사람 기준
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry);
-        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;
+        internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? entry.Scale(amount) : 0;
 
         // 18-bot 7-3 (사용자 2026-11-13 · 프로토타입 v2): 대상은 손패 × 3 + (HP ≤ amount 면 40) 이 가장 큰 상대 — 그 식이 그대로 점수다.
         // HP ≤ amount 인 찹츄 상대는 버리기를 고를 수밖에 없어 찹츄가 깨진다. 어느 쪽을 골라도 큰 손해라 바탕 점수가 있다
@@ -62,7 +62,7 @@ namespace Chapchu.Game.Effects
             if (option == DiscardAll)
                 server.DiscardRandom(actor, server.HandCountOf(actor), entry.User);
             else
-                server.ApplyDamage(entry, actor, amount);
+                server.ApplyDamage(entry, actor, entry.Scale(amount)); // 2배(2005)는 피해만 — 「전부 버리기」 는 숫자가 없다
         }
     }
 }

@@ -170,8 +170,8 @@ namespace Chapchu.Game
         /// </summary>
         internal bool CanReactTo(Card card, int me, ChainEntry top)
         {
-            if (!card.ReactsTo.Contains(top.Card.Type))
-                return false;
+            if (top.Card.Unstoppable || !card.ReactsTo.Contains(top.Card.Type))
+                return false; // 막을 수 없는 카드(2014 알아) 위에는 아무도 못 낸다 (04 7절 사용 조건 6)
 
             switch (card.Condition)
             {
@@ -187,6 +187,8 @@ namespace Chapchu.Game
                 case ReactCondition.DestroysMyTrap: return top.User != me && AffectedBy(top, EffectTag.DestroyTrap).Contains(me);
                 case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
+                case ReactCondition.HasDamage:      return top.Card.Effects.Any(e => e.Tag == EffectTag.Damage);
+                case ReactCondition.AimsAtMe:       return top.User != me && top.Card.Effects.Any(e => e.Affected(this, top).Contains(me));
                 default:                            return false;
             }
         }
@@ -248,6 +250,7 @@ namespace Chapchu.Game
                         return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
                 }
 
+                ApplyHealAfter(entry); // 2001 침착 — 줄어든 피해를 받은 바로 뒤에 회복 (04 7절)
                 _resolving.RemoveAt(0);
             }
 
@@ -318,11 +321,28 @@ namespace Chapchu.Game
             countered.NegatedBy = entry.User;
         }
 
-        /// <summary>효과를 받을 사람. 본인 무효화(Excluded)와 나간 사람을 뺀다 — 처리 전에 빠진 대상은 그 효과만 불발 (04 10절).</summary>
+        /// <summary>
+        /// 효과를 받을 사람. 본인 무효화(Excluded)와 나간 사람을 뺀다 — 처리 전에 빠진 대상은 그 효과만 불발 (04 10절).
+        /// 자기 몫을 되돌린 대상(2002 반사)은 그 자리를 쓴 사람이 받는다 — 쓴 사람이 원래 대상이기도 하면 두 몫을 받는다 (내 몫형, 04 7절).
+        /// </summary>
         internal int[] ReceiversOf(EffectSubject subject, ChainEntry entry)
         {
-            IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets;
-            return receivers.Where(actor => !entry.Excluded.Contains(actor) && IsInGame(actor)).ToArray();
+            IEnumerable<int> receivers = (subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets)
+                .Where(actor => !entry.Excluded.Contains(actor))
+                .Select(actor => subject == EffectSubject.Target && entry.Reflected.Contains(actor) ? entry.User : actor);
+            return receivers.Where(IsInGame).ToArray();
+        }
+
+        // 2001 침착의 덤 — 아래 카드의 효과를 다 적용한 직후. 그 피해로 HP 0 이 됐어도 체인이 끝나기 전이라 사망 대기가 아니다 — 회복으로 1 이상이면 살아 있다 (04 7절 · 9.3, 사용자 2026-11-21)
+        private void ApplyHealAfter(ChainEntry entry)
+        {
+            foreach (KeyValuePair<int, int> pair in entry.HealAfter)
+            {
+                if (IsInGame(pair.Key))
+                    ApplyHealRaw(pair.Key, pair.Value, fromZero: true);
+            }
+
+            entry.HealAfter.Clear();
         }
     }
 }

@@ -53,4 +53,14 @@ MonoBehaviour:
     count: 3
   - card: {fileID: 11400000, guid: 1623de1f2ccdb5c408b7cb2729ddeeba, type: 2}
     count: 1
+  - card: {fileID: 11400000, guid: 4b2d904cff298974ca979c054b3ce137, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: c6318b6e7e15a1f479069eb30d0b5136, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: aed37cbe39dbb204cb15b5c66f488e97, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: c98f1ac2f4dac3b48bd304d60785f174, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 43b274250374a984798e9642da83a337, type: 2}
+    count: 2
   sheet: {fileID: 4900000, guid: b5bc381f71aa40d4f8b411c8fa221a8a, type: 3}

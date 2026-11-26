@@ -10,7 +10,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 담는 순서가 바뀌면 올린다 — 다른 번호의 스냅샷은 되살리지 않는다 (앱 버전이 섞인 방)
-        private const int SnapshotVersion = 1;
+        private const int SnapshotVersion = 2; // 2 카운터 2001 · 2002 · 2005 의 표시
 
         /// <summary>
         /// 상태가 바뀔 때마다 는다 — 전송 층이 「예비 방장에게 다시 보낼 때」 를 아는 값. 거절만 일어난 요청 · 매 프레임 미루는 마감은 올리지 않는다
@@ -91,6 +91,10 @@ namespace Chapchu.Game
                 w.Ints(e.ProtectTraps);
                 w.Map(e.Rolled.ToDictionary(pair => IndexOfEffect(e.Card, pair.Key), pair => pair.Value)); // 효과는 그 카드의 몇 번째인지로
                 w.Ints(e.KnockedDown);
+                w.Int(e.DamageReductionAll);
+                w.Map(e.HealAfter);
+                w.Bool(e.Doubled);
+                w.Ints(e.Reflected);
                 w.Int(e.Below == null ? -1 : entries.IndexOf(e.Below));
                 w.Int(e.NextEffect);
             }
@@ -269,6 +273,10 @@ namespace Chapchu.Game
                 foreach (KeyValuePair<int, int> pair in rolled)
                     e.Rolled[EffectAt(card, pair.Key)] = pair.Value;
                 e.KnockedDown.UnionWith(r.Ints());
+                e.DamageReductionAll = r.Int();
+                r.Map(e.HealAfter);
+                e.Doubled = r.Bool();
+                e.Reflected.UnionWith(r.Ints());
                 belows[i] = r.Int();
                 e.NextEffect = r.Int();
                 entries.Add(e);

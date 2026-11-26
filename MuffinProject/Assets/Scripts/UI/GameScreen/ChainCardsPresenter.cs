@@ -314,8 +314,9 @@ namespace Chapchu.UI.GameScreen
         private Entry Find(int cardInstanceId) => _chain.Find(e => e.Id == cardInstanceId && e.Card != null);
 
         // 앞 카드를 무효화하는 카운터 — 그 앞 카드는 「죽은」 카드로 보고 묶음을 가른다. 본인만 무효(C05)는 다른 사람에게 그대로 적용되므로 아니다.
+        // 손패로 반환(2003 진짜 할거야?)도 앞 카드 전체를 무효로 한다.
         private static bool IsNegating(CardData data)
-            => data != null && data.type == CardType.Counter && data.effects.Any(effect => effect is NegateEffect negate && !negate.selfOnly);
+            => data != null && data.type == CardType.Counter && data.effects.Any(effect => effect is NegateEffect negate && !negate.selfOnly || effect is ReturnToHandEffect);
 
         // 체인의 카드를 모두 제자리로 보낸다. entering = 방금 낸 카드 (손에서 오는 시간으로), 나머지는 layoutDuration.
         // 3 단계인 카드는 배치와 상관없이 가운데 큰 자리 — 손패가 올라와 있으면 바로 제자리로.
