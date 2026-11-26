@@ -159,6 +159,14 @@ namespace Chapchu.UI.Lobby
         public int KillWins => 7;
         public int ChapchuWins => 5;
 
+        // 레벨 · 경험치 — 시안의 자리 확인용 값. 무엇으로 얻는지 · 레벨별 필요량은 레벨 시스템 미정 (17 12절 #14)
+        public int Level => 7;
+        public int Xp => 340;
+        public int XpNext => 500;
+
+        // 닉네임 변경 쿠폰 — 처음 1장 무료 (17 5-2). 쓰면 줄고 7일 쿨다운이 붙는 것은 서버가 정한다 (24 3-4)
+        public int NicknameCoupons => 1;
+
         public List<HubPerson> Friends { get; } = new List<HubPerson>();
         public List<HubPerson> RequestsIn { get; } = new List<HubPerson>();
         public List<HubPerson> RequestsOut { get; } = new List<HubPerson>();

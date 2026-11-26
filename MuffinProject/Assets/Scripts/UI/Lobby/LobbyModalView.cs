@@ -50,6 +50,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button inputCloseButton;
         [SerializeField] private TMP_Text inputMessage;
         [SerializeField] private TMP_InputField field;
+        [SerializeField] private LayoutElement fieldSize;
         [SerializeField] private TMP_Text fieldPlaceholder;
         [SerializeField] private RoundBox fieldBox;
         [SerializeField] private TMP_Text countText;
@@ -59,6 +60,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private TMP_Text submitLabel;
         [SerializeField] private Sprite keyIcon;
         [SerializeField] private Sprite userIcon;
+
+        [Tooltip("방 코드 입력칸 높이 (캔버스 px)")]
+        [SerializeField] private float codeFieldHeight = 104f;
+
+        [Tooltip("닉네임 · 삭제 입력칸 높이 (캔버스 px)")]
+        [SerializeField] private float textFieldHeight = 88f;
 
         [Tooltip("방 코드 입력칸의 글자 크기")]
         [SerializeField] private float codeFontSize = 52f;
@@ -114,7 +121,7 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             if (dimmer == null || inputContent == null || inputBand == null || inputIcon == null || inputTitle == null || inputCloseButton == null
-                || inputMessage == null || field == null || fieldPlaceholder == null || fieldBox == null || countText == null || errorText == null
+                || inputMessage == null || field == null || fieldSize == null || fieldPlaceholder == null || fieldBox == null || countText == null || errorText == null
                 || submitButton == null || submitBox == null || submitLabel == null || keyIcon == null || userIcon == null)
                 Debug.LogError($"[{nameof(LobbyModalView)}] 입력 창 참조가 비어 있습니다.", this);
 
@@ -146,7 +153,8 @@ namespace Chapchu.UI.Lobby
 
         #region 입력 창
 
-        public void ShowInput(LobbyInputKind kind, string value = "")
+        /// <param name="note">입력 칸 위 안내 줄 — 닉네임은 변경 쿠폰 안내. 계정 삭제는 정해진 문구를 쓰고, 방 코드는 없다</param>
+        public void ShowInput(LobbyInputKind kind, string value = "", string note = null)
         {
             InputKind = kind;
             bool isCode = kind == LobbyInputKind.RoomCode;
@@ -156,14 +164,16 @@ namespace Chapchu.UI.Lobby
             inputBand.color = isDelete ? LobbyStyle.Hp : LobbyStyle.Band;
             inputIcon.sprite = isCode ? keyIcon : isDelete ? alertIcon : userIcon; // 계정 삭제 = 위험 창과 같은 「!」
             inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : NicknameTitle;
-            inputMessage.gameObject.SetActive(isDelete);
-            inputMessage.text = DeleteMessage;
+            string message = isDelete ? DeleteMessage : note;
+            inputMessage.gameObject.SetActive(!string.IsNullOrEmpty(message));
+            inputMessage.text = message ?? string.Empty;
             fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : NicknamePlaceholder;
             submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : NicknameSubmit;
             submitLabel.color = isDelete ? Color.white : LobbyStyle.Ink;
             submitBox.FillColor = isDelete ? LobbyStyle.Hp : LobbyStyle.Turn;
 
-            // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다
+            // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다 · 칸이 더 높다
+            fieldSize.minHeight = fieldSize.preferredHeight = isCode ? codeFieldHeight : textFieldHeight;
             field.characterLimit = isCode ? RandomCode.Length : kind == LobbyInputKind.Nickname ? NicknameValidator.MaxLength : 0;
             field.textComponent.alignment = isCode ? TextAlignmentOptions.Center : TextAlignmentOptions.Left;
             field.textComponent.fontSize = isCode ? codeFontSize : textFontSize;

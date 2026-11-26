@@ -26,7 +26,8 @@ namespace Chapchu.UI.Lobby
         private const string AccountText = "계정";
         private const string LoginNoteFormat = "{0} 계정으로 로그인";
         private const string LoginNameFormat = "{0} 로그인";
-        private const string CopiedToast = "친구 코드를 복사했어요.";
+        private const string CopiedCodeToast = "친구 코드를 복사했어요.";
+        private const string CopiedIdToast = "고유 ID를 복사했어요.";
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -80,7 +81,7 @@ namespace Chapchu.UI.Lobby
             topBar.OnSettingsRequested += ShowSettings;
 
             friends.OnCloseRequested += ClosePopups;
-            friends.OnCopyRequested += HandleCopyRequested;
+            friends.OnCopyRequested += HandleCopyCodeRequested;
             friends.OnAcceptRequested += HandleFriendAccepted;
             friends.OnDeclineRequested += HandleFriendDeclined;
             friends.OnCancelRequested += HandleFriendRequestCanceled;
@@ -88,7 +89,8 @@ namespace Chapchu.UI.Lobby
             friends.OnDeleteRequested += HandleUnfriendRequested;
             friends.OnBlockRequested += HandleBlockRequested;
             profile.OnCloseRequested += ClosePopups;
-            profile.OnCopyRequested += HandleCopyRequested;
+            profile.OnCopyCodeRequested += HandleCopyCodeRequested;
+            profile.OnCopyIdRequested += HandleCopyIdRequested;
             settings.OnCloseRequested += ClosePopups;
             settings.OnSfxChanged += HandleSfxChanged;
             settings.OnBgmChanged += HandleBgmChanged;
@@ -114,7 +116,7 @@ namespace Chapchu.UI.Lobby
             topBar.OnSettingsRequested -= ShowSettings;
 
             friends.OnCloseRequested -= ClosePopups;
-            friends.OnCopyRequested -= HandleCopyRequested;
+            friends.OnCopyRequested -= HandleCopyCodeRequested;
             friends.OnAcceptRequested -= HandleFriendAccepted;
             friends.OnDeclineRequested -= HandleFriendDeclined;
             friends.OnCancelRequested -= HandleFriendRequestCanceled;
@@ -122,7 +124,8 @@ namespace Chapchu.UI.Lobby
             friends.OnDeleteRequested -= HandleUnfriendRequested;
             friends.OnBlockRequested -= HandleBlockRequested;
             profile.OnCloseRequested -= ClosePopups;
-            profile.OnCopyRequested -= HandleCopyRequested;
+            profile.OnCopyCodeRequested -= HandleCopyCodeRequested;
+            profile.OnCopyIdRequested -= HandleCopyIdRequested;
             settings.OnCloseRequested -= ClosePopups;
             settings.OnSfxChanged -= HandleSfxChanged;
             settings.OnBgmChanged -= HandleBgmChanged;
@@ -217,7 +220,7 @@ namespace Chapchu.UI.Lobby
         {
             HidePopups();
             EnterPopupScreen(AnalyticsRecorder.ScreenName.Profile);
-            profile.Show(NetworkManager.Nickname, Data, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
+            profile.Show(NetworkManager.Nickname, Data, AccountService.PlayerId, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
 
@@ -269,10 +272,21 @@ namespace Chapchu.UI.Lobby
 
         private void HandleContactRequested() => Debug.LogWarning($"[{nameof(LobbyPopupPresenter)}] 문의 주소가 아직 정해지지 않아 열지 않는다.");
 
-        private void HandleCopyRequested()
+        // 가려 있어도 값을 복사한다 (17 5-2)
+        private void HandleCopyCodeRequested()
         {
             GUIUtility.systemCopyBuffer = Data.MyCode;
-            fx.Toast(CopiedToast);
+            fx.Toast(CopiedCodeToast);
+        }
+
+        private void HandleCopyIdRequested()
+        {
+            string playerId = AccountService.PlayerId;
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            GUIUtility.systemCopyBuffer = playerId;
+            fx.Toast(CopiedIdToast);
         }
 
         #endregion

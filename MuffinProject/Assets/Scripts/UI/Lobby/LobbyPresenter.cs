@@ -60,7 +60,8 @@ namespace Chapchu.UI.Lobby
         private void Start()
         {
             AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Lobby);
-            home.SetProfile(NetworkManager.Nickname, Data.MyCode);
+            home.SetProfile(NetworkManager.Nickname);
+            home.SetLevel(Data.Level, Data.Xp, Data.XpNext);
             RefreshWallet();
             RefreshBadges();
         }
