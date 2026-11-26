@@ -252,6 +252,10 @@ namespace Chapchu.Cards
         public string grade;           // CardGrade 이름
         public int count;              // 덱에 들어가는 장수. 0 이면 덱에서 빠진다
         public string text;            // 카드 문구. 수치는 값 자리({0})로 쓴다
+        // 아래 셋은 「카드 가져오기」 만 에셋에 옮긴다 — 게임이 얹는 값(TryApply)에는 들지 않는다
+        public string reactsTo;        // 카운터: 반응하는 카드 종류 — CardType 이름을 쉼표로 (예: "Action, Counter"). 비우면 건드리지 않는다
+        public string reactCondition;  // 카운터: ReactCondition 이름, 비우면 Any
+        public bool uncounterable;     // 이 카드에는 카운터를 낼 수 없다 (2014)
         public CardSheetEffect[] effects;
     }
 

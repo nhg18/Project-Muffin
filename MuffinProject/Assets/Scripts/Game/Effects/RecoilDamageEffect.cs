@@ -14,6 +14,7 @@ namespace Chapchu.Game.Effects
         public int amount;
 
         internal override EffectTag Tag => EffectTag.Damage;
+        internal override bool IsRecoil => true;
         internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Self, entry);
         internal override int PredictDamage(GameServer server, ChainEntry entry, int actor) => Affected(server, entry).Contains(actor) ? amount : 0;
 
@@ -27,13 +28,14 @@ namespace Chapchu.Game.Effects
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            if (entry.Targets.Length == 0 || entry.Targets.Any(entry.KnockedDown.Contains))
+            int[] targets = entry.Targets;
+            if (targets.Length == 0 || targets.Any(entry.KnockedDown.Contains))
                 return;
-            if (!entry.Targets.Any(server.InGame))
+            if (!targets.Any(server.InGame))
                 return; // 대상이 빠졌다 — 판정할 상대가 없어 불발 (04 10절)
 
-            foreach (int actor in server.ReceiversOf(EffectSubject.Self, entry))
-                server.ApplyDamage(entry, actor, amount);
+            if (server.ReceiversOf(EffectSubject.Self, entry).Length > 0)
+                server.ApplyDamage(entry, entry.User, amount);
         }
     }
 }

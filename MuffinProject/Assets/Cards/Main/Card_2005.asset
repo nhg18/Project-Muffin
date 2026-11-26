@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
+  m_Name: Card_2005
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
+  id: 2005
+  cardName: "\uBB3B\uACE0 \uB530\uBE14\uB85C \uAC00"
+  cardImage: {fileID: 0}
+  type: 1
+  targetType: 0
+  targetCondition: 0
+  grade: 3
+  description: "\uBC29\uAE08 \uB098\uC628 \uCE74\uC6B4\uD130\uB97C \uB9C9\uACE0,
+    \uADF8 \uC544\uB798 \uCE74\uB4DC\uC758 \uC218\uCE58\uB97C 2\uBC30\uB85C \uB9CC\uB4E0\uB2E4"
+  reactsTo: 01000000
+  trapTrigger: 0
+  triggerValue: 0
+  reactCondition: 0
+  uncounterable: 0
+  revealSeconds: 1
+  resolveSeconds: 1.28
+  resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
+  resolveFlashSeconds: 0
+  effects:
+  - rid: 4532118188692078677
+  - rid: 4532118188692078678
+  references:
+    version: 2
+    RefIds:
+    - rid: 4532118188692078677
+      type: {class: NegateEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        selfOnly: 0
+    - rid: 4532118188692078678
+      type: {class: DoubleBelowEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data: 

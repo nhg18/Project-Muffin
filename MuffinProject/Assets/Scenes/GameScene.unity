@@ -8306,6 +8306,66 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 305787565}
   m_CullTransparentMesh: 1
+--- !u!1 &307767311
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 307767312}
+  - component: {fileID: 307767313}
+  m_Layer: 5
+  m_Name: Cards
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &307767312
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 307767311}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 953548390}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &307767313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 307767311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 1
+  m_StartCorner: 0
+  m_StartAxis: 0
+  m_CellSize: {x: 150, y: 210}
+  m_Spacing: {x: 16, y: 16}
+  m_Constraint: 1
+  m_ConstraintCount: 5
 --- !u!1 &309952409
 GameObject:
   m_ObjectHideFlags: 0
@@ -26742,6 +26802,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1554038499}
+  - {fileID: 307767312}
   - {fileID: 1672163471}
   m_Father: {fileID: 1346867391}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -46073,6 +46134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.ChoicePopupPresenter
   server: {fileID: 381565664}
+  hand: {fileID: 388471598}
 --- !u!114 &1635307799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -46093,6 +46155,9 @@ MonoBehaviour:
   firstLabel: {fileID: 154017172}
   secondButton: {fileID: 1373867421}
   secondLabel: {fileID: 1534108935}
+  buttonsRow: {fileID: 1672163470}
+  cardsGrid: {fileID: 307767313}
+  tilePrefab: {fileID: 2341370608107741959, guid: 36e17c6f94617e441b06ad30b4765fd8, type: 3}
 --- !u!1 &1638781138
 GameObject:
   m_ObjectHideFlags: 0
@@ -50951,6 +51016,8 @@ MonoBehaviour:
   screenFlash: {fileID: 437836665}
   chapchuShout: {fileID: 1660868202}
   cardDeck: {fileID: 11400000, guid: 914cd90ad35768b48b8f4d8014fb49c5, type: 2}
+  menu: {fileID: 0}
+  choicePopup: {fileID: 0}
 --- !u!114 &1842077302
 MonoBehaviour:
   m_ObjectHideFlags: 0

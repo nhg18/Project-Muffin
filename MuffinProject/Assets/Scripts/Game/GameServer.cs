@@ -76,6 +76,7 @@ namespace Chapchu.Game
             _falloutTurns = 0;
             _restartPending = false;
             _heldNext = -1;
+            _turnTaker = -1;
             _reversed = false; // 게임 시작은 정방향 (03-turn.md 6절 #4)
             _extraTurnActor = -1;
             TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)

@@ -9,6 +9,9 @@
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
+#   run.sh counter pick                 2018 물귀신 — 카운터를 낼 때 화면에서 대상(상대 좌석)을 고름 → 나 · 고른 사람이 같은 피해
+#   run.sh counter cost                 위에 이어 2021 으르렁의 대가 — 고르기 판의 카드 칸을 눌러 1장 버림
+#   run.sh counter                      메인 + 클론: 방장에게 실제 카운터(2003)를 쥐여 줌 → 화면에서 냄 → 막힌 카드는 쓴 사람 손패로 · 화면 = 방장
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
 #
@@ -615,11 +618,12 @@ run_multi() {
         for project in "${EDITORS[@]}"; do
             out=$(call "$project" ActIfMyTurn)
             case "$out" in
-                OK*)   log "  $(name_of "$project"): $out"; acted=1; done_rounds=$((done_rounds + 1)); sleep 2; break ;;
+                OK*)   log "  $(name_of "$project"): $out"; acted=1; done_rounds=$((done_rounds + 1)); break ;;
                 FAIL*) fail "$(name_of "$project"): $out"; return ;;
             esac
         done
         # 처음 카드가 나온 뒤 한 번 — 연출(1.46초) 뒤 반응 시간에 남의 턴 클라이언트가 카운터 요청 (04-card.md 7 · 8절)
+        # 카드를 낸 뒤의 쉼(2초)은 이 요청 뒤에 둔다 — 요청 하나(script.run)가 1.5초 넘게 걸려, 쉬고 나서 보내면 반응 시간 5초를 넘겨 코드 6 으로 거절된다 (2026-11-26)
         if [ $acted -eq 1 ] && [ $probed -eq 0 ] && printf '%s' "$out" | grep -q '카드'; then
             for project in "${EDITORS[@]}"; do
                 out=$(call "$project" CounterProbe)
@@ -629,6 +633,7 @@ run_multi() {
                 esac
             done
         fi
+        [ $acted -eq 1 ] && sleep 2
         [ $acted -eq 0 ] && sleep 1
     done
     PROBED=$probed
@@ -698,9 +703,10 @@ compare_screens() {
     done
     [ "$total" -ge 1 ] && log "  남의 턴 요청 거절 확인" || fail "남의 턴 요청이 거절되지 않았다"
     # 카운터 카드를 냈으면 행동 카드가 무효, 아니면 거절 (CounterProbe) — 코드 8(카운터 카드가 아니다), 또는 아무도 낼 카운터가 없어
-    # 반응 시간이 0초로 닫힌 뒤라 코드 6(반응 시간 아님, 04-card 8절)
-    local pattern='내 요청 거절 — 코드 [68]' what='카운터 요청 거절 (코드 6 · 8)'
-    if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — '; what='카운터로 행동 카드 무효'; fi
+    # 반응 시간이 0초로 닫힌 뒤라 코드 6(반응 시간 아님, 04-card 8절). 손의 카운터가 그 카드에 낼 수 없는 것이면 코드 9(반응 조건)
+    local pattern='내 요청 거절 — 코드 [689]' what='카운터 요청 거절 (코드 6 · 8 · 9)'
+    # 실제 카운터(11-card-list 1-3)는 무효만 하지 않는다 — 무효(카드 무효) · 쓴 사람 손패로(2003) · 피해 감소(2001 · 2016 — 카운터 카드가 처리된 줄)
+    if [ "$PROBED" -eq 2 ]; then pattern=' 카드 무효 — \| 손패로 반환\| 카드 처리 — 카드 20[0-9][0-9] '; what='카운터 카드가 방장에게 받아들여져 처리됨 (무효 · 반환 · 감소)'; fi
     total=0
     for project in "${EDITORS[@]}"; do
         count=$(console_lines "$project" | grep -c "\[GameDebugInput\].*$pattern")
@@ -871,6 +877,97 @@ run_skip() {
     log "  $out"
     case "$out" in OK*) ;; *) fail "스킵 뒤: $out" ;; esac
     sleep 6
+    for project in "${EDITORS[@]}"; do
+        check_errors "$project"
+    done
+}
+
+# 실제 카운터 (11-card-list 1-3): 클론의 턴에 방장에게 2003 을 쥐여 주고 클론이 방장에게 행동 카드를 낸다 → 방장이 화면에서 카운터
+# → 막힌 카드는 클론 손패로 · 두 화면의 손패 장수가 방장 값과 같다.
+run_counter() {
+    local out project arm="arm"
+    [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 1장 고르기까지
+    [ "${1:-}" = "pick" ] && arm="arm2018" # 2018 물귀신 — 낼 때 화면에서 대상 1명 고르기
+    [ "${1:-}" = "reflect" ] && arm="arm2002" # 2002 반사 — 막고 내가 쓴 사람에게 다시 쓴다
+    enter_game 2 || return
+    if [ "$arm" = "arm2018" ] && [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; log "  $(call "$MAIN" ArmPickShot "$SHOT_DIR/pick_$(name_of "$MAIN").png")"; fi
+    log "▶ 클론의 턴에 방장에게 실제 카운터를 쥐여 주고 클론이 카드를 낸다"
+    for _ in $(seq 1 20); do
+        out=$(call "$MAIN" ReactionSkipProbe $arm)
+        case "$out" in
+            OK*) break ;;
+            FAIL*) fail "$out"; return ;;
+        esac
+        call "$MAIN" ExpireTurn >/dev/null
+        sleep 2
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "남의 턴이 오지 않았다: $out"; return ;; esac
+    for _ in $(seq 1 8); do
+        out=$(call "$MAIN" ReactionSkipProbe play)
+        case "$out" in WAIT*) sleep 0.3 ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "카운터 내기: $out"; return ;; esac
+    if [ "$arm" = "arm2018" ]; then
+        log "▶ 대상 고르기 — 카운터를 내면 좌석 고르기가 열리고, 상대 좌석을 누르면 그 사람으로 나간다"
+        for _ in $(seq 1 8); do
+            out=$(call "$MAIN" ReactionSkipProbe pick)
+            case "$out" in WAIT*) sleep 0.2 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "카운터 대상 고르기: $out"; return ;; esac
+        for _ in $(seq 1 8); do
+            out=$(call "$MAIN" ReactionSkipProbe pickclosed)
+            case "$out" in WAIT*) sleep 0.2 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대상 고른 뒤 체인 카드 되돌리기: $out"; return ;; esac
+    fi
+    if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
+    if [ "$arm" = "arm2021" ]; then
+        log "▶ 대가 — 고르기 판에 내 손패가 카드 칸으로 뜨고, 누르면 그 카드가 버려진다 (다른 화면은 「고르는 중」)"
+        for _ in $(seq 1 60); do
+            out=$(call "$MAIN" ReactionSkipProbe cost)
+            case "$out" in
+                WAIT*) sleep 0.5 ;;
+                SHOT*) if [ -n "${SHOT_DIR:-}" ]; then for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/cost_$(name_of "$project").png")"; done; fi ;;
+                *) break ;;
+            esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대가 고르기: $out"; return ;; esac
+        for _ in $(seq 1 20); do
+            out=$(call "$MAIN" ReactionSkipProbe costdone)
+            case "$out" in WAIT*) sleep 0.5 ;; *) break ;; esac
+        done
+        log "  $out"
+        case "$out" in OK*) ;; *) fail "대가 결과: $out" ;; esac
+    fi
+    for _ in $(seq 1 20); do
+        out=$(call "$MAIN" ReactionSkipProbe countered)
+        case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
+    done
+    log "  $out"
+    case "$out" in OK*) ;; *) fail "카운터 결과: $out" ;; esac
+    sleep 4
+    # 카운터 기록 줄 (10-ui 6절) — 2003 「— 손패로 돌아감」 · 2018 「도 같은 피해」 · 2021 「 무효」
+    local line="— 손패로 돌아감"
+    [ "$arm" = "arm2018" ] && line="도 같은 피해"
+    [ "$arm" = "arm2021" ] && line=" 무효"
+    [ "$arm" = "arm2002" ] && line="반사! →"
+    log "▶ 기록에 카운터가 한 일의 줄이 있는가"
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" HistoryHasPart "$line")
+        log "  $(name_of "$project"): $out"
+        case "$out" in OK*) ;; *) fail "$(name_of "$project") 기록: $out" ;; esac
+    done
+    log "▶ 화면의 함정 칸 · 손패 장수가 방장 값과 같은가"
+    for project in "${EDITORS[@]}"; do
+        out=$(call "$project" TableUiExpect)
+        log "  $(name_of "$project"): $out"
+        case "$out" in OK*) ;; *) fail "$(name_of "$project") 화면: $out" ;; esac
+    done
     for project in "${EDITORS[@]}"; do
         check_errors "$project"
     done
@@ -1296,6 +1393,7 @@ case "${1:-}" in
     gaepan)  shift; run_gaepan "$@" ;;
     timeout) shift; run_timeout ;;
     skip)    shift; run_skip ;;
+    counter) shift; run_counter "$@" ;;
     aim)     shift; run_aim "$@" ;;
     fx)      shift; run_fx "$@" ;;
     *)     sed -n '2,10p' "$0"; exit 2 ;;

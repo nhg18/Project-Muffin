@@ -160,8 +160,8 @@ namespace Chapchu.Network
         /// </summary>
         public void RequestMySync() => SendRequest(nameof(RPC_RequestMySync));
 
-        /// <summary>내가 고르는 효과의 답 (1019 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). 고르는 사람 · 시간은 방장이 본다.</summary>
-        public void RequestChoose(int option) => SendRequest(nameof(RPC_RequestChoose), option);
+        /// <summary>내가 고르는 효과의 답 (1019 목표 조준 — 0 손패 전부 버리기 · 1 피해 받기). deadline 은 답하는 고르기의 마감 (OnChoiceStarted 로 받은 값). 고르는 사람 · 시간은 방장이 본다.</summary>
+        public void RequestChoose(int option, double deadline) => SendRequest(nameof(RPC_RequestChoose), option, deadline);
 
         /// <summary>카운터 사용 — 반응 시간 안에, 턴과 관계없이. 체인 맨 위 카드에 반응한다. 대상은 고르는 카드일 때만 쓰인다.</summary>
         public void RequestPlayCounter(int cardInstanceId, int[] targetActorNumbers) => SendRequest(nameof(RPC_RequestPlayCounter), cardInstanceId, targetActorNumbers);
@@ -225,11 +225,11 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_RequestChoose(int option, PhotonMessageInfo info)
+        private void RPC_RequestChoose(int option, double deadline, PhotonMessageInfo info)
         {
             if (!NetworkManager.IsTrustedMaster) return;
             if (!_limiter.Allow(info)) return;
-            Send(_server.Choose(info.Sender.ActorNumber, option));
+            Send(_server.Choose(info.Sender.ActorNumber, option, deadline));
         }
 
         [PunRPC]
@@ -655,12 +655,12 @@ namespace Chapchu.Network
                         break;
 
                     case ChoiceStarted choice:
-                        Broadcast(nameof(RPC_OnChoiceStarted), choice.Actor, choice.User, choice.CardId, choice.HandCount, choice.Damage, choice.StartsAt, choice.Deadline);
+                        Broadcast(nameof(RPC_OnChoiceStarted), choice.Actor, choice.User, choice.CardId, choice.HandCount, choice.Damage, choice.StartsAt, choice.Deadline, choice.Kind);
                         break;
 
                     case ChoiceMade made:
-                        Broadcast(nameof(RPC_OnChoiceMade), made.Actor, made.Option, made.TimedOut);
-                        Debug.Log($"[{nameof(PunGameServer)}] P{made.Actor} 고르기 — {(made.Option < 0 ? "나가서 불발" : made.Option == 0 ? "손패 전부 버리기" : "피해 받기")}{(made.TimedOut ? " (시간 초과 무작위)" : "")}");
+                        Broadcast(nameof(RPC_OnChoiceMade), made.Actor, made.Option, made.TimedOut, made.Kind);
+                        Debug.Log($"[{nameof(PunGameServer)}] P{made.Actor} 고르기 — {(made.Option < 0 ? "나가서 불발" : made.Kind == ChoiceKind.HandCard ? "버릴 카드 1장" : made.Option == 0 ? "손패 전부 버리기" : "피해 받기")}{(made.TimedOut ? " (시간 초과 무작위)" : "")}");
                         break;
 
                     case GaepanJudged judged:
@@ -1109,17 +1109,17 @@ namespace Chapchu.Network
         }
 
         [PunRPC]
-        private void RPC_OnChoiceStarted(int seq, int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, PhotonMessageInfo info)
+        private void RPC_OnChoiceStarted(int seq, int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseChoiceStarted(actor, user, cardId, handCount, damage, startsAt, deadline);
+                GameEvents.RaiseChoiceStarted(actor, user, cardId, handCount, damage, startsAt, deadline, kind);
         }
 
         [PunRPC]
-        private void RPC_OnChoiceMade(int seq, int actor, int option, bool timedOut, PhotonMessageInfo info)
+        private void RPC_OnChoiceMade(int seq, int actor, int option, bool timedOut, int kind, PhotonMessageInfo info)
         {
             if (Accept(seq, info))
-                GameEvents.RaiseChoiceMade(actor, option, timedOut);
+                GameEvents.RaiseChoiceMade(actor, option, timedOut, kind);
         }
 
         [PunRPC]

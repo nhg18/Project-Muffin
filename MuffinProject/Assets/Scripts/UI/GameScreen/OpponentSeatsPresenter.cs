@@ -242,7 +242,7 @@ namespace Chapchu.UI.GameScreen
             return 0;
         }
 
-        /// <summary>대상 선택을 취소한다 — 고르던 카드가 손패에서 빠졌을 때 (HandPresenter). 선택 중이 아니면 아무 일도 없다.</summary>
+        /// <summary>대상 선택을 취소한다 — 안내 바의 「취소」 · 고르던 카드가 손패에서 빠졌을 때 · 카운터의 대상을 고르는 중에 반응 시간이 끝남 (HandPresenter). 선택 중이 아니면 아무 일도 없다.</summary>
         public void CancelSelection()
         {
             if (_selecting)
@@ -325,11 +325,7 @@ namespace Chapchu.UI.GameScreen
             seat.SetTargetable(false);
         }
 
-        private void HandleCancelClicked()
-        {
-            if (_selecting)
-                _selectCancelled = true;
-        }
+        private void HandleCancelClicked() => CancelSelection();
 
         private void HandlePlayerLeft(Player player)
         {
