@@ -22609,6 +22609,8 @@ MonoBehaviour:
   options:
   - {fileID: 545556763}
   - {fileID: 20434491}
+  cardsGrid: {fileID: 1655935919}
+  tilePrefab: {fileID: 2341370608107741959, guid: 36e17c6f94617e441b06ad30b4765fd8, type: 3}
   handColor: {r: 0.18431373, g: 0.3882353, b: 0.8392157, a: 1}
   handArtColor: {r: 0.9529412, g: 0.9647059, b: 0.99215686, a: 1}
   handIcon: {fileID: 21300000, guid: 6b4a318cd0c97e146a7ceff39fe71830, type: 3}
@@ -22635,6 +22637,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.ChoicePopupPresenter
   server: {fileID: 381565664}
   chainCards: {fileID: 1924409856}
+  hand: {fileID: 388471598}
 --- !u!1 &1013653384
 GameObject:
   m_ObjectHideFlags: 0
@@ -26932,6 +26935,8 @@ MonoBehaviour:
   topCamera: {fileID: 401235568}
   chainCamera: {fileID: 279525932}
   chainImage: {fileID: 722093912}
+  chainFadedAlpha: 0.25
+  chainFadeDuration: 0.15
 --- !u!114 &1211240099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28913,6 +28918,7 @@ MonoBehaviour:
   boomMaterial: {fileID: 2100000, guid: fbdc9199b0ca49948964521c43644426, type: 2}
   ink: {r: 0.16470589, g: 0.14117648, b: 0.1254902, a: 1}
   hpRange: {x: 1, y: 50}
+  minHitVolume: 0.7
   cardRange: {x: 1, y: 6}
   starGrow: {x: 0.75, y: 1.5}
   sizeGrow: {x: 0.8, y: 1.5}
@@ -36998,6 +37004,66 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1655935917
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1655935918}
+  - component: {fileID: 1655935919}
+  m_Layer: 5
+  m_Name: Cards
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &1655935918
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655935917}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2078210722}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1012, y: -284}
+  m_SizeDelta: {x: 556, y: 415}
+  m_Pivot: {x: 0, y: 1}
+--- !u!114 &1655935919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655935917}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 4
+  m_StartCorner: 0
+  m_StartAxis: 0
+  m_CellSize: {x: 100, y: 100}
+  m_Spacing: {x: 0, y: 0}
+  m_Constraint: 0
+  m_ConstraintCount: 2
 --- !u!1 &1656379717
 GameObject:
   m_ObjectHideFlags: 0
@@ -40295,6 +40361,7 @@ MonoBehaviour:
   - {fileID: 665195599}
   - {fileID: 1678470403}
   - {fileID: 1337862873}
+  tickFromSeconds: 3
 --- !u!114 &1842077303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -45471,6 +45538,7 @@ RectTransform:
   - {fileID: 545556762}
   - {fileID: 20434490}
   - {fileID: 1163292244}
+  - {fileID: 1655935918}
   m_Father: {fileID: 1013332102}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

@@ -20,10 +20,13 @@ namespace Chapchu.UI.GameScreen
 
         [Header("색 (통합 화면 UI v3 .hcI)")]
         [SerializeField] private Color normalFace = Color.white;
+        [Tooltip("보통일 때 숫자 색.")]
         [SerializeField] private Color normalInk = new Color32(0x2a, 0x24, 0x20, 0xFF);
         [SerializeField] private Color nearFace = new Color32(0xff, 0xf1, 0xe0, 0xFF);
+        [Tooltip("9장 · 11장 이상일 때 숫자 색.")]
         [SerializeField] private Color nearInk = new Color32(0xb3, 0x3f, 0x00, 0xFF);
         [SerializeField] private Color tenFace = new Color32(0xff, 0xe3, 0xee, 0xFF);
+        [Tooltip("정확히 10장일 때 숫자 색.")]
         [SerializeField] private Color tenInk = new Color32(0xc8, 0x19, 0x5a, 0xFF);
 
         private void Awake()

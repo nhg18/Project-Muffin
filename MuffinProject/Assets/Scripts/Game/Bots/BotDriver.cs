@@ -27,6 +27,7 @@ namespace Chapchu.Game.Bots
         private const double IdleScore = -5;        // 아무것도 하지 않음 (손패가 10장이 아닐 때)
         private const double EmptyDrawPenalty = 15; // 덱 · 버림 더미가 비어 못 뽑는 1장마다 (빈 덱 피해)
         private const int GrudgePerHit = 2, GrudgeCap = 6, GrudgeCounted = 4; // 나를 노린 카드 1장마다 +2 · 내 턴마다 −1
+        private const int GrudgeDecay = 1;          // 내 턴마다 (18-bot 7-8)
         private const double GrudgeScore = 4;       // 원한 1 마다 그 상대를 노리는 수에 더하는 점수
 
         private readonly GameServer _server;
@@ -183,7 +184,7 @@ namespace Chapchu.Game.Bots
 
             // 원한은 내 턴마다 1 씩 식는다 (7-8)
             foreach (int actor in mind.Grudge.Keys.ToArray())
-                mind.Grudge[actor] = Math.Max(0, mind.Grudge[actor] - 1);
+                mind.Grudge[actor] = Math.Max(0, mind.Grudge[actor] - GrudgeDecay);
 
             // 찹츄 상태인 상대를 이번 턴에 알아챘는가 (7-7) — 턴마다 한 번 정한다
             mind.Noticed.Clear();
@@ -194,7 +195,7 @@ namespace Chapchu.Game.Bots
             }
 
             // 생각 시간 — 지금 보이는 수들의 점수 차로 (4절) × 난이도 배수, 가끔 한 번 더 뜸을 들인다 (7-7). 둘 때는 다시 계산한다
-            double[] scores = Moves(bot, mind).Select(move => move.Score).OrderByDescending(score => score).ToArray();
+            double[] scores = ListMoves(bot, mind).Select(move => move.Score).OrderByDescending(score => score).ToArray();
             double gap = scores.Length > 1 ? scores[0] - scores[1] : ClearGap;
             double min = gap >= ClearGap ? QuickThinkMin : gap < CloseGap ? LongThinkMin : ThinkMin;
             double max = gap >= ClearGap ? QuickThinkMax : gap < CloseGap ? LongThinkMax : ThinkMax;
@@ -220,16 +221,19 @@ namespace Chapchu.Game.Bots
                 return;
             }
 
-            List<Move> moves = Moves(bot, mind);
+            List<Move> moves = ListMoves(bot, mind);
             while (mind.Requests < MaxRequestsPerTurn && moves.Count > 0)
             {
                 Move move = Pick(moves, mind.Spec, out string how);
                 Move next = moves.Where(other => other != move).OrderByDescending(other => other.Score).FirstOrDefault();
-                string line = $"7-1 {move.Text} · {move.Score:0}점{how}" + (next != null ? $" (다음 수: {next.Text} {next.Score:0}점)" : "") + mind.ThinkNote;
+                string tail = $" · {move.Score:0}점{how}" + (next != null ? $" (다음 수: {next.Text} {next.Score:0}점)" : "") + mind.ThinkNote;
+                string line = $"7-1 {move.Text}{tail}";
 
                 if (move.Request == null)
                 {
-                    Log(bot, line); // 찹츄 선언은 자동이라 봇이 따로 요청하지 않는다 (7-5)
+                    // 찹츄 선언은 자동이라 봇이 따로 요청하지 않는다 — 10장 유지는 7-5 줄로 남긴다 (7-6)
+                    bool keepsTen = _server.StateOf(bot).Hand.Count == GameServer.ChapchuHandCount;
+                    Log(bot, keepsTen ? $"7-5 손패 10장 유지 → 기다림{tail}" : line);
                     mind.Done = true;
                     return;
                 }
@@ -238,7 +242,7 @@ namespace Chapchu.Game.Bots
                 events.AddRange(result);
                 mind.Requests++;
 
-                int code = RejectCodeOf(result, bot);
+                int code = FindRejectCode(result, bot);
                 if (code == 0)
                 {
                     Log(bot, line);
@@ -278,10 +282,10 @@ namespace Chapchu.Game.Bots
         }
 
         // 지금 둘 수 있는 수 전부와 점수 (7-1) — 기다림 · 뽑기 · 낼 수 있는 행동 카드 × 고를 수 있는 대상.
-        private List<Move> Moves(int bot, BotMind mind)
+        private List<Move> ListMoves(int bot, BotMind mind)
         {
             var view = new BotView(_server, bot, mind.Spec, mind.Style, mind.Noticed);
-            view.WorthOf = card => WorthOf(view, card);
+            view.WorthOf = card => EstimateWorth(view, card);
 
             PlayerState me = view.Me;
             int hand = me.Hand.Count;
@@ -297,10 +301,10 @@ namespace Chapchu.Game.Bots
 
             // 뽑기 — 2장, 손패가 9장이면 1장 (05-deck 4절). 못 뽑는 장은 빈 덱 피해
             view.Notes.Clear();
-            int want = hand == GameServer.ChapchuHandCount - 1 ? 1 : GameServer.TurnDrawCount;
+            int want = GameServer.TurnDrawCountFor(hand);
             int drawn = Math.Min(want, _server.DrawableCount);
             double drawScore = view.OwnHandScore(hand + drawn) - (want - drawn) * EmptyDrawPenalty;
-            moves.Add(new Move { Text = $"뽑기 {want}장{NotesOf(view)}", Score = drawScore, Request = () => _server.Draw(bot) });
+            moves.Add(new Move { Text = $"뽑기 {want}장{FormatNotes(view)}", Score = drawScore, Request = () => _server.Draw(bot) });
 
             if (me.ActionBlocked)
                 return moves; // 1007 짖기 — 이번 턴은 행동 카드를 쓸 수 없다 (방장 검증과 같은 기준)
@@ -312,7 +316,7 @@ namespace Chapchu.Game.Bots
                 if (card.Type != CardType.Action || !seen.Add(card.CardId))
                     continue;
 
-                int[][] options = ReceiverOptions(view, card).ToArray();
+                int[][] options = ListReceiverOptions(view, card).ToArray();
                 if (card.Target == TargetType.MostHand && options.Length > 1)
                 {
                     // 1018 무야호 — 동률이면 방장이 무작위로 고른다 (11-card-list 1018). 동률인 사람마다 점수를 내 평균한 수 하나 (18-bot.md 7-2)
@@ -338,7 +342,7 @@ namespace Chapchu.Game.Bots
                         view.Notes.AddRange(notes);
                         int tiedInstanceId = card.InstanceId;
                         string tied = string.Join(" · ", options.Select(t => $"P{t[0]}"));
-                        moves.Add(new Move { Text = $"카드 {card.CardId} (#{tiedInstanceId}) → {tied} 중 무작위{NotesOf(view)}", Score = sum / options.Length, Request = () => _server.PlayCard(bot, tiedInstanceId, Array.Empty<int>()) });
+                        moves.Add(new Move { Text = $"카드 {card.CardId} (#{tiedInstanceId}) → {tied} 중 무작위{FormatNotes(view)}", Score = sum / options.Length, Request = () => _server.PlayCard(bot, tiedInstanceId, Array.Empty<int>()) });
                     }
                     continue;
                 }
@@ -362,14 +366,14 @@ namespace Chapchu.Game.Bots
                     int instanceId = card.InstanceId;
                     int[] request = picked ? receivers : Array.Empty<int>(); // 자동 대상은 방장이 정한다
                     string to = picked ? " → " + string.Join(", ", receivers.Select(t => $"P{t}")) : "";
-                    moves.Add(new Move { Text = $"카드 {card.CardId} (#{instanceId}){to}{NotesOf(view)}", Score = score, Request = () => _server.PlayCard(bot, instanceId, request) });
+                    moves.Add(new Move { Text = $"카드 {card.CardId} (#{instanceId}){to}{FormatNotes(view)}", Score = score, Request = () => _server.PlayCard(bot, instanceId, request) });
                 }
             }
 
             return moves;
         }
 
-        private static string NotesOf(BotView view) => view.Notes.Count > 0 ? " [" + string.Join(" · ", view.Notes.Distinct()) + "]" : "";
+        private static string FormatNotes(BotView view) => view.Notes.Count > 0 ? " [" + string.Join(" · ", view.Notes.Distinct()) + "]" : "";
 
         // 이 카드를 receivers 에게 쓸 때의 효과 점수 합과 내 손패가 느는 장수. 봇이 쓰지 않는 효과가 있거나 카드별 조건(7-3)에 안 맞으면 false.
         private bool TryScore(BotView view, Card card, int[] receivers, out double score, out int gain)
@@ -393,10 +397,10 @@ namespace Chapchu.Game.Bots
         }
 
         // 그 카드가 지금 내 손패에 있다면 낼 수 있는 가장 높은 효과 점수 — 버림 더미 맨 위를 가져올 값어치 (1009)
-        private double WorthOf(BotView view, Card card)
+        private double EstimateWorth(BotView view, Card card)
         {
             double best = 0;
-            foreach (int[] receivers in ReceiverOptions(view, card))
+            foreach (int[] receivers in ListReceiverOptions(view, card))
             {
                 if (TryScore(view, card, receivers, out double score, out int gain))
                     best = Math.Max(best, score + gain * BotView.CardValue);
@@ -408,7 +412,7 @@ namespace Chapchu.Game.Bots
 
         // 카드의 대상이 될 사람들 — 고르는 카드는 후보마다 하나씩, 자동 대상은 방장이 정할 그대로 하나(1018 동률이면 동률인 사람마다). 낼 수 없으면 비어 있다.
         // 대상 후보 조건(11-card-list 1-2)은 방장 검증과 같은 기준으로 먼저 거른다. TwoOthers 는 쓰지 않는다 (7-3).
-        private IEnumerable<int[]> ReceiverOptions(BotView view, Card card)
+        private IEnumerable<int[]> ListReceiverOptions(BotView view, Card card)
         {
             int bot = view.Bot;
             int[] inGame = _server.ActorsInGame.ToArray();
@@ -444,16 +448,16 @@ namespace Chapchu.Game.Bots
                     yield return Array.Empty<int>();
                     break;
 
-                case TargetType.ChapchuPlayers: // 나도 찹츄면 나도 맞는다 — 찹츄 상대가 있고 나는 아닐 때만
-                case TargetType.ChapchuOthers:
-                    int[] chapchu = others.Where(view.SeesChapchu).ToArray(); // 알아챈 찹츄 상대만 (7-7)
-                    if (chapchu.Length > 0 && !view.Me.IsChapchu)
+                case TargetType.ChapchuPlayers: // 나 포함 찹츄 상태 전원 — 방장이 정할 그대로 (7-2). 알아챔(7-7)은 효과 점수의 SeesChapchu 가 본다
+                case TargetType.ChapchuOthers:  // 나를 뺀 찹츄 상태 전원
+                    int[] chapchu = (card.Target == TargetType.ChapchuPlayers ? inGame : others).Where(a => _server.StateOf(a).IsChapchu).ToArray();
+                    if (chapchu.Length > 0)
                         yield return chapchu;
                     break;
 
                 case TargetType.MostHand:
                     // 손패 최다 1명 (낸 뒤의 장수). 내가 최다이거나 동률이면 내가 대상이 될 수 있어 쓰지 않는다.
-                    // 상대끼리 동률이면 방장이 무작위로 고르므로 동률인 사람마다 하나씩 — Moves 가 평균을 낸다
+                    // 상대끼리 동률이면 방장이 무작위로 고르므로 동률인 사람마다 하나씩 — ListMoves 가 평균을 낸다
                     int[] alive = view.Opponents;
                     if (alive.Length > 0)
                     {
@@ -498,13 +502,13 @@ namespace Chapchu.Game.Bots
 
             IReadOnlyList<GameEvent> result = _server.SetTrap(bot, card.InstanceId);
             events.AddRange(result);
-            int code = RejectCodeOf(result, bot);
+            int code = FindRejectCode(result, bot);
             Log(bot, code == 0 ? $"7-4 함정 설치 → 카드 {card.CardId} (#{card.InstanceId}) · 함정 {me.Traps.Count}장" : $"7-4 함정 설치 거절 (코드 {code})");
             return code == 0;
         }
 
         // 반응 창이 열린 뒤 반응하기까지 — 난이도마다 (7-7)
-        private double ReactDelay(BotLevelSpec spec) => spec.ReactMin + _random.NextDouble() * (spec.ReactMax - spec.ReactMin);
+        private double RollReactDelay(BotLevelSpec spec) => spec.ReactMin + _random.NextDouble() * (spec.ReactMax - spec.ReactMin);
 
         // 7-4 — 지금 반응할 거리가 있으면 그 창이 열리고 난이도의 반응 시간 뒤 한 번. 같은 창에서는 다시 내지 않는다.
         private void ReactIfNeeded(int bot, double now, List<GameEvent> events)
@@ -520,7 +524,7 @@ namespace Chapchu.Game.Bots
             if (mind.ReactKey != reaction.Key)
             {
                 mind.ReactKey = reaction.Key;
-                mind.ReactAt = Math.Max(now, reaction.OpensAt) + ReactDelay(mind.Spec);
+                mind.ReactAt = Math.Max(now, reaction.OpensAt) + RollReactDelay(mind.Spec);
                 mind.Reacted = false;
             }
 
@@ -530,7 +534,7 @@ namespace Chapchu.Game.Bots
             mind.Reacted = true;
             IReadOnlyList<GameEvent> result = reaction.Request();
             events.AddRange(result);
-            int code = RejectCodeOf(result, bot);
+            int code = FindRejectCode(result, bot);
             Log(bot, code == 0 ? reaction.Reason : $"{reaction.Reason} → 거절 (코드 {code}), 이 창에서는 더 내지 않음");
             if (code != 0)
                 events.AddRange(_server.SkipReaction(bot)); // 더 내지 않으니 남을 기다리게 하지 않는다
@@ -546,11 +550,14 @@ namespace Chapchu.Game.Bots
             if (mind.SkipWindow != _server.ReactionOpensAt)
             {
                 mind.SkipWindow = _server.ReactionOpensAt;
-                mind.SkipAt = now + ReactDelay(mind.Spec);
+                mind.SkipAt = now + RollReactDelay(mind.Spec);
             }
 
             if (now >= mind.SkipAt)
+            {
                 events.AddRange(_server.SkipReaction(bot));
+                Log(bot, "7-4 반응 스킵 — 물어 왔지만 내지 않음"); // SkipReaction 이 물을 목록에서 빼므로 창마다 한 번
+            }
         }
 
         // 반응할 거리를 우선순위로 하나 (7-4). 없으면 false.
@@ -560,7 +567,9 @@ namespace Chapchu.Game.Bots
             {
                 // 1019 목표 조준의 대상 — 반응처럼 난이도의 반응 시간 뒤 (고르는 시간 5초 안). 고르는 규칙은 효과가 (18-bot 7-3, 프로토타입 v2)
                 int option = _server.BotChoiceOption(bot);
-                reaction = new Reaction($"choice:{_server.ChoiceDeadline}", now, $"7-4 고르기 → {(option == 0 ? "손패 전부 버리기" : "피해 받기")}", () => _server.Choose(bot, option));
+                string what = _server.IsChoosingHandCard ? $"대가로 버릴 카드 #{option}" : option == 0 ? "손패 전부 버리기" : "피해 받기";
+                double deadline = _server.ChoiceDeadline;
+                reaction = new Reaction($"choice:{deadline}", now, $"7-4 고르기 → {what}", () => _server.Choose(bot, option, deadline));
                 return true;
             }
 
@@ -576,13 +585,14 @@ namespace Chapchu.Game.Bots
             }
 
             // 나를 대상으로 한 남의 카드가 체인 맨 위 — 카운터. 남끼리의 카드에는 끼지 않는다
-            if (reactionOpen && top.User != bot && top.Targets.Contains(bot))
+            // 나에게 이로운 효과뿐인 카드(회복만 — 1006 핥아주기)는 막지 않는다 (18-bot 7-4, 사용자 2026-11-24)
+            if (reactionOpen && top.User != bot && top.Targets.Contains(bot) && !IsOnlyHelpful(top.Card))
             {
                 string key = $"chain:{_server.ReactionOpensAt}";
-                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top)).OrderBy(c => c.CardId).FirstOrDefault();
+                Card counter = me.Hand.Where(c => c.Type == CardType.Counter && _server.CanReactTo(c, bot, top) && WantsReflect(bot, c, top) && CounterTargets(bot, c, top) != null).OrderBy(c => c.CardId).FirstOrDefault();
                 if (counter != null)
                 {
-                    int[] targets = counter.Target == TargetType.OneOther ? SortedOpponents(bot).Take(1).ToArray() : Array.Empty<int>();
+                    int[] targets = CounterTargets(bot, counter, top);
                     int instanceId = counter.InstanceId;
                     reaction = new Reaction(key, _server.ReactionOpensAt, $"7-4 나를 노린 카드 {top.Card.CardId} 에 카운터 → 카드 {counter.CardId} (#{instanceId})",
                         () => _server.PlayCounter(bot, instanceId, targets));
@@ -594,8 +604,48 @@ namespace Chapchu.Game.Bots
             return false;
         }
 
+        // 7-4 — 효과가 모두 회복인 카드. 받는 쪽에 이롭기만 해서 봇이 카운터로 막지 않는다
+        private static bool IsOnlyHelpful(Card card) => card.Effects.Count > 0 && card.Effects.All(e => e.Tag == EffectTag.Heal);
+
+        // 7-4 — 반사(2002)는 맨 위 카드를 내가 쓴 사람에게 다시 쓰는 것이다 (사용자 2026-11-26). 반사가 아닌 카운터는 언제나 true.
+        // HP 를 서로 바꾸는 카드(1011)는 반사해도 결과가 같아 내지 않는다. 반동이 있는 카드(1005)는 쓴 사람이 그 피해로 쓰러질 때만 낸다 — 못 쓰러뜨리면 반동을 내가 받는다
+        private bool WantsReflect(int bot, Card counter, ChainEntry top)
+        {
+            if (!counter.Effects.Any(e => e is ReflectEffect))
+                return true;
+            if (top.Card.Effects.Any(e => e is SwapHpEffect))
+                return false;
+            if (!top.Card.Effects.Any(e => e.IsRecoil))
+                return true;
+
+            var recast = new ChainEntry(top.Card, bot, new[] { top.User });
+            int damage = top.Card.Effects.Where(e => !e.IsRecoil).Sum(e => e.PredictDamage(_server, recast, top.User));
+            return damage >= _server.PlayerHp(top.User);
+        }
+
+        // 카운터의 대상 (18-bot.md 7-4) — 찹츄 → 손패 많은 → HP 낮은 상대 순. 고르지 않는 카드는 빈 배열, 고를 사람이 모자라면 null (그 카운터는 내지 않는다).
+        // 2015 가로채기는 나를 고르지 않는다. 2018 물귀신은 그 카드의 피해를 받지 않는 사람 중에서.
+        private int[] CounterTargets(int bot, Card counter, ChainEntry top)
+        {
+            switch (counter.Target)
+            {
+                case TargetType.OneOther:
+                    return SortOpponents(bot).Take(1).ToArray();
+                case TargetType.OneNotDamaged:
+                    int[] candidates = _server.ShareCandidates(bot, top);
+                    int[] shared = SortOpponents(bot).Where(candidates.Contains).Take(1).ToArray();
+                    return shared.Length == 1 ? shared : null;
+                case TargetType.SameCountAny:
+                    int count = GameServer.PickCount(top.Card.Target);
+                    int[] picked = SortOpponents(bot).Take(count).ToArray();
+                    return count > 0 && picked.Length == count ? picked : null;
+                default:
+                    return Array.Empty<int>();
+            }
+        }
+
         // 7-4 — 대상을 고르는 카운터의 대상: 나를 뺀 생존자를 찹츄 → 손패 많은 → HP 낮은 순으로. 모두 같으면 무작위.
-        private int[] SortedOpponents(int bot)
+        private int[] SortOpponents(int bot)
         {
             return _server.ActorsInGame
                 .Where(a => a != bot && _server.StateOf(a).Life == LifeState.Alive)
@@ -608,7 +658,7 @@ namespace Chapchu.Game.Bots
 
         #endregion
 
-        private static int RejectCodeOf(IReadOnlyList<GameEvent> events, int bot)
+        private static int FindRejectCode(IReadOnlyList<GameEvent> events, int bot)
         {
             foreach (GameEvent gameEvent in events)
             {

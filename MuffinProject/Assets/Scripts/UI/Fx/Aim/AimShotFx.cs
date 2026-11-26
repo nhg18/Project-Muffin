@@ -86,8 +86,9 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private Color darkColor = new Color32(5, 7, 15, 255);
         [Tooltip("어둠 가운데 (화면 비율, 위에서) · 안 반지름(높이 비율) · 바깥 반지름(대각선 비율).")]
         [SerializeField] private Vector4 darkShape = new Vector4(0.5f, 0.6f, 0.1f, 0.55f);
-        [Tooltip("위아래 띠: 처음 높이 · 늘어나는 높이 (화면 높이 %), 늦춤 · 길이 (ms), 굽음.")]
+        [Tooltip("위아래 띠: 처음 높이 · 늘어나는 높이 (화면 높이 %).")]
         [SerializeField] private Vector2 barHeight = new Vector2(8f, 42f);
+        [Tooltip("위아래 띠: 늦춤 · 길이 (ms), 굽음.")]
         [SerializeField] private Vector3 barTiming = new Vector3(450f, 1050f, 2.2f);
         [Tooltip("가운데 가로 빛: 시작 · 길이 · 끝 (ms).")]
         [SerializeField] private Vector3 lineTiming = new Vector3(1380f, 120f, 1750f);

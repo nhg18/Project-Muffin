@@ -207,6 +207,8 @@ namespace Chapchu.UI.Fx.Band
 
         private float _pixelScale = 1.5f;
 
+        private float ScreenWidth => ((RectTransform)transform).rect.width;
+
         private void Awake()
         {
             var missing = new List<string>();
@@ -428,8 +430,6 @@ namespace Chapchu.UI.Fx.Band
             }
             material.SetColor(ShaderUtilities.ID_UnderlayColor, WithAlpha(color, material.GetColor(ShaderUtilities.ID_UnderlayColor).a));
         }
-
-        private float ScreenWidth => ((RectTransform)transform).rect.width;
 
         private static Tween Progress(float ms, Vector4 ease, Action<float> apply)
         {

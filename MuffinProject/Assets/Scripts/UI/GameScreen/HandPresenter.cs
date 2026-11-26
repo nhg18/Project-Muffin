@@ -23,6 +23,7 @@ namespace Chapchu.UI.GameScreen
     /// 카드 종류 ID → CardData 는 덱 에셋으로 찾는다 — 게임에 나오는 카드는 전부 덱에서 나오기 때문.
     /// </summary>
     [RequireComponent(typeof(HandView))]
+    [RequireComponent(typeof(HandInput))]
     public class HandPresenter : MonoBehaviour
     {
         [Tooltip("PunGameServer 와 같은 덱 에셋 (05-deck.md 8절).")]
@@ -77,15 +78,20 @@ namespace Chapchu.UI.GameScreen
 
         // 반응 시간 — 방장이 보낸 시각(서버 시각)과 낼 수 있는 내 카운터. 시각 안에서만 빛을 켠다.
         private readonly HashSet<int> _usableCounters = new HashSet<int>();
+        private int _chainTopTargets; // 체인 맨 위 카드의 대상 수 — 2015 가로채기가 그 수만큼 고른다 (04-card.md 11절)
         private double _reactionOpensAt;
         private bool _reactionPending; // 반응 시간이 정해졌고 아직 끝나지 않았다 (연출 중 포함) — 마감 시각은 오지 않는다
         private bool _holdSent;        // 이번 반응 시간에 「고민 중」 을 이미 보냈다 (04-card.md 8절 — 1회)
         private bool _glowing;
+        private bool _counterTargeting; // 카운터의 대상을 고르는 중 — 반응 시간이 끝나면 선택을 취소한다 (10-ui.md 6절)
+        private CardView _counterTargetCard; // 그 카운터 — 손패에서 따로 둔 카드라 HandView.HeldCard 에 잡히지 않는다. 「고민 중」 을 보낼 때 쥔 카드로 본다
 
         // 새로 들어와 크게 보여 주는 중인 카드 묶음 — 손패(HandView)에는 이미 들어 있고 자리만 따로다. 판정과 상관없는 연출.
         private readonly List<CardView> _showing = new List<CardView>();
         private float _showLastAddAt;
         private Coroutine _showRoutine;
+
+        private CardView _targetingCard; // 대상을 고르는 중인 카드 — 손패에서 빠지면 선택을 취소한다
 
         private HandView _view;
         private HandInput _input;
@@ -169,7 +175,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (_holdSent) return;
 
-            CardView held = _view.HeldCard;
+            // 연출 중에 미리 대상 선택을 연 카운터도 쥔 카드다 (04-card.md 8절 — 열리자마자 연장)
+            CardView held = _counterTargeting && _counterTargetCard != null ? _counterTargetCard : _view.HeldCard;
             if (held == null || !_usableCounters.Contains(held.InstanceId)) return;
 
             _holdSent = true;
@@ -189,11 +196,16 @@ namespace Chapchu.UI.GameScreen
         public void ShowReaction(double opensAt)
         {
             FinishShow(); // 카운터를 낼 손패 · 체인 카드를 가리지 않게
-            EndReaction();
+            // 목록 · 빛만 버린다 — 연출 중에 미리 연 카운터 대상 선택은 취소하지 않는다 (04-card.md 8절). 취소는 EndReaction 이 한다
+            _usableCounters.Clear();
+            SetGlowOff();
             _reactionOpensAt = opensAt;
             _reactionPending = true;
             _holdSent = false;
         }
+
+        /// <summary>체인에 카드가 올랐다 (OnCardPlayed) — 그 카드의 대상 수를 기억한다.</summary>
+        public void NoteChainTop(int targetCount) => _chainTopTargets = targetCount;
 
         /// <summary>이번 반응 시간에 낼 수 있는 내 카운터 (OnMyCountersUsable) — 반응 시간이 열려 있는 동안 초록 빛.</summary>
         public void ShowUsableCounters(int[] cardInstanceIds)
@@ -203,12 +215,18 @@ namespace Chapchu.UI.GameScreen
             SetGlowOff(); // 다음 Update 에서 새 목록으로 다시 켠다
         }
 
-        /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다.</summary>
+        /// <summary>반응 시간이 끝났다 (새 카드가 체인에 오름 · 체인 처리 시작) — 빛을 끈다. 카운터의 대상을 고르는 중이었으면 선택을 취소한다 — 요청은 가지 않는다 (10-ui.md 6절).</summary>
         public void EndReaction()
         {
             _usableCounters.Clear();
             _reactionPending = false;
             SetGlowOff();
+
+            if (_counterTargeting)
+            {
+                _counterTargeting = false; // PlayWithTargetsRoutine 이 이것을 보고 고른 대상을 버린다
+                seats.CancelSelection();
+            }
         }
 
         private void SetGlowOff()
@@ -248,9 +266,14 @@ namespace Chapchu.UI.GameScreen
             {
                 CardData data = deck.GetCard(cardIds[i]);
                 if (data == null)
-                    Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardIds[i]}", this);
+                {
+                    if (Debug.isDebugBuild) // 내 손패 내용 — 개발 빌드에서만 (CODE_CONVENTION 7절)
+                        Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardIds[i]}", this);
+                }
                 else
+                {
                     AddAndShow(cardInstanceIds[i], data, transform.position);
+                }
             }
         }
 
@@ -260,8 +283,10 @@ namespace Chapchu.UI.GameScreen
             foreach (int instanceId in cardInstanceIds)
             {
                 CardView card = _view.TakeCard(instanceId);
-                if (card != null)
-                    Destroy(card.gameObject);
+                if (card == null) continue;
+
+                CancelTargetingIfTaken(card);
+                Destroy(card.gameObject);
             }
         }
 
@@ -270,9 +295,14 @@ namespace Chapchu.UI.GameScreen
         {
             CardData data = deck.GetCard(cardId);
             if (data == null)
-                Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+            {
+                if (Debug.isDebugBuild)
+                    Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+            }
             else
+            {
                 AddAndShow(cardInstanceId, data, from);
+            }
         }
 
         /// <summary>내가 뽑은 카드를 덱 자리에서 꺼내 크게 보여 준 뒤 손패 끝에 붙인다. 연출 큐는 꺼내는 간격만 기다린다 — 보여 주는 동안 다음 일은 이어진다.</summary>
@@ -281,7 +311,8 @@ namespace Chapchu.UI.GameScreen
             CardData data = deck.GetCard(cardId);
             if (data == null)
             {
-                Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
+                if (Debug.isDebugBuild)
+                    Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={cardId}", this);
                 yield break;
             }
 
@@ -367,16 +398,35 @@ namespace Chapchu.UI.GameScreen
             {
                 CardView card = _view.TakeCard(instanceId);
                 if (card == null)
+                {
                     Debug.LogWarning($"[{nameof(HandPresenter)}] 버려진 카드가 손패에 없다. instanceId={instanceId}", this);
+                }
                 else
+                {
+                    CancelTargetingIfTaken(card);
                     cards.Add(card);
+                }
             }
 
             yield return FlyToDiscardRoutine(cards);
         }
 
-        /// <summary>내 손패 전부가 버려졌다 (최종 사망, 05-deck.md 6절) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
-        public IEnumerator DiscardHandRoutine() => FlyToDiscardRoutine(_view.TakeAll());
+        /// <summary>내 손패 전부가 버려졌다 (최종 사망 · 대소동, 05-deck.md 6절) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
+        public IEnumerator DiscardHandRoutine()
+        {
+            FinishShow(); // 보여 주던 새 카드도 함께 버려진다 — 남은 시간 막대 · 안내 글을 내린다
+            List<CardView> cards = _view.TakeAll();
+            foreach (CardView card in cards)
+                CancelTargetingIfTaken(card);
+            return FlyToDiscardRoutine(cards);
+        }
+
+        // 대상을 고르던 카드가 손패에서 빠졌다 — 선택 모드(가림판 · 안내 바 · 손패 잠금)를 끝낸다 (10-ui.md 6절).
+        private void CancelTargetingIfTaken(CardView card)
+        {
+            if (card != null && card == _targetingCard)
+                seats.CancelSelection();
+        }
 
         // 카드들을 버림 더미의 맨 위 카드 자리로 보내고 지운다 — 닿는 자세가 더미의 맨 위 카드와 같아, 지운 뒤 더미가 그 카드를 맨 위로 보여 준다 (DiscardPilePresenter).
         private IEnumerator FlyToDiscardRoutine(List<CardView> cards)
@@ -419,10 +469,10 @@ namespace Chapchu.UI.GameScreen
                 seats.ShowAim(0);
         }
 
-        // 올라온 손패가 덮는 HUD 는 그동안 눌리지 않는다 — 카드를 고르려다 찹츄 버튼이 눌리지 않게 (프로토타입 v2 #game.handup).
+        // 올라온 손패가 덮는 HUD 는 그동안 눌리지 않는다 — 올라온 손패 위의 누름을 덮인 HUD(내 패널 등)가 가로채 HandInput.IsOverHud 로 손패 입력이 무시되지 않게 (프로토타입 v2 #game.handup).
         private void HandleRaisedChanged(bool raised)
         {
-            // 카드를 골라 내려간 직후에는 더블클릭의 둘째 클릭이 올 수 있다 — 그 클릭이 찹츄 버튼에 떨어지지 않게 창이 지난 뒤에 되살린다 (Update)
+            // 카드를 골라 내려간 직후에는 더블클릭의 둘째 누름이 올 수 있다 — 그 누름을 덮인 HUD 가 가로채 손패 입력이 무시되지 않게 창이 지난 뒤에 되살린다 (Update)
             _hudRestorePending = !raised && _input != null && _input.IsAwaitingDoubleClick;
             if (!_hudRestorePending)
             {
@@ -465,7 +515,8 @@ namespace Chapchu.UI.GameScreen
             CardData data = deck.GetCard(card.CardId);
             if (data == null)
             {
-                Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={card.CardId}", this);
+                if (Debug.isDebugBuild)
+                    Debug.LogWarning($"[{nameof(HandPresenter)}] 덱에 없는 카드 종류 cardId={card.CardId}", this);
                 _view.ReturnCard(card);
                 return;
             }
@@ -473,7 +524,8 @@ namespace Chapchu.UI.GameScreen
             // 함정은 설치 — 대상이 없다 (04-card.md 6절). 발동 대상은 발동할 때 방장이 정한다.
             if (data.type == CardType.Trap)
             {
-                Debug.Log($"[{nameof(HandPresenter)}] 함정 설치 요청 instanceId={card.InstanceId} cardId={card.CardId}", this);
+                if (Debug.isDebugBuild) // 내 함정 내용 — 개발 빌드에서만 (CODE_CONVENTION 7절)
+                    Debug.Log($"[{nameof(HandPresenter)}] 함정 설치 요청 instanceId={card.InstanceId} cardId={card.CardId}", this);
                 server.RequestSetTrap(card.InstanceId);
                 _view.ReturnCard(card);
                 return;
@@ -498,6 +550,20 @@ namespace Chapchu.UI.GameScreen
                 case TargetType.OneAny: // 나를 포함한 1명 — 내 패널도 고를 수 있다
                     StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, true));
                     break;
+                case TargetType.OneNotDamaged when seatActor != 0: // 2018 물귀신 — 나를 뺀 1명. 고를 수 없는 사람이면 방장이 거절한다
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
+                case TargetType.OneNotDamaged:
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, 1, false));
+                    break;
+                case TargetType.SameCountAny when seatActor != 0 && _chainTopTargets <= 1: // 2015 가로채기 — 아래 카드가 1명을 고르는 카드면 놓은 상대로
+                    RequestPlay(card, new[] { seatActor });
+                    _view.ReturnCard(card);
+                    break;
+                case TargetType.SameCountAny: // 아래 카드의 인원 수만큼 — 나 · 그 카드를 쓴 사람도 고를 수 있다
+                    StartCoroutine(PlayWithTargetsRoutine(card, data.cardName, Mathf.Max(1, _chainTopTargets), true));
+                    break;
                 default:
                     RequestPlay(card, Array.Empty<int>());
                     _view.ReturnCard(card);
@@ -512,10 +578,24 @@ namespace Chapchu.UI.GameScreen
             _view.SetLocked(true);
             _view.Hold(card);
             topLayer.Set(card, true);
+            topLayer.SetChainFaded(true); // 체인의 카드가 상대 좌석을 가리지 않게 (10-ui.md 6절)
             ShowAtTargetSpot(card);
+            _targetingCard = card;
+
+            bool isCounter = deck.GetCard(card.CardId)?.type == CardType.Counter;
+            _counterTargeting = isCounter;
+            _counterTargetCard = isCounter ? card : null;
 
             int[] targets = null;
             yield return seats.SelectTargetsRoutine(cardName, targetCount, includeMe, picked => targets = picked);
+            topLayer.SetChainFaded(false);
+            _targetingCard = null;
+
+            // 카운터의 대상을 고르는 사이 반응 시간이 끝났다 (EndReaction) — 같은 프레임에 다 골랐어도 요청하지 않는다
+            if (isCounter && !_counterTargeting)
+                targets = null;
+            _counterTargeting = false;
+            _counterTargetCard = null;
 
             if (card == null) // 고르는 사이 손패에서 빠져 지워졌다 (강제 버림 · 사망)
             {
@@ -551,7 +631,8 @@ namespace Chapchu.UI.GameScreen
         private void RequestPlay(CardView card, int[] targets)
         {
             bool isCounter = deck.GetCard(card.CardId)?.type == CardType.Counter;
-            Debug.Log($"[{nameof(HandPresenter)}] {(isCounter ? "카운터" : "카드")} 사용 요청 instanceId={card.InstanceId} cardId={card.CardId} targets=[{string.Join(",", targets)}]", this);
+            if (Debug.isDebugBuild) // 내 손패 내용 — 개발 빌드에서만 (CODE_CONVENTION 7절)
+                Debug.Log($"[{nameof(HandPresenter)}] {(isCounter ? "카운터" : "카드")} 사용 요청 instanceId={card.InstanceId} cardId={card.CardId} targets=[{string.Join(",", targets)}]", this);
             if (isCounter)
                 server.RequestPlayCounter(card.InstanceId, targets);
             else

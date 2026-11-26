@@ -22,6 +22,9 @@ namespace Chapchu.DebugTools
 
         private int _hp;
 
+        /// <summary>지금 체력.</summary>
+        public int Hp => _hp;
+
         private void Awake()
         {
             if (hpFill == null || hpText == null)
@@ -32,9 +35,6 @@ namespace Chapchu.DebugTools
 
             ResetHp();
         }
-
-        /// <summary>지금 체력.</summary>
-        public int Hp => _hp;
 
         /// <summary>체력 바를 그 값으로 바꾼다 (흔들지 않는다 — 맞음 연출은 FxLayer.Hit 가 그린다).</summary>
         public void ShowHp(int hp)

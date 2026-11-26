@@ -2,6 +2,7 @@
 using System.Linq;
 using Chapchu.Cards;
 using Chapchu.Game;
+using Chapchu.Game.Effects;
 using Chapchu.Network;
 using Photon.Pun;
 using UnityEngine;
@@ -39,9 +40,9 @@ namespace Chapchu.UI.GameScreen
         private const string GaepanAgainText = "개판 오분전 다시 처음부터!";
         private const string GaepanLeftFormat = "개판 오분전: {0}바퀴 남음";
         private const string GaepanJudgeFormat = "개판 오분전 종료: 기준 {0} 꼴찌 — {1}{2} → 즉시 사망";
+        private const string GaepanJudgeTiedFormat = "개판 오분전 종료: 기준 {0} 꼴찌 — {1}{2} · 동점 {3} 중 무작위 → 즉시 사망";
         private const string GaepanHpValueFormat = "(HP {0})";
         private const string GaepanCardValueFormat = "({0}장)";
-        private const string GaepanTiedFormat = " · 동점 {0} 중 무작위";
         private const string GaepanByHp = "HP";
         private const string GaepanByCard = "손패";
         private const string NameSeparator = ", ";
@@ -51,6 +52,19 @@ namespace Chapchu.UI.GameScreen
         private const string ChoiceTimeoutSuffix = " (시간 초과 · 무작위)";
         private const string MinusSign = "−";
         private const string PlusSign = "+";
+        private const string UnknownCardFormat = "카드 {0}";
+        private const string CostTimeoutText = "버릴 카드를 안 골라 무작위로 버렸어요";
+        // 카운터가 한 일 (10-ui.md 5절 「카운터 기록 줄」, 사용자 2026-11-24). {0} = 카드 이름 · 사람 이름 · 수치
+        private const string NegatedFormat = "{0} 무효";
+        private const string ReturnedFormat = "{0} — 손패로 돌아감";
+        private const string TakenFormat = "{0} — 꿀꺽";
+        private const string TakeTurnFormat = "새치기! 다음 턴은 {0}";
+        private const string DoubledFormat = "따블! {0} 2배";
+        private const string ReflectedFormat = "반사! → {0}";
+        private const string RedirectedFormat = "대상 변경 → {0}";
+        private const string SharedFormat = "{0}도 같은 피해";
+        private const string ReducedFormat = "피해 −{0}";
+        private const string HandLossBlockedText = "손패 감소 막음";
         private const string TargetSeparator = " · ";
 
         // 「낸 카드 기록」 줄 (통합 화면 UI v3 .hit)
@@ -102,6 +116,9 @@ namespace Chapchu.UI.GameScreen
         private int _turnActor = -1; // 지금 턴 주인 — 피폭 줄(턴 끝)을 그 사람 이름으로
         private HistoryEntry _resolving; // 효과가 적용되는 중인 카드 줄 — 뒤따르는 결과 알림을 여기에 붙인다
         private int _resolvingDraws; // 그 카드의 효과로 뽑은 장수
+        // 지금 체인에 놓인 카드 (낸 순서, 끝이 맨 위) — 카운터가 처리될 때 「그 아래 카드」 의 이름 · 쓴 사람을 기록 줄에 적는다.
+        // 처리는 위에서부터라 결과 알림이 올 때마다 끝에서 하나씩 뺀다. 화면만의 기억이다 (중간에 들어와 비어 있으면 그 줄은 건너뛴다)
+        private readonly List<(int Actor, int CardId)> _chain = new List<(int Actor, int CardId)>();
 
         private void Awake()
         {
@@ -116,7 +133,7 @@ namespace Chapchu.UI.GameScreen
             // 변화량의 기준 — 지금 HP 스냅샷 (봇의 값은 방 속성에 있다, 18-bot.md 9절)
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _lastHp[actor] = hpValue;
+                    _lastHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 남이 잠깐 바꾼 값일 수 있다 (09-network.md 13절 #8)
 
             // 씬이 늦게 열려 첫 턴 이벤트를 놓쳤을 때 — 턴 주인이 이미 있으면 게임이 진행 중이라 그 뒤 뽑기는 기록한다
             _turnStarted = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomProps.TurnActor);
@@ -152,6 +169,9 @@ namespace Chapchu.UI.GameScreen
             _resolving = null;
             CardData data = deck.GetCard(cardId);
             string cardName = NameOf(data, cardId);
+            if (data == null || data.type != CardType.Counter)
+                _chain.Clear(); // 카운터가 아니면 새 체인의 첫 카드다
+            _chain.Add((actorNumber, cardId));
             string text = targets != null && targets.Length > 0
                 ? string.Format(PlayFormat, cardName, string.Join(TargetSeparator, targets.Select(PlayerLook.NameOf)))
                 : cardName;
@@ -185,16 +205,47 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        /// <summary>카드 효과 적용 (OnCardResolved) — 뒤따르는 결과 알림을 그 카드 줄에 붙인다.</summary>
-        public void ShowCardResolved(int cardInstanceId)
+        /// <summary>
+        /// 카드 효과 적용 (OnCardResolved) — 뒤따르는 결과 알림을 그 카드 줄에 붙인다.
+        /// 카운터면 그 카드가 한 일을 효과마다 한 줄씩 (10-ui.md 5절 「카운터 기록 줄」). targets = 처리 알림의 대상.
+        /// </summary>
+        public void ShowCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets)
         {
             _resolving = _entries.LastOrDefault(entry => entry.InList && !entry.IsTrapSet && entry.InstanceId == cardInstanceId);
             _resolvingDraws = 0;
+
+            if (!LeaveChain(cardId)) return;
+
+            CardData data = deck.GetCard(cardId);
+            if (data == null || data.type != CardType.Counter || _chain.Count == 0) return;
+
+            (int belowActor, int belowCardId) = _chain[_chain.Count - 1];
+            string below = NameOfCard(belowCardId);
+            string picked = string.Join(TargetSeparator, (targets ?? System.Array.Empty<int>()).Select(PlayerLook.NameOf));
+            foreach (CardEffect effect in data.effects)
+            {
+                string text = effect switch
+                {
+                    NegateEffect negate when !negate.selfOnly => string.Format(NegatedFormat, below),
+                    ReturnToHandEffect back => string.Format(back.to == ReturnReceiver.CounterUser ? TakenFormat : ReturnedFormat, below),
+                    TakeTurnEffect _ => string.Format(TakeTurnFormat, PlayerLook.NameOf(actorNumber)),
+                    DoubleBelowEffect _ when _chain.Count >= 2 => string.Format(DoubledFormat, NameOfCard(_chain[_chain.Count - 2].CardId)), // 막은 카운터의 아래 카드
+                    ReflectEffect _ => string.Format(ReflectedFormat, PlayerLook.NameOf(belowActor)),
+                    RedirectEffect _ => string.Format(RedirectedFormat, picked),
+                    ShareDamageEffect _ => string.Format(SharedFormat, picked),
+                    ReduceDamageEffect reduce => string.Format(ReducedFormat, reduce.amount),
+                    NegateHandLossEffect _ => HandLossBlockedText,
+                    _ => null,
+                };
+                if (text != null)
+                    Add(new HistoryEntry { Actor = actorNumber, Text = text, Icon = HistoryIcon.Card });
+            }
         }
 
         /// <summary>카드가 무효가 됐다 — 그 줄은 흐리게 + 줄, 무효로 만든 카드(지금 적용 중)의 결과는 「무효」.</summary>
-        public void ShowCardNegated(int cardInstanceId)
+        public void ShowCardNegated(int cardInstanceId, int cardId)
         {
+            LeaveChain(cardId);
             SetResult(VoidResult);
 
             HistoryEntry entry = _entries.LastOrDefault(e => e.InList && !e.IsTrapSet && e.InstanceId == cardInstanceId);
@@ -206,8 +257,26 @@ namespace Chapchu.UI.GameScreen
             Redraw(entry);
         }
 
+        /// <summary>체인의 카드가 효과 없이 손패로 돌아갔다 — 기록 줄은 막은 카운터가 적었다.</summary>
+        public void ShowCardLeftChain(int cardId) => LeaveChain(cardId);
+
         /// <summary>체인이 끝났다 (OnChainDiscarded) — 결과를 더 붙이지 않는다.</summary>
-        public void ShowChainEnded() => _resolving = null;
+        public void ShowChainEnded()
+        {
+            _resolving = null;
+            _chain.Clear();
+        }
+
+        // 맨 위 카드가 cardId 면 체인 기억에서 뺀다. 아니면(체인에 끼어든 함정 · 중간에 들어와 모르는 카드) 그대로 두고 false
+        private bool LeaveChain(int cardId)
+        {
+            if (_chain.Count == 0 || _chain[_chain.Count - 1].CardId != cardId) return false;
+
+            _chain.RemoveAt(_chain.Count - 1);
+            return true;
+        }
+
+        private string NameOfCard(int cardId) => NameOf(deck.GetCard(cardId), cardId);
 
         /// <summary>HP 가 바뀌었다 — 적용 중인 카드 줄에 「−HP n」, 아니면 기록에 「HP −n」 한 줄.</summary>
         public void ShowHpChanged(int actorNumber, int hp)
@@ -318,21 +387,32 @@ namespace Chapchu.UI.GameScreen
                 Add(new HistoryEntry { Actor = caster, Text = GaepanAgainText, Icon = HistoryIcon.Card });
             if (started)
                 Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanStartFormat, left), Icon = HistoryIcon.Card });
-            else
+            else if (left > 0) // 0 은 판정 직전 — 판정 줄이 따로 적는다
                 Add(new HistoryEntry { Actor = caster, Text = string.Format(GaepanLeftFormat, left), Icon = HistoryIcon.Card });
         }
 
         /// <summary>개판 오분전 판정 (1021) — 기준 · 꼴찌 · 동점. HP 0 은 뒤따르는 HP 변화가 적는다.</summary>
         public void ShowGaepanJudged(int loser, bool byHp, int value, int[] tied)
         {
-            string tiedText = tied.Length > 1 ? string.Format(GaepanTiedFormat, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf))) : "";
             string valueText = string.Format(byHp ? GaepanHpValueFormat : GaepanCardValueFormat, value);
-            Add(new HistoryEntry { Actor = loser, Text = string.Format(GaepanJudgeFormat, byHp ? GaepanByHp : GaepanByCard, PlayerLook.NameOf(loser), valueText) + tiedText, Icon = HistoryIcon.Card });
+            string by = byHp ? GaepanByHp : GaepanByCard;
+            string text = tied.Length > 1
+                ? string.Format(GaepanJudgeTiedFormat, by, PlayerLook.NameOf(loser), valueText, string.Join(NameSeparator, tied.Select(PlayerLook.NameOf)))
+                : string.Format(GaepanJudgeFormat, by, PlayerLook.NameOf(loser), valueText);
+            Add(new HistoryEntry { Actor = loser, Text = text, Icon = HistoryIcon.Card });
         }
 
         /// <summary>1019 목표 조준 — 대상이 고른 것. 버림 · 피해 수치는 뒤따르는 사건이 적는다.</summary>
-        public void ShowChoiceMade(int actor, int option, bool timedOut)
+        public void ShowChoiceMade(int actor, int option, bool timedOut, int kind)
         {
+            // 손패에서 1장 버리기(카운터의 대가)는 뒤따르는 버림 줄이 적는다 — 시간 초과로 무작위였을 때만 알린다
+            if (kind == Chapchu.Game.ChoiceKind.HandCard)
+            {
+                if (timedOut)
+                    Add(new HistoryEntry { Actor = actor, Text = CostTimeoutText, Icon = HistoryIcon.Card });
+                return;
+            }
+
             string text = option < 0 ? ChoiceLeftText : option == 0 ? ChoiceDiscardText : ChoiceDamageText;
             Add(new HistoryEntry { Actor = actor, Text = timedOut ? text + ChoiceTimeoutSuffix : text, Icon = HistoryIcon.Card });
         }
@@ -400,6 +480,6 @@ namespace Chapchu.UI.GameScreen
             return string.Format(WhoFormat, ColorUtility.ToHtmlStringRGB(PlayerLook.InkOf(actorNumber)), isMe ? MeName : PlayerLook.NameOf(actorNumber));
         }
 
-        private static string NameOf(CardData data, int cardId) => data != null ? data.cardName : $"카드 {cardId}";
+        private static string NameOf(CardData data, int cardId) => data != null ? data.cardName : string.Format(UnknownCardFormat, cardId);
     }
 }

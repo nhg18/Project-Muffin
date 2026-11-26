@@ -79,11 +79,27 @@ namespace Chapchu.UI.ResultScreen
             if (root == null || group == null || boardButton == null || lobbyButton == null || lobbyBox == null || lobbySubText == null || againButton == null || againBox == null
                 || againShadow == null || againText == null || againSubText == null || dotRow == null || dotPrefab == null)
                 Debug.LogError($"[{nameof(ResultButtonsView)}] 참조 중 비어 있는 것이 있습니다.", this);
-
-            boardButton.onClick.AddListener(() => BoardClicked?.Invoke());
-            lobbyButton.onClick.AddListener(() => LobbyClicked?.Invoke());
-            againButton.onClick.AddListener(() => AgainClicked?.Invoke());
         }
+
+        private void OnEnable()
+        {
+            boardButton.onClick.AddListener(HandleBoardButtonClicked);
+            lobbyButton.onClick.AddListener(HandleLobbyButtonClicked);
+            againButton.onClick.AddListener(HandleAgainButtonClicked);
+        }
+
+        private void OnDisable()
+        {
+            boardButton.onClick.RemoveListener(HandleBoardButtonClicked);
+            lobbyButton.onClick.RemoveListener(HandleLobbyButtonClicked);
+            againButton.onClick.RemoveListener(HandleAgainButtonClicked);
+        }
+
+        private void HandleBoardButtonClicked() => BoardClicked?.Invoke();
+
+        private void HandleLobbyButtonClicked() => LobbyClicked?.Invoke();
+
+        private void HandleAgainButtonClicked() => AgainClicked?.Invoke();
 
         /// <summary>준비 점을 사람 수만큼 만든다 — 한 번만.</summary>
         public void BuildDots(int count)

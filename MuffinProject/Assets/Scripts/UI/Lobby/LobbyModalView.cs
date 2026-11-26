@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 namespace Chapchu.UI.Lobby
 {
-    /// <summary>입력 창 종류 — 방 코드 · 새 닉네임 · 계정 삭제 확인(「삭제」 입력)</summary>
-    public enum LobbyInputKind { RoomCode, Nickname, DeleteAccount }
+    /// <summary>입력 창 종류 — 방 코드 · 새 닉네임 · 계정 삭제 확인(「삭제」 입력) · 개발자 모드 암호</summary>
+    public enum LobbyInputKind { RoomCode, Nickname, DeleteAccount, DevPassword }
 
     /// <summary>경고 · 확인 창의 종류 — 머리 띠 색 · 띠 아이콘 · 주 버튼 색 (시안 v3.24 .pu)</summary>
     public enum LobbyWarnKind
@@ -31,12 +31,15 @@ namespace Chapchu.UI.Lobby
         private const string CodePlaceholder = "방 코드";
         private const string CodeSubmit = "참가";
         private const string NicknameTitle = "새 닉네임";
-        private const string NicknamePlaceholder = "닉네임";
+        private const string NicknamePlaceholder = "새 닉네임";
         private const string NicknameSubmit = "변경";
-        private const string DeleteTitle = "계정 삭제";
+        private const string DeleteTitle = "삭제 확인";
         private const string DeletePlaceholder = "삭제";
         private const string DeleteSubmit = "삭제";
         private const string DeleteMessage = "「삭제」를 입력하면 계정이 지워져요.";
+        private const string DevTitle = "개발자 모드";
+        private const string DevPlaceholder = "암호";
+        private const string DevSubmit = "확인";
         private const string CountFormat = "{0} / {1}";
         private const string DefaultOkText = "확인";
 
@@ -159,21 +162,24 @@ namespace Chapchu.UI.Lobby
             InputKind = kind;
             bool isCode = kind == LobbyInputKind.RoomCode;
             bool isDelete = kind == LobbyInputKind.DeleteAccount;
+            bool isDev = kind == LobbyInputKind.DevPassword;
 
             inputContent.SetActive(true);
             inputBand.color = isDelete ? LobbyStyle.Hp : LobbyStyle.Band;
-            inputIcon.sprite = isCode ? keyIcon : isDelete ? alertIcon : userIcon; // 계정 삭제 = 위험 창과 같은 「!」
-            inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : NicknameTitle;
+            inputIcon.sprite = isCode || isDev ? keyIcon : isDelete ? alertIcon : userIcon; // 계정 삭제 = 위험 창과 같은 「!」
+            inputTitle.text = isCode ? CodeTitle : isDelete ? DeleteTitle : isDev ? DevTitle : NicknameTitle;
             string note = isDelete ? DeleteMessage : message;
             inputMessage.gameObject.SetActive(!string.IsNullOrEmpty(note));
             inputMessage.text = note;
-            fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : NicknamePlaceholder;
-            submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : NicknameSubmit;
+            fieldPlaceholder.text = isCode ? CodePlaceholder : isDelete ? DeletePlaceholder : isDev ? DevPlaceholder : NicknamePlaceholder;
+            submitLabel.text = isCode ? CodeSubmit : isDelete ? DeleteSubmit : isDev ? DevSubmit : NicknameSubmit;
             submitLabel.color = isDelete ? Color.white : LobbyStyle.Ink;
             submitBox.FillColor = isDelete ? LobbyStyle.Hp : LobbyStyle.Turn;
 
             // 방 코드 — 가운데 · 대문자 · 글자 사이를 벌린다 · 칸이 더 높다
             fieldSize.minHeight = fieldSize.preferredHeight = isCode ? codeFieldHeight : textFieldHeight;
+            // 암호는 ● 로 가린다
+            field.contentType = isDev ? TMP_InputField.ContentType.Password : TMP_InputField.ContentType.Standard;
             field.characterLimit = isCode ? RandomCode.Length : kind == LobbyInputKind.Nickname ? NicknameValidator.MaxLength : 0;
             field.textComponent.alignment = isCode ? TextAlignmentOptions.Center : TextAlignmentOptions.Left;
             field.textComponent.fontSize = isCode ? codeFontSize : textFontSize;
@@ -185,7 +191,7 @@ namespace Chapchu.UI.Lobby
             RectTransform viewport = field.textViewport;
             viewport.offsetMax = new Vector2(kind == LobbyInputKind.Nickname ? -countInset : -viewport.offsetMin.x, viewport.offsetMax.y);
 
-            field.SetTextWithoutNotify(value);
+            field.SetTextWithoutNotify(kind == LobbyInputKind.Nickname ? NicknameValidator.TrimToWidth(value) : value);
             UpdateCount();
             SetInputError(string.Empty);
             UpdateDimmer();
@@ -266,7 +272,7 @@ namespace Chapchu.UI.Lobby
         private void UpdateDimmer() => dimmer.SetActive(IsAnyOpen);
 
         private void UpdateCount()
-            => countText.text = string.Format(CountFormat, field.text.Length, NicknameValidator.MaxLength);
+            => countText.text = string.Format(CountFormat, NicknameValidator.GetWidth(field.text), NicknameValidator.MaxLength);
 
         private void Submit()
         {
@@ -282,6 +288,14 @@ namespace Chapchu.UI.Lobby
         {
             if (InputKind == LobbyInputKind.RoomCode && text != text.ToUpperInvariant())
                 field.SetTextWithoutNotify(text.ToUpperInvariant());
+
+            // 닉네임은 폭 16 을 넘는 끝을 잘라 입력 자체를 막는다 (12-title-ui 4-2) — characterLimit 는 글자 수라 한글을 못 막는다
+            if (InputKind == LobbyInputKind.Nickname)
+            {
+                string trimmed = NicknameValidator.TrimToWidth(text);
+                if (trimmed != text)
+                    field.SetTextWithoutNotify(trimmed);
+            }
 
             UpdateCount();
             SetInputError(string.Empty);

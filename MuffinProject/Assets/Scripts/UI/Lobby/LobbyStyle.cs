@@ -40,7 +40,7 @@ namespace Chapchu.UI.Lobby
         public static Color StatusColor(HubFriendStatus status) => status switch
         {
             HubFriendStatus.Online => Ok,
-            HubFriendStatus.InGame => Turn,
+            HubFriendStatus.InGame => Warn,
             _                      => OfflineDot,
         };
 

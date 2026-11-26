@@ -44,7 +44,7 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("체인에 올라간 카드 — 낸 카드를 모든 화면에 크게 보여 주고 처리되면 버림 더미로.")]
         [SerializeField] private ChainCardsPresenter chainCards;
         [SerializeField] private ReactionTimerPresenter reactionTimer;
-        [Tooltip("카드 효과 고르기 판 (1019) — 남이 고를 때도 같은 판을 연출 큐 순서대로.")]
+        [Tooltip("카드 효과 고르기 판 (1019 · 카운터의 대가) — 남이 고를 때도 같은 판을 연출 큐 순서대로. 버려진 내 카드의 장 번호도 받은 자리에서 바로 넘긴다.")]
         [SerializeField] private ChoicePopupPresenter choicePopup;
         [SerializeField] private MyTrapsPresenter myTraps;
         [Tooltip("화면 덮기 — 효과가 적용될 때 카드 데이터의 색으로 덮었다 걷는다 (10-ui.md 5-1, 1013).")]
@@ -312,6 +312,8 @@ namespace Chapchu.UI.GameScreen
             _hasPendingMyCard = true;
             _pendingCardInstanceId = cardInstanceId;
             _pendingCardId = cardId;
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId);
         }
 
         private void HandleCardDrawn(int actorNumber, int handCount, int deckCount)
@@ -364,6 +366,9 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleDeckRefilled(int deckCount)
         {
+            if (choicePopup != null)
+                choicePopup.ClearDiscarded(); // 버림 더미가 통째로 덱이 됐다 — 누가 뽑아 가도 번호가 남지 않게
+
             Enqueue(() =>
             {
                 deck.ShowDeckCount(deckCount);
@@ -416,6 +421,7 @@ namespace Chapchu.UI.GameScreen
                     _myMainActionDone = true;
                 reactionTimer.Hide(); // 3 단계 동안은 숨는다 (시안 .g3big) — 새 반응 시간이 바로 뒤따라온다
                 hand.EndReaction();
+                hand.NoteChainTop(targets != null ? targets.Length : 0);
                 history.ShowCardPlayed(actorNumber, cardInstanceId, cardId, targets);
                 if (isMe)
                     myPanel.ShowHandCount(handCount);
@@ -560,6 +566,9 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds)
         {
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceIds);
+
             Enqueue(() =>
             {
                 hand.GainCards(cardInstanceIds, cardIds);
@@ -623,7 +632,7 @@ namespace Chapchu.UI.GameScreen
                 CardData data = cardDeck.GetCard(cardId);
                 if (data != null)
                     screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
-                history.ShowCardResolved(cardInstanceId);
+                history.ShowCardResolved(actorNumber, cardInstanceId, cardId, targets);
                 LeaveChain();
                 return null;
             });
@@ -633,7 +642,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Enqueue(() =>
             {
-                history.ShowCardNegated(cardInstanceId);
+                history.ShowCardNegated(cardInstanceId, cardId);
                 LeaveChain();
                 return null;
             });
@@ -663,6 +672,8 @@ namespace Chapchu.UI.GameScreen
         private void HandleDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId)
         {
             bool isMe = IsMe(actorNumber);
+            if (choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId); // 누가 가져가든 버림 더미를 떠났다
 
             Enqueue(() =>
             {
@@ -729,6 +740,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleGameRestarted(int user, int count, int[] order)
         {
             _resolving = false;
+            choicePopup.ClearDiscarded();
             Enqueue(() => GameRestartedRoutine(user, count, order));
             _hpSource = HpSource.Quiet;
         }
@@ -781,27 +793,27 @@ namespace Chapchu.UI.GameScreen
             _hpSource = turns > 0 ? HpSource.Fallout : HpSource.Normal;
         }
 
-        // 대상이 고르는 중 (1019) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 같은 판을 누를 수 없게 — 고르는 사람의 손패 · 재생한 HP 로 (PM 2026-11-27)
-        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        // 대상이 고르는 중 (1019 · 2013 · 2021 의 대가) — 고르는 사람은 ChoicePopupPresenter 가 판을 바로 연다. 나머지는 같은 판을 누를 수 없게 — 고르는 사람의 손패 · 재생한 HP 로 (PM 2026-11-27)
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind)
         {
             if (IsMe(actor))
                 return;
             Enqueue(() =>
             {
                 reactionTimer.Hide();
-                choicePopup.ShowWatching(actor, user, cardId, handCount, _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp, damage, startsAt, deadline);
+                choicePopup.ShowWatching(actor, user, cardId, handCount, _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp, damage, startsAt, deadline, kind);
                 return null;
             });
         }
 
         // 골랐다 — 남이 골랐으면 고른 카드가 튀어나온 뒤 기록 줄 (내 판은 ChoicePopupPresenter 가 바로 닫는다)
-        private void HandleChoiceMade(int actor, int option, bool timedOut) => Enqueue(() => ChoiceMadeRoutine(actor, option, timedOut));
+        private void HandleChoiceMade(int actor, int option, bool timedOut, int kind) => Enqueue(() => ChoiceMadeRoutine(actor, option, timedOut, kind));
 
-        private IEnumerator ChoiceMadeRoutine(int actor, int option, bool timedOut)
+        private IEnumerator ChoiceMadeRoutine(int actor, int option, bool timedOut, int kind)
         {
             reactionTimer.Hide();
             yield return choicePopup.PickRoutine(actor, option);
-            history.ShowChoiceMade(actor, option, timedOut);
+            history.ShowChoiceMade(actor, option, timedOut, kind);
         }
 
         // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
@@ -824,9 +836,12 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardReturnedToHand(int actorNumber, int cardInstanceId, int cardId, int handCount)
         {
             bool isMe = IsMe(actorNumber);
+            if (isMe && choicePopup != null)
+                choicePopup.NoteLeftDiscard(cardInstanceId); // 예전에 버려졌던 내 카드가 남의 손을 거쳐 돌아온 경우 (2020)
 
             Enqueue(() =>
             {
+                history.ShowCardLeftChain(cardId);
                 LeaveChain();
                 if (!isMe)
                 {
@@ -857,6 +872,8 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardsDiscarded(int actorNumber, int[] cardInstanceIds, int[] cardIds, int handCount, int discardCount)
         {
             bool isMe = IsMe(actorNumber);
+            if (isMe && choicePopup != null)
+                choicePopup.NoteDiscarded(cardInstanceIds);
 
             Enqueue(() =>
             {

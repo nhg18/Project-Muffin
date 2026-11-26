@@ -83,8 +83,9 @@ namespace Chapchu.UI.Fx.Aim
         [SerializeField] private Color subLineColor = new Color(223f / 255f, 230f / 255f, 1f, 0.9f);
 
         [Header("시간 (초, 시작부터)")]
-        [Tooltip("조준경 표시: 길이 · 가운데 키 지점, 시작 배율 · 회전(도) · 가운데 배율.")]
+        [Tooltip("조준경 표시: 길이 · 가운데 키 지점.")]
         [SerializeField] private Vector2 reticleTime = new Vector2(0.23f, 0.7f);
+        [Tooltip("조준경 표시: 시작 배율 · 회전(도) · 가운데 배율.")]
         [SerializeField] private Vector3 reticleFrom = new Vector3(2.4f, -120f, 0.92f);
         [Tooltip("조준경 표시 굽음 (cubic-bezier).")]
         [SerializeField] private Vector4 reticleEase = new Vector4(0.3f, 0f, 0.3f, 1f);

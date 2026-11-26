@@ -73,9 +73,9 @@ namespace Chapchu.EditorTools
             }
 
             // UGS Authentication 이 기기에 남기는 키 — {클라우드 프로젝트 ID}.{프로필}.unity.services.authentication.{이름}
-            string prefix = $"{Application.cloudProjectId}.default.unity.services.authentication.";
-            PlayerPrefs.DeleteKey(prefix + "session_token");
-            PlayerPrefs.DeleteKey(prefix + "player_id");
+            string prefix = Application.cloudProjectId + Core.PlayerPrefsKeys.UgsAuthPrefix;
+            PlayerPrefs.DeleteKey(prefix + Core.PlayerPrefsKeys.UgsAuthSessionToken);
+            PlayerPrefs.DeleteKey(prefix + Core.PlayerPrefsKeys.UgsAuthPlayerId);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.TermsAgreed);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.PlayerName);
             PlayerPrefs.DeleteKey(Core.PlayerPrefsKeys.AccountLogin);

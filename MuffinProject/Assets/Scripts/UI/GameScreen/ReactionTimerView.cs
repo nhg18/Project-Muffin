@@ -6,9 +6,8 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 반응 타이머 — 크게 둔 처리 카드의 아래 가장자리에 걸치는 알약 (10-ui.md 5절 「반응 타이머」 · 2-1 「카드 연출 자리」, 시안 .rt2).
-    /// 열리기 전: 회색 「반응 · 곧」. 진행 중: 노란 막대가 줄고 남은 초, 얼마 안 남으면 빨강. 마감 뒤: 「‖ 처리하는 중」.
-    /// 반응 시간에 낼 카운터가 있으면 알약 대신 오른쪽 아래 「스킵」 버튼 + 내 캐릭터 머리 옆 「!」 (통합 화면 UI v3 .btn.skip · .bang.me).
+    /// 처리 카드 아래 알약 — 크게 둔 처리 카드의 아래 가장자리에 걸친다 (10-ui.md 5절 · 2-1 「카드 연출 자리」, 시안 .rt2). 반응 타이머는 없다 (04-card.md 8절).
+    /// 반응 시간에는 「스킵」 버튼. 남이 고르는 중(1019)이면 「{이름} 고르는 중」 + 노란 막대 · 남은 초, 얼마 안 남으면 빨강. 마감 뒤: 「‖ 처리하는 중」.
     /// 값은 ReactionTimerPresenter 가 매 프레임 넘긴다. 받은 값을 표시만 한다.
     /// </summary>
     public class ReactionTimerView : MonoBehaviour
@@ -122,12 +121,12 @@ namespace Chapchu.UI.GameScreen
                 cardNameText.text = _cardName;
         }
 
-        /// <summary>반응 시간이 아직 열리지 않았다 (카드 연출 중) — 회색 「반응 · 곧」.</summary>
-        public void ShowSoon()
+        /// <summary>고르는 중 알약의 시작 전 — 회색 「{label} · 곧」. label 이 없으면 「반응」.</summary>
+        public void ShowSoon(string label = null)
         {
             ShowParts(true);
             border.color = soonBorder;
-            labelText.text = ReactionLabel;
+            labelText.text = label ?? ReactionLabel;
             labelText.color = soonInk;
             SetFill(0f, fillColor);
             secondsText.text = SoonText;
@@ -135,7 +134,7 @@ namespace Chapchu.UI.GameScreen
             unitText.SetActive(false);
         }
 
-        /// <summary>반응 시간 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강. label 이 있으면 「반응」 대신 (1019 「{이름} 고르는 중」).</summary>
+        /// <summary>고르는 중 알약 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강. label 이 있으면 「반응」 대신 (1019 「{이름} 고르는 중」).</summary>
         public void ShowRemaining(int seconds, float fraction, bool low, string label = null)
         {
             ShowParts(true);

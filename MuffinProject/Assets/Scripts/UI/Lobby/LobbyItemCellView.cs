@@ -17,6 +17,8 @@ namespace Chapchu.UI.Lobby
         private const string PackPriceText = "₩ 미정";
         private const string CouponName = "닉네임 변경";
         private const string CouponOwnedFormat = "보유 {0}장";
+        private const string PackNameFormat = "츄르 {0}";
+        private const string BonusFormat = "+{0}";
 
         [SerializeField] private Image frame;
         [SerializeField] private GameObject selection;
@@ -115,10 +117,10 @@ namespace Chapchu.UI.Lobby
             Begin(pack.Id, LobbyStyle.PackFrame, isSelected, true);
             ShowPicture(false, false, churuIcon, null, packIconSize, false);
             iconImage.color = Color.white; // 재화 그림은 색이 박혀 있다
-            nameText.text = $"츄르 {pack.Churu}";
+            nameText.text = string.Format(PackNameFormat, pack.Churu);
             SetPrice(null, PackPriceText, true);
             bonusTag.SetActive(pack.Bonus > 0);
-            bonusText.text = $"+{pack.Bonus}";
+            bonusText.text = string.Format(BonusFormat, pack.Bonus);
         }
 
         /// <summary>닉네임 변경 쿠폰 칸 (상점 「기타」) — 몇 장이든 살 수 있어 「보유」 띠 없이 꼬리표에 보유 수 (17 7-7).</summary>

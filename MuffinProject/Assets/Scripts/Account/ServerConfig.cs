@@ -54,16 +54,14 @@ namespace Chapchu.Account
         public static IEnumerator FetchRoutine()
         {
             Task fetch = FetchAsync();
+            // 시간이 넘은 요청이 나중에 실패하거나 코루틴이 중간에 멈춰도 처리되지 않은 예외로 남지 않게
+            fetch.ContinueWith(t => t.Exception, TaskContinuationOptions.OnlyOnFaulted);
             float waited = 0f;
             while (!fetch.IsCompleted && waited < FetchTimeoutSeconds)
             {
                 waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
                 yield return null;
             }
-
-            // 시간이 넘은 요청이 나중에 실패해도 처리되지 않은 예외로 남지 않게
-            if (!fetch.IsCompleted)
-                fetch.ContinueWith(t => t.Exception, TaskContinuationOptions.OnlyOnFaulted);
 
             if (!fetch.IsCompleted || fetch.IsFaulted || fetch.IsCanceled)
                 Debug.LogWarning($"[{nameof(ServerConfig)}] 설정 값 읽기 실패 — 마지막 값으로 진행: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");

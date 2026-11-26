@@ -22,6 +22,7 @@ namespace Chapchu.Game
         private bool _reversed;           // 턴 진행 방향 — false 정방향(배열 순) · true 역방향 (03-turn.md 6절 #4). 한 판 동안 유지
         private int _extraTurnActor = -1; // 생존자 2명일 때 방향 반전 — 다음 턴이 다시 이 사람 (03-turn.md 7절). 없으면 -1
         private int _heldNext = -1;       // 스킵된 턴 끝의 개판 판정을 기다리는 중 — 끝나면 이 사람부터 다음 턴을 찾는다. 없으면 -1
+        private int _turnTaker = -1;      // 턴 가로채기 (2013 새치기) — 지금 턴이 끝나면 다음 턴이 이 사람 (03-turn.md 7절). 없으면 -1
 
         /// <summary>
         /// 방장이 매 프레임 부른다. 지금 멈춰 있는 것 하나를 시각에 따라 진행한다 —
@@ -67,7 +68,9 @@ namespace Chapchu.Game
             {
                 if (now < _choiceDeadline)
                     return; // 대상이 고르는 중 (1019) — 게임 · 턴 시간이 멈춘다
-                FinishChoice(_random.Next(2), true); // 시간 초과 — 방장이 무작위 (11-card-list 1019)
+                FinishChoice(RandomChoice(), true); // 시간 초과 — 방장이 무작위 (11-card-list 1019 · 1-3)
+                if (IsChoosing)
+                    return; // 같은 고르기를 한 번 더 열었다 (2배가 된 대가)
             }
 
             if (IsGaepanJudging)
@@ -187,6 +190,14 @@ namespace Chapchu.Game
                 next = IsInGame(_heldNext) ? _heldNext : GetNextActor(_heldNext);
                 _heldNext = -1;
                 skipped = true;
+            }
+            else if (_turnTaker != -1)
+            {
+                // 턴 가로채기 — 사이 사람들의 턴은 시작하지 않는다: 그들의 「다음 턴」 상태는 남고 개판도 세지 않는다 (03-turn.md 7절).
+                // 그 사람이 그새 빠졌으면 그 자리의 다음 사람. 턴 스킵이 걸려 있으면 아래에서 건너뛴다 — 그 뒤 순서는 어느 쪽이든 이 사람 다음부터
+                next = IsInGame(_turnTaker) ? _turnTaker : GetNextActor(_turnTaker);
+                _turnTaker = -1;
+                _extraTurnActor = -1;
             }
             else
             {
@@ -325,6 +336,9 @@ namespace Chapchu.Game
             _extraTurnActor = two ? user : -1;
             _events.Add(new TurnDirectionChanged(_reversed, _extraTurnActor));
         }
+
+        /// <summary>턴 가로채기 (2013 새치기) — 지금 턴이 끝나면(턴 끝 처리까지 마친 뒤) 다음 턴을 actor 에게 준다 (03-turn.md 7절).</summary>
+        internal void TakeTurn(int actor) => _turnTaker = actor;
 
         // 게임에 남은 사람 = 나가지 않았고 최종 사망하지 않았다. 사망 대기는 아직 남아 있다 (06 12절).
         // 참가자가 아닌 번호(요청자 · 대상)는 게임에 없는 것으로 — 검사 순서가 바뀌어도 예외가 나지 않게

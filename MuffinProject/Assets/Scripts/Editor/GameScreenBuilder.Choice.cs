@@ -33,6 +33,7 @@ namespace Chapchu.EditorTools
         private static readonly Vector2 ChoiceTagCenter = new Vector2(839f, 714f);
         private static readonly Vector2[] ChoiceOptionTopLeft = { new Vector2(1012f, 318f), new Vector2(1298f, 318f) };
         private static readonly Vector2 ChoiceOptionSize = new Vector2(270f, 388f);
+        private static readonly Rect ChoiceCardsArea = new Rect(1012f, 284f, 556f, 415f); // 「손패에서 1장」 카드 칸 — 고를 카드 두 장 자리, 높이는 쓴 카드와 같게
         private const float ChoiceCardBorder = 6f, ChoiceCardRadius = 24f, ChoiceCardShadow = 10f;
 
         // 상태 알약 — 좌석은 이름표 오른쪽 8 에서 이름표 아래 끝부터 위로 쌓는다, 나는 캐릭터 오른쪽 목표 칩 위에 옆으로
@@ -81,7 +82,7 @@ namespace Chapchu.EditorTools
             Object.DestroyImmediate(oldChoice.gameObject);
             ChoicePopupPresenter choice = BuildChoicePopup((RectTransform)sheets, server);
             choice.transform.SetSiblingIndex(index);
-            Wire(choice, ("chainCards", chainCards));
+            Wire(choice, ("chainCards", chainCards), ("hand", Object.FindFirstObjectByType<HandView>(FindObjectsInactive.Include))); // 「손패에서 1장」 고르기가 내 손패를 읽는다
             Wire(presenter, ("choicePopup", choice));
 
             // 2. 상태 알약 — 좌석마다 이름표 오른쪽, 나는 목표 칩 위. 땀방울(사망 대기 표시)은 지운다
@@ -160,6 +161,7 @@ namespace Chapchu.EditorTools
             Wire(view, ("panel", panel.gameObject), ("barDrain", drain.rectTransform), ("hintText", hintText), ("tagText", tagText),
                 ("usedCardSlot", usedCard), ("handIcon", Hud("icon_hand_minus")), ("damageIcon", Hud("icon_burst")));
             WireArray(view, "options", options);
+            BuildChoiceCards(view, panel);
             var presenter = root.gameObject.AddComponent<ChoicePopupPresenter>();
             Wire(presenter, ("server", server));
             return presenter;

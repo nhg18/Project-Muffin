@@ -60,7 +60,11 @@ namespace Chapchu.Game
             if (!CanPlayCounter(requester, card, top))
                 return Reject(requester, RejectCode.CannotReact);
 
-            int[] targets = ResolveTargets(requester, card.Target, requestedTargets, top.User);
+            // 아래 카드를 쓴 사람이 그새 빠졌으면(나감 · 최종 사망) 그 사람을 대상으로 하는 카운터(2021 으르렁)는 대상 없이 나간다 —
+            // 무효 · 대가는 그대로, 쓴 사람에게 가는 벌칙만 없다 (11-card-list 1-3 2021, 사용자 2026-11-25)
+            int[] targets = card.Target == TargetType.TriggerSource && !IsInGame(top.User)
+                ? new int[0]
+                : ResolveTargets(requester, card.Target, requestedTargets, top.User, top: top);
             if (targets == null)
                 return Reject(requester, RejectCode.InvalidTarget);
 
@@ -162,7 +166,8 @@ namespace Chapchu.Game
             card.Type == CardType.Counter
             && top.User != actor
             && (_players[actor].Life != LifeState.DeathPending || card.Condition == ReactCondition.WouldKillMe)
-            && CanReactTo(card, actor, top);
+            && CanReactTo(card, actor, top)
+            && (card.Target != TargetType.OneNotDamaged || ShareCandidates(actor, top).Length > 0); // 고를 사람이 없으면 낼 수 없다 (2018)
 
         /// <summary>
         /// 카운터 card 로 맨 위 카드 top 에 반응할 수 있는가 — 반응 대상 종류 + 반응 조건 (04-card.md 7절).
@@ -173,6 +178,10 @@ namespace Chapchu.Game
             if (!card.ReactsTo.Contains(top.Card.Type))
                 return false;
 
+            // 카운터는 내 카드 · 「막을 수 없는」 카드에 낼 수 없다 — 반응 조건과 관계없이 (04 7절 사용 조건 5 · 6)
+            if (card.Type == CardType.Counter && (top.User == me || top.Card.Uncounterable))
+                return false;
+
             switch (card.Condition)
             {
                 case ReactCondition.Any:            return true;
@@ -180,13 +189,19 @@ namespace Chapchu.Game
                 case ReactCondition.TargetsMe:      return top.User != me && top.Targets.Contains(me);
                 case ReactCondition.DamagesMe:      return AffectedBy(top, EffectTag.Damage).Contains(me);
                 case ReactCondition.WouldKillMe:
-                    int damage = top.Card.Effects.Sum(e => e.PredictDamage(this, top, me));
+                    int damage = Scaled(top, top.Card.Effects.Sum(e => e.PredictDamage(this, top, me)));
                     return damage > 0 && damage >= _players[me].Hp;
                 case ReactCondition.HealsOther:     return AffectedBy(top, EffectTag.Heal).Any(a => a != me);
                 case ReactCondition.TakesMyHand:    return AffectedBy(top, EffectTag.TakeHand).Contains(me);
                 case ReactCondition.DestroysMyTrap: return top.User != me && AffectedBy(top, EffectTag.DestroyTrap).Contains(me);
                 case ReactCondition.SkipsMe:        return AffectedBy(top, EffectTag.SkipTurn).Contains(me);
                 case ReactCondition.GivesMeChapchu: return top.User != me && AffectedBy(top, EffectTag.GiveChapchu).Contains(me);
+                case ReactCondition.HasDamage:      return top.Card.Effects.Any(e => e.Tag == EffectTag.Damage);
+                case ReactCondition.HasHandGain:    return top.Card.Effects.Any(e => e.GainsHand);
+                case ReactCondition.AimedAtMe:      return top.Targets.Contains(me) && !top.Excluded.Contains(me) && !top.Card.Effects.Any(e => e.BoardWide);
+                // 장수는 이 카드를 낸 뒤의 내 손패로 센다 — 이 카드만 있으면(0장) 못 낸다 (11-card-list 1-3 「2019 안 놔!」)
+                case ReactCondition.PicksTargets:   return PickCount(top.Card.Target) > 0;
+                case ReactCondition.LosesMyHand:    return PredictHandLoss(top, me, _players[me].Hand.Count(c => !c.Equals(card))) > 0;
                 default:                            return false;
             }
         }
@@ -222,7 +237,11 @@ namespace Chapchu.Game
                     if (entry.Negated)
                     {
                         _resolving.RemoveAt(0);
-                        ResolveNegated(entry);
+                        ChainEntry recast = RecastOf(entry);
+                        if (recast != null)
+                            _resolving.Insert(0, recast); // 반사 — 무효 알림 대신, 반사한 사람이 다시 쓴 카드로 이어서 처리한다
+                        else
+                            ResolveNegated(entry);
                         continue;
                     }
 
@@ -248,6 +267,7 @@ namespace Chapchu.Game
                         return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
                 }
 
+                ApplyHealAfter(entry); // 이 카드의 처리가 끝난 직후의 회복 (2001)
                 _resolving.RemoveAt(0);
             }
 
@@ -284,17 +304,50 @@ namespace Chapchu.Game
                 _resumeAt = System.Math.Max(_resumeAt, at);
         }
 
-        // 무효된 카드 — 효과 없이, 체인이 끝나면 버림 더미로 (DiscardChain). 「손패로 반환」(C01)이면 시전자 손패로. 사건 기록: 카드 반환(T13)
+        // 반사(2002)된 카드를 반사한 사람이 다시 쓴 것 — 없으면(반사가 아니다 · 반사한 사람이 그새 빠졌다) null (04 7절 「반사」 · 11-card-list 1-3).
+        // 카드의 조건(대상 후보 · 행동 금지 · 내 턴)은 따지지 않고, 반응 시간도 다시 열지 않는다 — 막으려면 반사를 막는다.
+        // 대상: 1명 카드(고르든 자동이든)는 원래 쓴 사람, 전원 카드는 반사한 사람 기준 전원. 원래 쓴 사람이 빠졌으면 받는 사람이 없어 불발이다.
+        // 체인의 카드 순서(_chainOrder)에는 넣지 않는다 — 카드는 원래 것 한 장으로 버림 더미에 간다. 「행동 카드 사용」 지표에도 세지 않는다.
+        private ChainEntry RecastOf(ChainEntry entry)
+        {
+            int by = entry.ReflectedBy;
+            if (by == -1 || !IsInGame(by))
+                return null;
+
+            int[] targets;
+            switch (entry.Card.Target)
+            {
+                case TargetType.OneOther:
+                case TargetType.TwoOthers:
+                case TargetType.OneAny:
+                case TargetType.MostHand:
+                case TargetType.NextPlayer:
+                    targets = new[] { entry.User };
+                    break;
+                default:
+                    targets = ResolveTargets(by, entry.Card.Target, null, fromHand: false) ?? new int[0];
+                    break;
+            }
+
+            var recast = new ChainEntry(entry.Card, by, targets) { Below = entry.Below };
+            foreach (CardEffect effect in entry.Card.Effects)
+                effect.Prepare(this, recast);
+            return recast;
+        }
+
+        // 무효된 카드 — 효과 없이, 체인이 끝나면 버림 더미로 (DiscardChain). 「손패로 반환」 이면 정해진 사람 손패로 (쓴 사람 2003 · 카운터를 낸 사람 2020).
+        // 사건 기록: 카드 반환(T13) — 쓴 사람에게 돌아갔을 때만
         private void ResolveNegated(ChainEntry entry)
         {
-            if (entry.ReturnToCaster && IsInGame(entry.User))
+            if (entry.ReturnTo != -1 && IsInGame(entry.ReturnTo))
             {
                 entry.Returned = true;
-                PlayerState caster = _players[entry.User];
-                caster.Hand.Add(entry.Card);
-                _events.Add(new CardReturnedToHand(entry.User, entry.Card.InstanceId, entry.Card.CardId, caster.Hand.Count));
-                OnHandChanged(entry.User);
-                RecordAfter(AfterKind.CardReturned, entry.User, entry.NegatedBy, 1);
+                PlayerState receiver = _players[entry.ReturnTo];
+                receiver.Hand.Add(entry.Card);
+                _events.Add(new CardReturnedToHand(entry.ReturnTo, entry.Card.InstanceId, entry.Card.CardId, receiver.Hand.Count));
+                OnHandChanged(entry.ReturnTo);
+                if (entry.ReturnTo == entry.User)
+                    RecordAfter(AfterKind.CardReturned, entry.User, entry.NegatedBy, 1);
                 return;
             }
 
@@ -324,5 +377,9 @@ namespace Chapchu.Game
             IEnumerable<int> receivers = subject == EffectSubject.Self ? new[] { entry.User } : entry.Targets;
             return receivers.Where(actor => !entry.Excluded.Contains(actor) && IsInGame(actor)).ToArray();
         }
+
+        /// <summary>손패 감소 효과(빼앗기 · 버리기 · 주기)를 받을 사람 — ReceiversOf 에서 「손패 − 내 몫 무효」(2019) 한 사람을 더 뺀다.</summary>
+        internal int[] HandLossReceiversOf(EffectSubject subject, ChainEntry entry) =>
+            ReceiversOf(subject, entry).Where(actor => !entry.HandLossBlocked.ContainsKey(actor)).ToArray();
     }
 }
