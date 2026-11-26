@@ -37,8 +37,8 @@ namespace Chapchu.UI.Lobby
         private const string CancelText = "취소";
         private const string CloseText = "닫기";
         private const string BuyTitle = "구매";
-        private const string BuyMessageFormat = "'{0}'({1} · {2}) — {3} {4}에 살까요?";
-        private const string ShortTitleFormat = "{0} 부족";
+        private const string BuyMessageFormat = "「{0}」({1} · {2}) — {3} {4}에 살까요?";
+        private const string ShortTitleFormat = "{0}가 모자라요"; // 뼈다귀 · 츄르 — 둘 다 받침이 없다
         private const string ShortMessageFormat = "필요한 {0} {1} · 지금 {2}";
         private const string GachaShortMessageFormat = "{0}회 뽑기에 필요한 츄르 {1} · 지금 {2}";
         private const string ChargeTitle = "츄르 충전";
@@ -467,7 +467,7 @@ namespace Chapchu.UI.Lobby
 
             modal.ShowWarn(BuyTitle,
                 string.Format(BuyMessageFormat, item.Name, LobbyHubData.GradeName(item.Grade), LobbyHubData.SlotName(item.Slot), currencyName, LobbyStyle.Number(amount)),
-                BuyTitle, CancelText, () => Buy(item, currency, amount));
+                BuyTitle, CancelText, () => Buy(item, currency, amount), LobbyWarnKind.Ask);
         }
 
         private void Buy(HubItem item, HubCurrency currency, int amount)
@@ -492,7 +492,7 @@ namespace Chapchu.UI.Lobby
             {
                 Pay(HubCurrency.Churu, pack.Churu + pack.Bonus);
                 fx.Toast(string.Format(ChargedToastFormat, pack.Churu + pack.Bonus));
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         private void HandleInfoButtonClicked()

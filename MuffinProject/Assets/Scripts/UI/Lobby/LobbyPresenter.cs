@@ -70,6 +70,9 @@ namespace Chapchu.UI.Lobby
             // Android 뒤로가기 (17 3절 #5)
             if (Input.GetKeyDown(KeyCode.Escape))
                 Back();
+
+            // 창이 떠 있는 동안 알림은 위쪽 HUD 줄 가운데 — 창 내용을 가리지 않게 (통합 v3.25)
+            fx.SetToastOverHud(gachaResult.IsOpen || modal.IsAnyOpen || popups.IsOpen);
         }
 
         /// <summary>윗줄의 재화 숫자를 데이터에 맞춘다.</summary>

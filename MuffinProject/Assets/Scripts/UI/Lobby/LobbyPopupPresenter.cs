@@ -12,7 +12,9 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyPopupPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        private const string UnfriendOkText = "삭제"; // 확인 창 오른쪽 버튼 = 하는 일 이름 (시안 v3.23)
+        private const string BlockOkText = "차단";
+        private const string UnblockOkText = "해제";
         private const string CancelText = "취소";
         private const string UnfriendTitle = "친구 삭제";
         private const string UnfriendMessageFormat = "{0}님을 친구에서 삭제할까요?";
@@ -57,7 +59,8 @@ namespace Chapchu.UI.Lobby
 
         private LobbyHubData Data => lobby.Data;
 
-        private bool IsOpen => friends.IsOpen || profile.IsOpen || settings.IsOpen || quests.IsOpen || rates.IsOpen;
+        /// <summary>친구 · 프로필 · 설정 · 퀘스트 · 확률 창 중 하나라도 떠 있다.</summary>
+        public bool IsOpen => friends.IsOpen || profile.IsOpen || settings.IsOpen || quests.IsOpen || rates.IsOpen;
 
         private void Awake()
         {
@@ -253,12 +256,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleUnblockRequested(HubPerson person)
         {
-            modal.ShowWarn(UnblockTitle, UnblockMessage, OkText, CancelText, () =>
+            modal.ShowWarn(UnblockTitle, UnblockMessage, UnblockOkText, CancelText, () =>
             {
                 Data.Blocked.Remove(person);
                 if (settings.IsBlockListOpen)
                     settings.ShowBlockList(Data);
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         // 주소가 아직 없다 (17 미정) — 정해지면 Application.OpenURL
@@ -314,16 +317,16 @@ namespace Chapchu.UI.Lobby
 
         private void HandleUnfriendRequested(HubPerson friend)
         {
-            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), UnfriendOkText, CancelText, () =>
             {
                 Data.Friends.Remove(friend);
                 friends.Refresh();
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         private void HandleBlockRequested(HubPerson friend)
         {
-            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), BlockOkText, CancelText, () =>
             {
                 Data.Block(friend);
                 if (invite.Inviter == friend.Nickname)
@@ -331,7 +334,7 @@ namespace Chapchu.UI.Lobby
 
                 lobby.RefreshBadges();
                 friends.Refresh();
-            });
+            }, LobbyWarnKind.Danger);
         }
 
         #endregion

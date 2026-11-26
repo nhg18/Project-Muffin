@@ -13,7 +13,7 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyAccountPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        private const string DeleteOkText = "삭제"; // 확인 창 오른쪽 버튼 = 하는 일 이름 (시안 v3.23)
         private const string CancelText = "취소";
         private const string RenamingText = "바꾸는 중…";
         private const string RenamedToast = "닉네임을 바꿨어요.";
@@ -21,7 +21,7 @@ namespace Chapchu.UI.Lobby
         private const string DeleteTitle = "계정 삭제";
         private const string DeleteMessage = "계정을 삭제할까요? 친구 · 통계 · 보유 아이템이 모두 지워지고 되돌릴 수 없어요.";
         private const string DeleteWord = "삭제";
-        private const string DeleteWordError = "'삭제'라고 똑같이 입력해야 지워져요.";
+        private const string DeleteWordError = "「삭제」와 똑같이 입력해야 지워져요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -60,7 +60,7 @@ namespace Chapchu.UI.Lobby
         }
 
         private void HandleDeleteAccountRequested()
-            => modal.ShowWarn(DeleteTitle, DeleteMessage, OkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount));
+            => modal.ShowWarn(DeleteTitle, DeleteMessage, DeleteOkText, CancelText, () => modal.ShowInput(LobbyInputKind.DeleteAccount), LobbyWarnKind.Danger);
 
         // 입력 창은 방 코드에도 쓰인다 — 닉네임 · 계정 삭제일 때만 받는다
         private void HandleInputSubmitted(LobbyInputKind kind, string value)

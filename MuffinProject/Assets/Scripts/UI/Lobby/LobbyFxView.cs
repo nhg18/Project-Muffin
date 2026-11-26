@@ -2,23 +2,25 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 로비 맨 위층의 알림 · 손맛 — 말풍선 알림(3초 · 누르면 닫힘 · 새 것이 위) · 터짐(「입장!」 · 「개판!」) · 재화 「+N」.
-    /// 기준: 「통합 화면 UI v2」 키트 toast · fxBurst, 로비 gainFx
+    /// 로비 맨 위층의 알림 · 손맛 — 말풍선 알림(3초 · 누르면 닫힘 · 한 번에 하나) · 터짐(「입장!」 · 「개판!」) · 재화 「+N」.
+    /// 알림은 새 것이 앞 것을 갈아 끼우고, 창이 떠 있는 동안은 위쪽 HUD 줄 가운데로 올라가 창 내용을 가리지 않는다.
+    /// 기준: 「통합 화면 UI v2」 키트 toast · fxBurst, 로비 gainFx · 「통합 화면 UI v3」 v3.25 알림 규칙
     /// </summary>
     public class LobbyFxView : MonoBehaviour
     {
         [Header("알림")]
-        [SerializeField] private RectTransform[] toasts;
-        [SerializeField] private TMP_Text[] toastTexts;
-        [SerializeField] private Image[] toastFills;
-        [SerializeField] private Image[] toastTails;
-        [SerializeField] private Button[] toastButtons;
+        [Tooltip("알림이 놓이는 자리 — 평소 자리는 씬에 놓인 그대로, 창이 떠 있으면 위쪽 HUD 줄 가운데로 옮긴다.")]
+        [SerializeField] private RectTransform toastArea;
+        [SerializeField] private RectTransform toast;
+        [SerializeField] private TMP_Text toastText;
+        [SerializeField] private Image toastFill;
+        [SerializeField] private Image toastTail;
+        [SerializeField] private Button toastButton;
 
         [Header("터짐")]
         [SerializeField] private RectTransform burst;
@@ -41,6 +43,9 @@ namespace Chapchu.UI.Lobby
 
         [Tooltip("나쁜 소식 알림의 바탕색")]
         [SerializeField] private Color badToastFill = LobbyStyle.HpFill;
+
+        [Tooltip("창이 떠 있는 동안 알림 위 끝의 자리 — 캔버스 위 끝에서 (px). 위쪽 HUD 줄 가운데.")]
+        [SerializeField] private float toastHudTop = 72f;
 
         [Tooltip("터짐 그림이 커졌다 사라지기까지 (초)")]
         [SerializeField] private float burstSeconds = 0.7f;
@@ -75,43 +80,33 @@ namespace Chapchu.UI.Lobby
         [Tooltip("「+N」 이 시작할 때 · 나타남 끝의 크기 (배) — 머무는 동안 1 로 돌아온다")]
         [SerializeField] private Vector2 gainStartAndPeakScale = new Vector2(0.6f, 1.1f);
 
-        private Coroutine[] _toastLives;
-        private UnityAction[] _toastClicks; // 말풍선마다 「누르면 닫힘」 — 붙인 것을 그대로 떼려고 들고 있는다
+        private Coroutine _toastLife;
+        private Vector2 _toastAnchor; // 평소 자리 — 씬에 놓인 그대로
+        private Vector2 _toastPosition;
+        private bool _toastOverHud;
         private int _nextGain;
 
         private void Awake()
         {
-            if (toasts == null || toasts.Length == 0 || toastTexts == null || toastTexts.Length != toasts.Length || toastFills == null || toastFills.Length != toasts.Length
-                || toastTails == null || toastTails.Length != toasts.Length || toastButtons == null || toastButtons.Length != toasts.Length)
+            if (toastArea == null || toast == null || toastText == null || toastFill == null || toastTail == null || toastButton == null)
                 Debug.LogError($"[{nameof(LobbyFxView)}] 알림 참조가 비어 있습니다.", this);
 
             if (burst == null || burstGroup == null || burstImage == null || burstText == null || gains == null || gains.Length == 0)
                 Debug.LogError($"[{nameof(LobbyFxView)}] 터짐 · 재화 참조가 비어 있습니다.", this);
 
-            _toastLives = new Coroutine[toasts.Length];
-            _toastClicks = new UnityAction[toasts.Length];
-            for (int i = 0; i < toasts.Length; i++)
-            {
-                int index = i;
-                _toastClicks[i] = () => HideToast(index);
-            }
+            _toastAnchor = toastArea.anchorMin;
+            _toastPosition = toastArea.anchoredPosition;
         }
 
         private void OnEnable()
         {
-            for (int i = 0; i < toastButtons.Length; i++)
-                toastButtons[i].onClick.AddListener(_toastClicks[i]);
+            toastButton.onClick.AddListener(HideToast);
         }
 
         private void OnDisable()
         {
-            for (int i = 0; i < toasts.Length; i++)
-            {
-                toastButtons[i].onClick.RemoveListener(_toastClicks[i]);
-                toasts[i].DOKill();
-                toasts[i].gameObject.SetActive(false);
-                _toastLives[i] = null; // 꺼지면 코루틴도 멈춘다
-            }
+            toastButton.onClick.RemoveListener(HideToast);
+            HideToast();
 
             burst.DOKill();
             burst.gameObject.SetActive(false);
@@ -123,21 +118,30 @@ namespace Chapchu.UI.Lobby
             }
         }
 
-        /// <summary>말풍선 알림 한 줄. bad 면 붉은 바탕 (실패).</summary>
+        /// <summary>말풍선 알림 한 줄 — 떠 있던 알림은 바로 갈아 끼운다. bad 면 붉은 바탕 (실패).</summary>
         public void Toast(string message, bool bad = false)
         {
-            int index = FreeToast();
-            HideToast(index);
+            HideToast();
 
             Color fill = bad ? badToastFill : Color.white;
-            toastTexts[index].text = message;
-            toastFills[index].color = fill;
-            toastTails[index].color = fill;
-            toasts[index].SetAsFirstSibling();
-            toasts[index].gameObject.SetActive(true);
-            toasts[index].localScale = Vector3.zero;
-            toasts[index].DOScale(1f, toastPopSeconds).SetEase(Ease.OutBack).SetUpdate(true);
-            _toastLives[index] = StartCoroutine(ToastRoutine(index));
+            toastText.text = message;
+            toastFill.color = fill;
+            toastTail.color = fill;
+            toast.gameObject.SetActive(true);
+            toast.localScale = Vector3.zero;
+            toast.DOScale(1f, toastPopSeconds).SetEase(Ease.OutBack).SetUpdate(true);
+            _toastLife = StartCoroutine(ToastRoutine());
+        }
+
+        /// <summary>창(팝업 · 확인 창 · 뽑기 결과)이 떠 있으면 알림을 위쪽 HUD 줄 가운데로 — 창은 그 줄 아래에만 놓여 내용을 가리지 않는다.</summary>
+        public void SetToastOverHud(bool overHud)
+        {
+            if (overHud == _toastOverHud)
+                return;
+
+            _toastOverHud = overHud;
+            toastArea.anchorMin = toastArea.anchorMax = overHud ? new Vector2(0.5f, 1f) : _toastAnchor;
+            toastArea.anchoredPosition = overHud ? new Vector2(0f, -toastHudTop) : _toastPosition;
         }
 
         /// <summary>터짐 — worldPosition 을 가운데로, size 는 캔버스 px (시안 크기 × 2).</summary>
@@ -208,40 +212,21 @@ namespace Chapchu.UI.Lobby
             UIJuice.Pop(coin, 0.9f);
         }
 
-        // 꺼져 있는 말풍선, 다 떠 있으면 가장 아래(가장 오래된) 것
-        private int FreeToast()
+        private void HideToast()
         {
-            for (int i = 0; i < toasts.Length; i++)
-            {
-                if (!toasts[i].gameObject.activeSelf)
-                    return i;
-            }
+            if (_toastLife != null)
+                StopCoroutine(_toastLife);
 
-            int oldest = 0;
-            for (int i = 1; i < toasts.Length; i++)
-            {
-                if (toasts[i].GetSiblingIndex() > toasts[oldest].GetSiblingIndex())
-                    oldest = i;
-            }
-
-            return oldest;
+            _toastLife = null;
+            toast.DOKill();
+            toast.gameObject.SetActive(false);
         }
 
-        private void HideToast(int index)
-        {
-            if (_toastLives[index] != null)
-                StopCoroutine(_toastLives[index]);
-
-            _toastLives[index] = null;
-            toasts[index].DOKill();
-            toasts[index].gameObject.SetActive(false);
-        }
-
-        private IEnumerator ToastRoutine(int index)
+        private IEnumerator ToastRoutine()
         {
             yield return new WaitForSecondsRealtime(toastSeconds);
-            _toastLives[index] = null;
-            HideToast(index);
+            _toastLife = null;
+            HideToast();
         }
     }
 }
