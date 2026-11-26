@@ -83,6 +83,7 @@ namespace Chapchu.UI.GameScreen
         private bool _holdSent;        // 이번 반응 시간에 「고민 중」 을 이미 보냈다 (04-card.md 8절 — 1회)
         private bool _glowing;
         private bool _counterTargeting; // 카운터의 대상을 고르는 중 — 반응 시간이 끝나면 선택을 취소한다 (10-ui.md 6절)
+        private CardView _counterTargetCard; // 그 카운터 — 손패에서 따로 둔 카드라 HandView.HeldCard 에 잡히지 않는다. 「고민 중」 을 보낼 때 쥔 카드로 본다
 
         // 새로 들어와 크게 보여 주는 중인 카드 묶음 — 손패(HandView)에는 이미 들어 있고 자리만 따로다. 판정과 상관없는 연출.
         private readonly List<CardView> _showing = new List<CardView>();
@@ -171,7 +172,8 @@ namespace Chapchu.UI.GameScreen
         {
             if (_holdSent) return;
 
-            CardView held = _view.HeldCard;
+            // 연출 중에 미리 대상 선택을 연 카운터도 쥔 카드다 (04-card.md 8절 — 열리자마자 연장)
+            CardView held = _counterTargeting && _counterTargetCard != null ? _counterTargetCard : _view.HeldCard;
             if (held == null || !_usableCounters.Contains(held.InstanceId)) return;
 
             _holdSent = true;
@@ -541,6 +543,7 @@ namespace Chapchu.UI.GameScreen
 
             bool isCounter = deck.GetCard(card.CardId)?.type == CardType.Counter;
             _counterTargeting = isCounter;
+            _counterTargetCard = isCounter ? card : null;
 
             int[] targets = null;
             yield return seats.SelectTargetsRoutine(cardName, targetCount, includeMe, picked => targets = picked);
@@ -549,6 +552,7 @@ namespace Chapchu.UI.GameScreen
             if (isCounter && !_counterTargeting)
                 targets = null;
             _counterTargeting = false;
+            _counterTargetCard = null;
 
             if (card == null) // 고르는 사이 손패에서 빠져 지워졌다 (강제 버림 · 사망)
             {
