@@ -86,7 +86,7 @@ namespace Chapchu.UI.GameScreen
             return LookOf(actorNumber, ordered, MeColor, SeatColors);
         }
 
-        /// <summary>actorNumber 의 표시 이름. 봇이면 「봇 N」 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
+        /// <summary>actorNumber 의 표시 이름. 봇이면 봇 닉네임 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
         public static string NameOf(int actorNumber)
         {
             if (BotRoster.IsBot(actorNumber))

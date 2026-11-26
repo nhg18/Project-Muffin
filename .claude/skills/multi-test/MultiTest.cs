@@ -628,6 +628,45 @@ public static class MultiTest
         return "OK 혼자 하기 요청";
     }
 
+    /// <summary>디버그 로비에서 랜덤 매칭 — 매치 방이 없으면 새로 만든다 (08-room 4절 「매치」).</summary>
+    public static string Match()
+    {
+        if (Object.FindFirstObjectByType<DebugScript>() == null)
+            return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer)
+            return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
+
+        NetworkManager.Instance.JoinRandomRoom();
+        return "OK 랜덤 매칭 요청";
+    }
+
+    /// <summary>매치 방 화면 — 매치 방 · 시작 시각 · 방 코드 카드 숨김 · 대기 글에 남은 초.</summary>
+    public static string ExpectMatchRoom()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        var start = Object.FindFirstObjectByType<RoomStartView>();
+        var code = Object.FindFirstObjectByType<RoomCodeCardView>(FindObjectsInactive.Include);
+        if (start == null || code == null)
+            return "WAIT 방 화면 아님";
+
+        var text = (TMP_Text)typeof(RoomStartView).GetField("waitText", Private).GetValue(start);
+        bool at = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.MatchStartAt, out object value) && value is double;
+        string state = "매치 " + BotRoster.IsMatchRoom + " · 시각 " + at + " · 코드 카드 " + code.gameObject.activeInHierarchy + " · 글 「" + text.text.Replace("\n", " / ") + "」";
+        return BotRoster.IsMatchRoom && at && !code.gameObject.activeInHierarchy && text.gameObject.activeInHierarchy && text.text.Contains("찾는 중")
+            ? "OK " + state : "WAIT " + state;
+    }
+
+    /// <summary>봇 닉네임 — 「봇 N」 이 아니고 서로 다르다 (18-bot 4절).</summary>
+    public static string BotNames()
+    {
+        string[] names = BotRoster.Numbers.Select(n => BotRoster.NicknameOf(BotRoster.ActorOf(n))).ToArray();
+        bool ok = names.Length > 0 && names.Distinct().Count() == names.Length && names.All(n => !n.StartsWith("봇 "));
+        return (ok ? "OK " : "FAIL ") + "봇 닉네임 " + string.Join(" · ", names);
+    }
+
     /// <summary>방의 봇 목록 · 정원 · 공개 여부가 기대와 같을 때까지 WAIT. bots = "1,2,3" 처럼.</summary>
     public static string ExpectBots(string bots, string maxPlayers, string visible)
     {
@@ -658,7 +697,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var button = (UnityEngine.UI.Button)typeof(RoomSlotView).GetField(SlotButtonField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
             if (!button.interactable)
                 return "FAIL 봇 " + number + " 칸이 눌리지 않는다";
@@ -687,7 +726,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var tag = (TMP_Text)typeof(RoomSlotView).GetField(SlotBotTagField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
 
             // 꼬리표가 켜져 있고 · 글자가 맞고 · 글자가 꼬리표 밖으로 넘치지 않는다

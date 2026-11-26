@@ -26,5 +26,8 @@ namespace Chapchu.Core
         public const string SfxOn = "SfxOn";
         public const string BgmOn = "BgmOn";
         public const string InviteNoticeOn = "InviteNoticeOn";
+
+        /// <summary>개발자 모드 (1 = 켬, 없으면 끔). 이 기기에만 저장한다 (DevMode)</summary>
+        public const string DevMode = "DevMode";
     }
 }

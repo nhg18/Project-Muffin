@@ -19,7 +19,15 @@ namespace Chapchu.Network
 
         private readonly RoomGuard _guard; // 방장이 쓴 값 지키기 — 남이 바꾼 봇 목록 · 정원 · 열림도 이것이 되돌린다 (09-network.md 13절)
 
-        private bool _creatingSolo; // 「혼자 하기」 방을 만드는 중 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+        /// <summary>매치 방이 생긴 뒤 빈자리를 봇으로 채우고 시작할 때까지 (초) — 08-room.md 4절 「매치」</summary>
+        public const double MatchWaitSeconds = 15;
+
+        private enum CreatingKind { Room, Solo, Match }
+
+        private CreatingKind _creating; // 만드는 중인 방 종류 — 코드가 겹쳐 다시 만들 때도 같은 종류로
+
+        // 랜덤 매칭은 매치 방에만 들어간다 — 개발자 모드로 만든 공개 방에 모르는 사람이 들어가지 않게
+        private static readonly ExitGames.Client.Photon.Hashtable MatchFilter = new ExitGames.Client.Photon.Hashtable { [RoomProps.Match] = true };
 
         // 방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null.
         // PUN 은 서버 확인이 돌아온 뒤에야 내 기기의 방 속성을 바꾸므로, 방금 쓴 목록은 이것으로 읽는다
@@ -59,7 +67,7 @@ namespace Chapchu.Network
                 RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
                 return;
             }
-            PhotonNetwork.JoinRandomRoom();
+            PhotonNetwork.JoinRandomRoom(MatchFilter, 0);
         }
     
         public void LeaveRoom()
@@ -75,8 +83,33 @@ namespace Chapchu.Network
                 return;
             }
 
-            _creatingSolo = false;
+            _creating = CreatingKind.Room;
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
+            string code = RandomCode.GenerateRandomCode();
+
+            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+        }
+
+        /// <summary>
+        /// 매치 방 (08-room.md 4절 「매치」) — 랜덤 매칭이 들어갈 방이 없을 때 만든다. 공개 고정 · 시작 시각을 처음부터 적는다.
+        /// 시각이 지나면 방장이 빈자리를 봇으로 채우고 시작한다 (RoomPresenter).
+        /// </summary>
+        private void CreateMatchRoom()
+        {
+            if (!PhotonConnection.ValidConnect)
+            {
+                RoomEvents.RaiseCreateRoomFailed(NotConnectedCode, NotConnectedMessage);
+                return;
+            }
+
+            _creating = CreatingKind.Match;
+            RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
+            options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                [RoomProps.Match] = true,
+                [RoomProps.MatchStartAt] = PhotonNetwork.Time + MatchWaitSeconds,
+            };
+            options.CustomRoomPropertiesForLobby = new[] { RoomProps.Match };
             string code = RandomCode.GenerateRandomCode();
 
             PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
@@ -94,7 +127,7 @@ namespace Chapchu.Network
                 return;
             }
 
-            _creatingSolo = true;
+            _creating = CreatingKind.Solo;
             int[] bots = Enumerable.Range(1, BotRoster.MaxBots).ToArray();
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers - bots.Length, false, true);
             options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { [RoomProps.Bots] = bots, [RoomProps.Solo] = true };
@@ -226,8 +259,10 @@ namespace Chapchu.Network
             {
                 // 랜덤 코드로 방 생성시 겹치는 문제시 CreateRoom 함수 호출
                 case ErrorCode.GameIdAlreadyExists:
-                    if (_creatingSolo)
+                    if (_creating == CreatingKind.Solo)
                         CreateSoloRoom();
+                    else if (_creating == CreatingKind.Match)
+                        CreateMatchRoom();
                     else
                         CreateRoom();
                     return;
@@ -273,8 +308,8 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
-            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 방을 만든다: {message}");
-            CreateRoom();
+            Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 매치 방을 만든다: {message}");
+            CreateMatchRoom();
         }
 
         public void OnPlayerEntered(Player player)

@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.Core;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,7 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 로비 홈 — 프로필 칩 · 아래 왼쪽 줄(퀘스트 · 꾸미기 · 상점) · 플레이 묶음. 섹션으로 가면 0.2초에 사라진다.
+    /// 플레이 묶음의 작은 버튼 셋(혼자 하기 · 방 만들기 · 코드로 참가)은 개발자 모드에서만 풀린다 — 평소엔 자물쇠 · 꺼진 모양 (14-lobby-ui 5절).
     /// 기준: 「통합 화면 UI v2」 로비 #home
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
@@ -27,10 +29,10 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button codeButton;
         [SerializeField] private Button randomButton;
 
-        [Header("혼자 하기 잠금")]
-        [Tooltip("켜면 「혼자 하기」 를 자물쇠 아이콘 · 꺼진 모양으로 바꾸고 누를 수 없게 막는다")]
-        [SerializeField] private bool soloLocked = true;
+        [Header("개발자 모드 잠금 — 작은 버튼 셋의 아이콘")]
         [SerializeField] private Image soloIcon;
+        [SerializeField] private Image createIcon;
+        [SerializeField] private Image codeIcon;
         [SerializeField] private Sprite lockSprite;
 
         [Tooltip("닉네임 글자 폭 한도 (캔버스 px) — 넘으면 말줄임")]
@@ -41,6 +43,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private float fadeSeconds = 0.2f;
 
         private CanvasGroup _group;
+        private Sprite[] _openSprites; // 작은 버튼 셋의 원래 아이콘 — 개발자 모드를 켜면 되돌린다
 
         public event Action OnProfileRequested;
         public event Action OnQuestsRequested;
@@ -61,18 +64,25 @@ namespace Chapchu.UI.Lobby
             if (soloButton == null || createButton == null || codeButton == null || randomButton == null)
                 Debug.LogError($"[{nameof(LobbyHomeView)}] 플레이 버튼 참조가 비어 있습니다.", this);
 
-            if (soloIcon == null || lockSprite == null)
-                Debug.LogError($"[{nameof(LobbyHomeView)}] 혼자 하기 잠금 참조가 비어 있습니다.", this);
+            if (soloIcon == null || createIcon == null || codeIcon == null || lockSprite == null)
+                Debug.LogError($"[{nameof(LobbyHomeView)}] 개발자 모드 잠금 참조가 비어 있습니다.", this);
+
+            _openSprites = new[] { soloIcon.sprite, createIcon.sprite, codeIcon.sprite };
         }
 
         // PressableButton 이 Awake 에서 원래 색을 기억한 뒤에 꺼진 모양으로 바꾼다
-        private void Start()
-        {
-            if (!soloLocked)
-                return;
+        private void Start() => SetDevMode(DevMode.IsOn);
 
-            soloIcon.sprite = lockSprite;
-            LobbyStyle.SetEnabled(soloButton, false);
+        /// <summary>개발자 모드 — 켜면 작은 버튼 셋이 원래 아이콘으로 풀리고, 끄면 자물쇠 · 꺼진 모양으로 잠긴다.</summary>
+        public void SetDevMode(bool on)
+        {
+            Button[] buttons = { soloButton, createButton, codeButton };
+            Image[] icons = { soloIcon, createIcon, codeIcon };
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                icons[i].sprite = on ? _openSprites[i] : lockSprite;
+                LobbyStyle.SetEnabled(buttons[i], on);
+            }
         }
 
         private void OnEnable()

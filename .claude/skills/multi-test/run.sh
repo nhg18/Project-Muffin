@@ -5,6 +5,7 @@
 #   run.sh ui                          한 클라이언트: 타이틀 → 로비 → 경고 팝업 · 토스트 → 방 → 나가기
 #   run.sh multi [클라이언트=2] [턴=4]  메인 + 클론: 디버그 로비 → 방 → 게임, 턴마다 행동, 화면끼리 비교
 #   run.sh full [클라이언트=2] [HP=20]   메인 + 클론: 체력을 낮춰 한 판을 끝까지 → 함정 · 사망 · 게임 종료 → 결과 화면 → 한 판 더 → 로비로
+#   run.sh match                      메인 혼자: 랜덤 매칭 → 매치 방 → 15초 뒤 봇 3 채워 스스로 시작 → 봇 닉네임
 #   run.sh solo [HP=30]                 메인 혼자 + 봇 3: 혼자 하기 → 봇 제거 · 추가 → 한 판 끝까지 → 결과 화면 → 한 판 더 → 로비로
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
@@ -477,6 +478,25 @@ run_full() {
 }
 
 # 사람 1 + 봇 3 (18-bot.md 10절): 혼자 하기 → 봇 제거 · 다시 추가 → 시작 → 체력을 낮춰 한 판 끝까지 → 결과 화면(봇이 스스로 준비) → 한 판 더 → 새 판(봇 · 난이도 · 비공개 그대로) → 끝 → 로비로
+# 매치 (08-room 4절) — 메인 혼자 랜덤 매칭 → 매치 방(코드 · 토글 · 시작 버튼 없음, 남은 초) → 15초 뒤 봇 3 이 채워져 스스로 시작
+run_match() {
+    EDITORS=("$MAIN")
+    log "▶ 준비 — 메인 혼자"
+    prepare "$LOBBY_SCENE"
+    log "▶ 랜덤 매칭 → 매치 방"
+    until_ok "$MAIN" Match || return
+    wait_scene RoomScene || return
+    until_ok "$MAIN" ExpectMatchRoom || return
+    log "▶ 15초 뒤 빈자리 봇 → 스스로 시작"
+    wait_scene GameScene || return
+    until_ok "$MAIN" ExpectBots "1,2,3" 1 True || return
+    log "  $(call "$MAIN" BotNames)"
+    case "$(call "$MAIN" BotNames)" in OK*) ;; *) fail "봇 닉네임이 「봇 N」 이거나 겹친다" ;; esac
+    sleep 2
+    log "▶ 판정"
+    check_errors "$MAIN"
+}
+
 run_solo() {
     local hp="${1:-30}" line bots
     EDITORS=("$MAIN")
@@ -1258,6 +1278,7 @@ case "${1:-}" in
     multi) shift; run_multi "$@" ;;
     full)  shift; run_full "$@" ;;
     solo)  shift; run_solo "$@" ;;
+    match) shift; run_match ;;
     chapchu) shift; run_chapchu "$@" ;;
     restart) shift; run_restart "$@" ;;
     gaepan)  shift; run_gaepan "$@" ;;

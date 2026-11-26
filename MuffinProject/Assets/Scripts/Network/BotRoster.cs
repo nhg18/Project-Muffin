@@ -94,11 +94,33 @@ namespace Chapchu.Network
         public static bool IsSoloRoom => PhotonNetwork.CurrentRoom != null
                                          && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Solo, out object solo) && solo is bool b && b;
 
+        /// <summary>랜덤 매칭이 만든 매치 방 — 시각이 지나면 빈자리를 봇으로 채우고 시작한다 (08-room.md 4절 「매치」).</summary>
+        public static bool IsMatchRoom => PhotonNetwork.CurrentRoom != null
+                                          && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Match, out object match) && match is bool b && b;
+
         public static int ActorOf(int number) => ActorBase + number;
         public static bool IsBot(int actorNumber) => actorNumber > ActorBase;
 
-        /// <summary>「봇 N」 (18-bot.md 4절). 「(봇)」 표기는 화면이 붙인다.</summary>
-        public static string NicknameOf(int actorNumber) => $"봇 {actorNumber - ActorBase}";
+        // 봇 닉네임 (18-bot.md 4절) — 사람 닉네임처럼 보이는 이름 + 화면이 붙이는 「봇」 표시
+        private static readonly string[] BotNames =
+        {
+            "모찌", "호두", "두부", "보리", "깨비", "감자", "꿀떡", "말랑이",
+            "누룽지", "단팥", "인절미", "꼬미", "뭉치", "송편", "쫀득이", "도토리",
+        };
+
+        /// <summary>
+        /// 봇의 닉네임 (18-bot.md 4절). 방 코드 · 봇 번호로 정해 모든 기기에서 같고, 한 방의 봇 셋은 서로 다르다. 「봇」 표기는 화면이 붙인다.
+        /// string.GetHashCode 는 실행기마다 달라질 수 있어 직접 센다.
+        /// </summary>
+        public static string NicknameOf(int actorNumber)
+        {
+            int number = actorNumber - ActorBase;
+            uint hash = 2166136261;
+            foreach (char c in PhotonNetwork.CurrentRoom?.Name ?? string.Empty)
+                hash = (hash ^ c) * 16777619;
+
+            return BotNames[(int)((hash + (uint)number) % (uint)BotNames.Length)];
+        }
 
         /// <summary>봇의 공개 값이 들어 있는 방 속성 키 — 사람과 같은 키(PlayerProps) + #식별자 (09-network.md 3절).</summary>
         public static string PropKey(string playerPropKey, int actorNumber) => $"{playerPropKey}#{actorNumber}";
