@@ -140,7 +140,7 @@ namespace Chapchu.Game
         // 함정은 고르는 입력이 없다 — 고르는 대상이면 무작위 (04 6절). 고르지 않는 타입이면 null (ResolveTargets 가 정한다).
         private int[] RandomPicks(int owner, TargetType type)
         {
-            int count = type == TargetType.OneOther || type == TargetType.OneAny ? 1 : type == TargetType.TwoOthers ? 2 : 0;
+            int count = PickCount(type);
             if (count == 0)
                 return null;
 
