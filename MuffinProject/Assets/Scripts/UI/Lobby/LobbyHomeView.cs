@@ -1,5 +1,6 @@
 ﻿using System;
 using DG.Tweening;
+using Chapchu.UI.Title;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +27,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button createButton;
         [SerializeField] private Button codeButton;
         [SerializeField] private Button randomButton;
+
+        [Header("혼자 하기 잠금")]
+        [Tooltip("켜면 「혼자 하기」 를 자물쇠 아이콘 · 꺼진 모양으로 바꾸고 누를 수 없게 막는다")]
+        [SerializeField] private bool soloLocked = true;
+        [SerializeField] private Image soloIcon;
+        [SerializeField] private Sprite lockSprite;
 
         [Tooltip("닉네임 글자 폭 한도 (캔버스 px) — 넘으면 말줄임")]
         [SerializeField] private float nicknameMaxWidth = 560f;
@@ -54,6 +61,20 @@ namespace Chapchu.UI.Lobby
 
             if (soloButton == null || createButton == null || codeButton == null || randomButton == null)
                 Debug.LogError($"[{nameof(LobbyHomeView)}] 플레이 버튼 참조가 비어 있습니다.", this);
+
+            if (soloIcon == null || lockSprite == null)
+                Debug.LogError($"[{nameof(LobbyHomeView)}] 혼자 하기 잠금 참조가 비어 있습니다.", this);
+        }
+
+        // PressableButton 이 Awake 에서 원래 색을 기억한 뒤에 꺼진 모양으로 바꾼다
+        private void Start()
+        {
+            if (!soloLocked)
+                return;
+
+            soloButton.interactable = false;
+            soloIcon.sprite = lockSprite;
+            soloButton.GetComponent<PressableButton>().SetDimmed(true);
         }
 
         private void OnEnable()

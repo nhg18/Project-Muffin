@@ -20311,8 +20311,10 @@ MonoBehaviour:
   hardShadow: {fileID: 0}
   hoverColor: {r: 0, g: 0, b: 0, a: 0}
   hoverLift: 0
-  fill: {fileID: 0}
-  inkParts: []
+  fill: {fileID: 2141072612}
+  inkParts:
+  - {fileID: 2030331027}
+  - {fileID: 1375862240}
 --- !u!114 &580673753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37394,6 +37396,9 @@ MonoBehaviour:
   createButton: {fileID: 1194371167}
   codeButton: {fileID: 1013104158}
   randomButton: {fileID: 236934331}
+  soloLocked: 1
+  soloIcon: {fileID: 2030331027}
+  lockSprite: {fileID: 21300000, guid: bb9f710802986c2468124c82a130724d, type: 3}
   nicknameMaxWidth: 560
   fadeSeconds: 0.2
 --- !u!1 &1099822481
