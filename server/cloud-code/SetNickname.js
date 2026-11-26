@@ -2,7 +2,12 @@
  * Cloud Code 「닉네임 저장」 — 닉네임을 정하거나 바꾸는 유일한 길. 클라이언트는 자기 닉네임을 Cloud Save 에 직접 쓰지 않는다.
  * 기준 문서: docs/systems/23-login.md 3절 #5 · 7-8 · 8절, 12-title-ui.md 4-2
  *
- * 순서: 길이 · 문자(12 4-2) → (바꾸기면) 쿠폰 · 쿨다운 → 금칙어(23 8-2) → 이름 장부에 새 이름 → 내 보호 칸 → 장부에서 옛 이름 지우기.
+ * 순서: 길이 · 문자(12 4-2) → (바꾸기면) 쿠폰 · 쿨다운 → 금칙어(23 8-2) → [이름 자물쇠] 이름 장부에 새 이름 → 내 보호 칸 → [풀기] → 장부에서 옛 이름 지우기.
+ *
+ * 동시에 같은 이름 (23 7-8): Cloud Save 에는 UNIQUE 제약도 「없을 때만 만들기」 도 없다. 있는 것은 쓰기 잠금(writeLock) —
+ * 「내가 읽은 판일 때만 써진다, 아니면 409」 인 낙관적 잠금(CAS)이다. 그것으로 자물쇠 칸을 만들어 이름 하나를 「확인 → 쓰기」 하는 동안
+ * 그 칸을 한 스크립트만 쥐게 한다. 같은 칸을 동시에 잡으면 하나만 성공하고, 나머지는 기다렸다 다시 — 그땐 이름이 이미 장부에 있어 taken.
+ * 스크립트가 도중에 죽어도 자물쇠는 LOCK_LEASE_MS 뒤 저절로 풀린다.
  * 결과는 예외가 아니라 { result } 로 돌려준다 — 클라이언트가 갈래마다 다른 문구를 띄운다.
  *   ok · same(지금 이름과 똑같음, 쓰지 않음) · invalid · banned · taken · cooldown(+remainingSeconds) · noCoupon · error
  *
@@ -28,6 +33,13 @@ const KEY_CHANGED_AT = "nicknameChangedAt";
 // 이름 장부 — 이름 하나에 비공개 게임 데이터 묶음 하나, 칸 owner = 플레이어 ID (23 7-8)
 const REGISTRY_PREFIX = "nick_";
 const REGISTRY_KEY = "owner";
+
+// 이름 자물쇠 — 비공개 게임 데이터 묶음 하나에 칸 LOCK_BUCKETS 개. 이름을 해시로 칸에 나눠, 다른 이름끼리는 덜 기다리게 한다
+const LOCK_ID = "nicklock";
+const LOCK_BUCKETS = 16;
+const LOCK_LEASE_MS = 10000;   // 이 시간이 지나면 쥔 쪽이 죽은 것으로 보고 빼앗는다 — Cloud Code 실행 제한 15초 안
+const LOCK_TRIES = 25;         // 기다리며 다시 잡는 횟수 — 약 5초
+const LOCK_WAIT_MS = 200;
 
 // 23 8-1 Remote Config 키
 const RC_BANNED = "bannedWords";
@@ -67,16 +79,32 @@ module.exports = async ({ params, context, logger }) => {
     // 대소문자만 바꾸면 같은 이름 — 장부는 그대로 (23 7-8)
     const newId = registryId(nickname);
     const oldId = isFirst ? null : registryId(mine.nickname);
-    if (newId !== oldId && !(await claim(cloudSave, projectId, newId, playerId)))
-      return { result: "taken" };
-
-    // 닉네임을 먼저 — 뒤의 쓰기가 실패하면 쿠폰을 덜 쓰는 쪽으로 남는다
     const coupons = isFirst ? mine.coupons : mine.coupons - 1;
     const changedAt = isFirst ? mine.changedAt : Date.now();
-    await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_NICKNAME, value: nickname });
-    if (!isFirst) {
-      await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_COUPONS, value: coupons });
-      await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_CHANGED_AT, value: changedAt });
+
+    const lock = newId === oldId ? null : await acquire(cloudSave, projectId, newId, playerId, logger);
+    if (newId !== oldId && !lock)
+      return { result: "error" }; // 자물쇠를 못 잡음 — 「잠시 후 다시」
+
+    try {
+      if (lock) {
+        const owner = await ownerOf(cloudSave, projectId, newId);
+        if (owner && owner !== playerId)
+          return { result: "taken" };
+        if (!owner)
+          await cloudSave.setPrivateCustomItem(projectId, newId, { key: REGISTRY_KEY, value: playerId });
+      }
+
+      // 닉네임을 먼저 — 뒤의 쓰기가 실패하면 쿠폰을 덜 쓰는 쪽으로 남는다.
+      // 바꾸기면 읽은 판의 쓰기 잠금을 건다 — 같은 사람의 요청 둘이 겹치면 늦은 쪽이 409 로 멈춰 쿠폰을 두 번 쓰지 않는다
+      await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_NICKNAME, value: nickname, writeLock: mine.nicknameLock ?? undefined });
+      if (!isFirst) {
+        await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_COUPONS, value: coupons });
+        await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_CHANGED_AT, value: changedAt });
+      }
+    } finally {
+      if (lock)
+        await unlock(cloudSave, projectId, lock, logger);
     }
 
     if (oldId && oldId !== newId)
@@ -109,11 +137,16 @@ function widthOf(chars) {
 async function loadMine(cloudSave, projectId, playerId) {
   const res = await cloudSave.getProtectedItems(projectId, playerId, [KEY_NICKNAME, KEY_COUPONS, KEY_CHANGED_AT]);
   const values = {};
-  for (const item of res.data.results ?? [])
+  let nicknameLock = null;
+  for (const item of res.data.results ?? []) {
     values[item.key] = item.value;
+    if (item.key === KEY_NICKNAME)
+      nicknameLock = item.writeLock ?? null;
+  }
 
   return {
     nickname: typeof values[KEY_NICKNAME] === "string" ? values[KEY_NICKNAME] : null,
+    nicknameLock,
     coupons: Number.isFinite(values[KEY_COUPONS]) ? values[KEY_COUPONS] : FREE_COUPONS,
     changedAt: Number.isFinite(values[KEY_CHANGED_AT]) ? values[KEY_CHANGED_AT] : 0,
   };
@@ -133,16 +166,62 @@ async function ownerOf(cloudSave, projectId, id) {
   return item ? item.value : null;
 }
 
-// 비어 있으면 내 것으로 쓰고, 다시 읽어 내 것인지 확인한다 — 동시에 같은 이름을 쓰면 나중에 쓴 쪽이 남고 먼저 쓴 쪽은 여기서 진다
-async function claim(cloudSave, projectId, id, playerId) {
-  const owner = await ownerOf(cloudSave, projectId, id);
-  if (owner === playerId)
-    return true;
-  if (owner)
-    return false;
+// ----- 이름 자물쇠 (CAS) -----------------------------------------------------
 
-  await cloudSave.setPrivateCustomItem(projectId, id, { key: REGISTRY_KEY, value: playerId });
-  return (await ownerOf(cloudSave, projectId, id)) === playerId;
+// 이름 → 자물쇠 칸. 같은 이름은 늘 같은 칸
+function lockKey(id) {
+  let h = 0;
+  for (const c of id)
+    h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `b${h % LOCK_BUCKETS}`;
+}
+
+// 칸이 비었거나(holder 없음) 쥔 쪽의 시간이 지났으면, 읽은 판의 쓰기 잠금으로 내 이름을 쓴다 — 그 사이 누가 먼저 썼으면 409 로 지고 다시.
+// 잡으면 { key, writeLock }, 못 잡으면 null.
+// 칸은 배포 때 미리 만들어 둔다 (server/README.md) — 여기서 만들면 둘이 동시에 만들 때 늦게 만든 쪽이 이미 잡힌 자물쇠를 덮어써 둘 다 잡는다
+async function acquire(cloudSave, projectId, id, playerId, logger) {
+  const key = lockKey(id);
+  const token = `${playerId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+
+  for (let i = 0; i < LOCK_TRIES; i++) {
+    const res = await cloudSave.getPrivateCustomItems(projectId, LOCK_ID, [key]);
+    const item = (res.data.results ?? []).find(it => it.key === key);
+    if (!item) {
+      logger.error(`이름 자물쇠 칸 ${LOCK_ID}/${key} 가 없다 — server/README.md 「배포」 의 자물쇠 만들기를 돌린다`);
+      return null;
+    }
+
+    const held = item.value && item.value.holder && item.value.until > Date.now();
+    if (!held) {
+      try {
+        const set = await cloudSave.setPrivateCustomItem(projectId, LOCK_ID, {
+          key, value: { holder: token, until: Date.now() + LOCK_LEASE_MS }, writeLock: item.writeLock,
+        });
+        return { key, writeLock: set.data.writeLock };
+      } catch (err) {
+        if (err?.response?.status !== 409)
+          throw err;
+      }
+    }
+
+    await sleep(LOCK_WAIT_MS + Math.floor(Math.random() * LOCK_WAIT_MS));
+  }
+
+  logger.warning(`이름 자물쇠를 못 잡음 ${key}`);
+  return null;
+}
+
+// 내가 쥔 판일 때만 푼다 — 시간이 지나 남이 가져갔으면 409, 그대로 둔다
+async function unlock(cloudSave, projectId, lock, logger) {
+  try {
+    await cloudSave.setPrivateCustomItem(projectId, LOCK_ID, { key: lock.key, value: { holder: null, until: 0 }, writeLock: lock.writeLock });
+  } catch (err) {
+    logger.warning(`이름 자물쇠 풀기 실패 ${lock.key}: ${describe(err)}`);
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // 옛 이름 풀기 — 내 것일 때만. 실패해도 닉네임은 이미 바뀌었으니 기록만 남긴다

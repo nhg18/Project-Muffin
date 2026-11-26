@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | 플레이어 보호 칸 | `nickname` · `nicknameCoupons` · `nicknameChangedAt`(유닉스 ms) | 내 닉네임 · 쿠폰 수(없으면 1장) · 마지막 변경 시각 | `SetNickname` 만. 클라이언트는 읽기만 (`AccountService.LoadNicknameAsync`) |
 | 비공개 게임 데이터 `nick_<이름>` | `owner` | 그 이름을 쓰는 플레이어 ID. `<이름>` = NFKC · 소문자로 바꾼 이름의 UTF-8 을 base64url (묶음 ID 는 영문 · 숫자 · `_` · `-` 50자까지) | `SetNickname` 만 |
+| 비공개 게임 데이터 `nicklock` | `b0` ~ `b15` | 이름 자물쇠 `{ holder, until }` — 같은 이름을 둘이 동시에 저장할 때 한 명씩 장부를 보게 한다 (`23` 7-8). **배포 때 미리 만든다** (아래) | `SetNickname` 만 |
 
 읽는 Remote Config: `bannedWords` · `allowedWords` (`23` 8-1).
 
@@ -27,7 +28,21 @@ ugs deploy server/cloud-code/SetNickname.js
 ugs cloud-code scripts list                                     # 올라갔는지
 ```
 
-서비스 계정 역할: 프로젝트에 Cloud Code 편집 역할 + 환경 보기 역할.
+### 이름 자물쇠 만들기 (환경마다 한 번)
+
+`SetNickname` 은 자물쇠 칸이 없으면 저장하지 않는다 (「잠시 후 다시 시도해 주세요.」). 저장 중에 칸을 만들면 둘이 동시에 만들 때 늦게 만든 쪽이 이미 잡힌 자물쇠를 덮어써 둘 다 잡으므로, 환경을 새로 만들 때 **한 번** 미리 만든다. 이미 있으면 다시 돌려도 된다 (빈 자물쇠로 덮는다 — 저장이 몰리는 때는 피한다).
+
+```bash
+P=36edb1bd-5445-4554-8ed7-d7c526a59a6d
+E=<환경 ID>                                                     # ugs env list
+for b in $(seq 0 15); do
+  curl -sS -u "<키 ID>:<비밀 키>" -H "Content-Type: application/json"     -d "{\"key\":\"b$b\",\"value\":{\"holder\":null,\"until\":0}}"     "https://services.api.unity.com/cloud-save/v1/data/projects/$P/environments/$E/custom/nicklock/private-items"
+done
+```
+
+칸 수(16)를 바꾸면 `SetNickname.js` 의 `LOCK_BUCKETS` 와 같이 바꾼다.
+
+서비스 계정 역할: 프로젝트에 Cloud Code 편집 역할 + Cloud Save 편집 역할(자물쇠 만들기) + 환경 보기 역할.
 
 ## 고칠 때
 
