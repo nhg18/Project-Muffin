@@ -8878,8 +8878,9 @@ MonoBehaviour:
   counterCardPrefab: {fileID: 3580590184976121583, guid: 7a398f165abba98448b287921a202cca, type: 3}
   trapCardPrefab: {fileID: 3079282687537872274, guid: db14fcfda42f1e44c94a780923db20fe, type: 3}
   topLayer: {fileID: 1211240098}
-  leftReserved: 5.64
-  rightReserved: 4.52
+  leftReserved: 4.72
+  rightReserved: 0.52
+  skipReserved: 2.6
   loweredSpacing: 0.5
   loweredAnglePerCard: 1.4
   loweredAngleMax: 9
@@ -8894,14 +8895,15 @@ MonoBehaviour:
   pickGapLowered: 0.22
   hoverLift: 0.08
   hoverScale: 1.12
-  usableScale: 1.06
+  playableScale: 1.1
+  unplayableScale: 0.86
   moveDuration: 0.18
   drawDuration: 1
   restTilt: 4
   drawTilt: 40
-  showTopMargin: 1
+  showTopMargin: 1.6
   showBottomGap: 0.28
-  showBarSpace: 0.8
+  showBarSpace: 1.1
   showGapX: 0.44
   showGapY: 0.28
   showMaxWidth: 13.6
@@ -8918,7 +8920,6 @@ MonoBehaviour:
   playLineGap: 0.48
   handZoneGap: 0.5
   cardDepthStep: 0.02
-  usableDepth: 0.3
   selectedDepth: 0.34
   hoverDepth: 0.38
   dragDepth: 0.42

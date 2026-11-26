@@ -309,10 +309,10 @@ namespace Chapchu.UI.GameScreen
             _showing.Add(card);
             _showLastAddAt = Time.time;
 
-            float bottom = _view.LayoutShown(_showing, _showing.Count - 1);
+            float cardsTop = _view.LayoutShown(_showing, _showing.Count - 1);
             float enter = _view.ShowEnterSeconds(1);
             float hold = Mathf.Min(showHoldMax, showHoldBase + showHoldPerCard * (_showing.Count - 1));
-            revealView.Show(_view.WorldToCanvasY(bottom), enter, hold);
+            revealView.Show(_view.WorldToCanvasY(cardsTop), enter, hold);
 
             if (_showRoutine != null)
                 StopCoroutine(_showRoutine);

@@ -35,11 +35,13 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("올라온 손패 · 끄는 카드를 HUD 위에 그리는 층.")]
         [SerializeField] private TopCardLayerView topLayer;
 
-        [Header("내려간 손패 — 내 패널과 찹츄 버튼 사이")]
-        [Tooltip("화면 왼쪽 끝에서 손패가 시작되는 곳까지 (유닛) — 가장자리 32 + 내 패널 508 + 틈 24.")]
-        [SerializeField] private float leftReserved = 5.64f;
-        [Tooltip("화면 오른쪽 끝에서 손패가 끝나는 곳까지 (유닛) — 가장자리 32 + 찹츄 버튼 392 + 틈 28.")]
-        [SerializeField] private float rightReserved = 4.52f;
+        [Header("내려간 손패 — 내 HUD 옆 ~ 오른쪽 끝 (통합 화면 UI v3 handBox)")]
+        [Tooltip("안전 영역 왼쪽 끝에서 손패 상자가 시작되는 곳까지 (유닛) — 시안 (가장자리 16 + 내 HUD 192 + 틈 28) × 2.")]
+        [SerializeField] private float leftReserved = 4.72f;
+        [Tooltip("안전 영역 오른쪽 끝에서 손패 상자가 끝나는 곳까지 (유닛) — 시안 (가장자리 16 + 10) × 2.")]
+        [SerializeField] private float rightReserved = 0.52f;
+        [Tooltip("반응 시간 「스킵」 이 떠 있을 때만 오른쪽에서 더 비우는 폭 (유닛) — 시안 v3.8 (스킵 128 + 틈 12 − 10) × 2.")]
+        [SerializeField] private float skipReserved = 2.6f;
         [Tooltip("카드 사이 간격의 상한 (카드 폭 대비).")]
         [SerializeField] private float loweredSpacing = 0.5f;
         [Tooltip("맨 끝 카드의 기울기 — 한 장 늘 때마다 이만큼(도), 상한까지.")]
@@ -88,12 +90,12 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float drawTilt = 40f;
 
         [Header("새 카드 보여 주기 (10-ui.md 2-1 「새 카드 보여 주기」 — 프로토타입 v2 revGeom × 2)")]
-        [Tooltip("보여 주는 영역의 위 끝 — 화면 위 끝에서 (유닛). 턴 띠 아래.")]
-        [SerializeField] private float showTopMargin = 1f;
+        [Tooltip("보여 주는 영역의 위 끝 — 화면 위 끝에서 (유닛). 상대 이름표 · HP 막대 아래 (통합 v3).")]
+        [SerializeField] private float showTopMargin = 1.6f;
         [Tooltip("보여 주는 영역의 아래 끝 — 올라온 손패(고른 카드 높이까지) 위로 띄우는 틈 (유닛).")]
         [SerializeField] private float showBottomGap = 0.28f;
-        [Tooltip("카드 아래에 남은 시간 막대 · 안내 글을 둘 높이 (유닛).")]
-        [SerializeField] private float showBarSpace = 0.8f;
+        [Tooltip("카드 위에 남은 시간 막대 · 안내 글을 둘 높이 (유닛) — 카드 아래(판 가운데)에는 낸 카드가 온다.")]
+        [SerializeField] private float showBarSpace = 1.1f;
         [Tooltip("카드 사이 가로 틈 (유닛).")]
         [SerializeField] private float showGapX = 0.44f;
         [Tooltip("카드 사이 세로 틈 (유닛).")]
@@ -254,17 +256,17 @@ namespace Chapchu.UI.GameScreen
         public bool IsShown(CardView card) => card != null && _shown.Contains(card);
 
         /// <summary>
-        /// 보여 주는 카드들을 화면 가운데 위쪽에 나란히 놓는다 — 장수에 맞춰 줄 수 · 크기를 정한다 (턴 띠 아래 ~ 올라온 손패 위, 카드가 가장 커지는 줄 수).
-        /// firstNew 번째부터는 새로 온 카드라 차례로 늦춰 보낸다. 돌려주는 값은 카드 묶음의 아래 끝 (월드 y) — 그 아래에 막대 · 안내 글을 둔다.
+        /// 보여 주는 카드들을 화면 가운데 위쪽에 나란히 놓는다 — 장수에 맞춰 줄 수 · 크기를 정한다 (상대 이름표 아래 막대 · 안내 글 자리 밑 ~ 올라온 손패 위, 카드가 가장 커지는 줄 수).
+        /// firstNew 번째부터는 새로 온 카드라 차례로 늦춰 보낸다. 돌려주는 값은 카드 묶음의 위 끝 (월드 y) — 그 위에 막대 · 안내 글을 둔다.
         /// </summary>
         public float LayoutShown(IReadOnlyList<CardView> cards, int firstNew)
         {
             int count = cards.Count;
             float cardWidth = CardWidth, cardHeight = CardHeight;
             Vector3 cameraPosition = _camera.transform.position;
-            float top = cameraPosition.y + ScreenHalfHeight - showTopMargin;
+            float top = cameraPosition.y + ScreenHalfHeight - showTopMargin - showBarSpace; // 카드 묶음의 위 끝
             float handTop = ScreenBottom + raisedBottomGap + cardHeight * (1f + pickLiftRaised) + showBottomGap;
-            float available = top - handTop - showBarSpace;
+            float available = top - handTop;
             float maxWidth = Mathf.Min(showMaxWidth, ScreenHalfWidth * 2f - showEdgeMargin * 2f);
 
             int rows = 1, perRow = count;
@@ -280,7 +282,6 @@ namespace Chapchu.UI.GameScreen
                 perRow = per;
             }
 
-            float blockHeight = rows * cardHeight * scale + (rows - 1) * showGapY;
             for (int i = 0; i < count; i++)
             {
                 int row = i / perRow, column = i - row * perRow;
@@ -300,7 +301,7 @@ namespace Chapchu.UI.GameScreen
                 t.DOScale(size, showEnterDuration).SetDelay(delay).SetEase(Ease.OutQuart).SetLink(cards[i].gameObject);
             }
 
-            return top - blockHeight;
+            return top;
         }
 
         /// <summary>손패 평면 위 월드 y → 캔버스 좌표 y (화면 가운데가 0, 위가 +) — 캔버스 100px = 1 유닛 (10-ui.md 2-1 「3D 층 구현」).</summary>
@@ -655,8 +656,11 @@ namespace Chapchu.UI.GameScreen
             float cardWidth = CardWidth;
             float halfWidth = ScreenHalfWidth;
             float cameraX = _camera.transform.position.x;
-            float left = cameraX - halfWidth + leftReserved;
-            float right = cameraX + halfWidth - rightReserved;
+            // 내 HUD · 스킵은 SafeArea 안에 있다 — 노치 · 펀치홀로 밀린 만큼 손패 상자도 민다 (시안 handBox 의 gL · gR)
+            Rect safe = Screen.safeArea;
+            float unitsPerPixel = Screen.width > 0 ? halfWidth * 2f / Screen.width : 0f;
+            float left = cameraX - halfWidth + safe.xMin * unitsPerPixel + leftReserved;
+            float right = cameraX + halfWidth - (Screen.width - safe.xMax) * unitsPerPixel - rightReserved - (_reacting ? skipReserved : 0f);
 
             float centerX = raised ? cameraX : (left + right) / 2f;
             float maxSpan = raised
