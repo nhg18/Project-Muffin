@@ -16,7 +16,6 @@ namespace Chapchu.UI.Lobby
         private const string DeleteOkText = "삭제"; // 확인 창 오른쪽 버튼 = 하는 일 이름 (시안 v3.23)
         private const string CancelText = "취소";
         private const string RenamingText = "바꾸는 중…";
-        private const string RenameNoteFormat = "변경 쿠폰 1장을 써요 (남은 쿠폰 {0}장). 바꾸면 일주일 동안 다시 바꿀 수 없어요.";
         private const string RenamedToast = "닉네임을 바꿨어요.";
         private const string RenameFailedTitle = "닉네임 변경 실패";
         private const string DeleteTitle = "계정 삭제";
@@ -57,7 +56,7 @@ namespace Chapchu.UI.Lobby
         private void HandleNicknameChangeRequested()
         {
             _nicknameRejectCount = 0;
-            modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname, string.Format(RenameNoteFormat, lobby.Data.NicknameCoupons));
+            modal.ShowInput(LobbyInputKind.Nickname, NetworkManager.Nickname);
         }
 
         private void HandleDeleteAccountRequested()
