@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Cards;
+using Chapchu.Core;
 using Chapchu.Game;
 using Chapchu.Game.Effects;
 using DG.Tweening;
@@ -233,6 +234,7 @@ namespace Chapchu.UI.GameScreen
             // 3 단계 — 손에서 바로 가운데로 크게. 모두가 카드를 읽는 구간
             ownerTag.Show(data != null ? data.type : CardType.Action, OwnerText(actorNumber, targets));
             FadeDim(true);
+            SoundManager.Play(fromSlot != null ? Sfx.TrapFire : Sfx.CardPlay);
             Place(entry); // 앞서 나온 카드는 새 카드의 자리를 비우며 옮겨 간다
             yield return new WaitForSeconds(zoomDuration);
 

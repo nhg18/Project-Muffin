@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Chapchu.Core;
 using Chapchu.UI.Fx;
 using Chapchu.UI.Fx.Common;
 using DG.Tweening;
@@ -96,6 +97,7 @@ namespace Chapchu.UI.GameScreen
         {
             _playing = true;
             gameObject.SetActive(true);
+            SoundManager.Play(Sfx.Chapchu); // 10-ui 5-2 #1 「효과음 1회」 — 외침이 실제로 시작할 때
 
             label.text = text;
             label.outlineWidth = outline;

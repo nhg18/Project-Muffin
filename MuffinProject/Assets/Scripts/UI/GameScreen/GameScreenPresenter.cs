@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Cards;
+using Chapchu.Core;
 using Chapchu.Game;
 using Chapchu.Network;
 using Chapchu.Network.Events;
@@ -246,10 +247,12 @@ namespace Chapchu.UI.GameScreen
             _drawBatch = null;
         }
 
-        // 「뽑고 턴 끝」 버튼 — 재생한 상태로 매 프레임 (대상 선택은 큐 밖에서 열리고 닫힌다)
+        // 「뽑고 턴 끝」 버튼 · 마지막 초 째깍 소리 — 재생한 상태로 매 프레임 (대상 선택은 큐 밖에서 열리고 닫힌다)
         private void LateUpdate()
         {
-            deck.ShowCanDraw(_isMyTurn && !_myMainActionDone && _chainCount == 0 && _pendingActors.Count == 0 && !seats.IsSelectingTargets);
+            bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0 && _pendingActors.Count == 0;
+            deck.ShowCanDraw(canAct && !seats.IsSelectingTargets);
+            turnTimer.TickForMe = canAct;
         }
 
         // 내 손패 올림 · 내림은 내 포인터의 일이라 연출 큐를 거치지 않고 바로 — 가운데 카드 · 반응 타이머가 비킨다.
@@ -343,6 +346,7 @@ namespace Chapchu.UI.GameScreen
                     myPanel.ShowHandCount(handCount);
                     fly = hasCard ? hand.DrawRoutine(cardInstanceId, cardId) : null;
                 }
+                SoundManager.Play(Sfx.CardDraw);
                 return batch == null ? fly : DrawnRoutine(fly, batch);
             });
             _drawBatch = batch;
@@ -383,6 +387,8 @@ namespace Chapchu.UI.GameScreen
                 turnOrder.ShowTurn(actorNumber);
                 turnTimer.ShowTurn(deadline);
                 history.ShowTurnStarted(actorNumber);
+                if (isMyTurn)
+                    SoundManager.Play(Sfx.MyTurn);
                 return null;
             });
         }
@@ -465,6 +471,7 @@ namespace Chapchu.UI.GameScreen
                     seats.ShowTrapCount(actorNumber, trapCount);
                 }
                 history.ShowTrapSet(actorNumber);
+                SoundManager.Play(Sfx.TrapSet); // 내 것은 손패의 카드가 칸에 닿은 뒤 (OnMyTrapSet 이 먼저 줄 선다)
 
                 return null;
             });
@@ -921,6 +928,7 @@ namespace Chapchu.UI.GameScreen
             {
                 _pendingActors.Remove(actorNumber);
                 ShowLife(actorNumber, LifeState.Dead);
+                SoundManager.Play(Sfx.PlayerOut);
 
                 // 함정도 전부 버림 더미로 (05-deck.md 6절)
                 if (isMe)
