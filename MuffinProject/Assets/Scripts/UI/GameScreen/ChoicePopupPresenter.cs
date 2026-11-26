@@ -13,8 +13,10 @@ namespace Chapchu.UI.GameScreen
     [RequireComponent(typeof(ChoicePopupView))]
     public class ChoicePopupPresenter : MonoBehaviour
     {
-        private const string AimTitle = "목표 조준!";
-        private const string AimDescFormat = "{0}: 둘 중 하나를 골라 주세요. {1}초 안에 안 고르면 무작위로 정해요.";
+        private const string AimCardName = "목표 조준";
+        private const string AimTitle = AimCardName + "!";
+        // 쓴 사람이 누구인지부터 — 「봇 1: 둘 중 하나를…」 은 봇 1 에게 고르라는 말처럼 읽혔다
+        private const string AimDescFormat = "{0}{1} 「" + AimCardName + "」을 썼어요 — 둘 중 하나를 골라 주세요. {2}초 안에 안 고르면 무작위로 정해요.";
         private const string DiscardFormat = "손패 전부 버리기 ({0}장)";
         private const string DamageFormat = "{0} 피해 받기";
 
@@ -59,8 +61,20 @@ namespace Chapchu.UI.GameScreen
             _deadline = deadline;
             _open = true;
             int seconds = Mathf.RoundToInt((float)(deadline - startsAt));
-            _view.Show(AimTitle, string.Format(AimDescFormat, PlayerLook.NameOf(user), seconds), string.Format(DiscardFormat, handCount), string.Format(DamageFormat, damage));
+            string userName = PlayerLook.NameOf(user);
+            _view.Show(AimTitle, string.Format(AimDescFormat, userName, SubjectParticle(userName), seconds), string.Format(DiscardFormat, handCount), string.Format(DamageFormat, damage));
             Update();
+        }
+
+        // 이름 끝 글자에 맞는 「이 · 가」 — 한글은 받침으로, 숫자는 읽는 소리로(0 영 · 1 일 · 3 삼 · 6 육 · 7 칠 · 8 팔 = 받침). 그 밖(영문 등)은 「이(가)」.
+        private static string SubjectParticle(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "이(가)";
+
+            char last = name[name.Length - 1];
+            if (last >= '가' && last <= '힣') return (last - '가') % 28 != 0 ? "이" : "가";
+            if (last >= '0' && last <= '9') return "013678".IndexOf(last) >= 0 ? "이" : "가";
+            return "이(가)";
         }
 
         private void HandleChoiceMade(int actor, int option, bool timedOut)
