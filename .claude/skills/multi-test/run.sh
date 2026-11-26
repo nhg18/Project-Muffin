@@ -230,6 +230,7 @@ run_ui() {
     prepare "$TITLE_SCENE"
     log "▶ UI 흐름"
     until_ok "$MAIN" Ui title &&
+    until_ok "$MAIN" Ui "devmode|${CHAPCHU_DEV_PASSWORD:-}" &&
     until_ok "$MAIN" Ui bad-code &&
     until_ok "$MAIN" Ui warning &&
     until_ok "$MAIN" Ui create &&

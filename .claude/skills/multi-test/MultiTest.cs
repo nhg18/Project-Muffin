@@ -1308,8 +1308,11 @@ public static class MultiTest
 
     public static string ChoiceResult() => SessionState.GetString(ChoiceResultKey, "WAIT 준비 안 됨");
 
+    // step 은 「이름」 또는 「이름|값」 (devmode|암호)
     public static string Ui(string step)
     {
+        string arg = step.Contains("|") ? step.Substring(step.IndexOf('|') + 1) : "";
+        step = step.Contains("|") ? step.Substring(0, step.IndexOf('|')) : step;
         string scene = SceneManager.GetActiveScene().name;
         switch (step)
         {
@@ -1394,6 +1397,8 @@ public static class MultiTest
                 Call(presenter, CreateRoomRequestedMethod);
                 return "OK 방 만들기";
             }
+            case "devmode":
+                return DevModeCheck(arg);
             case "leave":
             {
                 RoomPresenter room = Object.FindFirstObjectByType<RoomPresenter>();
@@ -1407,6 +1412,67 @@ public static class MultiTest
             default:
                 return "OK " + scene;
         }
+    }
+
+    // 개발자 모드 (14-lobby-ui 3절 #6 · 17 5-4) — 잠김 → 버전 글자 5번 → 암호 창 → 틀림 → (암호가 있으면) 맞음 → 풀림 → 다시 5번 → 잠김.
+    // 암호는 저장소에 두지 않는다 — run.sh 가 환경 변수 CHAPCHU_DEV_PASSWORD 로 넘긴다. 없으면 맞는 암호 단계는 건너뛴다
+    private static string DevModeCheck(string password)
+    {
+        var home = Object.FindFirstObjectByType<LobbyHomeView>();
+        var settings = Object.FindFirstObjectByType<LobbySettingsPopupView>(FindObjectsInactive.Include);
+        var modal = Object.FindFirstObjectByType<LobbyModalView>(FindObjectsInactive.Include);
+        var account = Object.FindFirstObjectByType<LobbyAccountPresenter>();
+        if (home == null || settings == null || modal == null || account == null)
+            return "WAIT 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        string Locks()
+        {
+            var parts = new List<string>();
+            foreach (string name in new[] { "solo", "create", "code" })
+            {
+                var button = (UnityEngine.UI.Button)typeof(LobbyHomeView).GetField(name + "Button", Private).GetValue(home);
+                var icon = (UnityEngine.UI.Image)typeof(LobbyHomeView).GetField(name + "Icon", Private).GetValue(home);
+                parts.Add(name + (button.interactable ? "=열림" : "=잠김") + "(" + icon.sprite.name + ")");
+            }
+            return string.Join(" ", parts);
+        }
+
+        void TapVersion()
+        {
+            for (int i = 0; i < 5; i++)
+                Call(settings, "HandleVersionClicked");
+        }
+
+        Chapchu.Core.DevMode.TurnOff();
+        home.SetDevMode(false);
+        string locked = Locks();
+        if (locked.Contains("열림") || !locked.Contains("icon_lock"))
+            return "FAIL 개발자 모드 꺼짐인데 " + locked;
+
+        TapVersion();
+        if (!modal.IsInputOpen || modal.InputKind != LobbyInputKind.DevPassword)
+            return "FAIL 버전 글자 5번에 암호 창이 뜨지 않음";
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, "틀린-암호" });
+        string error = ((TMP_Text)typeof(LobbyModalView).GetField("errorText", Private).GetValue(modal)).text;
+        if (!modal.IsInputOpen || error.Length == 0 || Chapchu.Core.DevMode.IsOn)
+            return "FAIL 틀린 암호가 받아들여짐 (창 " + modal.IsInputOpen + " · 오류 「" + error + "」)";
+
+        if (string.IsNullOrEmpty(password))
+        {
+            modal.HideInput();
+            return "OK 잠김 " + locked + " · 암호 창 · 틀린 암호 「" + error + "」 (맞는 암호 단계는 건너뜀 — CHAPCHU_DEV_PASSWORD 없음)";
+        }
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, password });
+        string opened = Locks();
+        if (modal.IsInputOpen || !Chapchu.Core.DevMode.IsOn || opened.Contains("잠김") || opened.Contains("icon_lock"))
+            return "FAIL 맞는 암호 뒤 " + opened;
+
+        TapVersion();
+        string relocked = Locks();
+        bool off = !Chapchu.Core.DevMode.IsOn && !relocked.Contains("열림");
+        return (off ? "OK " : "FAIL ") + "잠김 → 틀림 「" + error + "」 → 풀림 " + opened + " → 다시 5번 → " + relocked;
     }
 
     // ── 규칙 계층만 (네트워크 없음) ──

@@ -91,8 +91,8 @@ namespace Chapchu.Network
         }
 
         /// <summary>
-        /// 매치 방 (08-room.md 4절 「매치」) — 랜덤 매칭이 들어갈 방이 없을 때 만든다. 공개 고정 · 시작 시각을 처음부터 적는다.
-        /// 시각이 지나면 방장이 빈자리를 봇으로 채우고 시작한다 (RoomPresenter).
+        /// 매치 방 (08-room.md 4절 「매치」) — 랜덤 매칭이 들어갈 방이 없을 때 만든다. 공개 고정.
+        /// 시작 시각은 방에 들어온 뒤 방장이 적는다 — 방 밖에서 읽은 PhotonNetwork.Time 은 방 안의 서버 시각과 맞지 않는다 (RoomPresenter).
         /// </summary>
         private void CreateMatchRoom()
         {
@@ -107,7 +107,6 @@ namespace Chapchu.Network
             options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
             {
                 [RoomProps.Match] = true,
-                [RoomProps.MatchStartAt] = PhotonNetwork.Time + MatchWaitSeconds,
             };
             options.CustomRoomPropertiesForLobby = new[] { RoomProps.Match };
             string code = RandomCode.GenerateRandomCode();

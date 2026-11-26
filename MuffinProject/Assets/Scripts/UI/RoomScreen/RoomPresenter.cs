@@ -366,7 +366,10 @@ namespace Chapchu.UI.RoomScreen
         private void ShowMatchWait()
         {
             bool filled = BotRoster.MemberCount >= NetworkManager.MaxPlayers;
-            int seconds = filled ? 0 : Mathf.Max(0, (int)Math.Ceiling(MatchStartAt - PhotonNetwork.Time));
+            // 방장이 시각을 적기 전이면 처음 값. 다 센 초는 기다리는 시간을 넘지 않게 — 방 속성은 남이 쓸 수 있다
+            double at = MatchStartAt;
+            int wait = (int)PhotonRoom.MatchWaitSeconds;
+            int seconds = filled ? 0 : at <= 0 ? wait : Mathf.Clamp((int)Math.Ceiling(at - PhotonNetwork.Time), 0, wait);
             if (seconds == _matchShownSeconds && _matchShownSeconds >= 0)
                 return;
 
@@ -387,10 +390,18 @@ namespace Chapchu.UI.RoomScreen
 
             double now = PhotonNetwork.Time;
             double at = MatchStartAt;
+
+            // 방을 막 만들었다 — 또는 적힌 시각이 말이 안 되게 멀다 (방 속성은 아무 클라나 쓸 수 있다). 지금부터 다시 센다
+            if (at <= 0 || at - now > PhotonRoom.MatchWaitSeconds + MatchJoinGraceSeconds)
+            {
+                SetMatchStartAt(now + PhotonRoom.MatchWaitSeconds);
+                return;
+            }
+
             if (PhotonNetwork.CurrentRoom.PlayerCount >= NetworkManager.MaxPlayers && at - now > MatchFullStartSeconds)
                 SetMatchStartAt(now + MatchFullStartSeconds);
 
-            if (at <= 0 || now < at)
+            if (now < at)
                 return;
 
             if (BotRoster.MemberCount < NetworkManager.MaxPlayers)
