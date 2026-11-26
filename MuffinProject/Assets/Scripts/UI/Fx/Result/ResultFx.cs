@@ -20,7 +20,6 @@ namespace Chapchu.UI.Fx
     {
         private const string SeatShakeId = "ResultFx.Seat.";
         private const string ChipPopId = "ResultFx.Chip.";
-        private const float MinHitVolume = 0.7f; // 피해 1 의 효과음 음량 — 최대 피해(hpRange.y)면 1
 
         // 시안 CSS ease-out = cubic-bezier(0, 0, .58, 1)
         private static readonly Vector4 EaseOut = new Vector4(0f, 0f, 0.58f, 1f);
@@ -58,6 +57,8 @@ namespace Chapchu.UI.Fx
         [Header("세기 — 수치를 0 ~ 1 로 (시안 AMP · GROW)")]
         [Tooltip("HP 수치 범위 (최소 → 0, 최대 → 1).")]
         [SerializeField] private Vector2 hpRange = new Vector2(1f, 50f);
+        [Tooltip("피해 · 피폭 1 의 효과음 음량 배율 — 최대 피해(hpRange 최대)면 1.")]
+        [SerializeField] [Range(0f, 1f)] private float minHitVolume = 0.7f;
         [Tooltip("장수 범위 (최소 → 0, 최대 → 1).")]
         [SerializeField] private Vector2 cardRange = new Vector2(1f, 6f);
         [Tooltip("세기 0 → 1 일 때 별(글자) 배율.")]
@@ -209,7 +210,7 @@ namespace Chapchu.UI.Fx
         public void Hit(Seat seat, int amount)
         {
             float k = Strength(amount, hpRange);
-            SoundManager.Play(Sfx.Hit, Mathf.Lerp(MinHitVolume, 1f, k));
+            SoundManager.Play(Sfx.Hit, Mathf.Lerp(minHitVolume, 1f, k));
             Vector2 c = CenterOf(seat.Body);
             Boom(c, hitColor, "-" + amount, k);
             Burst(c, k, hitCount, hitColors, StarCircle, hitSpeed, hitGravity, burstSize);
@@ -258,7 +259,7 @@ namespace Chapchu.UI.Fx
         public void Zap(Seat seat, int amount)
         {
             float k = Strength(amount, hpRange);
-            SoundManager.Play(Sfx.Zap, Mathf.Lerp(MinHitVolume, 1f, k));
+            SoundManager.Play(Sfx.Zap, Mathf.Lerp(minHitVolume, 1f, k));
             Vector2 c = CenterOf(seat.Body);
             Boom(c, zapColor, "-" + amount, k);
             Burst(c, k, zapCount, zapColors, StarCircle, zapSpeed, zapGravity, burstSize);

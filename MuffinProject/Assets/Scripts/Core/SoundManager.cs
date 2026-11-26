@@ -40,7 +40,6 @@ namespace Chapchu.Core
     {
         // 앞부분을 예약해 틀 때까지의 여유. 예약해야 반복 부분이 빈틈 없이 이어진다
         private const double BgmScheduleLeadSeconds = 0.1;
-        private const float BgmStopFadeSeconds = 0.5f;
         private const int SfxVoices = 8;
 
         // 배경음을 트는 화면 (PM 2026-11-27). 방 · 게임 · 결과에서는 멈춘다
@@ -63,6 +62,8 @@ namespace Chapchu.Core
         [SerializeField] private AudioClip bgmLoop;
         [Tooltip("배경음 음량")]
         [SerializeField] [Range(0f, 1f)] private float bgmVolume = 0.5f;
+        [Tooltip("배경음을 멈출 때 줄어드는 초")]
+        [SerializeField] private float bgmStopFadeSeconds = 0.5f;
         [Tooltip("효과음 표 — 종류마다 한 줄")]
         [SerializeField] private SfxEntry[] sfx;
 
@@ -71,6 +72,13 @@ namespace Chapchu.Core
         private AudioSource[] _voices;
         private int _nextVoice;
         private bool _isBgmPlaying;
+
+        // 누르고 있는 버튼 · 스위치 — 그 위에서 놓아야 Tap
+        private Selectable _pressed;
+        private Camera _pressedCamera;
+        private Vector2 _pressPosition;
+        private float _dragThreshold;
+        private bool _dragged;
 
         /// <summary>효과음 스위치 (없으면 켬)</summary>
         public static bool IsSfxOn => PlayerPrefs.GetInt(PlayerPrefsKeys.SfxOn, 1) == 1;
@@ -89,11 +97,25 @@ namespace Chapchu.Core
             if (bgmLoopSource == null)
                 Debug.LogError($"[{nameof(SoundManager)}] {nameof(bgmLoopSource)} 참조가 비어 있습니다.", this);
 
+            if (bgmIntro == null)
+                Debug.LogError($"[{nameof(SoundManager)}] {nameof(bgmIntro)} 참조가 비어 있습니다.", this);
+
+            if (bgmLoop == null)
+                Debug.LogError($"[{nameof(SoundManager)}] {nameof(bgmLoop)} 참조가 비어 있습니다.", this);
+
             foreach (SfxEntry entry in sfx ?? Array.Empty<SfxEntry>())
             {
                 if (entry.clip == null)
                     Debug.LogError($"[{nameof(SoundManager)}] 효과음 {entry.id} 의 파일이 비어 있습니다.", this);
+                if (_sfx.ContainsKey(entry.id))
+                    Debug.LogError($"[{nameof(SoundManager)}] 효과음 표에 {entry.id} 가 두 줄 있습니다 — 뒤 줄을 씁니다.", this);
                 _sfx[entry.id] = entry;
+            }
+
+            foreach (Sfx id in (Sfx[])Enum.GetValues(typeof(Sfx)))
+            {
+                if (!_sfx.ContainsKey(id))
+                    Debug.LogError($"[{nameof(SoundManager)}] 효과음 표에 {id} 줄이 없습니다.", this);
             }
 
             _voices = new AudioSource[SfxVoices];
@@ -114,11 +136,24 @@ namespace Chapchu.Core
             SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
-        // 버튼은 화면마다 수십 개라 하나하나 물리지 않고, 누른 자리의 맨 위가 누를 수 있는 버튼 · 스위치면 소리를 낸다
+        // 버튼은 화면마다 수십 개라 하나하나 물리지 않고, 누른 자리의 맨 위가 누를 수 있는 버튼 · 스위치면 그 위에서 놓을 때 소리를 낸다.
+        // 끌어서 스크롤하거나 버튼 밖에서 놓아 클릭이 취소되면 내지 않는다
         private void Update()
         {
-            if (Input.GetMouseButtonDown(0) && IsPointerOnSelectable())
+            if (Input.GetMouseButtonDown(0))
+                PressSelectable();
+
+            if (_pressed == null) return;
+
+            if (!_dragged && ((Vector2)Input.mousePosition - _pressPosition).sqrMagnitude >= _dragThreshold * _dragThreshold)
+                _dragged = true;
+
+            if (!Input.GetMouseButtonUp(0)) return;
+
+            if (!_dragged && _pressed.transform is RectTransform rect
+                && RectTransformUtility.RectangleContainsScreenPoint(rect, Input.mousePosition, _pressedCamera))
                 Play(Sfx.Tap);
+            _pressed = null;
         }
 
         /// <summary>효과음을 낸다. 효과음 스위치가 꺼져 있거나 SoundManager 가 없으면 아무것도 하지 않는다. volumeScale = 표의 음량에 곱할 값.</summary>
@@ -171,18 +206,31 @@ namespace Chapchu.Core
             return oldest;
         }
 
-        private bool IsPointerOnSelectable()
+        // 누른 자리의 맨 위가 누를 수 있는 버튼 · 스위치면 기억한다
+        private void PressSelectable()
         {
+            _pressed = null;
+            _dragged = false;
+
             EventSystem eventSystem = EventSystem.current;
-            if (eventSystem == null) return false;
+            if (eventSystem == null) return;
 
             var pointer = new PointerEventData(eventSystem) { position = Input.mousePosition };
             _pointerHits.Clear();
             eventSystem.RaycastAll(pointer, _pointerHits);
-            if (_pointerHits.Count == 0) return false;
+            if (_pointerHits.Count == 0) return;
 
-            Selectable selectable = _pointerHits[0].gameObject.GetComponentInParent<Selectable>();
-            return selectable != null && selectable.IsInteractable();
+            RaycastResult hit = _pointerHits[0];
+            Selectable selectable = hit.gameObject.GetComponentInParent<Selectable>();
+            if (selectable == null || !selectable.IsInteractable()) return;
+
+            _pressed = selectable;
+            _pressedCamera = hit.module != null ? hit.module.eventCamera : null;
+            _pressPosition = pointer.position;
+            // 끌 수 있는 것(스크롤 목록) 안이면 이만큼 움직였을 때 클릭 대신 드래그가 된다 — EventSystem 과 같은 기준
+            _dragThreshold = ExecuteEvents.GetEventHandler<IDragHandler>(hit.gameObject) != null
+                ? eventSystem.pixelDragThreshold
+                : float.PositiveInfinity;
         }
 
         private void StartBgm()
@@ -213,12 +261,12 @@ namespace Chapchu.Core
             source.PlayScheduled(startAt);
         }
 
-        private static void FadeOut(AudioSource source)
+        private void FadeOut(AudioSource source)
         {
             if (source == null) return;
 
             source.DOKill();
-            source.DOFade(0f, BgmStopFadeSeconds).OnComplete(source.Stop);
+            source.DOFade(0f, bgmStopFadeSeconds).OnComplete(source.Stop);
         }
     }
 }

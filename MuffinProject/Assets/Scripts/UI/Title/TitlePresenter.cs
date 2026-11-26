@@ -399,10 +399,11 @@ namespace Chapchu.UI.Title
         {
             Scene title = gameObject.scene;
             screen.blocksRaycasts = false;
-            DisableSceneSingletons(title);
+            DisableEventSystems(title);
 
             AsyncOperation load = SceneManager.LoadSceneAsync(ScenePaths.Lobby, LoadSceneMode.Additive);
             yield return load;
+            DisableAudioListeners(title); // 로비 리스너가 생긴 뒤에 — 먼저 끄면 로드 동안 배경음 · 탭 소리가 끊긴다
             SceneManager.SetActiveScene(SceneManager.GetSceneByName(ScenePaths.Lobby));
 
             float elapsed = 0f;
@@ -417,16 +418,18 @@ namespace Chapchu.UI.Title
         }
 
         // 두 씬이 겹치는 동안 EventSystem · AudioListener 가 둘이 되지 않게 타이틀 것을 끈다
-        private static void DisableSceneSingletons(Scene scene)
+        private static void DisableEventSystems(Scene scene)
         {
             foreach (GameObject root in scene.GetRootGameObjects())
-            {
                 foreach (EventSystem eventSystem in root.GetComponentsInChildren<EventSystem>())
                     eventSystem.gameObject.SetActive(false);
+        }
 
+        private static void DisableAudioListeners(Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
                 foreach (AudioListener listener in root.GetComponentsInChildren<AudioListener>())
                     listener.enabled = false;
-            }
         }
 
         #endregion

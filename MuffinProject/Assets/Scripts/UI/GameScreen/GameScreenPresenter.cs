@@ -928,7 +928,6 @@ namespace Chapchu.UI.GameScreen
                     return null;
 
                 history.ShowChapchuDeclared(actorNumber);
-                SoundManager.Play(Sfx.Chapchu); // 10-ui 5-2 #1 「효과음 1회」
                 return chapchuShout.PlayRoutine(isMe ? MyChapchuShout : string.Format(OtherChapchuShoutFormat, PlayerLook.NameOf(actorNumber)));
             });
         }
