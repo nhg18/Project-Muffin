@@ -22,7 +22,7 @@ namespace Chapchu.EditorTools
     /// 수치 · 색은 docs/systems/10-ui.md 2-1 「HUD v2」 (HTML 시안 × 2). 가장자리 UI 는 SafeArea 아래, 가운데 묶음(상대 좌석 · 대상 안내)은 캔버스 가운데 1920 × 1080.
     /// 프레젠터도 같이 붙인다 — 영역마다 하나, 캔버스 루트에 연출 큐(GameScreenPresenter) 하나.
     /// 이미 GameCanvas 가 있으면 사람이 고친 것을 덮어쓰지 않도록 멈춘다 — 지우고 다시 실행한다.
-    /// Galmuri11 TMP 폰트 에셋이 없으면 먼저 만든다. 시안 글꼴(Jua · 고운돋움)은 아직 안 쓴다 — 굵은 자리 Bold · 본문 Regular (2026-11-07 결정).
+    /// 글꼴은 통합 화면 UI v3 와 같다 — 제목 · 버튼 · 숫자 · 이름(NewText 의 bold) = 태백체, 본문 = Pretendard (21-font 추천 ④). 에셋이 없으면 먼저 만든다.
     /// </summary>
     public static partial class GameScreenBuilder
     {
@@ -32,10 +32,10 @@ namespace Chapchu.EditorTools
         private const string CushionTexturePath = "Assets/Sprites/UI/Hud/table_cushion.png";
         private static readonly Vector2 CushionCenter = new Vector2(960f, 620f); // 시안 TABLE 가운데 — 3D 층의 카드 내는 자리와 같은 점
         private static readonly Vector2 CushionSize = new Vector2(1120f, 560f);
-        private const string RegularFontPath = "Assets/Fonts/GlaMuri/Galmuri11.ttf";
-        private const string BoldFontPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold.ttf";
-        private const string RegularFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11 SDF.asset";
-        private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
+        private const string RegularFontPath = "Assets/Fonts/Pretendard/Pretendard-Regular.ttf"; // 본문 (시안 --f-b)
+        private const string BoldFontPath = "Assets/Fonts/Taebaek/Taebaek.ttf"; // 제목 · 버튼 · 숫자 · 이름 (시안 --f-d)
+        private const string RegularFontAssetPath = "Assets/Fonts/Pretendard/Pretendard SDF.asset";
+        private const string BoldFontAssetPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string CharacterSpritePath = "Assets/Sprites/Characters/chara.png"; // 노션 「캐릭터 디자인」 기본 치와와 (10-ui 2-1 캐릭터별 데이터)
         private const float CharacterAspect = 0.772f; // 그림 비율 = 보이는 부분 상자 폭 ÷ 키 (10-ui 2-1)
