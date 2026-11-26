@@ -443,6 +443,9 @@ namespace Chapchu.EditorTools
             var art = NewRect("Art", artMask.transform).gameObject.AddComponent<RawImage>();
             Stretch(art.rectTransform);
             art.raycastTarget = false;
+            // 그림 없는 카드 — 카드 「그림 준비 중」 처럼 옅은 종류 색 바탕(Art) 위 발바닥 36 (그림 칸의 반). 색 · 켜기는 HistoryItemView 가
+            Image noArtPaw = Icon("NoArtPaw", artMask.transform, Hud("icon_paw"), 36f, White);
+            noArtPaw.enabled = false;
 
             // 상자 — 두 줄을 세로 가운데에 (HistoryItemView.LayoutLines 가 결과 줄 높이에 맞춰 옮긴다)
             UIShape box = NewShape("Box", body, White, 18f, Line4, Ink);
@@ -455,7 +458,7 @@ namespace Chapchu.EditorTools
             fx.overflowMode = TextOverflowModes.Ellipsis;
 
             var view = root.gameObject.AddComponent<HistoryItemView>();
-            Wire(view, ("body", body), ("bodyGroup", bodyGroup), ("labelText", label), ("thumb", thumb), ("art", art), ("whoText", who), ("fxText", fx));
+            Wire(view, ("body", body), ("bodyGroup", bodyGroup), ("labelText", label), ("thumb", thumb), ("art", art), ("noArtPaw", noArtPaw), ("whoText", who), ("fxText", fx));
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, HistoryItemPrefabPath);
             Object.DestroyImmediate(root.gameObject);

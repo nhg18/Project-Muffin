@@ -8,7 +8,7 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 「낸 카드 기록」 한 줄 (통합 화면 UI v3 .hitem) — 카드 이름 · 작은 카드(종류 색 테 + 그림) · 상자(누가 → 누구에게 / 결과). 프리팹 HistoryItem 을 HistoryListView 가 복제한다.
-    /// 무효가 된 카드는 그림이 흐려지고 결과에 줄. 값은 HistoryPresenter 가 만든 글을 그대로 넣는다.
+    /// 무효가 된 카드는 그림이 흐려지고 결과에 줄. 그림이 없는 카드는 카드의 「그림 준비 중」 처럼 옅은 종류 색 바탕 + 발바닥. 값은 HistoryPresenter 가 만든 글을 그대로 넣는다.
     /// </summary>
     public class HistoryItemView : MonoBehaviour
     {
@@ -20,8 +20,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text labelText;
         [Tooltip("작은 카드 — 흰 바탕 + 종류 색 테.")]
         [SerializeField] private UIShape thumb;
-        [Tooltip("카드 그림 — 칸을 꽉 채우게 잘라 위쪽(25%)을 보인다 (시안 object-position 50% 25%).")]
+        [Tooltip("카드 그림 — 칸을 꽉 채우게 잘라 위쪽(25%)을 보인다 (시안 object-position 50% 25%). 그림이 없으면 옅은 종류 색 바탕.")]
         [SerializeField] private RawImage art;
+        [Tooltip("그림 없는 카드의 발바닥 — 카드 「그림 준비 중」 과 같은 모양 (옅은 종류 색 바탕 위).")]
+        [SerializeField] private Image noArtPaw;
         [SerializeField] private TMP_Text whoText;
         [SerializeField] private TMP_Text fxText;
 
@@ -35,6 +37,9 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("그림에서 보일 세로 자리 — 0 = 위끝, 1 = 아래끝.")]
         [SerializeField] private float artFocusY = 0.25f;
         [SerializeField] private Color voidArtColor = new Color(0.62f, 0.62f, 0.62f, 0.6f);
+        [Tooltip("그림 없을 때 바탕 · 발바닥에 섞는 종류 색 비율 — 카드 그림 칸과 같다 (CardArt.shader 0.05 · 0.3).")]
+        [SerializeField] private float noArtFillMix = 0.05f;
+        [SerializeField] private float noArtPawMix = 0.3f;
         [Tooltip("새 줄이 튀어나오는 시간 (시안 320ms) — 0.4 → 1.12 → 1.")]
         [SerializeField] private float popSeconds = 0.32f;
 
@@ -42,7 +47,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (body == null || bodyGroup == null || labelText == null || thumb == null || art == null || whoText == null || fxText == null)
+            if (body == null || bodyGroup == null || labelText == null || thumb == null || art == null || noArtPaw == null || whoText == null || fxText == null)
                 Debug.LogError($"[{nameof(HistoryItemView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
@@ -56,13 +61,14 @@ namespace Chapchu.UI.GameScreen
             fxText.fontStyle = isVoid ? fxText.fontStyle | FontStyles.Strikethrough : fxText.fontStyle & ~FontStyles.Strikethrough;
             LayoutLines(bigFx ? bigFxHeight : fxHeight);
 
-            art.enabled = picture != null;
-            if (picture != null)
-            {
-                art.texture = picture.texture;
-                art.uvRect = CoverUv(picture);
-            }
-            art.color = isVoid ? voidArtColor : Color.white;
+            // 그림이 없으면 빈 흰 칸 대신 카드의 「그림 준비 중」 처럼 — 옅은 종류 색 바탕(빈 텍스처 = 흰색 × 색) + 발바닥
+            bool hasArt = picture != null;
+            art.texture = hasArt ? picture.texture : null;
+            art.uvRect = hasArt ? CoverUv(picture) : new Rect(0f, 0f, 1f, 1f);
+            Color tint = isVoid ? voidArtColor : Color.white;
+            art.color = hasArt ? tint : Color.Lerp(Color.white, kind, noArtFillMix) * tint;
+            noArtPaw.enabled = !hasArt;
+            noArtPaw.color = Color.Lerp(Color.white, kind, noArtPawMix) * tint;
         }
 
         /// <summary>새 줄 — 작게 나와 살짝 커졌다 제자리로.</summary>
