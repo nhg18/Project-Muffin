@@ -5,7 +5,7 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 처리 카드 아래 알약 (10-ui.md 5절 · 04-card.md 8절). 반응 시간의 남은 초는 보이지 않는다 — 마감은 방장만 안다.
-    /// 반응 시간에 내가 낼 수 있는 카운터가 있으면 「스킵」 버튼이 되고, 남이 고르는 중(1019)이면 「{이름} 고르는 중」 + 남은 초를 보인다.
+    /// 반응 시간에 내가 낼 수 있는 카운터가 있으면 「스킵」 버튼이 된다.
     /// 표시 전용이고 판정은 방장이 한다 (09-network.md 8절). 언제 보이고 숨는지는 GameScreenPresenter 가 부른다.
     /// </summary>
     [RequireComponent(typeof(ReactionTimerView))]
@@ -22,7 +22,6 @@ namespace Chapchu.UI.GameScreen
         private bool _skipShown;
         private double _opensAt;  // 서버 시각(PhotonNetwork.Time, 초)
         private double _deadline;
-        private string _label; // null 이면 「반응」. 남이 고르는 중이면 「{이름} 고르는 중」 (1019)
 
         private void Awake()
         {
@@ -70,17 +69,7 @@ namespace Chapchu.UI.GameScreen
             }
 
             float total = (float)(_deadline - _opensAt);
-            _view.ShowRemaining(Mathf.CeilToInt(remaining), total > 0f ? remaining / total : 0f, remaining <= lowSeconds, _label);
-        }
-
-        /// <summary>남이 고르는 중 (1019 목표 조준) — 반응 타이머와 같은 알약에 「{이름} 고르는 중」 + 남은 초 (사용자 2026-11-13).</summary>
-        public void ShowChoosing(string label, double startsAt, double deadline)
-        {
-            _label = label;
-            _opensAt = startsAt;
-            _deadline = deadline;
-            _showing = true;
-            _skipShown = false;
+            _view.ShowRemaining(Mathf.CeilToInt(remaining), total > 0f ? remaining / total : 0f, remaining <= lowSeconds, null);
         }
 
         /// <summary>내 손패가 올라왔다 · 내려갔다 — 올라와 있으면 손패 바로 위로 옮기고 카드 이름을 붙인다.</summary>

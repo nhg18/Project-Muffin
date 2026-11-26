@@ -287,7 +287,7 @@ namespace Chapchu.EditorTools
             CenterMenuSheetV3(canvasRect);
 
             // 그리는 순서 — 기록 · 턴 순서 · 메뉴 < 내 캐릭터 · 링 · 스톱워치 · 「!」 · 「찹츄까지」 · 내 HUD · 스킵. 가운데는 좌석 · 판 위 HUD < 가림판 < 대상 안내
-            OrderChildren(safeArea, "History", "TurnOrder", "Menu", "MyCharacter", "MyPickRing", "MyTurnTimer", "MyBang", "Goal", "MyHud", "SkipButton");
+            OrderChildren(safeArea, "History", "TurnOrder", "Menu", "MyCharacter", "MyPickRing", "MyTurnTimer", "MyBang", "Goal", "MyStatus", "MyHud", "SkipButton");
             OrderChildren(center, "OpponentSeats", "TableHud", "Dimmer", "TargetAsk");
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(canvasRect);
@@ -715,6 +715,7 @@ namespace Chapchu.EditorTools
             WireArray(view, "pickLayers", layers);
             view.SetNickname("두부"); // 처음 모습도 실행 때와 같은 폭 규칙
             root.gameObject.AddComponent<MyPanelPresenter>();
+            BuildMyStatus(safeArea, view);
             return view;
         }
 
@@ -801,6 +802,7 @@ namespace Chapchu.EditorTools
                 ("grayMaterial", GrayMaterial), ("character", character), ("turnTimer", watch.gameObject), ("pickRing", ring.gameObject), ("shout", shout.gameObject), ("hand", hand),
                 ("lifeTag", lifeTag.gameObject), ("lifeTagFill", lifeTagFill), ("lifeTagText", lifeTagText), ("tapArea", tapArea));
             WireArray(view, "pickLayers", layers);
+            BuildSeatStatus(view);
             return view;
         }
 

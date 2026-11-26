@@ -782,7 +782,7 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 reactionTimer.Hide();
-                choicePopup.ShowWatching(actor, user, handCount, _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp, damage, startsAt, deadline);
+                choicePopup.ShowWatching(actor, user, cardId, handCount, _shownHp.TryGetValue(actor, out int hp) ? hp : GameServer.MaxHp, damage, startsAt, deadline);
                 return null;
             });
         }

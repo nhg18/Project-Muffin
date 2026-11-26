@@ -131,7 +131,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>고르기 번호의 이름 — 「손패 모두 버리기」 · 「80 피해」.</summary>
         public string OptionName(int option) => option == 0 ? DiscardName : string.Format(DamageNameFormat, _damage);
 
-        /// <summary>고른 카드가 튀어나오고 다른 카드는 줄어 사라진 뒤, 잠깐 두고 판을 닫는다. 연출 큐가 기다릴 코루틴.</summary>
+        /// <summary>고른 카드가 튀어나오고 다른 카드는 줄어 사라진 뒤, 잠깐 둔다. 연출 큐가 기다릴 코루틴. 판은 부른 쪽이 닫는다 (Hide).</summary>
         public IEnumerator PickRoutine(int option)
         {
             for (int i = 0; i < options.Length; i++)
@@ -151,7 +151,6 @@ namespace Chapchu.UI.GameScreen
             }
 
             yield return new WaitForSeconds(Mathf.Max(popSeconds, shrinkSeconds) + holdSeconds);
-            Hide();
         }
 
         public void Hide()

@@ -88,23 +88,10 @@ namespace Chapchu.EditorTools
             foreach (OpponentSeatView seat in canvas.GetComponentsInChildren<OpponentSeatView>(true))
             {
                 DestroyChild(seat.transform, "Sweat");
-                DestroyChild(seat.transform, "StatusChips");
-                var plate = (RectTransform)seat.transform.Find("Plate");
-                StatusChipsView chips = BuildStatusChips("StatusChips", seat.transform, true);
-                float right = plate.anchoredPosition.x + plate.sizeDelta.x * (1f - plate.pivot.x);
-                float bottom = -plate.anchoredPosition.y + plate.sizeDelta.y * plate.pivot.y;
-                Anchor((RectTransform)chips.transform, new Vector2(0f, 1f), Vector2.zero, new Vector2(right + StatusSeatGap, -bottom), Vector2.zero);
-                chips.transform.SetSiblingIndex(plate.GetSiblingIndex() + 1);
-                Wire(seat, ("status", chips));
+                BuildSeatStatus(seat);
             }
 
-            DestroyChild(safeArea, "MyStatus");
-            StatusChipsView myChips = BuildStatusChips("MyStatus", safeArea, false);
-            Anchor((RectTransform)myChips.transform, Vector2.zero, Vector2.zero, MyStatusBottomLeft, Vector2.zero);
-            Transform goal = safeArea.Find("Goal");
-            if (goal != null)
-                myChips.transform.SetSiblingIndex(goal.GetSiblingIndex() + 1);
-            Wire(myPanel, ("status", myChips));
+            BuildMyStatus(safeArea, myPanel);
 
             // 3. 판 효과 줄 — 왼쪽 세로 (자명종이 낸 카드 기록을 덮지 않게, 가운데 위 띠를 비운다)
             BuildBoardColumn((RectTransform)boardLayer, (RectTransform)gaepanHud.transform, boardEffects);
@@ -245,6 +232,31 @@ namespace Chapchu.EditorTools
             return saved;
         }
 
+        // 좌석 상태 알약 — 이름표(Plate) 오른쪽 8 에서 이름표 아래 끝부터 위로 쌓는다. 있던 것은 새로 짓는다 (UpgradeChoiceBoard · BuildSeatV3)
+        private static void BuildSeatStatus(OpponentSeatView seat)
+        {
+            DestroyChild(seat.transform, "StatusChips");
+            var plate = (RectTransform)seat.transform.Find("Plate");
+            StatusChipsView chips = BuildStatusChips("StatusChips", seat.transform, true);
+            float right = plate.anchoredPosition.x + plate.sizeDelta.x * (1f - plate.pivot.x);
+            float bottom = -plate.anchoredPosition.y + plate.sizeDelta.y * plate.pivot.y;
+            Anchor((RectTransform)chips.transform, new Vector2(0f, 1f), Vector2.zero, new Vector2(right + StatusSeatGap, -bottom), Vector2.zero);
+            chips.transform.SetSiblingIndex(plate.GetSiblingIndex() + 1);
+            Wire(seat, ("status", chips));
+        }
+
+        // 내 상태 알약 — 「찹츄까지」 칩(Goal) 위에 옆으로. 있던 것은 새로 짓는다 (UpgradeChoiceBoard · BuildMyHudV3)
+        private static void BuildMyStatus(Transform safeArea, MyPanelView myPanel)
+        {
+            DestroyChild(safeArea, "MyStatus");
+            StatusChipsView myChips = BuildStatusChips("MyStatus", safeArea, false);
+            Anchor((RectTransform)myChips.transform, Vector2.zero, Vector2.zero, MyStatusBottomLeft, Vector2.zero);
+            Transform goal = safeArea.Find("Goal");
+            if (goal != null)
+                myChips.transform.SetSiblingIndex(goal.GetSiblingIndex() + 1);
+            Wire(myPanel, ("status", myChips));
+        }
+
         // 상태 알약 묶음 — 「행동 금지」 · 「스킵」 (꺼 둔다). stackUp 이면 아래 끝에서 위로 쌓고, 아니면 옆으로.
         private static StatusChipsView BuildStatusChips(string name, Transform parent, bool stackUp)
         {
@@ -323,7 +335,8 @@ namespace Chapchu.EditorTools
                 FitBoth(column.gameObject);
             }
 
-            column.SetSiblingIndex(effects.GetSiblingIndex());
+            if (effects.parent == boardLayer) // 처음 옮길 때만 — 다시 돌리면 effects 는 이미 묶음 안이다
+                column.SetSiblingIndex(effects.GetSiblingIndex());
             Anchor(column, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(BoardColumnTopLeft.x, -BoardColumnTopLeft.y), Vector2.zero);
             gaepanHud.SetParent(column, false);
             effects.SetParent(column, false);

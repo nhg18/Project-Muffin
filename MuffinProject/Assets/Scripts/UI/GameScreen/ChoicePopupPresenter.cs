@@ -30,6 +30,9 @@ namespace Chapchu.UI.GameScreen
         private bool _open;
         private bool _mine;       // 내가 고르는 판 — 고르기 끝 알림을 바로 받는다
         private bool _picking;    // 고른 연출 중 — 남은 시간을 더 줄이지 않는다
+        private bool _requested;  // 내가 눌러 방장에게 보냈다 — 고른 연출은 방장이 확정한 값(ChoiceMade)으로
+        private int _actor;       // 지금 판의 고르는 사람
+        private int _generation;  // 판을 열 때마다 올린다 — 앞 판의 연출이 끝나며 새 판을 닫지 않게
         private double _startsAt;
         private double _deadline;
 
@@ -77,35 +80,41 @@ namespace Chapchu.UI.GameScreen
 
             int hp = BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object value) && value is int hpValue ? hpValue : GameServer.MaxHp;
             int seconds = Mathf.RoundToInt((float)(deadline - startsAt));
-            Open(actor, user, handCount, hp, damage, startsAt, deadline, string.Format(ChooseHintFormat, seconds), true);
+            Open(actor, user, cardId, handCount, hp, damage, startsAt, deadline, string.Format(ChooseHintFormat, seconds), true);
         }
 
-        /// <summary>남이 고르는 중 — 같은 판을 누를 수 없게 연다. hp = 화면에 재생한 고르는 사람의 HP. 연출 큐가 부른다.</summary>
-        public void ShowWatching(int actor, int user, int handCount, int hp, int damage, double startsAt, double deadline)
+        /// <summary>남이 고르는 중 — 같은 판을 누를 수 없게 연다. hp = 화면에 재생한 고르는 사람의 HP. 연출 큐가 부른다. 내 판이 열려 있으면 덮지 않는다.</summary>
+        public void ShowWatching(int actor, int user, int cardId, int handCount, int hp, int damage, double startsAt, double deadline)
         {
+            if (_open && _mine)
+                return;
+
             string name = PlayerLook.NameOf(actor);
-            Open(actor, user, handCount, hp, damage, startsAt, deadline, string.Format(WatchHintFormat, name, SubjectParticle(name)), false);
+            Open(actor, user, cardId, handCount, hp, damage, startsAt, deadline, string.Format(WatchHintFormat, name, SubjectParticle(name)), false);
         }
 
-        /// <summary>남이 골랐다 — 고른 카드를 튀어나오게 하고 판을 닫는다. 연출 큐가 기다릴 코루틴. 판이 닫혀 있으면 바로 끝난다.</summary>
+        /// <summary>남이 골랐다 — 고른 카드를 튀어나오게 하고 판을 닫는다. 연출 큐가 기다릴 코루틴. 그 사람의 판이 열려 있지 않으면 바로 끝난다.</summary>
         public IEnumerator PickRoutine(int actor, int option)
         {
-            if (!_open || _mine)
+            if (!_open || _mine || actor != _actor)
                 yield break;
 
             yield return Pick(actor, option);
         }
 
-        private void Open(int actor, int user, int handCount, int hp, int damage, double startsAt, double deadline, string hint, bool interactive)
+        private void Open(int actor, int user, int cardId, int handCount, int hp, int damage, double startsAt, double deadline, string hint, bool interactive)
         {
             StopAllCoroutines();
+            _generation++;
             _open = true;
             _mine = interactive;
             _picking = false;
+            _requested = false;
+            _actor = actor;
             _startsAt = startsAt;
             _deadline = deadline;
             _view.Show(hint, string.Format(TagFormat, ShortName(user), ShortName(actor)), handCount, hp, damage, interactive);
-            chainCards.Focus(_view.UsedCardCenter, _view.UsedCardHeight);
+            chainCards.Focus(cardId, _view.UsedCardCenter, _view.UsedCardHeight);
             Update();
         }
 
@@ -120,18 +129,29 @@ namespace Chapchu.UI.GameScreen
 
         private void HandlePicked(int option)
         {
-            if (!_open || !_mine || _picking)
+            if (!_open || !_mine || _picking || _requested)
                 return;
 
+            // 요청만 보낸다 — 고른 연출은 방장이 확정한 값으로 (HandleChoiceMade). 늦게 닿아 거절되면 방장이 무작위로 고른 쪽이 보인다
+            _requested = true;
             server.RequestChoose(option);
-            StartCoroutine(Pick(PhotonNetwork.LocalPlayer.ActorNumber, option));
         }
 
+        // 고른 카드를 튀어나오게 하고 판을 닫는다. option < 0 (고르는 사람이 나가 불발) 이면 고른 연출 없이 닫는다.
+        // 그 사이 새 판이 열렸으면(세대가 바뀜) 닫지 않는다 — 남의 판 연출은 연출 큐의 코루틴이라 Open 의 StopAllCoroutines 로 멈추지 않는다.
         private IEnumerator Pick(int actor, int option)
         {
-            _picking = true;
-            _view.SetHint(string.Format(PickedHintFormat, ShortName(actor), _view.OptionName(option)));
-            yield return _view.PickRoutine(option);
+            int generation = _generation;
+            if (option >= 0)
+            {
+                _picking = true;
+                _view.SetHint(string.Format(PickedHintFormat, ShortName(actor), _view.OptionName(option)));
+                yield return _view.PickRoutine(option);
+                if (generation != _generation)
+                    yield break;
+            }
+
+            _view.Hide();
             _open = false;
             _picking = false;
             chainCards.Unfocus();
