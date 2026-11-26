@@ -62,9 +62,9 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float raisedBottomGap = 0.18f;
 
         [Header("카드 상태 (카드 높이 · 폭 대비)")]
-        [Tooltip("고른 카드 · 반응 시간에 낼 수 있는 카운터가 더 올라오는 높이 — 올라온 손패에서.")]
+        [Tooltip("고른 카드가 더 올라오는 높이 — 올라온 손패에서.")]
         [SerializeField] private float pickLiftRaised = 0.1f;
-        [Tooltip("고른 카드 · 반응 시간에 낼 수 있는 카운터가 더 올라오는 높이 — 내려간 손패에서 (거의 다 보이게).")]
+        [Tooltip("고른 카드가 더 올라오는 높이 — 내려간 손패에서 (거의 다 보이게).")]
         [SerializeField] private float pickLiftLowered = 0.42f;
         [Tooltip("고른 카드 양옆 틈 — 내려간 손패에서 (카드 폭 대비).")]
         [SerializeField] private float pickGapLowered = 0.22f;
@@ -72,8 +72,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float hoverLift = 0.08f;
         [Tooltip("포인터 아래 카드의 배율.")]
         [SerializeField] private float hoverScale = 1.12f;
-        [Tooltip("반응 시간에 낼 수 있는 카운터의 배율.")]
-        [SerializeField] private float usableScale = 1.06f;
+        [Tooltip("지금 낼 수 있는 카드의 배율 (시안 v3.5 .can — 내 턴엔 흐리지 않은 카드, 반응 시간엔 낼 수 있는 카운터).")]
+        [SerializeField] private float playableScale = 1.1f;
+        [Tooltip("지금 낼 수 없는 카드의 배율 — 흐림과 함께 (시안 v3.5 .dim).")]
+        [SerializeField] private float unplayableScale = 0.86f;
 
         [Header("연출")]
         [Tooltip("카드가 자리를 옮기는 초 — 올리기 · 내리기 · 호버 · 드롭 실패 복귀.")]
@@ -128,9 +130,7 @@ namespace Chapchu.UI.GameScreen
         [Header("그리는 순서 — 카메라 쪽으로 당기는 거리 (유닛)")]
         [Tooltip("자리마다 z 간격 — 오른쪽 카드가 카메라 쪽. 겹친 곳은 깊이로 정렬된다.")]
         [SerializeField] private float cardDepthStep = 0.02f;
-        [Tooltip("반응 시간에 낼 수 있는 카운터를 앞에 그리는 거리 — 손패 15장(자리 간격 × 15 = 0.3)까지 순서가 지켜진다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.")]
-        [SerializeField] private float usableDepth = 0.3f;
-        [Tooltip("고른 카드를 앞에 그리는 거리 — 낼 수 있는 카운터보다 커야 한다.")]
+        [Tooltip("고른 카드를 앞에 그리는 거리 — 손패 15장(자리 간격 × 15 = 0.3)보다 커야 한다. 가까워진 만큼 자리 · 크기를 줄여 화면에서는 같은 자리 · 크기로 보인다.")]
         [SerializeField] private float selectedDepth = 0.34f;
         [Tooltip("포인터 아래 카드를 앞에 그리는 거리 — 고른 카드보다 커야 한다.")]
         [SerializeField] private float hoverDepth = 0.38f;
@@ -159,8 +159,12 @@ namespace Chapchu.UI.GameScreen
         private float _dragTilt;
         private float _lastDragX;
         private bool _armed;
+        private float _dragScale = 1f; // 끄는 카드의 배율 — 낼 수 없는 카드는 끄는 동안에도 작게 (시안 v3.5)
         private bool _revealed;        // 포인터가 손패에 올라와 있다
         private bool _reacting;
+        private bool _myTurn;          // 지금 낼 수 있는 카드를 가리는 판 상태 (SetPlayState)
+        private bool _busy;
+        private bool _trapsFull;
         private bool _wasRaised;
         private bool _onTop;           // 카드가 HUD 위 층에 있다 — 내려갈 때는 자리로 돌아간 뒤에 내린다
         private float _dropLayerAt = -1f;
@@ -315,7 +319,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 반응 시간 — 이 인스턴스 ID 의 카드(낼 수 있는 카운터)는 빛나며 올라오고 나머지는 어두워진다 (10-ui.md 5절). null 이면 반응 시간이 아니다.
+        /// 반응 시간 — 이 인스턴스 ID 의 카드(낼 수 있는 카운터)는 커지고 나머지는 흐려지며 작아진다 (시안 v3.5, 색 강조 없음). null 이면 반응 시간이 아니다.
         /// </summary>
         public void ShowReaction(ICollection<int> usableInstanceIds)
         {
@@ -323,6 +327,20 @@ namespace Chapchu.UI.GameScreen
             _usable.Clear();
             if (usableInstanceIds != null)
                 _usable.UnionWith(usableInstanceIds);
+            Layout();
+        }
+
+        /// <summary>
+        /// 지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴인지, 연출 · 체인이 진행 중인지, 내 함정 칸이 다 찼는지.
+        /// 내 턴엔 카운터 · 칸이 찬 함정이 흐려지며 작아지고, 진행 중이 아니면 나머지가 커진다. 판정이 아니라 표시 — 내면 방장이 판정한다.
+        /// </summary>
+        public void SetPlayState(bool myTurn, bool busy, bool trapsFull)
+        {
+            if (_myTurn == myTurn && _busy == busy && _trapsFull == trapsFull) return;
+
+            _myTurn = myTurn;
+            _busy = busy;
+            _trapsFull = trapsFull;
             Layout();
         }
 
@@ -580,38 +598,37 @@ namespace Chapchu.UI.GameScreen
             for (int i = 0; i < _laidOut.Count; i++)
             {
                 CardView card = _laidOut[i];
-                bool usable = _reacting && _usable.Contains(card.InstanceId);
                 bool dragging = card == _dragging;
-                card.SetGlow(usable);
-                card.SetDimmed(_reacting && !usable && !dragging);
-                card.SetSelected(card == _selected || (dragging && _armed));
-                if (dragging) continue;
+                bool selected = card == _selected;
+                bool hovered = card == _hovered;
+                // 시안 v3.5 · v3.8 — 지금 낼 수 없는 카드는 흐리고 작게, 낼 수 있는 카드는 크게. 고르거나 포인터 아래 카드 · 끄는 카드는 원색으로 읽힌다
+                bool dim = IsUnplayable(card);
+                bool can = !dragging && CanPlay(dim);
+                card.SetDimmed(dim && !dragging && !selected && !hovered);
+                card.SetSelected(selected || (dragging && _armed));
+                card.SetHovered(hovered);
+                float stateScale = selected || hovered ? 1f : can ? playableScale : dim ? unplayableScale : 1f;
+                if (dragging)
+                {
+                    _dragScale = stateScale;
+                    continue;
+                }
 
                 Vector3 slot = _slots[i];
-                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = 1f, Lift = i * cardDepthStep, TiltX = restTilt };
+                var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = stateScale, Lift = i * cardDepthStep, TiltX = restTilt };
                 if (raised)
                     pose.Center.y += cardHeight / 2f + raisedBottomGap;
 
-                float pickLift = cardHeight * (raised ? pickLiftRaised : pickLiftLowered);
-                if (card == _selected)
+                if (selected)
                 {
-                    pose.Center.y += pickLift;
+                    pose.Center.y += cardHeight * (raised ? pickLiftRaised : pickLiftLowered);
                     pose.Lift += selectedDepth;
                 }
-
-                if (card == _hovered && card != _selected)
+                else if (hovered)
                 {
                     pose.Center.y += cardHeight * hoverLift;
                     pose.Scale *= hoverScale;
                     pose.Lift += hoverDepth;
-                }
-                else if (usable && card != _selected)
-                {
-                    // 낼 수 있는 카운터는 내려간 손패에서도 쑥 올라와 다 보인다
-                    pose.Center.y += pickLift;
-                    pose.Scale *= usableScale;
-                    if (!raised)
-                        pose.Lift += usableDepth;
                 }
 
                 MoveTo(card, pose);
@@ -619,6 +636,14 @@ namespace Chapchu.UI.GameScreen
 
             SyncRaised(raised);
         }
+
+        // 지금 낼 수 없는 카드 (시안 v3.5 dim) — 반응 시간엔 낼 수 있는 카운터 말고 전부, 내 턴엔 카운터 · 칸이 다 찬 함정. 대상 고르는 중(잠김)에는 가리지 않는다.
+        private bool IsUnplayable(CardView card) => _reacting
+            ? !_usable.Contains(card.InstanceId)
+            : _myTurn && !IsLocked && (card.Type == CardType.Counter || (card.Type == CardType.Trap && _trapsFull));
+
+        // 지금 낼 수 있는 카드 (시안 v3.5 can) — 반응 시간엔 낼 수 있는 카운터, 내 턴엔 흐리지 않은 카드 (연출 · 체인이 진행 중이 아닐 때).
+        private bool CanPlay(bool unplayable) => _reacting ? !unplayable : _myTurn && !IsLocked && !_busy && !unplayable;
 
         // 원호 위의 자리 n 개 — x · y(카드 가운데, 화면 아래 끝이 기준) · 시계 방향 각도. 프로토타입 v2 baseSlots · handSlots 와 같은 식.
         // 화면 아래 가상의 중심점을 기준으로 놓아 기울기와 높이가 늘 맞물린다. selected 번째 카드를 골랐으면 그 양옆에 틈을 벌리고, 넘치면 나머지 간격을 좁힌다.
@@ -706,7 +731,7 @@ namespace Chapchu.UI.GameScreen
         // 끄는 카드는 트윈 없이 바로 — 포인터를 따라 똑바로 선 채 좌우로만 기운다.
         private void PlaceDragged()
         {
-            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = 1f, Lift = dragDepth, TiltX = 0f };
+            var pose = new Pose { Center = _dragCenter, Angle = -_dragTilt, Scale = _dragScale, Lift = dragDepth, TiltX = 0f };
             ToTransform(pose, out Vector3 position, out Quaternion rotation, out float scale);
             Transform t = _dragging.transform;
             t.localPosition = position;
@@ -793,7 +818,7 @@ namespace Chapchu.UI.GameScreen
 
         private static void ClearMarks(CardView card)
         {
-            card.SetGlow(false);
+            card.SetHovered(false);
             card.SetSelected(false);
             card.SetDimmed(false);
         }

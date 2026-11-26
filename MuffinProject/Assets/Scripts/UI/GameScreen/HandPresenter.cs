@@ -220,6 +220,9 @@ namespace Chapchu.UI.GameScreen
                 OnReactionAsked?.Invoke(false);
         }
 
+        /// <summary>지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴 · 연출 · 체인 진행 중 · 내 함정 칸이 다 찼는지. 표시만 한다.</summary>
+        public void ShowPlayState(bool myTurn, bool busy, bool trapsFull) => _view.SetPlayState(myTurn, busy, trapsFull);
+
         /// <summary>내가 설치한 함정 — 손패에서 떼어 함정 칸(slot 의 위치 · 회전 · 배율)으로 보내 지운다. 연출 큐가 기다릴 코루틴. 손패에 없으면(빼앗아 온 함정) 바로 끝난다.</summary>
         public IEnumerator SetTrapRoutine(int cardInstanceId, Transform slot)
         {
@@ -386,7 +389,6 @@ namespace Chapchu.UI.GameScreen
                 Transform t = card.transform;
                 t.SetParent(transform.parent, true); // 손패 올리기 · 내리기에 끌려가지 않게
                 card.SetRaycastBlocking(false);
-                card.SetGradeVisible(false); // 닿으면 바꿔 끼우는 더미의 맨 위 카드와 같게
 
                 t.DOKill();
                 t.DOMove(discardSpot.position, discardDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);

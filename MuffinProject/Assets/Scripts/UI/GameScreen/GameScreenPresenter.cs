@@ -63,6 +63,9 @@ namespace Chapchu.UI.GameScreen
         // 화면에 재생한 기준으로 체인에 남은 카드 수 — 0 이 되면 반응 타이머를 숨긴다. 연출 큐 단계 안에서만 바꾼다.
         private int _chainCount;
 
+        // 화면에 재생한 기준으로 지금 내 턴인가 — 손패의 「지금 낼 수 있는 카드」 표시에 쓴다 (시안 v3.5). 연출 큐 단계 안에서만 바꾼다.
+        private bool _isMyTurn;
+
         private void Awake()
         {
             if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
@@ -255,6 +258,7 @@ namespace Chapchu.UI.GameScreen
 
             Enqueue(() =>
             {
+                _isMyTurn = isMyTurn;
                 myPanel.ShowTurn(isMyTurn);
                 seats.ShowTurn(actorNumber);
                 turnStrip.ShowTurn(actorNumber);
@@ -739,11 +743,19 @@ namespace Chapchu.UI.GameScreen
                 }
 
                 if (step != null)
+                {
+                    ShowHandPlayState(true);
                     yield return Guarded(step);
+                }
             }
 
             _playing = null;
+            ShowHandPlayState(false);
         }
+
+        // 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) — 연출이 있는 단계를 재생하는 동안 · 체인이 남은 동안은 진행 중이라 커지지 않는다.
+        // 큐가 빌 때와 연출 단계를 시작할 때만 고친다 — 단계 사이마다 고치면 연달아 오는 단계 사이에 카드가 잠깐 커졌다 줄어든다.
+        private void ShowHandPlayState(bool stepRunning) => hand.ShowPlayState(_isMyTurn, stepRunning || _chainCount > 0, myTraps.IsFull);
 
         // 연출 코루틴을 직접 돌린다 — 안쪽 코루틴(yield return IEnumerator)까지 MoveNext 를 감싸, 예외가 나면 그 단계를 끝낸다
         private IEnumerator Guarded(IEnumerator step)

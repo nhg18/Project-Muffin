@@ -70,6 +70,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>내 함정 칸 수 (OnTrapSet 등의 trapCount).</summary>
         public void ShowCount(int trapCount) => _view.SetCount(trapCount);
 
+        /// <summary>내 함정 칸이 다 찼다 — 손패의 함정을 「지금 낼 수 없는 카드」 로 보인다 (시안 v3.5).</summary>
+        public bool IsFull => _view.IsFull;
+
         /// <summary>다음에 설치되는 함정이 들어갈 칸의 자리.</summary>
         public Transform NextSlot => _view.SlotAnchor(_instanceIds.Count);
 
