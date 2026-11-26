@@ -120,6 +120,9 @@ namespace Chapchu.UI.GameScreen
         private readonly List<Entry> _chain = new List<Entry>();
         private Entry _big;         // 3 단계 — 가운데에서 크게 보여 주는 중인 카드
         private bool _handRaised;
+        private bool _focused;      // 카드 효과 고르기 (1019) — 체인의 카드를 고르기 판 왼쪽 자리로 옮겨 고를 카드와 나란히 보인다
+        private Vector2 _focusCenter; // 캔버스 px, 화면 가운데가 0 · 위가 +
+        private float _focusHeight;   // 캔버스 px
         private float _near;        // showSpot 깊이의 원근 보정 — 테이블 면 길이에 곱하면 그 깊이의 월드 길이
         private float _bigScale;    // 큰 자리의 배율 (1.85)
         private float _cardWidth;
@@ -173,6 +176,28 @@ namespace Chapchu.UI.GameScreen
             if (_handRaised == raised) return;
 
             _handRaised = raised;
+            Place(null);
+        }
+
+        /// <summary>
+        /// 카드 효과 고르기 판이 열렸다 — 체인의 카드(고르게 한 카드)를 판의 왼쪽 자리로 옮긴다. 판이 닫히면 Unfocus, 체인이 비어도 풀린다.
+        /// canvasCenter = 카드 가운데 (캔버스 px, 화면 가운데가 0 · 위가 +), canvasHeight = 카드 높이 (캔버스 px). 판정과 상관없는 연출.
+        /// </summary>
+        public void Focus(Vector2 canvasCenter, float canvasHeight)
+        {
+            _focused = true;
+            _focusCenter = canvasCenter;
+            _focusHeight = canvasHeight;
+            Place(null);
+        }
+
+        /// <summary>고르기 판이 닫혔다 — 옮긴 카드를 체인 자리로 돌린다.</summary>
+        public void Unfocus()
+        {
+            if (!_focused)
+                return;
+
+            _focused = false;
             Place(null);
         }
 
@@ -245,6 +270,7 @@ namespace Chapchu.UI.GameScreen
 
             _chain.Clear();
             _big = null;
+            _focused = false;
             if (cards.Count == 0)
                 yield break;
 
@@ -278,7 +304,12 @@ namespace Chapchu.UI.GameScreen
             CardView card = entry.Card;
             entry.Card = null; // 자리는 남긴다 — 남은 카드는 제자리
             if (_big == entry) _big = null;
-            if (_chain.TrueForAll(e => e.Card == null)) _chain.Clear();
+            if (_chain.TrueForAll(e => e.Card == null))
+            {
+                _chain.Clear();
+                _focused = false;
+            }
+
             return card;
         }
 
@@ -303,12 +334,13 @@ namespace Chapchu.UI.GameScreen
 
             Slot[] slots = ComputeLayout(out float bottom);
             Vector3 bigCenter = showSpot.position + showSpot.up * (_cardHeight * showSpot.lossyScale.y / 2f);
+            Entry focus = _focused ? _chain.FindLast(e => e.Card != null) : null; // 고르게 한 카드 = 체인 맨 위 (그 위 카드는 먼저 처리돼 없다)
             for (int i = 0; i < _chain.Count; i++)
             {
                 Entry entry = _chain[i];
                 if (entry.Card == null) continue;
 
-                Slot slot = entry == _big && !_handRaised ? new Slot { Scale = _bigScale } : slots[i];
+                Slot slot = entry == focus ? FocusSlot(bigCenter) : entry == _big && !_handRaised ? new Slot { Scale = _bigScale } : slots[i];
                 // 카드 기준점이 아래 가운데라, 가운데 자리에서 기운 방향으로 반 높이만큼 내려 잡는다. 뒤에 낸 카드일수록 카메라 쪽으로.
                 Quaternion rotation = showSpot.rotation * Quaternion.Euler(0f, 0f, -slot.Tilt);
                 float scale = slot.Scale * _near;
@@ -319,6 +351,13 @@ namespace Chapchu.UI.GameScreen
 
             OnBottomChanged?.Invoke((bigCenter.y / _near + bottom) * CanvasPerUnit);
         }
+
+        // 고르기 판의 왼쪽 자리 — 캔버스 px 를 큰 자리 카드 가운데에서 본 테이블 면 유닛으로
+        private Slot FocusSlot(Vector3 bigCenter) => new Slot
+        {
+            Center = _focusCenter / CanvasPerUnit - new Vector2(bigCenter.x, bigCenter.y) / _near,
+            Scale = _focusHeight / (CanvasPerUnit * _cardHeight),
+        };
 
         // 체인 배치 (프로토타입 v2 chainLayout) — 살아 있는 카드는 앞 카드 오른쪽에 작게 · 기울여 붙이고, 죽은 카드(살아 있는 무효화 카운터 바로 아래)는 새 묶음을 시작한다.
         // 「행동 → 카운터」 는 한 묶음, 「행동 → 카운터 → 카운터」 는 [행동] [카운터 · 카운터] — 카운터 둘이 비켜 행동이 살아 있음이 보인다.
