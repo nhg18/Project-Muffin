@@ -81,6 +81,7 @@ namespace Chapchu.UI.GameScreen
         private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
         private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
         private readonly HashSet<int> _deadActors = new HashSet<int>();    // 재생한 기준으로 죽은 사람 — 카드 연출에 넘기는 「판에 남은 사람」 에서 뺀다
+        private bool _reversed; // 재생한 기준의 턴 방향 — 카드 연출에 넘기는 「받는 사람」 순서 (1018). 연출 큐 단계 안에서만 바꾼다.
 
         // 4 단계 공통 연출 (10-ui.md 5-1). 재생한 기준의 HP — 바뀐 양으로 피해 · 회복을 고른다. 없으면 처음 HP(MaxHp).
         private readonly Dictionary<int, int> _shownHp = new Dictionary<int, int>();
@@ -125,6 +126,7 @@ namespace Chapchu.UI.GameScreen
 
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 _isMyTurn = IsMe(turnActorValue);
+            _reversed = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDirection, out object reversed) && reversed is bool reversedValue && reversedValue;
             if (_playing == null)
                 ShowHandPlayState(false);
         }
@@ -664,21 +666,32 @@ namespace Chapchu.UI.GameScreen
             return fxSeats;
         }
 
-        // 카드를 한 장씩 받는 사람 (1018 무야호 — 쓴 사람부터 턴 순서대로, 대상은 빼고). 대상 손패가 모자라 덜 받는 경우는 결과가 오기 전이라 모른다 — 모두 받는 것으로 그린다.
-        // 턴 순서 = 좌석 순서, 역방향이면 거꾸로 (03-turn.md 6절 #4). 받는 사람을 정하는 카드가 아니면 연출이 쓰지 않는다.
-        private static List<CardFxSeat> ReceiversOf(List<CardFxSeat> fxSeats, CardFxSeat caster, List<CardFxSeat> targets)
+        // 카드를 한 장씩 받는 사람 (1018 무야호 — 쓴 사람부터 턴 순서대로, 대상은 빼고). 대상 손패가 모자라면 재생한 기준의 대상 장수까지만 받는다.
+        // 턴 순서 = 좌석 순서, 역방향이면 거꾸로 (03-turn.md 6절 #4 — 재생한 기준의 방향). 받는 사람을 정하는 카드가 아니면 연출이 쓰지 않는다.
+        private List<CardFxSeat> ReceiversOf(List<CardFxSeat> fxSeats, CardFxSeat caster, List<CardFxSeat> targets)
         {
-            bool reversed = PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnDirection, out object value) && value is bool reversedValue && reversedValue;
+            int limit = targets.Count == 1 && TryGetShownHandCount(targets[0].Actor, out int targetHand) ? targetHand : int.MaxValue;
             int start = fxSeats.IndexOf(caster);
             var receivers = new List<CardFxSeat>();
-            for (int i = 0; i < fxSeats.Count; i++)
+            for (int i = 0; i < fxSeats.Count && receivers.Count < limit; i++)
             {
-                int index = reversed ? start - i : start + i;
+                int index = _reversed ? start - i : start + i;
                 CardFxSeat seat = fxSeats[(index % fxSeats.Count + fxSeats.Count) % fxSeats.Count];
                 if (!targets.Contains(seat))
                     receivers.Add(seat);
             }
             return receivers;
+        }
+
+        // 재생한 기준의 손패 장수 — 화면에 보이는 값
+        private bool TryGetShownHandCount(int actorNumber, out int handCount)
+        {
+            if (IsMe(actorNumber))
+            {
+                handCount = myPanel.HandCount;
+                return true;
+            }
+            return seats.TryGetHandCount(actorNumber, out handCount);
         }
 
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
@@ -736,6 +749,7 @@ namespace Chapchu.UI.GameScreen
         {
             Enqueue(() =>
             {
+                _reversed = reversed;
                 turnOrder.ShowDirection(reversed);
                 history.ShowDirectionChanged();
                 return null;
@@ -800,6 +814,7 @@ namespace Chapchu.UI.GameScreen
             myPanel.ShowChapchu(false);
             myPanel.ShowHandCount(0);
             turnOrder.ShowDirection(false);
+            _reversed = false;
             foreach (int actor in order)
             {
                 ShowLife(actor, LifeState.Alive);

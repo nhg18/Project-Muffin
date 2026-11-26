@@ -75,10 +75,11 @@ namespace Chapchu.UI.GameScreen
             StartCoroutine(CardFxLoader.ReleaseRoutine(fx));
         }
 
-        private static IEnumerator ReleaseLaterRoutine(CardFx fx, float seconds)
+        private IEnumerator ReleaseLaterRoutine(CardFx fx, float seconds)
         {
             yield return new WaitForSeconds(seconds);
-            yield return CardFxLoader.ReleaseRoutine(fx);
+            StartCoroutine(CardFxLoader.ReleaseRoutine(fx));
+            fx = null;
         }
     }
 }

@@ -96,6 +96,7 @@ namespace Chapchu.UI.GameScreen
         private bool _aimed;
         private LifeState _life;
         private int _hp = GameServer.MaxHp;
+        private int _handCount;
         private float _hpFontSize;
 
         /// <summary>대상 선택 중 이 좌석을 탭했다.</summary>
@@ -123,9 +124,13 @@ namespace Chapchu.UI.GameScreen
         /// <summary>4 단계 공통 연출 자리 — 캐릭터 가운데에서 터지고, 캐릭터 · 이름표가 흔들리고, 손패 장수 칩이 톡 (시안 「4단계 공통 연출」).</summary>
         public ResultFx.Seat FxSeat => new ResultFx.Seat(character.rectTransform, new[] { character.rectTransform, plate }, (RectTransform)handBadge.transform, handBadge.Face);
 
+        /// <summary>보이고 있는 손패 장수.</summary>
+        public int HandCount => _handCount;
+
         /// <summary>손패 장수 — 손패 카드 그림과 뒷면 부채꼴을 같이 맞춘다.</summary>
         public void SetHandCount(int count)
         {
+            _handCount = count;
             handBadge.SetCount(count);
             hand.SetCount(count);
         }
