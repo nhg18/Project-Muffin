@@ -41,6 +41,7 @@ namespace Chapchu.UI.GameScreen
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
         private readonly Dictionary<int, TrapSlotsView> _trapsOf = new Dictionary<int, TrapSlotsView>(); // actorNumber → 함정 칸
         private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
+        private readonly Dictionary<int, double> _pendingDeadlines = new Dictionary<int, double>(); // 사망 대기 중인 actorNumber → 마감(PhotonNetwork.Time)
         private bool _selecting;
         private bool _selectCancelled;
         private int _aimedActor; // 끄는 카드가 겨눈 상대 (없으면 0)
@@ -118,7 +119,7 @@ namespace Chapchu.UI.GameScreen
                 seat.gameObject.SetActive(true);
                 string nickname = PlayerLook.NameOf(actor);
                 seat.SetNickname(BotRoster.IsBot(actor) ? string.Format(BotNicknameFormat, nickname) : nickname);
-                seat.SetColor(PlayerLook.SeatColors[seatIndex - 1]);
+                seat.SetLife(LifeState.Alive);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
                 seat.SetTargetable(false);
@@ -135,11 +136,22 @@ namespace Chapchu.UI.GameScreen
 
                 if (BotRoster.TryGetPublic(actor, PlayerProps.TrapCount, out object trapCount) && trapCount is int trapCountValue)
                     traps.SetCount(trapCountValue);
+
+                // 사망 대기의 마감은 스냅샷에 없다 — 대기 팻말만 켜고 초는 다음 알림부터
+                if (BotRoster.TryGetPublic(actor, PlayerProps.LifeState, out object life) && life is byte lifeValue && lifeValue != (byte)LifeState.Alive)
+                    seat.SetLife((LifeState)lifeValue);
             }
 
             Hashtable room = PhotonNetwork.CurrentRoom.CustomProperties;
             if (room.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 ShowTurn(turnActorValue);
+        }
+
+        private void Update()
+        {
+            foreach (KeyValuePair<int, double> pair in _pendingDeadlines)
+                if (_seatOf.TryGetValue(pair.Key, out OpponentSeatView seat))
+                    seat.SetPendingSeconds(Mathf.Max(0, Mathf.CeilToInt((float)(pair.Value - PhotonNetwork.Time))));
         }
 
         /// <summary>상대 수에 따른 좌석 인덱스 (02-player.md 3절). 2명이면 정면(2), 3명이면 1 · 2, 4명이면 1 · 2 · 3. 상대는 actorNumber 오름차순으로 앉는다.</summary>
@@ -211,14 +223,33 @@ namespace Chapchu.UI.GameScreen
             yield return new WaitForSeconds(dealInterval);
         }
 
-        /// <summary>상대의 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 띠 · 말풍선. 해제되면 바로 사라진다 (10-ui.md 7절).</summary>
+        /// <summary>상대의 찹츄 상태 (OnChapchuChanged) — 왕관 · 분홍 이름 칸 · 말풍선. 해제되면 바로 사라진다 (10-ui.md 7절).</summary>
         public void ShowChapchu(int actorNumber, bool isChapchu)
         {
             if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
                 seat.SetChapchu(isChapchu);
         }
 
-        /// <summary>턴 주인의 좌석에만 노란 머리 띠 · 발밑 타원. 내 턴이면 모두 끈다. 대상을 고르는 중에 내 턴이 끝나면 선택을 취소한다 (10-ui.md 6절).</summary>
+        /// <summary>
+        /// 살아 있음 · 사망 대기 · 최종 사망 (OnDeathPending · OnDeathAvoided · OnPlayerDied, 06-death.md) — 이름표 · 캐릭터 팻말.
+        /// 사망 대기면 마감(deadline)까지 「사망 대기 n초」 를 센다. 좌석이 없는 사람(나 · 나간 사람)이면 무시.
+        /// </summary>
+        public void ShowLife(int actorNumber, LifeState life, double deadline = 0)
+        {
+            if (life == LifeState.DeathPending)
+                _pendingDeadlines[actorNumber] = deadline;
+            else
+                _pendingDeadlines.Remove(actorNumber);
+
+            if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                seat.SetLife(life);
+
+            // 최종 사망 — 손패 · 설치 함정은 버림 더미로 가고 「함정 슬롯 0」 으로 보인다 (06-health 9절, 시안: 사망이면 빈 칸)
+            if (life == LifeState.Dead && _trapsOf.TryGetValue(actorNumber, out TrapSlotsView traps))
+                traps.SetCount(0);
+        }
+
+        /// <summary>턴 주인의 좌석에만 노란 이름 칸 · 스톱워치. 내 턴이면 모두 끈다. 대상을 고르는 중에 내 턴이 끝나면 선택을 취소한다 (10-ui.md 6절).</summary>
         public void ShowTurn(int turnActorNumber)
         {
             foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
@@ -323,6 +354,7 @@ namespace Chapchu.UI.GameScreen
             if (!_seatOf.TryGetValue(player.ActorNumber, out OpponentSeatView seat)) return;
 
             _seatOf.Remove(player.ActorNumber);
+            _pendingDeadlines.Remove(player.ActorNumber);
             seat.gameObject.SetActive(false);
             if (_trapsOf.TryGetValue(player.ActorNumber, out TrapSlotsView traps))
             {

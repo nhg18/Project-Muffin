@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Chapchu.Cards;
+using Chapchu.Game;
 using Chapchu.Network.Events;
 using Photon.Pun;
 using UnityEngine;
@@ -12,10 +13,12 @@ namespace Chapchu.UI.GameScreen
     /// 인게임 화면의 연출 큐 (CODE_CONVENTION 9절 · 09-network.md 6.1). 방장이 보낸 일어난 일(GameEvents)을 받은 순서대로 줄 세우고,
     /// 하나씩 영역 프레젠터에 넘겨 연출이 끝난 뒤 다음을 꺼낸다. 화면 값은 재생하는 순간 이벤트에 담긴 값으로 바뀐다. 판정은 하지 않는다.
     /// 받는 순서 = 일어난 순서다 (GameServer 가 쌓은 순서대로 PunGameServer 가 보내고, 같은 보낸이의 RPC 는 순서가 지켜진다).
-    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(TurnStripPresenter 가 매 프레임 계산) · 퇴장(RoomEvents) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start)
+    /// 큐를 타지 않는 것: 내 요청 거절(RejectToastPresenter 가 바로 띄움) · 남은 초(TurnTimerPresenter 가 매 프레임 계산) · 퇴장(RoomEvents) · 늦게 열렸을 때의 스냅샷 복구(각 프레젠터 Start)
     /// · 곧 씬이 바뀌는 알림의 경고 예약과 방 나가기 (내 강제 퇴장 · 판 중지 — GameMenuPresenter 를 받은 자리에서 바로 부른다).
     /// 체인: 카드가 나오면(OnCardPlayed) ChainCardsPresenter 가 크게 보여 주고, 반응 시간(OnReactionStarted)이 오면 그 아래에 반응 타이머. 처리 결과가 오면 카드를 치우고 체인이 비면 타이머를 숨긴다 (10-ui.md 5절).
     /// 버림 더미: 버림이 생기는 일(효과 적용 · 무효화 · 강제 버림 · 함정 파괴 · 사망 · 나감)마다 내 카드가 있으면 더미로 보낸 뒤 맨 위 카드 · 장수를 바꾼다 (10-ui.md 2-1 「버림 더미」).
+    /// 사망 대기(06-death.md): 좌석 · 내 HUD · 턴 순서에 「대기」, 턴 타이머는 멈춘 초에 선다. 이어지면(OnTurnResumed) 다시 센다.
+    /// 「뽑고 턴 끝」 버튼은 재생한 기준으로 내 턴 · 메인 행동 전 · 체인 없음 · 대상 선택 아님 · 사망 대기 없음일 때만 보인다 (통합 화면 UI v3 .drawbtn). 표시만 — 판정은 방장.
     /// </summary>
     public class GameScreenPresenter : MonoBehaviour
     {
@@ -28,10 +31,11 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private HandPresenter hand;
         [SerializeField] private MyPanelPresenter myPanel;
         [SerializeField] private OpponentSeatsPresenter seats;
-        [SerializeField] private TurnStripPresenter turnStrip;
+        [Tooltip("오른쪽 세로 턴 순서.")]
+        [SerializeField] private TurnOrderPresenter turnOrder;
         [SerializeField] private TurnTimerPresenter turnTimer;
         [SerializeField] private HistoryPresenter history;
-        [Tooltip("판 효과 줄 — 턴 순서 띠 아래 (기다려! · 피폭).")]
+        [Tooltip("판 효과 줄 — 화면 위 가운데 (기다려! · 피폭).")]
         [SerializeField] private BoardEffectsPresenter boardEffects;
         [Tooltip("1021 개판 오분전 — 시작 제목 · 자명종 · 판정 팻말.")]
         [SerializeField] private GaepanPresenter gaepan;
@@ -63,9 +67,14 @@ namespace Chapchu.UI.GameScreen
         // 화면에 재생한 기준으로 체인에 남은 카드 수 — 0 이 되면 반응 타이머를 숨긴다. 연출 큐 단계 안에서만 바꾼다.
         private int _chainCount;
 
+        // 「뽑고 턴 끝」 버튼의 조건 — 재생한 기준. 연출 큐 단계 안에서만 바꾼다.
+        private bool _isMyTurn;
+        private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
+        private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
+
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnStrip == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || myTraps == null || screenFlash == null || chapchuShout == null || cardDeck == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -88,6 +97,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
             GameEvents.OnDeckRefilled += HandleDeckRefilled;
             GameEvents.OnTurnStarted += HandleTurnStarted;
+            GameEvents.OnTurnResumed += HandleTurnResumed;
             GameEvents.OnCardPlayed += HandleCardPlayed;
             GameEvents.OnTrapActivated += HandleTrapActivated;
             GameEvents.OnReactionStarted += HandleReactionStarted;
@@ -107,6 +117,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken += HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnTurnSkipMarked += HandleTurnSkipMarked;
             RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
@@ -120,6 +131,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
+            GameEvents.OnDeathPending += HandleDeathPending;
+            GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
             GameEvents.OnGameHalted += HandleGameHalted;
             GameEvents.OnChapchuChanged += HandleChapchuChanged;
@@ -136,6 +149,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
             GameEvents.OnDeckRefilled -= HandleDeckRefilled;
             GameEvents.OnTurnStarted -= HandleTurnStarted;
+            GameEvents.OnTurnResumed -= HandleTurnResumed;
             GameEvents.OnCardPlayed -= HandleCardPlayed;
             GameEvents.OnTrapActivated -= HandleTrapActivated;
             GameEvents.OnReactionStarted -= HandleReactionStarted;
@@ -155,6 +169,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken -= HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnTurnSkipMarked -= HandleTurnSkipMarked;
             RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
@@ -168,6 +183,8 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
+            GameEvents.OnDeathPending -= HandleDeathPending;
+            GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
             GameEvents.OnGameHalted -= HandleGameHalted;
             GameEvents.OnChapchuChanged -= HandleChapchuChanged;
@@ -181,6 +198,13 @@ namespace Chapchu.UI.GameScreen
             _steps.Clear();
             _hasPendingMyCard = false;
             _chainCount = 0;
+            _pendingActors.Clear();
+        }
+
+        // 「뽑고 턴 끝」 버튼 — 재생한 상태로 매 프레임 (대상 선택은 큐 밖에서 열리고 닫힌다)
+        private void LateUpdate()
+        {
+            deck.ShowCanDraw(_isMyTurn && !_myMainActionDone && _chainCount == 0 && _pendingActors.Count == 0 && !seats.IsSelectingTargets);
         }
 
         // 내 손패 올림 · 내림은 내 포인터의 일이라 연출 큐를 거치지 않고 바로 — 가운데 카드 · 반응 타이머가 비킨다.
@@ -200,6 +224,7 @@ namespace Chapchu.UI.GameScreen
                     myPanel.ShowHp(hp);
                 else
                     seats.ShowHp(actorNumber, hp);
+                turnOrder.ShowHp(actorNumber, hp);
                 history.ShowHpChanged(actorNumber, hp);
                 return null;
             });
@@ -255,11 +280,24 @@ namespace Chapchu.UI.GameScreen
 
             Enqueue(() =>
             {
+                _isMyTurn = isMyTurn;
+                _myMainActionDone = false;
+                deck.ShowTurnChanged();
                 myPanel.ShowTurn(isMyTurn);
                 seats.ShowTurn(actorNumber);
-                turnStrip.ShowTurn(actorNumber);
+                turnOrder.ShowTurn(actorNumber);
                 turnTimer.ShowTurn(deadline);
                 history.ShowTurnStarted(actorNumber);
+                return null;
+            });
+        }
+
+        // 사망 대기로 멈췄던 턴이 이어졌다 (메인 행동 전) — 같은 사람의 턴, 새 마감으로 다시 센다.
+        private void HandleTurnResumed(int actorNumber, double deadline)
+        {
+            Enqueue(() =>
+            {
+                turnTimer.ShowTurn(deadline);
                 return null;
             });
         }
@@ -273,9 +311,11 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 _chainCount++;
+                if (isMe && _isMyTurn)
+                    _myMainActionDone = true;
                 reactionTimer.Hide(); // 3 단계 동안은 숨는다 (시안 .g3big) — 새 반응 시간이 바로 뒤따라온다
                 hand.EndReaction();
-                history.ShowCardPlayed(actorNumber, cardId, targets);
+                history.ShowCardPlayed(actorNumber, cardInstanceId, cardId, targets);
                 if (isMe)
                     myPanel.ShowHandCount(handCount);
                 else
@@ -295,6 +335,7 @@ namespace Chapchu.UI.GameScreen
                 _chainCount++;
                 reactionTimer.Hide();
                 hand.EndReaction();
+                history.ShowTrapActivated(actorNumber, cardInstanceId, cardId, targets);
 
                 Transform slot = isMe ? myTraps.SlotOf(cardInstanceId) : seats.GetTrapSlot(actorNumber);
                 if (isMe)
@@ -328,6 +369,7 @@ namespace Chapchu.UI.GameScreen
                     seats.ShowHandCount(actorNumber, handCount);
                     seats.ShowTrapCount(actorNumber, trapCount);
                 }
+                history.ShowTrapSet(actorNumber);
 
                 return null;
             });
@@ -394,6 +436,7 @@ namespace Chapchu.UI.GameScreen
             {
                 ShowHandCount(from, fromHandCount);
                 ShowHandCount(to, toHandCount);
+                history.ShowHandCardsMoved(from, to, count);
                 return null;
             });
         }
@@ -462,6 +505,7 @@ namespace Chapchu.UI.GameScreen
                 CardData data = cardDeck.GetCard(cardId);
                 if (data != null)
                     screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
+                history.ShowCardResolved(cardInstanceId);
                 LeaveChain();
                 return null;
             });
@@ -469,13 +513,18 @@ namespace Chapchu.UI.GameScreen
         private void HandleCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount)
             => Enqueue(() =>
             {
+                history.ShowCardNegated(cardInstanceId);
                 LeaveChain();
                 return null;
             });
 
         // 체인(또는 함정)의 카드들이 버림 더미에 쌓였다 — 쓴 순서대로 한 장씩 날아가, 마지막에 쓴 카드가 맨 위에 보인다 (04-card.md 9.1).
         private void HandleChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
-            => Enqueue(() => ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount));
+            => Enqueue(() =>
+            {
+                history.ShowChainEnded();
+                return ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount);
+            });
 
         private IEnumerator ChainCardsToDiscardRoutine(int[] cardInstanceIds, int[] cardIds, int discardCount)
         {
@@ -497,6 +546,7 @@ namespace Chapchu.UI.GameScreen
                 if (isMe)
                     hand.TakeFromDiscard(cardInstanceId, cardId, discardPile.TopPosition);
                 ShowHandCount(actorNumber, handCount);
+                history.ShowDiscardTaken();
                 if (topCardId > 0)
                     discardPile.Show(topCardId, discardCount);
                 else
@@ -505,21 +555,24 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 턴 진행 방향 (1045 뒤로 돌아) — 턴 띠 화살표.
+        // 턴 진행 방향 (1045 뒤로 돌아) — 턴 순서의 알약 · 화살표 · 꺾쇠.
         private void HandleTurnDirectionChanged(bool reversed, int extraTurn)
         {
             Enqueue(() =>
             {
-                turnStrip.ShowDirection(reversed);
+                turnOrder.ShowDirection(reversed);
+                history.ShowDirectionChanged();
                 return null;
             });
         }
 
-        // 턴 스킵 (1020 얼음!) · 행동 카드 금지 (1007 짖기) · 기다려 (1023) — 상태 표시 시안이 없어 기록에 한 줄만 (11-card-list 4절 #10, 2026-11-13)
+        // 턴 스킵 (1020 얼음!) · 행동 카드 금지 (1007 짖기) · 기다려 (1023) — 상태 표시 시안이 없어 기록에만 (낸 카드 기록 줄의 결과 한 마디, 11-card-list 4절 #10)
         // 방장이 바뀌었다 — 기록에 한 줄만 (팝업 없음, 09-network.md 9.1)
         private void HandleMasterClientSwitched(Photon.Realtime.Player newMaster) => Enqueue(() => { history.ShowHostChanged(); return null; });
 
         private void HandleTurnSkipped(int actorNumber) => Enqueue(() => { history.ShowTurnSkipped(actorNumber); return null; });
+
+        private void HandleTurnSkipMarked(int actorNumber) => Enqueue(() => { history.ShowTurnSkipMarked(actorNumber); return null; });
 
         private void HandleActionBlockChanged(int actorNumber, Chapchu.Game.ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); return null; });
 
@@ -545,10 +598,10 @@ namespace Chapchu.UI.GameScreen
             myTraps.ShowCount(0);
             myPanel.ShowChapchu(false);
             myPanel.ShowHandCount(0);
-            turnStrip.ShowDirection(false);
+            turnOrder.ShowDirection(false);
             foreach (int actor in order)
             {
-                turnStrip.ShowChapchu(actor, false);
+                turnOrder.ShowChapchu(actor, false);
                 if (IsMe(actor))
                     continue;
                 seats.ShowChapchu(actor, false);
@@ -624,8 +677,11 @@ namespace Chapchu.UI.GameScreen
         {
             bool isMe = IsMe(actorNumber);
 
-            Enqueue(() => CardsToDiscardRoutine(actorNumber, isMe, handCount, cardIds, discardCount,
-                isMe ? hand.DiscardFromHandRoutine(cardInstanceIds) : null));
+            Enqueue(() =>
+            {
+                history.ShowCardsDiscarded(cardIds.Length);
+                return CardsToDiscardRoutine(actorNumber, isMe, handCount, cardIds, discardCount, isMe ? hand.DiscardFromHandRoutine(cardInstanceIds) : null);
+            });
         }
 
         private void HandleTrapDestroyed(int owner, int cardInstanceId, int cardId, int trapCount, int discardCount)
@@ -638,17 +694,58 @@ namespace Chapchu.UI.GameScreen
                     myTraps.Remove(cardInstanceId);
                 ShowTrapCount(owner, trapCount);
                 discardPile.Show(cardId, discardCount);
+                history.ShowTrapDestroyed();
                 return null;
             });
         }
 
-        // 최종 사망 · 나감 — 손패(와 함정) 전부가 버림 더미로 (05-deck.md 6 · 7절). 죽은 사람의 좌석 표시는 여기서 다루지 않는다 (기능 7).
+        // 사망 대기 (06-death.md) — 게임이 멈춘다. 좌석 · 내 HUD · 턴 순서에 「대기」, 턴 타이머는 지금 초에 선다.
+        private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
+        {
+            Enqueue(() =>
+            {
+                _pendingActors.Add(actorNumber);
+                ShowLife(actorNumber, LifeState.DeathPending, deadline);
+                turnTimer.ShowPaused();
+                return null;
+            });
+        }
+
+        // 사망 대기에서 살아났다 — HP 는 이 알림의 값.
+        private void HandleDeathAvoided(int actorNumber, int hp)
+        {
+            Enqueue(() =>
+            {
+                _pendingActors.Remove(actorNumber);
+                ShowLife(actorNumber, LifeState.Alive);
+                if (IsMe(actorNumber))
+                    myPanel.ShowHp(hp);
+                else
+                    seats.ShowHp(actorNumber, hp);
+                turnOrder.ShowHp(actorNumber, hp);
+                return null;
+            });
+        }
+
+        private void ShowLife(int actorNumber, LifeState life, double deadline = 0)
+        {
+            if (IsMe(actorNumber))
+                myPanel.ShowLife(life);
+            else
+                seats.ShowLife(actorNumber, life, deadline);
+            turnOrder.ShowLife(actorNumber, life);
+        }
+
+        // 최종 사망 · 나감 — 손패(와 함정) 전부가 버림 더미로 (05-deck.md 6 · 7절). 죽은 사람은 좌석 · 내 HUD · 턴 순서에 「사망」.
         private void HandlePlayerDied(int actorNumber, int[] cardIds, int discardCount)
         {
             bool isMe = IsMe(actorNumber);
 
             Enqueue(() =>
             {
+                _pendingActors.Remove(actorNumber);
+                ShowLife(actorNumber, LifeState.Dead);
+
                 // 함정도 전부 버림 더미로 (05-deck.md 6절)
                 if (isMe)
                     myTraps.Clear();
@@ -664,6 +761,7 @@ namespace Chapchu.UI.GameScreen
         {
             Enqueue(() =>
             {
+                _pendingActors.Remove(actorNumber);
                 discardPile.Show(cardIds, discardCount);
                 return null;
             });
@@ -680,7 +778,7 @@ namespace Chapchu.UI.GameScreen
                 menu.ShowGameHalted();
         }
 
-        // 찹츄 선언 · 해제(턴 시작 판정의 무효) — 내 패널(「찹츄 완료」) 또는 그 사람 좌석, 턴 띠 칩, 기록.
+        // 찹츄 선언 · 해제(턴 시작 판정의 무효) — 내 HUD 이름표 또는 그 사람 좌석, 턴 순서 꼬리표, 기록.
         // 찹츄 상태가 되면(자동 선언 · 카드로 부여) 모든 화면에 선언 연출 — 큐를 세우지 않는다 (10-ui.md 5-2 #1 · 7절).
         private void HandleChapchuChanged(int actorNumber, bool isChapchu)
         {
@@ -692,7 +790,7 @@ namespace Chapchu.UI.GameScreen
                     myPanel.ShowChapchu(isChapchu);
                 else
                     seats.ShowChapchu(actorNumber, isChapchu);
-                turnStrip.ShowChapchu(actorNumber, isChapchu);
+                turnOrder.ShowChapchu(actorNumber, isChapchu);
                 if (!isChapchu)
                     return null;
 
