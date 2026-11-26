@@ -9957,7 +9957,7 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: 0
   m_MinHeight: 88
-  m_PreferredWidth: -1
+  m_PreferredWidth: 0
   m_PreferredHeight: 88
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
@@ -12747,7 +12747,7 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: 0
   m_MinHeight: 88
-  m_PreferredWidth: -1
+  m_PreferredWidth: 0
   m_PreferredHeight: 88
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
