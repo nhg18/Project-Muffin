@@ -24,7 +24,7 @@ namespace Chapchu.Network
 
         // 방장이 방 전원의 씬을 바꾼다 (09-network.md 13절) — PUN 씬 동기화는 누가 쓴 값인지 보지 않아 쓰지 않는다
         private const byte LoadSceneEvent = 1;
-        private static readonly string[] SharedScenes = { ScenePaths.Room, ScenePaths.Game };
+        private static readonly string[] SharedScenes = { ScenePaths.Room, ScenePaths.Game, ScenePaths.Result };
 
         private PhotonConnection _connection;
         private PhotonRoom _room;
@@ -41,6 +41,9 @@ namespace Chapchu.Network
         /// <summary>방장이 정한 봇 목록 — 원본 (09-network.md 3절). 방장이 아니면 null. 읽기는 BotRoster.Numbers 로.</summary>
         internal int[] HostBots => _room.HostBots;
         internal int[] HostBotLevels => _room.HostBotLevels;
+
+        /// <summary>방금 끝난 판의 「게임 종료 요약」 — 게임 씬에서 받아 결과 씬이 읽는다 (09-network.md 3절). 방을 나가거나 게임을 시작하면 null.</summary>
+        public GameResult LastResult { get; internal set; }
 
         /// <summary>
         /// 믿는 방장의 actorNumber (09-network.md 13절) — 방에 들어올 때의 방장, 그 뒤엔 방장이 나가서 바뀐 사람만.
@@ -127,10 +130,8 @@ namespace Chapchu.Network
         /// </summary>
         public void LeaveRoom() => _room.LeaveRoom();
     
-        /// <summary>
-        /// 룸 생성 함수
-        /// </summary>
-        public void CreateRoom() => _room.CreateRoom();
+        /// <summary>「방 만들기」 — 비공개로 만든다. 방 안에서 방장이 공개로 바꿀 수 있다 (08-room.md 5절 #7)</summary>
+        public void CreateRoom() => _room.CreateRoom(isPublic: false);
     
         /// <summary>
         /// 룸 옵션 생성 함수
@@ -151,11 +152,17 @@ namespace Chapchu.Network
         /// <summary>방 속성 쓰기 (방장) — 남이 바꾸면 이 값으로 되돌린다 (09-network.md 13절). 값이 null 이면 키를 지운다.</summary>
         public void SetRoomProps(ExitGames.Client.Photon.Hashtable props) => _guard.SetRoomProps(props);
 
+        /// <summary>
+        /// 방 속성 읽기 — 믿는 방장은 자기가 쓴 원본을 (서버 확인 전 포함), 다른 클라는 방 속성 사본을 읽는다 (09-network.md 3절). 없으면 null.
+        /// 사본은 아무 클라나 쓸 수 있다 — 읽는 쪽이 모양 · 범위를 확인한다.
+        /// </summary>
+        public static object RoomProp(string key) => Instance != null && Instance._guard != null ? Instance._guard.RoomValue(key) : null;
+
         /// <summary>Player 속성 쓰기 (방장) — 남이 바꾸면 이 값으로 되돌린다.</summary>
         public void SetPlayerProps(Player player, ExitGames.Client.Photon.Hashtable props) => _guard.SetPlayerProps(player, props);
 
         /// <summary>
-        /// 방 전원을 같은 씬으로 (방장) — 방 → 게임 · 게임 → 방. 다른 클라는 믿는 방장이 보낸 것만 따른다.
+        /// 방 전원을 같은 씬으로 (방장) — 방 → 게임 → 결과 → 게임. 다른 클라는 믿는 방장이 보낸 것만 따른다.
         /// 늦게 들어온 사람은 로비가 방 씬을 연다 (방이 닫혀 게임 중에는 못 들어온다).
         /// </summary>
         public void LoadSceneForAll(string scene)
@@ -254,6 +261,7 @@ namespace Chapchu.Network
         public override void OnLeftRoom()
         {
             PunEventFilter.ResetLog();
+            LastResult = null;
             _guard.OnLeftRoom();
             _room.OnLeftRoom();
         }
@@ -266,8 +274,8 @@ namespace Chapchu.Network
     
         public override void OnPlayerLeftRoom(Player otherPlayer)
         {
-            _guard.OnPlayerLeft(otherPlayer);
-            _room.OnPlayerLeft(otherPlayer);
+            bool trustedMasterLeft = _guard.OnPlayerLeft(otherPlayer);
+            _room.OnPlayerLeft(otherPlayer, trustedMasterLeft);
         }
 
         public override void OnMasterClientSwitched(Player newMasterClient) => _room.OnMasterClientSwitched(newMasterClient);

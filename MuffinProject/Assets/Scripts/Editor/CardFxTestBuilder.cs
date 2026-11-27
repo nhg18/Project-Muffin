@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Chapchu.Cards;
 using Chapchu.DebugTools;
 using Chapchu.Game;
 using Chapchu.UI.Fx;
@@ -32,16 +33,22 @@ namespace Chapchu.EditorTools
         private const string CommonFxFolder = FxPrefabFolder + "/Common";
         // 카드별 연출 프리팹은 재생할 때만 불러오므로 Resources 아래 (CardFxLoader)
         private const string CardFxResourceFolder = "Assets/Resources/CardFx";
-        private const string HellBladePrefabPath = CardFxResourceFolder + "/" + nameof(HellBladeFx) + ".prefab";
+        // 이름 = Card_{카드 ID} (CardFxLoader.NameOf) — 1017 지옥참마도
+        private const int HellBladeCardId = 1017;
+        private static readonly string HellBladePrefabPath = CardFxResourceFolder + "/" + CardFxLoader.NameOf(HellBladeCardId) + ".prefab";
         private const string HellBladeName = "지옥참마도";
         private const string SpriteFolder = "Assets/Sprites/CardFx";
         private const string HellBladeSprites = SpriteFolder + "/HellBlade/";
         private const string CommonSprites = SpriteFolder + "/Common/";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
+        private const string ResultFontPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";              // 4 단계 터지는 글자 (게임 화면과 같은 글꼴)
+        private const string ResultFontMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Outline.mat"; // 흰 글자 + 잉크 테
         private const string BackgroundPath = "Assets/Sprites/UI/Background/bg_ingame.png";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
-        private const string HellBladeArtPath = "Assets/Sprites/Cards/Art/117.png";
+        private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset";
+        private const string CardBackPath = "Assets/Sprites/Cards/Frames/CardBack.jpg";
+        private const string CharacterPath = "Assets/Sprites/Characters/chara.png";
         private const string FxShaderName = "Chapchu/UI Fx Blend";
         private const string MaterialFolder = "Assets/Materials/CardFx";
         private const string AdditivePath = MaterialFolder + "/FxAdditive.mat";
@@ -76,12 +83,12 @@ namespace Chapchu.EditorTools
         public static void BuildOrUpdateTestScene()
         {
             _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(BoldFontAssetPath);
-            HellBladeFx hellBlade = EnsureHellBladePrefab();
+            EnsureHellBladePrefab();
 
             Scene active = SceneManager.GetActiveScene();
             if (active.path == ScenePath)
             {
-                ApplyBench(active, hellBlade);
+                ApplyBench(active);
                 EditorSceneManager.SaveScene(active);
                 Debug.Log($"[{nameof(CardFxTestBuilder)}] 열린 {ScenePath} 을 맞추고 저장했다.");
                 return;
@@ -96,7 +103,7 @@ namespace Chapchu.EditorTools
             Scene previous = active;
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             SceneManager.SetActiveScene(scene);
-            ApplyBench(scene, hellBlade);
+            ApplyBench(scene);
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
                 Debug.LogError($"[{nameof(CardFxTestBuilder)}] {ScenePath} 저장 실패.");
             if (previous.IsValid())
@@ -162,7 +169,7 @@ namespace Chapchu.EditorTools
         #region 테스트 씬
 
         // 없는 것만 만들고, 참조는 매번 다시 연결한다
-        private static void ApplyBench(Scene scene, HellBladeFx hellBlade)
+        private static void ApplyBench(Scene scene)
         {
             if (FindRoot(scene, "Main Camera") == null)
             {
@@ -269,13 +276,25 @@ namespace Chapchu.EditorTools
                 ("dot", Common("fx_dot")), ("glow", Common("fx_glow_soft")), ("streak", Common("fx_streak")),
                 ("starburst", Common("fx_starburst")), ("boomFont", _font));
 
+            // 4 단계 공통 연출 — 게임 화면과 같은 것, 연출 레이어 위에 같이 (입자는 자식 하나가 메시 하나로 그린다)
+            ResultFx resultFx = GetOrAdd<ResultFx>(fxLayerRect.gameObject);
+            RectTransform particlesRect = Child(fxLayerRect, "ResultParticles");
+            if (particlesRect == null)
+                particlesRect = NewStretch("ResultParticles", fxLayerRect);
+            InkParticles particles = GetOrAdd<InkParticles>(particlesRect.gameObject);
+            particles.raycastTarget = false;
+            Wire(resultFx, ("stage", stage), ("particles", particles),
+                ("boomFont", AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(ResultFontPath)),
+                ("boomMaterial", AssetDatabase.LoadAssetAtPath<Material>(ResultFontMaterialPath)));
+
             CardFxTestBench bench = GetOrAdd<CardFxTestBench>(canvasGo);
             Wire(bench,
                 ("actionCardPrefab", LoadHandCard("HandCard_Action")), ("counterCardPrefab", LoadHandCard("HandCard_Counter")),
                 ("trapCardPrefab", LoadHandCard("HandCard_Trap")), ("handArea", hand), ("playSpot", playSpot),
-                ("discardPile", pile), ("fxLayer", fxLayer), ("caster", caster), ("target", target),
-                ("captionText", caption), ("replayButton", replay), ("resetButton", reset), ("playedGlow", Common("fx_card_glow")));
-            EnsureHellBladeEntry(bench, hellBlade);
+                ("discardPile", pile), ("fxLayer", fxLayer), ("resultFx", resultFx), ("caster", caster), ("target", target),
+                ("captionText", caption), ("replayButton", replay), ("resetButton", reset), ("playedGlow", Common("fx_card_glow")),
+                ("cardDeck", AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath)), ("cardBack", LoadSprite(CardBackPath)),
+                ("character", LoadSprite(CharacterPath)));
 
             EditorSceneManager.MarkSceneDirty(scene);
         }
@@ -428,34 +447,6 @@ namespace Chapchu.EditorTools
             return material;
         }
 
-        // 목록에 지옥참마도 줄이 없으면 더하고, 연출 프리팹 연결을 맞춘다. 다른 줄은 건드리지 않는다
-        private static void EnsureHellBladeEntry(CardFxTestBench bench, HellBladeFx hellBlade)
-        {
-            var serialized = new SerializedObject(bench);
-            SerializedProperty entries = serialized.FindProperty("entries");
-            SerializedProperty entry = null;
-            for (int i = 0; i < entries.arraySize; i++)
-            {
-                if (entries.GetArrayElementAtIndex(i).FindPropertyRelative("cardName").stringValue == HellBladeName)
-                    entry = entries.GetArrayElementAtIndex(i);
-            }
-
-            if (entry == null)
-            {
-                entries.arraySize++;
-                entry = entries.GetArrayElementAtIndex(entries.arraySize - 1);
-                entry.FindPropertyRelative("cardName").stringValue = HellBladeName;
-                entry.FindPropertyRelative("type").enumValueIndex = (int)CardType.Action;
-                entry.FindPropertyRelative("art").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(HellBladeArtPath);
-                entry.FindPropertyRelative("description").stringValue = "대상 40 피해";
-                entry.FindPropertyRelative("damage").intValue = 40;
-            }
-
-            entry.FindPropertyRelative("fxName").stringValue = hellBlade.GetType().Name;
-            entry.FindPropertyRelative("bigHit").boolValue = true;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         private static FxDummySeat EnsureSeat(RectTransform stage, string name, string label, Vector2 anchor, Vector2 pivot, Sprite round)
         {
             RectTransform existing = Child(stage, name);
@@ -551,7 +542,7 @@ namespace Chapchu.EditorTools
         {
             var card = AssetDatabase.LoadAssetAtPath<HandCardView>($"{HandCardPrefabFolder}/{name}.prefab");
             if (card == null)
-                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Build UI 로 먼저 만들 것.");
+                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Rebuild Hand Card Prefabs 로 먼저 만들 것.");
             return card;
         }
 
@@ -736,7 +727,7 @@ namespace Chapchu.EditorTools
                 AssetDatabase.CreateFolder("Assets/Resources", "CardFx");
             if (AssetDatabase.LoadAssetAtPath<HellBladeFx>(HellBladePrefabPath) == null)
             {
-                RectTransform empty = NewPrefabRoot("HellBladeFx");
+                RectTransform empty = NewPrefabRoot(CardFxLoader.NameOf(HellBladeCardId));
                 Stretch(empty);
                 empty.gameObject.AddComponent<HellBladeFx>();
                 PrefabUtility.SaveAsPrefabAsset(empty.gameObject, HellBladePrefabPath);

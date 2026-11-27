@@ -92,6 +92,12 @@ namespace Chapchu.Network
             room.MaxPlayers = _maxPlayers = maxPlayers;
         }
 
+        /// <summary>
+        /// 방 속성 읽기 — 믿는 방장은 자기가 쓴 원본을, 다른 클라는 방 속성 사본을 (09-network.md 3절). 없으면 null.
+        /// 방장은 자기가 쓴 값을 서버 확인 뒤에야 방에서 본다 — 쓴 직후에 다시 읽어 판정하는 값은 이것으로 읽는다.
+        /// </summary>
+        public object RoomValue(string key) => IsTrustedMaster ? _room[key] : PhotonNetwork.CurrentRoom?.CustomProperties[key];
+
         private static void Remember(Hashtable intended, Hashtable props)
         {
             foreach (DictionaryEntry entry in props)
@@ -152,7 +158,8 @@ namespace Chapchu.Network
             return true;
         }
 
-        public void OnPlayerLeft(Player player)
+        /// <summary>나간 사람 정리. 믿는 방장이 바뀌었으면 true — AcceptMasterSwitch 의 true 와 같은 뜻이다.</summary>
+        public bool OnPlayerLeft(Player player)
         {
             _players.Remove(player.ActorNumber);
             _playerRestore.Remove(player.ActorNumber);
@@ -167,7 +174,9 @@ namespace Chapchu.Network
                     Adopt();
                     _becameTrustedMaster?.Invoke();
                 }
+                return true;
             }
+            return false;
         }
 
         // 방장이 되면 지금 방의 값을 원본으로 이어받는다 — 앞 방장이 쓴 값

@@ -4,7 +4,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 처리되는 시점의 버림 더미 맨 위 1장을 쓴 사람 손패로 (TakeDiscardTop — 109 아 맞다!). 고를 수 없다. 이 카드 자신은 가져올 수 없다.
+    /// 처리되는 시점의 버림 더미 맨 위 1장을 쓴 사람 손패로 (TakeDiscardTop — 1009 아 맞다!). 고를 수 없다. 이 카드 자신은 가져올 수 없다.
     /// 더미가 비어 있으면 불발 (11-card-list 1-2). 봇은 맨 위 카드가 지금 쓸 만할수록 가져온다 — 맨 위는 공개 정보다 (18-bot.md 7-3).
     /// </summary>
     [Serializable]
@@ -27,7 +27,12 @@ namespace Chapchu.Game.Effects
         }
 
         internal override int BotHandGain(Bots.BotView view, int[] receivers) => view.Server.DiscardTop != null ? 1 : 0;
+        internal override bool GainsHand => true;
 
-        internal override void Apply(GameServer server, ChainEntry entry) => server.TakeDiscardTop(entry.User, entry);
+        internal override void Apply(GameServer server, ChainEntry entry)
+        {
+            for (int i = server.Scaled(entry, 1); i > 0; i--) // 2배면 맨 위부터 2장
+                server.TakeDiscardTop(entry.User, entry);
+        }
     }
 }

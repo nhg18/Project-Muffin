@@ -12,8 +12,8 @@ namespace Chapchu.DebugTools
     /// <summary>
     /// 멀티 테스트용 키 입력과 결과 로그. UI 없이 키로 요청을 보내고, 이 클라이언트가 받은 결과를 콘솔에 찍는다. 판정은 하지 않는다.
     /// 턴이 시작될 때마다 "내 손패 · 모두의 손패 장수 · 체력" 한 줄을 찍는다 — 클라이언트마다 비교해 기능 1 · 2 를 확인한다.
-    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, C = 손패 첫 카운터를 체인 맨 위에, K = 찹츄 선언,
-    /// T = 손패 첫 함정 설치, Y = 설치한 첫 함정 발동.
+    /// 키: D = 뽑기, P = 손패 첫 카드를 다른 사람 1명에게, C = 손패 첫 카운터를 체인 맨 위에,
+    /// T = 손패 첫 함정 설치 (함정은 행동이 끝나면 자동 발동 — 04-card.md 6절).
     /// </summary>
     public class GameDebugInput : MonoBehaviour
     {
@@ -25,14 +25,18 @@ namespace Chapchu.DebugTools
         private readonly Dictionary<int, int> _hps = new Dictionary<int, int>();        // actorNumber → 체력
         private bool _gameEnded;                                                        // 게임 종료를 받았다 — multi-test 가 읽는다
         private readonly List<int> _myTraps = new List<int>();                          // 내가 설치한 함정 인스턴스 ID
-        private double _trapWindowOpensAt = -1;                                         // 함정 시간 (서버 시각) — multi-test 가 읽는다
-        private double _trapWindowDeadline = -1;
-        private int _hitBy = -1;                                                        // 마지막으로 나를 대상으로 처리된 카드를 낸 사람 — multi-test 가 읽는다
 
         private static int Me => PhotonNetwork.LocalPlayer.ActorNumber;
 
         private void Awake()
         {
+            // 출시 빌드에선 끈다 — 디버그 키 · 손패 로그는 개발 빌드에서만 (CODE_CONVENTION 7절)
+            if (!Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
+
             if (server == null)
                 Debug.LogError($"[{nameof(GameDebugInput)}] {nameof(server)} 참조가 비어 있습니다.", this);
         }
@@ -56,7 +60,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnMyTrapSet += HandleMyTrapSet;
             GameEvents.OnTrapSet += HandleTrapSet;
             GameEvents.OnTrapActivated += HandleTrapActivated;
-            GameEvents.OnTrapWindowStarted += HandleTrapWindowStarted;
+            GameEvents.OnChainDiscarded += HandleChainDiscarded;
             GameEvents.OnTurnResumed += HandleTurnResumed;
             GameEvents.OnMyCardsGained += HandleMyCardsGained;
             GameEvents.OnMyCardsLost += HandleMyCardsLost;
@@ -102,7 +106,7 @@ namespace Chapchu.DebugTools
             GameEvents.OnMyTrapSet -= HandleMyTrapSet;
             GameEvents.OnTrapSet -= HandleTrapSet;
             GameEvents.OnTrapActivated -= HandleTrapActivated;
-            GameEvents.OnTrapWindowStarted -= HandleTrapWindowStarted;
+            GameEvents.OnChainDiscarded -= HandleChainDiscarded;
             GameEvents.OnTurnResumed -= HandleTurnResumed;
             GameEvents.OnMyCardsGained -= HandleMyCardsGained;
             GameEvents.OnMyCardsLost -= HandleMyCardsLost;
@@ -143,14 +147,8 @@ namespace Chapchu.DebugTools
             if (Input.GetKeyDown(KeyCode.C))
                 PlayFirstCounter();
 
-            if (Input.GetKeyDown(KeyCode.K))
-                server.RequestDeclareChapchu();
-
             if (Input.GetKeyDown(KeyCode.T))
                 SetFirstTrap();
-
-            if (Input.GetKeyDown(KeyCode.Y))
-                ActivateFirstTrap();
         }
 
         private void SetFirstTrap()
@@ -164,18 +162,6 @@ namespace Chapchu.DebugTools
             }
 
             server.RequestSetTrap(_myHandInstances[index]);
-        }
-
-        private void ActivateFirstTrap()
-        {
-            if (_myTraps.Count == 0)
-            {
-                Log("설치한 함정이 없다");
-                return;
-            }
-
-            int target = PhotonNetwork.PlayerListOthers.Length > 0 ? PhotonNetwork.PlayerListOthers[0].ActorNumber : Me;
-            server.RequestActivateTrap(_myTraps[0], new[] { target });
         }
 
         private void PlayFirstCounter()
@@ -240,14 +226,11 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 카드 사용 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))}");
         }
 
-        private void HandleReactionStarted(double opensAt, double deadline)
-            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
+        private void HandleReactionStarted(double opensAt)
+            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림");
 
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
         {
-            if (actorNumber != Me && targets.Contains(Me))
-                _hitBy = actorNumber;
-
             Log($"P{actorNumber} 카드 처리 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))} · 버림 {discardCount}");
         }
 
@@ -267,12 +250,12 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 사망 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
-        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount)
+        private void HandlePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced)
         {
             _handCounts[actorNumber] = 0;
             if (actorNumber == Me)
                 ClearMyCards();
-            Log($"P{actorNumber} 게임 중 나감 · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
+            Log($"P{actorNumber} 게임 중 {(forced ? "강제 퇴장" : "나감")} · 버림 {discardCount} [{string.Join(" ", cardIds)}]");
         }
 
         // 방장이 내 손패 · 함정을 0 으로 만들었다
@@ -281,7 +264,6 @@ namespace Chapchu.DebugTools
             _myHandInstances.Clear();
             _myHand.Clear();
             _myTraps.Clear();
-            _hitBy = -1;
         }
 
         private void HandleTrapReturned(int owner, int trapCount, int handCount)
@@ -316,12 +298,8 @@ namespace Chapchu.DebugTools
             Log($"P{actorNumber} 함정 발동 — 카드 {cardId} (#{cardInstanceId}) → {string.Join(", ", targets.Select(t => $"P{t}"))} · 함정 {trapCount}장");
         }
 
-        private void HandleTrapWindowStarted(double opensAt, double deadline)
-        {
-            _trapWindowOpensAt = opensAt;
-            _trapWindowDeadline = deadline;
-            Log($"함정 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림 · {deadline - PhotonNetwork.Time:0.0}초 뒤 마감");
-        }
+        private void HandleChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
+            => Log($"버림 더미로 — 카드 {string.Join(" → ", cardIds)} (맨 위 {cardIds[cardIds.Length - 1]}) · 버림 {discardCount}");
 
         private void HandleMyCardsGained(int[] cardInstanceIds, int[] cardIds)
         {
@@ -386,13 +364,13 @@ namespace Chapchu.DebugTools
 
         private void HandleGameRestarted(int user, int count, int[] order)
         {
-            ClearMyCards(); // 새 판 — 손패 · 함정은 처음부터 다시 나눈다 (11-card-list 112)
+            ClearMyCards(); // 새 판 — 손패 · 함정은 처음부터 다시 나눈다 (11-card-list 1012)
             Log($"대소동 — P{user} · 새 판 {count}번째 · 순서 {string.Join(" → ", System.Linq.Enumerable.Select(order, a => $"P{a}"))}");
         }
 
         private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
-        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => Log($"고르기 시작 — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
-        private void HandleChoiceMade(int actor, int option, bool timedOut) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind) => Log($"고르기 시작{(kind == Chapchu.Game.ChoiceKind.HandCard ? " (손패 1장)" : "")} — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
+        private void HandleChoiceMade(int actor, int option, bool timedOut, int kind) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : kind == Chapchu.Game.ChoiceKind.HandCard ? "버릴 카드 1장" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
         private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
         private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명 · 값 {string.Join(" ", actors.Select((a, i) => $"P{a}={values[i]}"))}");
 
@@ -432,10 +410,10 @@ namespace Chapchu.DebugTools
 
         private void HandleChapchuChanged(int actorNumber, bool isChapchu) => Log($"P{actorNumber} 찹츄 {(isChapchu ? "선언" : "해제")}");
 
-        private void HandleGameEnded(int winner, GameEndReason reason, double returnAt)
+        private void HandleGameEnded(int winner, GameEndReason reason)
         {
             _gameEnded = true;
-            Log($"게임 종료 — {reason} · 승자 P{winner} · {returnAt - PhotonNetwork.Time:0.0}초 뒤 방으로");
+            Log($"게임 종료 — {reason} · 승자 P{winner} · 곧 결과 화면으로");
         }
 
         private void HandleMyRequestRejected(int code) => Log($"내 요청 거절 — 코드 {code}");

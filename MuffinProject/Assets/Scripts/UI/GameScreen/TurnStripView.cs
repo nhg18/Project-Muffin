@@ -110,7 +110,7 @@ namespace Chapchu.UI.GameScreen
                 _chips[i].SetCurrent(i == index);
         }
 
-        /// <summary>찹츄 선언한 칩에 분홍 테 (기능 8 에서 쓴다).</summary>
+        /// <summary>찹츄 선언한 칩에 분홍 테.</summary>
         public void SetChapchu(int index, bool declared)
         {
             if (index >= 0 && index < _chips.Count)

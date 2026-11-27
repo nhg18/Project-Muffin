@@ -1,4 +1,5 @@
 ﻿using Chapchu.Core;
+using Chapchu.Account;
 using Chapchu.Network;
 using UnityEngine;
 
@@ -11,7 +12,9 @@ namespace Chapchu.UI.Lobby
     /// </summary>
     public class LobbyPopupPresenter : MonoBehaviour
     {
-        private const string OkText = "확인";
+        private const string UnfriendOkText = "삭제"; // 확인 창 오른쪽 버튼 = 하는 일 이름 (시안 v3.23)
+        private const string BlockOkText = "차단";
+        private const string UnblockOkText = "해제";
         private const string CancelText = "취소";
         private const string UnfriendTitle = "친구 삭제";
         private const string UnfriendMessageFormat = "{0}님을 친구에서 삭제할까요?";
@@ -21,9 +24,10 @@ namespace Chapchu.UI.Lobby
         private const string UnblockMessage = "차단을 해제할까요? 친구로 돌아오지는 않아요.";
         private const string GuestText = "게스트";
         private const string AccountText = "계정";
-        private const string LoginNoteFormat = "{0} 계정으로 로그인";
         private const string LoginNameFormat = "{0} 로그인";
-        private const string CopiedToast = "친구 코드를 복사했어요.";
+        private const string CopiedCodeToast = "친구 코드를 복사했어요.";
+        private const string CopiedIdToast = "고유 ID를 복사했어요.";
+        private const string FriendLimitToastFormat = "친구는 {0}명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -45,6 +49,9 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private LobbyInviteBannerView invite;
         [SerializeField] private LobbyFxView fx;
 
+        private AnalyticsRecorder.ScreenName _screenBelowPopup = AnalyticsRecorder.ScreenName.Lobby; // 창을 닫으면 돌아갈 화면 (27 5-5)
+        private bool _inPopupScreen; // 플레이 기록에 창 화면으로 들어가 있는지 — EnterPopupScreen 에서 켜고 ClosePopups 에서 끈다
+
         /// <summary>설정의 「초대 알림」 스위치가 켜져 있는지 (기기 저장, 처음엔 켜짐).</summary>
         public static bool IsInviteNoticeOn => ReadSwitch(PlayerPrefsKeys.InviteNoticeOn);
 
@@ -53,7 +60,8 @@ namespace Chapchu.UI.Lobby
 
         private LobbyHubData Data => lobby.Data;
 
-        private bool IsOpen => friends.IsOpen || profile.IsOpen || settings.IsOpen || quests.IsOpen || rates.IsOpen;
+        /// <summary>친구 · 프로필 · 설정 · 퀘스트 · 확률 창 중 하나라도 떠 있다.</summary>
+        public bool IsOpen => friends.IsOpen || profile.IsOpen || settings.IsOpen || quests.IsOpen || rates.IsOpen;
 
         private void Awake()
         {
@@ -73,7 +81,7 @@ namespace Chapchu.UI.Lobby
             topBar.OnSettingsRequested += ShowSettings;
 
             friends.OnCloseRequested += ClosePopups;
-            friends.OnCopyRequested += HandleCopyRequested;
+            friends.OnCopyRequested += HandleCopyCodeRequested;
             friends.OnAcceptRequested += HandleFriendAccepted;
             friends.OnDeclineRequested += HandleFriendDeclined;
             friends.OnCancelRequested += HandleFriendRequestCanceled;
@@ -81,11 +89,13 @@ namespace Chapchu.UI.Lobby
             friends.OnDeleteRequested += HandleUnfriendRequested;
             friends.OnBlockRequested += HandleBlockRequested;
             profile.OnCloseRequested += ClosePopups;
-            profile.OnCopyRequested += HandleCopyRequested;
+            profile.OnCopyCodeRequested += HandleCopyCodeRequested;
+            profile.OnCopyIdRequested += HandleCopyIdRequested;
             settings.OnCloseRequested += ClosePopups;
             settings.OnSfxChanged += HandleSfxChanged;
             settings.OnBgmChanged += HandleBgmChanged;
             settings.OnInviteChanged += HandleInviteNoticeChanged;
+            settings.OnPlayRecordChanged += HandlePlayRecordChanged;
             settings.OnBlockListRequested += HandleBlockListRequested;
             settings.OnBackRequested += ShowSettings;
             settings.OnUnblockRequested += HandleUnblockRequested;
@@ -106,7 +116,7 @@ namespace Chapchu.UI.Lobby
             topBar.OnSettingsRequested -= ShowSettings;
 
             friends.OnCloseRequested -= ClosePopups;
-            friends.OnCopyRequested -= HandleCopyRequested;
+            friends.OnCopyRequested -= HandleCopyCodeRequested;
             friends.OnAcceptRequested -= HandleFriendAccepted;
             friends.OnDeclineRequested -= HandleFriendDeclined;
             friends.OnCancelRequested -= HandleFriendRequestCanceled;
@@ -114,11 +124,13 @@ namespace Chapchu.UI.Lobby
             friends.OnDeleteRequested -= HandleUnfriendRequested;
             friends.OnBlockRequested -= HandleBlockRequested;
             profile.OnCloseRequested -= ClosePopups;
-            profile.OnCopyRequested -= HandleCopyRequested;
+            profile.OnCopyCodeRequested -= HandleCopyCodeRequested;
+            profile.OnCopyIdRequested -= HandleCopyIdRequested;
             settings.OnCloseRequested -= ClosePopups;
             settings.OnSfxChanged -= HandleSfxChanged;
             settings.OnBgmChanged -= HandleBgmChanged;
             settings.OnInviteChanged -= HandleInviteNoticeChanged;
+            settings.OnPlayRecordChanged -= HandlePlayRecordChanged;
             settings.OnBlockListRequested -= HandleBlockListRequested;
             settings.OnBackRequested -= ShowSettings;
             settings.OnUnblockRequested -= HandleUnblockRequested;
@@ -153,7 +165,8 @@ namespace Chapchu.UI.Lobby
         /// <summary>퀘스트 창을 연다.</summary>
         public void ShowQuests()
         {
-            ClosePopups();
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Quest);
             quests.Show(Data);
             popupDimmer.SetActive(true);
         }
@@ -161,7 +174,7 @@ namespace Chapchu.UI.Lobby
         /// <summary>뽑기 확률 창을 연다.</summary>
         public void ShowRates()
         {
-            ClosePopups();
+            HidePopups();
             rates.Show(Data);
             popupDimmer.SetActive(true);
         }
@@ -169,7 +182,19 @@ namespace Chapchu.UI.Lobby
         /// <summary>친구 창이 열려 있으면 목록을 데이터에 맞춰 다시 그린다.</summary>
         public void RefreshFriends() => friends.Refresh();
 
+        // 창을 닫고 그 아래 화면으로 돌아간다 — 플레이 기록에는 창 아래 화면에 다시 들어간 것으로 남긴다 (27 5-5)
         private void ClosePopups()
+        {
+            HidePopups();
+            if (!_inPopupScreen)
+                return;
+
+            _inPopupScreen = false;
+            AnalyticsRecorder.RecordScreenViewed(_screenBelowPopup);
+        }
+
+        // 다른 창을 열기 전에 닫기만 — 창에서 창으로 옮길 때 아래 화면을 끼워 남기지 않는다
+        private void HidePopups()
         {
             friends.Hide();
             profile.Hide();
@@ -179,19 +204,31 @@ namespace Chapchu.UI.Lobby
             popupDimmer.SetActive(false);
         }
 
+        // 창 하나에 들어감 — 창 위에서 창을 열면 맨 아래 화면을 그대로 둔다
+        private void EnterPopupScreen(AnalyticsRecorder.ScreenName screen)
+        {
+            if (!_inPopupScreen)
+                _screenBelowPopup = AnalyticsRecorder.CurrentScreen;
+
+            _inPopupScreen = true;
+            AnalyticsRecorder.RecordScreenViewed(screen);
+        }
+
         #region 프로필 · 설정
 
         private void HandleProfileRequested()
         {
-            ClosePopups();
-            profile.Show(NetworkManager.Nickname, Data, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Profile);
+            profile.Show(NetworkManager.Nickname, Data, AccountService.PlayerId, IsAccountLogin ? string.Format(LoginNameFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
 
         private void ShowSettings()
         {
-            ClosePopups();
-            settings.ShowSettings(ReadSwitch(PlayerPrefsKeys.SfxOn), ReadSwitch(PlayerPrefsKeys.BgmOn), IsInviteNoticeOn,
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Settings);
+            settings.ShowSettings(ReadSwitch(PlayerPrefsKeys.SfxOn), ReadSwitch(PlayerPrefsKeys.BgmOn), IsInviteNoticeOn, AnalyticsRecorder.IsAgreed,
                 Data.Blocked.Count, IsAccountLogin ? string.Format(LoginNameFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
@@ -206,25 +243,33 @@ namespace Chapchu.UI.Lobby
 
         private void HandleSfxChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.SfxOn, isOn);
 
-        private void HandleBgmChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+        private void HandleBgmChanged(bool isOn)
+        {
+            SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.RefreshBgm();
+        }
 
         private void HandleInviteNoticeChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.InviteNoticeOn, isOn);
 
+        // 켬 → 수집 시작 / 끔 → 수집 중지 + 이미 보낸 기록 삭제 요청. 토스트 없음 (17 7-4 · 27 6절)
+        private static void HandlePlayRecordChanged(bool isOn) => AnalyticsRecorder.SetAgreedFromSettings(isOn);
+
         private void HandleBlockListRequested()
         {
-            ClosePopups();
+            HidePopups();
             settings.ShowBlockList(Data);
             popupDimmer.SetActive(true);
         }
 
         private void HandleUnblockRequested(HubPerson person)
         {
-            modal.ShowWarn(UnblockTitle, UnblockMessage, OkText, CancelText, () =>
+            modal.ShowWarn(UnblockTitle, UnblockMessage, UnblockOkText, CancelText, () =>
             {
                 Data.Blocked.Remove(person);
                 if (settings.IsBlockListOpen)
                     settings.ShowBlockList(Data);
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         // 주소가 아직 없다 (17 미정) — 정해지면 Application.OpenURL
@@ -232,10 +277,21 @@ namespace Chapchu.UI.Lobby
 
         private void HandleContactRequested() => Debug.LogWarning($"[{nameof(LobbyPopupPresenter)}] 문의 주소가 아직 정해지지 않아 열지 않는다.");
 
-        private void HandleCopyRequested()
+        // 가려 있어도 값을 복사한다 (17 5-2)
+        private void HandleCopyCodeRequested()
         {
             GUIUtility.systemCopyBuffer = Data.MyCode;
-            fx.Toast(CopiedToast);
+            fx.Toast(CopiedCodeToast);
+        }
+
+        private void HandleCopyIdRequested()
+        {
+            string playerId = AccountService.PlayerId;
+            if (string.IsNullOrEmpty(playerId))
+                return;
+
+            GUIUtility.systemCopyBuffer = playerId;
+            fx.Toast(CopiedIdToast);
         }
 
         #endregion
@@ -244,14 +300,20 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendsRequested()
         {
-            ClosePopups();
+            HidePopups();
+            EnterPopupScreen(AnalyticsRecorder.ScreenName.Friends);
             friends.Show(Data);
             popupDimmer.SetActive(true);
         }
 
         private void HandleFriendAccepted(HubPerson request)
         {
-            Data.Accept(request);
+            if (!Data.Accept(request))
+            {
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.ShowTab(LobbyFriendsTab.Friends);
             friends.Flash(request.Nickname);
@@ -272,23 +334,28 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendRequestRequested(HubSearchResult result)
         {
-            Data.Request(result);
+            if (!Data.Request(result))
+            {
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.Refresh();
         }
 
         private void HandleUnfriendRequested(HubPerson friend)
         {
-            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(UnfriendTitle, string.Format(UnfriendMessageFormat, friend.Nickname), UnfriendOkText, CancelText, () =>
             {
                 Data.Friends.Remove(friend);
                 friends.Refresh();
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         private void HandleBlockRequested(HubPerson friend)
         {
-            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), OkText, CancelText, () =>
+            modal.ShowWarn(BlockTitle, string.Format(BlockMessageFormat, friend.Nickname), BlockOkText, CancelText, () =>
             {
                 Data.Block(friend);
                 if (invite.Inviter == friend.Nickname)
@@ -296,7 +363,7 @@ namespace Chapchu.UI.Lobby
 
                 lobby.RefreshBadges();
                 friends.Refresh();
-            });
+            }, LobbyWarnKind.Danger);
         }
 
         #endregion

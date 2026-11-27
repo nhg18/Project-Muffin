@@ -19,9 +19,23 @@ namespace Chapchu.Core
         /// <summary>약관 · 개인정보 동의 기록 (1 = 동의). 계정 삭제 때 지운다 (23-login 7-5 · 6-4)</summary>
         public const string TermsAgreed = "TermsAgreed";
 
+        /// <summary>플레이 기록 수집 선택 (1 = 동의 · 0 = 동의 안 함 · 없으면 아직 고르지 않음). 계정 삭제 때 지운다 (27-analytics 6절)</summary>
+        public const string PlayRecordAgreed = "PlayRecordAgreed";
+
         /// <summary>설정의 효과음 · 배경음 · 초대 알림 스위치 (1 = 켬, 없으면 켬). 이 기기에만 저장한다 (17-lobby-ui-full 5-4)</summary>
         public const string SfxOn = "SfxOn";
         public const string BgmOn = "BgmOn";
         public const string InviteNoticeOn = "InviteNoticeOn";
+
+        /// <summary>개발자 모드 (1 = 켬, 없으면 끔). 이 기기에만 저장한다 (DevMode)</summary>
+        public const string DevMode = "DevMode";
+
+        /// <summary>
+        /// UGS Authentication 이 기기에 남기는 키 (SDK 소유 — 우리가 쓰지 않고 지우기만 한다).
+        /// 실제 키 = {클라우드 프로젝트 ID}{UgsAuthPrefix}{이름}
+        /// </summary>
+        public const string UgsAuthPrefix = ".default.unity.services.authentication.";
+        public const string UgsAuthSessionToken = "session_token";
+        public const string UgsAuthPlayerId = "player_id";
     }
 }

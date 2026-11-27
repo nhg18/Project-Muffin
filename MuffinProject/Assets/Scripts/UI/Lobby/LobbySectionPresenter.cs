@@ -1,13 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Chapchu.Account;
 using UnityEngine;
 
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 홈 ↔ 섹션(꾸미기 · 상점 · 뽑기) 이동과 섹션 안의 흐름 — 고르기 · 장착 · 구매 · 충전 · 뽑기.
+    /// 홈 ↔ 섹션(꾸미기 · 상점 · 뽑기) 이동과 섹션 안의 흐름 — 고르기 · 장착 · 구매 · 쿠폰 구매 · 충전 · 뽑기.
     /// 값은 모두 LobbyHubData 의 시안 값이다 (서버 없음 — 저장을 기다리지 않는다).
-    /// 기준: 「통합 화면 UI v2」 로비(게시본 1794316285-7080) · docs/systems/17-lobby-ui-full.md 5-5 · 7-6 · 7-7
+    /// 기준: 「통합 화면 UI v3」 로비 · docs/systems/17-lobby-ui-full.md 5-5 · 7-6 · 7-7
     /// </summary>
     public class LobbySectionPresenter : MonoBehaviour
     {
@@ -25,10 +26,15 @@ namespace Chapchu.UI.Lobby
         private const string NoPickHint = "아직 고른 상품이 없어요.";
         private const string ChargeHint = "츄르는 뽑기에 쓰는 재화예요.";
         private const string PackSubText = "뽑기에 써요 · 스토어 결제 · ₩ 미정";
+        private const string PackNameFormat = "츄르 {0}";
+        private const string PackBonusNameFormat = "츄르 {0} + {1}";
         private const string GachaSubFormat = "{0}% · {1}회 안에 1개 보장";
         private const string EquippedToast = "장착했어요.";
         private const string BoughtToast = "샀어요. 보관함에 들어갔어요.";
         private const string ChargedToastFormat = "츄르 +{0} 받았어요.";
+        private const string CouponName = "닉네임 변경 쿠폰";
+        private const string CouponSubFormat = "닉네임 1회 변경 · 보유 {0}장";
+        private const string CouponBoughtToast = "닉네임 변경 쿠폰을 샀어요.";
         private const string LegendBurstText = "개판!";
         private const string RareBurstText = "희귀";
 
@@ -36,11 +42,13 @@ namespace Chapchu.UI.Lobby
         private const string CancelText = "취소";
         private const string CloseText = "닫기";
         private const string BuyTitle = "구매";
-        private const string BuyMessageFormat = "'{0}'({1} · {2}) — {3} {4}에 살까요?";
-        private const string ShortTitleFormat = "{0} 부족";
+        private const string BuyMessageFormat = "「{0}」({1} · {2}) — {3} {4}에 살까요?";
+        private const string CouponBuyMessageFormat = "닉네임 변경 쿠폰 1장을 {0} {1}으로 살까요?"; // 값 500 · 20 — 받침이 있다
+        private const string ShortTitleFormat = "{0}가 모자라요"; // 뼈다귀 · 츄르 — 둘 다 받침이 없다
         private const string ShortMessageFormat = "필요한 {0} {1} · 지금 {2}";
         private const string GachaShortMessageFormat = "{0}회 뽑기에 필요한 츄르 {1} · 지금 {2}";
         private const string ChargeTitle = "츄르 충전";
+        private const string ShortChargeOkText = "츄르 충전";
         private const string ChargeMessageFormat = "츄르를 {0} 받아요. 실제 결제는 스토어 결제창에서 해요 — 시안이라 바로 들어와요.";
         private const string ChargeBonusFormat = "{0} + 보너스 {1}";
         private const string ChargeOkText = "충전";
@@ -80,8 +88,9 @@ namespace Chapchu.UI.Lobby
         private HubSlot _boxTab = HubSlot.Character;
         private HubItem _boxSelected;      // 꾸미기에서 고른 아이템 — 장착하지 않고 탭 · 화면을 떠나면 버린다
         private bool _shopCharge;          // 상점의 「충전」 탭인지 (아니면 「아이템」)
-        private bool _shopEffects;         // 아이템 탭 안의 「이펙트」 인지 (아니면 「캐릭터」)
+        private LobbyShopItemTab _shopItemTab;
         private HubItem _shopSelected;
+        private bool _couponSelected;      // 「기타」 의 쿠폰 칸을 골랐는지
         private HubPack _packSelected;
         private LobbyShopTab _lastShopTab = LobbyShopTab.Gacha;
 
@@ -115,6 +124,7 @@ namespace Chapchu.UI.Lobby
             itemPane.OnTabSelected += HandlePaneTabSelected;
             itemPane.OnCellClicked += HandleCellClicked;
             itemPane.OnFootClicked += HandleFootClicked;
+            itemPane.OnFootAltClicked += HandleFootAltClicked;
             gachaPane.OnRollRequested += HandleRollRequested;
             gachaResult.OnAgainRequested += HandleGachaAgainRequested;
             gachaResult.OnWearRequested += HandleGachaWearRequested;
@@ -135,6 +145,7 @@ namespace Chapchu.UI.Lobby
             itemPane.OnTabSelected -= HandlePaneTabSelected;
             itemPane.OnCellClicked -= HandleCellClicked;
             itemPane.OnFootClicked -= HandleFootClicked;
+            itemPane.OnFootAltClicked -= HandleFootAltClicked;
             gachaPane.OnRollRequested -= HandleRollRequested;
             gachaResult.OnAgainRequested -= HandleGachaAgainRequested;
             gachaResult.OnWearRequested -= HandleGachaWearRequested;
@@ -162,12 +173,14 @@ namespace Chapchu.UI.Lobby
             _screen = screen;
             _boxSelected = null;
             _shopSelected = null;
+            _couponSelected = false;
             if (from == Screen.Home || screen == Screen.Home)
             {
                 IsMoving = true;
                 StartCoroutine(EndMoveRoutine());
             }
 
+            AnalyticsRecorder.RecordScreenViewed(ToScreenName(screen));
             home.SetVisible(screen == Screen.Home);
             section.SetOpen(screen != Screen.Home);
             if (screen == Screen.Home)
@@ -179,6 +192,21 @@ namespace Chapchu.UI.Lobby
             RefreshSection();
             if (from != Screen.Home)
                 section.FlashContent();
+        }
+
+        // 상점 · 뽑기는 같은 「상점」 화면이다 — 뽑기는 상점의 탭 (27 5-5)
+        private static AnalyticsRecorder.ScreenName ToScreenName(Screen screen)
+        {
+            switch (screen)
+            {
+                case Screen.Box:
+                    return AnalyticsRecorder.ScreenName.Decorate;
+                case Screen.Shop:
+                case Screen.Gacha:
+                    return AnalyticsRecorder.ScreenName.Shop;
+                default:
+                    return AnalyticsRecorder.ScreenName.Lobby;
+            }
         }
 
         // 판 이동 연출(SetUpdate(true))과 같은 시계 · 같은 길이로 잠금을 푼다
@@ -202,7 +230,7 @@ namespace Chapchu.UI.Lobby
 
         private void HandleShopTabRequested(LobbyShopTab tab) => OpenShop(tab);
 
-        private void OpenShop(LobbyShopTab tab, bool? effects = null)
+        private void OpenShop(LobbyShopTab tab, LobbyShopItemTab? itemTab = null)
         {
             _lastShopTab = tab;
             if (tab == LobbyShopTab.Gacha)
@@ -211,8 +239,9 @@ namespace Chapchu.UI.Lobby
                 return;
             }
 
+            bool tabChanged = _shopCharge != (tab == LobbyShopTab.Charge);
             _shopCharge = tab == LobbyShopTab.Charge;
-            _shopEffects = effects ?? _shopEffects;
+            _shopItemTab = itemTab ?? _shopItemTab;
             _packSelected = null;
             if (_screen != Screen.Shop)
             {
@@ -221,8 +250,11 @@ namespace Chapchu.UI.Lobby
             }
 
             _shopSelected = null;
+            _couponSelected = false;
             RefreshSection();
             itemPane.ScrollToTop();
+            if (tabChanged)
+                section.FlashContent(); // 「아이템」 ↔ 「충전」 도 판 안 내용 · 정보 줄 0.2초 페이드 (17 5-1)
         }
 
         // 그 아이템의 슬롯 탭을 연 꾸미기로 데려가 골라 둔다
@@ -235,12 +267,6 @@ namespace Chapchu.UI.Lobby
 
             _boxSelected = item;
             RefreshSection();
-        }
-
-        private void ShowQuestsFromHome()
-        {
-            Go(Screen.Home);
-            popups.ShowQuests();
         }
 
         #endregion
@@ -286,7 +312,13 @@ namespace Chapchu.UI.Lobby
             section.SetHeader(ShopName, true, LobbyShopTab.Item);
             section.SetInfoButton(null);
             gachaPane.Hide();
-            itemPane.ShowShop(Data, _shopEffects, _shopSelected);
+            if (_shopItemTab == LobbyShopItemTab.Etc)
+            {
+                DrawCoupon();
+                return;
+            }
+
+            itemPane.ShowShop(Data, _shopItemTab, _shopSelected);
 
             HubItem item = _shopSelected;
             if (item == null)
@@ -304,6 +336,16 @@ namespace Chapchu.UI.Lobby
                 section.SetInfo(item.Name, item.Grade, $"{slot} · {OnlyGachaText}");
         }
 
+        // 「기타」 — 닉네임 변경 쿠폰 한 칸 (17 7-7)
+        private void DrawCoupon()
+        {
+            itemPane.ShowCoupon(Data, _couponSelected);
+            if (_couponSelected)
+                section.SetInfo(CouponName, null, string.Format(CouponSubFormat, Data.NicknameCoupons));
+            else
+                section.SetInfoHint(NoPickHint);
+        }
+
         private void DrawCharge()
         {
             section.SetHeader(ShopName, true, LobbyShopTab.Charge);
@@ -315,7 +357,7 @@ namespace Chapchu.UI.Lobby
             if (pack == null)
                 section.SetInfoHint(ChargeHint);
             else
-                section.SetInfo(pack.Bonus > 0 ? $"츄르 {pack.Churu} + {pack.Bonus}" : $"츄르 {pack.Churu}", null, PackSubText, itemPane.CurrencyIcon(HubCurrency.Churu));
+                section.SetInfo(pack.Bonus > 0 ? string.Format(PackBonusNameFormat, pack.Churu, pack.Bonus) : string.Format(PackNameFormat, pack.Churu), null, PackSubText, itemPane.CurrencyIcon(HubCurrency.Churu));
         }
 
         private void DrawGacha()
@@ -364,8 +406,9 @@ namespace Chapchu.UI.Lobby
             }
             else
             {
-                _shopEffects = index == 1;
+                _shopItemTab = (LobbyShopItemTab)index;
                 _shopSelected = null;
+                _couponSelected = false;
             }
 
             RefreshSection();
@@ -378,20 +421,35 @@ namespace Chapchu.UI.Lobby
                 _boxSelected = Data.FindItem(id);
             else if (_shopCharge)
                 _packSelected = _packSelected != null && _packSelected.Id == id ? null : Data.Packs.Find(pack => pack.Id == id);
+            else if (_shopItemTab == LobbyShopItemTab.Etc)
+                _couponSelected = !_couponSelected;
             else
                 _shopSelected = _shopSelected != null && _shopSelected.Id == id ? null : Data.FindItem(id);
 
             RefreshSection();
         }
 
+        // 주 버튼 — 「기타」 에서는 쿠폰을 츄르로
         private void HandleFootClicked()
         {
             if (_screen == Screen.Box)
                 EquipOrGet(BoxItem);
             else if (_shopCharge)
                 ConfirmCharge();
+            else if (_shopItemTab == LobbyShopItemTab.Etc)
+            {
+                if (_couponSelected)
+                    ConfirmCoupon(HubCurrency.Churu);
+            }
             else if (_shopSelected != null)
                 BuyOrMove(_shopSelected);
+        }
+
+        // 왼쪽 흰 버튼 — 쿠폰을 뼈다귀로 (「기타」 에서만 보인다)
+        private void HandleFootAltClicked()
+        {
+            if (_screen == Screen.Shop && !_shopCharge && _shopItemTab == LobbyShopItemTab.Etc && _couponSelected)
+                ConfirmCoupon(HubCurrency.Bone);
         }
 
         private void EquipOrGet(HubItem item)
@@ -400,6 +458,7 @@ namespace Chapchu.UI.Lobby
             {
                 // 서버가 없어 저장을 기다리지 않는다 — 바로 입힌다
                 Data.Equip(item);
+                AnalyticsRecorder.RecordItemEquipped(item.Id, item.Slot);
                 _boxSelected = item;
                 RefreshSection();
                 hero.Pop();
@@ -414,7 +473,7 @@ namespace Chapchu.UI.Lobby
                 return;
             }
 
-            OpenShop(LobbyShopTab.Item, item.Slot != HubSlot.Character);
+            OpenShop(LobbyShopTab.Item, item.Slot == HubSlot.Character ? LobbyShopItemTab.Character : LobbyShopItemTab.Effect);
             if (_screen != Screen.Shop)
                 return;
 
@@ -441,15 +500,15 @@ namespace Chapchu.UI.Lobby
             {
                 string message = string.Format(ShortMessageFormat, currencyName, LobbyStyle.Number(amount), LobbyStyle.Number(Data.Balance(currency)));
                 if (currency == HubCurrency.Churu)
-                    modal.ShowWarn(string.Format(ShortTitleFormat, currencyName), message, ChargeTitle, CloseText, () => OpenShop(LobbyShopTab.Charge));
+                    modal.ShowWarn(string.Format(ShortTitleFormat, currencyName), message, ShortChargeOkText, CloseText, () => OpenShop(LobbyShopTab.Charge));
                 else
-                    modal.ShowWarn(string.Format(ShortTitleFormat, currencyName), message, ToQuestsText, CloseText, ShowQuestsFromHome);
+                    modal.ShowWarn(string.Format(ShortTitleFormat, currencyName), message, ToQuestsText, CloseText, popups.ShowQuests); // 상점 위에 연다 — 닫으면 상점 (17 6절)
                 return;
             }
 
             modal.ShowWarn(BuyTitle,
                 string.Format(BuyMessageFormat, item.Name, LobbyHubData.GradeName(item.Grade), LobbyHubData.SlotName(item.Slot), currencyName, LobbyStyle.Number(amount)),
-                BuyTitle, CancelText, () => Buy(item, currency, amount));
+                BuyTitle, CancelText, () => Buy(item, currency, amount), LobbyWarnKind.Ask);
         }
 
         private void Buy(HubItem item, HubCurrency currency, int amount)
@@ -463,6 +522,37 @@ namespace Chapchu.UI.Lobby
             fx.Toast(BoughtToast);
         }
 
+        // 쿠폰 사기 — 모자라면 경고(츄르는 「츄르 충전」 으로, 뼈다귀는 닫기만), 충분하면 확인 → 쿠폰 +1 (17 7-7 · 24 3-4)
+        private void ConfirmCoupon(HubCurrency currency)
+        {
+            string currencyName = LobbyHubData.CurrencyName(currency);
+            int price = LobbyHubData.CouponPrice(currency);
+            if (Data.Balance(currency) < price)
+            {
+                string title = string.Format(ShortTitleFormat, currencyName);
+                string message = string.Format(ShortMessageFormat, currencyName, LobbyStyle.Number(price), LobbyStyle.Number(Data.Balance(currency)));
+                if (currency == HubCurrency.Churu)
+                    modal.ShowWarn(title, message, ChargeTitle, CloseText, () => OpenShop(LobbyShopTab.Charge));
+                else
+                    modal.ShowWarn(title, message, CloseText);
+                return;
+            }
+
+            modal.ShowWarn(BuyTitle, string.Format(CouponBuyMessageFormat, currencyName, LobbyStyle.Number(price)),
+                BuyTitle, CancelText, () => BuyCoupon(currency, price), LobbyWarnKind.Ask);
+        }
+
+        private void BuyCoupon(HubCurrency currency, int price)
+        {
+            if (!Data.BuyCoupon(currency))
+                return;
+
+            lobby.RefreshWallet();
+            fx.Gain(topBar.CoinRect(currency), -price);
+            RefreshSection();
+            fx.Toast(CouponBoughtToast);
+        }
+
         private void ConfirmCharge()
         {
             HubPack pack = _packSelected;
@@ -474,7 +564,7 @@ namespace Chapchu.UI.Lobby
             {
                 Pay(HubCurrency.Churu, pack.Churu + pack.Bonus);
                 fx.Toast(string.Format(ChargedToastFormat, pack.Churu + pack.Bonus));
-            });
+            }, LobbyWarnKind.Ask);
         }
 
         private void HandleInfoButtonClicked()
@@ -506,13 +596,18 @@ namespace Chapchu.UI.Lobby
             if (balance < cost)
             {
                 modal.ShowWarn(string.Format(ShortTitleFormat, LobbyHubData.CurrencyName(HubCurrency.Churu)),
-                    string.Format(GachaShortMessageFormat, count, cost, balance), ChargeTitle, CloseText, () => OpenShop(LobbyShopTab.Charge));
+                    string.Format(GachaShortMessageFormat, count, cost, balance), ShortChargeOkText, CloseText, () => OpenShop(LobbyShopTab.Charge));
                 return;
             }
 
             Pay(HubCurrency.Churu, -cost);
             List<HubGachaResult> results = Data.Roll(count); // 중복은 뼈다귀로 — 지갑에 바로 들어온다
             lobby.RefreshWallet();
+            int refund = 0;
+            foreach (HubGachaResult result in results)
+                refund += result.Refund;
+            if (refund > 0)
+                fx.Gain(topBar.CoinRect(HubCurrency.Bone), refund);
             gachaResult.Show(results);
             if (_screen == Screen.Gacha)
                 gachaPane.Show(Data);

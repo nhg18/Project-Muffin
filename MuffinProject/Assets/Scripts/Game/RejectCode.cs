@@ -16,15 +16,14 @@
         public const int NotCounterCard = 8;  // 카운터 카드가 아니다
         public const int CannotReact = 9;     // 체인 맨 위 카드에 반응할 수 없는 카운터 (04 7절)
         public const int NotAlive = 10;       // 사망했거나 나간 사람의 요청 (06 9절)
-        public const int NotTenCards = 11;    // 찹츄 선언 — 손패가 정확히 10장이 아니다 (07 4.1)
-        public const int AlreadyChapchu = 12; // 찹츄 선언 — 이미 찹츄 상태
+        // 11 · 12 — 찹츄 선언 요청의 거절이었다 (NotTenCards · AlreadyChapchu). 선언이 자동이 되어 쓰지 않는다 (07 4.1, 2026-11-14). 번호는 다시 쓰지 않는다
         public const int GameOver = 13;       // 게임이 끝났다
         public const int NotTrapCard = 14;    // 함정 카드가 아니다
         public const int TrapSlotFull = 15;   // 함정 슬롯 3칸이 다 찼다 (04 6절)
         public const int NotSetTrap = 16;     // 설치되지 않은 함정
         public const int TrapConditionNotMet = 17; // 함정 발동 조건 · 시점이 맞지 않는다 (04 6절)
         public const int Resolving = 18;      // 체인 · 함정 시간 · 사망 대기 중 — 메인 행동은 끝난 뒤에 (03 4절)
-        public const int ActionBlocked = 19;  // 이번 턴은 행동 카드를 쓸 수 없다 — 107 짖기 (11-card-list 107)
-        public const int NotChoosing = 20;    // 내가 고를 차례가 아니다 · 없는 선택지 — 119 목표 조준 (11-card-list 119)
+        public const int ActionBlocked = 19;  // 이번 턴은 행동 카드를 쓸 수 없다 — 1007 짖기 (11-card-list 1007)
+        public const int NotChoosing = 20;    // 내가 고를 차례가 아니다 · 없는 선택지 — 1019 목표 조준 (11-card-list 1019)
     }
 }

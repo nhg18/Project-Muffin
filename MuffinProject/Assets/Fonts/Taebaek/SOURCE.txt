@@ -1,0 +1,7 @@
+태백체 (TAEBAEK) — 저작권 태백시 (Copyright (c) 2022 by TAEBAEK-SI)
+
+받은 곳: 눈누 웹폰트 배포본 https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2310@1.0/TAEBAEKfont.woff2 를 TTF 로 바꿈 (글리프 그대로, 한글 11,172자).
+공식 배포처: 산돌구름 무료 글꼴 https://www.sandollcloud.com/free-font/19486/TAEBAEK
+사용 조건(산돌구름 안내): 인쇄 · 웹 · 영상 · 임베딩 · 로고 사용 가능, 글꼴 파일 유료 판매 금지.
+
+할 일: 공식 배포처의 사용 조건 원문을 이 폴더에 넣는다 (docs/systems/21-font.md 6절).

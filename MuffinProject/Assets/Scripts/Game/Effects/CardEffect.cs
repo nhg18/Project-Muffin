@@ -22,7 +22,7 @@ namespace Chapchu.Game.Effects
         /// <summary>방장의 규칙이 체인을 처리할 때 부른다. entry = 체인에 오른 이 카드 (쓴 사람 · 확정된 대상).</summary>
         internal abstract void Apply(GameServer server, ChainEntry entry);
 
-        /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 116 뽑을 장수). 기본은 없음.</summary>
+        /// <summary>카드가 체인에 오를 때(낼 때) 부른다 — 낼 때 정하는 값을 entry.Rolled 에 남긴다 (예: 1016 뽑을 장수). 기본은 없음.</summary>
         internal virtual void Prepare(GameServer server, ChainEntry entry) { }
 
         /// <summary>
@@ -41,10 +41,25 @@ namespace Chapchu.Game.Effects
         /// <summary>이 효과가 하는 일 (반응 조건 판정용, 04-card.md 7절).</summary>
         internal virtual EffectTag Tag => EffectTag.None;
 
+        /// <summary>「손패 +」 키워드의 효과인가 — 뽑기 · 가져오기 · 빼앗기 (11-card-list.md 5-1 · 5-3). 「손패 + 효과가 있다」 반응 조건(2020)이 본다.</summary>
+        internal virtual bool GainsHand => false;
+
+        /// <summary>판 전체 상태를 바꾸는 효과인가 — 이런 효과의 카드는 「나를 노린 카드」 가 아니다 (대소동 · 기다려! · 개판 오분전 · 뒤로 돌아, 11-card-list 1-3).</summary>
+        internal virtual bool BoardWide => false;
+
+        /// <summary>조건이 맞을 때만 쓴 사람에게 돌아오는 피해인가 (1005 드롭킥의 반동) — 「그 카드의 피해를 받고 있는 사람」 에 넣지 않는다 (2018 물귀신의 후보, 11-card-list 1-3).</summary>
+        internal virtual bool IsRecoil => false;
+
         /// <summary>이 효과가 Tag 의 일을 하는 사람 — 처리 전에 미리 본다 (예: 피해를 받을 사람).</summary>
         internal virtual IEnumerable<int> Affected(GameServer server, ChainEntry entry) => Array.Empty<int>();
 
         /// <summary>actor 가 이 효과로 받을 피해 (감소 · 전환 전) — 「그 피해로 사망」(C11) 판정용.</summary>
         internal virtual int PredictDamage(GameServer server, ChainEntry entry, int actor) => 0;
+
+        /// <summary>
+        /// actor 가 이 효과로 잃을 손패 장수 — 손패가 handCount 장일 때 (「내 손패가 준다」 반응 조건 · 2019 안 놔! 의 뽑을 장수, 11-card-list 2-2 #17).
+        /// 손패 감소 효과(빼앗기 · 버리기 · 주기)만 답한다. 대상이 고르는 선택지(1019)는 0 이다.
+        /// </summary>
+        internal virtual int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) => 0;
     }
 }

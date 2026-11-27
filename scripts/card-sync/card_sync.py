@@ -9,6 +9,7 @@
 """
 import argparse
 import datetime
+import difflib
 import json
 import os
 import re
@@ -22,6 +23,7 @@ import urllib.request
 CARD_DS = "3d26dad6-6abe-800c-8b9f-000be2f2c4fa"     # 카드 목록 (기획 원본)
 PATCH_DS = "4196dad6-6abe-81c3-8859-000b52a6bab4"    # 📝 패치 노트
 OLD_DS = "4196dad6-6abe-8179-9515-000bb16b186e"      # 🗄️ 카드 옛 버전
+LOG_DS = "4196dad6-6abe-8196-beae-000b44e282e3"      # 🧾 카드 변경 기록 (🃏 카드 칸)
 I18N_DS = "4196dad6-6abe-813a-963e-000bf3a619fe"     # 🌐 다국어 문구
 BOT_PAGE = "4196dad6-6abe-81d2-8970-c9e1863fe31b"    # 🤖 카드 정리 봇 (스위치 · 마지막 실행)
 
@@ -32,7 +34,7 @@ CARD_LIST_MD = "docs/systems/11-card-list.md"
 RULE_HEADINGS = ("효과", "추가 사용 조건", "발동 조건", "예외")
 REQUIRED = ("Name", "Type", "대상", "장수", "카드 문구", "등급")
 GRADE_ENUM = {"일반": "Normal", "고급": "Fine", "희귀": "Rare", "개판": "Gaepan"}
-TYPE_PREFIX = {"Action": 100, "Counter": 200, "Trap": 300}
+TYPE_PREFIX = {"Action": 1000, "Counter": 2000, "Trap": 3000}
 
 NOTION_VERSION = "2025-09-03"
 API = "https://api.notion.com/v1"
@@ -233,6 +235,83 @@ def summary(card, kind, old):
     return f"{card['name']} — {label}"
 
 
+# 변경 기록에 남기는 칸 — 카드 하나 · 하루 한 줄 (출시 전후 · 상태 가리지 않음)
+LOG_FIELDS = (("name", "이름"), ("state", "상태"), ("type", "종류"), ("target", "대상"), ("grade", "등급"),
+              ("count", "장수"), ("text", "문구"), ("rules", "본문 규칙"))
+KST = datetime.timezone(datetime.timedelta(hours=9))
+NL = chr(10)
+
+# 변경 기록 diff — 글을 숫자 · 띄어쓰기 · 나머지로 쪼개 비교한다 (「2장을」 → 「1장을」 에서 숫자만 칠함)
+WORD = re.compile(r"\d+|\s+|[^\d\s]+")
+CUT = {"strikethrough": True, "color": "red"}
+ADD = {"bold": True, "color": "green"}
+
+
+def field(c, k):
+    return "" if c.get(k) is None else str(c[k])
+
+
+def word_diff(a, b):
+    """(종류, 글) 조각 — '=' 같음 · '-' 빠짐 · '+' 들어감."""
+    a, b = WORD.findall(a), WORD.findall(b)
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op == "equal":
+            out.append(("=", "".join(a[i1:i2])))
+            continue
+        if i1 < i2:
+            out.append(("-", "".join(a[i1:i2])))
+        if j1 < j2:
+            out.append(("+", "".join(b[j1:j2])))
+    return out
+
+
+def line_changes(a, b):
+    """바뀐 줄만 — (빠진 줄들, 들어간 줄들) 목록. 빈 줄은 뺀다 (값이 비었다가 생긴 칸)."""
+    a, b = a.split(NL), b.split(NL)
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        cut, add = [x for x in a[i1:i2] if x], [x for x in b[j1:j2] if x]
+        if op != "equal" and (cut or add):
+            out.append((cut, add))
+    return out
+
+
+def marked(old, new, diff):
+    """「바뀐 부분」 칸 — 바뀐 줄만. 빠진 글 빨강 취소선, 들어간 글 초록 굵게.
+    한 줄이 한 줄로 조금 바뀌면(60% 이상 같음) 「~」 줄에 단어만 칠하고, 새로 쓴 줄은 「−」 · 「+」 줄째 칠한다."""
+    out = []
+
+    def put(t, ann=None):
+        item = {"type": "text", "text": {"content": t[:2000]}}
+        if ann:
+            item["annotations"] = ann
+        out.append(item)
+
+    for k, label in diff:
+        put((NL if out else "") + f"[{label}]")
+        for cut, add in line_changes(field(old, k), field(new, k)):
+            if len(cut) == len(add) == 1 and difflib.SequenceMatcher(None, cut[0], add[0], autojunk=False).ratio() >= 0.6:
+                put(NL + "~ ")
+                for op, t in word_diff(cut[0], add[0]):
+                    put(t, None if op == "=" else CUT if op == "-" else ADD)
+            else:
+                for line in cut:
+                    put(NL + "− " + line, CUT)
+                for line in add:
+                    put(NL + "+ " + line, ADD)
+    return out[:100]   # 노션 한 칸 조각 제한
+
+
+def git_diff(old, new, diff):
+    """행 본문 코드 블록 — git diff 꼴 (바뀐 줄 앞뒤 1줄, 떨어진 곳은 …)."""
+    lines = []
+    for k, label in diff:
+        body = list(difflib.unified_diff(field(old, k).split(NL), field(new, k).split(NL), n=1, lineterm=""))[3:]
+        lines += [f"@@ {label} @@"] + [" …" if l.startswith("@@") else l for l in body]
+    return {"type": "code", "code": {"language": "diff", "rich_text": rt(NL.join(lines))}}
+
+
 def describe(c):
     s = c["text"]
     if c.get("count") is not None:
@@ -284,9 +363,57 @@ def writable(b, depth=0):
 
 # ── 저장소 (cards.json · 11-card-list 1-1) ────────────────────────────
 
+# 문구의 값 자리 — cards.json 의 문구는 수치를 {0} {1} 로 쓰고, 값은 효과 args 가 갖는다 (26-card-data 7-2).
+# 노션 문구에는 숫자가 그대로 적혀 있으므로, 값 자리를 채운 글과 견준다.
+SLOT = re.compile(r"\{(\d+)\}")
+NUMBER = r"\d+(?:\.\d+)?"
+ARG_NUMBER = re.compile(rf'=\s*({NUMBER})\s*(?=[,"])')
+
+
+def effect_values(e):
+    """카드 한 줄의 효과 값 — args 에 적힌 숫자를 적힌 순서대로 (Unity CardSheet 와 같은 규칙)."""
+    out = []
+    for fx in e.get("effects") or []:
+        for pair in (fx.get("args") or "").split(","):
+            if "=" in pair:
+                v = pair.split("=", 1)[1].strip()
+                if re.fullmatch(NUMBER, v):
+                    out.append(v)
+    return out
+
+
+def render_text(template, values):
+    """값 자리를 효과 값으로 채운 글. 값이 모자라거나 번호가 ASCII 숫자가 아니면(앱이 거절한다) None."""
+    if not all(s.isascii() for s in SLOT.findall(template)):
+        return None
+    try:
+        return SLOT.sub(lambda m: values[int(m.group(1))], template)
+    except IndexError:
+        return None
+
+
+def read_values(template, text, values):
+    """노션 문구를 값 자리 틀에 맞춰 읽는다. 글이 틀과 같고 숫자만 다르면 새 값 목록, 아니면 None.
+    정수이던 값에 소수가 오면 None — 효과 칸의 형이 달라 Unity 가 못 읽는다."""
+    parts = SLOT.split(template)   # [글, 번호, 글, 번호, …, 글]
+    if len(parts) == 1 or not all(p.isascii() for p in parts[1::2]):
+        return None
+    pattern = "".join(re.escape(p) if i % 2 == 0 else f"({NUMBER})" for i, p in enumerate(parts))
+    m = re.fullmatch(pattern, text)
+    if not m:
+        return None
+    new, seen = list(values), {}
+    for idx, got in zip((int(p) for p in parts[1::2]), m.groups()):
+        if idx >= len(new) or seen.setdefault(idx, got) != got or ("." in got) != ("." in new[idx]):
+            return None
+        new[idx] = got
+    return new
+
 def sync_repo(repo, cards, reworked=(), write=True):
-    """확정 카드의 이름 · 문구 · 장수 · 등급 · 종류를 cards.json 과 11-card-list 에 맞춘다.
+    """확정 카드의 이름 · 문구 · 장수 · 등급 · 종류 · 효과 값을 cards.json 과 11-card-list 에 맞춘다.
     cards.json 에 이미 있는 카드만 고친다 — 새 카드는 효과를 만들어야 하므로 사람이 넣는다.
+    문구: 값 자리를 채운 글이 노션과 같으면 그대로 둔다. 숫자만 다르면 효과 값(args)을 고친다 — 문구와 효과가 따로 놀지 않는다.
+    글이 다르면 노션 글을 그대로 넣고(값 자리가 풀린다) 알린다.
     돌려주는 값: 바뀐 카드 줄 목록 (PR 본문용)."""
     path = os.path.join(repo, CARDS_JSON)
     raw = open(path, encoding="utf-8").read()
@@ -297,21 +424,36 @@ def sync_repo(repo, cards, reworked=(), write=True):
         c = by_id.get(e["id"])
         if not c:
             continue
-        want = {"name": c["name"], "text": c["text"], "count": c["count"],
+        want = {"name": c["name"], "count": c["count"],
                 "grade": GRADE_ENUM.get(c["grade"], e["grade"]), "type": c["type"] or e["type"]}
         diff = {k: (e[k], v) for k, v in want.items() if v is not None and e.get(k) != v}
-        if not diff:
+        values = effect_values(e)
+        new_values, unslotted = None, False
+        if c["text"] is not None and render_text(e["text"], values) != c["text"]:
+            new_values = read_values(e["text"], c["text"], values)
+            if new_values is None:
+                diff["text"] = (e["text"], c["text"])
+                unslotted = bool(SLOT.search(e["text"]))
+        if not diff and new_values is None:
             continue
         # 줄 모양(한 카드 = 몇 줄)을 지키려고 문자열로 고친다
         start = raw.index(f'"id": {e["id"]},')
-        end = raw.index("}", raw.index('"effects"', start))
-        block = raw[start:end]
+        effects_at = raw.index('"effects"', start)
+        end = raw.index("\n    }", effects_at)   # 카드 한 줄의 끝
+        block, effects = raw[start:effects_at], raw[effects_at:end]
         for k, (_, v) in diff.items():
             val = json.dumps(v, ensure_ascii=False)
             block = re.sub(rf'"{k}": (?:"(?:[^"\\]|\\.)*"|\d+)', lambda m: f'"{k}": {val}', block, count=1)
-        raw = raw[:start] + block + raw[end:]
-        warn = " ⚠ 능력 변경 — 효과(에셋)도 고쳐야 함" if e["id"] in reworked else ""
-        changed.append(f"- {e['id']} {c['name']}{warn}: " + " · ".join(f"{k} {a!r} → {b!r}" for k, (a, b) in diff.items()))
+        notes = [f"{k} {a!r} → {b!r}" for k, (a, b) in diff.items()]
+        if new_values is not None:
+            it = iter(new_values)
+            effects = ARG_NUMBER.sub(lambda m: m.group(0).replace(m.group(1), next(it)), effects)
+            notes.append("효과 값 " + " · ".join(f"{a} → {b}" for a, b in zip(values, new_values) if a != b))
+        raw = raw[:start] + block + effects + raw[end:]
+        warn = " ⚠ 능력 변경 — 효과 구성(에셋) · 값(cards.json args)도 확인" if e["id"] in reworked else ""
+        if unslotted:
+            warn += " ⚠ 문구의 글이 바뀌어 값 자리가 풀림 — 값 자리({0})를 다시 넣기"
+        changed.append(f"- {e['id']} {c['name']}{warn}: " + " · ".join(notes))
         if write:
             update_card_list(repo, e["id"], c)
     if changed and write:
@@ -392,6 +534,12 @@ class Bot:
         self.fill_ids(cards)
 
         for c in cards.values():
+            self.record(prev.get(c["page"]), c)
+        for page_id, old in prev.items():
+            if page_id not in cards:
+                self.record(old, None)
+
+        for c in cards.values():
             old = prev.get(c["page"])
             if not old:
                 self.on_new(c, released, in_json)
@@ -413,12 +561,45 @@ class Bot:
         pending = {int(l.split()[1]) for l in changed}
         return {"cards": cards, "reworked": sorted(self.reworked & pending)}, released, changed
 
+    # 🧾 카드 변경 기록 — 바뀐 칸만 이전 · 이후(바뀐 줄) · 바뀐 부분(줄 diff, 조금 바뀐 줄은 단어) · 본문(git diff)
+    def record(self, old, new):
+        extra, blocks = {}, []
+        if old is None:
+            kind, labels = "추가", []
+            before, after = "", NL.join(f"{label}: {new[k]}" for k, label in LOG_FIELDS if new.get(k) not in (None, ""))
+        elif new is None:
+            kind, labels = "삭제", []
+            before, after = f"이름: {old['name']}{NL}문구: {old['text']}", "(노션에서 페이지가 사라짐 — 휴지통 확인)"
+        else:
+            diff = [(k, label) for k, label in LOG_FIELDS if old.get(k) != new.get(k)]
+            if not diff:
+                return
+            labels = [label for _, label in diff]
+            kind = "삭제" if new["state"] == "삭제" else ("상태" if labels == ["상태"] else "수정")
+            # 바뀐 줄만 — 본문 규칙 전체를 붙이면 칸이 길어져 무엇이 바뀌었는지 안 보인다
+            ch = {k: line_changes(field(old, k), field(new, k)) for k, _ in diff}
+            before = NL.join(f"{label}: " + (NL.join(x for c, _ in ch[k] for x in c) or "(없음)") for k, label in diff)
+            after = NL.join(f"{label}: " + (NL.join(x for _, a in ch[k] for x in a) or "(없음)") for k, label in diff)
+            extra = {"바뀐 부분": {"rich_text": marked(old, new, diff)}}
+            blocks = [git_diff(old, new, diff)]
+        card = new or old
+        title = f"{card['name'] or '(이름 없음)'} — {kind}" + (f" ({' · '.join(labels)})" if kind == "수정" else "")
+        props = {"변경": {"title": rt(title)}, "종류": {"select": {"name": kind}},
+                 "날짜": {"date": {"start": datetime.datetime.now(KST).date().isoformat()}},
+                 "바뀐 칸": {"multi_select": [{"name": x} for x in labels]},
+                 "이전": {"rich_text": rt(before)[:100]}, "이후": {"rich_text": rt(after)[:100]}}
+        if new is not None:
+            props["카드"] = {"relation": [{"id": new["page"]}]}
+        props.update(extra)
+        self.n.create_page(LOG_DS, props, blocks)
+        self.say(f"기록: {title}")
+
     def fill_ids(self, cards):
         for c in cards.values():
             if c["id"] is not None or c["state"] == "삭제" or c["type"] not in TYPE_PREFIX:
                 continue
             base = TYPE_PREFIX[c["type"]]
-            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 100]
+            used = [x["id"] for x in cards.values() if x["id"] is not None and base <= x["id"] < base + 1000]
             c["id"] = max(used, default=base) + 1
             self.n.update_page(c["page"], {"ID": {"number": c["id"]}})
             self.say(f"ID 채움: {c['name']} → {c['id']}")
@@ -574,7 +755,8 @@ def main():
         open(args.pr_body, "w", encoding="utf-8").write(
             "노션 카드 DB 의 확정 카드에 맞춰 `cards.json` · `11-card-list` 1-1 을 고쳤어요 (카드 정리 봇).\n\n"
             + "\n".join(changed)
-            + "\n\n머지한 뒤 Unity 에서 `Chapchu/카드 가져오기` 를 한 번 돌려 카드 에셋에 반영해 주세요. "
+            + "\n\n**머지하면 끝이에요** — `cards.json` 이 빌드에 같이 들어가고, 게임이 켜질 때 읽어요. Unity 에서 누를 것 · 커밋할 에셋이 없어요 "
+              "(`26-card-data` 7-3). "
               "1-2 카드별 규칙 글은 봇이 고치지 않아요 — 문구 · 수치가 본문에도 적혀 있으면 함께 봐 주세요.\n")
 
 

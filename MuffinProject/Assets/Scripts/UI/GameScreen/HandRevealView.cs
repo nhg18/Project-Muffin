@@ -3,7 +3,8 @@
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 새 카드 보여 주기의 HUD — 크게 띄운 카드 아래의 남은 시간 막대와 안내 글 (10-ui.md 2-1 「새 카드 보여 주기」, 프로토타입 v2 .rvbar · .rvhint).
+    /// 새 카드 보여 주기의 HUD — 크게 띄운 카드 위의 남은 시간 막대와 안내 글 (10-ui.md 2-1 「새 카드 보여 주기」, 프로토타입 v2 .rvbar · .rvhint).
+    /// 프로토타입 v2 는 카드 아래에 뒀지만, 통합 v3 에서는 그 자리(판 가운데)에 낸 카드가 와서 글끼리 겹치므로 카드 위 · 상대 이름표 아래에 둔다.
     /// 카드는 3D 층(HandView)이 놓고, 여기는 받은 자리 · 시간대로 표시만 한다. 판정과 상관없는 연출.
     /// </summary>
     public class HandRevealView : MonoBehaviour
@@ -12,7 +13,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private RectTransform content;
         [Tooltip("남은 시간만큼 줄어드는 막대 — 왼쪽 끝이 기준점.")]
         [SerializeField] private RectTransform fill;
-        [Tooltip("카드 묶음 아래 끝에서 막대 위 끝까지 (캔버스 px) — 시안 12 × 2.")]
+        [Tooltip("막대 · 안내 글 묶음의 아래 끝에서 카드 묶음 위 끝까지 (캔버스 px) — 시안 12 × 2.")]
         [SerializeField] private float gap = 24f;
 
         private float _startsAt;
@@ -32,10 +33,11 @@ namespace Chapchu.UI.GameScreen
             fill.localScale = new Vector3(remaining, 1f, 1f);
         }
 
-        /// <summary>카드 묶음의 아래 끝(캔버스 y, 화면 가운데가 0)에 맞춰 켠다. delay 초 뒤부터 hold 초 동안 막대가 줄어든다.</summary>
-        public void Show(float cardsBottomY, float delay, float hold)
+        /// <summary>카드 묶음의 위 끝(캔버스 y, 화면 가운데가 0) 바로 위에 켠다. delay 초 뒤부터 hold 초 동안 막대가 줄어든다.</summary>
+        public void Show(float cardsTopY, float delay, float hold)
         {
-            content.anchoredPosition = new Vector2(0f, cardsBottomY - gap);
+            // content 의 기준점은 위 가운데 — 묶음 아래 끝이 카드 위 끝에서 gap 만큼 뜨게
+            content.anchoredPosition = new Vector2(0f, cardsTopY + gap + content.rect.height);
             _startsAt = Time.time + delay;
             _endsAt = _startsAt + hold;
             fill.localScale = Vector3.one;

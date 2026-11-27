@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Services.RemoteConfig;
@@ -45,6 +46,26 @@ namespace Chapchu.Account
         public static IReadOnlyList<string> AllowedWords => ReadList(CloudKeys.AllowedWords);
 
         public static Task FetchAsync() => RemoteConfigService.Instance.FetchConfigsAsync(new UserAttributes(), new AppAttributes());
+
+        /// <summary>
+        /// 설정 값을 읽고 시간 제한(FetchTimeoutSeconds)까지 기다린다 — 타이틀 · 로비가 같이 쓴다.
+        /// 읽지 못하면(실패 · 취소 · 시간 초과) 경고만 남긴다 — 부른 쪽은 마지막 값으로 진행한다 (23 7-6).
+        /// </summary>
+        public static IEnumerator FetchRoutine()
+        {
+            Task fetch = FetchAsync();
+            // 시간이 넘은 요청이 나중에 실패하거나 코루틴이 중간에 멈춰도 처리되지 않은 예외로 남지 않게
+            fetch.ContinueWith(t => t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+            float waited = 0f;
+            while (!fetch.IsCompleted && waited < FetchTimeoutSeconds)
+            {
+                waited += Mathf.Min(Time.unscaledDeltaTime, AccountService.MaxCountedFrameSeconds);
+                yield return null;
+            }
+
+            if (!fetch.IsCompleted || fetch.IsFaulted || fetch.IsCanceled)
+                Debug.LogWarning($"[{nameof(ServerConfig)}] 설정 값 읽기 실패 — 마지막 값으로 진행: {fetch.Exception?.GetBaseException().Message ?? "시간 초과"}");
+        }
 
         private static IReadOnlyList<string> ReadList(string key)
         {

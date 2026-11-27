@@ -88,16 +88,17 @@
         }
     }
 
-    /// <summary>반응 시간이 정해졌다 (04-card.md 8절). 카드가 체인에 오를 때마다 다시 온다. 시각은 서버 시각(초) — OpensAt 전은 연출 중이라 카운터를 받지 않는다.</summary>
+    /// <summary>
+    /// 반응 시간이 정해졌다 (04-card.md 8절). 카드가 체인에 오를 때마다 다시 온다. 시각은 서버 시각(초) — OpensAt 전은 연출 중이라 카운터를 받지 않는다.
+    /// 마감 시각은 싣지 않는다 — 방장만 안다 (고민 연장을 드러내지 않게). 닫힌 것은 체인 처리가 시작되는 것으로 안다.
+    /// </summary>
     public sealed class ReactionStarted : GameEvent
     {
         public double OpensAt { get; }
-        public double Deadline { get; }
 
-        public ReactionStarted(double opensAt, double deadline)
+        public ReactionStarted(double opensAt)
         {
             OpensAt = opensAt;
-            Deadline = deadline;
         }
     }
 
@@ -117,7 +118,8 @@
         }
     }
 
-    /// <summary>체인의 카드 하나를 처리했다 — 효과 적용 (04-card.md 9절, 연출 4 단계). 카드는 버림 더미로 갔고, 효과는 뒤따르는 일(HpChanged 등)로 온다. Targets 는 본인 무효화를 뺀 대상.</summary>
+    /// <summary>체인의 카드(또는 발동한 함정) 하나를 처리했다 — 효과 적용 (04-card.md 9절, 연출 4 단계). 효과는 뒤따르는 일(HpChanged 등)로 온다. Targets 는 본인 무효화를 뺀 대상.
+    /// 카드는 아직 버림 더미에 없다 — 체인이 끝나면 ChainDiscarded 로 쓴 순서대로 쌓인다 (04 9.1). DiscardCount 는 지금 버림 더미 장수.</summary>
     public sealed class CardResolved : GameEvent
     {
         public int Actor { get; }
@@ -136,7 +138,7 @@
         }
     }
 
-    /// <summary>체인의 카드 하나가 무효화됐다 (04-card.md 9절). 효과 없이 버림 더미로 갔다 — 연출 4 단계 없음.</summary>
+    /// <summary>체인의 카드 하나가 무효화됐다 (04-card.md 9절). 효과 없음 — 연출 4 단계 없음. 버림 더미에는 체인이 끝날 때 쌓인다 (ChainDiscarded).</summary>
     public sealed class CardNegated : GameEvent
     {
         public int Actor { get; }
@@ -208,12 +210,15 @@
         public int Actor { get; }
         public int[] CardIds { get; }
         public int DiscardCount { get; }
+        /// <summary>연속 시간 초과로 방장이 내보냈다 (03-turn.md 10절) — 그 사람 화면은 스스로 방을 나가 로비로 간다.</summary>
+        public bool Forced { get; }
 
-        public PlayerLeft(int actor, int[] cardIds, int discardCount)
+        public PlayerLeft(int actor, int[] cardIds, int discardCount, bool forced)
         {
             Actor = actor;
             CardIds = cardIds;
             DiscardCount = discardCount;
+            Forced = forced;
         }
     }
 
@@ -252,7 +257,7 @@
         }
     }
 
-    /// <summary>함정을 발동했다 — 공개되고 체인 맨 위에 올라갔다 (04-card.md 6절, 연출 1 단계는 함정 슬롯에서). 뒤에 ReactionStarted.</summary>
+    /// <summary>함정이 자동 발동했다 — 행동(체인)이 끝난 뒤, 설치한 순서대로 (04-card.md 6절 · 9.2, 연출 1 단계는 함정 슬롯에서). 반응 시간 없이 뒤에 CardResolved → ChainDiscarded.</summary>
     public sealed class TrapActivated : GameEvent
     {
         public int Actor { get; }
@@ -271,16 +276,18 @@
         }
     }
 
-    /// <summary>「피해 받은 후」 함정을 낼 수 있는 함정 시간 (04-card.md 6절). 조건이 맞는 함정을 가진 사람이 있을 때만 온다.</summary>
-    public sealed class TrapWindowStarted : GameEvent
+    /// <summary>처리가 끝난 카드들이 버림 더미에 쌓였다 — 체인은 쓴 순서대로(맨 위 = 마지막), 함정은 한 장씩 (04-card.md 9.1 · 9.2). DiscardCount 는 쌓은 뒤 장수.</summary>
+    public sealed class ChainDiscarded : GameEvent
     {
-        public double OpensAt { get; }
-        public double Deadline { get; }
+        public int[] CardInstanceIds { get; }
+        public int[] CardIds { get; }
+        public int DiscardCount { get; }
 
-        public TrapWindowStarted(double opensAt, double deadline)
+        public ChainDiscarded(int[] cardInstanceIds, int[] cardIds, int discardCount)
         {
-            OpensAt = opensAt;
-            Deadline = deadline;
+            CardInstanceIds = cardInstanceIds;
+            CardIds = cardIds;
+            DiscardCount = discardCount;
         }
     }
 
@@ -305,16 +312,42 @@
         Draw         // 무승부 — 전원 최종 사망
     }
 
-    /// <summary>게임이 끝났다 (07-win-condition.md). 무승부면 Winner = -1. 이 뒤로는 모든 요청을 거절한다.</summary>
+    /// <summary>
+    /// 게임이 끝났다 (07-win-condition.md). 무승부면 Winner = -1. 이 뒤로는 모든 요청을 거절한다.
+    /// 「게임 종료 요약」(07 11-3 · 11-4)을 함께 싣는다 — 배열은 모두 같은 길이, 순위 순(같은 순위는 actorNumber 순)이다. 나간 사람도 들어 있다.
+    /// </summary>
     public sealed class GameEnded : GameEvent
     {
         public int Winner { get; }
         public GameEndReason Reason { get; }
+        public int[] Actors { get; }
+        /// <summary>순위 — 1부터. 같은 값이면 공동 순위이고 다음 순위는 건너뛴다 (1 · 2 · 2 · 4). 무승부는 전원 1.</summary>
+        public int[] Ranks { get; }
+        /// <summary>끝났을 때의 HP. 탈락한 사람은 0 이 아닐 수 있다(나간 사람) — 화면은 탈락이면 0 으로 보인다.</summary>
+        public int[] Hps { get; }
+        /// <summary>게임에서 빠진 턴 번호 (최종 사망 · 나감). 끝까지 남았으면 0.</summary>
+        public int[] OutTurns { get; }
+        /// <summary>HP 를 0 으로 만든 사람 (07 11-3 「킬」). 없으면 -1.</summary>
+        public int[] DownedBy { get; }
+        /// <summary>방을 나가서 빠졌는지 — 화면이 「이탈」 로 구별한다 (07 11-2).</summary>
+        public bool[] Left { get; }
+        /// <summary>이 판의 지표 (07 11-4) — 사람마다 <see cref="GameServer.StatCount"/> 개씩 <see cref="StatKind"/> 순서로, Actors 순서대로 이어 붙였다.</summary>
+        public int[] Stats { get; }
+        /// <summary>게임이 끝난 턴 번호 — 끝까지 남은 사람의 「생존 턴 수」 (07 11-4).</summary>
+        public int EndTurn { get; }
 
-        public GameEnded(int winner, GameEndReason reason)
+        public GameEnded(int winner, GameEndReason reason, int[] actors, int[] ranks, int[] hps, int[] outTurns, int[] downedBy, bool[] left, int[] stats, int endTurn)
         {
             Winner = winner;
             Reason = reason;
+            Actors = actors;
+            Ranks = ranks;
+            Hps = hps;
+            OutTurns = outTurns;
+            DownedBy = downedBy;
+            Left = left;
+            Stats = stats;
+            EndTurn = endTurn;
         }
     }
 
@@ -482,7 +515,7 @@
         }
     }
 
-    /// <summary>버림 더미 맨 위 카드를 손패로 가져왔다 (109 아 맞다! — 05-deck.md 7절). 버림 더미는 공개라 카드도 전원에게. TopCardId = 가져간 뒤 맨 위 (비면 0).</summary>
+    /// <summary>버림 더미 맨 위 카드를 손패로 가져왔다 (1009 아 맞다! — 05-deck.md 7절). 버림 더미는 공개라 카드도 전원에게. TopCardId = 가져간 뒤 맨 위 (비면 0).</summary>
     public sealed class DiscardTaken : GameEvent
     {
         public int Actor { get; }
@@ -503,7 +536,7 @@
         }
     }
 
-    /// <summary>행동 카드 금지 상태 (107 짖기, 11-card-list 107). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
+    /// <summary>행동 카드 금지 상태 (1007 짖기, 11-card-list 1007). 네트워크로는 byte 로 간다 — 순서를 바꾸지 않는다.</summary>
     public enum ActionBlock : byte
     {
         None,     // 없음
@@ -511,7 +544,7 @@
         ThisTurn  // 이번 턴 금지 — 그 턴이 끝나면 None
     }
 
-    /// <summary>행동 카드 금지 상태가 바뀌었다 (107 짖기). 공개 — 전원.</summary>
+    /// <summary>행동 카드 금지 상태가 바뀌었다 (1007 짖기). 공개 — 전원.</summary>
     public sealed class ActionBlockChanged : GameEvent
     {
         public int Actor { get; }
@@ -524,7 +557,7 @@
         }
     }
 
-    /// <summary>「기다려」 를 건 사람들이 바뀌었다 (123 기다려!, 07 4.3). 비어 있지 않은 동안 아무도 찹츄로 이기지 않는다. 공개 — 전원.</summary>
+    /// <summary>「기다려」 를 건 사람들이 바뀌었다 (1023 기다려!, 07 4.3). 비어 있지 않은 동안 아무도 찹츄로 이기지 않는다. 공개 — 전원.</summary>
     public sealed class WaitChanged : GameEvent
     {
         public int[] Casters { get; }
@@ -535,7 +568,7 @@
         }
     }
 
-    /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (123). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
+    /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
     public sealed class ChapchuWinHeld : GameEvent
     {
         public int Actor { get; }
@@ -546,7 +579,7 @@
         }
     }
 
-    /// <summary>턴 진행 방향이 바뀌었다 (145 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
+    /// <summary>턴 진행 방향이 바뀌었다 (1045 뒤로 돌아 — 03-turn.md 6절 #4). Reversed = 역방향. ExtraTurn = 생존자 2명이라 다음 턴이 다시 이 사람 (없으면 -1).</summary>
     public sealed class TurnDirectionChanged : GameEvent
     {
         public bool Reversed { get; }
@@ -560,8 +593,8 @@
     }
 
     /// <summary>
-    /// 대소동(112)으로 게임을 새로 시작한다 — 이 뒤로 HP · 손패 · 첫 턴이 시작 때처럼 온다. 화면은 판 상태(손패 · 함정 · 버림 더미 · 찹츄 · 사망 · 방향 · 판 효과)를 처음으로 되돌린다.
-    /// User = 대소동을 쓴 사람. Count = 이 판에서 대소동을 쓴 횟수 n. Order = 새 턴 순서 (나간 사람 제외, 죽은 사람 포함). 통계 · 기록 서랍은 이어진다 (11-card-list 112).
+    /// 대소동(1012)으로 게임을 새로 시작한다 — 이 뒤로 HP · 손패 · 첫 턴이 시작 때처럼 온다. 화면은 판 상태(손패 · 함정 · 버림 더미 · 찹츄 · 사망 · 방향 · 판 효과)를 처음으로 되돌린다.
+    /// User = 대소동을 쓴 사람. Count = 이 판에서 대소동을 쓴 횟수 n. Order = 새 턴 순서 (나간 사람 제외, 죽은 사람 포함). 통계 · 기록 서랍은 이어진다 (11-card-list 1012).
     /// </summary>
     public sealed class GameRestarted : GameEvent
     {
@@ -578,7 +611,7 @@
     }
 
     /// <summary>
-    /// 피폭 상태가 바뀌었다 (112 대소동). N = 대소동 횟수, Turns = 새로 시작한 뒤 피폭이 들어간 턴 수 k. Turns 가 1 이상이면 방금 모두가 k^N 피해를 입었다.
+    /// 피폭 상태가 바뀌었다 (1012 대소동). N = 대소동 횟수, Turns = 새로 시작한 뒤 피폭이 들어간 턴 수 k. Turns 가 1 이상이면 방금 모두가 k^N 피해를 입었다.
     /// 다음 턴 끝의 피해는 (k+1)^N — 판 효과 줄 「피폭 · 턴이 끝날 때마다 모두 −N」. N 이 0 이면 피폭 없음. 공개 — 전원.
     /// </summary>
     public sealed class FalloutChanged : GameEvent
@@ -593,7 +626,7 @@
         }
     }
     /// <summary>
-    /// 개판 오분전 상태가 바뀌었다 (121). Caster = 건 사람 (-1 이면 112 대소동으로 지워짐), Left = 남은 바퀴 (0 이면 끝 — 판정이 따르면 GaepanJudged),
+    /// 개판 오분전 상태가 바뀌었다 (1021). Caster = 건 사람 (-1 이면 1012 대소동으로 지워짐), Left = 남은 바퀴 (0 이면 끝 — 판정이 따르면 GaepanJudged),
     /// Again = 개판 중에 다시 써서 처음부터. 판 효과 줄 「개판 오분전 · N바퀴 남음」. 공개 — 전원.
     /// </summary>
     public sealed class GaepanChanged : GameEvent
@@ -611,7 +644,7 @@
     }
 
     /// <summary>
-    /// 개판 오분전 판정 (121). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
+    /// 개판 오분전 판정 (1021). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
     /// Actors · Values = 판정 때 살아 있던 사람과 그 기준 값 (같은 순서) — 각자 머리 위 수치 표. 공개 GameServer.GaepanJudgeSeconds 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
     /// </summary>
     public sealed class GaepanJudged : GameEvent
@@ -634,7 +667,7 @@
         }
     }
     /// <summary>
-    /// 대상이 고르기 시작 (119 목표 조준). Actor = 고르는 사람, User = 카드를 쓴 사람, HandCount = 고르는 사람의 손패 장수 (「손패 전부 버리기 (n장)」),
+    /// 대상이 고르기 시작 (1019 목표 조준). Actor = 고르는 사람, User = 카드를 쓴 사람, HandCount = 고르는 사람의 손패 장수 (「손패 전부 버리기 (n장)」),
     /// Damage = 피해 쪽 수치, StartsAt · Deadline = 서버 시각. 그동안 게임 · 턴 시간이 멈춘다. 공개 — 전원 (고르는 사람은 팝업, 나머지는 「고르는 중」 타이머).
     /// </summary>
     public sealed class ChoiceStarted : GameEvent
@@ -647,8 +680,12 @@
         public double StartsAt { get; }
         public double Deadline { get; }
 
-        public ChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline)
+        /// <summary>고르기 종류 (ChoiceKind) — 0 선택지 둘(1019) · 1 손패에서 1장 버리기(2013 · 2021 의 대가).</summary>
+        public int Kind { get; }
+
+        public ChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind = ChoiceKind.Options)
         {
+            Kind = kind;
             Actor = actor;
             User = user;
             CardId = cardId;
@@ -659,8 +696,15 @@
         }
     }
 
+    /// <summary>고르기 종류 — 알림에 int 로 실린다 (09-network.md).</summary>
+    public static class ChoiceKind
+    {
+        public const int Options = 0;  // 선택지 둘 중 하나 (1019 목표 조준)
+        public const int HandCard = 1; // 내 손패에서 1장 골라 버리기 (2013 새치기 · 2021 으르렁의 대가, 11-card-list 1-3)
+    }
+
     /// <summary>
-    /// 고르기가 끝났다 (119). Option 0 손패 전부 버리기 · 1 피해 받기 · -1 고르는 사람이 나가 불발. TimedOut = 시간 초과로 방장이 무작위. 결과(버림 · 피해)는 뒤따르는 사건들. 공개 — 전원.
+    /// 고르기가 끝났다 (1019). Option 0 손패 전부 버리기 · 1 피해 받기 · -1 고르는 사람이 나가 불발. TimedOut = 시간 초과로 방장이 무작위. 결과(버림 · 피해)는 뒤따르는 사건들. 공개 — 전원.
     /// </summary>
     public sealed class ChoiceMade : GameEvent
     {
@@ -668,8 +712,12 @@
         public int Option { get; }
         public bool TimedOut { get; }
 
-        public ChoiceMade(int actor, int option, bool timedOut)
+        /// <summary>고르기 종류 (ChoiceKind). 손패에서 1장 버리기면 Option 은 0(버렸다) · -1(불발) — 버린 카드는 뒤따르는 버림 사건에 실린다.</summary>
+        public int Kind { get; }
+
+        public ChoiceMade(int actor, int option, bool timedOut, int kind = ChoiceKind.Options)
         {
+            Kind = kind;
             Actor = actor;
             Option = option;
             TimedOut = timedOut;

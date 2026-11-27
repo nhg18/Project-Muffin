@@ -74,7 +74,6 @@ MonoBehaviour:
   - RPC_OnPlayerLeftGame
   - RPC_OnChapchuChanged
   - RPC_OnGameEnded
-  - RPC_RequestDeclareChapchu
   - RPC_OnMyTrapSet
   - RPC_OnTrapActivated
   - RPC_OnTrapSet
@@ -109,6 +108,14 @@ MonoBehaviour:
   - RPC_OnChoiceMade
   - RPC_OnChoiceStarted
   - RPC_RequestChoose
+  - RPC_OnChainDiscarded
+  - RPC_ResultRequestSetReady
+  - RPC_OnResultEmote
+  - RPC_ResultRequestEmote
+  - RPC_RequestReactionHold
+  - RPC_RequestReactionSkip
+  - RPC_OnBackup
+  - RPC_OnGameHalted
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

@@ -13,11 +13,13 @@ namespace Chapchu.UI.Title
         Update,
         Maintenance,
         Quit,
+        PlayRecord,
     }
 
     /// <summary>
-    /// 타이틀 팝업 — 업데이트 필요 · 점검 중(닫을 수 없음) · 게임 종료 확인. 카드 한 장, 닫기 X 없음.
-    /// 문구: docs/systems/22-popup-ui.md 3절 「타이틀」. 모양: 「통합 화면 UI v2」 타이틀 .pop
+    /// 타이틀 팝업 — 업데이트 필요 · 점검 중(닫을 수 없음) · 게임 종료 확인 · 플레이 기록 수집(첫 실행). 카드 한 장, 닫기 X 없음.
+    /// 문구: docs/systems/22-popup-ui.md 3절 「타이틀」 · 20-title-ui-full.md 7-12. 모양: 「통합 화면 UI v3」 타이틀 .pop (v3.24 — 경고 주황 「!」 · 확인 민트 「?」,
+    /// 본문은 굵은 첫 문장 + 흐린 둘째 줄)
     /// </summary>
     public class TitlePopupView : MonoBehaviour
     {
@@ -26,22 +28,33 @@ namespace Chapchu.UI.Title
         private const string MaintenanceTitle = "점검 중";
         private const string QuitTitle = "게임 종료";
         private const string QuitBody = "게임을 종료할까요?";
+        private const string PlayRecordTitle = "플레이 기록 수집";
+        private const string PlayRecordBody = "더 재미있는 게임을 만들려고 플레이 기록(판 결과 · 사용한 카드 · 화면 이동)을 모아요. 닉네임 · 친구 같은 정보는 모으지 않아요. 설정 → 정보에서 언제든 바꿀 수 있어요.";
 
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
         [SerializeField] private Image band;
         [SerializeField] private Image bandIcon;
         [SerializeField] private TMP_Text bandTitle;
+        [Tooltip("본문 첫 문장 — 굵게.")]
         [SerializeField] private TMP_Text body;
+        [Tooltip("본문 나머지 — 흐린 둘째 줄. 없으면 숨긴다.")]
+        [SerializeField] private TMP_Text detail;
         [SerializeField] private Button storeButton;
         [SerializeField] private Button okButton;
         [SerializeField] private GameObject quitRow;
         [SerializeField] private Button cancelButton;
         [SerializeField] private Button quitButton;
 
+        [Tooltip("플레이 기록 수집 — 「동의 안 함」 · 「동의」 가 같은 모양인 줄 (20 7-12)")]
+        [SerializeField] private GameObject choiceRow;
+        [SerializeField] private Button declineButton;
+        [SerializeField] private Button agreeButton;
+
+        [Tooltip("경고 띠 아이콘 「!」.")]
         [SerializeField] private Sprite alertIcon;
-        [SerializeField] private Sprite clockIcon;
-        [SerializeField] private Sprite doorIcon;
+        [Tooltip("확인 띠 아이콘 「?」.")]
+        [SerializeField] private Sprite askIcon;
 
         public TitlePopup Current { get; private set; }
 
@@ -50,15 +63,19 @@ namespace Chapchu.UI.Title
         public event Action OnQuitConfirmed;
         public event Action OnQuitCanceled;
 
+        /// <summary>플레이 기록 수집에서 고름 — 참 = 동의 (20 7-12)</summary>
+        public event Action<bool> OnPlayRecordChosen;
+
         private void Awake()
         {
-            if (content == null || frame == null || band == null || bandIcon == null || bandTitle == null || body == null)
+            if (content == null || frame == null || band == null || bandIcon == null || bandTitle == null || body == null || detail == null)
                 Debug.LogError($"[{nameof(TitlePopupView)}] 팝업 참조가 비어 있습니다.", this);
 
-            if (storeButton == null || okButton == null || quitRow == null || cancelButton == null || quitButton == null)
+            if (storeButton == null || okButton == null || quitRow == null || cancelButton == null || quitButton == null
+                || choiceRow == null || declineButton == null || agreeButton == null)
                 Debug.LogError($"[{nameof(TitlePopupView)}] 버튼 참조가 비어 있습니다.", this);
 
-            if (alertIcon == null || clockIcon == null || doorIcon == null)
+            if (alertIcon == null || askIcon == null)
                 Debug.LogError($"[{nameof(TitlePopupView)}] 아이콘 참조가 비어 있습니다.", this);
         }
 
@@ -68,6 +85,8 @@ namespace Chapchu.UI.Title
             okButton.onClick.AddListener(HandleOkClicked);
             cancelButton.onClick.AddListener(HandleCancelClicked);
             quitButton.onClick.AddListener(HandleQuitClicked);
+            declineButton.onClick.AddListener(HandleDeclineClicked);
+            agreeButton.onClick.AddListener(HandleAgreeClicked);
         }
 
         private void OnDisable()
@@ -76,15 +95,20 @@ namespace Chapchu.UI.Title
             okButton.onClick.RemoveListener(HandleOkClicked);
             cancelButton.onClick.RemoveListener(HandleCancelClicked);
             quitButton.onClick.RemoveListener(HandleQuitClicked);
+            declineButton.onClick.RemoveListener(HandleDeclineClicked);
+            agreeButton.onClick.RemoveListener(HandleAgreeClicked);
         }
 
         /// <summary>업데이트 필요 — 닫을 수 없다, 「스토어로」 (20 7-9)</summary>
         public void ShowUpdate() => Show(TitlePopup.Update, UpdateTitle, UpdateBody, alertIcon, LobbyStyle.Warn);
 
         /// <summary>점검 중 — 닫을 수 없다, 본문은 Remote Config 안내 문구 그대로 (23 7-6)</summary>
-        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, clockIcon, LobbyStyle.Warn);
+        public void ShowMaintenance(string message) => Show(TitlePopup.Maintenance, MaintenanceTitle, message, alertIcon, LobbyStyle.Warn);
 
-        public void ShowQuit() => Show(TitlePopup.Quit, QuitTitle, QuitBody, doorIcon, LobbyStyle.Band);
+        public void ShowQuit() => Show(TitlePopup.Quit, QuitTitle, QuitBody, askIcon, LobbyStyle.Band);
+
+        /// <summary>플레이 기록 수집 — 닫을 수 없다, 「동의 안 함」 · 「동의」 중 하나 (20 7-12)</summary>
+        public void ShowPlayRecord() => Show(TitlePopup.PlayRecord, PlayRecordTitle, PlayRecordBody, askIcon, LobbyStyle.Band);
 
         public void Hide()
         {
@@ -99,10 +123,14 @@ namespace Chapchu.UI.Title
             band.color = bandColor;
             bandIcon.sprite = icon;
             bandTitle.text = title;
-            body.text = text;
+            (string first, string rest) = LobbyStyle.SplitMessage(text);
+            body.text = first;
+            detail.gameObject.SetActive(rest.Length > 0);
+            detail.text = rest;
             storeButton.gameObject.SetActive(kind == TitlePopup.Update);
             okButton.gameObject.SetActive(kind == TitlePopup.Maintenance);
             quitRow.SetActive(kind == TitlePopup.Quit);
+            choiceRow.SetActive(kind == TitlePopup.PlayRecord);
         }
 
         private void HandleStoreClicked() => OnStoreRequested?.Invoke();
@@ -116,5 +144,9 @@ namespace Chapchu.UI.Title
         private void HandleCancelClicked() => OnQuitCanceled?.Invoke();
 
         private void HandleQuitClicked() => OnQuitConfirmed?.Invoke();
+
+        private void HandleDeclineClicked() => OnPlayRecordChosen?.Invoke(false);
+
+        private void HandleAgreeClicked() => OnPlayRecordChosen?.Invoke(true);
     }
 }

@@ -12,15 +12,30 @@ namespace Chapchu.UI.Popups
     /// </summary>
     public class PopupManager : SingletonPersistent<PopupManager>
     {
+        // 토스트 아래 여백 (22-popup-ui.md 5-3). 기본은 MessageToast 프리팹 자리 48.
+        private const float DefaultToastBottom = 48f;
+        private const float GameToastBottom = 212f;
+
         [SerializeField] private RectTransform modalLayer;
         [SerializeField] private RectTransform nonModalLayer;
         [SerializeField] private RectTransform toastLayer;
+
+        [Header("알림 자리 (통합 v3.25) — 화면 아래 끝에서 알림 아래 끝까지, 시안 #toasts bottom ×2")]
+        [SerializeField] private float toastBottomTitle = 100f;
+        [Tooltip("방 — 「게임 시작」 위")]
+        [SerializeField] private float toastBottomRoom = 264f;
+        [Tooltip("인게임 · 그 밖 — 손패 위")]
+        [SerializeField] private float toastBottomGame = 220f;
+        [Tooltip("창이 떠 있을 때 — 화면 위 끝에서 알림 위 끝까지 (위쪽 HUD 줄 가운데, 시안 --tt)")]
+        [SerializeField] private float toastHudTop = 72f;
 
         // 모달은 나중에 연 것이 위. 하나라도 열려 있으면 modalLayer 의 Image 가 아래 UI 입력을 막는다.
         private readonly List<Popup> _modals = new();
         private readonly List<Popup> _nonModals = new();
         private readonly List<Popup> _toasts = new();
         private Image _modalBlocker;
+        private (string Title, string Text)? _warningOnNextScene;
+        private bool _toastOverHud;
 
         protected override void Awake()
         {
@@ -64,13 +79,30 @@ namespace Chapchu.UI.Popups
         public T OpenToast<T>() where T : ToastPopup => Open<T>(toastLayer, _toasts);
 
         /// <summary>
-        /// 문구 한 줄짜리 토스트를 띄운다.
+        /// 문구 한 줄짜리 토스트를 띄운다. 알림은 한 번에 하나 — 떠 있던 것은 새 것으로 바뀐다 (통합 v3.25).
         /// </summary>
         public void ShowToast(string message)
         {
+            ReleaseAll(_toasts);
             MessageToast toast = OpenToast<MessageToast>();
-            if (toast != null)
-                toast.Message = message;
+            if (toast == null)
+                return;
+            toast.Message = message;
+            PlaceToasts();
+        }
+
+        /// <summary>
+        /// 씬의 창이 떠 있다 — 알림을 창 내용 대신 위쪽 HUD 줄 가운데에 띄운다 (통합 v3.25). 씬이 바뀌면 풀린다.
+        /// </summary>
+        public bool ToastOverHud
+        {
+            set
+            {
+                if (_toastOverHud == value)
+                    return;
+                _toastOverHud = value;
+                PlaceToasts();
+            }
         }
 
         /// <summary>
@@ -89,6 +121,7 @@ namespace Chapchu.UI.Popups
 
             Release(popup);
             RefreshBlocker();
+            PlaceToasts();
         }
 
         /// <summary>
@@ -102,7 +135,29 @@ namespace Chapchu.UI.Popups
             RefreshBlocker();
         }
 
-        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode) => CloseAll();
+        /// <summary>
+        /// 다음 씬이 열린 뒤 경고 팝업을 띄운다. 씬이 바뀌면 열린 팝업이 모두 닫히므로, 옮겨 간 화면에서 알릴 것은 여기에 맡긴다 (22-popup-ui.md 3절 「… 뒤 로비 도착」).
+        /// </summary>
+        public void ShowWarningOnNextScene(string title, string text) => _warningOnNextScene = (title, text);
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            _toastOverHud = false;
+            CloseAll();
+            // 22-popup-ui.md 5-3: 토스트는 아래 48, 게임 화면만 손패 위 아래 212. 프리팹이 이미 48 위에 있으니 차이만큼 레이어 바닥을 올린다.
+            float toastBottom = scene.name == ScenePaths.Game ? GameToastBottom : DefaultToastBottom;
+            toastLayer.offsetMin = new Vector2(toastLayer.offsetMin.x, toastBottom - DefaultToastBottom);
+            if (_warningOnNextScene == null)
+                return;
+
+            (string title, string text) = _warningOnNextScene.Value;
+            _warningOnNextScene = null;
+            WarningPopup popup = OpenModal<WarningPopup>();
+            if (popup == null)
+                return;
+            popup.MainText = title;
+            popup.SubText = text;
+        }
 
         private T Open<T>(RectTransform layer, List<Popup> opened) where T : Popup
         {
@@ -114,6 +169,7 @@ namespace Chapchu.UI.Popups
             opened.Add(popup);
             RefreshBlocker();
             popup.NotifyOpened();
+            PlaceToasts();
             return popup;
         }
 
@@ -144,6 +200,26 @@ namespace Chapchu.UI.Popups
         private void RefreshBlocker()
         {
             _modalBlocker.enabled = _modals.Count > 0;
+        }
+
+        // 알림 자리 — 평소엔 화면마다 정한 아래 자리, 창이 떠 있으면 위쪽 HUD 줄 가운데 (시안 #toasts · #toasts.over)
+        private void PlaceToasts()
+        {
+            bool over = _toastOverHud || _modals.Count > 0 || _nonModals.Count > 0;
+            float bottom = SceneManager.GetActiveScene().name switch
+            {
+                ScenePaths.Title => toastBottomTitle,
+                ScenePaths.Room => toastBottomRoom,
+                _ => toastBottomGame,
+            };
+            foreach (Popup toast in _toasts)
+            {
+                var rect = (RectTransform)toast.transform;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+                float half = rect.rect.height / 2f; // 가운데 기준 — 튀어나오는 연출이 알림 가운데에서 커진다
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, over ? 1f : 0f);
+                rect.anchoredPosition = new Vector2(0f, over ? -toastHudTop - half : bottom + half);
+            }
         }
 
 #if UNITY_EDITOR

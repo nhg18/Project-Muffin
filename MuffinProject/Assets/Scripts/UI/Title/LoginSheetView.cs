@@ -18,7 +18,7 @@ namespace Chapchu.UI.Title
 
     /// <summary>
     /// 로그인 창 — 가림판 + 카드 한 장(머리 띠). 약관 동의 · 로그인 고르기 · 로딩 · 닉네임 · 실패가 같은 창을 번갈아 쓴다.
-    /// 바탕을 눌러도 닫히지 않는다 — 닫기 X · 뒤로가기만 (22-popup-ui 1절). 기준: 「통합 화면 UI v2」 타이틀 .lsheet
+    /// 바탕을 눌러도 닫히지 않는다 — 닫기 X · 뒤로가기만 (22-popup-ui 1절). 기준: 「통합 화면 UI v2」 타이틀 .lsheet · v3.23 (창은 전부 화면 가운데)
     /// </summary>
     public class LoginSheetView : MonoBehaviour
     {
@@ -67,13 +67,11 @@ namespace Chapchu.UI.Title
         [SerializeField] private Sprite userIcon;
         [SerializeField] private Sprite alertIcon;
 
-        [Header("창 자리 (가운데 1920 × 1080 묶음 위에서 아래로)")]
-        [Tooltip("약관 동의 창 위쪽 · 폭 (시안 40 · 640 × 2)")]
-        [SerializeField] private Vector2 agreeTopAndWidth = new Vector2(80f, 1280f);
-        [Tooltip("로그인 고르기 창 위쪽 · 폭 (시안 140 · 420 × 2)")]
-        [SerializeField] private Vector2 loginTopAndWidth = new Vector2(280f, 840f);
-        [Tooltip("그 밖의 창 위쪽 · 폭 (시안 150 · 420 × 2)")]
-        [SerializeField] private Vector2 otherTopAndWidth = new Vector2(300f, 840f);
+        [Header("창 폭 — 자리는 화면 가운데 (판 높이가 바뀌어도 가운데에서 자란다)")]
+        [Tooltip("약관 동의 창 폭 — 약관 두 칸이 나란히 들어간다")]
+        [SerializeField] private float agreeWidth = 1280f;
+        [Tooltip("그 밖의 창 폭 (시안 v3.23 · 390 × 2)")]
+        [SerializeField] private float sheetWidth = 780f;
 
         public bool IsOpen => content.activeSelf;
 
@@ -149,7 +147,7 @@ namespace Chapchu.UI.Title
 
         public void ShowAgree()
         {
-            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, LobbyStyle.Band, closable: true, agreeTopAndWidth);
+            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, LobbyStyle.Band, closable: false, agreeWidth); // 닫기 X 없음 — 뒤에 갈 화면이 없다 (20 7-11)
             agreeBody.HideNeed(); // 판이 켜진 뒤에 — 꺼져 있으면 버튼 · 판의 Awake 가 아직 안 돌았다
         }
 
@@ -157,26 +155,26 @@ namespace Chapchu.UI.Title
         public void ShowLogin(bool showApple)
         {
             appleButton.gameObject.SetActive(showApple);
-            Open(LoginSheetStep.Login, StartTitle, keyIcon, LobbyStyle.Band, closable: true, loginTopAndWidth);
+            Open(LoginSheetStep.Login, StartTitle, keyIcon, LobbyStyle.Band, closable: true, sheetWidth);
         }
 
         public void ShowLoading(string message)
         {
             loadingText.text = message;
-            Switch(LoginSheetStep.Loading, StartTitle, keyIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
+            Switch(LoginSheetStep.Loading, StartTitle, keyIcon, LobbyStyle.Band, closable: false, sheetWidth);
         }
 
         /// <summary>닉네임 단계를 새로 연다 — 추천 이름을 미리 넣는다</summary>
         public void ShowNickname(string suggestion)
         {
             nicknameField.SetText(suggestion);
-            Open(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
+            Open(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, sheetWidth);
         }
 
         /// <summary>닉네임 단계로 돌아와 에러를 보인다 — 입력값은 그대로 (저장 실패 · 금칙어 거절)</summary>
         public void ReturnToNickname(string error)
         {
-            Switch(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, otherTopAndWidth);
+            Switch(LoginSheetStep.Nickname, NicknameTitle, userIcon, LobbyStyle.Band, closable: false, sheetWidth);
             nicknameField.ShowError(error);
         }
 
@@ -185,7 +183,7 @@ namespace Chapchu.UI.Title
 
         public void SetNickname(string nickname) => nicknameField.SetText(nickname);
 
-        /// <summary>실패 — 로그인 실패면 닫기 X 와 「다른 방법으로」 도 (시안 step fail)</summary>
+        /// <summary>실패 — 경고 주황 띠. 로그인 실패면 닫기 X 와 「다른 방법으로」 도 (시안 step fail · v3.24)</summary>
         public void ShowFail(string title, string description, string code, bool loginFailure)
         {
             IsLoginFailure = loginFailure;
@@ -193,7 +191,7 @@ namespace Chapchu.UI.Title
             failDescription.text = description;
             failCode.text = code;
             otherButton.gameObject.SetActive(loginFailure);
-            Switch(LoginSheetStep.Fail, loginFailure ? LoginFailTitle : ConnectionFailTitle, alertIcon, LobbyStyle.Hp, closable: loginFailure, otherTopAndWidth);
+            Switch(LoginSheetStep.Fail, loginFailure ? LoginFailTitle : ConnectionFailTitle, alertIcon, LobbyStyle.Warn, closable: loginFailure, sheetWidth);
         }
 
         public void Hide()
@@ -202,13 +200,13 @@ namespace Chapchu.UI.Title
         }
 
         // 창을 연다 — 단계가 바뀌어도 튀어나온다 (시안 openSheet)
-        private void Open(LoginSheetStep step, string title, Sprite icon, Color bandColor, bool closable, Vector2 topAndWidth)
+        private void Open(LoginSheetStep step, string title, Sprite icon, Color bandColor, bool closable, float width)
         {
-            Switch(step, title, icon, bandColor, closable, topAndWidth);
+            Switch(step, title, icon, bandColor, closable, width);
             UIJuice.Pop(frame, 0.92f);
         }
 
-        private void Switch(LoginSheetStep step, string title, Sprite icon, Color bandColor, bool closable, Vector2 topAndWidth)
+        private void Switch(LoginSheetStep step, string title, Sprite icon, Color bandColor, bool closable, float width)
         {
             Step = step;
             content.SetActive(true);
@@ -216,8 +214,7 @@ namespace Chapchu.UI.Title
             bandIcon.sprite = icon;
             bandTitle.text = title;
             closeButton.gameObject.SetActive(closable);
-            frame.anchoredPosition = new Vector2(0f, -topAndWidth.x);
-            frame.sizeDelta = new Vector2(topAndWidth.y, frame.sizeDelta.y);
+            frame.sizeDelta = new Vector2(width, frame.sizeDelta.y);
 
             agreeBody.gameObject.SetActive(step == LoginSheetStep.Agree);
             loginBody.SetActive(step == LoginSheetStep.Login);

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: GaepanSkyBack
+  m_Shader: {fileID: 4800000, guid: 432b6f77830a76449946d58c933eecb1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 1000
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Part: 0
+    m_Colors:
+    - _Glow: {r: 1, g: 0.839, b: 0.667, a: 0.55}
+    - _Sky0: {r: 0.373, g: 0.561, b: 0.816, a: 1}
+    - _Sky1: {r: 0.616, g: 0.741, b: 0.902, a: 1}
+    - _Sky2: {r: 0.863, g: 0.839, b: 0.886, a: 1}
+    - _Sky3: {r: 0.953, g: 0.851, b: 0.8, a: 1}
+    - _Sky4: {r: 0.973, g: 0.863, b: 0.776, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

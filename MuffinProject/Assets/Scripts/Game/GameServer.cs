@@ -16,7 +16,8 @@ namespace Chapchu.Game
         // 1. 파일을 하나 만든다: GameServer.Trap.cs — namespace Chapchu.Game { public partial class GameServer { ... } }
         //    한 클래스라 다른 파일의 필드 · 메서드를 그대로 쓴다. 규칙을 별도 클래스로 떼지 않는다 — 상태를 두루 봐야 한다.
         //
-        // 2. 원본 상태는 이 파일의 "원본 상태" 에 모은다. 플레이어별 값은 PlayerState 에 필드로.
+        // 2. 원본 상태 필드는 그 기능의 partial 파일에 둔다. 플레이어별 값은 PlayerState 에 필드로.
+        //    새 필드는 GameServer.Snapshot.cs 의 Capture · Restore 에 같은 자리로 더한다.
         //
         // 3. 요청 메서드는 requester 를 첫 인자로 받고, 검증 → 적용 → return TakeEvents() 순서다.
         //        public IReadOnlyList<GameEvent> SetTrap(int requester, int cardInstanceId)
@@ -54,15 +55,20 @@ namespace Chapchu.Game
         /// 게임 시작 1회 (01-game-flow.md 3절 순서): 덱 셔플 → 체력 100 → 5장씩 → 턴 순서 무작위 · 첫 턴.
         /// deck 의 카드는 장마다 고유 InstanceId 를 가져야 한다 (09-network.md 7절).
         /// </summary>
-        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck)
+        /// <param name="noTimeoutActors">시간 초과 자동 행동 · 강제 퇴장을 받지 않는 사람 — 봇 (03-turn.md 4절). 없으면 전원이 받는다.</param>
+        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck, IEnumerable<int> noTimeoutActors = null)
         {
+            _noTimeoutActors.Clear();
+            if (noTimeoutActors != null)
+                _noTimeoutActors.UnionWith(noTimeoutActors);
             _players.Clear();
             _chain.Clear();
             _resolving.Clear();
+            _chainOrder.Clear();
             _deathDeadline = -1;
             _gameOver = false;
-            _trapWindowDeadline = -1;
             _afterRecords.Clear();
+            _trapSetOrder.Clear();
             _waitCasters.Clear();
             _allCards.Clear();
             _allCards.AddRange(deck);
@@ -70,11 +76,16 @@ namespace Chapchu.Game
             _falloutTurns = 0;
             _restartPending = false;
             _heldNext = -1;
+            _turnTaker = -1;
+            _reversed = false; // 게임 시작은 정방향 (03-turn.md 6절 #4)
+            _extraTurnActor = -1;
+            TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)
             ResetGaepan();
             ClearChoice();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
                 _players[actor] = new PlayerState();
+            ResetStats(actors);
 
             InitDeck(deck);
 
@@ -118,11 +129,14 @@ namespace Chapchu.Game
 
         private IReadOnlyList<GameEvent> TakeEvents()
         {
+            SettleChapchu(); // 요청 · Tick 하나가 끝날 때 남은 손패 변화를 마저 본다 (07 4.1)
             if (_events.Count == 0)
                 return Array.Empty<GameEvent>(); // Tick 이 매 프레임 부르므로 빈 목록은 할당하지 않는다
 
             GameEvent[] taken = _events.ToArray();
             _events.Clear();
+            if (taken.Any(e => !(e is RequestRejected)))
+                Revision++; // 상태가 바뀌었다 — 예비 방장에게 다시 보낸다 (GameServer.Snapshot.cs)
             return taken;
         }
 

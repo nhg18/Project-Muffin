@@ -43,10 +43,13 @@ namespace Chapchu.UI.GameScreen
         };
 
         /// <summary>닉네임(서식 태그 · 제어 문자를 거른 것, NicknameValidator.ForDisplay), 비면 P{actorNumber}.</summary>
-        public static string NameOf(Player player)
+        public static string NameOf(Player player) => NameOf(player.NickName, player.ActorNumber);
+
+        /// <summary>닉네임 원본을 걸러 표시 이름으로, 비면 P{actorNumber} — 방에 없는 사람(결과 화면의 나간 사람)의 이름도 같은 규칙으로 만든다.</summary>
+        public static string NameOf(string nickname, int actorNumber)
         {
-            string name = NicknameValidator.ForDisplay(player.NickName);
-            return name.Length == 0 ? string.Format(NicknameFallbackFormat, player.ActorNumber) : name;
+            string name = NicknameValidator.ForDisplay(nickname);
+            return name.Length == 0 ? string.Format(NicknameFallbackFormat, actorNumber) : name;
         }
 
         /// <summary>
@@ -71,7 +74,19 @@ namespace Chapchu.UI.GameScreen
         /// <summary>플레이어의 흰 바탕 위 글자색.</summary>
         public static Color InkOf(int actorNumber) => LookOf(actorNumber, MeInk, SeatInks);
 
-        /// <summary>actorNumber 의 표시 이름. 봇이면 「봇 N」 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
+        /// <summary>
+        /// 게임을 시작할 때의 명단으로 본 목걸이 색 — 결과 화면이 쓴다. 누가 나가도 게임에서 보던 색 그대로다
+        /// (ColorOf 는 지금 방에 있는 사람으로 좌석을 세어, 나간 사람은 회색이 되고 남은 사람의 색이 밀린다).
+        /// </summary>
+        public static Color ColorOf(int actorNumber, IEnumerable<int> startActors)
+        {
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
+            var ordered = new List<int> { me };
+            ordered.AddRange(startActors.Where(actor => actor != me).OrderBy(actor => actor)); // 봇 식별자는 사람보다 크다 — 사람 뒤에 봇 번호 순
+            return LookOf(actorNumber, ordered, MeColor, SeatColors);
+        }
+
+        /// <summary>actorNumber 의 표시 이름. 봇이면 봇 닉네임 (18-bot.md 4절), 방에 없으면 P{actorNumber}.</summary>
         public static string NameOf(int actorNumber)
         {
             if (BotRoster.IsBot(actorNumber))
@@ -81,9 +96,10 @@ namespace Chapchu.UI.GameScreen
             return player != null ? NameOf(player) : string.Format(NicknameFallbackFormat, actorNumber);
         }
 
-        private static Color LookOf(int actorNumber, Color me, Color[] seats)
+        private static Color LookOf(int actorNumber, Color me, Color[] seats) => LookOf(actorNumber, OrderedActors(), me, seats);
+
+        private static Color LookOf(int actorNumber, List<int> ordered, Color me, Color[] seats)
         {
-            List<int> ordered = OrderedActors();
             int index = ordered.IndexOf(actorNumber);
             if (index == 0) return me;
             if (index < 0) return UnseatedColor;

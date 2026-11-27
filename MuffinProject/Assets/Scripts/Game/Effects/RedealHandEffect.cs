@@ -4,8 +4,9 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 받는 사람마다 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (RedealHand — 113 기억 삭제). HP · 설치 함정은 그대로.
+    /// 받는 사람마다 손패를 전부 버리고 시작 손패 장수만큼 새로 뽑는다 (RedealHand — 1013 기억 삭제). HP · 설치 함정은 그대로.
     /// 교환 · 재분배라 훔침 · 버림에 반응하는 카드의 대상이 아니다 (11-card-list 1-2) — 반응 조건 일(Tag)이 없다.
+    /// 다만 「손패를 모두 버리고」 는 손패 감소다 — 2019 안 놔! 로 막으면 그 사람은 버리기 · 다시 뽑기 모두에서 빠진다 (사용자 2026-11-23, 11-card-list 1-3).
     /// 봇은 찹츄 상대가 있거나 받는 사람의 평균 손패가 시작 장수보다 많을 때만 쓴다 (18-bot.md 7-3).
     /// </summary>
     [Serializable]
@@ -25,10 +26,15 @@ namespace Chapchu.Game.Effects
             return receivers.Sum(actor => view.HandScore(actor, GameServer.InitialHandCount - view.Server.HandCountOf(actor)));
         }
 
+        internal override bool GainsHand => true;
+
+        internal override int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) =>
+            server.HandLossReceiversOf(subject, entry).Contains(actor) ? handCount : 0;
+
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            foreach (int actor in server.ReceiversOf(subject, entry))
-                server.RedealHand(actor);
+            foreach (int actor in server.HandLossReceiversOf(subject, entry))
+                server.RedealHand(actor, server.Scaled(entry, GameServer.InitialHandCount));
         }
     }
 }

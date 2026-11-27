@@ -4,12 +4,14 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 게임을 새로 시작한다 — 이 턴이 끝나면 지금 방에 있는 사람으로 처음처럼, 그 뒤로 턴이 끝날 때마다 모두 피폭 k^n (Restart — 112 대소동, 11-card-list 112).
+    /// 게임을 새로 시작한다 — 이 턴이 끝나면 지금 방에 있는 사람으로 처음처럼, 그 뒤로 턴이 끝날 때마다 모두 피폭 k^n (Restart — 1012 대소동, 11-card-list 1012).
     /// 봇은 찹츄 상대가 있거나 내 HP 가 꼴찌일 때만 쓴다 (18-bot.md 7-3 ㅂ).
     /// </summary>
     [Serializable]
     public sealed class RestartEffect : CardEffect
     {
+        internal override bool BoardWide => true;
+
         private const double BotChapchuScore = 250; // 18-bot.md 7-3 「새 판」 — 찹츄 상대가 보이면
 
         // 찹츄 상대(알아챈 상대만, 7-7)가 있으면 판을 엎을 값이 크다. 아니면 내 HP 가 꼴찌일 때만, 내가 뒤진 HP 만큼 — 모두 같은 HP 면 0 이라 쓰지 않는다

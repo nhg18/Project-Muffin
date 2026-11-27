@@ -14,9 +14,6 @@ namespace Chapchu.Game
         /// <summary>체인 · 함정 시간 · 사망 대기 등으로 메인 행동을 할 수 없는 때 (코드 18) · 게임 끝.</summary>
         internal bool IsBusy => _gameOver || IsPaused(_clock());
 
-        /// <summary>카드 효과가 아직 처리 중 (체인 · 효과 처리 멈춤 · 개판 판정 · 고르기) — 봇이 찹츄를 선언하지 않는 때. 함정 시간 · 사망 대기는 들지 않는다 (18-bot.md 7-5).</summary>
-        internal bool IsResolving => _chain.Count > 0 || IsResolvePaused || IsGaepanJudging || IsChoosing;
-
         internal PlayerState StateOf(int actor) => _players[actor];
 
         internal bool InGame(int actor) => _players.ContainsKey(actor) && IsInGame(actor);
@@ -32,17 +29,10 @@ namespace Chapchu.Game
 
         internal bool IsReactionOpen(double now) => _chain.Count > 0 && now >= _reactionOpensAt && now < _reactionDeadline;
 
-        internal bool IsTrapWindowOpenAt(double now) => IsTrapWindowOpen && now >= _trapWindowOpensAt;
-
-        internal double TrapWindowOpensAt => _trapWindowOpensAt;
-
-        /// <summary>actor 의 「~한 후」 함정 trap 을 지금 쓸 사건이 있다 (04 6절).</summary>
-        internal bool HasAfterTrigger(int actor, Card trap) => IsAfterTrigger(trap.Trigger) && FindAfterRecord(actor, trap) != null;
+        /// <summary>이번 반응 시간에 물어 온 사람인가 — 낼 수 있는 카운터가 있고 아직 스킵하지 않았다.</summary>
+        internal bool IsReactionAsked(int actor) => _reactionAsked.ContainsKey(actor);
 
         internal double DeathDeadline => _deathDeadline;
-
-        /// <summary>선언 대기 중 — 턴 주인이 뽑아서 10장이 됐고 아직 턴이 넘어가지 않았다 (03-turn.md 4절).</summary>
-        internal bool IsDeclareWait => _declareWait;
 
         /// <summary>덱 + 버림 더미 장수 — 이보다 많이 뽑으면 빈 덱 피해 (05-deck.md 5절). 둘 다 공개 값이다.</summary>
         internal int DrawableCount => _deck.Count + _discardPile.Count;

@@ -13,6 +13,7 @@ using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using AnalyticsRecorder = Chapchu.Account.AnalyticsRecorder; // Photon.Realtime 에도 AccountService 가 있어 통째로 가져오지 않는다
 using UnityEngine.UI;
 
 namespace Chapchu.UI.RoomScreen
@@ -20,6 +21,8 @@ namespace Chapchu.UI.RoomScreen
     /// <summary>
     /// 방 화면의 뷰들과 네트워크 · 씬 전환을 잇는다. Scripts/UI/RoomScreen 에서 네트워크를 아는 유일한 파일이다.
     /// 칸 · 인원 · 공개 여부 · 시작 자리는 방 상태가 바뀔 때마다 Refresh 한 곳에서 다시 그린다.
+    /// 매치 방(랜덤 매칭)은 방 코드 · 공개 토글 · 봇 편집 · 「게임 시작」 이 없고, 시각이 지나면 방장이 빈자리를 봇으로 채워 시작한다.
+    /// 매치 방의 봇은 사람과 똑같이 보인다 — 꼬리표 · 흐린 색 · 「봇」 로그가 없다 (18-bot.md 4절, PM 2026-11-26).
     /// 기준 문서: docs/systems/16-room-ui-full.md, docs/systems/08-room.md 4 · 5절, docs/systems/18-bot.md 5 · 8-1절
     /// </summary>
     public class RoomPresenter : MonoBehaviour
@@ -29,16 +32,23 @@ namespace Chapchu.UI.RoomScreen
         private const string EnteredLogFormat = "{0}님이 입장했어요.";
         private const string LeftLogFormat = "{0}님이 퇴장했어요.";
         private const string HostChangedLogFormat = "{0}님이 방장이 되었어요.";
+        private const string BecameHostToastFormat = "방장이 되었어요. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string PublicLog = "공개로 변경";
         private const string PrivateLog = "비공개로 변경";
-        private const string BotAddedLogFormat = "봇 {0} 추가";
+        private const string BotAddedLogFormat = "봇 {0} 추가";   // {0} = 봇 닉네임
         private const string BotRemovedLogFormat = "봇 {0} 제거";
+
+        // 매치 방 (08-room.md 4절 「매치」 · 16-room-ui-full.md 7-7)
+        private const string MatchSearchingFormat = "같이 할 사람 찾는 중…\n{0}초";
+        private const string MatchFilledText = "다 모였어요!\n곧 시작해요.";
+        private const double MatchFullStartSeconds = 3;  // 사람 4명이 다 차면 이만큼 뒤 시작 — 누가 모였는지 보이게
+        private const double MatchJoinGraceSeconds = 3;  // 마감 직전에 들어온 사람도 방을 이만큼은 본다
+        private const float MatchBotShowSeconds = 1.5f;  // 봇을 채운 뒤 시작까지 — 봇이 든 칸을 보고, 봇 목록이 전원에게 먼저 닿게
 
         // 18-bot.md 8-1 — 봇 칸의 꼬리표 「(봇 · 보통)」, 방장이 칸을 누를 때마다 보통 → 어려움 → 쉬움 → 보통
         private const string BotTagFormat = "(봇 · {0})";
         private const string BotLevelLogFormat = "봇 {0} 난이도 {1}";
         private static readonly BotLevel[] BotLevelCycle = { BotLevel.Normal, BotLevel.Hard, BotLevel.Easy };
-        private const string BecameHostToastFormat = "방장이 되었어요. {0}명 이상이면 시작할 수 있어요."; // {0} = NetworkManager.MinPlayers
         private const string FallbackNickname = "플레이어";
 
         [Header("위")]
@@ -72,12 +82,20 @@ namespace Chapchu.UI.RoomScreen
         // 방이 닫혔다 = 방장이 시작을 눌렀다. 전원 화면이 「게임을 시작합니다」 가 되고 입력이 잠긴다
         private bool _isLocked;
         private bool _isLeaving;
+        private float _enteredAt = -1f; // 방에 들어온 시각 — 판 전에 나가면 roomLeftBeforeStart.waitSeconds (27 5-2). 음수 = 세지 않음
 
         // 공개 여부 · 열림 · 봇 목록 · 봇 난이도([봇 번호 − 1])의 지난 값 — 바뀐 것을 찾아 로그 · 잠금에 쓴다
         private bool _wasPublic;
         private bool _wasOpen;
         private int[] _bots = Array.Empty<int>();
         private readonly BotLevel[] _botLevels = new BotLevel[BotRoster.MaxBots];
+
+        // 매치 방 — 방장이 빈자리를 봇으로 채운 때 (실시간). 음수 = 아직 안 채움
+        private float _matchFilledAt = -1f;
+        private int _matchShownSeconds = -1; // 대기 안내에 지금 띄운 남은 초 — 바뀔 때만 글을 다시 쓴다
+
+        // 방장 교체 로그 줄 — PUN 은 방장 교체를 앞 방장 퇴장보다 먼저 알린다. 퇴장 줄 뒤에 쓰려고 미뤄 둔다 (없으면 다음 프레임에)
+        private string _pendingHostLog;
 
         private readonly struct Seat
         {
@@ -191,7 +209,13 @@ namespace Chapchu.UI.RoomScreen
             if (!_initialized || _isLeaving || !PhotonNetwork.InRoom)
                 return;
 
+            FlushHostLog();
             SyncRoomOptions();
+            UpdateMatch();
+
+            // 창이 떠 있는 동안 알림은 위쪽 HUD 줄 가운데 — 창 내용을 가리지 않게 (통합 v3.25)
+            if (PopupManager.Instance != null)
+                PopupManager.Instance.ToastOverHud = leaveConfirm.IsOpen || playerInfo.IsOpen;
 
             // Android 뒤로가기 · PC Esc (16-room-ui-full 3절 #12)
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -211,6 +235,9 @@ namespace Chapchu.UI.RoomScreen
                 return;
             }
 
+            AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Room);
+            _enteredAt = Time.realtimeSinceStartup;
+
             Room room = PhotonNetwork.CurrentRoom;
             _wasPublic = room.IsVisible;
             _wasOpen = room.IsOpen;
@@ -219,6 +246,11 @@ namespace Chapchu.UI.RoomScreen
                 _botLevels[number - 1] = BotRoster.LevelOf(number);
 
             // 로그는 내가 들어온 뒤의 일만 가진다 — 먼저 와 있던 사람은 칸으로만 보인다 (7-9)
+            // 매치 방은 코드로 부르거나 공개 여부를 바꿀 수 없다 — 그 자리를 비운다
+            bool isMatch = BotRoster.IsMatchRoom;
+            codeCard.gameObject.SetActive(!isMatch);
+            visibility.gameObject.SetActive(!isMatch);
+
             codeCard.SetCode(room.Name);
             log.Add(string.Format(EnteredLogFormat, DisplayName(NetworkManager.Nickname)));
             SetLocked(!room.IsOpen);
@@ -232,7 +264,8 @@ namespace Chapchu.UI.RoomScreen
 
             Room room = PhotonNetwork.CurrentRoom;
             bool isHost = PhotonNetwork.IsMasterClient;
-            bool canEditBots = isHost && !_isLocked;
+            bool isMatch = BotRoster.IsMatchRoom;
+            bool canEditBots = isHost && !_isLocked && !isMatch;
             int[] bots = BotRoster.Numbers;
 
             // PlayerList 는 ActorNumber 순 — 들어온 순서대로 칸을 채운다. 봇은 그 뒤에 번호 순.
@@ -247,9 +280,9 @@ namespace Chapchu.UI.RoomScreen
             {
                 if (i >= _seats.Count)
                     slots[i].ShowEmpty(canAddBot);
-                else if (_seats[i].IsBot)
+                else if (_seats[i].IsBot && !isMatch)
                     slots[i].ShowBot(_seats[i].Nickname, string.Format(BotTagFormat, LevelName(BotRoster.LevelOf(_seats[i].ActorNumber - BotRoster.ActorBase))), canEditBots);
-                else
+                else // 사람 — 매치 방의 봇도 사람 칸으로
                     slots[i].ShowPlayer(_seats[i].Nickname, _seats[i].ActorNumber == room.MasterClientId, _seats[i].ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber);
             }
 
@@ -260,6 +293,11 @@ namespace Chapchu.UI.RoomScreen
 
             if (_isLocked)
                 start.ShowStarting();
+            else if (isMatch)
+            {
+                _matchShownSeconds = -1;
+                ShowMatchWait();
+            }
             else if (isHost)
                 start.ShowHost(CanStartGame());
             else
@@ -325,6 +363,88 @@ namespace Chapchu.UI.RoomScreen
         // 08-room.md 5절 #2: 최소 인원 2명 (준비 상태 없음) — 봇 포함 (08 2절 · 18-bot 4절). 정원(4)은 남이 바꿀 수 있어 넘으면 시작하지 않는다
         private static bool CanStartGame() => BotRoster.MemberCount >= NetworkManager.MinPlayers && BotRoster.MemberCount <= NetworkManager.MaxPlayers;
 
+        #region 매치 방
+
+        private static double MatchStartAt => NetworkManager.RoomProp(RoomProps.MatchStartAt) is double at ? at : 0;
+
+        // 남은 초 — 봇을 채웠거나 4명이 다 찼으면 「곧 시작」
+        private void ShowMatchWait()
+        {
+            bool filled = BotRoster.MemberCount >= NetworkManager.MaxPlayers;
+            // 방장이 시각을 적기 전이면 처음 값. 다 센 초는 기다리는 시간을 넘지 않게 — 방 속성은 남이 쓸 수 있다
+            double at = MatchStartAt;
+            int wait = (int)PhotonRoom.MatchWaitSeconds;
+            int seconds = filled ? 0 : at <= 0 ? wait : Mathf.Clamp((int)Math.Ceiling(at - PhotonNetwork.Time), 0, wait);
+            if (seconds == _matchShownSeconds && _matchShownSeconds >= 0)
+                return;
+
+            _matchShownSeconds = seconds;
+            start.ShowMatching(filled ? MatchFilledText : string.Format(MatchSearchingFormat, seconds));
+        }
+
+        // 매 프레임 — 전원은 남은 초를 고치고, 믿는 방장은 시각이 되면 빈자리를 봇으로 채운 뒤 시작한다 (08-room.md 4절 「매치」).
+        // 시각은 방 속성이라 방장이 바뀌어도 새 방장이 이어 센다
+        private void UpdateMatch()
+        {
+            if (_isLocked || !BotRoster.IsMatchRoom)
+                return;
+
+            ShowMatchWait();
+            if (!NetworkManager.IsTrustedMaster)
+                return;
+
+            double now = PhotonNetwork.Time;
+            double at = MatchStartAt;
+
+            // 방을 막 만들었다 — 또는 적힌 시각이 말이 안 되게 멀다 (방 속성은 아무 클라나 쓸 수 있다). 지금부터 다시 센다
+            if (at <= 0 || at - now > PhotonRoom.MatchWaitSeconds + MatchJoinGraceSeconds)
+            {
+                SetMatchStartAt(now + PhotonRoom.MatchWaitSeconds);
+                return;
+            }
+
+            if (PhotonNetwork.CurrentRoom.PlayerCount >= NetworkManager.MaxPlayers && at - now > MatchFullStartSeconds)
+                SetMatchStartAt(now + MatchFullStartSeconds);
+
+            if (now < at)
+                return;
+
+            if (BotRoster.MemberCount < NetworkManager.MaxPlayers)
+            {
+                for (int i = 0; i < BotRoster.MaxBots && NetworkManager.Instance.AddBot(); i++) { } // 쓰기가 막혀도 끝나게 횟수를 둔다
+                _matchFilledAt = Time.realtimeSinceStartup;
+                Refresh();
+                return;
+            }
+
+            // 방장이 바뀌었으면 앞 방장이 이미 채웠다 — 기다리지 않는다
+            if (_matchFilledAt >= 0f && Time.realtimeSinceStartup - _matchFilledAt < MatchBotShowSeconds)
+                return;
+
+            HandleStartRequested();
+        }
+
+        private static void SetMatchStartAt(double at)
+            => NetworkManager.Instance.SetRoomProps(new ExitGames.Client.Photon.Hashtable { [RoomProps.MatchStartAt] = at });
+
+        // 마감 직전에 들어온 사람도 방을 잠깐은 보게 미룬다 (방장만)
+        private static void DelayMatchForNewcomer()
+        {
+            if (!BotRoster.IsMatchRoom || !NetworkManager.IsTrustedMaster)
+                return;
+
+            // 시각이 아직 없으면 미루지 않는다 — 15초 시각은 UpdateMatch 가 먼저 적는다
+            double at = MatchStartAt;
+            if (at <= 0)
+                return;
+
+            double earliest = PhotonNetwork.Time + MatchJoinGraceSeconds;
+            if (at < earliest)
+                SetMatchStartAt(earliest);
+        }
+
+        #endregion
+
         private static string LevelName(BotLevel level) => level == BotLevel.Easy ? "쉬움" : level == BotLevel.Hard ? "어려움" : "보통";
 
         // 서식 태그 · 제어 문자를 거른 닉네임(NicknameValidator.ForDisplay), 비면 「플레이어」 (16-room-ui-full 9절)
@@ -342,6 +462,7 @@ namespace Chapchu.UI.RoomScreen
 
         private void HandlePlayerEntered(Player player)
         {
+            DelayMatchForNewcomer();
             log.Add(string.Format(EnteredLogFormat, DisplayName(player.NickName)));
             Refresh();
         }
@@ -349,31 +470,49 @@ namespace Chapchu.UI.RoomScreen
         private void HandlePlayerLeft(Player player)
         {
             log.Add(string.Format(LeftLogFormat, DisplayName(player.NickName)));
+            FlushHostLog();
             Refresh();
+        }
+
+        private void FlushHostLog()
+        {
+            if (_pendingHostLog == null) return;
+
+            log.Add(_pendingHostLog);
+            _pendingHostLog = null;
         }
 
         private void HandleMasterClientSwitched(Player newMaster)
         {
-            log.Add(string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName)));
-            if (newMaster.IsLocal)
-                PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
+            // 방 대기 중에 방장이 나갔다 — 위임: 방장 표시 · 시작 자리 · 봇 편집 · 공개 토글이 새 방장 기준으로 바뀐다 (08-room.md 5절 #5, PM 2026-11-20)
+            if (_isLeaving)
+                return;
+
+            if (newMaster != null)
+            {
+                _pendingHostLog = string.Format(HostChangedLogFormat, DisplayName(newMaster.NickName));
+                if (newMaster.IsLocal && !BotRoster.IsMatchRoom) // 매치 방은 방장이 할 일이 없다
+                    PopupManager.Instance.ShowToast(string.Format(BecameHostToastFormat, NetworkManager.MinPlayers));
+            }
 
             Refresh();
         }
 
         private void HandleBotsChanged(int[] numbers)
         {
+            // 매치 방의 봇은 사람처럼 「입장 · 퇴장」 으로 적는다
+            bool isMatch = BotRoster.IsMatchRoom;
             foreach (int number in numbers.Except(_bots))
-                log.Add(string.Format(BotAddedLogFormat, number));
+                log.Add(string.Format(isMatch ? EnteredLogFormat : BotAddedLogFormat, BotName(number)));
             foreach (int number in _bots.Except(numbers))
-                log.Add(string.Format(BotRemovedLogFormat, number));
+                log.Add(string.Format(isMatch ? LeftLogFormat : BotRemovedLogFormat, BotName(number)));
 
             // 난이도 로그는 계속 있던 봇만 — 새로 든 봇은 「추가」 한 줄로 충분하다
             foreach (int number in numbers)
             {
                 BotLevel level = BotRoster.LevelOf(number);
                 if (_bots.Contains(number) && level != _botLevels[number - 1])
-                    log.Add(string.Format(BotLevelLogFormat, number, LevelName(level)));
+                    log.Add(string.Format(BotLevelLogFormat, BotName(number), LevelName(level)));
 
                 _botLevels[number - 1] = level;
             }
@@ -382,8 +521,19 @@ namespace Chapchu.UI.RoomScreen
             Refresh();
         }
 
+        private static string BotName(int number) => BotRoster.NicknameOf(BotRoster.ActorOf(number));
+
         private void HandleLeftRoom()
         {
+            // 판이 시작되면 이 화면은 게임 씬으로 바뀌어 여기 오지 않는다 — 여기 오면 판 전에 나간 것.
+            // 내보내기 · 버전 다름은 아직 없어 내가 나갔나 · 끊겼나 둘만 가린다
+            if (_enteredAt >= 0f)
+            {
+                AnalyticsRecorder.RecordRoomLeftBeforeStart(Mathf.RoundToInt(Time.realtimeSinceStartup - _enteredAt),
+                    _isLeaving ? AnalyticsRecorder.RoomLeaveReason.Self : AnalyticsRecorder.RoomLeaveReason.Disconnected);
+                _enteredAt = -1f;
+            }
+
             // 들어온 곳으로 돌아간다. Lobby 에서 왔으면 Lobby, DebugLobby 에서 왔으면 DebugLobby.
             SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
         }
@@ -436,8 +586,9 @@ namespace Chapchu.UI.RoomScreen
 
             Seat seat = _seats[Array.IndexOf(slots, slot)];
 
-            // 봇 칸은 방장에게만 눌린다 — 난이도를 다음 것으로 (18-bot.md 8-1). 칸은 바로, 로그는 OnBotsChanged 에서
-            if (seat.IsBot)
+            // 봇 칸은 방장에게만 눌린다 — 난이도를 다음 것으로 (18-bot.md 8-1). 칸은 바로, 로그는 OnBotsChanged 에서.
+            // 매치 방의 봇은 사람 칸처럼 정보 판을 연다
+            if (seat.IsBot && !BotRoster.IsMatchRoom)
             {
                 int number = seat.ActorNumber - BotRoster.ActorBase;
                 int next = (Array.IndexOf(BotLevelCycle, BotRoster.LevelOf(number)) + 1) % BotLevelCycle.Length;
@@ -454,8 +605,8 @@ namespace Chapchu.UI.RoomScreen
         {
             if (_isLocked || _isLeaving) return;
 
-            // 다른 사람(봇 제외)이 있을 때만 묻는다. 혼자면 바로 나간다 (7-8)
-            if (PhotonNetwork.CurrentRoom.PlayerCount > 1)
+            // 다른 사람(봇 제외)이 있을 때만 묻는다. 혼자면 바로 나간다 (7-8). 매치 방은 나가기 = 매칭 취소라 묻지 않는다
+            if (PhotonNetwork.CurrentRoom.PlayerCount > 1 && !BotRoster.IsMatchRoom)
                 leaveConfirm.Show(PhotonNetwork.IsMasterClient);
             else
                 Leave();

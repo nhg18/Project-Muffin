@@ -9,7 +9,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 연출 (121, 프로토타입 v2): 시작 제목 → 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말.
+    /// 개판 오분전 연출 (1021, 프로토타입 v2): 시작 제목 → 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말.
     /// 값은 GameScreenPresenter 가 연출 큐 순서로 넘긴다. 늦게 열렸을 때는 Start 에서 방 속성 「gaepan」 을 한 번 읽어 자명종만 보인다 (09-network.md 6.1).
     /// </summary>
     public class GaepanPresenter : MonoBehaviour
@@ -30,13 +30,14 @@ namespace Chapchu.UI.GameScreen
 
         private void Start()
         {
-            if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Gaepan, out object value) && value is int[] gaepan && gaepan.Length == 2 && gaepan[1] > 0)
+            if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.Gaepan, out object value) && value is int[] gaepan && gaepan.Length == 2
+                && gaepan[1] >= 1 && gaepan[1] <= GameServer.GaepanRounds) // 남이 잠깐 바꾼 값은 거른다 (09-network.md 13절 #8)
                 hud.Show(gaepan[1], GameServer.GaepanRounds);
         }
 
         /// <summary>
         /// 개판 상태가 바뀌었다 (OnGaepanChanged). 처음 · 다시 처음부터면 시작 제목을 마친 뒤 자명종, 바퀴가 줄면 자명종이 넘어간다,
-        /// 0 이면 (판정 직전 · 112 대소동으로 지워짐) 자명종을 거둔다.
+        /// 0 이면 (판정 직전 · 1012 대소동으로 지워짐) 자명종을 거둔다.
         /// </summary>
         public IEnumerator ChangedRoutine(int left)
         {
@@ -71,7 +72,7 @@ namespace Chapchu.UI.GameScreen
             yield return judge.PlayRoutine(byHp, values, points, loserIndex);
         }
 
-        /// <summary>새 판 (112 대소동) — 개판 표시를 모두 거둔다.</summary>
+        /// <summary>새 판 (1012 대소동) — 개판 표시를 모두 거둔다.</summary>
         public void ShowRestarted()
         {
             hud.Hide(false);

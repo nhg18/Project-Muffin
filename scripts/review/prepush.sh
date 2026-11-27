@@ -136,13 +136,19 @@ else
     warn "원격 브랜치가 지금 커밋의 조상이 아닙니다 (rebase · 남의 push) — $BASE_DESC 부터 봅니다."
   elif git merge-base --is-ancestor "$DEV_BASE" "$PUSHED"; then
     BASE="$PUSHED"; BASE_DESC="이미 push 한 곳"
-  elif TREE="$(git merge-tree --write-tree "$PUSHED" "$DEV_BASE" 2>/dev/null)"; then
-    # push 뒤에 develop 을 머지했다 — 「push 한 곳 + 그 develop」을 합친 트리와 비교해 남의 코드를 뺀다
-    BASE="$TREE"; BASE_DESC="이미 push 한 곳 + 머지한 develop"
   else
-    warn "push 한 곳과 develop 을 충돌 없이 합칠 수 없습니다 — $BASE_DESC 부터 봅니다."
+    # push 뒤에 develop 을 머지했다 — 「push 한 곳 + 그 develop」을 합친 트리와 비교해 남의 코드를 뺀다.
+    # 충돌이 나도(종료 1) 첫 줄에 트리가 나온다 — 충돌 파일은 충돌 표시가 든 채로 들어 있어, HEAD 와 비교하면 충돌 해결만 남는다
+    TREE="$(git merge-tree --write-tree "$PUSHED" "$DEV_BASE" 2>/dev/null)"; MT=$?
+    TREE="${TREE%%$'\n'*}"
+    if (( MT <= 1 )) && [[ -n "$TREE" ]]; then
+      BASE="$TREE"; BASE_DESC="이미 push 한 곳 + 머지한 develop"
+      (( MT == 1 )) && { BASE_DESC+=" (충돌 표시 포함)"; CONFLICT_NOTE=" diff 의 - 쪽에 충돌 표시(<<<<<<< · ======= · >>>>>>>)가 보이면 그 자리는 develop 을 머지하며 푼 충돌이다 — 푼 결과가 양쪽 의도를 다 살렸는지 본다."; }
+    else
+      warn "push 한 곳과 develop 을 합친 트리를 만들지 못했습니다 — $BASE_DESC 부터 봅니다."
+    fi
   fi
-  SCOPE="이번 diff가 새로 만들거나 건드린 문제만 보고한다. diff와 무관한 기존 코드의 문제는 보고하지 않는다."
+  SCOPE="이번 diff가 새로 만들거나 건드린 문제만 보고한다. diff와 무관한 기존 코드의 문제는 보고하지 않는다.${CONFLICT_NOTE:-}"
 fi
 # 2라운드부터: 앞 라운드 수정 커밋만 본다 (두 모드 공통)
 VERIFY_SCOPE="이번 diff 는 앞 라운드 수정 세션이 고친 내용이다. 두 가지만 보고한다 — (1) 앞 라운드 기록의 수정 결과에서 FIXED 라고 한 지적이 이 수정으로 실제로 해결되지 않았다, 또는 SKIPPED 된 C- 가 그대로 남아 있다 (2) 이 수정이 새로 만든 문제 (Q- 를 정리하다 동작이 바뀐 것 포함). 수정과 무관한 기존 코드의 문제, 앞 라운드에서 철회된 지적, SKIPPED 된 Q- 는 보고하지 않는다. 새 설계 지적(Q-)은 이 라운드에서 하지 않는다 — C- 로만 보고한다."

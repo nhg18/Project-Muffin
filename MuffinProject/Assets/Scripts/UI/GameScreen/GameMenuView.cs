@@ -5,16 +5,18 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 오른쪽 위 설정(톱니) 버튼 → 설정 서랍(「게임 나가기」) → 나가기 확인 팝업 (10-ui.md 2-1 HUD v2 「설정」 · 08-room.md 6절).
-    /// 서랍 열고 닫기는 표시만이라 여기서 처리하고, 「나가기」 확정만 이벤트로 알린다. 배경 음악 · 효과음 토글은 다음 작업 (2026-11-07).
-    /// 기본: 서랍 · 팝업 비활성.
+    /// 오른쪽 위 설정(톱니) 버튼 → 설정 판(「게임 나가기」) → 나가기 확인 팝업 (10-ui.md 2-1 HUD v2 「설정」 · 08-room.md 6절).
+    /// 설정 판은 화면 가운데 · 바탕 어둡게 (통합 화면 UI v3 .gset · .popdim). 바탕을 눌러도 닫히지 않고 닫기(×)로 닫는다.
+    /// 열고 닫기는 표시만이라 여기서 처리하고, 「나가기」 확정만 이벤트로 알린다. 배경 음악 · 효과음 토글은 다음 작업 (2026-11-07) — 게임에 소리가 생기면 넣는다.
+    /// 기본: 설정 판 · 팝업 비활성.
     /// </summary>
     public class GameMenuView : MonoBehaviour
     {
         [SerializeField] private Button gearButton;
         [SerializeField] private Image gearFill;
-        [Tooltip("서랍이 열려 있는 동안 설정(톱니) 버튼 바탕색. 닫혀 있으면 흰색.")]
+        [Tooltip("설정 판이 열려 있는 동안 설정(톱니) 버튼 바탕색. 닫혀 있으면 흰색.")]
         [SerializeField] private Color gearOpenColor = new Color32(0xff, 0xc1, 0x2e, 0xFF);
+        [Tooltip("설정 판 — 바탕 어둡게(PopDim) + 판을 함께 켜고 끈다.")]
         [SerializeField] private GameObject sheet;
         [SerializeField] private Button closeButton;
         [SerializeField] private Button exitButton;
@@ -33,19 +35,19 @@ namespace Chapchu.UI.GameScreen
 
         private void OnEnable()
         {
-            gearButton.onClick.AddListener(ToggleSheet);
-            closeButton.onClick.AddListener(CloseSheet);
-            exitButton.onClick.AddListener(OpenConfirm);
-            confirmCancelButton.onClick.AddListener(CloseConfirm);
+            gearButton.onClick.AddListener(HandleGearClicked);
+            closeButton.onClick.AddListener(HandleCloseClicked);
+            exitButton.onClick.AddListener(HandleExitClicked);
+            confirmCancelButton.onClick.AddListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.AddListener(HandleExitConfirmed);
         }
 
         private void OnDisable()
         {
-            gearButton.onClick.RemoveListener(ToggleSheet);
-            closeButton.onClick.RemoveListener(CloseSheet);
-            exitButton.onClick.RemoveListener(OpenConfirm);
-            confirmCancelButton.onClick.RemoveListener(CloseConfirm);
+            gearButton.onClick.RemoveListener(HandleGearClicked);
+            closeButton.onClick.RemoveListener(HandleCloseClicked);
+            exitButton.onClick.RemoveListener(HandleExitClicked);
+            confirmCancelButton.onClick.RemoveListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.RemoveListener(HandleExitConfirmed);
         }
 
@@ -56,7 +58,14 @@ namespace Chapchu.UI.GameScreen
             gearFill.color = Color.white;
         }
 
-        private void ToggleSheet()
+        // PC Esc 로도 설정 판을 닫는다 (10-ui.md 9절 「설정 버튼」). 확인 팝업은 버튼으로만 닫는다.
+        private void Update()
+        {
+            if (sheet.activeSelf && Input.GetKeyDown(KeyCode.Escape))
+                CloseSheet();
+        }
+
+        private void HandleGearClicked()
         {
             bool open = !sheet.activeSelf;
             sheet.SetActive(open);
@@ -69,14 +78,16 @@ namespace Chapchu.UI.GameScreen
             gearFill.color = Color.white;
         }
 
-        // 서랍을 닫고 확인 팝업으로 바꾼다 (시안). 바탕을 눌러도 닫히지 않는다.
-        private void OpenConfirm()
+        private void HandleCloseClicked() => CloseSheet();
+
+        // 설정 판을 닫고 확인 팝업으로 바꾼다 (시안). 바탕을 눌러도 닫히지 않는다.
+        private void HandleExitClicked()
         {
             CloseSheet();
             confirm.SetActive(true);
         }
 
-        private void CloseConfirm() => confirm.SetActive(false);
+        private void HandleConfirmCancelClicked() => confirm.SetActive(false);
 
         private void HandleExitConfirmed()
         {

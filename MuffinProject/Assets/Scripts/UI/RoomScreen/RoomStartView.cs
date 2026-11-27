@@ -1,6 +1,7 @@
 ﻿using System;
 using Chapchu.UI.Lobby;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,6 +9,7 @@ namespace Chapchu.UI.RoomScreen
 {
     /// <summary>
     /// 시작 자리 — 같은 자리에 셋 중 하나만 보인다: 방장의 「게임 시작」 버튼 / 참가자의 대기 안내 / 전원의 「게임을 시작합니다」.
+    /// 매치 방은 방장도 버튼 없이 대기 안내 자리에 남은 초를 띄운다.
     /// 기준 문서: docs/systems/16-room-ui-full.md 7-7 · 7-12
     /// </summary>
     public class RoomStartView : MonoBehaviour
@@ -21,6 +23,9 @@ namespace Chapchu.UI.RoomScreen
         [Header("참가자 — 대기 안내")]
         [SerializeField] private GameObject waitPanel;
 
+        [Tooltip("대기 안내의 글 — 매치 방이면 남은 초로 바꾼다")]
+        [SerializeField] private TMP_Text waitText;
+
         [Tooltip("대기 안내의 발자국 — 차례로 까딱인다")]
         [SerializeField] private RectTransform[] waitPaws;
 
@@ -33,6 +38,7 @@ namespace Chapchu.UI.RoomScreen
         [SerializeField] private GameObject startingPanel;
 
         private float[] _pawBaseY;
+        private string _guestText; // 씬에 적힌 참가자 안내 글 — 매치 방 글에서 돌아올 때 쓴다
 
         /// <summary>방장이 「게임 시작」 을 눌렀다.</summary>
         public event Action OnStartRequested;
@@ -59,9 +65,13 @@ namespace Chapchu.UI.RoomScreen
                 }
             }
 
+            if (waitText == null)
+                Debug.LogError($"[{nameof(RoomStartView)}] {nameof(waitText)} 참조가 비어 있습니다.", this);
+
             if (startingPanel == null)
                 Debug.LogError($"[{nameof(RoomStartView)}] {nameof(startingPanel)} 참조가 비어 있습니다.", this);
 
+            _guestText = waitText.text;
             _pawBaseY = new float[waitPaws.Length];
             for (int i = 0; i < waitPaws.Length; i++)
                 _pawBaseY[i] = waitPaws[i].anchoredPosition.y;
@@ -84,8 +94,14 @@ namespace Chapchu.UI.RoomScreen
         }
 
         /// <summary>참가자 — 눌리지 않는 버튼 대신 대기 안내.</summary>
-        public void ShowGuest()
+        public void ShowGuest() => ShowWait(_guestText);
+
+        /// <summary>매치 방 — 방장 · 참가자 모두 대기 안내 자리에 이 글 (남은 초 · 봇 채움).</summary>
+        public void ShowMatching(string text) => ShowWait(text);
+
+        private void ShowWait(string text)
         {
+            waitText.text = text;
             bool wasShown = waitPanel.activeSelf;
             Show(waitPanel);
             if (!wasShown)

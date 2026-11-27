@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 자명종 (프로토타입 v2 .gp-hud · gpClock — 121). 크림색 스티커 + 5칸 자명종 + 「개판 오분전 N 바퀴 남음」.
+    /// 개판 오분전 자명종 (프로토타입 v2 .gp-hud · gpClock — 1021). 크림색 스티커 + 5칸 자명종 + 「개판 오분전 N 바퀴 남음」.
     /// 한 바퀴마다 분홍 칸이 하나 비고 바늘이 한 칸 넘어간다 · 숫자가 튄다 · 시계가 흔들린다. 마지막 바퀴는 분홍 바탕 + 따르릉 흔들림 (깜빡임 없음).
     /// v2 는 판 효과 줄 대신 왼쪽 위(턴 순서 띠 아래) — 자리 고정이라 나타날 때 미끄러지지 않는다 (v2 의 transform:none). 숨길 때만 0.3초 흐려진다.
     /// </summary>
@@ -108,7 +108,7 @@ namespace Chapchu.UI.GameScreen
             numberText.text = Mathf.Max(0, left).ToString();
             Dial(left, true);
 
-            var numberRect = numberText.rectTransform;
+            RectTransform numberRect = numberText.rectTransform;
             numberRect.DOKill();
             numberRect.localScale = Vector3.one * numberPopScale;
             numberRect.localRotation = Quaternion.Euler(0f, 0f, numberPopAngle);
@@ -152,7 +152,7 @@ namespace Chapchu.UI.GameScreen
                 segment.color = off ? segmentOff : segmentOn;
                 if (off && !wasOff && animate)
                 {
-                    var rect = segment.rectTransform;
+                    RectTransform rect = segment.rectTransform;
                     rect.DOKill();
                     rect.localScale = Vector3.one * segmentPopScale;
                     DOTween.Sequence().SetTarget(rect)
@@ -193,7 +193,7 @@ namespace Chapchu.UI.GameScreen
             foreach (float angle in ringAngles)
                 ring.Append(clock.DOLocalRotate(new Vector3(0f, 0f, angle), step));
             ring.AppendInterval(ringSeconds - step * ringAngles.Length);
-            _ring = ring.SetLoops(-1);
+            _ring = ring.SetLoops(-1).SetLink(clock.gameObject);
         }
 
         private void KillTweens()

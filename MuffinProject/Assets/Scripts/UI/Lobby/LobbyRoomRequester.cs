@@ -3,6 +3,7 @@ using Chapchu.Account;
 using Chapchu.Core;
 using Chapchu.Network;
 using Chapchu.Network.Events;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using ErrorCode = Photon.Realtime.ErrorCode; // Photon.Realtime 에도 AccountService 가 있어 통째로 가져오지 않는다
@@ -11,7 +12,8 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 로비의 방 요청 — 혼자 하기 · 방 만들기 · 코드로 참가 · 랜덤 매칭 · 초대 수락. 결과는 RoomEvents 로 오고, 10초 안에 응답이 없으면 실패로 알린다.
-    /// 기준: docs/systems/08-room.md 7절 · 14-lobby-ui.md 6절 · 17-lobby-ui-full.md 5-1 · 22-popup-ui 3절
+    /// 요청을 보내기 전에 설정 값을 다시 읽는다 — 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐으면 타이틀로 돌려보낸다 (23-login 7-6).
+    /// 기준: docs/systems/08-room.md 7절 · 14-lobby-ui.md 6절 · 17-lobby-ui-full.md 5-1 · 22-popup-ui 3절 · 23-login.md 7-6
     /// </summary>
     public class LobbyRoomRequester : MonoBehaviour
     {
@@ -31,7 +33,13 @@ namespace Chapchu.UI.Lobby
         private const string NoRoomCodeText = "방 코드를 입력해 주세요.";
         private const string RetryLaterText = "잠시 후 다시 시도해 주세요.";
 
+        // 방에 가기 전 확인 (23-login 7-6) — 타이틀 팝업과 같은 글
+        private const string UpdateTitle = "업데이트 필요";
+        private const string UpdateText = "새 버전으로 업데이트해 주세요.";
+        private const string MaintenanceTitle = "점검 중";
+
         private const float RoomRequestTimeoutSeconds = 10f; // 14-lobby-ui 6절
+        private const float ConfigRefreshSeconds = 30f;      // 23-login 4절 — 이 로비에서 마지막으로 읽은 지 이 안이면 다시 읽지 않는다
 
         [SerializeField] private LobbyHomeView home;
         [SerializeField] private LobbyModalView modal;
@@ -40,6 +48,7 @@ namespace Chapchu.UI.Lobby
 
         private RoomRequest _request;
         private Coroutine _roomTimeout; // 방 요청의 응답을 기다리는 동안만 있다
+        private float _configReadAt = float.NegativeInfinity; // 이 로비에서 설정 값을 마지막으로 다시 읽기 시작한 때 (실패한 읽기도 센다)
 
         // 초대 배너가 떠 있는 동안 플레이 버튼은 눌리지 않는다 (17 5-1)
         private bool CanPlay => !invite.IsShown && !sections.IsMoving && !modal.IsLoading;
@@ -135,6 +144,30 @@ namespace Chapchu.UI.Lobby
                 return;
 
             _request = request;
+            StartCoroutine(RequestRoutine(request, roomCode));
+        }
+
+        // 설정 값 다시 읽기 → (업데이트 · 점검이면 타이틀로) → 요청 보내기. 로딩 창은 처음부터 그 요청의 글로 뜬다
+        private IEnumerator RequestRoutine(RoomRequest request, string roomCode)
+        {
+            modal.ShowLoading(request switch
+            {
+                RoomRequest.Random => SearchingText,
+                RoomRequest.Join   => JoiningText,
+                _                  => CreatingText,
+            });
+
+            yield return RefreshConfigRoutine();
+
+            // 앱을 켜 둔 사이 최소 버전이 올랐거나 점검이 시작됐다 — 요청을 보내지 않고 타이틀로 돌려보낸다. 닫을 수 없는 팝업은 타이틀이 띄운다 (23-login 7-6)
+            if (AccountService.IsSignedIn && ServerConfig.HasValues && (ServerConfig.NeedsUpdate || ServerConfig.IsMaintenance))
+            {
+                modal.HideLoading();
+                bool update = ServerConfig.NeedsUpdate;
+                modal.ShowWarn(update ? UpdateTitle : MaintenanceTitle, update ? UpdateText : ServerConfig.MaintenanceMessage, onOk: ReturnToTitle);
+                yield break;
+            }
+
             // 서버가 새 요청을 받을 수 있다 = 포기한 옛 요청은 끝났다. 받을 수 없으면(옛 요청이 아직 처리 중) 표시를 그대로 둔다 —
             // 새 요청은 그 자리에서 실패하고, 옛 요청의 늦은 입장은 계속 막는다
             if (NetworkManager.IsReady)
@@ -144,23 +177,32 @@ namespace Chapchu.UI.Lobby
             switch (request)
             {
                 case RoomRequest.Random:
-                    modal.ShowLoading(SearchingText);
                     NetworkManager.Instance.JoinRandomRoom();
                     break;
                 case RoomRequest.Create:
-                    modal.ShowLoading(CreatingText);
                     NetworkManager.Instance.CreateRoom();
                     break;
                 case RoomRequest.Solo:
-                    modal.ShowLoading(CreatingText);
                     NetworkManager.Instance.CreateSoloRoom();
                     break;
                 default:
-                    modal.ShowLoading(JoiningText);
                     NetworkManager.Instance.JoinRoom(roomCode);
                     break;
             }
         }
+
+        // 이 로비에서 마지막으로 읽은 지 30초가 지났으면 설정 값을 다시 읽는다. 읽지 못하면 지난 값으로 간다 — 읽기 실패가 방에 가는 것을 막지 않는다.
+        // 로그인하지 않은 실행(디버그 로비)은 읽지 않는다
+        private IEnumerator RefreshConfigRoutine()
+        {
+            if (!AccountService.IsSignedIn || Time.realtimeSinceStartup - _configReadAt < ConfigRefreshSeconds)
+                yield break;
+
+            _configReadAt = Time.realtimeSinceStartup;
+            yield return ServerConfig.FetchRoutine();
+        }
+
+        private static void ReturnToTitle() => SceneManager.LoadScene(ScenePaths.Title);
 
         #endregion
 
@@ -176,7 +218,23 @@ namespace Chapchu.UI.Lobby
             }
 
             StopCoroutine(_roomTimeout); // 입장했다 — 방 씬이 열리기 전에 시간 초과가 끼어들지 않게 멈춘다
+            // 봇은 Photon 플레이어가 아니다 — PlayerCount 가 곧 사람 수 (18-bot)
+            AnalyticsRecorder.RecordRoomEntered(ToVia(_request), PhotonNetwork.CurrentRoom.IsVisible, PhotonNetwork.CurrentRoom.PlayerCount);
             SceneManager.LoadScene(ScenePaths.Room);
+        }
+
+        // 혼자 하기(봇 방)도 방 만들기다. 초대 수락은 친구 서버가 붙으면 Invite 로 (27 5-2)
+        private static AnalyticsRecorder.RoomVia ToVia(RoomRequest request)
+        {
+            switch (request)
+            {
+                case RoomRequest.Random:
+                    return AnalyticsRecorder.RoomVia.QuickStart;
+                case RoomRequest.Join:
+                    return AnalyticsRecorder.RoomVia.Code;
+                default:
+                    return AnalyticsRecorder.RoomVia.Create;
+            }
         }
 
         // 랜덤 매칭이 방을 못 찾으면 바로 새 방을 만든다 — 그 생성이 실패한 경우도 여기로 온다

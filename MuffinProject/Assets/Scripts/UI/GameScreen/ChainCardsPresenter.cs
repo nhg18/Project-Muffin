@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Chapchu.Cards;
+using Chapchu.Core;
 using Chapchu.Game;
 using Chapchu.Game.Effects;
 using DG.Tweening;
@@ -25,6 +26,8 @@ namespace Chapchu.UI.GameScreen
         private const string OwnerToTargetFormat = "{0} → {1}";
         private const string TargetSeparator = " · ";
         private const string NameFormat = "<color=#{0}><noparse>{1}</noparse></color>";
+        private const float HalfCanvasWidth = HandView.ReferenceWidth / 2f / HandView.CanvasPerUnit; // 기준 화면 1920 의 절반 = 9.6 유닛
+        private const float CanvasPerUnit = HandView.CanvasPerUnit;
 
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 카드 종류 ID 로 카드 내용을 찾는다 (05-deck.md 8절).")]
         [SerializeField] private DeckData deck;
@@ -40,6 +43,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private CardOwnerTagView ownerTag;
         [Tooltip("3 단계 동안 3D 층(테이블 · 덱 · 버림 더미 · 내 손패)을 어둡게 덮는 판 — 손패보다 앞, 크게 둔 카드보다 뒤에 있다. HUD 는 덮지 않는다.")]
         [SerializeField] private MeshRenderer dimmer;
+        [Tooltip("HUD 위 카드 층 — 체인의 카드는 나온 순간부터 지워질 때까지 HUD(좌석 캐릭터 · 패널) 위 · 손패 뒤에 그린다 (사용자 2026-11-17).")]
+        [SerializeField] private TopCardLayerView topLayer;
 
         [Header("자리")]
         [Tooltip("3 단계 · 홀드 — 크게 둔 카드의 자리. 카드 기준점(아래 가운데)의 위치 · 회전 · 배율.")]
@@ -95,13 +100,11 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("체인 전체가 올라가는 높이 — 시안 40 × 2 = 캔버스 80.")]
         [SerializeField] private float handUpRaise = 0.8f;
 
-        private const float HalfCanvasWidth = HandView.ReferenceWidth / 2f / HandView.CanvasPerUnit; // 기준 화면 1920 의 절반 = 9.6 유닛
-        private const float CanvasPerUnit = HandView.CanvasPerUnit;
-
         // 체인의 카드 한 장. 처리돼 떠난 카드도 체인이 다 끝날 때까지 자리를 남긴다 (Card = null) — 처리 도중 남은 카드가 다시 줄 서지 않게.
         private sealed class Entry
         {
             public int Id;
+            public int CardId;   // 카드 종류 ID — 고르기 판이 고르게 한 카드를 찾는다
             public CardView Card;
             public string Name;
             public bool Negates; // 바로 아래 카드를 무효화하는 카운터인가 (본인만 무효는 아니다)
@@ -118,35 +121,16 @@ namespace Chapchu.UI.GameScreen
         private readonly List<Entry> _chain = new List<Entry>();
         private Entry _big;         // 3 단계 — 가운데에서 크게 보여 주는 중인 카드
         private bool _handRaised;
+        private bool _focused;      // 카드 효과 고르기 (1019) — 체인의 카드를 고르기 판 왼쪽 자리로 옮겨 고를 카드와 나란히 보인다
+        private int _focusCardId;   // 고르게 한 카드의 종류 ID
+        private Vector2 _focusCenter; // 캔버스 px, 화면 가운데가 0 · 위가 +
+        private float _focusHeight;   // 캔버스 px
         private float _near;        // showSpot 깊이의 원근 보정 — 테이블 면 길이에 곱하면 그 깊이의 월드 길이
         private float _bigScale;    // 큰 자리의 배율 (1.85)
         private float _cardWidth;
         private float _cardHeight;
-
-        /// <summary>배치가 바뀌었다 — 체인 맨 아래 줄 카드의 아래 끝 (캔버스 y, 화면 가운데가 0 · 위가 +). 반응 타이머가 따라온다.</summary>
-        public event System.Action<float> OnBottomChanged;
-
         private Camera _camera;
         private Tween _dimTween;
-
-        private void Awake()
-        {
-            _camera = Camera.main;
-
-            if (deck == null || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || seats == null || ownerTag == null || dimmer == null
-                || showSpot == null || discardSpot == null || _camera == null)
-            {
-                Debug.LogError($"[{nameof(ChainCardsPresenter)}] 참조 중 비어 있는 것이 있습니다 (메인 카메라 포함).", this);
-                return;
-            }
-
-            float cameraZ = _camera.transform.position.z;
-            _near = (showSpot.position.z - cameraZ) / -cameraZ;
-            _bigScale = showSpot.lossyScale.x / _near;
-
-            SetDimAlpha(0f);
-            dimmer.gameObject.SetActive(false);
-        }
 
         /// <summary>체인 맨 위 카드(반응을 기다리는 카드)의 이름. 체인이 비었으면 null.</summary>
         public string TopCardName
@@ -162,6 +146,28 @@ namespace Chapchu.UI.GameScreen
             }
         }
 
+        /// <summary>배치가 바뀌었다 — 체인 맨 아래 줄 카드의 아래 끝 (캔버스 y, 화면 가운데가 0 · 위가 +). 반응 타이머가 따라온다.</summary>
+        public event System.Action<float> OnBottomChanged;
+
+        private void Awake()
+        {
+            _camera = Camera.main;
+
+            if (deck == null || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || seats == null || ownerTag == null || dimmer == null || topLayer == null
+                || showSpot == null || discardSpot == null || _camera == null)
+            {
+                Debug.LogError($"[{nameof(ChainCardsPresenter)}] 참조 중 비어 있는 것이 있습니다 (메인 카메라 포함).", this);
+                return;
+            }
+
+            float cameraZ = _camera.transform.position.z;
+            _near = (showSpot.position.z - cameraZ) / -cameraZ;
+            _bigScale = showSpot.lossyScale.x / _near;
+
+            SetDimAlpha(0f);
+            dimmer.gameObject.SetActive(false);
+        }
+
         /// <summary>
         /// 내 손패가 올라왔다 · 내려갔다 — 올라와 있는 동안 체인의 카드를 작게 · 위로 비켜 손패와 겹치지 않게 한다. 판정과 상관없는 연출.
         /// 3 단계(크게 보여 주는 중)에도 바로 따른다.
@@ -175,14 +181,47 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
+        /// 카드 효과 고르기 판이 열렸다 — 체인의 카드(고르게 한 카드, 종류 ID = cardId)를 판의 왼쪽 자리로 옮긴다. 판이 닫히면 Unfocus, 체인이 비어도 풀린다.
+        /// canvasCenter = 카드 가운데 (캔버스 px, 화면 가운데가 0 · 위가 +), canvasHeight = 카드 높이 (캔버스 px). 판정과 상관없는 연출.
+        /// </summary>
+        public void Focus(int cardId, Vector2 canvasCenter, float canvasHeight)
+        {
+            _focused = true;
+            _focusCardId = cardId;
+            _focusCenter = canvasCenter;
+            _focusHeight = canvasHeight;
+            Place(null);
+        }
+
+        /// <summary>고르기 판이 닫혔다 — 옮긴 카드를 체인 자리로 돌린다.</summary>
+        public void Unfocus()
+        {
+            if (!_focused)
+                return;
+
+            _focused = false;
+            Place(null);
+        }
+
+        /// <summary>
         /// 카드가 체인에 올라갔다 (OnCardPlayed) — 3 단계(가운데에서 크게) 뒤 그 자리에 둔다. 연출 큐가 기다릴 코루틴.
         /// fromHand = 내 손패에서 떼어 온 카드. null 이면 새로 만든다 — fromSlot(발동한 함정이 있던 칸)이 있으면 그 자리에서, 없으면(남의 카드) 낸 사람 좌석의 손 자리에서.
         /// </summary>
         public IEnumerator PlayRoutine(int actorNumber, int cardInstanceId, int cardId, int[] targets, CardView fromHand, Transform fromSlot = null)
         {
             CardData data = deck.GetCard(cardId);
+            Entry existing = Find(cardInstanceId);
+            if (existing != null)
+            {
+                // 같은 사용 알림이 두 번 왔다 · 복원과 겹쳤다 — 손패에서 떼어 온 카드가 떠 있지 않게 지운다
+                Debug.LogWarning($"[{nameof(ChainCardsPresenter)}] 이미 체인에 있는 카드다. instanceId={cardInstanceId} cardId={cardId}", this);
+                if (fromHand != null && fromHand != existing.Card)
+                    Destroy(fromHand.gameObject);
+                yield break;
+            }
+
             CardView card = fromHand != null ? fromHand : Spawn(actorNumber, cardInstanceId, data, fromSlot);
-            if (card == null || Find(cardInstanceId) != null)
+            if (card == null)
             {
                 Debug.LogWarning($"[{nameof(ChainCardsPresenter)}] 카드를 보여 주지 못했다. instanceId={cardInstanceId} cardId={cardId}", this);
                 yield break;
@@ -191,9 +230,10 @@ namespace Chapchu.UI.GameScreen
             Transform t = card.transform;
             t.SetParent(transform, true); // 손패 올리기 · 내리기에 끌려가지 않게
             card.SetRaycastBlocking(false);
+            topLayer.SetChain(card, true); // 좌석 캐릭터 · 패널(HUD)에 가리지 않게 — 손패보다는 뒤
 
             _chain.RemoveAll(e => e.Card == null); // 앞 체인의 처리 도중에 새 카드가 나왔다 — 떠난 카드의 빈자리를 걷고 다시 줄 세운다
-            var entry = new Entry { Id = cardInstanceId, Card = card, Name = data != null ? data.cardName : null, Negates = IsNegating(data) };
+            var entry = new Entry { Id = cardInstanceId, CardId = cardId, Card = card, Name = data != null ? data.cardName : null, Negates = IsNegating(data) };
             _chain.Add(entry);
             _big = entry;
             _cardWidth = card.Width;
@@ -202,6 +242,7 @@ namespace Chapchu.UI.GameScreen
             // 3 단계 — 손에서 바로 가운데로 크게. 모두가 카드를 읽는 구간
             ownerTag.Show(data != null ? data.type : CardType.Action, OwnerText(actorNumber, targets));
             FadeDim(true);
+            SoundManager.Play(fromSlot != null ? Sfx.TrapFire : Sfx.CardPlay);
             Place(entry); // 앞서 나온 카드는 새 카드의 자리를 비우며 옮겨 간다
             yield return new WaitForSeconds(zoomDuration);
 
@@ -218,18 +259,68 @@ namespace Chapchu.UI.GameScreen
         /// <summary>체인의 카드가 처리됐다 (효과 적용 · 무효화) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴. 여기 없는 카드(함정 칸에서 나온 카드)면 바로 끝난다.</summary>
         public IEnumerator DiscardRoutine(int cardInstanceId)
         {
-            CardView card = Take(cardInstanceId);
+            CardView card = Detach(cardInstanceId);
             if (card == null)
                 yield break;
 
-            card.SetGradeVisible(false); // 닿으면 바꿔 끼우는 더미의 맨 위 카드와 같게 — 등급 연출은 버림 더미에서 보이지 않는다
             MoveTo(card, discardSpot.position, discardSpot.rotation, discardSpot.lossyScale, discardDuration, Ease.InQuad);
             yield return new WaitForSeconds(discardDuration);
-            Destroy(card.gameObject);
+            Remove(card);
         }
 
-        /// <summary>체인에서 카드를 떼어 넘긴다 — 내 카드가 손패로 돌아올 때 (04-card.md 7절 「손패로 반환」). 여기 없으면 null.</summary>
+        /// <summary>
+        /// 체인에 남은 카드를 모두 버림 더미 자리로 보내 지운다 — 1012 대소동의 새 판 (체인이 처리 도중에 버려져 ChainDiscarded 가 오지 않는다, 11-card-list 1012).
+        /// 카드는 새 덱에 들어갔으니 버림 더미 장수는 바꾸지 않는다 — 부르는 쪽이 더미를 비운다. 연출 큐가 기다릴 코루틴.
+        /// </summary>
+        public IEnumerator DiscardAllRoutine()
+        {
+            var cards = new List<CardView>();
+            foreach (Entry entry in _chain)
+            {
+                if (entry.Card != null)
+                    cards.Add(entry.Card);
+            }
+
+            _chain.Clear();
+            _big = null;
+            _focused = false;
+            if (cards.Count == 0)
+                yield break;
+
+            foreach (CardView card in cards)
+            {
+                MoveTo(card, discardSpot.position, discardSpot.rotation, discardSpot.lossyScale, discardDuration, Ease.InQuad);
+            }
+
+            yield return new WaitForSeconds(discardDuration);
+
+            foreach (CardView card in cards)
+                Remove(card);
+        }
+
+        /// <summary>남의 카드가 그 사람 손패로 돌아갔다 (「손패로 반환」) — 좌석의 손 자리로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
+        public IEnumerator ReturnToSeatRoutine(int actorNumber, int cardInstanceId)
+        {
+            CardView card = Detach(cardInstanceId);
+            if (card == null)
+                yield break;
+
+            MoveTo(card, SeatHandPoint(actorNumber), Quaternion.identity, Vector3.one * seatCardScale, discardDuration, Ease.InQuad);
+            yield return new WaitForSeconds(discardDuration);
+            Remove(card);
+        }
+
+        /// <summary>체인에서 카드를 떼어 넘긴다 — 내 카드가 손패로 돌아올 때 (04-card.md 7절 「손패로 반환」). HUD 위 층에서 내려 준다. 여기 없으면 null.</summary>
         public CardView Take(int cardInstanceId)
+        {
+            CardView card = Detach(cardInstanceId);
+            if (card != null)
+                topLayer.SetChain(card, false);
+            return card;
+        }
+
+        // 체인에서 카드를 뗀다 — HUD 위 층에는 그대로 둔다 (떠나는 길에도 가리지 않게). 여기 없으면 null.
+        private CardView Detach(int cardInstanceId)
         {
             Entry entry = Find(cardInstanceId);
             if (entry == null)
@@ -238,8 +329,24 @@ namespace Chapchu.UI.GameScreen
             CardView card = entry.Card;
             entry.Card = null; // 자리는 남긴다 — 남은 카드는 제자리
             if (_big == entry) _big = null;
-            if (_chain.TrueForAll(e => e.Card == null)) _chain.Clear();
+            if (_chain.TrueForAll(e => e.Card == null))
+            {
+                _chain.Clear();
+                _focused = false;
+            }
+            else if (_focused)
+            {
+                Place(null); // 고르기 판이 열린 뒤에 위 카드가 떠났다 — 고르게 한 카드를 판 자리에 다시 맞춘다
+            }
+
             return card;
+        }
+
+        // 다 간 카드를 HUD 위 층에서 내리고 지운다 (TopCardLayerView — 지우기 전에 내린다).
+        private void Remove(CardView card)
+        {
+            topLayer.SetChain(card, false);
+            Destroy(card.gameObject);
         }
 
         private Entry Find(int cardInstanceId) => _chain.Find(e => e.Id == cardInstanceId && e.Card != null);
@@ -256,12 +363,13 @@ namespace Chapchu.UI.GameScreen
 
             Slot[] slots = ComputeLayout(out float bottom);
             Vector3 bigCenter = showSpot.position + showSpot.up * (_cardHeight * showSpot.lossyScale.y / 2f);
+            Entry focus = _focused ? _chain.FindLast(e => e.Card != null && e.CardId == _focusCardId) : null; // 고르게 한 카드 — 그 위 카드가 아직 연출 큐에서 떠나는 중일 수 있어 종류 ID 로 찾는다
             for (int i = 0; i < _chain.Count; i++)
             {
                 Entry entry = _chain[i];
                 if (entry.Card == null) continue;
 
-                Slot slot = entry == _big && !_handRaised ? new Slot { Scale = _bigScale } : slots[i];
+                Slot slot = entry == focus ? FocusSlot(bigCenter) : entry == _big && !_handRaised ? new Slot { Scale = _bigScale } : slots[i];
                 // 카드 기준점이 아래 가운데라, 가운데 자리에서 기운 방향으로 반 높이만큼 내려 잡는다. 뒤에 낸 카드일수록 카메라 쪽으로.
                 Quaternion rotation = showSpot.rotation * Quaternion.Euler(0f, 0f, -slot.Tilt);
                 float scale = slot.Scale * _near;
@@ -272,6 +380,13 @@ namespace Chapchu.UI.GameScreen
 
             OnBottomChanged?.Invoke((bigCenter.y / _near + bottom) * CanvasPerUnit);
         }
+
+        // 고르기 판의 왼쪽 자리 — 캔버스 px 를 큰 자리 카드 가운데에서 본 테이블 면 유닛으로
+        private Slot FocusSlot(Vector3 bigCenter) => new Slot
+        {
+            Center = _focusCenter / CanvasPerUnit - new Vector2(bigCenter.x, bigCenter.y) / _near,
+            Scale = _focusHeight / (CanvasPerUnit * _cardHeight),
+        };
 
         // 체인 배치 (프로토타입 v2 chainLayout) — 살아 있는 카드는 앞 카드 오른쪽에 작게 · 기울여 붙이고, 죽은 카드(살아 있는 무효화 카운터 바로 아래)는 새 묶음을 시작한다.
         // 「행동 → 카운터」 는 한 묶음, 「행동 → 카운터 → 카운터」 는 [행동] [카운터 · 카운터] — 카운터 둘이 비켜 행동이 살아 있음이 보인다.
@@ -353,18 +468,6 @@ namespace Chapchu.UI.GameScreen
 
             bottom = raise - (rows - 1) / 2f * rowStep - _cardHeight * scale / 2f;
             return slots;
-        }
-
-        /// <summary>남의 카드가 그 사람 손패로 돌아갔다 (「손패로 반환」) — 좌석의 손 자리로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
-        public IEnumerator ReturnToSeatRoutine(int actorNumber, int cardInstanceId)
-        {
-            CardView card = Take(cardInstanceId);
-            if (card == null)
-                yield break;
-
-            MoveTo(card, SeatHandPoint(actorNumber), Quaternion.identity, Vector3.one * seatCardScale, discardDuration, Ease.InQuad);
-            yield return new WaitForSeconds(discardDuration);
-            Destroy(card.gameObject);
         }
 
         // 남이 낸 카드 — 그 좌석의 손 자리에 작게 만든다. 손패 내용은 비공개라 낸 순간에 앞면이 처음 보인다.

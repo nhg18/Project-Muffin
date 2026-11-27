@@ -4,12 +4,14 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 개판 오분전 시작 (121, 11-card-list 121). 이 턴이 끝난 뒤부터 턴을 세어 생존자 수만큼이면 한 바퀴, 5바퀴 뒤 반반 기준 꼴찌가 HP 0.
+    /// 개판 오분전 시작 (1021, 11-card-list 1021). 이 턴이 끝난 뒤부터 턴을 세어 생존자 수만큼이면 한 바퀴, 5바퀴 뒤 반반 기준 꼴찌가 HP 0.
     /// 개판 중에 다시 쓰면 처음부터. 건 사람이 죽거나 나가도 이어진다 (사용자 2026-11-13).
     /// </summary>
     [Serializable]
     public sealed class StartGaepanEffect : CardEffect
     {
+        internal override bool BoardWide => true;
+
         // 18-bot.md 7-3 「개판 시작」
         private const int BotMinHpLead = 20;   // 내 HP − 상대 최저 HP 가 이 이상
         private const int BotMinHandLead = 2;  // 내 손패 − 상대 최소 손패가 이 이상

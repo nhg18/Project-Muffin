@@ -53,3 +53,28 @@ MonoBehaviour:
     count: 3
   - card: {fileID: 11400000, guid: 1623de1f2ccdb5c408b7cb2729ddeeba, type: 2}
     count: 1
+  - card: {fileID: 11400000, guid: b48c36ab8dfc8ce4db855f46ab56be01, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: fcddb20e750d31149977b3f2349cd8d9, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: de83a14bf0154d54fbab29f2ad08e251, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 9f53e9eaf4d09654c823a33b923e10bd, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: 1dd5db12dee48864a899f365a8bf2022, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 1dee9e5c8c7894b4fad77541b4c19d46, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 7adf583772f01ca419d5e3ff7c209d88, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 2f4954a0d430f3042895dd3532d019fc, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 5c0e48a5dd181ae4c9d98233ef790689, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 56a03964e9d7c574fb9a17244798b6f5, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 1726dcdafe59bb34080a68e4c263d4c2, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 790bd8ba65ecd8548bffad96d5d1a107, type: 2}
+    count: 2
+  sheet: {fileID: 4900000, guid: b5bc381f71aa40d4f8b411c8fa221a8a, type: 3}

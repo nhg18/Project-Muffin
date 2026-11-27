@@ -8,7 +8,7 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class RedirectEffect : CardEffect
     {
-        // 켜면 시전자에게 (C04), 끄면 이 카운터의 대상에게 (C02)
+        // 켜면 시전자에게 (C04), 끄면 이 카운터의 대상에게 (C02 · 2015 가로채기 — 대상이 여러 명이면 모두)
         public bool toCaster;
 
         internal override void Apply(GameServer server, ChainEntry entry) => server.RedirectBelow(entry, toCaster);

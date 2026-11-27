@@ -37,16 +37,28 @@ namespace Chapchu.Game
         // 다음 턴 스킵 (03-turn.md 7절 — 겹쳐도 1회).
         public bool SkipNextTurn;
 
-        // 다음 실제 턴에 행동 카드 금지 (107 짖기 — 겹쳐도 1회). 스킵된 턴은 세지 않는다 — 실제로 오는 다음 턴에 ActionBlocked 로 바뀐다 (03-turn.md 7절).
+        // 다음 실제 턴에 행동 카드 금지 (1007 짖기 — 겹쳐도 1회). 스킵된 턴은 세지 않는다 — 실제로 오는 다음 턴에 ActionBlocked 로 바뀐다 (03-turn.md 7절).
         public bool BlockActionNextTurn;
 
-        // 이번 턴에 행동 카드를 쓸 수 없다 (107 짖기) — 공개. 그 턴이 끝나면 해제. 뽑기 · 함정 설치 · 카운터는 된다.
+        // 이번 턴에 행동 카드를 쓸 수 없다 (1007 짖기) — 공개. 그 턴이 끝나면 해제. 뽑기 · 함정 설치 · 카운터는 된다.
         public bool ActionBlocked;
 
         // 다음 실제 턴 시작에 더 뽑을 장수 (T15, 03-turn.md 7절).
         public int TurnStartDraws;
 
-        // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 10장이 아니게 되면 즉시 해제 (07-win-condition.md 7절).
+        // 연속 시간 초과 횟수 — 직접 뽑기 · 카드 사용으로 턴을 끝내면 0. GameServer.TimeoutLimit 번째에 강제 퇴장 (03-turn.md 4절).
+        public int TimeoutStreak;
+
+        // 찹츄 상태 — 공개. 손패 10장에서 파생되지 않고 따로 부여 · 제거된다. 선언 뒤 장수는 보지 않는다 — 그 사람의 턴이 시작될 때 10장이 아니면 풀린다 (07-win-condition.md 4.2 · 4.3).
         public bool IsChapchu;
+
+        // 게임에서 빠진 턴 번호 — 최종 사망했거나 나간 때 한 번만 적는다 (07-win-condition.md 11-3 순위). 남아 있으면 0.
+        public int OutTurn;
+
+        // 나가서 게임에서 빠졌다 — OutTurn 을 나갈 때 적은 사람만. 최종 사망한 뒤 나간 사람은 사망으로 빠진 것이라 false (07-win-condition.md 11-2 「이탈 · N턴」).
+        public bool OutByLeaving;
+
+        // HP 를 0 으로 만든 마지막 피해의 주인 (07-win-condition.md 11-3 「킬」). 빈 덱 · 자기 피해 · 판정이거나 HP 가 0 보다 크면 -1.
+        public int DownedBy = -1;
     }
 }

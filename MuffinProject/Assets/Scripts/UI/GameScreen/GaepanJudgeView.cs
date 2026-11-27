@@ -10,7 +10,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 판정 팻말 (프로토타입 v2 GP_FX.judge — 121). 화면을 어둡게 → 「땡 개판 끝!」 → 기준 팻말(HP 꼴찌 / 카드 꼴찌)이 룰렛처럼 번갈아 뒤집히다 정해진 쪽에 멈춤
+    /// 개판 오분전 판정 팻말 (프로토타입 v2 GP_FX.judge — 1021). 화면을 어둡게 → 「땡 개판 끝!」 → 기준 팻말(HP 꼴찌 / 카드 꼴찌)이 룰렛처럼 번갈아 뒤집히다 정해진 쪽에 멈춤
     /// → 살아 있는 사람 머리 위에 기준 값 표가 하나씩 → 꼴찌 표만 분홍 「꼴찌」, 나머지는 흐리게 · 띠는 「꼴찌는?!」 → 0.65초 뒤 사라진다.
     /// 시안의 처형씬(치와와 뭉치)은 넣지 않는다 (사용자 2026-11-13). 시간표는 방장의 GameServer.GaepanJudgeSeconds 와 같다 — 끝나면 꼴찌의 HP 가 0 이 된다.
     /// 판정 · 꼴찌는 방장이 정해 보낸 값만 그린다.
@@ -56,15 +56,24 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject cardIcon;
         [Tooltip("머리 위 값 표 템플릿 (비활성) — 자식: Body(Fill · Text · LowBadge).")]
         [SerializeField] private RectTransform tagTemplate;
+        [Tooltip("머리 위 값 표 글자 크기.")]
         [SerializeField] private float tagFontSize = 48f;
+        [Tooltip("꼴찌 표 글자 크기 — 화면 끝 여백도 이 크기로 잰다.")]
         [SerializeField] private float lowTagFontSize = 69f;
 
+        [Tooltip("정해진 팻말 · 꼴찌 표의 글자 색 (크림).")]
         [SerializeField] private Color cream = new Color32(0xFF, 0xFC, 0xF6, 0xFF);
+        [Tooltip("뒤집히는 팻말 · 보통 표의 글자 색 (잉크).")]
         [SerializeField] private Color ink = new Color32(0x2B, 0x1E, 0x1A, 0xFF);
+        [Tooltip("HP 로 정해진 팻말 면 · 꼴찌 표 면 · 뒤집히는 동안 하트 색 (분홍).")]
         [SerializeField] private Color pink = new Color32(0xFF, 0x5C, 0x8A, 0xFF);
+        [Tooltip("정해진 팻말의 하트 색 (노랑).")]
         [SerializeField] private Color yellow = new Color32(0xFF, 0xE2, 0x7A, 0xFF);
+        [Tooltip("뒤집히는 동안 HP 면 팻말 색.")]
         [SerializeField] private Color hpFill = new Color32(0xFF, 0xE0, 0xEA, 0xFF);
+        [Tooltip("뒤집히는 동안 카드 면 팻말 색.")]
         [SerializeField] private Color cardFill = new Color32(0xE3, 0xF0, 0xFF, 0xFF);
+        [Tooltip("카드로 정해진 팻말 면 색 (파랑).")]
         [SerializeField] private Color cardOnFill = new Color32(0x4E, 0x9B, 0xEA, 0xFF);
 
         private readonly List<GameObject> _tags = new List<GameObject>();
