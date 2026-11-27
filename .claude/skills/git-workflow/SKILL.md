@@ -51,16 +51,16 @@ Unity 빌드는 오래 걸리고(무료 러너로 한 번에 수십 분) 라이�
 | --- | --- | --- |
 | PR → `release/*` · `hotfix/*` · `main` | Android 빌드 검사. **통과해야 머지**(필수 검사) | 내보낼 브랜치에 깨진 빌드가 들어가지 않게 |
 | push → `release/*` · `hotfix/*` | 확인용 APK 빌드 → 아티팩트 | release · hotfix 확인 단계(위 순서 2)에서 기기에 깔아 본다 |
-| `v*` 태그 push | 서명된 AAB (CD) → 아티팩트. Play Console 내부 테스트 트랙 올리기는 나중에 붙인다 | 배포 빌드 = 태그 커밋 (`docs/versioning.md` 「태그」) |
+| `v*` 태그 push | 서명된 AAB · PC 빌드 (CD) → 아티팩트 → **GitHub Release 자동 생성** (PC zip + 설치용 APK, `0.x` 는 Pre-release). Play Console 내부 테스트 트랙 올리기는 나중에 붙인다 | 배포 빌드 = 태그 커밋 (`docs/versioning.md` 「태그」). 팀원은 Release 페이지에서 받는다 |
 | `develop` | 하루 한 번 밤 빌드 (schedule) — 그날 바뀐 것이 없으면 건너뛴다 | feature PR 마다 돌리면 비싸다. 깨진 날을 하루 안에 안다 |
-| 수동 | `workflow_dispatch` | 아무 브랜치나 필요할 때 |
+| 수동 | `workflow_dispatch` | 아무 브랜치나 필요할 때. `release_tag` 를 넣으면 빌드 없이 그 태그 빌드의 아티팩트로 Release 만 만든다 (빠진 Release 채우기) |
 
 * `docs/**` · `*.md` 만 바꾼 것은 돌지 않는다.
 * feature · fix · docs PR(→ develop)에는 Unity 빌드를 돌리지 않는다 — 대신 `/prepush` 리뷰와 skill `multi-test` 가 막는다.
 * **지금 파일과 다르다** (2026-11-27 기준) — 위 표대로 고치는 것은 따로 브랜치를 따서 `/prepush` 를 거쳐 넣는다.
   * PR 검사: 아직 원격에 없는 `test_build` 로 가는 PR 에만 돌아, `release/*` · `hotfix/*` · `main` PR 검사가 한 번도 돈 적이 없다.
   * push → `release/*`: Windows 64비트 PC 빌드(zip)만 나온다 (전시판). 확인용 APK 는 아직 없다. `hotfix/*` push 는 돌지 않는다.
-  * `v*` 태그: 서명된 AAB 와 PC 빌드가 함께 나온다.
+  * `v*` 태그: 서명된 AAB 와 PC 빌드가 함께 나오고, 끝나면 Release 를 만든다 (iOS 빌드는 아직 없다 — Mac 러너 필요).
   * `develop` 밤 빌드(schedule)는 아직 없다.
 
 ## 그 밖의 규칙

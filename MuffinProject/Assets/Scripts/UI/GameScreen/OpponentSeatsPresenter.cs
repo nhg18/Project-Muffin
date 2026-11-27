@@ -39,6 +39,20 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("상대가 뽑은 뒷면을 꺼낸 뒤 다음 일로 넘어가기까지 초. 내 손패(HandPresenter.dealInterval)와 같게 — 첫 분배 때 한 장씩 날아온다.")]
         [SerializeField] private float dealInterval = 0.15f;
 
+        [Header("캐릭터 모습")]
+        [Tooltip("사람의 캐릭터 그림 — 기본 캐릭터 (19-character-items 「기본 캐릭터 1종」).")]
+        [SerializeField] private Sprite defaultBody;
+        [Tooltip("봇 번호 1 · 2 · 3 의 모습 — 사람과도, 봇끼리도 달라 보이게 (18-bot.md 8-2). 매치 방은 쓰지 않는다.")]
+        [SerializeField] private CharacterLook[] botLooks = new CharacterLook[3];
+
+        /// <summary>캐릭터 모습 한 벌 — 몸 그림 + 위에 겹치는 꾸미기(없어도 된다). 두 그림은 같은 크기 · 같은 자리로 그린 원본이다.</summary>
+        [Serializable]
+        public struct CharacterLook
+        {
+            public Sprite body;
+            public Sprite accessory;
+        }
+
         private readonly Dictionary<int, OpponentSeatView> _seatOf = new Dictionary<int, OpponentSeatView>(); // actorNumber → 좌석
         private readonly Dictionary<int, TrapSlotsView> _trapsOf = new Dictionary<int, TrapSlotsView>(); // actorNumber → 함정 칸
         private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
@@ -47,6 +61,21 @@ namespace Chapchu.UI.GameScreen
         private int _selectCount;       // 이번 선택에서 고를 수
         private bool _selectIncludeMe;  // 이번 선택에서 나도 고를 수 있다
         private int _aimedActor; // 끄는 카드가 겨눈 상대 (없으면 0)
+
+        /// <summary>
+        /// actorNumber 의 캐릭터 모습 — 봇은 봇 번호의 모습, 사람은 기본 캐릭터. 좌석 · 턴 순서가 같이 쓴다.
+        /// 매치 방의 봇은 사람과 똑같이 보여야 해서 기본 캐릭터 (18-bot.md 2절 #11).
+        /// </summary>
+        public CharacterLook LookOf(int actorNumber)
+        {
+            if (BotRoster.IsBot(actorNumber) && !BotRoster.IsMatchRoom)
+            {
+                int index = actorNumber - BotRoster.ActorOf(1);
+                if (index >= 0 && index < botLooks.Length && botLooks[index].body != null)
+                    return botLooks[index];
+            }
+            return new CharacterLook { body = defaultBody };
+        }
 
         /// <summary>대상 선택 중인가 — 그동안 손패는 잠긴다 (HandPresenter).</summary>
         public bool IsSelectingTargets => _selecting;
@@ -122,6 +151,8 @@ namespace Chapchu.UI.GameScreen
                 string nickname = PlayerLook.NameOf(actor);
                 // 매치 방의 봇은 사람과 똑같이 닉네임만 (18-bot.md 8-2, PM 2026-11-26)
                 seat.SetNickname(BotRoster.IsBot(actor) && !BotRoster.IsMatchRoom ? string.Format(BotNicknameFormat, nickname) : nickname);
+                CharacterLook look = LookOf(actor);
+                seat.SetLook(look.body, look.accessory);
                 seat.SetLife(LifeState.Alive);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
@@ -304,6 +335,13 @@ namespace Chapchu.UI.GameScreen
         {
             if (_selecting)
                 _selectCancelled = true;
+        }
+
+        /// <summary>체인 맨 위 카드의 대상인 상대 좌석을 강조한다 (10-ui.md 5-2 #3 「대상 표시」). 빈 배열이면 모두 끈다.</summary>
+        public void ShowTargeted(int[] targets)
+        {
+            foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
+                pair.Value.SetTargeted(Array.IndexOf(targets, pair.Key) >= 0);
         }
 
         /// <summary>끄는 카드가 겨눈 상대의 좌석만 강조한다. 0 이면 모두 끈다. 대상 선택 중에는 건드리지 않는다 — 같은 고리 · 테를 쓴다.</summary>

@@ -54,7 +54,7 @@ public static class MultiTest
     private const string PanelChapchuField = "_isChapchu";                 // MyPanelPresenter — 내 찹츄 상태 (찹츄 자리 「찹츄 완료」)
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
-    private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
+    private const string CardUseMethod = "Use";                            // HandPresenter — 손패 카드 사용 (카드, 놓은 상대 actorNumber) — 사용 기준선 위에 놓은 것과 같은 길
     private const string HandCardsField = "_cards";                        // HandView — 손패의 카드들
     private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
     private const string TrapPreviewField = "_preview";                    // MyTrapsPresenter — 크게 보기 중인 카드
@@ -98,6 +98,7 @@ public static class MultiTest
 
     // 규칙 상수 — GameServer 의 private 상수와 같게 둔다 (04-card.md 8절 반응 10초 · 03-turn.md 2절 턴 30초).
     private const double ReactionSeconds = 5, TurnSeconds = 15; // 반응 5초 — 낼 수 있는 사람이 있을 때 (04 8절)
+    private const double ReadSeconds = 3; // 읽는 시간 — 카드가 체인에 오른 뒤 이 초 전에는 처리하지 않는다 (04 8절, PM 2026-11-28)
     private const double BotTurnSeconds = 9; // 보통 봇이 수를 두는 가장 늦은 때 — 고민되는 수 5.5초 + 망설임 2.5초 = 8초에 여유 (18-bot.md 4절 · 7-7)
 
     // ActIfMyTurn 이 마지막으로 행동한 턴의 마감 시각 (에디터마다 따로). script.run 은 부를 때마다 새로 컴파일돼 static 이 남지 않아 SessionState 에 둔다
@@ -224,7 +225,7 @@ public static class MultiTest
         string setLog = "";
         if (trapIndex >= 0 && traps.Count < 3)
         {
-            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (더블클릭과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
+            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (기준선 위에 놓은 것과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
             if (UseFromHand(instances[trapIndex]))
                 setLog = " · 함정 설치(화면)";
             else
@@ -411,7 +412,7 @@ public static class MultiTest
 
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
 
-        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 손패 뷰가 그 카드를 「낼 수 있는 카운터」(방장이 알려 준 것)로 알고 있는지도 같이 본다
+        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (기준선 위에 놓은 것과 같은 길). 손패 뷰가 그 카드를 「낼 수 있는 카운터」(방장이 알려 준 것)로 알고 있는지도 같이 본다
         if (counter >= 0)
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
@@ -450,14 +451,14 @@ public static class MultiTest
         return cards.FirstOrDefault(card => card.InstanceId == instanceId);
     }
 
-    // 화면 경로 — 손패의 카드를 더블클릭한 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
+    // 화면 경로 — 손패의 카드를 집어 사용 기준선 위에 놓은 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
     private static bool UseFromHand(int instanceId)
     {
         HandPresenter presenter = Object.FindFirstObjectByType<HandPresenter>();
         CardView card = FindHandCard(instanceId);
         if (presenter == null || card == null) return false;
 
-        typeof(HandPresenter).GetMethod(CardUseRequestedMethod, Private).Invoke(presenter, new object[] { card });
+        typeof(HandPresenter).GetMethod(CardUseMethod, Private).Invoke(presenter, new object[] { card, 0 });
         return true;
     }
 
@@ -1199,7 +1200,7 @@ public static class MultiTest
             }
             case "play":
             {
-                // 실제 카운터를 화면 경로(더블클릭과 같은 길)로 낸다 — 반응 시간이 열린 뒤
+                // 실제 카운터를 화면 경로(기준선 위에 놓은 것과 같은 길)로 낸다 — 반응 시간이 열린 뒤
                 if (!skip.isActiveAndEnabled)
                     return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
                 return UseFromHand(SkipProbeInstance) ? "OK P" + me + " 카운터를 화면에서 냄" : "WAIT 손패에 카운터가 아직 없다";
@@ -1855,7 +1856,7 @@ public static class MultiTest
         double opens = ChainTable.Reveal;
         bool Resolved(IEnumerable<GameEvent> events) => events.OfType<CardResolved>().Any();
 
-        // 낼 수 있는 사람이 없으면 반응 시간을 열자마자(0초) 처리한다
+        // 낼 수 있는 사람이 없으면 반응 시간을 열자마자(0초) — 다만 읽는 시간(카드가 오른 뒤 3초) 전에는 처리하지 않는다 (PM 2026-11-28)
         {
             var t = new ChainTable();
             foreach (int actor in new[] { t.Turn, t.O1, t.O2 })
@@ -1868,7 +1869,11 @@ public static class MultiTest
             t.At(opens - 0.1);
             Check(!Resolved(t.Tick()), "연출 중에는 처리하지 않는다");
             t.At(opens);
-            Check(Resolved(t.Tick()) && t.Hp(t.O1) < 100, "낼 사람이 없으면 연출 직후 바로 처리 (0초)");
+            Check(!Resolved(t.Tick()), "낼 사람이 없어도 연출 직후에는 처리하지 않는다 — 읽는 시간");
+            t.At(ReadSeconds - 0.01);
+            Check(!Resolved(t.Tick()), "읽는 시간(3초) 전에는 처리하지 않는다");
+            t.At(ReadSeconds);
+            Check(Resolved(t.Tick()) && t.Hp(t.O1) < 100, "낼 사람이 없으면 읽는 시간이 끝나자마자 처리");
         }
 
         // 모두 스킵하면 남은 시간을 기다리지 않는다 · 스킵한 사람의 카운터는 받지 않는다
@@ -1885,7 +1890,9 @@ public static class MultiTest
             Check(!Resolved(t.Tick()), "한 명이 남았으면 기다린다");
             Check(t.Code(t.Server.PlayCounter(asked[0].Actor, asked[0].CardInstanceIds[0], new int[0])) == RejectCode.NotReactionTime, "스킵한 사람의 카운터 → 6");
             t.Server.SkipReaction(asked[asked.Length - 1].Actor);
-            Check(Resolved(t.Tick()), "모두 스킵 → 바로 처리 (열린 지 0.5초)");
+            Check(!Resolved(t.Tick()), "모두 스킵해도 읽는 시간(카드가 오른 뒤 3초) 전에는 처리하지 않는다");
+            t.At(ReadSeconds);
+            Check(Resolved(t.Tick()), "모두 스킵 → 읽는 시간이 끝나자마자 처리 (5초 마감을 기다리지 않는다)");
         }
 
         // 스킵하지 않으면 5초 마감 · 물어 오지 않은 사람의 스킵은 버린다
@@ -1986,7 +1993,7 @@ public static class MultiTest
             List<GameEvent> events = t.Tick().ToList();
             double startsAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
             PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
-            Check(died != null && died.Actor == t.O1 && !events.OfType<DeathPending>().Any(), "HP 0 → 체인 끝 사망 정리에서 바로 최종 사망 (사망 대기 없음)");
+            Check(died != null && died.Actor == t.O1, "HP 0 → 체인 끝 사망 정리에서 바로 최종 사망 (사망 대기 없음)");
             Check(t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 1 + 6, "손패 6장 버림 더미로 (쓴 카드 1장 다음에)");
             Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
             t.At(startsAt - 0.01);
@@ -2010,7 +2017,7 @@ public static class MultiTest
             t.Play(t.Turn, ChainTable.Wave, null);
             t.At(ChainTable.Reveal + ReactionSeconds);
             List<GameEvent> events = t.Tick().ToList();
-            Check(events.OfType<PlayerDied>().Count() == 2 && !events.OfType<DeathPending>().Any(), "동시 HP 0 → 함께 최종 사망 (사망 대기 없음)");
+            Check(events.OfType<PlayerDied>().Count() == 2, "동시 HP 0 → 함께 최종 사망 (사망 대기 없음)");
         }
 
         // 3. 턴 뽑기는 2장, 손패가 찹츄 장수 − 1 이면 1장 (05 4절)
@@ -2047,7 +2054,7 @@ public static class MultiTest
             int drawer = t.Turn;
             t.At(3);
             List<GameEvent> events = t.Server.Draw(t.Turn).ToList();
-            Check(events.OfType<PlayerDied>().Any(e => e.Actor == drawer) && !events.OfType<DeathPending>().Any() && events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1,
+            Check(events.OfType<PlayerDied>().Any(e => e.Actor == drawer) && events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1,
                 "빈 덱 피해로 HP 0 → 바로 최종 사망 → 다음 사람 턴");
         }
 
@@ -2347,7 +2354,7 @@ public static class MultiTest
             Card restart = t.Give(t.Turn, id => new Card(id, 1012, CardType.Action, TargetType.None, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve));
             t.PlayCard(t.Turn, restart);
             Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대소동 체인 중에 상대가 나감 → 아직");
-            List<GameEvent> events = t.Run(ChainTable.Reveal + 0.5); // 물을 사람이 없어 등장 연출 뒤 바로 처리 — 후처리 연출 · 턴 넘김(+1.28초) 전
+            List<GameEvent> events = t.Run(ReadSeconds + 0.5); // 물을 사람이 없어 읽는 시간(3초) 뒤 바로 처리 — 후처리 연출 · 턴 넘김(+1.28초) 전
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
                 "혼자 남으면 새 판 대신 처치 승리 — 체인 처리 직후, 연출 · 턴 넘김을 기다리지 않는다 (" + Summary(ended) + ")");
@@ -2479,7 +2486,7 @@ public static class MultiTest
             List<GameEvent> events = t.Tick().ToList();
             List<TrapActivated> traps = events.OfType<TrapActivated>().ToList();
             Check(traps.Count == 1 && traps[0].CardId == ChainTable.TrapDying && t.Hp(t.Turn) == 100, "HP 0 → 본인 사망 함정만 발동 · 피해 받은 후 함정은 발동하지 않음");
-            Check(events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && !events.OfType<DeathPending>().Any() && t.TrapCount(t.O1) == 0, "살아나지 못했다 → 바로 최종 사망 (남은 함정은 버림 더미로)");
+            Check(events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && t.TrapCount(t.O1) == 0, "살아나지 못했다 → 바로 최종 사망 (남은 함정은 버림 더미로)");
         }
 
         // 6. 같은 사건에 맞는 함정은 모두 발동한다 — 한 사람이 여러 장이어도, 한 장당 한 번 (04 6절 「발동 조건」 · 「여러 함정 동시 발동」, 2026-11-18).
@@ -2609,7 +2616,7 @@ public static class MultiTest
             int hand = t.HandCount(t.O1);
             var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
             int avoided = events.FindIndex(e => e is DeathAvoided d && d.Actor == t.O1);
-            Check(avoided >= 0 && !events.OfType<DeathPending>().Any() && t.Hp(t.O1) == 20 && t.State(t.O1).Life == LifeState.Alive && t.TrapCount(t.O1) == 0 && t.HandCount(t.O1) == hand,
+            Check(avoided >= 0 && t.Hp(t.O1) == 20 && t.State(t.O1).Life == LifeState.Alive && t.TrapCount(t.O1) == 0 && t.HandCount(t.O1) == hand,
                 $"3008 죽은 척 — 사망 정리에서 바로 HP 20 으로 생존 · 손패는 그대로 (♥{t.Hp(t.O1)} · {t.State(t.O1).Life})");
             Check(!t.Run(t.Now + 10).OfType<PlayerDied>().Any(), "3008 죽은 척 — 최종 사망하지 않는다");
             var t2 = new ChainTable();
@@ -5109,7 +5116,7 @@ public static class MultiTest
             Check(t.Code(t.Counter(t.O2, notYet)) == RejectCode.CannotReact, "C11 조건 「그 피해로 사망」 — HP 50 → 9");
             t.Counter(t.O1, save);
             var events = t.Run(20);
-            Check(t.Hp(t.O1) == 1 && !events.OfType<DeathPending>().Any(), "C11 사망 방지 — HP 1 로 남고 사망 대기 없음");
+            Check(t.Hp(t.O1) == 1, "C11 사망 방지 — HP 1 로 남고 사망 대기 없음");
         }
         {
             var t = new ChainTable();
@@ -5492,7 +5499,7 @@ public static class MultiTest
             double at = t.Now + 30;
             t.At(at);
             var resumed = clone.ResumeAfterMigration().ToList();
-            Check(!resumed.OfType<DeathPending>().Any() && !resumed.OfType<PlayerDied>().Any() && DumpHp(clone, t.O1) == 0, "최종 사망 뒤 이주 — 사망을 다시 처리하지 않는다");
+            Check(!resumed.OfType<PlayerDied>().Any() && DumpHp(clone, t.O1) == 0, "최종 사망 뒤 이주 — 사망을 다시 처리하지 않는다");
             t.At(at + 20);
             clone.Tick();
             Check(clone.CurrentTurnActor != t.Turn && clone.CurrentTurnActor != t.O1, "이어 가면 다음 턴 — 죽은 사람은 건너뛴다");

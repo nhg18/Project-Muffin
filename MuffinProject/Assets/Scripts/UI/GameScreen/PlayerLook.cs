@@ -68,6 +68,20 @@ namespace Chapchu.UI.GameScreen
             return ordered;
         }
 
+        /// <summary>
+        /// 방 안 플레이어(봇 포함)의 actorNumber 를 턴 순서로 — 방장이 섞어 방 속성에 둔 순서(03-turn.md 6절 #2), 정방향.
+        /// 속성이 아직 없거나 거기 없는 사람이 있으면 좌석 순서로 뒤에 붙인다. 방 밖이면 빈 목록.
+        /// </summary>
+        public static List<int> TurnOrderActors()
+        {
+            List<int> seated = OrderedActors();
+            var ordered = new List<int>();
+            if (PhotonNetwork.InRoom && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnOrder, out object value) && value is int[] order)
+                ordered.AddRange(order.Where(seated.Contains).Distinct()); // 방 속성은 남이 쓸 수 있다 — 방에 있는 사람만
+            ordered.AddRange(seated.Where(actor => !ordered.Contains(actor)));
+            return ordered;
+        }
+
         /// <summary>플레이어의 목걸이 색. 나면 MeColor, 상대면 앉은 좌석 색. 좌석이 없으면(방 밖 · 나간 사람) 잉크 회색.</summary>
         public static Color ColorOf(int actorNumber) => LookOf(actorNumber, MeColor, SeatColors);
 

@@ -19,7 +19,7 @@ MonoBehaviour:
     AppIdVoice: 
     AppVersion: 
     UseNameServer: 1
-    FixedRegion: 
+    FixedRegion: kr
     Server: 
     Port: 0
     ProxyServer: 
@@ -116,6 +116,7 @@ MonoBehaviour:
   - RPC_RequestReactionSkip
   - RPC_OnBackup
   - RPC_OnGameHalted
+  - RPC_OnTurnSkipCleared
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

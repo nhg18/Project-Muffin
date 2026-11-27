@@ -67,6 +67,8 @@ namespace Chapchu.UI.GameScreen
         [Header("캐릭터")]
         [Tooltip("캐릭터 그림 자리 — 그림이 오면 스프라이트만 끼운다 (19-character-items).")]
         [SerializeField] private Image character;
+        [Tooltip("캐릭터 위에 겹치는 꾸미기 그림(봇 스킨의 리본) — 캐릭터 그림과 같은 크기 · 자리. 꾸미기가 없으면 끈다.")]
+        [SerializeField] private Image accessory;
         [Tooltip("턴인 캐릭터 배율 — 발밑 기준 (시안 .char.turn 1.05).")]
         [SerializeField] private float turnCharacterScale = 1.05f;
         [Tooltip("겨눈 캐릭터 배율 (시안 .char.aim 1.08).")]
@@ -94,6 +96,7 @@ namespace Chapchu.UI.GameScreen
         private bool _chapchu;
         private bool _targetable;
         private bool _aimed;
+        private bool _targeted;
         private LifeState _life;
         private int _hp = GameServer.MaxHp;
         private int _handCount;
@@ -105,7 +108,7 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             if (plate == null || plateGroup == null || nameTag == null || nicknameText == null || nameOutlineMaterial == null || namePlainMaterial == null || crown == null
-                || pickOutline == null || handBadge == null || heart == null || hpText == null || hpBar == null || hpFill == null || hpFillGraphic == null || grayMaterial == null || character == null
+                || pickOutline == null || handBadge == null || heart == null || hpText == null || hpBar == null || hpFill == null || hpFillGraphic == null || grayMaterial == null || character == null || accessory == null
                 || turnTimer == null || pickRing == null || shout == null || hand == null || lifeTag == null || lifeTagFill == null || lifeTagText == null || status == null || tapArea == null
                 || pickLayers == null || pickLayers.Length == 0)
                 Debug.LogError($"[{nameof(OpponentSeatView)}] 참조 중 비어 있는 것이 있습니다.", this);
@@ -114,6 +117,15 @@ namespace Chapchu.UI.GameScreen
         }
 
         public void SetNickname(string nickname) => nicknameText.text = nickname;
+
+        /// <summary>캐릭터 모습 — 몸 그림 · 꾸미기(없으면 null). 봇은 봇 번호마다 다르다 (18-bot.md 8-2).</summary>
+        public void SetLook(Sprite body, Sprite accessorySprite)
+        {
+            if (body != null)
+                character.sprite = body;
+            accessory.sprite = accessorySprite;
+            accessory.enabled = accessorySprite != null;
+        }
 
         /// <summary>뒷면 부채꼴의 화면 좌표 — 이 좌석이 낸 카드가 출발하는 자리. Overlay 캔버스라 월드 위치가 곧 화면 픽셀이다.</summary>
         public Vector2 HandScreenPoint => hand.transform.position;
@@ -169,6 +181,13 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
+        /// <summary>처리를 기다리는 체인 맨 위 카드의 대상이다 — 겨눔과 같은 빨간 이름 칸 + 발밑 타원 (10-ui.md 5-2 #3 「대상 표시」). 탭은 받지 않는다.</summary>
+        public void SetTargeted(bool targeted)
+        {
+            _targeted = targeted;
+            Refresh();
+        }
+
         /// <summary>살아 있음 · 최종 사망 (06-health.md) — 이름 칸 · HP 자리 · 캐릭터 팻말. 사망 대기는 살아 있을 때와 같다.</summary>
         public void SetLife(LifeState life)
         {
@@ -199,7 +218,7 @@ namespace Chapchu.UI.GameScreen
         private void Refresh()
         {
             bool dead = _life == LifeState.Dead;
-            bool aim = _aimed && !dead;
+            bool aim = (_aimed || _targeted) && !dead;
             bool pick = _targetable && !dead;
 
             bool chapchuTag = !dead && !aim && !_isTurn && _chapchu;
@@ -221,8 +240,10 @@ namespace Chapchu.UI.GameScreen
             heart.material = gray;
             hpBar.material = gray;
             character.material = gray;
+            accessory.material = gray;
 
             character.color = dead ? deadCharacterColor : Color.white;
+            accessory.color = character.color;
             character.rectTransform.localScale = Vector3.one * (dead ? 1f : aim ? aimCharacterScale : _isTurn ? turnCharacterScale : 1f);
             turnTimer.SetActive(_isTurn && !dead);
             // 층은 링이 켜진 동안에 올리고 내린다 — 꺼진 캔버스는 rootCanvas 를 못 읽고 값도 바뀌지 않는다.

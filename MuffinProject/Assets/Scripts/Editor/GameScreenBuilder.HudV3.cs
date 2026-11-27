@@ -272,11 +272,7 @@ namespace Chapchu.EditorTools
                 seatViews[i] = BuildSeatV3(seat, i, deck, referenceShout);
             }
 
-            var characters = new Image[seatViews.Length + 1];
-            characters[0] = myCharacter;
-            for (int i = 0; i < seatViews.Length; i++)
-                characters[i + 1] = seatViews[i].transform.Find("Character").GetComponent<Image>();
-            turnOrder = BuildTurnOrderV3(safeArea, characters);
+            turnOrder = BuildTurnOrderV3(safeArea, seatArea.GetComponent<OpponentSeatsPresenter>());
 
             TableHudParts tableHud = BuildTableHudV3(center);
             ApplyTableLayoutV3(deck, pile, myTraps, tableHud);
@@ -469,7 +465,7 @@ namespace Chapchu.EditorTools
         #region 턴 순서 (오른쪽)
 
         // 「턴 방향 ↓」 알약 + 세로 막대 (폭 128 · 반지름 64 · 흰 50%) + 줄(얼굴 원 · 이름 · 꺾쇠). 지금 턴 = 큰 원 + 왼쪽 꼬리표(이름 형광펜 · 남은 초)
-        private static TurnOrderView BuildTurnOrderV3(RectTransform safeArea, Image[] characters)
+        private static TurnOrderView BuildTurnOrderV3(RectTransform safeArea, OpponentSeatsPresenter seats)
         {
             RectTransform root = NewRect("TurnOrder", safeArea);
             TopRight(root, EdgeX, TurnOrderTop, 300f, 700f);
@@ -484,10 +480,6 @@ namespace Chapchu.EditorTools
             headerFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             NewText("Text", header, "턴 방향", 28f, Ink, true).rectTransform.sizeDelta = new Vector2(100f, 52f);
             Image arrow = FixedIcon("Arrow", header, Hud("icon_arrow_down"), 20f, 26f, Ink);
-            UIShape halt = NewShape("Halt", header, WarnFill, 8f, 3f, Ink);
-            SetLayoutSize(halt.rectTransform, 32f, 32f);
-            Icon("Icon", halt.transform, Hud("icon_pause"), 18f, Ink);
-            halt.gameObject.SetActive(false);
 
             // 세로 막대 — 높이는 줄 수에 맞춰 뷰가 정한다
             UIShape track = NewShape("Track", root, TrackFill, 64f, Line4, Ink);
@@ -530,11 +522,11 @@ namespace Chapchu.EditorTools
 
             var view = root.gameObject.AddComponent<TurnOrderView>();
             Wire(view,
-                ("headerFill", headerFill), ("directionArrow", arrow.rectTransform), ("haltBox", halt.gameObject), ("track", track.rectTransform), ("rows", rows),
+                ("headerFill", headerFill), ("directionArrow", arrow.rectTransform), ("track", track.rectTransform), ("rows", rows),
                 ("rowPrefab", EnsureTurnOrderRowPrefab()), ("currentTab", tab), ("currentNameText", currentName), ("currentNameLayout", currentNameLayout),
                 ("currentBand", band), ("currentCrown", crown.gameObject));
             var presenter = root.gameObject.AddComponent<TurnOrderPresenter>();
-            WireArray(presenter, "characters", characters);
+            Wire(presenter, ("seats", seats));
             return view;
         }
 
@@ -739,6 +731,14 @@ namespace Chapchu.EditorTools
                 character.preserveAspect = true;
             }
             Anchor(character.rectTransform, new Vector2(0f, 1f), new Vector2(0.5f, 0f), new Vector2(cx, -SeatFootY), new Vector2(SeatHeight * CharacterAspect, SeatHeight));
+            Image accessory = FindIn<Image>(character.transform, "Accessory"); // 봇 스킨의 꾸미기 — 캐릭터 그림과 같은 자리 (18-bot 8-2)
+            if (accessory == null)
+            {
+                accessory = NewImage("Accessory", character.transform, White);
+                accessory.preserveAspect = true;
+                Stretch(accessory.rectTransform);
+                accessory.enabled = false;
+            }
 
             var ring = (RectTransform)seat.Find("PickRing");
             if (ring == null)
@@ -799,7 +799,7 @@ namespace Chapchu.EditorTools
                 ("plate", plate), ("plateGroup", parts.Group), ("nameTag", parts.NameTag), ("nicknameText", parts.Nickname),
                 ("nameOutlineMaterial", OutlineWhite), ("namePlainMaterial", BoldFont != null ? BoldFont.material : null), ("crown", parts.Crown), ("pickOutline", parts.PickOutline),
                 ("handBadge", parts.Badge), ("heart", parts.Heart), ("hpText", parts.HpText), ("hpBar", parts.HpBar), ("hpFill", parts.HpFill.rectTransform), ("hpFillGraphic", parts.HpFill),
-                ("grayMaterial", GrayMaterial), ("character", character), ("turnTimer", watch.gameObject), ("pickRing", ring.gameObject), ("shout", shout.gameObject), ("hand", hand),
+                ("grayMaterial", GrayMaterial), ("character", character), ("accessory", accessory), ("turnTimer", watch.gameObject), ("pickRing", ring.gameObject), ("shout", shout.gameObject), ("hand", hand),
                 ("lifeTag", lifeTag.gameObject), ("lifeTagFill", lifeTagFill), ("lifeTagText", lifeTagText), ("tapArea", tapArea));
             WireArray(view, "pickLayers", layers);
             BuildSeatStatus(view);

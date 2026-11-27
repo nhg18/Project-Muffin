@@ -1,5 +1,6 @@
 ﻿using Chapchu.Game;
 using Chapchu.UI.Fx;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,8 +27,13 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("함정 카드 종류 색.")]
         [SerializeField] private Color trapColor = new Color32(0xf6, 0x46, 0x12, 0xFF);
 
+        private RectTransform _rect;
+        private float _baseY; // 씬에 둔 자리 — 큰 카드(1.85배, 가운데)의 아래 가장자리 20 아래
+
         private void Awake()
         {
+            _rect = (RectTransform)transform;
+            _baseY = _rect.anchoredPosition.y;
             if (body == null || ownerText == null || kindBox == null || kindImages == null || kindImages.Length == 0)
             {
                 Debug.LogError($"[{nameof(CardOwnerTagView)}] 참조 중 비어 있는 것이 있습니다.", this);
@@ -49,5 +55,12 @@ namespace Chapchu.UI.GameScreen
         }
 
         public void Hide() => body.SetActive(false);
+
+        /// <summary>씬에 둔 자리에서 위로 y 만큼 (캔버스 px) — 카드가 옮겨 가는 시간(duration) 동안 같이 간다.</summary>
+        public void SetOffsetY(float y, float duration)
+        {
+            _rect.DOKill();
+            _rect.DOAnchorPosY(_baseY + y, duration).SetEase(Ease.OutQuart).SetLink(gameObject);
+        }
     }
 }

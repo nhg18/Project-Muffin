@@ -6,26 +6,25 @@ using Chapchu.Network.Events;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
-using UnityEngine.UI;
 using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 턴 순서에 값을 넣는다 (통합 화면 UI v3 .tord · 03-turn.md 7절). 순서는 좌석 순서(PlayerLook.OrderedActors)와 같다 — 봇 포함. 나는 「나」.
-    /// 얼굴은 그 사람이 앉은 자리의 캐릭터 그림을 그대로 쓴다 (나 = 내 캐릭터, 상대 = 좌석 1 · 2 · 3). 턴 · HP · 찹츄 · 생사 · 방향은 GameScreenPresenter 가 연출 큐에서 넘긴다.
-    /// 퇴장은 RoomEvents.OnPlayerLeft 로 받아 줄을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
+    /// 턴 순서에 값을 넣는다 (통합 화면 UI v3 .tord · 03-turn.md 6 · 7절). 순서는 방장이 섞은 실제 턴 순서(방 속성 turnOrder, PlayerLook.TurnOrderActors) — 봇 포함. 나는 「나」.
+    /// 얼굴은 그 사람의 캐릭터 모습(OpponentSeatsPresenter.LookOf — 봇은 봇마다 다르다). 턴 · HP · 찹츄 · 생사 · 방향은 GameScreenPresenter 가 연출 큐에서 넘긴다.
+    /// 순서가 오거나(시작 · 대소동 새 판) 누가 나가면 줄을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
     [RequireComponent(typeof(TurnOrderView))]
     public class TurnOrderPresenter : MonoBehaviour
     {
         private const string MeName = "나";
 
-        [Tooltip("자리마다 캐릭터 그림 — 0 = 나, 1 · 2 · 3 = 상대 좌석 인덱스. 얼굴 원이 이 그림을 쓴다.")]
-        [SerializeField] private Image[] characters = new Image[OpponentSeatsPresenter.SeatCount + 1];
+        [Tooltip("사람마다의 캐릭터 모습을 주는 곳 — 얼굴 원이 이 그림을 쓴다.")]
+        [SerializeField] private OpponentSeatsPresenter seats;
 
         private TurnOrderView _view;
-        private readonly List<int> _actors = new List<int>(); // 줄 순서 = 좌석 순서
+        private readonly List<int> _actors = new List<int>(); // 줄 순서 = 턴 순서
         private readonly HashSet<int> _chapchuActors = new HashSet<int>();
         private readonly Dictionary<int, int> _hp = new Dictionary<int, int>();
         private readonly Dictionary<int, LifeState> _life = new Dictionary<int, LifeState>();
@@ -34,18 +33,25 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             _view = GetComponent<TurnOrderView>();
-            if (characters == null || characters.Length != OpponentSeatsPresenter.SeatCount + 1 || characters.Any(image => image == null))
-                Debug.LogError($"[{nameof(TurnOrderPresenter)}] {nameof(characters)} 는 나 + 좌석 {OpponentSeatsPresenter.SeatCount}개가 모두 연결돼야 합니다.", this);
+            if (seats == null)
+                Debug.LogError($"[{nameof(TurnOrderPresenter)}] {nameof(seats)} 참조가 비어 있습니다.", this);
         }
 
-        private void OnEnable() => RoomEvents.OnPlayerLeft += HandlePlayerLeft;
+        private void OnEnable()
+        {
+            RoomEvents.OnPlayerLeft += HandlePlayerLeft;
+            RoomEvents.OnRoomPropsChanged += HandleRoomPropsChanged;
+        }
 
-        private void OnDisable() => RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
+        private void OnDisable()
+        {
+            RoomEvents.OnPlayerLeft -= HandlePlayerLeft;
+            RoomEvents.OnRoomPropsChanged -= HandleRoomPropsChanged;
+        }
 
         private void Start()
         {
             _view.SetReversed(false);
-            _view.SetHalted(false);
             RebuildRows();
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
 
@@ -94,14 +100,13 @@ namespace Chapchu.UI.GameScreen
             RefreshHp(actorNumber);
         }
 
-        /// <summary>생사 (OnDeathPending · OnDeathAvoided · OnPlayerDied) — 사망이면 흐리게, 누구든 사망 대기면 알약에 멈춤.</summary>
+        /// <summary>생사 (OnDeathAvoided · OnPlayerDied) — 사망이면 흐리게.</summary>
         public void ShowLife(int actorNumber, LifeState life)
         {
             _life[actorNumber] = life;
             int index = _actors.IndexOf(actorNumber);
             _view.SetDead(index, life == LifeState.Dead);
             RefreshHp(actorNumber);
-            _view.SetHalted(_life.Values.Any(state => state == LifeState.DeathPending));
         }
 
         private void RefreshHp(int actorNumber)
@@ -114,15 +119,14 @@ namespace Chapchu.UI.GameScreen
         private void RebuildRows()
         {
             _actors.Clear();
-            _actors.AddRange(PlayerLook.OrderedActors());
-            int[] seatIndices = OpponentSeatsPresenter.GetOpponentSeatIndices(_actors.Count - 1);
+            _actors.AddRange(PlayerLook.TurnOrderActors());
+            int me = PhotonNetwork.InRoom ? PhotonNetwork.LocalPlayer.ActorNumber : -1;
 
-            var players = new List<(string, Sprite)>();
-            for (int i = 0; i < _actors.Count; i++)
+            var players = new List<(string, Sprite, Sprite)>();
+            foreach (int actor in _actors)
             {
-                int seat = i == 0 ? 0 : i - 1 < seatIndices.Length ? seatIndices[i - 1] : -1;
-                Sprite face = seat >= 0 && seat < characters.Length && characters[seat] != null ? characters[seat].sprite : null;
-                players.Add((i == 0 ? MeName : PlayerLook.NameOf(_actors[i]), face));
+                OpponentSeatsPresenter.CharacterLook look = seats.LookOf(actor);
+                players.Add((actor == me ? MeName : PlayerLook.NameOf(actor), look.body, look.accessory));
             }
 
             _view.SetPlayers(players);
@@ -136,13 +140,19 @@ namespace Chapchu.UI.GameScreen
             _view.SetCurrent(_actors.IndexOf(_turnActor));
         }
 
+        // 턴 순서가 왔다 (게임 시작 · 대소동 새 판) — 좌석 순서로 그려 둔 줄을 실제 순서로
+        private void HandleRoomPropsChanged(Hashtable changed)
+        {
+            if (changed.ContainsKey(RoomProps.TurnOrder))
+                RebuildRows();
+        }
+
         private void HandlePlayerLeft(Player player)
         {
             _life.Remove(player.ActorNumber);
             _hp.Remove(player.ActorNumber);
             _chapchuActors.Remove(player.ActorNumber);
             RebuildRows();
-            _view.SetHalted(_life.Values.Any(state => state == LifeState.DeathPending));
         }
     }
 }
