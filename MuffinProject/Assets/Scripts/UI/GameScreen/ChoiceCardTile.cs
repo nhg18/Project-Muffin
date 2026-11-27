@@ -29,6 +29,9 @@ namespace Chapchu.UI.GameScreen
 
         public int InstanceId { get; private set; }
 
+        /// <summary>카드 문구 글 — 키워드 설명 창(KeywordTipView)이 포인터 아래 키워드 링크를 찾는다.</summary>
+        public TMP_Text DescriptionText => descText;
+
         private void Awake()
         {
             if (button == null || frame == null || nameText == null || art == null || descText == null)
@@ -45,7 +48,7 @@ namespace Chapchu.UI.GameScreen
             InstanceId = instanceId;
             frame.color = data.type == CardType.Counter ? counterColor : data.type == CardType.Trap ? trapColor : actionColor;
             nameText.text = data.cardName;
-            descText.text = data.description;
+            descText.text = CardKeywords.Format(data.description, data.type);
             Sprite sprite = data.LoadArt();
             art.sprite = sprite;
             art.enabled = sprite != null;
