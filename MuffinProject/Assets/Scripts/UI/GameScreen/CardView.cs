@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Chapchu.Cards;
+﻿using Chapchu.Cards;
 using Chapchu.Game;
 using DG.Tweening;
 using TMPro;
@@ -32,7 +31,6 @@ namespace Chapchu.UI.GameScreen
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int OffsetId = Shader.PropertyToID("_Offset");
         private static readonly int BlurId = Shader.PropertyToID("_Blur");
-        private static readonly Regex Words = new Regex(@"\S+");
 
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text descriptionText;
@@ -82,6 +80,8 @@ namespace Chapchu.UI.GameScreen
         private ShadowLook _shadow;   // 지금 그림자 — 넘어가는 중의 값
         private Tween _shadowTween;
         private Tween _dimTween;
+        private string _description; // 카드 문구 원문 — 흐림이 키워드 색을 다시 칠할 때 쓴다
+        private bool _hasKeywords;
 
         // 프리팹에 저장된 값 — 흐림 · 이름 크기 · 그림자의 기준 (ReadPrefabValues)
         private bool _prefabValuesRead;
@@ -99,6 +99,9 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>카드 종류 — 손패가 지금 낼 수 있는 카드를 가리는 데 쓴다 (시안 v3.5).</summary>
         public CardType Type { get; private set; }
+
+        /// <summary>카드 문구 글 — 키워드 설명 창(KeywordTipView)이 포인터 아래 키워드 링크를 찾는다.</summary>
+        public TMP_Text DescriptionText => descriptionText;
 
         /// <summary>카드 폭 (유닛) — 콜라이더 크기(앞면 크기, 종이 테 제외). 손패 간격을 계산하는 데 쓴다.</summary>
         public float Width => Collider.size.x;
@@ -175,7 +178,9 @@ namespace Chapchu.UI.GameScreen
             nameText.fontSizeMax = nameSize;
             nameText.fontSize = nameSize;
 
-            descriptionText.text = FormatDescription(data.description);
+            _description = data.description;
+            _hasKeywords = CardKeywords.HasKeywords(_description, Type);
+            RefreshDescription();
             SetArt(data.LoadArt());
             SetFloat(frameRenderer, GradeId, (int)data.grade); // 별 수 = 등급 (일반 0 · 고급 1 · 희귀 2 · 개판 3)
 
@@ -198,9 +203,18 @@ namespace Chapchu.UI.GameScreen
             _shadow = _restShadow;
         }
 
-        // 줄은 띄어쓰기에서만 바꾼다 (시안 word-break: keep-all) — TMP 는 한글을 글자마다 끊으므로 낱말을 nobr 로 묶는다.
-        private static string FormatDescription(string text) =>
-            string.IsNullOrEmpty(text) ? string.Empty : Words.Replace(text, match => $"<nobr>{match.Value}</nobr>");
+        // 문구 — 낱말 묶기 · 키워드 색 · 아이콘 (CardKeywords, 11-card-list 5절). 키워드 색은 태그라 글자색 거르기가 닿지 않아, 흐린 만큼 거른 색으로 다시 칠한다.
+        private void RefreshDescription()
+        {
+            if (_dim <= 0f)
+            {
+                descriptionText.text = CardKeywords.Format(_description, Type);
+                return;
+            }
+
+            Vector4 filter = DimFilter(_dim);
+            descriptionText.text = CardKeywords.Format(_description, Type, color => Filter(color, filter));
+        }
 
         // 그림 스프라이트의 텍스처를 그림 칸에 입힌다 — 칸에 꽉 채우고 넘치는 쪽을 자른다: 가로는 가운데, 세로는 위에서 30 % (시안 cover · object-position 50% 30%).
         // 아틀라스에 묶인 스프라이트도 되게 UV 는 textureRect 로 잡는다. 그림이 아직 없는 카드는 「그림 준비 중」 칸 + 글자.
@@ -269,7 +283,7 @@ namespace Chapchu.UI.GameScreen
         {
             ReadPrefabValues();
             _dim = amount;
-            var filter = new Vector4(Mathf.Lerp(1f, dimSaturate, amount), Mathf.Lerp(1f, dimBrightness, amount), Mathf.Lerp(1f, dimContrast, amount), 0f);
+            Vector4 filter = DimFilter(amount);
             SetVector(frameRenderer, FilterId, filter);
             SetVector(artRenderer, FilterId, filter);
             SetVector(backRenderer, FilterId, filter);
@@ -278,7 +292,12 @@ namespace Chapchu.UI.GameScreen
             nameText.color = Filter(_nameColor, filter);
             descriptionText.color = Filter(_descriptionColor, filter);
             pendingText.color = Filter(_pendingColor, filter);
+            if (_hasKeywords)
+                RefreshDescription();
         }
+
+        private Vector4 DimFilter(float amount) =>
+            new Vector4(Mathf.Lerp(1f, dimSaturate, amount), Mathf.Lerp(1f, dimBrightness, amount), Mathf.Lerp(1f, dimContrast, amount), 0f);
 
         // CardFilter.cginc 와 같은 식 — CSS saturate → brightness → contrast, 단계마다 0 ~ 1 로 자른다. 알파는 그대로.
         private static Color Filter(Color c, Vector4 filter)
