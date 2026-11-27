@@ -138,6 +138,9 @@ MonoBehaviour:
   titleAt: 1.18
   hits:
   - {x: 0.5, y: 16}
+  noBand: 0
+  plainTag: 0
+  noTitle: 0
   calm: {fileID: 4011764999526782431}
   confetti: {fileID: 383727895368900443}
   stopped: {fileID: 6261539442302879152}
@@ -196,7 +199,7 @@ MonoBehaviour:
   calmTone: {r: 1, g: 0.30980393, b: 0.47843137, a: 0.16}
   stoppedTone: {r: 0.3529412, g: 0, b: 0.0627451, a: 0.32}
   peopleX: {x: 1090, y: 960}
-  peopleY: {x: 160, y: 175}
+  peopleY: {x: 195, y: 162}
   bounce: 12
   bounceSpeed: 14
   bouncePhase: 1.3
@@ -212,7 +215,7 @@ MonoBehaviour:
   bubbleGap: 0.08
   bubbleTime: 0.16
   bubbleOvershoot: 2
-  bubbleOffset: {x: -195, y: -44}
+  bubbleOffset: {x: -195, y: -30}
   tailOffset: {x: -48, y: -12}
   shoutSize: {x: 196, y: 88}
   hushSize: {x: 118, y: 88}
@@ -225,7 +228,7 @@ MonoBehaviour:
   tagAt: 0.22
   tagTime: 0.14
   tagOvershoot: 2.4
-  tagOffset: {x: 0, y: 72}
+  tagOffset: {x: 0, y: 64}
   tagTilt: {x: -0.1, y: 0.07}
   tagPadding: 34
   tagHeight: 1.35
@@ -259,7 +262,6 @@ MonoBehaviour:
   ringRise: 30
   ringRadius: {x: 190, y: 430}
   ringWidth: 10
-  ringWidthMin: 2
   postWait: 0.5
   bubbleRise: 70
 --- !u!1 &188592248972085515

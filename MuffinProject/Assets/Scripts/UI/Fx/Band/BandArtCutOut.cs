@@ -30,8 +30,8 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private float shadowDrop = 4.32f;
         [Tooltip("그림자 색 (알파 = 진하기, 시안 rgba(43, 40, 86, .55)).")]
         [SerializeField] private Color shadowColor = new Color(43f / 255f, 40f / 255f, 86f / 255f, 0.55f);
-        [Tooltip("빛이 번지는 흐림 (시안 px, drop-shadow 2.4vmin — 720 화면 기준).")]
-        [SerializeField] private float glowBlur = 17.28f;
+        [Tooltip("빛이 번지는 흐림 (시안 px, drop-shadow 2.4vmin — 720 화면 기준). 0 이면 빛 없이 흰 외곽선 · 그림자만.")]
+        [SerializeField] private float glowBlur;
         [Tooltip("칸 가장자리를 흐리게 지우는 폭 — 칸 비율 (x 왼쪽 · y 오른쪽 · z 위 · w 아래, 시안 9% · 9% · 8% · 14%).")]
         [SerializeField] private Vector4 edgeFade = new Vector4(0.09f, 0.09f, 0.08f, 0.14f);
 
@@ -202,21 +202,24 @@ namespace Chapchu.UI.Fx.Band
             // 3. 아래로 어긋난 진한 그림자 (시안 drop-shadow(0 .6vmin 0 rgba(43, 40, 86, .55)))
             DropShadow(image, shade, w, h, 0, s.ShadowDrop, s.ShadowColor);
 
-            // 4. 빛 (시안 drop-shadow(0 0 2.4vmin var(--glow))) — 모양을 흐려 glow 색으로 깐다
-            Color glow = s.GlowColor;
-            Parallel.For(0, h, y =>
+            // 4. 빛 (시안 drop-shadow(0 0 2.4vmin var(--glow))) — 모양을 흐려 glow 색으로 깐다. 흐림이 0 이면 깔지 않는다
+            if (s.GlowSigma > 0f)
             {
-                for (int i = y * w, end = i + w; i < end; i++)
+                Color glow = s.GlowColor;
+                Parallel.For(0, h, y =>
                 {
-                    float a = image[i * 4 + 3] * glow.a;
-                    shade[i * 4] = glow.r * a;
-                    shade[i * 4 + 1] = glow.g * a;
-                    shade[i * 4 + 2] = glow.b * a;
-                    shade[i * 4 + 3] = a;
-                }
-            });
-            ComicSticker.Blur(shade, w, h, s.GlowSigma);
-            OverAll(image, shade, w, h);
+                    for (int i = y * w, end = i + w; i < end; i++)
+                    {
+                        float a = image[i * 4 + 3] * glow.a;
+                        shade[i * 4] = glow.r * a;
+                        shade[i * 4 + 1] = glow.g * a;
+                        shade[i * 4 + 2] = glow.b * a;
+                        shade[i * 4 + 3] = a;
+                    }
+                });
+                ComicSticker.Blur(shade, w, h, s.GlowSigma);
+                OverAll(image, shade, w, h);
+            }
 
             // 5. 칸 가장자리를 흐리게 (시안 mask-image 두 줄 — 가로 9% · 91%, 세로 8% · 86%)
             var pixels = new Color32[n];

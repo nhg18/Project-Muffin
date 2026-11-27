@@ -11,7 +11,7 @@ namespace Chapchu.UI.Fx.Dropkick
 {
     /// <summary>
     /// 드롭킥(카드 1005) 만화 컷인 장면 — 도움닫기 → 날아차기 → 맞는 순간, 어두운 핏빛 (시안 CI2.SC["드롭킥"]).
-    /// 0 ~ 0.44 초 옆에서 본 컷: 맞는 쪽이 땀을 흘리는 사이, 쓴 쪽이 오른쪽에서 달려와 0.26 초에 뛰어올라 잔상을 남기며 두 발부터 날아든다.
+    /// 0 ~ 0.44 초 옆에서 본 컷: 맞는 쪽이 땀을 흘리는 사이, 쓴 쪽이 오른쪽에서 달려와 0.26 초에 뛰어올라 두 발부터 날아든다 (시안의 반투명 잔상 넷은 흐린 얼룩처럼 보여 뺐다 — 빠르기는 속도선이 보여 준다).
     /// 0.44 초 맞는 순간: 햇살 무늬 · 집중선 위로 카드 그림(스티커)이 크게 들이받고 화면 가장자리가 어두워진다(비네트) →
     /// 0.6 초 「-N」 이 커다랗게 나타나 떨리며 박힌다 (N = 카드 데이터 DamageEffect 양) → 0.86 초 쓴 쪽 땀 (시안 「차는 쪽도 아프긴 하다」).
     /// 시안은 제목 · 「-N」 · 「반동 -N」 을 거칠게 긁은 글자 그림(dk_title · dk_dmg · dk_rec.png)으로 쓰는데 그 그림은 시안 파일에 없다 — 글자(ComicWord)로 그리고 박히는 움직임만 시안 dimg 를 따른다.
@@ -45,8 +45,6 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private ComicDog target;
         [Tooltip("맞는 쪽 땀 둘 (큰 것 · 작은 것).")]
         [SerializeField] private ComicSweat[] sweats = new ComicSweat[2];
-        [Tooltip("잔상 넷 — 가장 먼 것부터 (그리는 순서, 시안 g = 4 → 1). 진하기는 각자의 CanvasGroup.")]
-        [SerializeField] private ComicDog[] afterimages = new ComicDog[4];
         [Tooltip("차는 쪽 강아지.")]
         [SerializeField] private ComicDog kicker;
         [Tooltip("차는 쪽 발밑 그림자 — 뛰어오르면 끈다 (시안 shadow: jump < 0.2).")]
@@ -137,8 +135,6 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private float kickerTail = -0.4f;
         [Tooltip("이만큼 뛰어오르면 그림자를 끈다 (0 ~ 1, 시안 0.2).")]
         [SerializeField] private float shadowUntil = 0.2f;
-        [Tooltip("잔상 사이 — 뒤로 · 아래로 (설계 px, 시안 70 · −10).")]
-        [SerializeField] private Vector2 afterimageStep = new Vector2(70f, -10f);
 
         [Header("맞는 순간 (시안: 카드 그림 690 을 (640, 735) 에, 맞닿은 곳으로 1 + 0.2·exp(−9τ) 배 들이받음)")]
         [Tooltip("스티커 자리 — 그림 기준점이 놓일 곳 (설계 px, 시안 640, 735).")]
@@ -163,8 +159,10 @@ namespace Chapchu.UI.Fx.Dropkick
         [SerializeField] private Color sunburstOdd = new Color32(0x3b, 0x0b, 0x0a, 0xff);
         [Tooltip("햇살 무늬 색 — 짝수 조각 (시안 #1c0506).")]
         [SerializeField] private Color sunburstEven = new Color32(0x1c, 0x05, 0x06, 0xff);
-        [Tooltip("터짐 별이 퍼지는 시간 (초, 시안 0.3).")]
+        [Tooltip("터짐 별이 퍼졌다 줄어 사라지는 시간 (초, 시안 0.3).")]
         [SerializeField] private float burstTime = 0.3f;
+        [Tooltip("터짐 별이 줄기 시작하는 때 — 터짐 시간 비율. 시안은 흐려지며 사라져 회색 잔상이 남아, 진하기는 그대로 두고 줄여서 없앤다.")]
+        [SerializeField, Range(0.1f, 0.9f)] private float burstShrinkFrom = 0.55f;
         [Tooltip("터짐 별 처음 반지름 (설계 px, 시안 60 · 45).")]
         [SerializeField] private Vector2 burstFrom = new Vector2(60f, 45f);
         [Tooltip("터짐 별 끝 반지름 — 터짐 별 오브젝트의 반지름과 같게 둔다 (설계 px, 시안 190 · 140).")]
@@ -269,19 +267,11 @@ namespace Chapchu.UI.Fx.Dropkick
                 if (sweats[i] == null)
                     Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(sweats)}[{i}] 가 비었다");
             }
-            for (int i = 0; i < afterimages.Length; i++)
-            {
-                if (afterimages[i] == null)
-                    Debug.LogError($"[{nameof(DropkickComicScene)}] {name} 의 {nameof(afterimages)}[{i}] 가 비었다");
-            }
         }
 
         public override void Begin(ComicContext context)
         {
-            string kickerKey = context.DogKeyOf(context.From);
-            kicker.Key = kickerKey;
-            foreach (ComicDog afterimage in afterimages)
-                afterimage.Key = kickerKey;
+            kicker.Key = context.DogKeyOf(context.From);
             target.Key = context.TargetKey;
             speedLines.Painter = PaintSpeedLines;
             sunburst.Painter = PaintSunburst;
@@ -376,18 +366,6 @@ namespace Chapchu.UI.Fx.Dropkick
             PoseKicker(kicker, t, jump, lean);
             ComicKit.Place((RectTransform)kicker.transform, x, y);
             kickerShadow.enabled = jump < shadowUntil;
-
-            for (int i = 0; i < afterimages.Length; i++)
-            {
-                ComicDog afterimage = afterimages[i];
-                afterimage.gameObject.SetActive(jump > 0f);
-                if (jump <= 0f)
-                    continue;
-                // afterimages[0] = 가장 먼 것 (시안 g = 4)
-                int g = afterimages.Length - i;
-                PoseKicker(afterimage, t, jump, lean);
-                ComicKit.Place((RectTransform)afterimage.transform, x + g * afterimageStep.x, y + g * afterimageStep.y);
-            }
         }
 
         // 맞는 순간: 카드 그림을 크게, 맞닿은 곳으로 모이는 선
@@ -408,9 +386,11 @@ namespace Chapchu.UI.Fx.Dropkick
             if (bursting)
             {
                 float e = imp / burstTime;
-                float grow = ComicKit.Eo(e);
-                burst.SetRadius(ComicKit.Lerp(burstFrom.x, burstTo.x, grow) / burstTo.x, ComicKit.Lerp(burstFrom.y, burstTo.y, grow) / burstTo.y);
-                ComicKit.SetAlpha(burst, 1f - e * e);
+                float grow = ComicKit.Eo(ComicKit.Cl(e / burstShrinkFrom));
+                float shrink = ComicKit.Cl((e - burstShrinkFrom) / (1f - burstShrinkFrom));
+                float size = 1f - shrink * shrink;
+                burst.SetRadius(ComicKit.Lerp(burstFrom.x, burstTo.x, grow) / burstTo.x * size, ComicKit.Lerp(burstFrom.y, burstTo.y, grow) / burstTo.y * size);
+                ComicKit.SetAlpha(burst, 1f);
             }
 
             DrawDamage(t);

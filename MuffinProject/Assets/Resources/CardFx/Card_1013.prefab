@@ -743,7 +743,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61575d2023da3454eb179d2649921bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Comic.ComicSketch
-  m_Material: {fileID: 2100000, guid: c0d746e42ba08ce45a6396449bac1dd6, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -875,8 +875,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 2100000, guid: c0d746e42ba08ce45a6396449bac1dd6, type: 2}
-  m_Color: {r: 0.9254902, g: 0.972549, b: 1, a: 0}
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1055,7 +1055,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61575d2023da3454eb179d2649921bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Comic.ComicSketch
-  m_Material: {fileID: 2100000, guid: c0d746e42ba08ce45a6396449bac1dd6, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -1120,7 +1120,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61575d2023da3454eb179d2649921bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Comic.ComicSketch
-  m_Material: {fileID: 2100000, guid: c0d746e42ba08ce45a6396449bac1dd6, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -1372,7 +1372,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61575d2023da3454eb179d2649921bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Comic.ComicSketch
-  m_Material: {fileID: 2100000, guid: c0d746e42ba08ce45a6396449bac1dd6, type: 2}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -1480,10 +1480,10 @@ RectTransform:
   - {fileID: 3288993531941019784}
   - {fileID: 380896632299730943}
   - {fileID: 53840011416908519}
+  - {fileID: 4542830212341394428}
   - {fileID: 7717949542721084176}
   - {fileID: 4356191396590511689}
   - {fileID: 5007064950458788995}
-  - {fileID: 4542830212341394428}
   - {fileID: 302219973568412329}
   - {fileID: 186381542954681881}
   - {fileID: 2230331397916831188}
@@ -1519,6 +1519,9 @@ MonoBehaviour:
   titleAt: 1.3
   hits:
   - {x: 0.56, y: 8}
+  noBand: 0
+  plainTag: 0
+  noTitle: 0
   backgroundStripes: {fileID: 2875714273557392424}
   agent: {fileID: 4631219202237671824}
   lensSparkle: {fileID: 5080893716717310685}
@@ -1600,28 +1603,21 @@ MonoBehaviour:
   sparkleCorners: 8
   sparkleInner: 0.18
   flashAt: 0.56
-  litHold: 0.08
-  litFade: 3.2
-  litMin: 0.01
-  glowDecay: 3.4
-  glowGrowTime: 0.4
-  glowRadius: {x: 140, y: 460}
-  glowColor: {r: 0.88235295, g: 0.9647059, b: 1, a: 0.32}
+  litHold: 0.3
+  rayGrowTime: 0.4
+  rayLife: 0.6
   rayCount: 12
   raySpin: 0.6
   rayLength: {x: 120, y: 760}
   rayHalfWidth: 0.035
   rayHalfWidthStep: 0.02
-  rayColor: {r: 0.9254902, g: 0.972549, b: 1, a: 0.34}
+  rayColor: {r: 0.9254902, g: 0.972549, b: 1, a: 1}
   ringGap: 0.12
-  ringLife: 0.5
+  ringLife: 0.36
   ringRadius: {x: 60, y: 620}
-  ringWidth: 6
-  ringWidthMin: 2
-  ringAlpha: 0.8
-  whiteOutTime: 0.34
-  whiteOutAlpha: 0.62
-  peopleOrigin: {x: 880, y: 150}
+  ringWidth: 16
+  whiteOutTime: 0.08
+  peopleOrigin: {x: 880, y: 165}
   peopleStep: {x: 150, y: 175}
   faceArea:
     serializedVersion: 2
@@ -1655,7 +1651,7 @@ MonoBehaviour:
   dustCount: 16
   dustSpeed: 260
   dustRadius: 8
-  dustColor: {r: 0.84313726, g: 0.9490196, b: 1, a: 0.6}
+  dustColor: {r: 0.84313726, g: 0.9490196, b: 1, a: 1}
 --- !u!1 &5900514255225200387
 GameObject:
   m_ObjectHideFlags: 0

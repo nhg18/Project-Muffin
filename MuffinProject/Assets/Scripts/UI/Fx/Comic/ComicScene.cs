@@ -57,6 +57,8 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private bool noBand;
         [Tooltip("한마디를 상자 없이 밝은 색 글자 + 진한 그림자로 (시안 tagPlain).")]
         [SerializeField] private bool plainTag;
+        [Tooltip("제목 글자 · 띠를 빼고 한마디만 — 장면 안에서 카드 이름을 이미 크게 외칠 때 (같은 글자가 두 번 나오지 않게).")]
+        [SerializeField] private bool noTitle;
 
         /// <summary>장면 길이 (초, 시안 len).</summary>
         public float Length => length;
@@ -90,6 +92,9 @@ namespace Chapchu.UI.Fx.Comic
 
         /// <summary>한마디를 상자 없이 글자만 (시안 tagPlain).</summary>
         public bool PlainTag => plainTag;
+
+        /// <summary>제목 글자 · 띠를 빼고 한마디만.</summary>
+        public bool NoTitle => noTitle;
 
         /// <summary>장면을 시작하기 전에 한 번 — 누가 누구인지(강아지 키 · 얼굴)를 그림에 넣는다. 그림 만들기(스티커)는 틀이 기다려 준다.</summary>
         public virtual void Begin(ComicContext context)

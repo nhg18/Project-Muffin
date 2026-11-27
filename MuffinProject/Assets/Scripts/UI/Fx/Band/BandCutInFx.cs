@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.Band
@@ -23,7 +24,8 @@ namespace Chapchu.UI.Fx.Band
     /// <summary>
     /// 띠 컷인 — 고급 등급 카드의 3 단계 (아티팩트 「찹츄 카드 이펙트 v2」 의 M 표 + rareCI mini + cutinFrame).
     /// 판이 어두워지고 기운 띠가 미끄러져 들어온 뒤, 왼쪽에 카드 그림(틀 없이 오려 낸 캐릭터 — <see cref="BandArtCutOut"/>, 없으면 캐릭터 동그라미 + 글자)이 날아와 움직이고
-    /// 말풍선 → 한마디 · 카드 이름 → 고리 → 효과 한 줄 순으로 뜬 뒤 그림이 한 번 더 움직이고, 끝에 판째 사라진다.
+    /// 말풍선 → 한마디 · 카드 이름 → 효과 한 줄 순으로 뜬 뒤 그림이 한 번 더 움직이고, 끝에 판째 위아래로 접혀 사라진다.
+    /// 시안의 번지는 빛(띠 · 제목 · 그림)과 퍼지는 고리, 판째 흐려지기는 뺐다 — 반투명 빛이 겹쳐 흐릿하고 장면이 유령처럼 남았다.
     /// 카드마다 다른 것은 「카드 값」 아래 값뿐이다 — 카드 하나 더하기 = 틀 프리팹(Prefab/UI/CardFx/Band/BandCutIn)의 변형 Card_{ID} + 값.
     /// 4 단계 장식은 <see cref="post"/> 아래 조각(<see cref="CardFxStep"/>)을 시작 시각대로 재생한다 (없으면 바로 끝난다).
     /// </summary>
@@ -53,8 +55,6 @@ namespace Chapchu.UI.Fx.Band
             new Pose(0f, 0f, 0f, 0f, -12f, 1f), new Pose(0.4f, 0f, 0f, 1.25f, 4f, 1f), new Pose(0.6f, 0f, 0f, 1f, 0f, 1f),
             new Pose(0.85f, 0f, 0f, 1f, 0f, 1f), new Pose(1f, 0f, 0f, 0.6f, 0f, 0f),
         };
-        // .ci-ring: scale(.1) → scale(3) 투명
-        private static readonly Pose[] RingOut = { new Pose(0f, 0f, 0f, 0.1f, 0f, 1f), new Pose(1f, 0f, 0f, 3f, 0f, 0f) };
 
         // 시안 MV — B = rotate(-3deg). x · y 는 그림 크기 대비
         private const float RestAngle = -3f;
@@ -75,7 +75,7 @@ namespace Chapchu.UI.Fx.Band
 
         // CSS 이징 (cubic-bezier 네 값)
         private static readonly Vector4 Snap = new Vector4(0.2f, 0.9f, 0.3f, 1f);
-        private static readonly Vector4 EaseOut = new Vector4(0f, 0f, 0.58f, 1f);
+        private static readonly Vector4 EaseIn = new Vector4(0.42f, 0f, 1f, 1f);
         private static readonly Vector4 EaseInOut = new Vector4(0.42f, 0f, 0.58f, 1f);
         private static readonly Vector4 Linear = new Vector4(0f, 0f, 1f, 1f);
 
@@ -87,7 +87,7 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private Color bandColor = new Color32(0xe0, 0x11, 0x2b, 0xff);
         [Tooltip("띠 위아래 가장자리 색 (시안 c2).")]
         [SerializeField] private Color bandEdgeColor = new Color32(0x5a, 0x00, 0x10, 0xff);
-        [Tooltip("빛 · 고리 · 효과 한 줄 글자 색 (시안 glow).")]
+        [Tooltip("그림이 없을 때 캐릭터 동그라미의 빛 테 색 (시안 glow).")]
         [SerializeField] private Color glowColor = new Color32(0xff, 0x2a, 0x3a, 0xff);
         [Tooltip("카드 이름 위 한마디 (시안 who).")]
         [SerializeField] private string who = string.Empty;
@@ -99,14 +99,15 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private string icon = string.Empty;
         [Tooltip("그림 움직임 (시안 mv).")]
         [SerializeField] private BandMove move = BandMove.Nod;
-        [Tooltip("켜면 띠 줄무늬가 흐르지 않는다 (시안 still).")]
+        [Tooltip("켜면 띠 안에 흐르는 가로 줄이 없다 — 멈춘 띠 (시안 still).")]
         [SerializeField] private bool stillLines;
 
         [Header("시간표 (ms — 시안 mk · rareCI · cutinFrame)")]
-        [Tooltip("컷인 길이 — 끝나기 fadeOutMs 전부터 판째 사라진다 (시안 SPECIAL_MS).")]
+        [Tooltip("컷인 길이 — 끝나기 closeMs 전부터 판째 위아래로 접힌다 (시안 SPECIAL_MS).")]
         [SerializeField] private float lengthMs = 1850f;
-        [Tooltip("판째 사라지는 시간.")]
-        [SerializeField] private float fadeOutMs = 240f;
+        [Tooltip("판째 접혀 사라지는 시간.")]
+        [FormerlySerializedAs("fadeOutMs")]
+        [SerializeField] private float closeMs = 240f;
         [Tooltip("컷인이 사라진 뒤 4 단계까지 (시안 special2 의 +80).")]
         [SerializeField] private float afterMs = 80f;
         [Tooltip("판이 어두워지는 시간 (.ci-bg).")]
@@ -121,29 +122,23 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private Vector2 bubbleTime = new Vector2(520f, 900f);
         [Tooltip("한마디 · 카드 이름 시작 · 시간 (F.title).")]
         [SerializeField] private Vector2 titleTime = new Vector2(760f, 380f);
-        [Tooltip("고리 시작 · 시간 (ringAt, ease-out).")]
-        [SerializeField] private Vector2 ringTime = new Vector2(1050f, 620f);
         [Tooltip("효과 한 줄 시작 · 시간 (F.tag).")]
         [SerializeField] private Vector2 tagTime = new Vector2(1150f, 380f);
         [Tooltip("그림이 한 번 더 움직이는 시작 · 시간 (MV, ease-in-out).")]
         [SerializeField] private Vector2 secondMoveTime = new Vector2(1400f, 520f);
-        [Tooltip("줄무늬가 한 주기 흐르는 시간 (시안 ciLines .35s).")]
-        [SerializeField] private float stripeLoopMs = 350f;
 
         [Header("글자 칸 (시안 px)")]
         [Tooltip("한마디 칸의 좌우 여백 (.ci-nin small padding .7em).")]
         [SerializeField] private float whoPadding = 18.2f;
         [Tooltip("말풍선 크기 = 글자 + 이만큼 (좌우 · 위아래 합, 여백 + 테).")]
         [SerializeField] private Vector2 bubblePadding = new Vector2(51.2f, 14.9f);
-        [Tooltip("제목 뒤 빛이 글자 밖으로 퍼지는 거리 (시안 text-shadow 0 0 .6em).")]
-        [SerializeField] private float titleGlowSpread = 40f;
         [Tooltip("글자 동그라미의 좌우 여백 (.rr-ico padding .35em + 테).")]
         [SerializeField] private float iconPadding = 21f;
         [Tooltip("제목 기울기 (TMP <i angle> — 100 이 45°쯤. 시안 skewX(-8deg) ≈ 14).")]
         [SerializeField] private int titleSlant = 14;
 
         [Header("부품")]
-        [Tooltip("3 단계 판 전체 — 끝에 판째 사라진다.")]
+        [Tooltip("3 단계 판 전체 — 끝에 판째 위아래로 접힌다.")]
         [SerializeField] private CanvasGroup cutIn;
         [Tooltip("어두운 판 (.ci-bg) — 판의 색 · 투명도는 그림에, 나타나기는 이 투명도로.")]
         [SerializeField] private CanvasGroup backdrop;
@@ -168,8 +163,6 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private RectTransform whoBox;
         [SerializeField] private TMP_Text whoLabel;
         [SerializeField] private TMP_Text titleLabel;
-        [Tooltip("제목 뒤 번지는 빛.")]
-        [SerializeField] private RectTransform titleGlow;
         [Tooltip("효과 한 줄 (.rr-tag).")]
         [SerializeField] private RectTransform effectTag;
         [SerializeField] private CanvasGroup effectTagGroup;
@@ -177,8 +170,6 @@ namespace Chapchu.UI.Fx.Band
         [SerializeField] private RectTransform bubble;
         [SerializeField] private CanvasGroup bubbleGroup;
         [SerializeField] private TMP_Text bubbleLabel;
-        [SerializeField] private RectTransform ring;
-        [SerializeField] private CanvasGroup ringGroup;
         [Tooltip("빛 색(glow)을 입힐 그림 — 투명도는 그대로 둔다.")]
         [SerializeField] private Graphic[] glowFills;
         [Tooltip("빛 색(glow)을 입힐 도형 테 — 투명도는 그대로 둔다.")]
@@ -195,10 +186,8 @@ namespace Chapchu.UI.Fx.Band
         private Vector2 _avatarOrigin;
         private Vector2 _effectTagOrigin;
         private Vector2 _bubbleOrigin;
-        private Vector2 _ringOrigin;
         private RectTransform _moving;
         private Sequence _timeline;
-        private Tween _stripes;
 
         private float _pixelScale = 1.5f;
 
@@ -228,15 +217,12 @@ namespace Chapchu.UI.Fx.Band
             Check(whoBox, nameof(whoBox));
             Check(whoLabel, nameof(whoLabel));
             Check(titleLabel, nameof(titleLabel));
-            Check(titleGlow, nameof(titleGlow));
             Check(effectTag, nameof(effectTag));
             Check(effectTagGroup, nameof(effectTagGroup));
             Check(effectLabel, nameof(effectLabel));
             Check(bubble, nameof(bubble));
             Check(bubbleGroup, nameof(bubbleGroup));
             Check(bubbleLabel, nameof(bubbleLabel));
-            Check(ring, nameof(ring));
-            Check(ringGroup, nameof(ringGroup));
             if (glowFills == null || Array.IndexOf(glowFills, null) >= 0)
                 missing.Add(nameof(glowFills));
             if (glowBorders == null || Array.IndexOf(glowBorders, null) >= 0)
@@ -255,7 +241,6 @@ namespace Chapchu.UI.Fx.Band
             _avatarOrigin = avatar.anchoredPosition;
             _effectTagOrigin = effectTag.anchoredPosition;
             _bubbleOrigin = bubble.anchoredPosition;
-            _ringOrigin = ring.anchoredPosition;
 
             // 투명도 0 인 그림은 GPU 가 그리지 않게
             foreach (Graphic graphic in GetComponentsInChildren<Graphic>(true))
@@ -280,7 +265,6 @@ namespace Chapchu.UI.Fx.Band
             PlayTimeline();
             yield return new WaitForSeconds(Seconds(lengthMs + afterMs));
             cutIn.gameObject.SetActive(false);
-            _stripes?.Kill();
         }
 
         public override IEnumerator PlayPostRoutine(CardFxContext context)
@@ -297,15 +281,15 @@ namespace Chapchu.UI.Fx.Band
         // 카드 값을 부품에 넣는다 — 글자 · 색 · 그림 · 칸 크기
         private void ShowCard(CardFxContext context)
         {
-            band.SetColors(bandColor, bandEdgeColor, glowColor);
+            band.SetColors(bandColor, bandEdgeColor);
             foreach (Graphic graphic in glowFills)
                 graphic.color = WithAlpha(glowColor, graphic.color.a);
             foreach (UIShape shape in glowBorders)
                 shape.BorderColor = WithAlpha(glowColor, shape.BorderColor.a);
             iconFill.color = WithAlpha(bandColor, iconFill.color.a);
             TintUnderlay(titleLabel, bandColor);
-            TintUnderlay(effectLabel, glowColor);
-            effectLabel.color = WithAlpha(glowColor, effectLabel.color.a);
+            // 효과 한 줄은 띠 위의 흰 글자 — 그림자만 띠 가장자리 색
+            TintUnderlay(effectLabel, bandEdgeColor);
 
             ShowPicture(context);
 
@@ -316,10 +300,6 @@ namespace Chapchu.UI.Fx.Band
 
             titleLabel.text = string.Format(SlantFormat, titleSlant, context.CardName);
             Vector2 titleSize = titleLabel.GetPreferredValues(titleLabel.text);
-            // 빛은 제목 글자 둘레 — 제목처럼 오른쪽 끝에 붙여 둔다
-            float spread = titleGlowSpread * _pixelScale;
-            titleGlow.sizeDelta = new Vector2(titleSize.x + spread * 2f, titleSize.y + spread * 2f);
-            titleGlow.anchoredPosition = new Vector2(spread, titleGlow.anchoredPosition.y);
 
             // .ci-nin 은 두 줄 중 넓은 쪽 너비 — 커지며 나타날 때 그 가운데가 기준점
             float groupWidth = Mathf.Max(whoBox.gameObject.activeSelf ? whoWidth : 0f, titleSize.x);
@@ -364,12 +344,12 @@ namespace Chapchu.UI.Fx.Band
         private void ResetState()
         {
             _timeline?.Kill();
-            _stripes?.Kill();
             cutIn.gameObject.SetActive(true);
             cutIn.alpha = 1f;
+            cutIn.transform.localScale = Vector3.one;
             backdrop.alpha = 0f;
             band.Slide = BandFrom * band.Width;
-            band.StripeShift = 0f;
+            band.ShowStreaks(!stillLines);
             Apply(character, characterGroup, CharacterIn[0], new Vector2(ScreenWidth, 0f), _characterOrigin);
             Apply(_moving, null, Rest(0f), _moving.rect.size, _moving == art ? _artOrigin : _avatarOrigin);
             if (_moving == avatar)
@@ -378,8 +358,6 @@ namespace Chapchu.UI.Fx.Band
             titleGroupAlpha.alpha = 0f;
             Apply(effectTag, effectTagGroup, TagIn[0], Vector2.one * _pixelScale, _effectTagOrigin);
             Apply(bubble, bubbleGroup, BubbleIn[0], Vector2.zero, _bubbleOrigin);
-            Apply(ring, ringGroup, RingOut[0], Vector2.zero, _ringOrigin);
-            ringGroup.alpha = 0f;
         }
 
         private void PlayTimeline()
@@ -404,15 +382,12 @@ namespace Chapchu.UI.Fx.Band
                 titleGroup.localScale = new Vector3(pose.ScaleX, pose.ScaleY, 1f);
                 titleGroupAlpha.alpha = pose.Alpha;
             }));
-            _timeline.Insert(Seconds(ringTime.x), Animate(ringTime.y, EaseOut, RingOut, pose => Apply(ring, ringGroup, pose, Vector2.zero, _ringOrigin)));
             _timeline.Insert(Seconds(tagTime.x), Animate(tagTime.y, Linear, TagIn, pose => Apply(effectTag, effectTagGroup, pose, Vector2.one * _pixelScale, _effectTagOrigin)));
             _timeline.Insert(Seconds(secondMoveTime.x), Animate(secondMoveTime.y, EaseInOut, moveKeys, pose => Apply(_moving, null,
                 new Pose(pose.At, pose.X, pose.Y, pose.ScaleX, pose.ScaleY, pose.Angle + moveAngle, pose.Alpha), moveUnit, moveOrigin)));
-            _timeline.Insert(Seconds(lengthMs - fadeOutMs), Progress(fadeOutMs, Linear, p => cutIn.alpha = 1f - p));
+            // 판째 위아래로 접힌다 — 끝으로 갈수록 빨리
+            _timeline.Insert(Seconds(lengthMs - closeMs), Progress(closeMs, EaseIn, p => cutIn.transform.localScale = new Vector3(1f, 1f - p, 1f)));
 
-            if (!stillLines && stripeLoopMs > 0f)
-                _stripes = DOVirtual.Float(0f, band.StripePeriod, Seconds(stripeLoopMs), value => band.StripeShift = value)
-                    .SetEase(Ease.Linear).SetLoops(-1).SetLink(gameObject);
         }
 
         // 글자 그림자(underlay) 색은 카드마다 달라 이 연출만 쓰는 머티리얼 사본에 넣는다 (연출이 지워질 때 같이 지운다). 투명도는 머티리얼 값 그대로

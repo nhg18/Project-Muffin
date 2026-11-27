@@ -424,7 +424,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 308002062251295115, guid: 1781ed1680fb90a429af73f8428fe4ed, type: 3}
       propertyPath: say
-      value: "\uC5BC\uC74C!"
+      value: "\uAF41!"
       objectReference: {fileID: 0}
     - target: {fileID: 308002062251295115, guid: 1781ed1680fb90a429af73f8428fe4ed, type: 3}
       propertyPath: who

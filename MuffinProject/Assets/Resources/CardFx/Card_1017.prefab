@@ -1994,7 +1994,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2083936742262962357, guid: 9469c9951627bc043b3283c479629268, type: 3}
       propertyPath: alpha
-      value: 0.55
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2083936742262962357, guid: 9469c9951627bc043b3283c479629268, type: 3}
       propertyPath: startMs
@@ -2002,7 +2002,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2083936742262962357, guid: 9469c9951627bc043b3283c479629268, type: 3}
       propertyPath: durationMs
-      value: 140
+      value: 70
       objectReference: {fileID: 0}
     - target: {fileID: 4862260064163710723, guid: 9469c9951627bc043b3283c479629268, type: 3}
       propertyPath: m_Pivot.x

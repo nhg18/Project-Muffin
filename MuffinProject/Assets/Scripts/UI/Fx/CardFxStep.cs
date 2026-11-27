@@ -77,12 +77,12 @@ namespace Chapchu.UI.Fx
             graphic.color = color;
         }
 
-        // 그림 색 그대로 alpha 로 번쩍였다가 사라진다
+        // 그림 색 그대로 alpha 로 durationMs 동안 켰다가 딱 끈다 — 흐려지며 사라지면 어두운 판 위에 회색 막이 남는다
         protected void Flash(Graphic graphic, float alpha, float durationMs)
         {
             graphic.DOKill();
             SetAlpha(graphic, alpha);
-            graphic.DOFade(0f, Seconds(durationMs)).SetEase(Ease.OutQuad).SetLink(gameObject);
+            DOVirtual.DelayedCall(Seconds(durationMs), () => SetAlpha(graphic, 0f)).SetTarget(graphic).SetLink(gameObject);
         }
 
         // 시작부터 ms 가 지날 때까지 기다린다 (매 프레임 확인 — 시각이 밀리지 않게)

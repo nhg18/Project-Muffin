@@ -157,8 +157,8 @@ namespace Chapchu.UI.Fx.Wait
         [Header("나머지 사람들 (시안: x = i%2 ? 960 : 1090, y 160 + i·175)")]
         [Tooltip("얼굴 x — 짝수 번째 · 홀수 번째 (설계 px, 시안 1090 · 960).")]
         [SerializeField] private Vector2 peopleX = new Vector2(1090f, 960f);
-        [Tooltip("첫 사람 y · 한 사람마다 아래로 (설계 px, 시안 160 · 175).")]
-        [SerializeField] private Vector2 peopleY = new Vector2(160f, 175f);
+        [Tooltip("첫 사람 y · 한 사람마다 아래로 (설계 px, 시안 160 · 175) — 폰 가로 화면은 판이 위아래로 잘려(설계 약 97 ~ 623 만 보임) 셋째 사람의 말풍선 · 표까지 들어오게 좁혔다.")]
+        [SerializeField] private Vector2 peopleY = new Vector2(195f, 162f);
         [Tooltip("들썩이는 높이 (설계 px, 시안 |sin(t·14 + i·1.3)|·12).")]
         [SerializeField] private float bounce = 12f;
         [Tooltip("들썩이는 빠르기 (시안 14).")]
@@ -181,8 +181,8 @@ namespace Chapchu.UI.Fx.Wait
         [SerializeField] private float bubbleTime = 0.16f;
         [Tooltip("튀어나올 때 지나치는 정도 (시안 back 2).")]
         [SerializeField] private float bubbleOvershoot = 2f;
-        [Tooltip("말풍선 가운데 — 얼굴 가운데에서 (설계 px, 시안 −195, −44).")]
-        [SerializeField] private Vector2 bubbleOffset = new Vector2(-195f, -44f);
+        [Tooltip("말풍선 가운데 — 얼굴 가운데에서 (설계 px, 시안 −195, −44 — 사람 줄을 좁히니 윗사람 「승리 불가」 표를 가려 내렸다).")]
+        [SerializeField] private Vector2 bubbleOffset = new Vector2(-195f, -30f);
         [Tooltip("꼬리 끝 — 얼굴 가운데에서 (설계 px, 시안 −48, −12).")]
         [SerializeField] private Vector2 tailOffset = new Vector2(-48f, -12f);
         [Tooltip("말풍선 크기 — 외칠 때 (설계 px, 시안 196×88).")]
@@ -209,8 +209,8 @@ namespace Chapchu.UI.Fx.Wait
         [SerializeField] private float tagTime = 0.14f;
         [Tooltip("튀어나올 때 지나치는 정도 (시안 back 2.4).")]
         [SerializeField] private float tagOvershoot = 2.4f;
-        [Tooltip("표 가운데 — 얼굴 가운데에서 (설계 px, 시안 0, 72).")]
-        [SerializeField] private Vector2 tagOffset = new Vector2(0f, 72f);
+        [Tooltip("표 가운데 — 얼굴 가운데에서 (설계 px, 시안 0, 72 — 아랫사람 말풍선에 가리지 않게 턱에 붙였다).")]
+        [SerializeField] private Vector2 tagOffset = new Vector2(0f, 64f);
         [Tooltip("표 기울기 — 첫 사람 · 사람마다 더하는 만큼 (라디안, 시안 −0.1 · 0.07).")]
         [SerializeField] private Vector2 tagTilt = new Vector2(-0.1f, 0.07f);
         [Tooltip("표 너비 = 글자 폭 + 이만큼 (설계 px, 시안 34).")]
@@ -270,17 +270,15 @@ namespace Chapchu.UI.Fx.Wait
         [Tooltip("털 삐침 선 두께 (설계 px, 시안 4).")]
         [SerializeField] private float furLine = 4f;
 
-        [Header("흰 고리 (시안: 막고 0.32 초 동안 (420, 390) 에서 반지름 190 → 430 eo, 굵기 10·(1 − e) + 2, 진하기 1 − e)")]
+        [Header("흰 고리 (시안: 막고 0.32 초 동안 (420, 390) 에서 반지름 190 → 430 eo) — 시안은 흐려지며 가는 선으로 남아, 진하기는 그대로 굵기가 0 으로 줄어 사라진다")]
         [Tooltip("고리가 사는 시간 (초, 시안 0.32).")]
         [SerializeField] private float ringLife = 0.32f;
         [Tooltip("고리 가운데 — 손바닥 가운데에서 위로 (설계 px, 시안 30).")]
         [SerializeField] private float ringRise = 30f;
         [Tooltip("반지름 — 처음 · 끝 (설계 px, 시안 190 → 430).")]
         [SerializeField] private Vector2 ringRadius = new Vector2(190f, 430f);
-        [Tooltip("굵기 — 줄어드는 만큼 (설계 px, 시안 10).")]
+        [Tooltip("처음 굵기 — 0 으로 줄어든다 (설계 px, 시안 10).")]
         [SerializeField] private float ringWidth = 10f;
-        [Tooltip("굵기 — 끝 (설계 px, 시안 2).")]
-        [SerializeField] private float ringWidthMin = 2f;
 
         [Header("4 단계")]
         [Tooltip("4 단계 장식 길이 (초, 시안 500ms).")]
@@ -405,8 +403,8 @@ namespace Chapchu.UI.Fx.Wait
             {
                 float e = hit / ringLife;
                 ComicKit.Place(pawRing.rectTransform, pawX, py - ringRise);
-                pawRing.Set(ComicKit.Lerp(ringRadius.x, ringRadius.y, ComicKit.Eo(e)), ringWidth * (1f - e) + ringWidthMin);
-                ComicKit.SetAlpha(pawRing, 1f - e);
+                pawRing.Set(ComicKit.Lerp(ringRadius.x, ringRadius.y, ComicKit.Eo(e)), ringWidth * (1f - e));
+                ComicKit.SetAlpha(pawRing, 1f);
             }
             else
             {

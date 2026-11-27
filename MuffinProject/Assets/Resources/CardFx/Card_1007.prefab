@@ -75,6 +75,8 @@ MonoBehaviour:
   - {x: 0.37, y: 12}
   - {x: 0.5, y: 6}
   - {x: 0.88, y: 8}
+  noBand: 0
+  plainTag: 0
   focusLines: {fileID: 8391275692846770093}
   barker: {fileID: 4347698619515436793}
   soundWaves: {fileID: 5265642728193754959}
@@ -91,7 +93,80 @@ MonoBehaviour:
   ban: {fileID: 441317405176174738}
   focusRadius: {x: 260, y: 150}
   focusAlpha: {x: 0.22, y: 0.85}
+  barkAt: 0.36
+  hitAt: 0.5
+  enterTime: 0.24
+  enterOvershoot: 1.6
+  barkerFromX: -200
+  barkerX: 400
+  barkerY: 740
+  recoilFrequency: 20
+  recoilDamping: 6
+  recoilTilt: -0.06
+  recoilStretchX: 0.07
+  recoilSquashY: 0.03
+  crouchFrom: -0.1
+  crouchY: 0.95
+  mouthInArt: {x: 486, y: 345}
+  stickerAnchor: {x: 300, y: 562}
+  stickerScale: 0.93333334
+  waveCount: 3
+  waveGap: 0.09
+  waveLife: 0.45
+  waveRadius: 50
+  waveGrow: 420
+  waveInk: 26
+  waveInkMin: 14
+  waveLight: 13
+  waveLightMin: 7
+  waveFade: 0
+  waveHalfAngle: 0.5
+  waveLightColor: {r: 1, g: 0.9647059, b: 0.8784314, a: 1}
+  targetX: 990
+  targetY: 700
+  pushTime: 0.2
+  push: 24
+  lean: 0.07
+  leanWobble: 0.11
+  leanDamping: 6
+  leanFrequency: 15
+  hitWidth: 0.97
+  hitSkew: -0.08
+  skewDamping: 4
+  frontLegKick: -0.25
+  backLegKick: 0.1
+  legDamping: 3
+  handInDog: {x: 250, y: 640}
+  cardSpreadX: 40
+  cardLeft: -60
+  cardRaise: -20
+  cardArch: 10
+  cardFan: 0.26
+  cardTilt: -0.15
+  flyX: 260
+  flyXStep: 110
+  flyUp: 520
+  flyUpStep: 70
+  flyFall: 1200
+  flySpin: 7
+  flySpinStep: 3
+  headInDog: {x: 600, y: 250}
+  sweatOffsetA: {x: 30, y: 0}
+  sweatOffsetB: {x: 70, y: 50}
+  sweatAtA: 0.12
+  sweatAtB: 0.2
+  sweatFade: 0.1
+  shoutDelay: 0.02
+  shoutTime: 0.2
+  shoutOvershoot: 1.5
+  shoutShakeUntil: 0.5
+  shoutShake: 4
+  banAt: 0.88
+  banTime: 0.18
+  banOffsetX: 70
   postWait: 0.6
+  bubbleRise: 80
+  postShake: 8
 --- !u!1 &888748294617235740
 GameObject:
   m_ObjectHideFlags: 0
@@ -202,7 +277,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1060, y: -560}
+  m_AnchoredPosition: {x: 1060, y: -500}
   m_SizeDelta: {x: 208, y: 208}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &6726732180669917307
@@ -232,7 +307,6 @@ MonoBehaviour:
   from: 2.4
   overshoot: 1.4
   spin: 0
-  fade: 4
 --- !u!1 &1924779597629523398
 GameObject:
   m_ObjectHideFlags: 0

@@ -46,8 +46,8 @@ namespace Chapchu.UI.Fx.Common
         [Range(0f, 1f)]
         [Tooltip("번쩍일 때 판의 투명도.")]
         [SerializeField] private float flashAlpha = 1f;
-        [Tooltip("번쩍임이 사라지는 시간 (ms).")]
-        [SerializeField] private float flashMs = 180f;
+        [Tooltip("번쩍임을 켜 두는 시간 (ms) — 지나면 딱 꺼진다.")]
+        [SerializeField] private float flashMs = 70f;
         [Tooltip("번쩍인 뒤 흔들리기 시작할 때까지 (ms).")]
         [SerializeField] private float shakeDelayMs = 140f;
         [Tooltip("흔들리는 시간 (ms).")]
