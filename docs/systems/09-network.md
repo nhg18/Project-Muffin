@@ -170,6 +170,7 @@ public static class PlayerProps
 public static class RoomProps
 {
     public const string TurnActor    = "turnActor";
+    public const string TurnOrder    = "turnOrder"; // 턴 순서 — 방장이 섞은 actorNumber 배열 (int[], 03-turn 6절 #2). 시작 · 대소동 새 판에 쓰고 판이 끝나면 지운다 (2026-11-28)
     public const string DeckCount    = "deckCount";
     public const string DiscardCount = "discardCount";
     public const string DiscardTop   = "discardTop"; // 맨 위 카드 종류 ID. 더미가 비면 키 없음 (2026-11-09)
