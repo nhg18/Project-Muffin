@@ -26,6 +26,7 @@
 ### 다음 할 일
 - [ ] `hotfix/0.1.6` 으로 PR (PM 머지 · 태그) → develop 으로 되돌릴 때 `HandView` · `HandPresenter` · `TurnOrderPresenter` · `TurnOrderView` · `GameScreenBuilder.HudV3` 충돌 가능 (develop 의 #244 · #245)
 - [ ] `GameScene` 에 쓰지 않는 턴 순서 「Halt」 오브젝트(꺼져 있음)가 남아 있다 — Unity 에서 지우기 (다른 세션이 씬을 고치고 있어 손대지 않음)
+
 ---
 
 ## 2026-11-28 · 카드 연출 효과음 — 「카드 이펙트 v2」 소리를 게임에 (`hotfix/0.1.6`)
