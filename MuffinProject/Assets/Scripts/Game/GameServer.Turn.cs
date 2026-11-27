@@ -111,7 +111,7 @@ namespace Chapchu.Game
             if (player.TimeoutStreak >= TimeoutLimit)
                 Remove(actor, true);
             else
-                DrawForTurn(actor, AutoDrawCount(player.Hand.Count));
+                DrawForTurn(actor, AutoDrawCount(player.Hand.Count), false);
         }
 
         /// <summary>
