@@ -58,7 +58,7 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float punch;
         [Range(0f, 1f)]
         [Tooltip("그을 때 번쩍이는 판의 투명도.")]
-        [SerializeField] private float flashAlpha = 0.9f;
+        [SerializeField] private float flashAlpha = 1f;
         [Tooltip("번쩍임을 켜 두는 시간 (ms) — 지나면 딱 꺼진다.")]
         [SerializeField] private float flashMs = 60f;
 

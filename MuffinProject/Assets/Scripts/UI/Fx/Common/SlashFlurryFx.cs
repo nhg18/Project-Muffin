@@ -102,7 +102,7 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float heavyShake = 22f;
         [Range(0f, 1f)]
         [Tooltip("묵직한 칼선 때 번쩍이는 판의 투명도.")]
-        [SerializeField] private float heavyFlashAlpha = 0.45f;
+        [SerializeField] private float heavyFlashAlpha = 1f;
         [Tooltip("번쩍임을 켜 두는 시간 (ms) — 지나면 딱 꺼진다.")]
         [SerializeField] private float heavyFlashMs = 50f;
         [Tooltip("판이 튕기는 크기 (1 에 더하는 값).")]

@@ -82,7 +82,7 @@ namespace Chapchu.UI.Fx
         {
             graphic.DOKill();
             SetAlpha(graphic, alpha);
-            DOVirtual.DelayedCall(Seconds(durationMs), () => SetAlpha(graphic, 0f)).SetTarget(graphic).SetLink(gameObject);
+            DOVirtual.DelayedCall(Seconds(durationMs), () => SetAlpha(graphic, 0f), false).SetTarget(graphic).SetLink(gameObject);
         }
 
         // 시작부터 ms 가 지날 때까지 기다린다 (매 프레임 확인 — 시각이 밀리지 않게)
