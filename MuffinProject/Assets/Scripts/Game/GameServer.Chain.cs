@@ -161,11 +161,10 @@ namespace Chapchu.Game
         }
 
         // actor 가 손패의 card 를 카운터로 top 에 낼 수 있는가 (대상 확정 전) — PlayCounter 와 AddCountersUsable 이 같이 쓴다.
-        // 내가 낸 카드(행동 · 카운터)에는 낼 수 없다 (04 7절 「사용 조건」 5). 사망 대기 중엔 사망 관련 카운터만 (06 3 · 8절 — C11).
+        // 내가 낸 카드(행동 · 카운터)에는 낼 수 없다 (04 7절 「사용 조건」 5).
         private bool CanPlayCounter(int actor, Card card, ChainEntry top) =>
             card.Type == CardType.Counter
             && top.User != actor
-            && (_players[actor].Life != LifeState.DeathPending || card.Condition == ReactCondition.WouldKillMe)
             && CanReactTo(card, actor, top)
             && (card.Target != TargetType.OneNotDamaged || ShareCandidates(actor, top).Length > 0); // 고를 사람이 없으면 낼 수 없다 (2018)
 
@@ -208,10 +207,11 @@ namespace Chapchu.Game
 
         // Tick 이 반응 마감 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
         // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절) — 체인이 끝난 뒤 쓴 순서대로 (9.1). 맨 아래 카드의 후처리 연출 뒤에
-        // 함정 (9.2) → 사망 대기 → 메인 행동의 체인이면 다음 턴, 메인 행동 전(사망 대기 중 카운터 등)이면 턴을 이어 간다.
+        // 사망 정리 · 함정 줄 (9.2) → 메인 행동의 체인이면 다음 턴, 메인 행동 전(남의 턴에 낸 카운터 등)이면 턴을 이어 간다.
         private void ResolveChain()
         {
             double animationEnd = _clock() + _chain[0].Card.ResolveSeconds;
+            MarkHandsBefore(); // 처리 전 손패 — 「10장이 된 뒤」(3004)
 
             _chainOrder.Clear();
             _chainOrder.AddRange(_chain);
@@ -224,7 +224,7 @@ namespace Chapchu.Game
         // 처리할 카드가 남아 있는 동안 위에서부터 효과를 적용한다. 효과 사이에서는 멈추지 않는다 — 피해 뒤에 효과가 더 있어도 이어서 (04 9.3, 2026-11-15).
         // 대상이 고르는 효과(1019)에서만 멈추고, 고른 뒤 Advance 가 다시 부른다.
         // settleAt = 이번에 적용하는 결과의 후처리 연출(3 · 4 단계)이 끝나는 시각 — 처음엔 맨 아래 카드의, 이어 갈 때는 고른 결과의.
-        // 함정 · 사망 대기는 이 시각 뒤에, 다음 턴(메인 행동 전이면 턴 재개)도 그 뒤로 미룬다 (04 8 · 9.2절 · 06 8절).
+        // 사망 정리 · 함정은 이 시각 뒤에, 다음 턴(메인 행동 전이면 턴 재개)도 그 뒤로 미룬다 (04 8 · 9.2절 · 06 8절).
         private void ContinueResolve(double settleAt)
         {
             DelayTurnUntil(settleAt);
@@ -250,6 +250,7 @@ namespace Chapchu.Game
 
                     int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
+                    RecordActionReceived(entry, targets.Where(IsInGame).ToArray());
                 }
 
                 IReadOnlyList<CardEffect> effects = entry.Card.Effects;
@@ -272,15 +273,14 @@ namespace Chapchu.Game
             }
 
             DiscardChain();
-            double settled = FireTraps(settleAt); // 체인이 끝난 뒤 함정 — 설치한 순서대로 (04 9.2)
+            double settled = SettleAfter(settleAt); // 체인이 끝난 뒤 — 사망 정리 → 찹츄 선언 → 함정 줄 (04 9.2)
             if (_restartPending)
             {
                 CheckElimination(); // 함정의 대소동 — 위와 같다
                 return;
             }
             DelayTurnUntil(settled);
-            CheckDeathPending(settled);           // HP 가 0 이 되는 연출(4 단계) · 함정 뒤부터 대응 5초 (06 8절)
-            CheckElimination();                   // 사망 대기가 생겼으면 그것이 끝난 뒤 (07 3절) — 체인 중에 나간 경우
+            CheckElimination();                    // 체인 중에 나간 경우 (07 3절)
         }
 
         // 체인의 카드를 쓴 순서대로 버림 더미에 쌓는다 — 맨 위 = 마지막에 쓴 카드 (04 9.1, 2026-11-15). 손패로 돌아간 카드(C01)는 빠진다.

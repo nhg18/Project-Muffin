@@ -163,6 +163,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken += HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged += HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped += HandleTurnSkipped;
+            GameEvents.OnTurnSkipCleared += HandleTurnSkipCleared;
             GameEvents.OnTurnSkipMarked += HandleTurnSkipMarked;
             RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
@@ -215,6 +216,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnDiscardTaken -= HandleDiscardTaken;
             GameEvents.OnTurnDirectionChanged -= HandleTurnDirectionChanged;
             GameEvents.OnTurnSkipped -= HandleTurnSkipped;
+            GameEvents.OnTurnSkipCleared -= HandleTurnSkipCleared;
             GameEvents.OnTurnSkipMarked -= HandleTurnSkipMarked;
             RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
@@ -801,6 +803,8 @@ namespace Chapchu.UI.GameScreen
 
         // 행동 카드 금지 (1007 짖기) — 다음 턴 · 이번 턴 동안 이름표 옆 「행동 금지」
         private void HandleActionBlockChanged(int actorNumber, ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); ShowBlocked(actorNumber, state != ActionBlock.None); return null; });
+
+        private void HandleTurnSkipCleared(int actorNumber) => Enqueue(() => { ShowSkipMarked(actorNumber, false); return null; });
 
         private void ShowSkipMarked(int actorNumber, bool marked)
         {

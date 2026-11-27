@@ -52,18 +52,6 @@ namespace Chapchu.Game
                     return; // 체인 중에 나가 1명만 남았다 — 처리 뒤 바로 끝, 턴을 넘기지 않는다 (07 3 · 6절)
             }
 
-            if (IsDeathPending)
-            {
-                if (now < _deathDeadline)
-                    return;
-                if (!_mainActionUsed)
-                    _resumeAt = System.Math.Max(_resumeAt, _deathDeadline); // 사망 대기가 프레임 중간에 끝났다 — 턴은 그 마감까지 멈춘 것으로 (UpdateTurnClock, 03-turn.md 4절)
-                FinalizeDeaths();
-                CheckElimination();
-                if (_gameOver)
-                    return;
-            }
-
             if (IsChoosing)
             {
                 if (now < _choiceDeadline)
@@ -78,14 +66,14 @@ namespace Chapchu.Game
                 if (now < _gaepanJudgeAt)
                     return; // 개판 판정 공개 중 (11-card-list 1021)
                 FinishGaepanJudge(now);
-                if (IsDeathPending)
+                if (_gameOver)
                     return;
             }
 
             if (IsResolvePaused)
             {
                 ContinueResolve(now + _resolving[0].Card.ResolveSeconds); // 고르기가 끝났다 — 남은 효과로 (11-card-list 1019)
-                if (_gameOver || IsResolvePaused || IsDeathPending)
+                if (_gameOver || IsResolvePaused)
                     return;
             }
 
@@ -97,9 +85,9 @@ namespace Chapchu.Game
                 if (now >= _nextTurnAt)
                     AdvanceTurn();
             }
-            else if (CurrentTurnActor != -1 && _turnPaused && !_mainActionUsed && !IsInGame(CurrentTurnActor))
+            else if (CurrentTurnActor != -1 && !_mainActionUsed && !IsInGame(CurrentTurnActor))
             {
-                AdvanceTurn(); // 멈춘 사이에 턴 주인이 나갔거나 최종 사망했다 — 바로 다음 사람에게 (03-turn.md 7절)
+                AdvanceTurn(); // 턴 주인이 나갔거나 최종 사망했다(남의 카드 · 턴 시작 뽑기의 빈 덱 피해) — 바로 다음 사람에게 (03-turn.md 7절)
             }
             else if (CurrentTurnActor != -1 && (!_turnPaused || _mainActionUsed) && now >= _turnDeadline)
             {
@@ -180,7 +168,9 @@ namespace Chapchu.Game
         {
             SettleChapchu(); // 이 턴에 10장이 된 사람은 턴이 넘어가기 전에 선언된다 (07 4.1)
             if (HoldTurnEnd())
-                return; // 대소동 → 새 판 · 피폭 피해의 사망 대기 · 함정 시간 (11-card-list 1012)
+                return; // 대소동 → 새 판 · 피폭 피해의 사망 정리 · 함정 시간 (11-card-list 1012)
+
+            MarkHandsBefore(); // 턴 시작(스킵 · 턴 시작 뽑기)도 처리 하나다 — 끝에 사망 정리 · 함정 줄
 
             int next;
             bool skipped = false;
@@ -243,13 +233,8 @@ namespace Chapchu.Game
             }
 
             SetTurn(next);
-            if (skipped)
-            {
-                // 스킵 직후 함정 — 새 턴은 그 연출 뒤에 이어진다 (메인 행동 전이라 턴 시간이 멈춘다)
-                double settled = FireTraps(_clock());
-                DelayTurnUntil(settled);
-                CheckDeathPending(settled);
-            }
+            // 스킵 · 턴 시작 뽑기(빈 덱 피해) 직후 — 사망 정리 → 함정 줄. 새 턴은 그 연출 뒤에 이어진다 (메인 행동 전이라 턴 시간이 멈춘다)
+            DelayTurnUntil(SettleAfter(_clock()));
         }
 
         private void SetTurn(int actor)
@@ -272,12 +257,15 @@ namespace Chapchu.Game
             int extra = _players[actor].TurnStartDraws;
             _players[actor].TurnStartDraws = 0;
             for (int i = 0; i < extra; i++)
-                CountDraw(actor);
-            CheckDeathPending(_clock()); // 빈 덱 피해로 HP 0 이면 바로 사망 대기 — 턴이 멈춘다 (06 8절)
+                CountDraw(actor); // 빈 덱 피해로 HP 0 이 되면 — 사망 정리는 부른 쪽(AdvanceTurn)이
         }
 
-        // 체인 · 사망 대기 · 개판 판정 공개 · 대상의 고르기 · 체인 · 함정의 후처리 연출 — 턴이 진행되지 않는다.
-        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsDeathPending || IsGaepanJudging || IsChoosing || now < _resumeAt;
+        // 함정 줄 · 사망 정리 순서 — 현재 턴 플레이어부터 턴 진행 방향 한 바퀴. 턴이 없으면 턴 순서 그대로 (04 6절, 2026-11-27)
+        private IEnumerable<int> TurnOrderFromCurrent() =>
+            CurrentTurnActor != -1 && _turnOrder.Contains(CurrentTurnActor) ? TurnOrderFrom(CurrentTurnActor).ToList() : _turnOrder.ToList();
+
+        // 체인 · 개판 판정 공개 · 대상의 고르기 · 체인 · 함정 · 사망 대기 능력의 후처리 연출 — 턴이 진행되지 않는다.
+        private bool IsPaused(double now) => _chain.Count > 0 || IsResolvePaused || IsGaepanJudging || IsChoosing || now < _resumeAt;
 
         // 메인 행동 전에 멈춘 동안은 턴 마감을 미룬다. 풀리는 순간 남은 시간으로 다시 알린다 (03-turn.md 4절).
         private void UpdateTurnClock(double now)

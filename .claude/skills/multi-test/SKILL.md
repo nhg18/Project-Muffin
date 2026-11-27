@@ -22,6 +22,7 @@ bash .claude/skills/multi-test/run.sh counter cost                # 2021 으르�
 bash .claude/skills/multi-test/run.sh counter reflect             # 2002 반사 — 화면에서 내면 막힌 카드는 버림 더미로 · 쓴 사람만 피해 · 기록 줄 「반사! →」
 bash .claude/skills/multi-test/run.sh counter                     # 실제 카운터 — 방장에게 2003 진짜 할거야? 를 쥐여 줌 → 클론이 행동 카드 → 방장이 화면에서 카운터 → 막힌 카드는 쓴 사람 손패로 · 두 화면 손패 장수 = 방장 값
 bash .claude/skills/multi-test/run.sh migrate [fail|kick|room|result]            # 방장 이주 (09 9.1) — 메인 + 클론 + 봇 1. 방장(메인)이 나감 → 클론이 사본으로 이어받아 봇과 판을 잇는다 · 기록 「방장이 바뀌었어요」. fail = 사본 없이 나감 → 클론은 방으로 + 경고 팝업 · kick = 방장이 3턴 시간 초과로 강제 퇴장 → 이주 · room = 방 대기 중 방장 이탈 → 위임 (메인 + 클론 2: 새 방장 시작 버튼 · 봇 추가 · 토스트, 참가자 대기 안내 · 로그 「방장이 되었어요」 → 새 방장이 봇 넣고 시작) · result = 결과 화면 방장 이탈 → 위임 (메인 + 클론 2: 먼저 한 준비 유지 · 남은 둘 「한 판 더」 → 다음 판)
+SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh fx <카드 ID> [ms=300,800,1500]  # 연출 시험장(CardFxTestScene) — 메인 혼자, 그 카드를 냄 → 3 단계 시작부터 ms 마다 PNG(fx_<ID>_<ms>.png) → 끝까지 → 콘솔 오류 0 (CODE_CONVENTION 5절)
 SHOT_DIR=<폴더> bash .claude/skills/multi-test/run.sh multi 2       # 에디터마다 게임 뷰 PNG — 처음 나온 카드의 3 단계 확대(_zoom) · 반응 시간(_reaction · _later) + 턴이 끝난 뒤. 화면 눈 확인용 (MultiTest.ArmCardShots · Shot)
 ```
 

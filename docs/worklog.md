@@ -4,6 +4,112 @@
 
 ---
 
+## 2026-11-27 · 함정 6종 구현 — 프로토타입 v3.4 규칙 (`feature/trap-cards-impl`, `feature/trap-cards` 문서 위)
+
+### 결정 (사용자, 2026-11-27)
+- 함정은 `feature/trap-cards` 의 v3.4 문서대로 구현한다. **3001 멜 w 는 이름을 바꿔야 해 뺀다** — 노션 카드 페이지에 댓글, 새 이름이 확정되면 넣는다.
+
+### 한 것
+- 카드 6종 12장 — 3002 멈춰 · 3004 사이렌 · 3007 두고 보자 · 3008 죽은 척 · 3009 나만 아니면 돼 · 3012 편안 (`cards.json` · 에셋 · `Deck_Main` 77장 · `05-deck` 2절).
+- 함정 시스템 기반(묶음 0, 위 플랜대로): `SettleAfter` = 사망 정리 → 찹츄 선언 → 함정 줄. 줄은 현재 턴부터 턴 방향 · 슬롯 순서, 같은 이름은 한 사람 한 줄 한 장, 함정 한 장마다 사망 정리 → 그 함정이 만든 사건으로 다음 단(최대 4단), 발동 직전 재확인(안 되면 슬롯에 남음).
+- 사망 대기 5초를 지웠다 — 문서(`06` 8절)는 2026-11-22 에 이미 「대응 시간 없음」 이었다. `SettleDeaths` 가 그 자리에서 죽은 척 → 최종 사망. `DeathPending` 사건은 더 내지 않는다(사건 · RPC · 화면 처리는 남겨 둠).
+- 새 발동 조건 5개(`TrapTrigger` 14 ~ 18) · 사건 기록(행동 카드에 당함 · 손패 10장이 됨 · 막힘 + 걸린 종류) · 효과 `TakeTriggerCardEffect`(함정 줄이 끝난 뒤 손패로) · `ClearStatusEffect`(방금 걸린 종류는 남김) · 알림 `TurnSkipCleared`.
+- 스냅샷 형식 3 — 사건의 카드 · 처리 전 손패. 설치 순서 · 사망 대기 마감은 뺐다.
+- `MultiTest` — 옛 규칙 검사(설치 순서 · 5초 사망 대기 · 함정이 함정을 안 부름)를 새 규칙으로, 새 검사(턴 순서 · 4단 · 같은 이름 · 살아난 사람의 함정 · 함정 피해로 사망 · 사이렌/나만 아니면 돼 「내가 만든 일」). 35줄 `ClickJoinButton` → `HandleJoinClicked`.
+- 옛 문구: `development-plan` 7 · `02-player` 4절 · `18-bot` 7절의 「5초 사망 대기」 · 「설치 순서」.
+
+### 확인
+- batchmode 규칙 시나리오 9개 통과: Rules · Chain · Death · Win · Trap · Bot(77장 덱으로 봇 5판) · Effects · Migrate · Stats. 컴파일 오류 0.
+- **확인 못 한 것**: 2클론 네트워크 실행 · 화면(함정 공개 연출 · 죽은 척 부활 연출). 에디터가 모두 다른 작업에 열려 있었다.
+
+### 다음 할 일
+- 3001 멜 w 이름 확정 → `cards.json` 에 행 추가(코드는 있다) · 덱 79장.
+- 남겨 둔 것 지우기: `DeathPending` 사건 · `RPC_OnDeathPending` · 화면의 사망 대기 처리 (`09-network` 반영).
+- 노션 고칠 곳(PM) — `11-card-list` 4절 #19.
+
+## 2026-11-27 · 함정 시스템 기반 (묶음 0) — **구현 플랜** (`feature/trap-cards`, 코드는 이 브랜치에 없다)
+
+데스크톱 PC 에서 아래 플랜대로 코드를 고쳤으나 에디터가 멈춰 **컴파일 · 실행 확인을 못 했고, 커밋하지 않았다**. 원격에는 문서만 있다. 다른 PC 에서는 이 플랜으로 처음부터 구현한다 (데스크톱의 작업 폴더 코드는 참고용 — 확인 안 된 것이다).
+
+### 구현 플랜 — 순서대로
+
+기준 문서: `04-card` 6절 · 9.2, `06-health` 3 · 8절. 고치는 곳은 규칙 계층(`Assets/Scripts/Game/GameServer.*.cs`)뿐이다.
+
+1. **사건 기록을 줄마다 따로** (`GameServer.After.cs`)
+   - `TakeAfterRecords()` 추가 — `_afterRecords` 를 복사해 돌려주고 비운다.
+   - `FindAfterRecord` 가 `_afterRecords` 대신 받은 목록을 보게: `FindAfterRecord(List<AfterRecord> records, int actor, Card trap, ICollection<AfterRecord> taken)`.
+2. **순서 도우미** (`GameServer.Turn.cs`) — `TurnOrderFromCurrent()`: 현재 턴 플레이어부터 진행 방향 한 바퀴(`TurnOrderFrom`), 턴이 없으면 `_turnOrder`.
+3. **사망 정리** (`GameServer.Health.cs`)
+   - `SettleDeaths(at)`: `TurnOrderFromCurrent()` 순으로 HP 0 · `Alive` 인 사람을 모은다 → 각자 `Life = DeathPending`(안에서만, 사건 안 냄) → 「본인 사망」 함정을 슬롯 순서로 `ResolveTrap(actor, trap, null, at)` (HP 가 0 보다 커지면 멈춤) → `_afterRecords.Clear()`(사망 대기 능력은 함정 줄을 열지 않는다) → 아직 `DeathPending` 인 사람: HP > 0 이면 `Alive` + `DeathAvoided`, 아니면 `Dead`(킬 지표 · `OutTurn` · `DiscardAll` · `PlayerDied` · `EndWaitOf` · `ClearChapchu`) → 죽은 사람이 있으면 `CheckElimination()`.
+   - `SettleAfter(at)`: `records = TakeAfterRecords()` → `SettleDeaths` → `SettleChapchu` → 게임이 안 끝났으면 `FireTraps(records, at, 1)`. 끝나는 시각을 돌려준다.
+   - 지운다: `DeathResponseTime` · `_deathDeadline` · `IsDeathPending` · `CheckDeathPending` · `FinalizeDeaths`.
+4. **함정 줄** (`GameServer.Trap.cs`) — `FireTraps(List<AfterRecord> records, double at, int depth)`, `MaxTrapLineDepth = 4`
+   - 줄 만들기: `TurnOrderFromCurrent()` × 슬롯 순서. `IsAfterTrigger` 가 아니거나 이 사람이 이 줄에 이미 올린 `CardId` 면 건너뛴다. `FindAfterRecord(records, …, taken)` 이 있으면 줄에 올린다.
+   - 한 장씩: 직전 재확인(주인이 게임에 있나 · 함정이 아직 슬롯에 있나 · 대상이 `TriggerSource` 인데 그 사람이 빠졌나) — 안 되면 발동하지 않고 슬롯에 남긴다 → `ResolveTrap` → `made = TakeAfterRecords()` → `SettleDeaths` → `SettleChapchu` → `depth < 4` 면 `FireTraps(made, at, depth + 1)`. `_gameOver` · `_restartPending` 이면 멈춘다.
+   - `ResolveTrap` 은 그대로.
+5. **부르는 곳을 `SettleAfter` 로**
+   - `Chain.cs` `ContinueResolve` 끝: `FireTraps(settleAt)` + `CheckDeathPending` → `SettleAfter(settleAt)` → `DelayTurnUntil` → `CheckElimination`. `CanPlayCounter` 의 사망 대기 조건 삭제.
+   - `Deck.cs` `DrawForTurn`: 뽑은 뒤 `SettleAfter(now)`. 게임이 끝났으면 return, `settled > now` 면 `_mainActionUsed = true; _nextTurnAt = settled`, 아니면 `AdvanceTurn()`.
+   - `Turn.cs`: `Advance` 의 사망 대기 블록 삭제 · `FinishGaepanJudge` 뒤 `_gameOver` 면 return · 「턴 주인이 빠졌다 → 다음 사람」 분기에서 `_turnPaused` 조건 빼기 · `AdvanceTurn` 끝은 항상 `DelayTurnUntil(SettleAfter(_clock()))` · `SetTurn` 의 `CheckDeathPending` 삭제 · `IsPaused` 에서 사망 대기 빼기.
+   - `Restart.cs` 피폭 뒤: `SettleAfter(now)` → `_gameOver` 면 return true. `HoldForTurnEnd` 에서 사망 대기 빼기.
+   - `Gaepan.cs` `FinishGaepanJudge`: `SetHp(loser, 0)` 뒤 `DelayTurnUntil(SettleAfter(now))`.
+   - `Effects.cs`: `ApplyDamage` 의 `DeathPending → Alive` 블록 삭제, `SurviveNow` 의 `_deathDeadline` 줄 삭제(`DeathPending → Alive` + `DeathAvoided` 는 유지).
+   - `Win.cs` `CheckElimination` 가드 · `Bot.cs` `DeathDeadline` · `GameServer.cs` 초기화에서 사망 대기 흔적 삭제.
+6. **스냅샷** (`GameServer.Snapshot.cs`) — `_deathDeadline` 쓰기 · 읽기와 `ResumeAfterMigration` 의 사망 대기 블록 삭제 (형식이 바뀐다 → `migrate` 로 확인).
+7. **시험 도구** (`.claude/skills/multi-test/MultiTest.cs`) → 아래 「다음 할 일」. 고친 뒤 `rules` · `solo` · `migrate`.
+
+### 데스크톱에서 한 것 (위 1 ~ 6, 미확인)
+- `GameServer.Health.cs` — `SettleAfter`(사망 정리 → 찹츄 선언 → 함정 줄) · `SettleDeaths`(기다림 없이 그 자리에서: 사망 대기 능력 → 최종 사망). 사망 대응 5초(`_deathDeadline` · `CheckDeathPending` · `FinalizeDeaths`)를 지웠다.
+- `GameServer.Trap.cs` `FireTraps(records, at, depth)` — 현재 턴 플레이어부터 턴 방향 · 슬롯 순서, 한 사람의 같은 카드는 한 줄에 한 장, 발동 직전 재확인(안 되면 슬롯에 남는다), 한 장마다 사망 정리 → 그 함정이 만든 사건으로 다음 단 줄, 최대 4단.
+- 부르는 곳: 체인 끝(`Chain`) · 턴 뽑기(`Deck`) · 턴 시작(`Turn` `AdvanceTurn` — 스킵 · 빈 덱 피해) · 피폭(`Restart`) · 개판 판정(`Gaepan`). 스냅샷에서 사망 대기 마감 시각을 뺐다(형식이 바뀜).
+- 일부러 남긴 것: `DeathPending` 사건 · `RPC_OnDeathPending` · 화면 처리 · `_trapSetOrder` — `MultiTest.cs` 가 이름으로 쓰고 있어 지우면 시험 도구가 깨진다. 규칙 계층은 `DeathPending` 사건을 더 내지 않는다.
+
+### 확인하지 못한 것
+- `run.sh rules` 가 「컴파일이 끝나지 않는다」(exit 2). 메인 에디터(7800)가 새로고침 직후 멈췄고(컴파일 산출물이 새로 생기지 않음 — 컴파일 시작 전), 원인을 보려고 새로고침한 클론 0(7801)도 같은 자리에서 멈췄다. 화면 · 프로세스를 볼 권한이 없어 원인을 모른다. 클론 1 · 2 는 건드리지 않았다.
+- 그래서 **컴파일 여부도 모른다.** 지운 이름을 쓰는 곳이 남지 않았는지 · 쓰는 이름이 있는지만 검색으로 봤다.
+
+### 다음 할 일
+- 에디터를 살린 뒤(멈춘 창에 대화 상자가 떠 있는지 확인): 컴파일 → `rules` · `solo`. `rules` 에서 옛 규칙을 보는 검사(`Trap()` 의 설치 순서 · `Death()` 의 대응 5초 · `DeathPending` 사건)는 실패가 맞다 — 그 밖의 실패는 버그다.
+- `MultiTest.cs` (이 세션은 `.claude/skills/**` 를 못 고친다): 35줄 `"ClickJoinButton"` → `"HandleJoinClicked"` · `Trap()` · `Death()` 옛 규칙 검사 다시 쓰기 · 새 검사(턴 순서 발동 · 4단에서 멈춤 · 같은 이름 한 줄 한 장 · 재확인 실패 시 슬롯에 남음 · 살아난 사람의 다른 함정 · 함정 피해로 사망) · `_trapSetOrder` 리플렉션(83 ~ 84 · 5780줄) 지우기.
+- 그 뒤에 지울 것: `_trapSetOrder`(스냅샷 항목 포함) · `DeathPending` 사건 · RPC · 화면 처리 · `LifeState.DeathPending` 을 밖에 알리는 곳, `09-network` 반영. `migrate` 로 스냅샷 확인.
+- 같이 본 것(범위 밖, 안 고침): `ApplyHealRaw` · `ApplyHealAfter` 가 체인 중 HP 0 인 사람의 회복을 막는다 — `06` 과 맞는지 확인 필요.
+
+## 2026-11-27 · 함정 7종 확정 — 문서를 프로토타입 v3.4 기준으로 (`feature/trap-cards`, 문서만)
+
+### 결정 (사용자, 2026-11-27)
+- 함정 규칙은 **「프로토타입 v3.4」 아티팩트의 엔진이 목표**다 — 노션 본문과 다른 곳도 프로토타입을 따른다.
+- 함정 줄 순서 = 현재 턴 플레이어부터 턴 방향 (그 전: 방 전체 설치 순서).
+- 함정의 효과도 함정을 부른다 — 한 장마다 사망 정리 → 연쇄 줄, 최대 4단 (그 전: 부르지 않는다).
+- 죽은 척(사망 대기 능력)은 사망 정리 때 바로 — 함정 줄보다 먼저. 살아난 사람의 다른 함정도 발동한다.
+- 3002 멈춰는 전체 대상 카드에도 · 3012 편안은 방금 걸린 막기를 풀지 않는다 · 3009 나만 아니면 돼는 체인이 끝난 뒤.
+- 함정 7종은 그림 없이 지금 이름으로 먼저 구현한다 (IP 「수정 필요」 5장 포함, `art` 비움).
+- 2002 반사로 다시 쓰인 카드가 함정 조건을 만들면 **반사를 쓴 사람**이 쓴 것으로 본다 — 조건을 만든 카드를 추적한다.
+- 3012 편안 등급은 고급 그대로.
+
+### 한 것
+- `04-card` 6절(발동 규칙 · 발동 조건 종류 4개 추가 · 여러 함정 동시 발동) · 9.2(흐름) · 15절 #13 닫음 · #14 추가.
+- `06-health` 3 · 4 · 8절 — 사망 대기 능력 발동 시점 · 살아난 뒤.
+- `11-card-list` — 확정 40장(함정 7종 14장): 1-1 행 · **1-4 함정 카드별 규칙** · 2-4 함정 구현 묶음(0 ~ 3) · 4절 #16 ~ #19.
+- 코드는 손대지 않았다. 실행 확인할 것도 없다.
+
+### 다음 할 일
+- **묶음 0 — 함정 시스템 기반** (`11-card-list` 2-4): `GameServer.Trap.cs` `FireTraps` 를 턴 순서 · 연쇄 · 사망 정리 순서로. 지금 코드는 옛 규칙이다.
+- 묶음마다 시작 전에 묻기 (`11-card-list` 4절 #17): 죽은 척으로 부활한 사람의 상태(묶음 1) · 사이렌 · 나만 아니면 돼의 「내가 만든 일에도 발동」(묶음 2) · 두고 보자와 행선지를 바꾸는 카운터(묶음 3).
+- 노션은 고치지 않았다 — 프로토타입과 달라진 4곳은 `11-card-list` 4절 #19 (PM).
+- `05-deck` 2절(덱 총 구성)은 함정이 덱에 들어가는 묶음 1 에서.
+- 막혀 있는 것 (이 세션 권한): `.claude/skills/multi-test/MultiTest.cs` 35줄 `"ClickJoinButton"` → `"HandleJoinClicked"` — 클론 시나리오가 전부 「입장 · 시작」 에서 실패한다.
+## 2026-11-27 · 닉네임 중복 금지 서버 배포 (`feature/nickname-unique`, PR #237)
+
+- 서비스 계정 `chapchu-deploy` 를 만들어 UGS CLI 로그인 (역할은 `server/README.md`). 키 파일은 쓰고 지움 — CLI 설정에 남아 있다
+- production 에 이름 자물쇠 16칸 · `SetNickname` 게시. 실서버에서 3가지가 틀려 고침: Cloud Save 는 `serviceToken` 으로, Remote Config `assignSettings` 에 `attributes`, `ugs deploy` 가 params 를 비우면 관리 API 로 올림 (README)
+- 실서버 확인: 첫 이름 · 대소문자 중복 taken · same · invalid · 동시 저장 하나만 ok · 쿠폰 바꾸기 · 쿨다운 · 옛 이름 풀림. 게임 `run.sh ui` 통과, 콘솔 에러 0
+- develop 합침 — 로비 닉네임 변경 · 입력 창 · 문서 최종 수정일 줄 충돌을 양쪽 다 살려 풂
+
+남은 일
+- [ ] Remote Config 에 금칙어 목록이 없다 (`bannedWords` · `allowedWords` · `bannedInitials`) — 지금은 욕설 이름이 통과한다. 목록 내용 — PM
+- [ ] 쿠폰 없음 창 「상점으로」 · 통합 v3 프로필 쿠폰 줄 · 번체 → 간체 맞춤
+- [ ] 게임 안 중복 거절 문구 확인 (클라이언트 2개)
+
 ## 2026-11-27 · 카드 등급 연출 — 표면 빛 · 글로우 · 반짝이 (`feature/card-grade-shine`)
 
 ### 결정 (사용자, 2026-11-27)

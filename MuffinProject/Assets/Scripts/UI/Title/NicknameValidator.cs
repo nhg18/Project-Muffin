@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Chapchu.Account;
 using UnityEngine;
 
 namespace Chapchu.UI.Title
@@ -15,6 +16,8 @@ namespace Chapchu.UI.Title
         TooLong,
         InvalidCharacters,
         BannedWord,
+        /// <summary>남이 이미 쓰는 이름 — 서버(Cloud Code)만 안다 (23 7-8)</summary>
+        Taken,
     }
 
     /// <summary>닉네임 길이 · 글자 · 금칙어 검사와 실패 문구, 추천 닉네임 (12-title-ui.md 4-2절 · 23-login.md 8절). 검사는 입력한 클라이언트가 한다.</summary>
@@ -135,7 +138,20 @@ namespace Chapchu.UI.Title
             NicknameValidationResult.TooLong           => $"{MaxLength}자 이하로 입력해 주세요.",
             NicknameValidationResult.InvalidCharacters => "사용할 수 없는 문자가 포함되어 있어요.",
             NicknameValidationResult.BannedWord        => "사용할 수 없는 단어가 있어요.",
+            NicknameValidationResult.Taken             => "이미 쓰고 있는 닉네임이에요.",
             _                                          => "알 수 없는 오류가 났어요. 잠시 후 다시 시도해 주세요."
+        };
+
+        /// <summary>
+        /// 서버(Cloud Code 「닉네임 저장」)가 입력 때문에 거절한 갈래를 화면 문구 갈래로 — invalid · banned · taken (23 7-8).
+        /// 입력과 상관없는 거절(쿨다운 · 쿠폰 · 오류)이면 Valid — 부른 쪽이 따로 처리한다.
+        /// </summary>
+        public static NicknameValidationResult FromServer(string result) => result switch
+        {
+            NicknameSave.Invalid => NicknameValidationResult.InvalidCharacters,
+            NicknameSave.Banned  => NicknameValidationResult.BannedWord,
+            NicknameSave.Taken   => NicknameValidationResult.Taken,
+            _                    => NicknameValidationResult.Valid
         };
 
         /// <summary>추천 닉네임 — 꾸밈말 + 이름 + 10 ~ 99.</summary>

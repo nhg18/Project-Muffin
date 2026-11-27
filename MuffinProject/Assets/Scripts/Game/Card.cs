@@ -57,7 +57,12 @@ namespace Chapchu.Game
         AfterCardReturned,  // 행동 카드가 시전자 손패로 반환된 뒤 — 누구든 (T13)
         AfterDrewMany,    // 다른 사람이 카드 효과로 한 번에 TriggerValue 장 이상 뽑은 뒤 (T14)
         AfterTurnSkipped, // 내 턴이 스킵된 뒤 (T15)
-        AfterChapchuGiven // 다른 사람이 나에게 찹츄를 부여한 뒤 (T16)
+        AfterChapchuGiven, // 다른 사람이 나에게 찹츄를 부여한 뒤 (T16)
+        AfterTargetedByOther, // 다른 사람이 나를 지목한(고르는 대상) 행동 카드가 나에게 처리된 뒤 (3002 멈춰)
+        AfterHandReachedTen,  // 다른 사람의 손패가 정확히 10장이 된 뒤 — 처리 전 10장이 아니었고 처리 뒤 10장 (3004 사이렌)
+        AfterHitByAction,     // 다른 사람이 쓴 행동 카드의 효과를 내가 받은 뒤 — 그 카드를 함정 효과가 쓴다 (3007 두고 보자)
+        AfterBigDamage,       // 다른 사람이 한 번에 TriggerValue 이상 피해를 받은 뒤 (3009 나만 아니면 돼)
+        AfterBlocked          // 다른 사람의 카드로 내 턴 · 행동이 막힌 뒤 — 턴 스킵 · 행동 카드 금지 (3012 편안)
     }
 
     // 카운터 · 「카드 반응」 함정의 반응 조건 (04-card.md 7절 「반응 조건」). 맨 위 카드를 보고 판정한다. 끝에만 추가한다.

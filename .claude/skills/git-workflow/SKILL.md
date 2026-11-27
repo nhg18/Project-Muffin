@@ -57,7 +57,11 @@ Unity 빌드는 오래 걸리고(무료 러너로 한 번에 수십 분) 라이�
 
 * `docs/**` · `*.md` 만 바꾼 것은 돌지 않는다.
 * feature · fix · docs PR(→ develop)에는 Unity 빌드를 돌리지 않는다 — 대신 `/prepush` 리뷰와 skill `multi-test` 가 막는다.
-* **지금 파일과 다르다** — 지금 yaml 은 원격에 없는 `test_build` 브랜치로 가는 PR 에만 돌아, PR 검사가 한 번도 돈 적이 없다. 위 표대로 고치는 것은 따로 브랜치를 따서 `/prepush` 를 거쳐 넣는다 (2026-11-22 기준 미반영).
+* **지금 파일과 다르다** (2026-11-27 기준) — 위 표대로 고치는 것은 따로 브랜치를 따서 `/prepush` 를 거쳐 넣는다.
+  * PR 검사: 아직 원격에 없는 `test_build` 로 가는 PR 에만 돌아, `release/*` · `hotfix/*` · `main` PR 검사가 한 번도 돈 적이 없다.
+  * push → `release/*`: Windows 64비트 PC 빌드(zip)만 나온다 (전시판). 확인용 APK 는 아직 없다. `hotfix/*` push 는 돌지 않는다.
+  * `v*` 태그: 서명된 AAB 와 PC 빌드가 함께 나온다.
+  * `develop` 밤 빌드(schedule)는 아직 없다.
 
 ## 그 밖의 규칙
 

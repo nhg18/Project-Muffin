@@ -26,7 +26,10 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))
+            {
                 server.MarkActionBlock(actor);
+                server.RecordBlocked(actor, entry, GameServer.BlockKindAction); // 「막는 카드에 당한 후」 (3012 편안)
+            }
         }
     }
 }

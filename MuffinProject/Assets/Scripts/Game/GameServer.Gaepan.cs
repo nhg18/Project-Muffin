@@ -69,17 +69,18 @@ namespace Chapchu.Game
             _events.Add(new GaepanJudged(_gaepanLoser, byHp, lowest, tied, alive, alive.Select(ValueOf).ToArray()));
         }
 
-        // 판정 공개가 끝났다 — 꼴찌의 HP 를 0 으로 (피해가 아니라 설정). 사망 대기는 보통대로 (06 3절).
+        // 판정 공개가 끝났다 — 꼴찌의 HP 를 0 으로 (피해가 아니라 설정). 사망 정리는 보통대로 — 3008 죽은 척도 발동한다 (06 3절).
         private void FinishGaepanJudge(double now)
         {
             int loser = _gaepanLoser;
             _gaepanJudgeAt = -1;
             _gaepanLoser = -1;
             if (loser == -1 || !IsInGame(loser) || _players[loser].Life != LifeState.Alive)
-                return; // 공개 중에 나갔거나 이미 사망 대기 — 그대로
+                return; // 공개 중에 나갔다 — 그대로
 
+            MarkHandsBefore();
             SetHp(loser, 0);
-            CheckDeathPending(now);
+            DelayTurnUntil(SettleAfter(now));
         }
 
         // 1012 대소동 · 게임 시작 — 개판은 처음으로
@@ -96,7 +97,7 @@ namespace Chapchu.Game
                 _events.Add(new GaepanChanged(-1, 0, false));
         }
 
-        // 게임에 남은 생존자 (사망 대기 제외) — 바퀴의 길이 · 판정 후보
+        // 게임에 남은 생존자 — 바퀴의 길이 · 판정 후보
         private int[] AliveActors() => _turnOrder.Where(actor => IsInGame(actor) && _players[actor].Life == LifeState.Alive).ToArray();
 
         /// <summary>개판 오분전이 걸려 있다 (1021).</summary>

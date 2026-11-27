@@ -183,6 +183,48 @@
       "art": "",
       "reactsTo": "Action", "reactCondition": "Any",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "TakeTurnEffect", "args": "" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
+    },
+    {
+      "id": 3002, "name": "멈춰", "type": "Trap", "target": "TriggerSource", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "나에게 효과가 온 뒤 → 쓴 사람의 다음 턴을 건너뛴다",
+      "art": "",
+      "trapTrigger": "AfterTargetedByOther", "triggerValue": 0,
+      "effects": [ { "type": "SkipTurnEffect", "args": "subject=Target" } ]
+    },
+    {
+      "id": 3004, "name": "사이렌", "type": "Trap", "target": "TriggerSource", "targetCondition": "None", "grade": "Normal", "count": 2,
+      "text": "누가 손패 10장이 된 뒤 → 그 사람에게 {0} 피해를 준다",
+      "art": "",
+      "trapTrigger": "AfterHandReachedTen", "triggerValue": 0,
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=15" } ]
+    },
+    {
+      "id": 3007, "name": "두고 보자", "type": "Trap", "target": "Self", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "행동 카드에 당한 뒤 → 그 카드를 가져온다",
+      "art": "",
+      "trapTrigger": "AfterHitByAction", "triggerValue": 0,
+      "effects": [ { "type": "TakeTriggerCardEffect", "args": "" } ]
+    },
+    {
+      "id": 3008, "name": "죽은 척", "type": "Trap", "target": "Self", "targetCondition": "None", "grade": "Rare", "count": 1,
+      "text": "사망한 뒤 → HP {0}으로 부활한다",
+      "art": "",
+      "trapTrigger": "SelfDeathPending", "triggerValue": 0,
+      "effects": [ { "type": "SurviveAtEffect", "args": "hp=20, now=true, discardHandAndTraps=false" } ]
+    },
+    {
+      "id": 3009, "name": "나만 아니면 돼", "type": "Trap", "target": "TriggerSource", "targetCondition": "None", "grade": "Normal", "count": 3,
+      "text": "누가 20 이상 피해를 받은 뒤 → 그 사람에게 {0} 피해를 준다",
+      "art": "",
+      "trapTrigger": "AfterBigDamage", "triggerValue": 20,
+      "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" } ]
+    },
+    {
+      "id": 3012, "name": "편안", "type": "Trap", "target": "Self", "targetCondition": "None", "grade": "Fine", "count": 2,
+      "text": "턴 · 행동 · 뽑기를 막는 카드에 당한 뒤 → HP를 모두 채우고 찹츄를 뺀 상태를 모두 푼다",
+      "art": "",
+      "trapTrigger": "AfterBlocked", "triggerValue": 0,
+      "effects": [ { "type": "HealEffect", "args": "subject=Self, amount=100" }, { "type": "ClearStatusEffect", "args": "subject=Self" } ]
     }
   ]
 }

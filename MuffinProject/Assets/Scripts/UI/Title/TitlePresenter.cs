@@ -78,6 +78,7 @@ namespace Chapchu.UI.Title
         private bool _forgetSession;    // 다음 로그인은 저장된 로그인을 버리고 새 계정으로
         private LoginMethod _method;
         private string _savedNickname;  // 서버에 저장된 닉네임 — 없으면 null
+        private string _legacyNickname; // 2026-11-26 전에 클라이언트가 직접 쓴 옛 닉네임 — 처음 정하기 창에 미리 채운다 (23 7-8)
         private bool _nicknameLoaded;   // 이번 로그인에서 닉네임 읽기까지 성공했다 — 읽기 실패와 「서버에 없음」 을 가른다
         private string _typedNickname;  // 이번에 입력해 「시작」 한 닉네임 — 없으면 null
         private FailKind _failKind;
@@ -252,7 +253,7 @@ namespace Chapchu.UI.Title
                 yield break;
             }
 
-            Task<string> load = AccountService.LoadNicknameAsync();
+            Task<NicknameState> load = AccountService.LoadNicknameAsync();
             yield return Wait(load, AccountService.RequestTimeoutSeconds);
             if (!Succeeded(load))
             {
@@ -262,7 +263,8 @@ namespace Chapchu.UI.Title
 
             EnsurePlayRecordStarted(); // 위에서 초기화가 덜 끝나 못 켰으면 여기서
 
-            _savedNickname = string.IsNullOrEmpty(load.Result) ? null : load.Result;
+            _savedNickname = load.Result.Nickname;
+            _legacyNickname = load.Result.LegacyNickname;
             _nicknameLoaded = true;
             Debug.Log($"[{nameof(TitlePresenter)}] 로그인 — {AccountService.PlayerId} · 닉네임 {(_savedNickname ?? "없음")}");
 
@@ -323,8 +325,12 @@ namespace Chapchu.UI.Title
 
         private void AfterConnected()
         {
-            // 닉네임 창에서 정한 이름이 서버 것과 다르면 저장 — 새 계정이거나, 게스트가 지난 닉네임을 고쳤다
-            if (_typedNickname != null && _typedNickname != _savedNickname)
+            // 서버에 닉네임이 없을 때만 저장한다 — 처음 정하기라 쿠폰 · 쿨다운이 없다 (23 7-4).
+            // 이미 있는 계정은 타이틀에서 고친 이름을 쓰지 않는다 — 바꾸기는 로비 프로필에서만 (17 5-2)
+            if (_typedNickname != null && _savedNickname != null && _typedNickname != _savedNickname)
+                Debug.Log($"[{nameof(TitlePresenter)}] 서버에 닉네임이 있어 타이틀에서 고친 이름은 쓰지 않는다 — 바꾸기는 로비에서 (23 7-4)");
+
+            if (_typedNickname != null && _savedNickname == null)
             {
                 // 「시작」 때 목록이 없어 건너뛴 금칙어 검사 — 설정 값을 받은 지금 저장 전에 한 번 더 (23 6-1 · 8-3)
                 if (ServerConfig.HasValues
@@ -347,23 +353,29 @@ namespace Chapchu.UI.Title
                 return;
             }
 
-            // 저장된 로그인인데 서버에 닉네임이 없다 — 추천 이름을 넣어 두고 바로 「시작」 할 수 있게
+            // 저장된 로그인인데 서버에 닉네임이 없다 — 옛 닉네임이나 추천 이름을 넣어 두고 바로 「시작」 할 수 있게
             EndLoading();
             bottom.Hide();
-            sheet.ShowNickname(NicknameValidator.Suggest());
+            sheet.ShowNickname(_legacyNickname ?? NicknameValidator.Suggest());
         }
 
-        // 닉네임 저장은 접속 뒤 (23 6-1). 실패하면 닉네임 단계로 — 계정 · 접속은 그대로
+        // 닉네임 저장은 접속 뒤 (23 6-1) · 서버(Cloud Code)가 다시 검사한다 (23 7-8). 실패하면 닉네임 단계로 — 계정 · 접속은 그대로
         private IEnumerator SaveRoutine()
         {
             ShowLoading(SavingText);
-            Task save = AccountService.SaveNicknameAsync(_typedNickname);
+            Task<NicknameSave> save = AccountService.SetNicknameAsync(_typedNickname);
             yield return Wait(save, AccountService.RequestTimeoutSeconds);
-            if (!Succeeded(save))
+            if (!Succeeded(save) || !IsSaved(save.Result))
             {
-                Debug.LogWarning($"[{nameof(TitlePresenter)}] 닉네임 저장 실패: {save.Exception?.GetBaseException().Message ?? "시간 초과"}");
+                string why = Succeeded(save) ? save.Result.Result : save.Exception?.GetBaseException().Message ?? "시간 초과";
+                Debug.LogWarning($"[{nameof(TitlePresenter)}] 닉네임 저장 실패: {why}");
+
+                NicknameValidationResult rejected = Succeeded(save) ? NicknameValidator.FromServer(save.Result.Result) : NicknameValidationResult.Valid;
+                if (rejected == NicknameValidationResult.BannedWord)
+                    _nicknameRejectCount++;
+
                 EndLoading();
-                sheet.ReturnToNickname(SaveFailedText);
+                sheet.ReturnToNickname(rejected == NicknameValidationResult.Valid ? SaveFailedText : NicknameValidator.GetErrorMessage(rejected));
                 yield break;
             }
 
@@ -826,5 +838,8 @@ namespace Chapchu.UI.Title
         }
 
         private static bool Succeeded(Task task) => task.IsCompleted && !task.IsFaulted && !task.IsCanceled;
+
+        // 같은 이름(same) = 시간이 넘은 지난 요청이 이미 저장했다 — 성공으로 본다
+        private static bool IsSaved(NicknameSave save) => save.Result == NicknameSave.Ok || save.Result == NicknameSave.Same;
     }
 }

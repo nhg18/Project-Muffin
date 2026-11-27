@@ -38,13 +38,7 @@ namespace Chapchu.Game
             CountDamage(actor, by, -SetHp(actor, hp, by));
             if (hp <= 0 && direct)
                 entry.KnockedDown.Add(actor);
-            if (hp > 0 && _players[actor].Life == LifeState.DeathPending)
-            {
-                _players[actor].Life = LifeState.Alive; // 사망 방지(C11)로 HP 1 이상 — 바로 생존 (06 3 · 8절)
-                _events.Add(new DeathAvoided(actor, _players[actor].Hp));
-                _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
-            }
-            RecordAfter(AfterKind.Damaged, actor, by, amount);
+            RecordDamage(actor, by, amount); // 감소를 계산한 뒤의 피해량 (3009)
 
             // 피해 같이 받기 (2018) — 내가 실제로 받은 양만큼 물귀신의 대상도. 물귀신에 걸린 표시(감소 등)는 그 카드 기준으로 본다
             if (entry.DamageSharers.TryGetValue(actor, out ChainEntry share))
@@ -92,7 +86,7 @@ namespace Chapchu.Game
                 AddStat(actor, StatKind.Healed, SetHp(actor, hp)); // 실제 회복량 0 이면 사건 없음 (06 6절)
         }
 
-        /// <summary>「HP N 으로 생존」 지금 (T17) — 손패 · 다른 설치 함정을 버리고 HP N, 사망 대기면 바로 생존으로 (06 6 · 8절).</summary>
+        /// <summary>「HP N 으로 생존」 지금 (3008 · T17) — (discardHandAndTraps 면 손패 · 다른 설치 함정을 버리고) HP N, 사망 대기면 바로 생존으로 (06 6 · 8절).</summary>
         internal void SurviveNow(int actor, int hp, bool discardHandAndTraps)
         {
             PlayerState player = _players[actor];
@@ -112,8 +106,6 @@ namespace Chapchu.Game
                 player.Life = LifeState.Alive;
                 _events.Add(new DeathAvoided(actor, player.Hp));
                 _handDirty.Add(actor); // 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
-                if (!_turnOrder.Any(a => _players[a].Life == LifeState.DeathPending))
-                    _deathDeadline = -1; // 남은 사망 대기자가 없다 — 게임을 멈추지 않는다 (06 8절)
             }
         }
 
@@ -212,6 +204,21 @@ namespace Chapchu.Game
 
             int index = _discardPile.Count - 1;
             if (index < 0)
+                return;
+
+            Card card = _discardPile[index];
+            _discardPile.RemoveAt(index);
+            _players[actor].Hand.Add(card);
+            int top = _discardPile.Count > 0 ? _discardPile[_discardPile.Count - 1].CardId : 0;
+            _events.Add(new DiscardTaken(actor, card.InstanceId, card.CardId, _players[actor].Hand.Count, _discardPile.Count, top));
+            OnHandChanged(actor);
+        }
+
+        /// <summary>버림 더미의 그 카드를 actor 손패로 (3007 두고 보자). 맨 위가 아니어도 된다. 더미에 없으면 불발.</summary>
+        internal void TakeFromDiscard(int actor, int cardInstanceId)
+        {
+            int index = _discardPile.FindIndex(c => c.InstanceId == cardInstanceId);
+            if (index < 0 || !IsInGame(actor))
                 return;
 
             Card card = _discardPile[index];
