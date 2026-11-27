@@ -1263,7 +1263,7 @@ run_timeout() {
     done
 }
 
-# 1021 개판 오분전: 방장이 턴 주인에게 1021 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 제목 · 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷).
+# 1021 개판 오분전: 방장이 턴 주인에게 1021 을 쥐여 쓰게 한 뒤 턴을 시간 초과로 빨리 돌린다 → 모든 화면에 자명종 「5」 · 같은 바퀴 · 판정 줄 · 같은 결과 · 판정 뒤 자명종 없음 (SHOT_DIR 이면 자명종 · 마지막 바퀴 · 판정 팻말 스크린샷 — 시작 제목은 카드 컷인).
 run_gaepan() {
     local clients="${1:-2}" project out lines first="" ended=""
     enter_game "$clients" || return
@@ -1274,7 +1274,7 @@ run_gaepan() {
         done
     fi
     until_ok "$MAIN" ForceCard 1021 || return
-    log "▶ 처리 대기 (시작 제목 → 자명종)"
+    log "▶ 처리 대기 (컷인 → 자명종)"
     sleep 16
     for project in "${EDITORS[@]}"; do
         out=$(call "$project" GaepanHud)

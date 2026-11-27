@@ -646,7 +646,7 @@ namespace Chapchu.UI.GameScreen
         private IEnumerator CardResolvedRoutine(CardData data, int caster, int[] targets)
         {
             List<CardFxSeat> fxSeats = CreateFxSeats();
-            CardFxSeat casterSeat = fxSeats.Find(seat => seat.Actor == caster);
+            CardFxSeat casterSeat = fxSeats.Find(seat => seat.Actor == caster) ?? GaepanCasterSeat(data, caster);
             if (casterSeat != null)
             {
                 var targetSeats = new List<CardFxSeat>();
@@ -659,6 +659,22 @@ namespace Chapchu.UI.GameScreen
                 yield return cardFx.PlayRoutine(data, casterSeat, targetSeats, fxSeats, ReceiversOf(fxSeats, casterSeat, targetSeats));
             }
             screenFlash.Play(data.resolveFlashColor, data.resolveFlashSeconds);
+        }
+
+        // 1021 개판 시작 컷인은 쓴 사람이 나가거나 죽었어도 시작 연출이다 (10-ui.md 「개판 시작 연출」) — 판에 자리가 없으면 연출 자리를 대신 둔다. 이 컷인은 쓴 사람 자리를 쓰지 않는다
+        private CardFxSeat GaepanCasterSeat(CardData data, int caster)
+        {
+            if (!data.effects.Exists(effect => effect is Chapchu.Game.Effects.StartGaepanEffect))
+                return null;
+            return new CardFxSeat
+            {
+                Actor = caster,
+                Anchor = cardFx.transform as RectTransform,
+                Name = PlayerLook.NameOf(caster),
+                Color = PlayerLook.ColorOf(caster),
+                Hp = _shownHp.TryGetValue(caster, out int hp) ? hp : 0,
+                IsMe = IsMe(caster),
+            };
         }
 
         // 카드 연출이 아는 사람들 — 판에 남은 사람(재생한 기준), 좌석 순서(나 먼저). HP 는 재생한 기준(결과가 적용되기 전)

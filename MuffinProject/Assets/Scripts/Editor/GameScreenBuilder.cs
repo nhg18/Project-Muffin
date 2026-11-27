@@ -162,7 +162,7 @@ namespace Chapchu.EditorTools
             HandRevealView handReveal = BuildHandReveal(canvasRect);
             ScreenFlashView screenFlash = BuildScreenFlash(canvasRect);
 
-            // 1021 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 시작 제목 · 판정 팻말은 화면 덮기 위 · 서랍 아래
+            // 1021 개판 오분전 — 자명종은 판 효과 층(왼쪽 위), 판정 팻말은 화면 덮기 위 · 서랍 아래 (시작 제목은 카드 컷인)
             GaepanPresenter gaepan = BuildGaepan(canvasRect, boardLayer, seats, (RectTransform)safeArea.Find("MyCharacter"));
 
             // 서랍 · 팝업 — 가장 위

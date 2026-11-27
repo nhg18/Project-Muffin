@@ -9,13 +9,13 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 연출 (1021, 프로토타입 v2): 시작 제목 → 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말.
+    /// 개판 오분전 연출 (1021, 프로토타입 v2): 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말.
+    /// 시작 제목 · 「5 바퀴 동안」 도장은 카드의 3 단계 컷인(GaepanFx)이 보인다 — 판 위에 따로 띄우면 같은 글자가 두 번 나온다 (PM 2026-11-27).
     /// 값은 GameScreenPresenter 가 연출 큐 순서로 넘긴다. 늦게 열렸을 때는 Start 에서 방 속성 「gaepan」 을 한 번 읽어 자명종만 보인다 (09-network.md 6.1).
     /// </summary>
     public class GaepanPresenter : MonoBehaviour
     {
         [SerializeField] private GaepanHudView hud;
-        [SerializeField] private GaepanTitleView title;
         [SerializeField] private GaepanJudgeView judge;
         [Tooltip("판정 표를 띄울 상대 캐릭터 자리.")]
         [SerializeField] private OpponentSeatsPresenter seats;
@@ -24,7 +24,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (hud == null || title == null || judge == null || seats == null || myCharacter == null)
+            if (hud == null || judge == null || seats == null || myCharacter == null)
                 Debug.LogError($"[{nameof(GaepanPresenter)}] 참조가 비어 있습니다.", this);
         }
 
@@ -36,7 +36,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 개판 상태가 바뀌었다 (OnGaepanChanged). 처음 · 다시 처음부터면 시작 제목을 마친 뒤 자명종, 바퀴가 줄면 자명종이 넘어간다,
+        /// 개판 상태가 바뀌었다 (OnGaepanChanged). 처음 · 다시 처음부터면 자명종을 새로 띄운다 (컷인 뒤), 바퀴가 줄면 자명종이 넘어간다,
         /// 0 이면 (판정 직전 · 1012 대소동으로 지워짐) 자명종을 거둔다.
         /// </summary>
         public IEnumerator ChangedRoutine(int left)
@@ -50,7 +50,6 @@ namespace Chapchu.UI.GameScreen
             if (left == GameServer.GaepanRounds)
             {
                 hud.Hide(false);
-                yield return title.PlayRoutine(left);
                 hud.Show(left, GameServer.GaepanRounds);
                 yield break;
             }
@@ -76,7 +75,6 @@ namespace Chapchu.UI.GameScreen
         public void ShowRestarted()
         {
             hud.Hide(false);
-            title.Hide();
             judge.Hide();
         }
 
