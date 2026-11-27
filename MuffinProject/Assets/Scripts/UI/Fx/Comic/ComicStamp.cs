@@ -6,7 +6,8 @@ namespace Chapchu.UI.Fx.Comic
     /// <summary>
     /// 찍히기 — 크게 튀어나왔다가 제자리 크기로 쾅 내려앉는 등장 (시안 stamp(sp, x, y, sc, rot, k, {from, back, spin, fade, a})).
     /// 프리팹에 저장한 자리 · 기울기 · 크기가 다 찍힌 모습(시안 x · y · rot · sc)이다. 장면이 매 프레임 <see cref="Apply"/>(k) 를 부른다 — k = 등장 진행 (0 이하 = 안 보임, 1 넘어도 그대로).
-    /// 크기 = sc · lerp(from, 1, back(k)), 기울기 = rot + (1 − back(k))·spin, 투명도 = cl(k·fade)·a.
+    /// 크기 = sc · lerp(from, 1, back(k)), 기울기 = rot + (1 − back(k))·spin, 투명도 = a.
+    /// 시안은 투명도 cl(k·fade) 로 흐리게 커졌다 줄었지만, 반투명한 큰 글자가 번진 잔상처럼 보여 처음부터 다 보이게 찍는다.
     /// 투명도는 같은 오브젝트의 CanvasGroup 에 (여러 그림을 같이 찍을 때 — 예: 도장), 없으면 Graphic.color.a 에 준다.
     /// </summary>
     public class ComicStamp : MonoBehaviour
@@ -17,8 +18,6 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private float overshoot = 2.4f;
         [Tooltip("처음에 더 돌아가 있는 각도 (라디안, 시안 spin 0.12).")]
         [SerializeField] private float spin = 0.12f;
-        [Tooltip("나타나는 빠르기 — k 가 1/fade 일 때 다 보인다 (시안 fade 4).")]
-        [SerializeField] private float fade = 4f;
 
         private RectTransform _rect;
         private CanvasGroup _group;
@@ -58,7 +57,7 @@ namespace Chapchu.UI.Fx.Comic
             _rect.anchoredPosition = _position + new Vector2(offset.x, -offset.y);
             _rect.localScale = _scale * ComicKit.Lerp(from, 1f, e);
             _rect.localRotation = Quaternion.Euler(0f, 0f, _angle - (1f - e) * spin * Mathf.Rad2Deg);
-            SetAlpha(ComicKit.Cl(k * fade) * alpha);
+            SetAlpha(alpha);
         }
 
         private void Awake()

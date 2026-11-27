@@ -8,8 +8,9 @@ namespace Chapchu.UI.Fx.Comic
     /// <summary>
     /// 만화 컷인(시안 CI2) 틀 — 카드 한 장의 3 단계. 화면 전체를 덮고, 장면(<see cref="ComicScene"/>)을 1280×720 설계 판에 그려 화면에 꽉 채운다 (시안 frame · play).
     /// 틀이 하는 것: 밑바탕 색 · 설계 판 꽉 채우기(가로 화면 — 짧은 쪽이 넘치게) · 처음 0.35 초 살짝 확대 1.05 → 1 · 판 흔들림(hits) · 위아래 레터박스 ·
-    /// 왼쪽 아래 제목 + 한마디(<see cref="ComicTitleBlock"/>) · 종이결(<see cref="ComicGrain"/>) · 들어오기/나가기 먹 닦기(<see cref="ComicWipe"/>) · 0.09 초 나타나기 / 0.16 초 사라지기.
-    /// 3 단계 길이 = 장면 길이 + 0.16 초 (시안 SPECIAL_MS = len + 80ms, 그 뒤 special2 가 80ms 더 기다린다).
+    /// 왼쪽 아래 제목 + 한마디(<see cref="ComicTitleBlock"/>) · 종이결(<see cref="ComicGrain"/>) · 들어오기/나가기 색 닦기(<see cref="ComicWipe"/>).
+    /// 반투명으로 겹치지 않는다 — 닦기 띠가 화면을 다 덮은 채로 나타나 걷히고, 끝에는 다 덮은 채로 잠깐 멈췄다 한 번에 사라진다 (시안의 0.09 초 나타나기 · 0.16 초 사라지기는 게임 화면 위에 장면이 유령처럼 겹쳐 뺐다).
+    /// 3 단계 길이 = 장면 길이 + 0.16 초 (시안 SPECIAL_MS = len + 80ms, 그 뒤 special2 가 80ms 더 기다린다) — 덮고 멈춤 0.1 + 빈 틈 0.06.
     /// 4 단계 장식은 장면의 <see cref="ComicScene.PostRoutine"/>.
     /// 프리팹: <c>Prefab/UI/CardFx/Comic/ComicCutIn.prefab</c> (이 컴포넌트가 루트). 카드마다 그 변형 <c>Resources/CardFx/Card_&lt;ID&gt;.prefab</c> 의 Stage 아래에 장면을 하나 둔다 — 자세한 것은 <see cref="ComicScene"/>.
     /// 세로 화면(시안 NAR — 가운데 띠)은 만들지 않았다 (게임은 가로 화면만).
@@ -36,13 +37,9 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private float zoom = 0.05f;
         [Tooltip("확대가 풀리는 시간 (초, 시안 0.35).")]
         [SerializeField] private float zoomTime = 0.35f;
-        [Tooltip("나타나는 시간 (초, 시안 90ms).")]
-        [SerializeField] private float fadeIn = 0.09f;
-        [Tooltip("사라지는 시간 (초, 시안 160ms).")]
-        [SerializeField] private float fadeOut = 0.16f;
-        [Tooltip("장면 끝보다 이만큼 먼저 사라지기 시작 (초, 시안 len − 60ms).")]
-        [SerializeField] private float fadeOutLead = 0.06f;
-        [Tooltip("사라진 뒤 4 단계까지 빈 틈 (초, 시안 80 + 80ms − 사라지기 끝).")]
+        [Tooltip("장면 끝에 닦기 띠가 화면을 다 덮은 채 멈춰 있는 시간 (초) — 그 뒤 한 번에 사라진다.")]
+        [SerializeField] private float coverHold = 0.1f;
+        [Tooltip("사라진 뒤 4 단계까지 빈 틈 (초).")]
         [SerializeField] private float endPause = 0.06f;
         [Tooltip("흔들림 하나가 이어지는 시간 (초, 시안 0.45).")]
         [SerializeField] private float shakeWindow = 0.45f;
@@ -74,6 +71,7 @@ namespace Chapchu.UI.Fx.Comic
                 yield break;
             }
             _context = new ComicContext(context, _scene.Hits);
+            _group.alpha = 0f;
             ApplyLook(context);
             _scene.Begin(_context);
             foreach (ComicSticker sticker in _stickers)
@@ -86,14 +84,14 @@ namespace Chapchu.UI.Fx.Comic
             }
 
             float length = _scene.Length;
-            float fadeStart = length - fadeOutLead, end = fadeStart + fadeOut;
+            float end = length + coverHold;
             float start = Time.time;
+            _group.alpha = 1f;
             while (true)
             {
                 float t = Time.time - start;
                 if (t >= end)
                     break;
-                _group.alpha = t < fadeStart ? ComicKit.Cl(t / fadeIn) : 1f - ComicKit.Cl((t - fadeStart) / fadeOut);
                 Render(Mathf.Min(t, length), t);
                 yield return null;
             }
@@ -143,8 +141,9 @@ namespace Chapchu.UI.Fx.Comic
         private void ApplyLook(CardFxContext context)
         {
             background.color = _scene.Background;
+            wipe.Tint = _scene.Accent;
             string title = string.IsNullOrEmpty(_scene.Title) ? context.CardName : _scene.Title;
-            titleBlock.SetTexts(title, _scene.Tagline, _scene.Accent, _scene.Deep);
+            titleBlock.SetTexts(title, _scene.Tagline, _scene.Accent, _scene.Deep, _scene.Light, !_scene.NoTitle, !_scene.NoTitle && !_scene.NoBand, _scene.PlainTag);
             foreach (ComicCard card in stage.GetComponentsInChildren<ComicCard>(true))
             {
                 if (card.Back == null)

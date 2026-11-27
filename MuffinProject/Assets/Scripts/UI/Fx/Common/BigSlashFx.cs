@@ -46,8 +46,8 @@ namespace Chapchu.UI.Fx.Common
         [Range(0f, 1f)]
         [Tooltip("번쩍일 때 판의 투명도.")]
         [SerializeField] private float flashAlpha = 1f;
-        [Tooltip("번쩍임이 사라지는 시간 (ms).")]
-        [SerializeField] private float flashMs = 180f;
+        [Tooltip("번쩍임을 켜 두는 시간 (ms) — 지나면 딱 꺼진다.")]
+        [SerializeField] private float flashMs = 70f;
         [Tooltip("번쩍인 뒤 흔들리기 시작할 때까지 (ms).")]
         [SerializeField] private float shakeDelayMs = 140f;
         [Tooltip("흔들리는 시간 (ms).")]
@@ -97,12 +97,12 @@ namespace Chapchu.UI.Fx.Common
             SpawnGhost(new Vector2(-ghostOffset, 0f), leftGhost, length, thickness, angle);
             SpawnGhost(new Vector2(ghostOffset, 0f), rightGhost, length, thickness, angle);
 
-            DOVirtual.DelayedCall(Seconds(endMs), Slashes.ResetState).SetLink(gameObject);
+            DOVirtual.DelayedCall(Seconds(endMs), Slashes.ResetState, false).SetLink(gameObject);
             DOVirtual.DelayedCall(Seconds(flashDelayMs), () =>
             {
                 Flash(flash, flashAlpha, flashMs);
-                DOVirtual.DelayedCall(Seconds(shakeDelayMs), () => _shaker?.ShakeKeys(shakeKeys, shakeMs)).SetLink(gameObject);
-            }).SetLink(gameObject);
+                DOVirtual.DelayedCall(Seconds(shakeDelayMs), () => _shaker?.ShakeKeys(shakeKeys, shakeMs), false).SetLink(gameObject);
+            }, false).SetLink(gameObject);
         }
 
         private void SpawnGhost(Vector2 offset, Color color, float length, float thickness, float angle)

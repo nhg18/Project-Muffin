@@ -14,7 +14,7 @@ namespace Chapchu.UI.Fx.Muyaho
     /// 4 단계는 손패 이동(게임 화면 몫)뿐이라 장식이 없다 (시안 FXA 무야호 s4 = moveCards).
     /// 손패 부자 = 카드의 대상 <see cref="ComicContext.Target"/> (손패가 가장 많은 1명, 낼 때 정해 공개 — 11-card-list 1018). 받는 사람 = 쓴 사람부터 턴 순서대로, 카드가 모자라면 떨어진 데까지 — 부르는 쪽이 <see cref="CardFxContext.Receivers"/> 로 정해 준다.
     /// 얼굴은 <see cref="CardFxContext.Character"/> 의 얼굴 칸을 동그랗게 잘라 쓴다 (사람마다 그림이 생기기 전까지 모두 같다).
-    /// 연출 길이 2.56초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 2.56초 (3 단계만) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// </summary>
     public class MuyahoComicScene : ComicScene
     {

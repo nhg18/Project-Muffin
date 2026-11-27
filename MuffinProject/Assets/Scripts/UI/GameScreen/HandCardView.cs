@@ -57,7 +57,7 @@ namespace Chapchu.UI.GameScreen
             InstanceId = instanceId;
             CardId = data.id;
             nameText.text = data.cardName;
-            descriptionText.text = data.description;
+            descriptionText.text = CardKeywords.Format(data.description, data.type);
 
             // 그림이 아직 없는 카드가 있다 — 그림 칸만 비워 둔다.
             Sprite art = data.LoadArt();

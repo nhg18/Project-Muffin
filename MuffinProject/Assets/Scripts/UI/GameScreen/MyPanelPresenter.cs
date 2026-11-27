@@ -61,6 +61,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>4 단계 공통 연출 자리 (ResultFx).</summary>
         public ResultFx.Seat FxSeat => _view.FxSeat;
 
+        /// <summary>보이고 있는 손패 장수.</summary>
+        public int HandCount => _handCount;
+
         /// <summary>손패 장수 — 손패 카드 그림 · 「찹츄까지 n장」.</summary>
         public void ShowHandCount(int count)
         {
