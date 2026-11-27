@@ -44,7 +44,7 @@
 * 필수 참조가 비어 있으면 `Awake` 에서 `Debug.LogError` 로 어느 참조인지 알린다. 조용히 넘어가지 않는다.
 * 생명주기: `Awake` 자기 초기화 · `OnEnable`/`OnDisable` 이벤트 구독/해제(`+=` 와 `-=` 는 항상 짝) · `Start` 다른 오브젝트 참조. `OnEnable` 에서 다른 `Instance` 에 접근하지 않는다.
 * 필드는 private, 밖에 보일 것은 읽기 전용 프로퍼티나 메서드로 연다. 순수 데이터(ScriptableObject · struct) 는 public 필드로 둬도 된다.
-* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다. 예외: `AnalyticsRecorder.CurrentScreen` — 씬을 넘어 이어지는 「지금 화면」 하나이고 쓰기는 그 클래스 안에서만. 프로젝트는 Domain Reload 가 켜져 있어 플레이할 때마다 처음 값으로 돌아간다 (끄면 이 예외를 다시 본다).
+* 싱글톤은 `Core/Singleton.cs` · `Core/SingletonPun.cs` 를 상속한다. 싱글톤 `Instance` 와 `Network/Events/` 의 static 이벤트 외에 `static` 변경 가능 상태는 두지 않는다. 예외: `AnalyticsRecorder.CurrentScreen` — 씬을 넘어 이어지는 「지금 화면」 하나이고 쓰기는 그 클래스 안에서만. `GameClock`(봇전 멈춤) — 방장 규칙 · 봇 · 화면 타이머가 같은 게임 시각 하나를 읽어야 하고, 쓰기는 그 클래스 안에서만, 게임 씬마다 `ResetForNewGame` 으로 비운다. 프로젝트는 Domain Reload 가 켜져 있어 플레이할 때마다 처음 값으로 돌아간다 (끄면 이 예외를 다시 본다).
 * UI 는 화면 영역 하나에 컴포넌트 하나. 한 파일이 길어지면 화면을 그리는 코드와 네트워크 · 규칙을 아는 코드로 나눈다.
 
 ## 5. 수치와 문자열

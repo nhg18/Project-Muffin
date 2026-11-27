@@ -206,7 +206,7 @@ namespace Chapchu.DebugTools
             string players = string.Join(" │ ", _hps.Keys.OrderBy(a => a).Select(a =>
                 $"P{a} 손{(_handCounts.TryGetValue(a, out int count) ? count : 0)} ♥{_hps[a]}"));
 
-            Log($"턴 P{actorNumber} (남은 {deadline - PhotonNetwork.Time:0.0}초) · 내 손패 [{string.Join(" ", _myHand)}] · {players}");
+            Log($"턴 P{actorNumber} (남은 {deadline - GameClock.Now:0.0}초) · 내 손패 [{string.Join(" ", _myHand)}] · {players}");
         }
 
         private void HandleCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount)
@@ -227,7 +227,7 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleReactionStarted(double opensAt)
-            => Log($"반응 시간 — {opensAt - PhotonNetwork.Time:0.0}초 뒤 열림");
+            => Log($"반응 시간 — {opensAt - GameClock.Now:0.0}초 뒤 열림");
 
         private void HandleCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount)
         {
@@ -240,7 +240,7 @@ namespace Chapchu.DebugTools
         private void HandleEmptyDeckDamaged(int actorNumber, int amount) => Log($"P{actorNumber} 빈 덱 피해 {amount}");
 
         private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
-            => Log($"P{actorNumber} 사망 대기 — {startsAt - PhotonNetwork.Time:0.0}초 뒤부터 {deadline - PhotonNetwork.Time:0.0}초 뒤까지");
+            => Log($"P{actorNumber} 사망 대기 — {startsAt - GameClock.Now:0.0}초 뒤부터 {deadline - GameClock.Now:0.0}초 뒤까지");
 
         private void HandlePlayerDied(int actorNumber, int[] cardIds, int discardCount)
         {
@@ -406,7 +406,7 @@ namespace Chapchu.DebugTools
             }
         }
 
-        private void HandleTurnResumed(int actorNumber, double deadline) => Log($"턴 이어짐 P{actorNumber} (남은 {deadline - PhotonNetwork.Time:0.0}초)");
+        private void HandleTurnResumed(int actorNumber, double deadline) => Log($"턴 이어짐 P{actorNumber} (남은 {deadline - GameClock.Now:0.0}초)");
 
         private void HandleChapchuChanged(int actorNumber, bool isChapchu) => Log($"P{actorNumber} 찹츄 {(isChapchu ? "선언" : "해제")}");
 
