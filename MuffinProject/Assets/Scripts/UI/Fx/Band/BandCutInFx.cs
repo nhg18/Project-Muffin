@@ -261,9 +261,11 @@ namespace Chapchu.UI.Fx.Band
                 _pixelScale = context.Layer.PixelScale;
             ShowCard(context);
             ResetState();
+            LoadSound(context);
             // 오려 낸 그림을 만드는 동안 (일꾼 스레드, 한 프레임 ~ 몇 프레임) 기다린다 — 그림 없이 날아오지 않게
             while (!artCutOut.IsReady)
                 yield return null;
+            StartSound();
             PlayTimeline();
             yield return new WaitForSeconds(Seconds(lengthMs + afterMs));
             cutIn.gameObject.SetActive(false);

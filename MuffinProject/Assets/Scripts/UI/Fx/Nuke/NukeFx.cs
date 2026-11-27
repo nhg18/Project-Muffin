@@ -81,6 +81,7 @@ namespace Chapchu.UI.Fx.Nuke
             topBar.sizeDelta = new Vector2(0f, barHeight);
             bottomBar.sizeDelta = new Vector2(0f, barHeight);
 
+            LoadSound(context);
             cutIn.alpha = 0f;
             cutIn.gameObject.SetActive(true);
             title.Begin(screen, pixelScale);
@@ -98,6 +99,8 @@ namespace Chapchu.UI.Fx.Nuke
             // 시안처럼 실제 흐른 시간으로 — Time.time 은 긴 프레임(셰이더 준비 · 에디터 멈춤)마다 0.33초에서 잘려 장면이 뒤로 밀린다
             double last = Time.realtimeSinceStartupAsDouble;
             float ms = 0f;
+            // 배경 관현악 + 사이렌 · 짖음 · 쾅 — 시안처럼 장면과 같은 시간축 한 파일
+            StartSound();
             while (ms < lengthMs)
             {
                 float fadeOutAt = lengthMs - fadeOutMs;
