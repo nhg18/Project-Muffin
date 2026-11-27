@@ -98,6 +98,18 @@
 - 노션은 고치지 않았다 — 프로토타입과 달라진 4곳은 `11-card-list` 4절 #19 (PM).
 - `05-deck` 2절(덱 총 구성)은 함정이 덱에 들어가는 묶음 1 에서.
 - 막혀 있는 것 (이 세션 권한): `.claude/skills/multi-test/MultiTest.cs` 35줄 `"ClickJoinButton"` → `"HandleJoinClicked"` — 클론 시나리오가 전부 「입장 · 시작」 에서 실패한다.
+## 2026-11-27 · 닉네임 중복 금지 서버 배포 (`feature/nickname-unique`, PR #237)
+
+- 서비스 계정 `chapchu-deploy` 를 만들어 UGS CLI 로그인 (역할은 `server/README.md`). 키 파일은 쓰고 지움 — CLI 설정에 남아 있다
+- production 에 이름 자물쇠 16칸 · `SetNickname` 게시. 실서버에서 3가지가 틀려 고침: Cloud Save 는 `serviceToken` 으로, Remote Config `assignSettings` 에 `attributes`, `ugs deploy` 가 params 를 비우면 관리 API 로 올림 (README)
+- 실서버 확인: 첫 이름 · 대소문자 중복 taken · same · invalid · 동시 저장 하나만 ok · 쿠폰 바꾸기 · 쿨다운 · 옛 이름 풀림. 게임 `run.sh ui` 통과, 콘솔 에러 0
+- develop 합침 — 로비 닉네임 변경 · 입력 창 · 문서 최종 수정일 줄 충돌을 양쪽 다 살려 풂
+
+남은 일
+- [ ] Remote Config 에 금칙어 목록이 없다 (`bannedWords` · `allowedWords` · `bannedInitials`) — 지금은 욕설 이름이 통과한다. 목록 내용 — PM
+- [ ] 쿠폰 없음 창 「상점으로」 · 통합 v3 프로필 쿠폰 줄 · 번체 → 간체 맞춤
+- [ ] 게임 안 중복 거절 문구 확인 (클라이언트 2개)
+
 ## 2026-11-27 · 카드 등급 연출 — 표면 빛 · 글로우 · 반짝이 (`feature/card-grade-shine`)
 
 ### 결정 (사용자, 2026-11-27)

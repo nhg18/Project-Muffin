@@ -9,6 +9,7 @@
     "com.unity.remote-config": "4.2.5",
     "com.unity.services.analytics": "6.3.0",
     "com.unity.services.authentication": "3.8.1",
+    "com.unity.services.cloudcode": "2.10.4",
     "com.unity.services.cloudsave": "3.4.2",
     "com.unity.splines": "2.9.1",
     "com.unity.test-framework": "1.6.0",
