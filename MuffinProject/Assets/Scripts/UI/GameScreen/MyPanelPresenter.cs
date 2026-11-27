@@ -89,5 +89,11 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>내 생사 (OnDeathAvoided · OnPlayerDied) — HP 자리 「사망」. 사망 대기는 보이지 않는다 (10-ui.md 2-1).</summary>
         public void ShowLife(LifeState life) => _view.SetLife(life);
+
+        /// <summary>체인 맨 위 카드의 대상이 나인지 — 대상 표시 (10-ui.md 5-2 #3).</summary>
+        public void ShowTargeted(bool targeted) => _view.SetTargeted(targeted);
+
+        /// <summary>내 캐릭터 가운데(화면 좌표).</summary>
+        public Vector2 CharacterScreenPoint => _view.CharacterScreenPoint;
     }
 }

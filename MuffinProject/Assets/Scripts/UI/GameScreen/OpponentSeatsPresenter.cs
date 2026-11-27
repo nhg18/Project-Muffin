@@ -337,6 +337,13 @@ namespace Chapchu.UI.GameScreen
                 _selectCancelled = true;
         }
 
+        /// <summary>체인 맨 위 카드의 대상인 상대 좌석을 강조한다 (10-ui.md 5-2 #3 「대상 표시」). 빈 배열이면 모두 끈다.</summary>
+        public void ShowTargeted(int[] targets)
+        {
+            foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
+                pair.Value.SetTargeted(Array.IndexOf(targets, pair.Key) >= 0);
+        }
+
         /// <summary>끄는 카드가 겨눈 상대의 좌석만 강조한다. 0 이면 모두 끈다. 대상 선택 중에는 건드리지 않는다 — 같은 고리 · 테를 쓴다.</summary>
         public void ShowAim(int actorNumber)
         {
