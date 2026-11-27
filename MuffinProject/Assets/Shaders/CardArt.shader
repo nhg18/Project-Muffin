@@ -3,7 +3,7 @@
 //   틀의 발바닥 배지 자리(틀 그림 원 (121, 117) r 109)는 뚫는다 — 아래 틀이 보여 시안 .bdg 처럼 배지가 그림 위로 온다.
 //   그림이 아직 없는 카드(_HasTex 0)는 「그림 준비 중」 칸 (시안 v3.21 도감 .art.none): 종류 색 5 % 바탕 · 38 % 점선 테 · 30 % 발바닥. 글자는 CardView 의 TMP.
 //   점선 테는 시안을 그린 크롬 그대로 — .7 cqw 테는 1 px 보다 얇아 1 px(2.05 u)로 올라가고, 얇은 테의 칸 · 틈은 두께 × 3 · × 2 다.
-// 종류 색(_TypeColor) · 그림 · 흐림(_Filter)은 CardView 가 MaterialPropertyBlock 으로 넣는다. 길이는 u (캔버스 px), 칸 가운데가 0 · 위가 +.
+// 종류 색(_TypeColor) · 그림 · 흐림(_Filter) · 등급 표면 빛(_Sheen* — 종이와 이어지게 카드 기준으로, CardFilter.cginc)은 CardView 가 MaterialPropertyBlock 으로 넣는다. 길이는 u (캔버스 px), 칸 가운데가 0 · 위가 +.
 Shader "Chapchu/Card Art"
 {
     Properties
@@ -16,6 +16,12 @@ Shader "Chapchu/Card Art"
         _PendingPaw ("Pending Paw (x, y, 폭 u)", Vector) = (0, 9.95, 42.14, 0)
         [HideInInspector] _TypeColor ("Type Color", Color) = (0, 0.616, 1, 1)
         [HideInInspector] _Filter ("Filter (채도, 밝기, 대비)", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _Sheen ("Sheen (가운데, 반폭, 세기)", Vector) = (0, 1, 0, 0)
+        [HideInInspector] _SheenLine ("Sheen Line (축 x, 축 y, 더할 값, 흰 띠 비율)", Vector) = (1, 0, 0, 0.42)
+        [HideInInspector] _SheenA ("Sheen .25", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenB ("Sheen .5", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenC ("Sheen .75", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenWhite ("Sheen White", Float) = 0
     }
 
     SubShader
@@ -107,7 +113,7 @@ Shader "Chapchu/Card Art"
                 float2 q = abs(p) - halfBox;
                 float alpha = Coverage(max(q.x, q.y), aa) * (1.0 - Coverage(length(p - _Badge.xy) - _Badge.z, aa));
                 clip(alpha - 0.002);
-                return fixed4(CardFilter(color) * alpha, alpha);
+                return fixed4(CardSheen(CardFilter(color), p) * alpha, alpha);
             }
             ENDCG
         }
