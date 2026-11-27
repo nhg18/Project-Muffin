@@ -37,13 +37,25 @@ namespace Chapchu.UI.GameScreen
         private void OnEnable()
         {
             _view.ExitConfirmed += HandleExitConfirmed;
+            _view.OpenChanged += HandleMenuOpenChanged;
             RoomEvents.OnLeftRoom += HandleLeftRoom;
         }
 
         private void OnDisable()
         {
             _view.ExitConfirmed -= HandleExitConfirmed;
+            _view.OpenChanged -= HandleMenuOpenChanged;
             RoomEvents.OnLeftRoom -= HandleLeftRoom;
+            GameClock.Resume(); // 씬을 떠난다 — 멈춘 채(timeScale 0) 다음 씬으로 가지 않게
+        }
+
+        // 봇전이면 설정 판 · 나가기 확인 팝업이 떠 있는 동안 게임을 멈춘다 — 사람이 둘 이상이면 GameClock 이 멈추지 않는다 (10-ui.md 9절, 베타 한정)
+        private void HandleMenuOpenChanged(bool open)
+        {
+            if (open)
+                GameClock.Pause();
+            else
+                GameClock.Resume();
         }
 
         // 아래 둘은 GameScreenPresenter(큐)가 알림을 받은 자리에서 바로 부른다 — 곧 씬이 바뀌므로 연출 큐를 기다리지 않는다 (CODE_CONVENTION 9절 「큐를 타지 않는 것」)
@@ -78,6 +90,7 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleExitConfirmed()
         {
+            GameClock.Resume(); // 나간다 — 화면 전환 연출이 멈춘 시간(timeScale 0)에 서지 않게
             if (NetworkManager.Instance == null)
             {
                 Debug.LogWarning($"[{nameof(GameMenuPresenter)}] {nameof(NetworkManager)} 가 없다 — 방 밖에서 열린 씬. 바로 로비로.", this);
