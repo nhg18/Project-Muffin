@@ -17,6 +17,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image hpFill;
         [Tooltip("얼굴 원 안 캐릭터 머리 — 그 사람 좌석의 캐릭터 그림.")]
         [SerializeField] private Image head;
+        [Tooltip("머리 위에 겹치는 꾸미기(봇 스킨의 리본) — head 와 같은 크기 · 자리. 꾸미기가 없으면 끈다.")]
+        [SerializeField] private Image accessory;
         [Tooltip("다음 사람을 가리키는 꺾쇠 — 마지막 줄은 숨긴다. 역방향이면 위를 가리킨다.")]
         [SerializeField] private RectTransform chevron;
         [Tooltip("최종 사망이면 흐리게.")]
@@ -38,16 +40,18 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (nameText == null || ring == null || hpFill == null || head == null || chevron == null || group == null || grayMaterial == null)
+            if (nameText == null || ring == null || hpFill == null || head == null || accessory == null || chevron == null || group == null || grayMaterial == null)
                 Debug.LogError($"[{nameof(TurnOrderRowView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
-        /// <summary>이름 · 얼굴(그 사람 좌석의 캐릭터 그림).</summary>
-        public void SetPlayer(string playerName, Sprite face)
+        /// <summary>이름 · 얼굴(그 사람의 캐릭터 그림 · 꾸미기 — 없으면 null).</summary>
+        public void SetPlayer(string playerName, Sprite face, Sprite accessorySprite)
         {
             nameText.text = playerName;
             if (face != null)
                 head.sprite = face;
+            accessory.sprite = accessorySprite;
+            accessory.enabled = accessorySprite != null;
         }
 
         /// <summary>지금 턴 — 얼굴 원을 키우고 이름을 숨긴다 (이름은 옆 꼬리표에).</summary>
@@ -72,6 +76,7 @@ namespace Chapchu.UI.GameScreen
         {
             group.alpha = dead ? deadAlpha : 1f;
             head.material = dead ? grayMaterial : null;
+            accessory.material = head.material;
         }
 
         /// <summary>꺾쇠 — 마지막 줄이면 숨긴다. 역방향이면 위를 가리킨다.</summary>
