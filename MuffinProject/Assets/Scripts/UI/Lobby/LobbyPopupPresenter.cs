@@ -7,7 +7,7 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 로비의 창 — 친구 · 프로필 · 설정(차단 목록) · 퀘스트 · 확률. 한 번에 하나만 열리고, 열려 있는 동안 뒤가 어두워진다.
-    /// 친구 · 퀘스트는 LobbyHubData 의 시안 값이고, 설정 스위치만 기기에 저장한다.
+    /// 친구 · 퀘스트는 서버가 없어 비어 있고(LobbyHubData), 설정 스위치만 기기에 저장한다.
     /// 기준: 「통합 화면 UI v2」 로비(게시본 1794316285-7080) · docs/systems/17-lobby-ui-full.md 5-2 ~ 5-4 · 7-2 ~ 7-4
     /// </summary>
     public class LobbyPopupPresenter : MonoBehaviour
@@ -280,6 +280,9 @@ namespace Chapchu.UI.Lobby
         // 가려 있어도 값을 복사한다 (17 5-2)
         private void HandleCopyCodeRequested()
         {
+            if (string.IsNullOrEmpty(Data.MyCode))
+                return;
+
             GUIUtility.systemCopyBuffer = Data.MyCode;
             fx.Toast(CopiedCodeToast);
         }
