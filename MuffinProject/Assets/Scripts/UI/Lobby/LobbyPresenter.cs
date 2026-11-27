@@ -8,15 +8,12 @@ namespace Chapchu.UI.Lobby
     /// 로비 허브의 뼈대 — 시안 데이터 · 지갑 · 배지 · 뒤로가기 · 초대 배너. 화면 영역마다의 흐름은 옆 파일에 있다:
     /// LobbySectionPresenter(홈 ↔ 꾸미기 · 상점 · 뽑기) · LobbyPopupPresenter(친구 · 프로필 · 설정 · 퀘스트 창) ·
     /// LobbyRoomRequester(방 요청) · LobbyAccountPresenter(닉네임 변경 · 계정 삭제). 서버에 요청을 보내는 것은 뒤의 두 파일뿐이다.
-    /// 진짜인 것: 닉네임(변경은 서버 저장) · 방 만들기 / 참가 / 랜덤 매칭 / 혼자 하기 · 설정 스위치(기기 저장).
-    /// 임시인 것: 친구 · 재화 · 퀘스트 · 상점 · 뽑기 — LobbyHubData 의 시안 값, 이 기기 메모리에만 있다.
+    /// 진짜인 것: 닉네임 · 변경 쿠폰(서버 저장) · 방 만들기 / 참가 / 랜덤 매칭 / 혼자 하기 · 설정 스위치(기기 저장).
+    /// 서버가 없어 비어 있는 것: 친구 · 요청 · 차단 · 퀘스트 · 재화(0) · 전적 · 레벨 · 친구 코드. 상점 · 뽑기의 아이템 목록 · 값은 시안 값 (LobbyHubData).
     /// 기준: 「통합 화면 UI v2」 로비(게시본 1794316285-7080) · docs/systems/17-lobby-ui-full.md · 14-lobby-ui.md
     /// </summary>
     public class LobbyPresenter : MonoBehaviour
     {
-        private const int InviteSeconds = 30; // 초대 만료 (17 4-4 · 13-friend 4절)
-        private const string RequestToastFormat = "{0}님이 친구 요청을 보냈어요.";
-
         [Header("화면")]
         [SerializeField] private LobbyHomeView home;
         [SerializeField] private LobbyTopBarView topBar;
@@ -61,7 +58,7 @@ namespace Chapchu.UI.Lobby
         {
             AnalyticsRecorder.RecordScreenViewed(AnalyticsRecorder.ScreenName.Lobby);
             home.SetProfile(NetworkManager.Nickname);
-            home.SetLevel(Data.Level, Data.Xp, Data.XpNext);
+            home.ClearLevel();
             RefreshWallet();
             RefreshBadges();
         }
@@ -100,35 +97,5 @@ namespace Chapchu.UI.Lobby
             else if (!popups.Back())
                 sections.GoHome();
         }
-
-        #region 초대 · 친구 요청 — 친구 서버가 없어 인스펙터 메뉴로만 띄운다
-
-        /// <summary>확인용 — 온라인 친구 한 명이 방으로 초대한다. 초대 알림이 꺼져 있으면 아무것도 뜨지 않는다.</summary>
-        [ContextMenu("확인용 — 초대 받기")]
-        private void DebugReceiveInvite()
-        {
-            HubPerson inviter = Data?.PickInviter();
-            if (!Application.isPlaying || inviter == null || modal.IsLoading || !LobbyPopupPresenter.IsInviteNoticeOn)
-                return;
-
-            invite.Show(inviter.Nickname, InviteSeconds);
-            topBar.SetFriendsBadge(Data.RequestsIn.Count + 1, true);
-            topBar.ShakeFriends();
-        }
-
-        /// <summary>확인용 — 누군가 친구 요청을 보낸다.</summary>
-        [ContextMenu("확인용 — 친구 요청 받기")]
-        private void DebugReceiveFriendRequest()
-        {
-            HubPerson request = Application.isPlaying ? Data?.ReceiveRequest() : null;
-            if (request == null)
-                return;
-
-            topBar.SetFriendsBadge(Data.RequestsIn.Count + (invite.IsShown ? 1 : 0), true);
-            popups.RefreshFriends();
-            fx.Toast(string.Format(RequestToastFormat, request.Nickname));
-        }
-
-        #endregion
     }
 }

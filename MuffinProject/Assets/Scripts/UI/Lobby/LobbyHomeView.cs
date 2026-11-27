@@ -118,12 +118,12 @@ namespace Chapchu.UI.Lobby
             nicknameSize.preferredWidth = Mathf.Min(nicknameText.GetPreferredValues(nickname).x, nicknameMaxWidth);
         }
 
-        /// <summary>레벨 줄 — 「Lv.{n}」 · 경험치 막대 · 「{현재} / {다음 레벨까지 총량}」</summary>
-        public void SetLevel(int level, int xp, int xpNext)
+        /// <summary>레벨 줄을 비운다 — 레벨 값이 없을 때 (17 5절 「불러오는 중」 과 같은 모습, 레벨 시스템 미정 12절 #14).</summary>
+        public void ClearLevel()
         {
-            levelText.text = $"Lv.{level}";
-            xpFill.anchorMax = new Vector2(xpNext > 0 ? Mathf.Clamp01((float)xp / xpNext) : 0f, 1f);
-            xpText.text = $"{xp} / {xpNext}";
+            levelText.text = string.Empty;
+            xpFill.anchorMax = new Vector2(0f, 1f);
+            xpText.text = string.Empty;
         }
 
         /// <summary>퀘스트 배지 = 받을 수 있는 보상 수.</summary>
