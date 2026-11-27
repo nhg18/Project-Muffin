@@ -54,7 +54,7 @@ public static class MultiTest
     private const string PanelChapchuField = "_isChapchu";                 // MyPanelPresenter — 내 찹츄 상태 (찹츄 자리 「찹츄 완료」)
     private const string SeatOfField = "_seatOf";                          // OpponentSeatsPresenter — actorNumber → 좌석
     private const string SeatChapchuField = "_chapchu";                    // OpponentSeatView — 찹츄 표시
-    private const string CardUseRequestedMethod = "HandleCardUseRequested"; // HandPresenter — 손패 카드의 사용을 청했다 (카드) — 더블클릭과 같은 길
+    private const string CardUseMethod = "Use";                            // HandPresenter — 손패 카드 사용 (카드, 놓은 상대 actorNumber) — 사용 기준선 위에 놓은 것과 같은 길
     private const string HandCardsField = "_cards";                        // HandView — 손패의 카드들
     private const string TrapSlotClickedMethod = "HandleSlotClicked";      // MyTrapsPresenter — 내 함정 칸을 눌렀다 (칸 번호)
     private const string TrapPreviewField = "_preview";                    // MyTrapsPresenter — 크게 보기 중인 카드
@@ -225,7 +225,7 @@ public static class MultiTest
         string setLog = "";
         if (trapIndex >= 0 && traps.Count < 3)
         {
-            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (더블클릭과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
+            // 화면 경로 — 손패의 함정 카드의 사용을 청한다 (기준선 위에 놓은 것과 같은 길) (HandPresenter 가 설치 요청으로 바꾼다)
             if (UseFromHand(instances[trapIndex]))
                 setLog = " · 함정 설치(화면)";
             else
@@ -412,7 +412,7 @@ public static class MultiTest
 
         int counter = hand.FindIndex(cardId => server.Deck.GetCard(cardId)?.type == CardType.Counter);
 
-        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (더블클릭과 같은 길). 손패 뷰가 그 카드를 「낼 수 있는 카운터」(방장이 알려 준 것)로 알고 있는지도 같이 본다
+        // 카운터 카드가 있고 대상을 고르지 않는 카드면 화면 경로로 — 손패의 그 카드의 사용을 청한다 (기준선 위에 놓은 것과 같은 길). 손패 뷰가 그 카드를 「낼 수 있는 카운터」(방장이 알려 준 것)로 알고 있는지도 같이 본다
         if (counter >= 0)
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
@@ -451,14 +451,14 @@ public static class MultiTest
         return cards.FirstOrDefault(card => card.InstanceId == instanceId);
     }
 
-    // 화면 경로 — 손패의 카드를 더블클릭한 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
+    // 화면 경로 — 손패의 카드를 집어 사용 기준선 위에 놓은 것처럼 HandPresenter 에 사용을 청한다 (10-ui 4절 「사용 요청」). 카드가 손패 뷰에 없으면 false.
     private static bool UseFromHand(int instanceId)
     {
         HandPresenter presenter = Object.FindFirstObjectByType<HandPresenter>();
         CardView card = FindHandCard(instanceId);
         if (presenter == null || card == null) return false;
 
-        typeof(HandPresenter).GetMethod(CardUseRequestedMethod, Private).Invoke(presenter, new object[] { card });
+        typeof(HandPresenter).GetMethod(CardUseMethod, Private).Invoke(presenter, new object[] { card, 0 });
         return true;
     }
 
@@ -1200,7 +1200,7 @@ public static class MultiTest
             }
             case "play":
             {
-                // 실제 카운터를 화면 경로(더블클릭과 같은 길)로 낸다 — 반응 시간이 열린 뒤
+                // 실제 카운터를 화면 경로(기준선 위에 놓은 것과 같은 길)로 낸다 — 반응 시간이 열린 뒤
                 if (!skip.isActiveAndEnabled)
                     return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
                 return UseFromHand(SkipProbeInstance) ? "OK P" + me + " 카운터를 화면에서 냄" : "WAIT 손패에 카운터가 아직 없다";

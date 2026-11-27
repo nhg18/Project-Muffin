@@ -60,8 +60,8 @@ namespace Chapchu.UI.GameScreen
                 Debug.LogError($"[{nameof(TurnOrderView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
 
-        /// <summary>줄을 순서대로 다시 만든다 — 이름 · 얼굴.</summary>
-        public void SetPlayers(IReadOnlyList<(string name, Sprite face)> players)
+        /// <summary>줄을 순서대로 다시 만든다 — 이름 · 얼굴 · 꾸미기(없으면 null).</summary>
+        public void SetPlayers(IReadOnlyList<(string name, Sprite face, Sprite accessory)> players)
         {
             foreach (TurnOrderRowView row in _rows)
                 Destroy(row.gameObject);
@@ -75,7 +75,7 @@ namespace Chapchu.UI.GameScreen
                 row.gameObject.SetActive(true);
                 var rect = (RectTransform)row.transform;
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -i * rowPitch);
-                row.SetPlayer(players[i].name, players[i].face);
+                row.SetPlayer(players[i].name, players[i].face, players[i].accessory);
                 row.SetCurrent(false);
                 row.SetChevron(i < players.Count - 1, _reversed);
                 _rows.Add(row);
