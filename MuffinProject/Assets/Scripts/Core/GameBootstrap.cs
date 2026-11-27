@@ -16,11 +16,15 @@ namespace Chapchu.Core
         {
             nameof(NetworkManager),
             nameof(PopupManager),
+            nameof(SoundManager),
         };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void SpawnManagers()
         {
+            // 방 대기 · 남의 턴처럼 터치 없이 있을 때 화면이 잠겨 모바일 앱이 멈추면 Photon 연결이 끊긴다.
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
             foreach (string prefabName in ManagerPrefabs)
                 Spawn(prefabName);
         }

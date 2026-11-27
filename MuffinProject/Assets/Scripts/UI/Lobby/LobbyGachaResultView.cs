@@ -49,6 +49,12 @@ namespace Chapchu.UI.Lobby
         [Tooltip("카드 크기 — 한 장일 때 (캔버스 px)")]
         [SerializeField] private Vector2 singleCardSize = new Vector2(240f, 332f);
 
+        [Tooltip("개판이 열릴 때 판이 흔들리는 폭 (캔버스 px)")]
+        [SerializeField] private float legendShakeStrength = 16f;
+
+        [Tooltip("개판이 열릴 때 판이 흔들리는 시간 (초)")]
+        [SerializeField] private float legendShakeSeconds = 0.42f;
+
         private int _count;
         private Coroutine _openAll;
 
@@ -172,7 +178,7 @@ namespace Chapchu.UI.Lobby
             {
                 OnRevealed?.Invoke(card);
                 if (grade == HubGrade.Legend)
-                    UIJuice.Shake(frame, 16f, 0.42f);
+                    UIJuice.Shake(frame, legendShakeStrength, legendShakeSeconds);
             }
 
             if (AllOpen())

@@ -28,7 +28,7 @@ namespace Chapchu.EditorTools
         // 1080px(10.8 유닛)이 화면을 채우는 거리 — 5.4 / tan 20° ≈ 14.85.
         public static readonly float CameraDistance = 5.4f / Mathf.Tan(CameraFieldOfView * 0.5f * Mathf.Deg2Rad);
 
-        private const string TableName = "Table";
+        internal const string TableName = "Table";
         private const string HandCameraName = "HandCamera";
         private const string TopCameraName = "TopCardCamera";
         private const string TopChainCameraName = "TopChainCamera";
@@ -347,7 +347,7 @@ namespace Chapchu.EditorTools
 
         /// <summary>
         /// 덱 뷰 아래를 지우고 다시 만든다 — 판에 눕힌 `Stack`(받침 카드 · 맨 위 카드 · 탭 콜라이더) + 선 채로 둔 `덱 n`. 뷰의 참조를 다시 잇는다.
-        /// 루트(뷰 · 프레젠터)는 그대로라 다른 곳의 참조(손패의 뽑기 자리 등)는 끊기지 않는다 — 열린 씬의 덱만 고칠 때도 쓴다.
+        /// 루트(뷰 · 프레젠터)는 그대로라 다른 곳의 참조(손패의 뽑기 자리 등)는 끊기지 않는다.
         /// </summary>
         public static void BuildDeckParts(DeckView view)
         {

@@ -8,12 +8,14 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 설정 창과 그 안의 차단 목록 창 — 소리 · 초대 알림 스위치 · 차단 목록 · 계정(로그인 수단 · 계정 삭제) · 정보(버전 · 링크).
-    /// 로그아웃 버튼은 없다 (23-login 3절 #11).
+    /// 로그아웃 버튼은 없다 (23-login 3절 #11). 버전 글자를 연달아 누르면 개발자 모드를 청한다 (14-lobby-ui 5절).
     /// 기준: 「통합 화면 UI v2」 로비 settingsBody · blockBody, docs/systems/17-lobby-ui-full.md 5-4
     /// </summary>
     public class LobbySettingsPopupView : MonoBehaviour
     {
         private const string BlockedCountFormat = "{0}명";
+        private const int DevModeTaps = 5;          // 버전 글자를 이만큼 누르면 개발자 모드
+        private const float DevModeTapGap = 0.6f;   // 누름 사이가 이보다 길면 처음부터 센다 (초)
 
         [Header("설정")]
         [SerializeField] private GameObject settingsContent;
@@ -30,6 +32,9 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button privacyButton;
         [SerializeField] private Button contactButton;
 
+        [Tooltip("정보의 버전 글자 — 눌리는 모양 없이 누름만 받는다 (개발자 모드)")]
+        [SerializeField] private Button versionButton;
+
         [Header("차단 목록")]
         [SerializeField] private GameObject blockContent;
         [SerializeField] private Button blockCloseButton;
@@ -39,6 +44,8 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject blockEmpty;
 
         private readonly List<LobbyPersonRowView> _rows = new List<LobbyPersonRowView>();
+        private int _versionTaps;
+        private float _versionTappedAt;
 
         public bool IsOpen => settingsContent.activeSelf || blockContent.activeSelf;
 
@@ -56,10 +63,13 @@ namespace Chapchu.UI.Lobby
         public event Action OnPrivacyRequested;
         public event Action OnContactRequested;
 
+        /// <summary>버전 글자를 5번 연달아 눌렀다 — 개발자 모드 켜기(암호) · 끄기.</summary>
+        public event Action OnDevModeRequested;
+
         private void Awake()
         {
             if (settingsContent == null || closeButton == null || sfxSwitch == null || bgmSwitch == null || inviteSwitch == null || playRecordSwitch == null || blockedCountText == null
-                || manageButton == null || loginText == null || deleteButton == null || privacyButton == null || contactButton == null)
+                || manageButton == null || loginText == null || deleteButton == null || privacyButton == null || contactButton == null || versionButton == null)
                 Debug.LogError($"[{nameof(LobbySettingsPopupView)}] 설정 참조가 비어 있습니다.", this);
 
             if (blockContent == null || blockCloseButton == null || backButton == null || blockList == null || rowTemplate == null || blockEmpty == null)
@@ -75,6 +85,7 @@ namespace Chapchu.UI.Lobby
             deleteButton.onClick.AddListener(HandleDeleteClicked);
             privacyButton.onClick.AddListener(HandlePrivacyClicked);
             contactButton.onClick.AddListener(HandleContactClicked);
+            versionButton.onClick.AddListener(HandleVersionClicked);
             sfxSwitch.OnChanged += HandleSwitchChanged;
             bgmSwitch.OnChanged += HandleSwitchChanged;
             inviteSwitch.OnChanged += HandleSwitchChanged;
@@ -92,6 +103,7 @@ namespace Chapchu.UI.Lobby
             deleteButton.onClick.RemoveListener(HandleDeleteClicked);
             privacyButton.onClick.RemoveListener(HandlePrivacyClicked);
             contactButton.onClick.RemoveListener(HandleContactClicked);
+            versionButton.onClick.RemoveListener(HandleVersionClicked);
             sfxSwitch.OnChanged -= HandleSwitchChanged;
             bgmSwitch.OnChanged -= HandleSwitchChanged;
             inviteSwitch.OnChanged -= HandleSwitchChanged;
@@ -163,6 +175,18 @@ namespace Chapchu.UI.Lobby
         private void HandlePrivacyClicked() => OnPrivacyRequested?.Invoke();
 
         private void HandleContactClicked() => OnContactRequested?.Invoke();
+
+        private void HandleVersionClicked()
+        {
+            float now = Time.unscaledTime;
+            _versionTaps = now - _versionTappedAt > DevModeTapGap ? 1 : _versionTaps + 1;
+            _versionTappedAt = now;
+            if (_versionTaps < DevModeTaps)
+                return;
+
+            _versionTaps = 0;
+            OnDevModeRequested?.Invoke();
+        }
 
         private void HandleUnblockClicked(LobbyPersonRowView row) => OnUnblockRequested?.Invoke(row.Person);
     }

@@ -542,7 +542,7 @@ namespace Chapchu.EditorTools
         {
             var card = AssetDatabase.LoadAssetAtPath<HandCardView>($"{HandCardPrefabFolder}/{name}.prefab");
             if (card == null)
-                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Build UI 로 먼저 만들 것.");
+                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Rebuild Hand Card Prefabs 로 먼저 만들 것.");
             return card;
         }
 

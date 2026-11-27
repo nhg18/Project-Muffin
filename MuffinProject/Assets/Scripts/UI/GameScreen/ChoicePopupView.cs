@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using Chapchu.Cards;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Chapchu.UI.GameScreen
 {
@@ -11,6 +14,8 @@ namespace Chapchu.UI.GameScreen
     /// 왼쪽 = 쓴 카드 자리(체인의 카드가 ChainCardsPresenter.Focus 로 온다) + 아래 「쓴 사람 → 고르는 사람」 꼬리표,
     /// 오른쪽 = 고를 카드 두 장 (카드 글 순서: 손패 모두 버리기 · n 피해) — 결과 숫자를 키워드 색으로 (11-card-list 5-1).
     /// 위 = 남은 시간 막대 + 한 줄 안내 (새 카드 보여 주기와 같은 꼴). 고르면 고른 카드가 튀어나오고 다른 카드는 줄어 사라진다.
+    /// 「손패에서 1장」 고르기 (2013 · 2021 의 대가, 10-ui.md 5절)는 같은 판의 오른쪽에 고를 카드 두 장 대신 내 손패를 카드 칸으로 늘어놓는다 — 한 줄 5장, 넘치면 다음 줄, 10장을 넘으면 한 줄 7장. 칸 크기는 카드 칸 자리(cardsGrid)의 사각형에 맞춘다.
+    /// 남이 손패에서 고르는 중이면 오른쪽을 비운다 (손패는 비공개).
     /// 받은 값을 표시만 한다.
     /// </summary>
     public class ChoicePopupView : MonoBehaviour
@@ -20,6 +25,11 @@ namespace Chapchu.UI.GameScreen
         private const string HandFormat = "{0}장";
         private const string DiscardSub = "찹츄에서 멀어짐";
         private const string HpSubFormat = "남은 HP {0}";
+        private const int WideColumns = 5;       // 10장까지 — 한 줄 5칸
+        private const int NarrowColumns = 7;     // 그보다 많으면 칸을 줄여 한 줄 7칸
+        private const int WideLimit = 10;
+        private const float WideSpacing = 16f, NarrowSpacing = 12f;
+        private const float CellAspect = 1.4f;   // 칸 높이 = 폭 × 1.4 (카드 꼴)
 
         [Tooltip("켜고 끄는 판 — 이 컴포넌트의 오브젝트는 켜 둔다.")]
         [SerializeField] private GameObject panel;
@@ -32,6 +42,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private RectTransform usedCardSlot;
         [Tooltip("고를 카드 — 0 손패 모두 버리기 · 1 피해 (서버의 고르기 번호 순서).")]
         [SerializeField] private ChoiceOptionView[] options = new ChoiceOptionView[2];
+        [Tooltip("「손패에서 1장」 고르기의 카드 칸을 늘어놓는 자리 (GridLayoutGroup) — 고를 카드 두 장 자리에 놓인다.")]
+        [SerializeField] private GridLayoutGroup cardsGrid;
+        [Tooltip("카드 한 칸의 프리팹 (Prefab/UI/GameScreen/ChoiceCardTile) — 손패 장수만큼 만들어 쓴다.")]
+        [SerializeField] private ChoiceCardTile tilePrefab;
 
         [Header("키워드 색 · 그림 (11-card-list 5-1)")]
         [SerializeField] private Color handColor = new Color32(0x2f, 0x63, 0xd6, 0xFF);
@@ -55,13 +69,18 @@ namespace Chapchu.UI.GameScreen
         private float _barWidth;
         private Vector2[] _rest;
         private int _damage;
+        private readonly List<ChoiceCardTile> _tiles = new List<ChoiceCardTile>();
 
         /// <summary>고를 카드를 눌렀다 — 0 손패 모두 버리기 · 1 피해.</summary>
         public event Action<int> Picked;
 
+        /// <summary>「손패에서 1장」 고르기에서 카드 칸을 눌렀다 — 그 카드의 장 번호.</summary>
+        public event Action<int> CardPicked;
+
         private void Awake()
         {
-            if (panel == null || barDrain == null || hintText == null || tagText == null || usedCardSlot == null || options == null || options.Length != 2 || options[0] == null || options[1] == null || handIcon == null || damageIcon == null)
+            if (panel == null || barDrain == null || hintText == null || tagText == null || usedCardSlot == null || options == null || options.Length != 2 || options[0] == null || options[1] == null || handIcon == null || damageIcon == null
+                || cardsGrid == null || tilePrefab == null)
             {
                 Debug.LogError($"[{nameof(ChoicePopupView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
@@ -119,8 +138,56 @@ namespace Chapchu.UI.GameScreen
                 options[i].SetInteractable(interactive);
             }
 
+            SetOptionsVisible(true);
+            cardsGrid.gameObject.SetActive(false);
             SetFraction(1f);
             panel.SetActive(true);
+        }
+
+        /// <summary>
+        /// 「손패에서 1장」 고르기 — 오른쪽에 카드마다 한 칸. instanceIds 와 cards 는 같은 순서.
+        /// cards 가 비어 있으면(남이 고르는 중) 오른쪽을 비운 채 안내 · 꼬리표 · 남은 시간만 보인다.
+        /// </summary>
+        public void ShowCards(string hint, string tag, IReadOnlyList<int> instanceIds, IReadOnlyList<CardData> cards)
+        {
+            hintText.text = hint;
+            tagText.text = tag;
+            SetOptionsVisible(false);
+
+            bool wide = cards.Count <= WideLimit;
+            int columns = wide ? WideColumns : NarrowColumns;
+            int rows = Mathf.Max(1, Mathf.CeilToInt(cards.Count / (float)columns));
+            float spacing = wide ? WideSpacing : NarrowSpacing;
+            Rect area = ((RectTransform)cardsGrid.transform).rect;
+            float width = (area.width - spacing * (columns - 1)) / columns;
+            float height = Mathf.Min(width * CellAspect, (area.height - spacing * (rows - 1)) / rows); // 줄이 많으면 높이에 맞춰 줄인다
+            cardsGrid.cellSize = new Vector2(height / CellAspect, height);
+            cardsGrid.spacing = Vector2.one * spacing;
+            cardsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            cardsGrid.constraintCount = columns;
+
+            while (_tiles.Count < cards.Count)
+            {
+                ChoiceCardTile tile = Instantiate(tilePrefab, cardsGrid.transform);
+                tile.Clicked += id => CardPicked?.Invoke(id);
+                _tiles.Add(tile);
+            }
+            for (int i = 0; i < _tiles.Count; i++)
+            {
+                _tiles[i].gameObject.SetActive(i < cards.Count);
+                if (i < cards.Count)
+                    _tiles[i].Set(instanceIds[i], cards[i]);
+            }
+
+            cardsGrid.gameObject.SetActive(cards.Count > 0);
+            SetFraction(1f);
+            panel.SetActive(true);
+        }
+
+        private void SetOptionsVisible(bool visible)
+        {
+            foreach (ChoiceOptionView option in options)
+                option.gameObject.SetActive(visible);
         }
 
         /// <summary>남은 시간 비율 (0~1) — 막대가 왼쪽으로 준다.</summary>

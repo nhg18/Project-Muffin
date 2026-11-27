@@ -418,10 +418,17 @@ public static class MultiTest
         {
             TargetType targetType = server.Deck.GetCard(hand[counter]).targetType;
             CardView card = FindHandCard(instances[counter]);
+            // 방장이 「지금 낼 수 있다」 고 알려 준 카운터만 화면 경로로 — 실제 카운터는 반응 조건이 있어 손에 있어도 못 낼 수 있다 (11-card-list 1-3)
+            HandView handView = Object.FindFirstObjectByType<HandView>();
+            bool usable = handView != null && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Contains(instances[counter]);
+            if (!usable)
+            {
+                server.RequestPlayCounter(instances[counter], new int[0]);
+                return "OK P" + me + " 반응 시간에 카운터 (지금 낼 수 없는 카운터 — 거절 기대)";
+            }
             if (card != null && targetType != TargetType.OneOther && targetType != TargetType.TwoOthers)
             {
-                HandView handView = Object.FindFirstObjectByType<HandView>();
-                bool listed = handView != null && ((HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView)).Contains(instances[counter]);
+                bool listed = usable; // 위에서 본 「낼 수 있는 카운터」 표시
                 string usableLog = listed ? "낼 수 있는 카운터 표시 켜짐" : "낼 수 있는 카운터 표시 꺼짐";
                 // 스킵 버튼 — 낼 수 있는 카운터가 있으면 반응 시간 동안 알약이 「스킵」 으로 켜진다 (10-ui 5절)
                 ReactionTimerView pill = Object.FindFirstObjectByType<ReactionTimerView>();
@@ -628,6 +635,67 @@ public static class MultiTest
         return "OK 혼자 하기 요청";
     }
 
+    /// <summary>디버그 로비에서 랜덤 매칭 — 매치 방이 없으면 새로 만든다 (08-room 4절 「매치」).</summary>
+    public static string Match()
+    {
+        if (Object.FindFirstObjectByType<DebugScript>() == null)
+            return "WAIT 디버그 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        if (PhotonNetwork.NetworkClientState != Photon.Realtime.ClientState.ConnectedToMasterServer)
+            return "WAIT 연결 중 " + PhotonNetwork.NetworkClientState;
+
+        NetworkManager.Instance.JoinRandomRoom();
+        return "OK 랜덤 매칭 요청";
+    }
+
+    /// <summary>매치 방 화면 — 매치 방 · 시작 시각 · 방 코드 카드 숨김 · 대기 글에 남은 초.</summary>
+    public static string ExpectMatchRoom()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return "WAIT 방 없음";
+
+        var start = Object.FindFirstObjectByType<RoomStartView>();
+        var code = Object.FindFirstObjectByType<RoomCodeCardView>(FindObjectsInactive.Include);
+        if (start == null || code == null)
+            return "WAIT 방 화면 아님";
+
+        var text = (TMP_Text)typeof(RoomStartView).GetField("waitText", Private).GetValue(start);
+        bool at = PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.MatchStartAt, out object value) && value is double;
+        string state = "매치 " + BotRoster.IsMatchRoom + " · 시각 " + at + " · 코드 카드 " + code.gameObject.activeInHierarchy + " · 글 「" + text.text.Replace("\n", " / ") + "」";
+        return BotRoster.IsMatchRoom && at && !code.gameObject.activeInHierarchy && text.gameObject.activeInHierarchy && text.text.Contains("찾는 중")
+            ? "OK " + state : "WAIT " + state;
+    }
+
+    /// <summary>매치 방의 봇은 사람과 똑같이 보인다 — 화면에 「봇」 이 든 글이 없다 (18-bot 4절 · 8-2).</summary>
+    public static string NoBotMark()
+    {
+        var marked = Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None)
+            .Where(t => t.gameObject.activeInHierarchy && t.text.Contains("봇")).Select(t => t.name + "「" + t.text + "」").ToArray();
+        return (marked.Length == 0 ? "OK " : "FAIL ") + SceneManager.GetActiveScene().name + " 봇 표시 " + (marked.Length == 0 ? "없음" : string.Join(" · ", marked));
+    }
+
+    /// <summary>매치 방 화면에 봇이 채워진 순간 — 칸 · 로그에 「봇」 이 없는가. 이미 게임 화면이면 FAIL (잡지 못함).</summary>
+    public static string MatchRoomFilled()
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        if (scene != "RoomScene")
+            return "FAIL 방 화면을 지나침 (" + scene + ")";
+        if (BotRoster.MemberCount < NetworkManager.MaxPlayers)
+            return "WAIT 인원 " + BotRoster.MemberCount;
+
+        string names = string.Join(" · ", Object.FindObjectsByType<RoomSlotView>(FindObjectsSortMode.None)
+            .Select(slot => ((TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot)).text));
+        return NoBotMark() + " · 칸 " + names + " · 로그 「" + ReadText(Object.FindFirstObjectByType<RoomLogView>(), RoomLastLogField) + "」";
+    }
+
+    /// <summary>봇 닉네임 — 「봇 N」 이 아니고 서로 다르다 (18-bot 4절).</summary>
+    public static string BotNames()
+    {
+        string[] names = BotRoster.Numbers.Select(n => BotRoster.NicknameOf(BotRoster.ActorOf(n))).ToArray();
+        bool ok = names.Length > 0 && names.Distinct().Count() == names.Length && names.All(n => !n.StartsWith("봇 "));
+        return (ok ? "OK " : "FAIL ") + "봇 닉네임 " + string.Join(" · ", names);
+    }
+
     /// <summary>방의 봇 목록 · 정원 · 공개 여부가 기대와 같을 때까지 WAIT. bots = "1,2,3" 처럼.</summary>
     public static string ExpectBots(string bots, string maxPlayers, string visible)
     {
@@ -658,7 +726,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var button = (UnityEngine.UI.Button)typeof(RoomSlotView).GetField(SlotButtonField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
             if (!button.interactable)
                 return "FAIL 봇 " + number + " 칸이 눌리지 않는다";
@@ -687,7 +755,7 @@ public static class MultiTest
         {
             var label = (TMP_Text)typeof(RoomSlotView).GetField(SlotNameField, Private).GetValue(slot);
             var tag = (TMP_Text)typeof(RoomSlotView).GetField(SlotBotTagField, Private).GetValue(slot);
-            if (!label.gameObject.activeInHierarchy || label.text != "봇 " + number)
+            if (!label.gameObject.activeInHierarchy || label.text != BotRoster.NicknameOf(BotRoster.ActorOf(int.Parse(number))))
                 continue;
 
             // 꼬리표가 켜져 있고 · 글자가 맞고 · 글자가 꼬리표 밖으로 넘치지 않는다
@@ -1007,6 +1075,23 @@ public static class MultiTest
     //   after = 버튼 · 초록 빛이 꺼졌는지, 스킵한 뒤의 카운터가 거절되는지(방장 규칙에 직접)
     private const string SkipProbeKey = "MultiTest.SkipProbeCard";
     private const int SkipProbeInstance = 95000;
+    private const string PickShotKey = "MultiTest.PickShot";
+
+    /// <summary>counter pick 의 「pick」 단계가 좌석을 누르기 직전(대상 고르는 중)의 게임 뷰를 이 파일로 찍게 한다.</summary>
+    public static string ArmPickShot(string path)
+    {
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+        SessionState.SetString(PickShotKey, path);
+        return "OK 대상 고르는 중 스크린샷 → " + path;
+    }
+
+    private static float ChainLayerAlpha()
+    {
+        TopCardLayerView layer = Object.FindFirstObjectByType<TopCardLayerView>();
+        if (layer == null) return -1f;
+        return ((UnityEngine.UI.RawImage)typeof(TopCardLayerView).GetField("chainImage", Private).GetValue(layer)).color.a;
+    }
+
     public static string ReactionSkipProbe(string step)
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
@@ -1026,25 +1111,33 @@ public static class MultiTest
         switch (step)
         {
             case "arm":
+            case "arm2021":
+            case "arm2018":
+            case "arm2002":
             {
                 int actor = rules.CurrentTurnActor;
                 if (actor == -1 || actor == me)
                     return "WAIT 남의 턴이 아니다 (P" + actor + ")";
 
+                SessionState.EraseBool("MultiTest.CostShot");
                 List<Card> all = server.Deck.CreateCards().ToList();
                 Card hit = all.FirstOrDefault(c => c.Type == CardType.Action && c.Target == TargetType.OneOther && c.TargetCondition == TargetCondition.None);
-                // 게임 덱(Deck_Main)에는 아직 카운터가 없다 — 시험 덱의 카운터 규칙을 빌리고, 화면에 그릴 수 있게 카드 번호는 게임 덱의 것(그 행동 카드)을 쓴다
-                DeckData testDeck = AssetDatabase.FindAssets("Deck_Default t:DeckData").Select(g => AssetDatabase.LoadAssetAtPath<DeckData>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault();
-                Card counter = testDeck == null ? null : testDeck.CreateCards().FirstOrDefault(c => c.Type == CardType.Counter && c.Target == TargetType.None
+                // 게임 덱(Deck_Main)의 실제 카운터 — 아무 행동 카드에 내는 것 (2003 진짜 할거야?, 11-card-list 1-3)
+                // arm2021 = 2021 으르렁 (나를 노린 카드에 — 대가로 손패 1장 고르기)
+                // arm2018 = 2018 물귀신 (나에게 오는 피해에 — 낼 때 화면에서 1명을 고른다)
+                // arm2002 = 2002 반사 (나를 노린 행동 카드에 — 막고 내가 쓴 사람에게 다시 쓴다)
+                Card counter = step == "arm2002" ? all.FirstOrDefault(c => c.CardId == 2002) : step == "arm2021" ? all.FirstOrDefault(c => c.CardId == 2021) : step == "arm2018" ? all.FirstOrDefault(c => c.CardId == 2018) : all.FirstOrDefault(c => c.Type == CardType.Counter && c.Target == TargetType.None
                     && c.Condition == ReactCondition.Any && c.ReactsTo.Contains(CardType.Action));
                 if (hit == null || counter == null)
                     return "FAIL 덱에 맞는 행동 · 카운터 카드가 없다";
 
-                var mine = new Card(SkipProbeInstance, hit.CardId, counter.Type, counter.Target, counter.Effects, counter.ReactsTo, counter.RevealSeconds, counter.ResolveSeconds, counter.Trigger, counter.TriggerValue, counter.Condition, counter.TargetCondition);
+                // 시험은 화면을 찍고 누르는 데 몇 초가 걸린다 — 대가 고르기 시간만 넉넉히 (규칙의 5초는 rules 가 본다)
+                CardEffect[] counterEffects = counter.Effects.Select(e => e is ChooseDiscardEffect ? new ChooseDiscardEffect { seconds = 60 } : e).ToArray();
+                var mine = new Card(SkipProbeInstance, counter.CardId, counter.Type, counter.Target, counterEffects, counter.ReactsTo, counter.RevealSeconds, counter.ResolveSeconds, counter.Trigger, counter.TriggerValue, counter.Condition, counter.TargetCondition);
                 var forced = new Card(SkipProbeInstance + 1, hit.CardId, hit.Type, hit.Target, hit.Effects, hit.ReactsTo, hit.RevealSeconds, hit.ResolveSeconds, hit.Trigger, hit.TriggerValue, hit.Condition, hit.TargetCondition);
                 ((PlayerState)states[me]).Hand.Add(mine);
                 ((PlayerState)states[actor]).Hand.Add(forced);
-                Object.FindFirstObjectByType<HandPresenter>().GainCards(new[] { SkipProbeInstance }, new[] { hit.CardId }); // 화면 손패에도 그 카드를
+                Object.FindFirstObjectByType<HandPresenter>().GainCards(new[] { SkipProbeInstance }, new[] { counter.CardId }); // 화면 손패에도 그 카드를
 
                 IReadOnlyList<GameEvent> events = rules.PlayCard(actor, forced.InstanceId, new[] { me });
                 bool asked = events.OfType<CountersUsable>().Any(u => u.Actor == me && u.CardInstanceIds.Contains(SkipProbeInstance));
@@ -1071,6 +1164,115 @@ public static class MultiTest
                 bool off = !skip.isActiveAndEnabled && usable.Count == 0;
                 return (label == "스킵" && listed && !secondsShown && off ? "OK" : "FAIL") + " 버튼 「" + label + "」 · 낼 수 있는 카운터 표시 " + (listed ? "켜짐" : "꺼짐")
                     + " · 남은 초 " + (secondsShown ? "보임" : "안 보임") + " → 누른 뒤 " + (off ? "버튼 · 표시 꺼짐" : "아직 켜져 있다");
+            }
+            case "cost":
+            {
+                // 2021 의 대가 — 고르기 판에 내 손패가 카드 칸으로 떴는가 → 첫 칸을 누른다
+                ChoicePopupView popup = Object.FindFirstObjectByType<ChoicePopupView>(FindObjectsInactive.Include);
+                var panel = (GameObject)typeof(ChoicePopupView).GetField("panel", Private).GetValue(popup);
+                var grid = (UnityEngine.UI.GridLayoutGroup)typeof(ChoicePopupView).GetField("cardsGrid", Private).GetValue(popup);
+                var buttons = (GameObject)typeof(ChoicePopupView).GetField("buttonsRow", Private).GetValue(popup);
+                if (!panel.activeInHierarchy)
+                    return "WAIT 고르기 판이 아직 안 열렸다";
+                ChoiceCardTile[] tiles = grid.GetComponentsInChildren<ChoiceCardTile>(false);
+                int handCount = ((PlayerState)states[me]).Hand.Count;
+                string title = ReadText(popup, "titleText");
+                bool ok = grid.gameObject.activeInHierarchy && !buttons.activeSelf && tiles.Length == handCount && handCount > 0
+                    && tiles.All(t => ((PlayerState)states[me]).Hand.Any(c => c.InstanceId == t.InstanceId));
+                if (!ok)
+                    return "FAIL 고르기 판 「" + title + "」 카드 칸 " + tiles.Length + " · 손패 " + handCount + " · 버튼 줄 " + (buttons.activeSelf ? "켜짐" : "꺼짐");
+                int pick = tiles[0].InstanceId;
+                SessionState.SetInt("MultiTest.CostPick", pick);
+                SessionState.SetInt("MultiTest.CostHand", handCount);
+                if (SessionState.GetBool("MultiTest.CostShot", false) == false) { SessionState.SetBool("MultiTest.CostShot", true); return "SHOT 고르기 판 「" + title + "」 카드 칸 " + tiles.Length + " = 손패 " + handCount; }
+                SessionState.EraseBool("MultiTest.CostShot");
+                ((UnityEngine.UI.Button)typeof(ChoiceCardTile).GetField("button", Private).GetValue(tiles[0])).onClick.Invoke();
+                return "OK 고르기 판 「" + title + "」 카드 칸 " + tiles.Length + " = 손패 " + handCount + " → 카드 #" + pick + " 을 누름";
+            }
+            case "costdone":
+            {
+                ChoicePopupView popup = Object.FindFirstObjectByType<ChoicePopupView>(FindObjectsInactive.Include);
+                var panel = (GameObject)typeof(ChoicePopupView).GetField("panel", Private).GetValue(popup);
+                int pick = SessionState.GetInt("MultiTest.CostPick", -1), before = SessionState.GetInt("MultiTest.CostHand", -1);
+                List<Card> hand = ((PlayerState)states[me]).Hand;
+                if (panel.activeInHierarchy || hand.Any(c => c.InstanceId == pick))
+                    return "WAIT 고른 카드가 아직 안 버려졌다";
+                return (hand.Count == before - 1 ? "OK" : "FAIL") + " 고른 카드 #" + pick + " 이 버려짐 · 손패 " + before + " → " + hand.Count + " · 판 닫힘";
+            }
+            case "play":
+            {
+                // 실제 카운터를 화면 경로(더블클릭과 같은 길)로 낸다 — 반응 시간이 열린 뒤
+                if (!skip.isActiveAndEnabled)
+                    return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
+                return UseFromHand(SkipProbeInstance) ? "OK P" + me + " 카운터를 화면에서 냄" : "WAIT 손패에 카운터가 아직 없다";
+            }
+            case "pickclosed":
+            {
+                // 대상 고르기가 끝나면 체인 층(낸 카드)의 불투명도가 돌아온다 (10-ui.md 6절)
+                float alpha = ChainLayerAlpha();
+                return alpha < 0.99f ? "WAIT 체인 층 불투명도 " + alpha.ToString("0.00") : "OK 대상 고르기 끝 — 체인 층 불투명도 " + alpha.ToString("0.00");
+            }
+            case "pick":
+            {
+                // 대상을 고르는 카운터 (2018) — 손패에서 내면 대상 고르기가 열린다 → 상대 좌석을 누른다
+                OpponentSeatsPresenter seats = Object.FindFirstObjectByType<OpponentSeatsPresenter>();
+                if (seats == null || !seats.IsSelectingTargets)
+                    return "WAIT 대상 고르기가 아직 안 열렸다";
+                int other = states.Keys.Cast<int>().First(a => a != me);
+                var seatOf = (Dictionary<int, OpponentSeatView>)typeof(OpponentSeatsPresenter).GetField("_seatOf", Private).GetValue(seats);
+                if (!seatOf.TryGetValue(other, out OpponentSeatView seat))
+                    return "FAIL P" + other + " 의 좌석이 없다";
+                // 고르는 동안 체인 층(낸 카드)이 흐려져 상대 좌석을 가리지 않는다 (10-ui.md 6절). 한 번 부름에 같이 본다 — 반응 시간이 짧다
+                float faded = ChainLayerAlpha();
+                if (faded > 0.26f)
+                    return "WAIT 체인 층 불투명도 " + faded.ToString("0.00");
+                string shot = SessionState.GetString(PickShotKey, "");
+                if (shot != "")
+                {
+                    SessionState.EraseString(PickShotKey);
+                    ScreenCapture.CaptureScreenshot(shot); // 이 프레임 끝에 찍힌다 — 고르기가 아직 열려 있다
+                }
+                typeof(OpponentSeatsPresenter).GetMethod("HandleSeatClicked", Private).Invoke(seats, new object[] { seat });
+                return "OK 대상 고르기가 열림 · 체인 층 불투명도 " + faded.ToString("0.00") + " → P" + other + " 의 좌석을 누름";
+            }
+            case "countered":
+            {
+                // 2003 — 막힌 행동 카드는 쓴 사람 손패로, 카운터는 버림 더미로, 나는 피해 없음 (11-card-list 1-3)
+                var discard = (List<Card>)typeof(GameServer).GetField("_discardPile", Private).GetValue(rules);
+                int actor = states.Keys.Cast<int>().First(a => a != me);
+                bool returned = ((PlayerState)states[actor]).Hand.Any(c => c.InstanceId == SkipProbeInstance + 1);
+                bool spent = discard.Any(c => c.InstanceId == SkipProbeInstance) && !((PlayerState)states[me]).Hand.Any(c => c.InstanceId == SkipProbeInstance);
+                // 체인이 아직 처리 전 — 덱에 실제 카운터가 있어 상대가 내 카운터에 낼 카드(알아)를 쥐고 있으면 반응 시간 5초를 다 기다린다
+                bool pending = ((System.Collections.ICollection)typeof(GameServer).GetField("_chain", Private).GetValue(rules)).Count > 0;
+                if (!spent && (pending || FindHandCard(SkipProbeInstance) != null))
+                    return "WAIT 아직 처리 전";
+                int hp = ((PlayerState)states[me]).Hp;
+                if (discard.Any(c => c.InstanceId == SkipProbeInstance && c.CardId == 2018))
+                {
+                    // 2018 — 막지 않는다. 나도 받고, 고른 사람(카드를 쓴 사람)도 같은 양
+                    if (pending)
+                        return "WAIT 아직 처리 전";
+                    int otherHp = ((PlayerState)states[actor]).Hp;
+                    return (hp < 100 && otherHp == hp ? "OK" : "FAIL") + " 물귀신 — 내 HP " + hp + " · 고른 사람 HP " + otherHp + " · 카운터 버림 더미";
+                }
+                if (discard.Any(c => c.InstanceId == SkipProbeInstance && c.CardId == 2002))
+                {
+                    // 2002 — 막힌 카드는 버림 더미로(반환 아님), 내가 쓴 사람에게 다시 써서 쓴 사람만 피해를 받는다
+                    bool blocked = discard.Any(c => c.InstanceId == SkipProbeInstance + 1);
+                    if (!blocked && pending)
+                        return "WAIT 아직 처리 전";
+                    int userHp = ((PlayerState)states[actor]).Hp;
+                    return (blocked && !returned && hp == 100 && userHp < 100 ? "OK" : "FAIL") + " 반사 — 막힌 카드 " + (blocked ? "버림 더미로" : "버려지지 않음") + " · 내 HP " + hp + " · 쓴 사람 HP " + userHp;
+                }
+                if (discard.Any(c => c.InstanceId == SkipProbeInstance && c.CardId == 2021))
+                {
+                    // 2021 — 막힌 카드는 버림 더미로(반환 아님), 나는 피해 없음
+                    bool blocked = discard.Any(c => c.InstanceId == SkipProbeInstance + 1);
+                    if (!blocked && pending)
+                        return "WAIT 아직 처리 전";
+                    return (blocked && !returned && hp == 100 ? "OK" : "FAIL") + " 막힌 카드 " + (blocked ? "버림 더미로" : "버려지지 않음") + " · 카운터 버림 더미 · 내 HP " + hp;
+                }
+                return (returned && spent && hp == 100 ? "OK" : "FAIL") + " 막힌 카드 " + (returned ? "쓴 사람 손패로" : "돌아가지 않음") + " · 카운터 " + (spent ? "버림 더미" : "버려지지 않음") + " · 내 HP " + hp;
             }
             case "after":
             {
@@ -1129,6 +1331,18 @@ public static class MultiTest
         var entries = (List<HistoryEntry>)typeof(HistoryPresenter).GetField("_entries", Private).GetValue(history);
         int count = entries.Count(e => e.Text == text);
         return count > 0 ? "OK 기록 「" + text + "」 " + count + "줄" : "WAIT 기록에 「" + text + "」 없음 (" + entries.Count + "줄)";
+    }
+
+    /// <summary>기록 서랍에 그 글자가 든 줄이 있는가 — 카드 이름 · 사람 이름이 섞인 줄 (카운터 기록 줄).</summary>
+    public static string HistoryHasPart(string text)
+    {
+        HistoryPresenter history = Object.FindFirstObjectByType<HistoryPresenter>();
+        if (history == null)
+            return "WAIT 게임 화면 아님";
+
+        var entries = (List<HistoryEntry>)typeof(HistoryPresenter).GetField("_entries", Private).GetValue(history);
+        HistoryEntry found = entries.LastOrDefault(e => e.Text != null && e.Text.Contains(text));
+        return found != null ? "OK 기록 「" + found.Text + "」" : "WAIT 기록에 「" + text + "」 이 든 줄 없음 (" + entries.Count + "줄)";
     }
 
     /// <summary>지금 방을 나간다 (어느 씬에서든).</summary>
@@ -1215,8 +1429,8 @@ public static class MultiTest
         if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
         SessionState.SetString(ChoiceResultKey, "WAIT 고르기 시작 전");
 
-        Action<int, int, int, int, int, double, double> onStarted = null;
-        onStarted = (actor, user, cardId, handCount, damage, startsAt, deadline) =>
+        Action<int, int, int, int, int, double, double, int> onStarted = null;
+        onStarted = (actor, user, cardId, handCount, damage, startsAt, deadline, kind) =>
         {
             Chapchu.Network.Events.GameEvents.OnChoiceStarted -= onStarted;
             bool mine = actor == PhotonNetwork.LocalPlayer.ActorNumber;
@@ -1264,8 +1478,11 @@ public static class MultiTest
 
     public static string ChoiceResult() => SessionState.GetString(ChoiceResultKey, "WAIT 준비 안 됨");
 
+    // step 은 「이름」 또는 「이름|값」 (devmode|암호)
     public static string Ui(string step)
     {
+        string arg = step.Contains("|") ? step.Substring(step.IndexOf('|') + 1) : "";
+        step = step.Contains("|") ? step.Substring(0, step.IndexOf('|')) : step;
         string scene = SceneManager.GetActiveScene().name;
         switch (step)
         {
@@ -1350,6 +1567,8 @@ public static class MultiTest
                 Call(presenter, CreateRoomRequestedMethod);
                 return "OK 방 만들기";
             }
+            case "devmode":
+                return DevModeCheck(arg);
             case "leave":
             {
                 RoomPresenter room = Object.FindFirstObjectByType<RoomPresenter>();
@@ -1363,6 +1582,67 @@ public static class MultiTest
             default:
                 return "OK " + scene;
         }
+    }
+
+    // 개발자 모드 (14-lobby-ui 3절 #6 · 17 5-4) — 잠김 → 버전 글자 5번 → 암호 창 → 틀림 → (암호가 있으면) 맞음 → 풀림 → 다시 5번 → 잠김.
+    // 암호는 저장소에 두지 않는다 — run.sh 가 환경 변수 CHAPCHU_DEV_PASSWORD 로 넘긴다. 없으면 맞는 암호 단계는 건너뛴다
+    private static string DevModeCheck(string password)
+    {
+        var home = Object.FindFirstObjectByType<LobbyHomeView>();
+        var settings = Object.FindFirstObjectByType<LobbySettingsPopupView>(FindObjectsInactive.Include);
+        var modal = Object.FindFirstObjectByType<LobbyModalView>(FindObjectsInactive.Include);
+        var account = Object.FindFirstObjectByType<LobbyAccountPresenter>();
+        if (home == null || settings == null || modal == null || account == null)
+            return "WAIT 로비 아님 (" + SceneManager.GetActiveScene().name + ")";
+
+        string Locks()
+        {
+            var parts = new List<string>();
+            foreach (string name in new[] { "solo", "create", "code" })
+            {
+                var button = (UnityEngine.UI.Button)typeof(LobbyHomeView).GetField(name + "Button", Private).GetValue(home);
+                var icon = (UnityEngine.UI.Image)typeof(LobbyHomeView).GetField(name + "Icon", Private).GetValue(home);
+                parts.Add(name + (button.interactable ? "=열림" : "=잠김") + "(" + icon.sprite.name + ")");
+            }
+            return string.Join(" ", parts);
+        }
+
+        void TapVersion()
+        {
+            for (int i = 0; i < 5; i++)
+                Call(settings, "HandleVersionClicked");
+        }
+
+        Chapchu.Core.DevMode.TurnOff();
+        home.SetDevMode(false);
+        string locked = Locks();
+        if (locked.Contains("열림") || !locked.Contains("icon_lock"))
+            return "FAIL 개발자 모드 꺼짐인데 " + locked;
+
+        TapVersion();
+        if (!modal.IsInputOpen || modal.InputKind != LobbyInputKind.DevPassword)
+            return "FAIL 버전 글자 5번에 암호 창이 뜨지 않음";
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, "틀린-암호" });
+        string error = ((TMP_Text)typeof(LobbyModalView).GetField("errorText", Private).GetValue(modal)).text;
+        if (!modal.IsInputOpen || error.Length == 0 || Chapchu.Core.DevMode.IsOn)
+            return "FAIL 틀린 암호가 받아들여짐 (창 " + modal.IsInputOpen + " · 오류 「" + error + "」)";
+
+        if (string.IsNullOrEmpty(password))
+        {
+            modal.HideInput();
+            return "OK 잠김 " + locked + " · 암호 창 · 틀린 암호 「" + error + "」 (맞는 암호 단계는 건너뜀 — CHAPCHU_DEV_PASSWORD 없음)";
+        }
+
+        account.GetType().GetMethod("HandleInputSubmitted", Private).Invoke(account, new object[] { LobbyInputKind.DevPassword, password });
+        string opened = Locks();
+        if (modal.IsInputOpen || !Chapchu.Core.DevMode.IsOn || opened.Contains("잠김") || opened.Contains("icon_lock"))
+            return "FAIL 맞는 암호 뒤 " + opened;
+
+        TapVersion();
+        string relocked = Locks();
+        bool off = !Chapchu.Core.DevMode.IsOn && !relocked.Contains("열림");
+        return (off ? "OK " : "FAIL ") + "잠김 → 틀림 「" + error + "」 → 풀림 " + opened + " → 다시 5번 → " + relocked;
     }
 
     // ── 규칙 계층만 (네트워크 없음) ──
@@ -1451,7 +1731,7 @@ public static class MultiTest
         var names = new (string raw, string shown)[]
         {
             ("배고픈찹츄42", "배고픈찹츄42"), ("Player#2", "Player#2"), ("<b>방장</b><size=200>", "b방장/bsize=200"),
-            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength)),
+            ("a​b‮c\nd", "abcd"), ("  <>  ", ""), (new string('가', 40), new string('가', NicknameValidator.MaxLength / 2)), // 한글은 폭 2 (12-title 4-2)
             (new string('a', NicknameValidator.MaxLength - 1) + "\U0001F600", new string('a', NicknameValidator.MaxLength - 1)),
         };
         var badNames = names.Where(n => NicknameValidator.ForDisplay(n.raw) != n.shown).Select(n => NicknameValidator.ForDisplay(n.raw)).ToList();
@@ -2359,17 +2639,1240 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3 };
-            Check(ids.Length == 45 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 45장 (묶음 1 ~ 8, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2 };
+            Check(ids.Length == 65 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 65장 (행동 45 + 카운터 20, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
                 Card c = mainCards.First(x => x.CardId == cardId);
-                return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition);
+                return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 45)
+            if (ids.Length == 65)
             {
+                // ── 카운터 묶음 5 (11-card-list 1-3) — 2005 묻고 따블로 가 ──
+                // 차례인 사람의 행동 카드 ← O2 의 2003 진짜 할거야? ← O1 의 따블 → 2003 무효 · 행동 카드 2배. 20초까지 돌린 사건을 돌려준다
+                List<GameEvent> Doubled(ChainTable t, Card action, Card block, Card dbl, params int[] targets)
+                {
+                    t.PlayCard(t.Turn, action, targets);
+                    t.At(2);
+                    t.Counter(t.O2, block);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    var events = t.Counter(t.O1, dbl).ToList();
+                    events.AddRange(t.Run(20));
+                    return events;
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005)), early = t.Give(t.O2, Real(2005)), hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, early)) == RejectCode.CannotReact, "2005 행동 카드에는 거절 9 (카운터에만)");
+                    t.Counter(t.O2, block);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    Check(t.Code(t.Counter(t.O2, early)) == RejectCode.CannotReact, "2005 내 카운터에는 거절 9");
+                    t.Counter(t.O1, dbl);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 60 && !t.Hand(t.Turn).Contains(hit) && !t.Hand(t.O2).Contains(block), $"2005 묻고 따블로 가 — 2003 무효(반환 없음) · 1001 피해 20 → 40 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 30);
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    Doubled(t, t.Give(t.Turn, Real(1006)), block, dbl, t.O1);
+                    Check(t.Hp(t.O1) == 70, $"2005 회복 20 → 40 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 0);
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    Card roll = t.Give(t.Turn, id => new Card(id, 1016, CardType.Action, TargetType.Self, new CardEffect[] { new DrawEffect { subject = EffectSubject.Self, count = 2, randomMax = 3 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+                    int drawn = Doubled(t, roll, block, dbl).OfType<CardDrawn>().Count(e => e.Actor == t.Turn);
+                    Check(drawn == 4 || drawn == 6, $"2005 굴린 장수(2 ~ 3)도 2배 — {drawn}장");
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    int o1Hand = t.HandCount(t.O1) - 1, turnHand = t.HandCount(t.Turn);
+                    Doubled(t, t.Give(t.Turn, Real(1002)), block, dbl, t.O1);
+                    Check(t.HandCount(t.O1) == o1Hand - 2 && t.HandCount(t.Turn) == turnHand + 2, $"2005 빼앗기 1 → 2장 (대상 {t.HandCount(t.O1)} · 쓴 사람 {t.HandCount(t.Turn)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    Doubled(t, t.Give(t.Turn, Real(1013)), block, dbl);
+                    Check(t.HandCount(t.O1) == 10 && t.HandCount(t.O2) == 10, $"2005 1013 기억 삭제 — 다시 뽑기 5 → 10장 (사용자 2026-11-23) ({t.HandCount(t.O1)} · {t.HandCount(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    Doubled(t, t.Give(t.Turn, Real(1005)), block, dbl, t.O1);
+                    Check(t.Hp(t.O1) == 2 && t.Hp(t.Turn) == 2, $"2005 1005 드롭킥 — 피해 98 · 못 쓰러뜨려 반동도 98 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.Turn)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 8); // + 따블 → 낼 때 9장으로 최다, 따블을 낸 뒤 8장
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    int turnHand = t.HandCount(t.Turn), o2Hand = t.HandCount(t.O2) - 1;
+                    Doubled(t, t.Give(t.Turn, Real(1018)), block, dbl);
+                    Check(t.HandCount(t.O1) == 4 && t.HandCount(t.Turn) == turnHand + 2 && t.HandCount(t.O2) == o2Hand + 2, $"2005 1018 무야호 — 1장씩 → 2장씩 (준 사람 {t.HandCount(t.O1)} · {t.HandCount(t.Turn)} · {t.HandCount(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    t.PutInDiscard(ChainTable.Hit); t.PutInDiscard(ChainTable.Hit); t.PutInDiscard(ChainTable.Hit);
+                    int taken = Doubled(t, t.Give(t.Turn, Real(1009)), block, dbl).OfType<DiscardTaken>().Count(e => e.Actor == t.Turn);
+                    Check(taken == 2, $"2005 1009 아 맞다! — 맨 위부터 2장 ({taken}장)");
+                }
+                {
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    t.GiveTrap(t.O1, ChainTable.TrapDying); t.GiveTrap(t.O1, ChainTable.TrapDying); t.GiveTrap(t.O1, ChainTable.TrapDying);
+                    Doubled(t, t.Give(t.Turn, Real(1004)), block, dbl, t.O1);
+                    Check(t.TrapCount(t.O1) == 1, $"2005 1004 파헤치기 — 함정 1 → 2장 파괴 (남은 함정 {t.TrapCount(t.O1)})");
+                }
+                {
+                    // 1019 — 80 → 160 피해. 「전부 버리기」 는 숫자가 없어 그대로
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, block);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.O1, dbl);
+                    ChoiceStarted asked = t.RunUntil<ChoiceStarted>(30);
+                    if (asked != null)
+                        t.Server.Choose(t.O1, DiscardOrDamageEffect.TakeDamage);
+                    Check(asked != null && asked.Damage == 160 && t.Hp(t.O1) == 0, $"2005 1019 목표 조준 — 고르기 판의 피해 160 · 고르면 HP 0 (알림 {asked?.Damage} · ♥{t.Hp(t.O1)})");
+                }
+                {
+                    // 숫자가 없는 카드 — 무효화만
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005));
+                    var events = Doubled(t, t.Give(t.Turn, Real(1020)), block, dbl);
+                    Check(events.OfType<TurnSkipMarked>().Count() == 1, "2005 숫자 없는 카드(1020 얼음!) — 무효화만 · 건너뛰기는 1턴 그대로");
+                }
+                {
+                    // 따블 위에 따블 — 아래 따블 무효 · 그 아래 카운터(칼집)가 2배: 뽑기 1 → 2, 피해 감소 40 은 그대로. 1001 은 2배가 아니다
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 2);
+                    Card knife = t.Give(t.O1, Real(2016)), dbl1 = t.Give(t.O2, Real(2005)), dbl2 = t.Give(t.Turn, Real(2005));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, knife);
+                    t.At(2 + (ChainTable.Reveal + 0.1));
+                    t.Counter(t.O2, dbl1);
+                    t.At(2 + (ChainTable.Reveal + 0.1) * 2);
+                    bool played = t.Code(t.Counter(t.Turn, dbl2)) == 0;
+                    var events = t.Run(30);
+                    Check(played && t.Hp(t.O1) == 100 && events.OfType<CardDrawn>().Count(e => e.Actor == t.O1) == 2,
+                        $"2005 따블 위에 따블 — 아래 따블 무효 · 칼집 뽑기 2장 · 감소 40 그대로 · 1001 은 20 그대로 (♥{t.Hp(t.O1)} · 손패 {t.HandCount(t.O1)})");
+                }
+                {
+                    // 침착이 2배 — 회복 10 → 20, 감소 20 은 그대로
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 50);
+                    Card calm = t.Give(t.O2, Real(2001)), dbl1 = t.Give(t.O1, Real(2005)), dbl2 = t.Give(t.Turn, Real(2005));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)));
+                    t.At(2);
+                    t.Counter(t.O2, calm);
+                    t.At(2 + (ChainTable.Reveal + 0.1));
+                    t.Counter(t.O1, dbl1);
+                    t.At(2 + (ChainTable.Reveal + 0.1) * 2);
+                    t.Counter(t.Turn, dbl2);
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 50, $"2005 침착이 2배 — 1017 의 40 − 20(그대로) = 20 피해 · 회복 20 (♥{t.Hp(t.O1)} · 낸 사람 50 − 20 + 20 = ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 으르렁이 2배 — 벌칙 2 → 4장 · 대가 1 → 2장(한 장씩 두 번 고른다)
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 5);
+                    t.SetHandSize(t.O1, 3);
+                    Card growl = t.Give(t.O1, Real(2021)), dbl1 = t.Give(t.O2, Real(2005)), dbl2 = t.Give(t.Turn, Real(2005));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    t.At(2 + (ChainTable.Reveal + 0.1));
+                    t.Counter(t.O2, dbl1);
+                    t.At(2 + (ChainTable.Reveal + 0.1) * 2);
+                    t.Counter(t.Turn, dbl2);
+                    ChoiceStarted first = t.RunUntil<ChoiceStarted>(40);
+                    int turnAfterPenalty = t.HandCount(t.Turn);
+                    double firstDeadline = t.Server.OpenChoiceDeadline();
+                    t.Run(t.Now + 1); // 두 고르기의 마감이 달라지게
+                    var again = first != null ? t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId).ToList() : new List<GameEvent>();
+                    bool second = again.OfType<ChoiceStarted>().Any(c => c.Actor == t.O1 && c.Kind == ChoiceKind.HandCard);
+                    // 앞 고르기에 보낸 늦은 요청(그 고르기의 마감을 실어 온다)은 두 번째 고르기의 답으로 받지 않는다
+                    bool staleRefused = second && t.Code(t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId, firstDeadline)) == RejectCode.NotChoosing && t.HandCount(t.O1) == 2;
+                    Check(staleRefused, $"2배가 된 대가 — 앞 고르기에 보낸 늦은 요청은 거절(코드 20) · 손패 그대로({t.HandCount(t.O1)})");
+                    var rest = second ? t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId).ToList() : new List<GameEvent>();
+                    rest.AddRange(t.Run(t.Now + 10));
+                    Check(first != null && turnAfterPenalty == 1 && second && !rest.OfType<ChoiceStarted>().Any() && t.HandCount(t.O1) == 1 && t.Hp(t.O1) == 100,
+                        $"2005 으르렁이 2배 — 벌칙 4장(쓴 사람 손패 {turnAfterPenalty}) · 대가를 두 번 고름(손패 {t.HandCount(t.O1)}) · 막기 그대로(♥{t.Hp(t.O1)})");
+                }
+                {
+                    // 따블이 알아로 무효 — 2배도 없고 아래 카운터(2003)가 그대로 처리된다. 알아 위에는 아무도 못 낸다
+                    var t = new ChainTable();
+                    Card block = t.Give(t.O2, Real(2003)), dbl = t.Give(t.O1, Real(2005)), know = t.Give(t.O2, Real(2014)), late = t.Give(t.Turn, Real(2005));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, block);
+                    t.At(2 + (ChainTable.Reveal + 0.1));
+                    t.Counter(t.O1, dbl);
+                    t.At(2 + (ChainTable.Reveal + 0.1) * 2);
+                    t.Counter(t.O2, know);
+                    t.At(2 + (ChainTable.Reveal + 0.1) * 3);
+                    bool refused = t.Code(t.Counter(t.Turn, late)) != 0;
+                    t.Run(30);
+                    Check(refused && t.Hp(t.O1) == 100 && t.Hand(t.Turn).Contains(hit), $"2005 따블이 무효되면 2배 없음 — 2003 이 그대로 1001 을 무효 · 반환 (♥{t.Hp(t.O1)}) · 알아 위에는 못 낸다");
+                }
+                // ── 카운터 묶음 6 (11-card-list 1-3) — 2015 가로채기 · 2018 물귀신 ──
+                const double Second = 2 + ChainTable.Reveal + 0.1; // 두 번째 카운터를 낼 때
+                Card TwoHit(int id) => new Card(id, 1901, CardType.Action, TargetType.TwoOthers, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+                {
+                    // 대상 1명 — 다른 사람으로. 인원 수가 다르면 거절 5
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O1, Real(2015));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, grab)) == RejectCode.InvalidTarget && t.Code(t.Counter(t.O1, grab, t.O2, t.Turn)) == RejectCode.InvalidTarget, "2015 대상 0명 · 2명 → 거절 5 (아래 카드는 1명)");
+                    var played = t.Counter(t.O1, grab, t.O2);
+                    t.Run(20);
+                    Check(played.OfType<CardPlayed>().Any() && t.Hp(t.O1) == 100 && t.Hp(t.O2) == 80, $"2015 가로채기 — 1001 의 대상을 O2 로 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 쓴 사람 · 나도 고를 수 있다
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2015)), t.Turn);
+                    t.Run(20);
+                    var s = new ChainTable();
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O2, s.Give(s.O2, Real(2015)), s.O2);
+                    s.Run(20);
+                    Check(t.Hp(t.Turn) == 80 && t.Hp(t.O1) == 100 && s.Hp(s.O2) == 80 && s.Hp(s.O1) == 100, $"2015 새 대상 = 쓴 사람(♥{t.Hp(t.Turn)}) · 나(♥{s.Hp(s.O2)})");
+                }
+                {
+                    // 빼앗기 — 새 대상이 쓴 사람이면 불발. 대상 후보 조건(손패 1장 이상)은 새 대상에게 걸지 않는다 — 맞지 않으면 그 효과만 불발
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1002)), t.O1);
+                    int turnHand = t.HandCount(t.Turn);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2015)), t.Turn);
+                    t.Run(20);
+                    var s = new ChainTable();
+                    s.SetHandSize(s.O2, 0);
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1002)), s.O1);
+                    int sHand = s.HandCount(s.Turn);
+                    s.At(2);
+                    var played = s.Counter(s.O1, s.Give(s.O1, Real(2015)), s.O2);
+                    s.Run(20);
+                    Check(t.HandCount(t.Turn) == turnHand && t.HandCount(t.O1) == 6, $"2015 빼앗기를 쓴 사람에게 — 불발 (쓴 사람 {t.HandCount(t.Turn)} · 낸 사람 {t.HandCount(t.O1)})");
+                    Check(played.OfType<CardPlayed>().Any() && s.HandCount(s.Turn) == sHand && s.HandCount(s.O2) == 0 && s.HandCount(s.O1) == 6, "2015 손패 0장인 사람에게도 돌릴 수 있다 — 빼앗기만 불발 (사용자 2026-11-23)");
+                }
+                {
+                    // 고르지 않는 카드 · 카운터에는 못 낸다
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O1, Real(2015)), block = t.Give(t.O2, Real(2003));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)));
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, grab, t.Turn)) == RejectCode.CannotReact, "2015 대상이 자동인 카드(1017)에는 거절 9");
+                    t.Counter(t.O2, block);
+                    t.At(Second);
+                    Check(t.Code(t.Counter(t.O1, grab, t.Turn)) == RejectCode.CannotReact, "2015 카운터에는 거절 9 (행동 카드에만)");
+                }
+                {
+                    // 대상 2명 — 서로 다른 2명
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O1, Real(2015));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, TwoHit), t.O1, t.O2);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, grab, t.Turn)) == RejectCode.InvalidTarget && t.Code(t.Counter(t.O1, grab, t.Turn, t.Turn)) == RejectCode.InvalidTarget, "2015 아래 카드가 2명 — 1명 · 같은 사람 둘은 거절 5");
+                    t.Counter(t.O1, grab, t.Turn, t.O1);
+                    t.Run(20);
+                    Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 90 && t.Hp(t.O2) == 100, $"2015 대상 2명을 쓴 사람 · 나로 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 1005 드롭킥 — 반동 판정은 새 대상 기준
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 40);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1005)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2015)), t.O2);
+                    t.Run(20);
+                    var s = new ChainTable();
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1005)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O1, s.Give(s.O1, Real(2015)), s.O2);
+                    s.Run(20);
+                    Check(t.Hp(t.O2) <= 0 && t.Hp(t.Turn) == 100 && t.Hp(t.O1) == 100, $"2015 + 1005 — 새 대상을 쓰러뜨리면 반동 없음 (쓴 사람 ♥{t.Hp(t.Turn)})");
+                    Check(s.Hp(s.O2) == 51 && s.Hp(s.Turn) == 51 && s.Hp(s.O1) == 100, $"2015 + 1005 — 새 대상을 못 쓰러뜨리면 반동 (♥{s.Hp(s.O2)} · 쓴 사람 ♥{s.Hp(s.Turn)})");
+                }
+                {
+                    // 알아(2014)로 무효 — 원래 대상 그대로
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2015)), t.O2);
+                    t.At(Second);
+                    t.Counter(t.O2, t.Give(t.O2, Real(2014)));
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, $"2015 가 무효되면 원래 대상 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 2018 물귀신 — 나는 그대로, 고른 사람도 같은 양. 준 사람 = 아래 카드를 쓴 사람
+                    var statsField = typeof(GameServer).GetField(ServerStatsField, Private);
+                    var t = new ChainTable();
+                    Card ghost = t.Give(t.O1, Real(2018)), other = t.Give(t.O2, Real(2018));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, other, t.Turn)) == RejectCode.CannotReact, "2018 피해를 받지 않는 사람은 거절 9");
+                    Check(t.Code(t.Counter(t.O1, ghost)) == RejectCode.InvalidTarget && t.Code(t.Counter(t.O1, ghost, t.O1)) == RejectCode.InvalidTarget, "2018 대상 없음 · 나 → 거절 5");
+                    t.Counter(t.O1, ghost, t.O2);
+                    t.Run(20);
+                    int dealt = ((Dictionary<int, int[]>)statsField.GetValue(t.Server))[t.Turn][(int)StatKind.Dealt];
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 80 && t.Hp(t.Turn) == 100, $"2018 물귀신 — 나 20 · 고른 사람도 20 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                    Check(dealt == 40, $"2018 같이 받은 피해를 준 사람 = 아래 카드를 쓴 사람 (가한 피해 {dealt})");
+                }
+                {
+                    // 후보 — 그 카드의 피해를 받는 사람은 못 고른다. 쓴 사람은 고를 수 있다
+                    var t = new ChainTable();
+                    Card ghost = t.Give(t.O1, Real(2018));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)));
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, ghost, t.O2)) == RejectCode.InvalidTarget, "2018 같은 피해를 받는 사람은 거절 5");
+                    t.Counter(t.O1, ghost, t.Turn);
+                    t.Run(20);
+                    Check(t.Hp(t.Turn) == 60 && t.Hp(t.O1) == 60 && t.Hp(t.O2) == 60, $"2018 전원 피해(1017) — 쓴 사람을 고름 (쓴 사람 ♥{t.Hp(t.Turn)})");
+
+                    // 모두가 받는 피해 — 고를 사람이 없어 낼 수 없다
+                    var s = new ChainTable();
+                    Card none = s.Give(s.O1, Real(2018));
+                    s.Play(s.Turn, ChainTable.Storm, null);
+                    s.At(2);
+                    Check(s.Code(s.Counter(s.O1, none, s.O2)) == RejectCode.CannotReact, "2018 후보가 없으면(모두가 받는 피해) 거절 9");
+                }
+                {
+                    // 1005 드롭킥 — 쓴 사람을 고를 수 있다(반동은 조건부). 고른 사람이 쓰러져도 「쓰러뜨림」 이 아니다 → 반동
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1005)), t.O1);
+                    t.At(2);
+                    var played = t.Counter(t.O1, t.Give(t.O1, Real(2018)), t.Turn);
+                    t.Run(20);
+                    Check(played.OfType<CardPlayed>().Any() && t.Hp(t.O1) == 51 && t.Hp(t.Turn) == 2, $"2018 + 1005 — 쓴 사람도 49 · 못 쓰러뜨려 반동 49 (♥{t.Hp(t.O1)} · 쓴 사람 ♥{t.Hp(t.Turn)})");
+                    var s = new ChainTable();
+                    s.SetHp(s.O2, 40);
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1005)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O1, s.Give(s.O1, Real(2018)), s.O2);
+                    s.Run(20);
+                    Check(s.Hp(s.O2) <= 0 && s.Hp(s.O1) == 51 && s.Hp(s.Turn) == 51, $"2018 + 1005 — 고른 사람이 쓰러져도 쓰러뜨림이 아니다 · 반동 (쓴 사람 ♥{s.Hp(s.Turn)})");
+                }
+                {
+                    // 고른 사람이 물귀신 위에 칼집(2016) — 같이 받는 피해 20 − 40 = 0, 1장 뽑음. 나는 그대로
+                    var t = new ChainTable();
+                    Card knife = t.Give(t.O2, Real(2016));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2018)), t.O2);
+                    t.At(Second);
+                    int hand = t.HandCount(t.O2);
+                    var played = t.Counter(t.O2, knife);
+                    t.Run(20);
+                    Check(played.OfType<CardPlayed>().Any() && t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100 && t.HandCount(t.O2) == hand, $"2018 위에 칼집 — 고른 사람은 피해 0 · 1장 뽑음 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)} · 손패 {t.HandCount(t.O2)})");
+                }
+                {
+                    // 물귀신 위에 물귀신 — 고른 사람이 다시 쓴 사람을 끌어들인다
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2018)), t.O2);
+                    t.At(Second);
+                    t.Counter(t.O2, t.Give(t.O2, Real(2018)), t.Turn);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 80 && t.Hp(t.Turn) == 80, $"2018 위에 2018 — 세 사람 모두 20 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 1019 목표 조준 — 낼 수 있다. 피해를 고르면 같이, 전부 버리기를 고르면 없다
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                    t.At(2);
+                    var played = t.Counter(t.O1, t.Give(t.O1, Real(2018)), t.O2);
+                    if (t.RunUntil<ChoiceStarted>(30) != null)
+                        t.Server.Choose(t.O1, DiscardOrDamageEffect.TakeDamage);
+                    var s = new ChainTable();
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1019)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O1, s.Give(s.O1, Real(2018)), s.O2);
+                    if (s.RunUntil<ChoiceStarted>(30) != null)
+                        s.Server.Choose(s.O1, DiscardOrDamageEffect.DiscardAll);
+                    Check(played.OfType<CardPlayed>().Any() && t.Hp(t.O1) == 20 && t.Hp(t.O2) == 20, $"2018 + 1019 — 피해를 고르면 같이 80 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                    Check(s.Hp(s.O1) == 100 && s.Hp(s.O2) == 100 && s.HandCount(s.O1) == 0, $"2018 + 1019 — 전부 버리기를 고르면 같이 받는 피해도 없다 (♥{s.Hp(s.O2)})");
+                }
+                {
+                    // 알아(2014)로 무효
+                    var t = new ChainTable();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2018)), t.O2);
+                    t.At(Second);
+                    t.Counter(t.O2, t.Give(t.O2, Real(2014)));
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 100, $"2018 이 무효되면 나만 받는다 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 봇 (18-bot 7-4) — 대상은 찹츄 → 손패 많은 → HP 낮은 상대. 2015 는 나를 고르지 않는다
+                    CardPlayed BotCounter(int counterId, out ChainTable table)
+                    {
+                        double now = 0;
+                        var t = new ChainTable(() => now);
+                        table = t;
+                        t.Hand(t.O1).RemoveAll(c => c.Type == CardType.Counter);
+                        t.Give(t.O1, Real(counterId));
+                        t.Give(t.O2, Real(1001));
+                        t.Give(t.O2, Real(1001)); // O2 의 손패가 가장 많다
+                        var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        var events = new List<GameEvent>();
+                        for (now = 0; now < ChainTable.Reveal + ReactionSeconds - 0.1; now += 0.1)
+                            events.AddRange(driver.Tick());
+                        return events.OfType<CardPlayed>().FirstOrDefault();
+                    }
+                    CardPlayed ghost = BotCounter(2018, out ChainTable g), grab = BotCounter(2015, out ChainTable r);
+                    Check(ghost != null && ghost.CardId == 2018 && ghost.Targets.SequenceEqual(new[] { g.O2 }), "봇의 2018 물귀신 — 손패가 많은 상대를 고름");
+                    Check(grab != null && grab.CardId == 2015 && grab.Targets.SequenceEqual(new[] { r.O2 }), "봇의 2015 가로채기 — 손패가 많은 상대에게 (나를 고르지 않는다)");
+
+                    // 나에게 이로운 효과뿐인 카드(1006 회복)에는 카운터를 내지 않는다 — 피해 카드에는 그대로 낸다 (18-bot 7-4, 사용자 2026-11-24)
+                    bool BotCounters(int actionId)
+                    {
+                        double now = 0;
+                        var t = new ChainTable(() => now);
+                        t.Hand(t.O1).RemoveAll(c => c.Type == CardType.Counter);
+                        t.Give(t.O1, Real(2002));
+                        t.Give(t.O1, Real(2021));
+                        t.SetHp(t.O1, 50);
+                        var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(actionId)), t.O1);
+                        var events = new List<GameEvent>();
+                        for (now = 0; now < ChainTable.Reveal + ReactionSeconds - 0.1; now += 0.1)
+                            events.AddRange(driver.Tick());
+                        return events.OfType<CardPlayed>().Any(e => e.Actor == t.O1);
+                    }
+                    Check(!BotCounters(1006) && BotCounters(1001), "봇 — 회복뿐인 카드(1006)에는 반사 · 으르렁을 내지 않고, 피해 카드(1001)에는 낸다");
+
+                    // 반사만 쥔 봇 — 1011(HP 바꾸기)에는 내지 않고, 1005(반동)는 쓴 사람이 그 49 로 쓰러질 때만 낸다 (18-bot 7-4, 사용자 2026-11-26)
+                    bool BotReflects(int actionId, int userHp)
+                    {
+                        double now = 0;
+                        var t = new ChainTable(() => now);
+                        t.Hand(t.O1).RemoveAll(c => c.Type == CardType.Counter);
+                        t.Give(t.O1, Real(2002));
+                        t.SetHp(t.Turn, userHp);
+                        var driver = new BotDriver(t.Server, new[] { t.O1 }, new System.Random(1), () => now);
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(actionId)), t.O1);
+                        var events = new List<GameEvent>();
+                        for (now = 0; now < ChainTable.Reveal + ReactionSeconds - 0.1; now += 0.1)
+                            events.AddRange(driver.Tick());
+                        return events.OfType<CardPlayed>().Any(e => e.Actor == t.O1 && e.CardId == 2002);
+                    }
+                    bool swap = BotReflects(1011, 30), kickHigh = BotReflects(1005, 100), kickLow = BotReflects(1005, 49), bite = BotReflects(1001, 100);
+                    Check(!swap && !kickHigh && kickLow && bite, $"봇의 2002 반사 — 1011 안 냄({!swap}) · 1005 는 쓴 사람 ♥100 이면 안 냄({!kickHigh}) · ♥49 면 냄({kickLow}) · 1001 냄({bite})");
+                }
+
+                {
+                    // 2021 으르렁 — 아래 카드를 쓴 사람이 반응 시간 중에 나가도 낼 수 있다: 무효 · 대가는 그대로, 벌칙만 없다 (사용자 2026-11-25)
+                    var t = new ChainTable();
+                    int hand = t.HandCount(t.O1);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Server.RemovePlayer(t.Turn);
+                    List<GameEvent> events = t.Counter(t.O1, growl).ToList();
+                    bool played = events.OfType<CardPlayed>().Any(e => e.CardId == 2021 && e.Targets.Length == 0);
+                    events.AddRange(t.Run(30));
+                    Check(played && events.OfType<CardNegated>().Any(e => e.CardId == 1001) && t.Hp(t.O1) == 100 && t.HandCount(t.O1) == hand - 1,
+                        $"2021 쓴 사람이 나간 뒤에도 낼 수 있다 — 무효 · 대가 1장, 벌칙 없음 (♥{t.Hp(t.O1)} · 손패 {hand}→{t.HandCount(t.O1)})");
+                }
+
+                // ── 카운터 묶음 8 (11-card-list 1-3 · 03-turn 7절) — 2013 새치기 ──
+                {
+                    // 차례인 사람이 1001 을 O1 에게 내고 taker 가 새치기 — until 초까지 돌린 사건 (새치기를 낸 요청의 사건부터)
+                    List<GameEvent> Cut(ChainTable x, int taker, double until)
+                    {
+                        Card cut = x.Give(taker, Real(2013));
+                        x.PlayCard(x.Turn, x.Give(x.Turn, Real(1001)), x.O1);
+                        x.At(2);
+                        List<GameEvent> events = x.Counter(taker, cut).ToList();
+                        events.AddRange(x.Run(until));
+                        return events;
+                    }
+                    string Starts(List<GameEvent> events) => string.Join(" ", events.OfType<TurnStarted>().Take(3).Select(e => e.Actor));
+                    {
+                        // 막고 · 대가 1장 · 바로 내 턴 · 그 뒤는 내 다음 사람부터 (원래 순서로 돌아가지 않는다)
+                        var t = new ChainTable();
+                        int hand = t.HandCount(t.O2);
+                        List<GameEvent> events = Cut(t, t.O2, 70);
+                        Check(events.OfType<CardPlayed>().Any(e => e.CardId == 2013) && events.OfType<CardNegated>().Any(e => e.CardId == 1001) && t.Hp(t.O1) == 100,
+                            $"2013 새치기 — 행동 카드를 막는다 (대상 ♥{t.Hp(t.O1)})");
+                        Check(events.OfType<ChoiceStarted>().Any(e => e.Actor == t.O2 && e.Kind == ChoiceKind.HandCard) && t.HandCount(t.O2) == hand - 1,
+                            $"2013 대가 — 손패 1장을 골라 버린다 (손패 {hand}→{t.HandCount(t.O2)})");
+                        Check(Starts(events) == $"{t.O2} {t.Turn} {t.O1}", $"2013 다음 턴은 새치기를 낸 사람 · 그 뒤는 그 사람 다음부터 (턴 {Starts(events)} · 기대 {t.O2} {t.Turn} {t.O1})");
+                    }
+                    {
+                        // 건너뛴 사람의 「다음 턴」 상태는 쓰이지 않고 남는다 — 다음 실제 차례에 쓰인다
+                        var t = new ChainTable();
+                        t.State(t.O1).SkipNextTurn = true;
+                        t.State(t.O1).BlockActionNextTurn = true;
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        bool kept = t.Server.CurrentTurnActor == t.O2 && t.State(t.O1).SkipNextTurn && t.State(t.O1).BlockActionNextTurn && !events.OfType<TurnSkipped>().Any();
+                        events = t.Run(70);
+                        Check(kept && events.OfType<TurnSkipped>().Any(e => e.Actor == t.O1) && !t.State(t.O1).SkipNextTurn && t.State(t.O1).BlockActionNextTurn,
+                            "2013 건너뛴 사람의 턴 스킵 · 행동 금지는 남는다 — 스킵은 다음 실제 차례에 쓰인다");
+                    }
+                    {
+                        // 바로 다음 사람이 내면 순서 그대로 · 역방향에서도 낸 사람의 다음부터
+                        var t = new ChainTable();
+                        List<GameEvent> events = Cut(t, t.O1, 70);
+                        var s = new ChainTable();
+                        typeof(GameServer).GetField("_reversed", Private).SetValue(s.Server, true); // 역방향 — 보통이면 Turn → O2 → O1
+                        List<GameEvent> back = Cut(s, s.O1, 70);
+                        Check(Starts(events) == $"{t.O1} {t.O2} {t.Turn}", $"2013 바로 다음 사람이 내면 순서 그대로 (턴 {Starts(events)})");
+                        Check(Starts(back) == $"{s.O1} {s.Turn} {s.O2}", $"2013 역방향 — 새치기를 낸 사람부터 역방향으로 (턴 {Starts(back)} · 기대 {s.O1} {s.Turn} {s.O2})");
+                    }
+                    {
+                        // 새치기 턴은 보통 턴 — 대가로 딱 10장이 되면 찹츄 선언, 내 턴이 시작되며 승리
+                        var t = new ChainTable();
+                        t.SetHandSize(t.O2, GameServer.ChapchuHandCount + 1); // + 새치기 → 내고 11장 → 대가 뒤 10장
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
+                        Check(ended != null && ended.Winner == t.O2 && ended.Reason == GameEndReason.Chapchu && !events.OfType<TurnStarted>().Any(),
+                            $"2013 새치기 턴의 시작에 찹츄 판정 — 손패 10장이면 승리 (승자 P{ended?.Winner})");
+                    }
+                    {
+                        // 낸 사람에게 턴 스킵 — 새치기 턴이 건너뛰어지고(스킵은 쓰인다) 그 다음 사람에게
+                        var t = new ChainTable();
+                        t.State(t.O2).SkipNextTurn = true;
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        Check(events.OfType<TurnSkipped>().Any(e => e.Actor == t.O2) && !t.State(t.O2).SkipNextTurn && Starts(events) == $"{t.Turn}",
+                            $"2013 낸 사람에게 턴 스킵 — 건너뛰고 그 다음 사람 (턴 {Starts(events)} · 기대 {t.Turn})");
+                    }
+                    {
+                        // 새치기가 무효되면 버리기도 내 턴도 없다 · 내 카드 · 카운터 위에는 못 낸다
+                        var t = new ChainTable();
+                        int hand = t.HandCount(t.O2);
+                        Card cut = t.Give(t.O2, Real(2013)), mine = t.Give(t.Turn, Real(2013)), late = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        int own = t.Code(t.Counter(t.Turn, mine));
+                        List<GameEvent> events = t.Counter(t.O2, cut).ToList();
+                        t.At(2 + ChainTable.Reveal + 0.1);
+                        int onCounter = t.Code(t.Counter(t.Turn, late));
+                        events.AddRange(t.Counter(t.O1, ChainTable.Negate));
+                        events.AddRange(t.Run(40));
+                        Check(own == RejectCode.CannotReact && onCounter != 0, $"2013 내 카드 · 카운터 위에는 거절 (코드 {own} · {onCounter})");
+                        Check(events.OfType<CardNegated>().Any(e => e.CardId == 2013) && !events.OfType<ChoiceStarted>().Any() && t.HandCount(t.O2) == hand && t.Hp(t.O1) == 80
+                              && Starts(events).StartsWith($"{t.O1}"), $"2013 이 무효되면 버리기도 내 턴도 없다 (손패 {t.HandCount(t.O2)} · 대상 ♥{t.Hp(t.O1)} · 턴 {Starts(events)})");
+                    }
+                    {
+                        // 손패 0장이면 대가 없이 · 낸 사람이 턴 전에 나가면 그 자리의 다음 사람
+                        var t = new ChainTable();
+                        t.SetHandSize(t.O2, 0);
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        var s = new ChainTable();
+                        Card cut = s.Give(s.O2, Real(2013));
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                        s.At(2);
+                        s.Counter(s.O2, cut);
+                        bool choosing = s.RunUntil<ChoiceStarted>(30) != null;
+                        List<GameEvent> left = s.Server.RemovePlayer(s.O2).ToList();
+                        left.AddRange(s.Run(s.Now + 15));
+                        Check(!events.OfType<ChoiceStarted>().Any() && Starts(events).StartsWith($"{t.O2}"), $"2013 손패 0장 — 대가 없이 내 턴 (턴 {Starts(events)})");
+                        Check(choosing && Starts(left).StartsWith($"{s.Turn}"), $"2013 낸 사람이 턴 전에 나감 — 그 자리의 다음 사람 (턴 {Starts(left)} · 기대 {s.Turn})");
+                    }
+                    {
+                        // 막힌 사람의 턴 끝 처리(피폭)는 보통대로 — 그 뒤 새치기 턴
+                        var t = new ChainTable();
+                        typeof(GameServer).GetField("_restartCount", Private).SetValue(t.Server, 1); // 대소동 1번 뒤 — 턴이 끝날 때마다 피폭
+                        List<GameEvent> events = Cut(t, t.O2, 25);
+                        int fallout = events.FindIndex(e => e is FalloutChanged), start = events.FindIndex(e => e is TurnStarted);
+                        Check(fallout >= 0 && fallout < start && Starts(events) == $"{t.O2}" && new[] { t.Turn, t.O1, t.O2 }.All(a => t.Hp(a) == 99),
+                            $"2013 막힌 사람의 턴 끝 피폭 뒤에 새치기 턴 (턴 {Starts(events)} · ♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                    }
+                    {
+                        // 개판 — 실제로 진행된 턴만 센다: O1 의 턴 · 새치기 턴(Turn) · O1 의 턴으로 한 바퀴 (O2 는 그 바퀴에 턴이 없다)
+                        var t = new ChainTable();
+                        t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1021)));
+                        t.RunUntilTurn(t.O1, t.Now + 30);
+                        Card cut = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.O1, t.Give(t.O1, Real(1001)), t.O2);
+                        t.At(t.Now + 2);
+                        List<GameEvent> events = t.Counter(t.Turn, cut).ToList();
+                        for (double end = t.Now + 80; t.Now < end && !events.OfType<GaepanChanged>().Any(g => g.Left == 4);)
+                            events.AddRange(t.Run(t.Now + 0.1));
+                        int lap = events.FindIndex(e => e is GaepanChanged g && g.Left == 4);
+                        string before = string.Join(" ", events.Take(lap < 0 ? 0 : lap).OfType<TurnStarted>().Select(e => e.Actor));
+                        Check(lap >= 0 && before == $"{t.Turn} {t.O1}", $"2013 + 1021 — 실제로 진행된 턴만 센다 (한 바퀴까지 시작된 턴 {before} · 기대 {t.Turn} {t.O1})");
+                    }
+                    {
+                        // 스킵으로 건너뛰어진 새치기 턴도 개판에서 1턴 — O1 의 턴 · 스킵된 새치기 턴 · O2 의 턴으로 한 바퀴
+                        var t = new ChainTable();
+                        t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1021)));
+                        t.RunUntilTurn(t.O1, t.Now + 30);
+                        t.State(t.Turn).SkipNextTurn = true;
+                        Card cut = t.Give(t.Turn, Real(2013));
+                        t.PlayCard(t.O1, t.Give(t.O1, Real(1001)), t.O2);
+                        t.At(t.Now + 2);
+                        List<GameEvent> events = t.Counter(t.Turn, cut).ToList();
+                        for (double end = t.Now + 80; t.Now < end && !events.OfType<GaepanChanged>().Any(g => g.Left == 4);)
+                            events.AddRange(t.Run(t.Now + 0.1));
+                        int lap = events.FindIndex(e => e is GaepanChanged g && g.Left == 4);
+                        string before = string.Join(" ", events.Take(lap < 0 ? 0 : lap).OfType<TurnStarted>().Select(e => e.Actor));
+                        Check(lap >= 0 && events.OfType<TurnSkipped>().Any(e => e.Actor == t.Turn) && before == $"{t.O1}",
+                            $"2013 + 1021 — 스킵된 새치기 턴도 1턴으로 센다 (한 바퀴까지 시작된 턴 {before} · 기대 {t.O1})");
+                    }
+                }
+
+                // ── 2002 반사 (11-card-list 1-3, 사용자 2026-11-26) — 아래 행동 카드를 무효로 하고, 반사한 사람이 쓴 사람에게 다시 쓴다 ──
+                {
+                    var statsField = typeof(GameServer).GetField(ServerStatsField, Private);
+                    int Stat(ChainTable x, int actor, StatKind kind) => ((Dictionary<int, int[]>)statsField.GetValue(x.Server))[actor][(int)kind];
+                    int Dealt(ChainTable x, int actor) => Stat(x, actor, StatKind.Dealt);
+                    // 차례인 사람이 action 을 내고(대상 = targets) O1 이 반사 — 20초까지 돌린다. 낸 직후의 손패 장수를 돌려준다 (쓴 사람 · O1 · O2 · 반사가 나갔으면 1)
+                    int[] Reflected(ChainTable x, int actionId, params int[] targets)
+                    {
+                        Card mirror = x.Give(x.O1, Real(2002));
+                        x.PlayCard(x.Turn, x.Give(x.Turn, Real(actionId)), targets);
+                        x.At(2);
+                        bool ok = x.Counter(x.O1, mirror).OfType<CardPlayed>().Any();
+                        int[] hands = { x.HandCount(x.Turn), x.HandCount(x.O1), x.HandCount(x.O2), ok ? 1 : 0 };
+                        x.Run(20);
+                        return hands;
+                    }
+                    {
+                        // 피해 — 반사한 사람이 쓴 사람에게 다시 쓴다. 대상이 아닌 사람 · 내 카드에는 못 낸다. 낸 순간에는 아무 일도 없다 (체인에서 기다린다)
+                        var t = new ChainTable();
+                        Card mirror = t.Give(t.O1, Real(2002)), other = t.Give(t.O2, Real(2002)), mine = t.Give(t.Turn, Real(2002));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact && t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2002 대상이 아닌 사람 · 내 카드에는 거절 9");
+                        List<GameEvent> resolved = t.Counter(t.O1, mirror).ToList();
+                        Check(t.Hp(t.Turn) == 100 && t.Hp(t.O1) == 100 && !resolved.OfType<CardResolved>().Any(), "2002 를 낸 순간에는 효과가 없다 — 체인에서 반응 시간을 기다린다");
+                        resolved.AddRange(t.Run(20));
+                        CardResolved[] shown = resolved.OfType<CardResolved>().Where(e => e.CardId == 1001).ToArray();
+                        Check(t.Hp(t.Turn) == 80 && t.Hp(t.O1) == 100, $"2002 반사 — 1001 을 내가 쓴 사람에게 다시 쓴다 (쓴 사람 ♥{t.Hp(t.Turn)} · 나 ♥{t.Hp(t.O1)})");
+                        Check(Dealt(t, t.O1) == 20 && Dealt(t, t.Turn) == 0, $"2002 다시 쓴 피해를 준 사람 = 반사한 사람 (가한 피해 {Dealt(t, t.O1)} · 쓴 사람 {Dealt(t, t.Turn)})");
+                        Check(shown.Length == 1 && shown[0].Actor == t.O1 && shown[0].Targets.SequenceEqual(new[] { t.Turn }) && !resolved.OfType<CardNegated>().Any(),
+                            $"2002 처리 알림 — 1001 이 한 번, 쓴 사람 = 반사한 사람 · 대상 = 원래 쓴 사람 (알림 {shown.Length}번)");
+                        Check(Stat(t, t.O1, StatKind.Actions) == 0 && Stat(t, t.Turn, StatKind.Actions) == 1, $"2002 다시 쓴 것은 행동 카드 사용에 세지 않는다 (반사한 사람 {Stat(t, t.O1, StatKind.Actions)} · 쓴 사람 {Stat(t, t.Turn, StatKind.Actions)})");
+                        ChainDiscarded pile = resolved.OfType<ChainDiscarded>().FirstOrDefault();
+                        Check(pile != null && pile.CardIds.Count(id => id == 1001) == 1, "2002 반사된 카드는 버림 더미에 한 장만 간다");
+                    }
+                    {
+                        // 빼앗기 — 내가 쓴 사람의 카드를. 전원 카드는 반사한 사람 기준 전원
+                        var t = new ChainTable();
+                        int[] h = Reflected(t, 1002, t.O1);
+                        var s = new ChainTable();
+                        int[] g = Reflected(s, 1014);
+                        var u = new ChainTable();
+                        int[] k = Reflected(u, 1015, u.O1);
+                        Check(h[3] == 1 && t.HandCount(t.Turn) == h[0] - 1 && t.HandCount(t.O1) == h[1] + 1, $"2002 + 1002 — 내가 쓴 사람의 1장을 가져온다 (쓴 사람 {h[0]}→{t.HandCount(t.Turn)} · 나 {h[1]}→{t.HandCount(t.O1)})");
+                        Check(g[3] == 1 && s.HandCount(s.Turn) == g[0] - 1 && s.HandCount(s.O1) == g[1] + 2 && s.HandCount(s.O2) == g[2] - 1, $"2002 + 1014 — 내가 나를 뺀 모두에게서 1장씩 (쓴 사람 {g[0]}→{s.HandCount(s.Turn)} · 나 {g[1]}→{s.HandCount(s.O1)} · O2 {g[2]}→{s.HandCount(s.O2)})");
+                        Check(k[3] == 1 && u.Hp(u.Turn) == 90 && u.Hp(u.O1) == 100 && u.HandCount(u.O1) == k[1] + 1 && u.HandCount(u.Turn) == k[0] - 1, $"2002 + 1015 — 쓴 사람이 10 피해 · 내가 1장 (쓴 사람 ♥{u.Hp(u.Turn)} · 나 손패 {u.HandCount(u.O1)})");
+                    }
+                    {
+                        // 전원 대상 — 반사한 사람 기준 전원 (쓴 사람 + 나머지). 준 사람은 모두 반사한 사람
+                        var t = new ChainTable();
+                        Reflected(t, 1017);
+                        var s = new ChainTable();
+                        int[] g = Reflected(s, 1013);
+                        Check(t.Hp(t.Turn) == 60 && t.Hp(t.O1) == 100 && t.Hp(t.O2) == 60 && Dealt(t, t.O1) == 80 && Dealt(t, t.Turn) == 0,
+                            $"2002 + 1017 — 내가 나를 뺀 모두에게 40 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)} · 내가 준 피해 {Dealt(t, t.O1)} · 쓴 사람 {Dealt(t, t.Turn)})");
+                        Check(g[3] == 1 && s.HandCount(s.Turn) == 5 && s.HandCount(s.O1) == g[1] && s.HandCount(s.O2) == 5, $"2002 + 1013 — 나를 뺀 모두가 다시 뽑고 나는 그대로 (쓴 사람 {s.HandCount(s.Turn)} · 나 {s.HandCount(s.O1)} · O2 {s.HandCount(s.O2)})");
+                    }
+                    {
+                        // 턴 건너뛰기 · 행동 금지 · 회복 — 자동 대상 카드도 원래 쓴 사람에게
+                        var t = new ChainTable();
+                        Card mirror = t.Give(t.O1, Real(2002));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1020)));
+                        t.At(2);
+                        bool played = t.Counter(t.O1, mirror).OfType<CardPlayed>().Any();
+                        bool marked = t.Run(2 + ChainTable.Reveal + 6).OfType<TurnSkipMarked>().Any(e => e.Actor == t.Turn);
+                        var s = new ChainTable();
+                        Card mirror2 = s.Give(s.O1, Real(2002));
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1007)), s.O1);
+                        s.At(2);
+                        s.Counter(s.O1, mirror2);
+                        s.Run(2 + ChainTable.Reveal + 5.5);
+                        var u = new ChainTable();
+                        u.SetHp(u.Turn, 50);
+                        u.SetHp(u.O1, 50);
+                        Reflected(u, 1006, u.O1);
+                        Check(played && marked && !t.State(t.O1).SkipNextTurn, "2002 + 1020 — 쓴 사람이 1턴 건너뛴다");
+                        Check(s.State(s.Turn).BlockActionNextTurn && !s.State(s.O1).BlockActionNextTurn && !s.State(s.O1).ActionBlocked, "2002 + 1007 — 쓴 사람이 다음 턴 행동 카드를 못 쓴다");
+                        Check(u.Hp(u.Turn) == 70 && u.Hp(u.O1) == 50, $"2002 + 1006 — 회복도 쓴 사람이 (쓴 사람 ♥{u.Hp(u.Turn)} · 나 ♥{u.Hp(u.O1)})");
+                    }
+                    {
+                        // 1005 드롭킥 — 반동(불이익)은 다시 쓴 사람(반사한 사람)이 진다. 쓴 사람이 쓰러지면 반동 없음
+                        var t = new ChainTable();
+                        Reflected(t, 1005, t.O1);
+                        var s = new ChainTable();
+                        s.SetHp(s.Turn, 40);
+                        Reflected(s, 1005, s.O1);
+                        Check(t.Hp(t.Turn) == 51 && t.Hp(t.O1) == 51 && Dealt(t, t.O1) == 49 && Dealt(t, t.Turn) == 0, $"2002 + 1005 — 쓴 사람이 49 · 못 쓰러뜨려 반동 49 는 반사한 사람이 (쓴 사람 ♥{t.Hp(t.Turn)} · 나 ♥{t.Hp(t.O1)} · 내가 준 피해 {Dealt(t, t.O1)})");
+                        Check(s.Hp(s.Turn) <= 0 && s.Hp(s.O1) == 100 && Dealt(s, s.O1) == 40, $"2002 + 1005 — 쓴 사람이 쓰러지면 반동 없음 (쓴 사람 ♥{s.Hp(s.Turn)} · 나 ♥{s.Hp(s.O1)} · 준 피해 {Dealt(s, s.O1)})");
+                    }
+                    {
+                        // 1011 운명 뒤집기 — 다시 써도 같은 두 사람이 바꾼다 (예외 없음)
+                        var t = new ChainTable();
+                        t.SetHp(t.Turn, 30);
+                        t.SetHp(t.O1, 90);
+                        int[] h = Reflected(t, 1011, t.O1);
+                        Check(h[3] == 1 && t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 30, $"2002 + 1011 — HP 가 바뀐다 (쓴 사람 ♥{t.Hp(t.Turn)} · 나 ♥{t.Hp(t.O1)})");
+                    }
+                    {
+                        // 1018 무야호 — 대상(손패 최다)이 나일 때만. 쓴 사람이 나눠 주는 사람이 된다 · 받는 쪽은 못 낸다
+                        var t = new ChainTable();
+                        t.SetHandSize(t.O1, 9);
+                        Card mirror = t.Give(t.O1, Real(2002)), other = t.Give(t.O2, Real(2002));
+                        var played = t.PlayCard(t.Turn, t.Give(t.Turn, Real(1018)));
+                        int turnHand = t.HandCount(t.Turn), myHand = t.HandCount(t.O1) - 1, otherHand = t.HandCount(t.O2);
+                        t.At(2);
+                        bool aimed = played.OfType<CardPlayed>().Any(e => e.Targets.SequenceEqual(new[] { t.O1 }));
+                        Check(aimed && t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact, "2002 + 1018 — 받는 쪽은 거절 9 (대상이 아니다)");
+                        t.Counter(t.O1, mirror);
+                        t.Run(20);
+                        Check(t.HandCount(t.Turn) == turnHand - 2 && t.HandCount(t.O1) == myHand + 1 && t.HandCount(t.O2) == otherHand + 1, $"2002 + 1018 — 쓴 사람이 모두에게 1장씩 (쓴 사람 {turnHand}→{t.HandCount(t.Turn)} · 나 {myHand}→{t.HandCount(t.O1)} · O2 {otherHand}→{t.HandCount(t.O2)})");
+                    }
+                    {
+                        // 1019 목표 조준 — 쓴 사람이 고른다
+                        var t = new ChainTable();
+                        Card mirror = t.Give(t.O1, Real(2002));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                        t.At(2);
+                        t.Counter(t.O1, mirror);
+                        ChoiceStarted asked = t.RunUntil<ChoiceStarted>(30);
+                        bool refused = asked != null && t.Code(t.Server.Choose(t.O1, DiscardOrDamageEffect.TakeDamage)) != 0;
+                        if (asked != null)
+                            t.Server.Choose(t.Turn, DiscardOrDamageEffect.TakeDamage);
+                        Check(asked != null && asked.Actor == t.Turn && refused && t.Hp(t.Turn) == 20 && t.Hp(t.O1) == 100, $"2002 + 1019 — 쓴 사람이 고른다 · 80 피해 (고르는 사람 {asked?.Actor} · 쓴 사람 ♥{t.Hp(t.Turn)})");
+                    }
+                    {
+                        // 반사는 행동 카드에만 낸다 — 나를 노린 카운터(으르렁의 벌칙 · 물귀신 · 가로채기가 고른 사람) 위에는 거절 9
+                        var t = new ChainTable();
+                        Card mirror = t.Give(t.Turn, Real(2002));
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        t.Counter(t.O1, t.Give(t.O1, Real(2021)));
+                        t.At(Second);
+                        int growl = t.Code(t.Counter(t.Turn, mirror));
+                        var s = new ChainTable();
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                        s.At(2);
+                        s.Counter(s.O1, s.Give(s.O1, Real(2018)), s.O2);
+                        s.At(Second);
+                        int ghost = s.Code(s.Counter(s.O2, s.Give(s.O2, Real(2002))));
+                        var u = new ChainTable();
+                        u.PlayCard(u.Turn, u.Give(u.Turn, Real(1001)), u.O1);
+                        u.At(2);
+                        u.Counter(u.O1, u.Give(u.O1, Real(2015)), u.O2);
+                        u.At(Second);
+                        int grab = u.Code(u.Counter(u.O2, u.Give(u.O2, Real(2002))));
+                        Check(growl == RejectCode.CannotReact && ghost == RejectCode.CannotReact && grab == RejectCode.CannotReact, $"2002 카운터 위에는 거절 9 (으르렁 {growl} · 물귀신 {ghost} · 가로채기 {grab})");
+                    }
+                    {
+                        // 판 전체 상태를 바꾸는 카드에는 못 낸다
+                        string codes = string.Join(" · ", new[] { 1012, 1021, 1023, 1045 }.Select(id =>
+                        {
+                            var b = new ChainTable();
+                            Card mirror = b.Give(b.O1, Real(2002));
+                            bool played = b.PlayCard(b.Turn, b.Give(b.Turn, Real(id))).OfType<CardPlayed>().Any();
+                            b.At(2);
+                            return $"{id}:{(played ? b.Code(b.Counter(b.O1, mirror)) : -1)}";
+                        }));
+                        Check(codes == $"1012:{RejectCode.CannotReact} · 1021:{RejectCode.CannotReact} · 1023:{RejectCode.CannotReact} · 1045:{RejectCode.CannotReact}", $"2002 판 전체 카드에는 거절 9 ({codes})");
+                    }
+                    {
+                        // 반사가 무효되면 — 알아: 내가 그대로 받는다 / 따블: 내가 2배로 받는다
+                        var t = new ChainTable();
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        t.Counter(t.O1, t.Give(t.O1, Real(2002)));
+                        t.At(Second);
+                        t.Counter(t.O2, t.Give(t.O2, Real(2014)));
+                        t.Run(20);
+                        var s = new ChainTable();
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                        s.At(2);
+                        s.Counter(s.O1, s.Give(s.O1, Real(2002)));
+                        s.At(Second);
+                        s.Counter(s.O2, s.Give(s.O2, Real(2005)));
+                        s.Run(20);
+                        Check(t.Hp(t.O1) == 80 && t.Hp(t.Turn) == 100, $"2002 가 알아로 무효되면 내가 받는다 (♥{t.Hp(t.O1)} · 쓴 사람 ♥{t.Hp(t.Turn)})");
+                        Check(s.Hp(s.O1) == 60 && s.Hp(s.Turn) == 100, $"2002 가 따블로 막히면 내가 2배 (♥{s.Hp(s.O1)} · 쓴 사람 ♥{s.Hp(s.Turn)})");
+                    }
+                    {
+                        // 반응 시간 중에 빠진 사람 — 반사한 사람이 빠지면 카드는 무효로만 끝난다 / 쓴 사람이 빠지면 다시 쓴 카드가 불발이다
+                        var t = new ChainTable();
+                        t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                        t.At(2);
+                        List<GameEvent> gone = t.Counter(t.O1, t.Give(t.O1, Real(2002))).ToList();
+                        gone.AddRange(t.Server.RemovePlayer(t.O1));
+                        gone.AddRange(t.Run(20));
+                        var s = new ChainTable();
+                        s.PlayCard(s.Turn, s.Give(s.Turn, Real(1017)));
+                        s.At(2);
+                        s.Counter(s.O1, s.Give(s.O1, Real(2002)));
+                        s.Server.RemovePlayer(s.Turn);
+                        s.Run(20);
+                        Check(gone.OfType<CardNegated>().Any(e => e.CardId == 1001) && !gone.OfType<CardResolved>().Any(e => e.CardId == 1001) && t.Hp(t.Turn) == 100 && t.Hp(t.O2) == 100,
+                            $"2002 반사한 사람이 빠지면 — 카드는 무효로만 끝난다 (쓴 사람 ♥{t.Hp(t.Turn)})");
+                        Check(s.Hp(s.O1) == 100 && s.Hp(s.O2) == 60, $"2002 + 1017, 쓴 사람이 빠지면 — 남은 사람만 받는다 (나 ♥{s.Hp(s.O1)} · O2 ♥{s.Hp(s.O2)})");
+                    }
+                }
+
+                // ── 카운터 묶음 4 (11-card-list 1-3) — 2019 안 놔! ──
+                {
+                    // 빼앗기 1장 (1002) — 내 몫을 막고 1장 뽑는다. 손패가 안 주는 사람 · 내 카드에는 못 낸다
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 3);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    Card other = t.Give(t.O2, Real(2019));
+                    Card mine = t.Give(t.Turn, Real(2019));
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    List<Card> kept = t.Hand(t.O1).Where(c => !c.Equals(hold)).ToList();
+                    int turnHand = t.HandCount(t.Turn) - 1;
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact && t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2019 내 손패가 안 주는 사람 · 내 카드에는 거절 9");
+                    t.Counter(t.O1, hold);
+                    var events = t.Run(20);
+                    Check(kept.All(c => t.Hand(t.O1).Contains(c)) && t.HandCount(t.O1) == 4 && t.HandCount(t.Turn) == turnHand && events.OfType<CardDrawn>().Count(e => e.Actor == t.O1) == 1,
+                        $"2019 안 놔! — 1002 빼앗기를 막고 1장 뽑음 (손패 {t.HandCount(t.O1)} · 쓴 사람 {t.HandCount(t.Turn)})");
+                }
+                {
+                    // 기억 삭제 (1013) — 버리기 · 다시 뽑기 모두에서 빠지고 손패 장수만큼(최대 3) 뽑는다 (사용자 2026-11-23)
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 5);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    List<Card> kept = t.Hand(t.O1).Where(c => !c.Equals(hold)).ToList();
+                    List<Card> o2Old = t.Hand(t.O2).ToList();
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1013)));
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    var events = t.Run(20);
+                    Check(kept.All(c => t.Hand(t.O1).Contains(c)) && t.HandCount(t.O1) == 8 && events.OfType<CardDrawn>().Count(e => e.Actor == t.O1) == 3,
+                        $"2019 1013 기억 삭제 — 손패 5장 그대로 · 다시 뽑기 없음 · 최대 3장만 뽑음 (손패 {t.HandCount(t.O1)})");
+                    Check(t.HandCount(t.O2) == 5 && !o2Old.Any(c => t.Hand(t.O2).Contains(c)), $"2019 다른 사람은 그대로 받는다 — 전부 버리고 5장 (손패 {t.HandCount(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 2);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1013)));
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    var events = t.Run(20);
+                    Check(t.HandCount(t.O1) == 4 && events.OfType<CardDrawn>().Count(e => e.Actor == t.O1) == 2, $"2019 1013 — 손패 2장이면 2장 뽑음 (손패 {t.HandCount(t.O1)})");
+                }
+                {
+                    // 전원 빼앗기 (1014) — 나만 빠진다
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 3);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    int turnHand = t.HandCount(t.Turn), o2Hand = t.HandCount(t.O2);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1014)));
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    t.Run(20);
+                    Check(t.HandCount(t.O1) == 4 && t.HandCount(t.O2) == o2Hand - 1 && t.HandCount(t.Turn) == turnHand + 1,
+                        $"2019 1014 군침이 싹 도노 — 나만 빠짐 (나 {t.HandCount(t.O1)} · 다른 대상 {t.HandCount(t.O2)} · 쓴 사람 {t.HandCount(t.Turn)})");
+                }
+                {
+                    // 피해 + 빼앗기 (1015) — 피해는 받고 빼앗기만 막는다
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 3);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    int turnHand = t.HandCount(t.Turn);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1015)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == 4 && t.HandCount(t.Turn) == turnHand, $"2019 1015 팍씨 — 피해 10 은 받고 빼앗기만 막음 (♥{t.Hp(t.O1)} · 손패 {t.HandCount(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card hold = t.Give(t.O1, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, hold)) == RejectCode.CannotReact, "2019 1019 목표 조준(대상이 고르는 선택지)에는 거절 9");
+                }
+                {
+                    var t = new ChainTable();
+                    Card hold = t.Give(t.O1, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, hold)) == RejectCode.CannotReact, "2019 손패가 안 주는 카드(1001)에는 거절 9");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1014)));
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, hold)) == RejectCode.CannotReact, "2019 안 놔! 말고 손패가 0장이면 거절 9");
+                }
+                {
+                    // 무야호 (1018) — 내가 손패 최다라 나눠 주는 쪽. 막으면 아무도 못 받는다 (사용자 2026-11-23)
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 7);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    int turnHand = t.HandCount(t.Turn), o2Hand = t.HandCount(t.O2);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1018)));
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    var events = t.Run(20);
+                    Check(t.HandCount(t.O1) == 9 && t.HandCount(t.Turn) == turnHand && t.HandCount(t.O2) == o2Hand && !events.OfType<HandCardsMoved>().Any(),
+                        $"2019 1018 무야호 — 나눠 줄 2장을 막고 2장 뽑음 · 아무도 못 받음 (나 {t.HandCount(t.O1)} · {t.HandCount(t.Turn)} · {t.HandCount(t.O2)})");
+                }
+                {
+                    // 으르렁의 벌칙에 — 벌칙만 막힌다. 막기 · 대가는 그대로 (11-card-list 1-3 2021 예외)
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 4);
+                    t.SetHandSize(t.O1, 2);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    Card hold = t.Give(t.Turn, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    bool played = t.Code(t.Counter(t.Turn, hold)) == 0;
+                    ChoiceStarted asked = t.RunUntil<ChoiceStarted>(30);
+                    Check(played && asked != null && asked.Actor == t.O1 && t.HandCount(t.Turn) == 6 && t.Hp(t.O1) == 100,
+                        $"2019 으르렁 벌칙에 안 놔! — 벌칙 2장을 막고 2장 뽑음 · 막기(♥{t.Hp(t.O1)}) · 대가 고르기는 그대로 (쓴 사람 손패 {t.HandCount(t.Turn)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 1);
+                    t.SetHandSize(t.O1, 2);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    Card hold = t.Give(t.Turn, Real(2019));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, hold);
+                    t.RunUntil<ChoiceStarted>(30);
+                    Check(t.HandCount(t.Turn) == 2, $"2019 으르렁 벌칙 — 손패 1장이면 1장만 뽑음 (손패 {t.HandCount(t.Turn)})");
+                }
+                {
+                    // 알아로 무효 — 막기도 뽑기도 없다
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 3);
+                    Card hold = t.Give(t.O1, Real(2019));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    int turnHand = t.HandCount(t.Turn);
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1002)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, hold);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    var events = t.Run(30);
+                    Check(t.HandCount(t.O1) == 2 && t.HandCount(t.Turn) == turnHand && !events.OfType<CardDrawn>().Any(e => e.Actor == t.O1),
+                        $"2019 안 놔! 가 무효되면 막기 · 뽑기 없음 — 1002 적용 (손패 {t.HandCount(t.O1)} · 쓴 사람 {t.HandCount(t.Turn)})");
+                }
+                // ── 카운터 묶음 3 (11-card-list 1-3) — 2021 으르렁 ──
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 5); // + 낼 카드 → 낸 뒤 5장
+                    t.SetHandSize(t.O1, 3);   // + 으르렁 → 낸 뒤 3장
+                    Card growl = t.Give(t.O1, Real(2021));
+                    Card other = t.Give(t.O2, Real(2021));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact, "2021 나를 노리지 않은 카드에는 거절 9");
+                    t.Counter(t.O1, growl);
+                    ChoiceStarted asked = t.RunUntil<ChoiceStarted>(30);
+                    Check(asked != null && asked.Actor == t.O1 && asked.Kind == ChoiceKind.HandCard && asked.HandCount == 3 && t.HandCount(t.Turn) == 3 && t.Hp(t.O1) == 100,
+                        $"2021 으르렁 — 벌칙(쓴 사람 무작위 2장 버림, 손패 {t.HandCount(t.Turn)}) 뒤 대가 고르기가 열림 · 그동안 멈춤");
+                    int keepA = t.Hand(t.O1)[0].InstanceId, drop = t.Hand(t.O1)[1].InstanceId;
+                    Check(t.Code(t.Server.Choose(t.Turn, drop)) == RejectCode.NotChoosing && t.Code(t.Server.Choose(t.O1, hit.InstanceId)) == RejectCode.NotChoosing, "2021 남의 고르기 · 내 손패에 없는 카드 → 거절 20");
+                    var chosen = t.Server.Choose(t.O1, drop).ToList();
+                    chosen.AddRange(t.Run(t.Now + 10));
+                    Check(chosen.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.Kind == ChoiceKind.HandCard && c.Option == 0 && !c.TimedOut)
+                          && chosen.OfType<CardsDiscarded>().Any(d => d.Actor == t.O1 && d.CardInstanceIds.SequenceEqual(new[] { drop }))
+                          && t.HandCount(t.O1) == 2 && t.Hand(t.O1).Any(c => c.InstanceId == keepA) && t.Hp(t.O1) == 100 && !t.Hand(t.Turn).Contains(hit) && chosen.OfType<TurnStarted>().Any(),
+                        "2021 고른 1장을 버림 · 1001 무효(♥100 · 버림 더미로) · 처리를 마치고 다음 턴");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.Turn, 1); // 낸 뒤 1장 — 2장 미만이면 전부
+                    t.SetHandSize(t.O1, 2);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    bool asked = t.RunUntil<ChoiceStarted>(30) != null;
+                    var events = t.Run(t.Now + 6); // 5초 안에 안 고름 → 무작위
+                    Check(asked && t.HandCount(t.Turn) == 0 && t.HandCount(t.O1) == 1 && events.OfType<ChoiceMade>().Any(c => c.Actor == t.O1 && c.TimedOut && c.Kind == ChoiceKind.HandCard),
+                        $"2021 쓴 사람 손패 1장이면 전부 버림 · 대가를 안 고르면 5초 뒤 무작위 1장 (손패 {t.HandCount(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    var events = t.Run(20);
+                    Check(!events.OfType<ChoiceStarted>().Any() && t.Hp(t.O1) == 100 && events.OfType<TurnStarted>().Any(), "2021 내 손패 0장이면 대가 없이 처리");
+                }
+                {
+                    var t = new ChainTable();
+                    Card growl = t.Give(t.O1, Real(2021));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    int turnHand = t.HandCount(t.Turn), o1Hand = t.HandCount(t.O1) - 1;
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    var events = t.Run(30);
+                    Check(!events.OfType<ChoiceStarted>().Any() && t.Hp(t.O1) == 80 && t.HandCount(t.Turn) == turnHand - 1 && t.HandCount(t.O1) == o1Hand, "2021 으르렁이 무효되면 막기 · 벌칙 · 대가 없음 (♥80)");
+                }
+                {
+                    var t = new ChainTable();
+                    int[] aimed = { 1001, 1002, 1014, 1013, 1017 }, wide = { 1012, 1021, 1023, 1045 };
+                    bool Wide(int cardId) => mainCards.First(c => c.CardId == cardId).Effects.Any(e => (bool)typeof(CardEffect).GetProperty("BoardWide", Private).GetValue(e));
+                    Check(wide.All(Wide) && !aimed.Any(Wide), "2021 판 전체 상태 카드 = 1012 대소동 · 1021 개판 오분전 · 1023 기다려! · 1045 뒤로 돌아 (사용자 2026-11-21)");
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1045)));
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, growl)) == RejectCode.CannotReact, "2021 판 전체 상태 카드(1045 뒤로 돌아)에는 거절 9");
+                }
+                {
+                    // 전원 대상 카드 — 카드 전체가 무효
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 1);
+                    Card growl = t.Give(t.O1, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)));
+                    t.At(2);
+                    t.Counter(t.O1, growl);
+                    t.RunUntil<ChoiceStarted>(30);
+                    t.Server.Choose(t.O1, t.Hand(t.O1)[0].InstanceId);
+                    t.Run(t.Now + 10);
+                    Check(t.Hp(t.O1) == 100 && t.Hp(t.O2) == 100, $"2021 전원 대상 카드(1017)도 전체 무효 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    // 봇 — 대가로 버릴 카드: 함정 → 카운터 → 행동 순으로 있는 종류의 뒤쪽 카드 (18-bot 7-4)
+                    var t = new ChainTable();
+                    t.SetHandSize(t.O1, 0);
+                    Card a = t.Give(t.O1, Real(1001)), c1 = t.Give(t.O1, Real(2003)), c2 = t.Give(t.O1, Real(2016)), b = t.Give(t.O1, Real(1002));
+                    var pick = new ChooseDiscardEffect();
+                    int picked = (int)typeof(ChooseDiscardEffect).GetMethod("BotPick", Private).Invoke(pick, new object[] { t.Server, t.O1 });
+                    Check(picked == c2.InstanceId, "2021 봇이 대가로 버릴 카드 — 카운터(뒤쪽) 먼저");
+                }
+                // ── 카운터 묶음 3 (11-card-list 1-3) — 2020 내 거야! ──
+                {
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O2, Real(2020)); // 대상이 아닌 사람도 낼 수 있다
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    int o1Hand = t.HandCount(t.O1), turnHand = t.HandCount(t.Turn) - 1, o2Hand = t.HandCount(t.O2);
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, grab);
+                    var events = t.Run(20);
+                    Check(t.HandCount(t.O1) == o1Hand && t.HandCount(t.Turn) == turnHand && t.Hand(t.O2).Contains(steal) && t.HandCount(t.O2) == o2Hand
+                          && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O2 && e.CardInstanceId == steal.InstanceId),
+                        "2020 내 거야! — 1002 무효(아무도 안 빼앗김) · 막은 카드는 낸 사람 손패로 (낸 1장 + 받은 1장)");
+                    Check(t.Hp(t.O2) == 80, $"2020 대가 20 피해 (♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card grab = t.Give(t.O1, Real(2020));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, grab)) == RejectCode.CannotReact, "2020 손패 + 가 없는 카드(1001)에는 거절 9");
+                }
+                {
+                    var t = new ChainTable();
+                    int[] gain = { 1002, 1009, 1013, 1014, 1015, 1016 }, none = { 1001, 1004, 1005, 1006, 1011, 1017, 1018, 1019, 1020, 1045 };
+                    bool Gains(int cardId) => mainCards.First(c => c.CardId == cardId).Effects.Any(e => (bool)typeof(CardEffect).GetProperty("GainsHand", Private).GetValue(e));
+                    Check(gain.All(Gains) && !none.Any(Gains), "2020 「손패 +」 카드 = 1002 · 1009 · 1013 · 1014 · 1015 · 1016 (11-card-list 5-3) — 1018 무야호(손패 −)는 아니다");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 20);
+                    Card grab = t.Give(t.O1, Real(2020));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    int o1Hand = t.HandCount(t.O1) - 1;
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, grab);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 20 && !t.Hand(t.O1).Contains(steal) && t.HandCount(t.O1) == o1Hand - 1, $"2020 내 거야! 가 무효되면 가져오기 · 대가 없음 · 1002 적용 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 20);
+                    Card grab = t.Give(t.O1, Real(2020));
+                    Card steal = t.Give(t.Turn, Real(1002));
+                    t.PlayCard(t.Turn, steal, t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, grab);
+                    var events = t.Run(2 + ChainTable.Reveal + 8);
+                    Check(t.Hp(t.O1) == 0 && t.State(t.O1).Life == LifeState.DeathPending && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O1), "2020 대가로 HP 0 → 사망 대기 · 막은 카드는 받는다");
+                }
+                // ── 카운터 묶음 2 (11-card-list 1-3) — 2001 침착 ──
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 95);
+                    Card calm = t.Give(t.O2, Real(2001)); // 대상이 아닌 사람도 낼 수 있다
+                    Card mine = t.Give(t.Turn, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2001 내 카드에는 거절 9");
+                    t.Counter(t.O2, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.Hp(t.O2) == 100, $"2001 침착 — 20 − 20 = 0 피해 · 낸 사람 95 → 100 (최대 100) (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 50);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 40, $"2001 침착 — 40 − 20 = 20 피해 뒤 10 회복 (50 → 40) (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 10);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 0 && events.Any(e => e.GetType().Name.Contains("DeathPending")) && !events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp > 0),
+                        $"2001 침착 — HP 10 · 20 피해 → 0 이면 회복 없이 사망 대기 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 21);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1017)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 11 && !events.Any(e => e.GetType().Name.Contains("DeathPending")), $"2001 침착 — HP 21 · 20 피해 → 1 → 10 회복 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    var t = new ChainTable();
+                    t.SetHp(t.O2, 50);
+                    Card calm = t.Give(t.O2, Real(2001));
+                    Card know = t.Give(t.Turn, Real(2014));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O2, calm);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    t.Counter(t.Turn, know);
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 80 && t.Hp(t.O2) == 50, $"2001 침착이 무효되면 감소 · 회복 없음 (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                {
+                    var t = new ChainTable();
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1002)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, calm)) == RejectCode.CannotReact, "2001 피해 없는 카드(1002)에는 거절 9");
+                }
+                {
+                    // 고르기로 멈췄다 이어 가는 카드 — 고른 피해도 줄고, 회복은 그 카드가 끝난 뒤
+                    var t = new ChainTable();
+                    Card calm = t.Give(t.O1, Real(2001));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    bool asked = t.RunUntil<ChoiceStarted>(30) != null;
+                    int paused = t.Hp(t.O1);
+                    t.Server.Choose(t.O1, 1);
+                    t.Run(t.Now + 1);
+                    Check(asked && paused == 100 && t.Hp(t.O1) == 50, $"2001 침착 — 1019 고르는 동안 회복 없음(♥{paused}) · 80 − 20 = 60 피해 뒤 10 회복 (♥{t.Hp(t.O1)})");
+                }
+                {
+                    // 받는 사람 모두 — 전원 피해 메모리 카드에 실제 침착
+                    var t = new ChainTable();
+                    t.SetHp(t.O1, 90);
+                    Card calm = t.Give(t.O1, Real(2001));
+                    Card wave = t.Give(t.Turn, id => new Card(id, 902, CardType.Action, TargetType.AllOthers, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 30 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+                    t.PlayCard(t.Turn, wave);
+                    t.At(2);
+                    t.Counter(t.O1, calm);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 90 && t.Hp(t.O2) == 90, $"2001 침착 — 전원 30 피해를 받는 사람 모두 20 씩 감소 (낸 사람 90 − 10 + 10 · 다른 사람 100 − 10) (♥{t.Hp(t.O1)} · ♥{t.Hp(t.O2)})");
+                }
+                // ── 카운터 묶음 1 (11-card-list 1-3) — 2003 진짜 할거야? · 2014 알아 · 2016 칼집 ──
+                {
+                    var t = new ChainTable();
+                    Card c2003 = t.Give(t.O2, Real(2003)); // 대상이 아닌 사람도 낼 수 있다 (조건 없음)
+                    Card mine = t.Give(t.Turn, Real(2003));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.Turn, mine)) == RejectCode.CannotReact, "2003 내 카드에는 카운터 거절 9 (04 7절 사용 조건 5)");
+                    t.Counter(t.O2, c2003);
+                    var events = t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.Hand(t.Turn).Contains(hit) && events.OfType<CardReturnedToHand>().Any(e => e.CardInstanceId == hit.InstanceId),
+                        "2003 진짜 할거야? — 행동 카드 무효 · 쓴 사람 손패로");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2003 = t.Give(t.O1, Real(2003));
+                    Card c2014 = t.Give(t.Turn, Real(2014));
+                    Card late = t.Give(t.O1, Real(2014));
+                    Card hit = t.Give(t.Turn, Real(1001));
+                    t.PlayCard(t.Turn, hit, t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O1, late)) == RejectCode.CannotReact, "2014 행동 카드에는 거절 9 (카운터에만 반응)");
+                    t.Counter(t.O1, c2003);
+                    t.At(2 + ChainTable.Reveal + 0.1);
+                    IReadOnlyList<GameEvent> played = t.Counter(t.Turn, c2014);
+                    Check(!(played[0] is RequestRejected) && !played.OfType<CountersUsable>().Any(), "2014 알아 — 카운터에 냄 · 아무에게도 묻지 않는다 (막을 수 없음)");
+                    t.At(2 + 2 * ChainTable.Reveal + 0.2);
+                    int code = t.Code(t.Counter(t.O1, late));
+                    Check(code == RejectCode.CannotReact || code == RejectCode.NotReactionTime, $"2014 알아 위에는 카운터 거절 ({code})");
+                    t.Run(30);
+                    Check(t.Hp(t.O1) == 80 && !t.Hand(t.Turn).Contains(hit), "2014 알아 — 2003 무효 → 1001 적용 (♥80) · 반환 없음");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2016 = t.Give(t.O1, Real(2016));
+                    Card other = t.Give(t.O2, Real(2016));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    Check(t.Code(t.Counter(t.O2, other)) == RejectCode.CannotReact, "2016 피해를 받지 않는 사람은 거절 9");
+                    int before = t.HandCount(t.O1);
+                    t.Counter(t.O1, c2016);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 100 && t.HandCount(t.O1) == before, "2016 칼집 — 20 − 40 = 0 피해 · 1장 뽑기 (낸 1장 + 뽑은 1장)");
+                }
+                {
+                    var t = new ChainTable();
+                    Card c2016 = t.Give(t.O1, Real(2016));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1005)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, c2016);
+                    t.Run(20);
+                    Check(t.Hp(t.O1) == 91, $"2016 칼집 — 1005 드롭킥 49 − 40 = 9 (♥{t.Hp(t.O1)})");
+                }
+
                 {
                     var t = new ChainTable();
                     t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
@@ -2553,12 +4056,12 @@ public static class MultiTest
                     events = t.Run(t.Now + 3);
                     Check(started && !t.Server.IsGameOver && events.OfType<ChapchuWinHeld>().Any(e => e.Actor == t.O1) && t.Server.CurrentTurnActor == t.O1 && t.State(t.O1).IsChapchu,
                         "1023 기다려! — 찹츄 상태로 턴이 와도 이기지 않는다 · 찹츄는 그대로");
-                    events = t.Run(t.Now + 31); // O1 시간 초과 → O2
-                    events.AddRange(t.Run(t.Now + 31)); // O2 시간 초과 → 건 사람
+                    events = t.Run(t.Now + TurnSeconds + 1); // O1 시간 초과 → O2
+                    events.AddRange(t.Run(t.Now + TurnSeconds + 1)); // O2 시간 초과 → 건 사람
                     int endAt = events.FindIndex(e => e is WaitChanged w && w.Casters.Length == 0);
                     int turnAt = events.FindIndex(e => e is TurnStarted ts && ts.Actor == t.Turn);
                     Check(endAt >= 0 && turnAt > endAt, "1023 건 사람의 다음 턴이 시작되기 전에 끝난다");
-                    GameEnded ended = t.Run(t.Now + 31).OfType<GameEnded>().FirstOrDefault();
+                    GameEnded ended = t.Run(t.Now + TurnSeconds + 1).OfType<GameEnded>().FirstOrDefault(); // 건 사람 시간 초과 → O1 턴 시작에 판정
                     Check(ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Chapchu, "1023 끝난 뒤 다음 자기 턴에 다시 판정 → 찹츄 승리");
                 }
                 {
@@ -3643,6 +5146,135 @@ public static class MultiTest
             var t = new ChainTable();
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Choice), t.O1);
             Same(t, "고르기 중 (1019) — 처리 중인 카드 · 고르는 사람");
+            {
+                // 아래 카드 표시 「피해 감소 (모두)」 · 「처리 직후 회복」 (2001 침착) 이 남은 채 고르기로 멈춘 순간
+                var m = new ChainTable();
+                Card calm = m.Give(m.O1, id => new Card(id, 2001, CardType.Counter, TargetType.None,
+                    new CardEffect[] { new ReduceDamageEffect { amount = 20, everyone = true }, new HealAfterBelowEffect { amount = 10 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                m.PlayCard(m.Turn, m.Give(m.Turn, Choice), m.O1);
+                m.At(2);
+                m.Counter(m.O1, calm);
+                Check(m.RunUntil<ChoiceStarted>(30) != null, "침착이 걸린 1019 — 고르기가 열림");
+                Same(m, "고르기 중 — 아래 카드 표시 「피해 감소 (모두)」 · 「처리 직후 회복」 (2001)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.O1, 1);
+                copy.Tick();
+                int hp = ((PlayerState)((System.Collections.IDictionary)typeof(GameServer).GetField(ServerPlayersField, Private).GetValue(copy))[m.O1]).Hp;
+                Check(hp == 50, $"되살린 방장이 표시대로 처리 — 80 − 20 = 60 피해 뒤 10 회복 (♥{hp})");
+            }
+            {
+                // 아래 카드 표시 「수치 2배」 (2005 묻고 따블로 가) 가 남은 채 고르기로 멈춘 순간
+                var m = new ChainTable();
+                Card Dbl(int id) => new Card(id, 2005, CardType.Counter, TargetType.None, new CardEffect[] { new NegateEffect(), new DoubleBelowEffect() }, new[] { CardType.Counter }, ChainTable.Reveal, ChainTable.Resolve);
+                m.PlayCard(m.Turn, m.Give(m.Turn, Choice), m.O1);
+                m.At(2);
+                m.Counter(m.O2, ChainTable.Negate);
+                m.At(2 + ChainTable.Reveal + 0.1);
+                m.Counter(m.O1, m.Give(m.O1, Dbl));
+                ChoiceStarted asked = m.RunUntil<ChoiceStarted>(30);
+                Check(asked != null && asked.Damage == 160, $"2배가 걸린 1019 — 고르기가 열림 (피해 {asked?.Damage})");
+                Same(m, "고르기 중 — 아래 카드 표시 「수치 2배」 (2005)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.O1, 1);
+                Check(DumpHp(copy, m.O1) == 0, $"되살린 방장이 표시대로 처리 — 피해 160 (♥{DumpHp(copy, m.O1)})");
+
+                // 2배가 된 대가 — 첫 장을 고르는 중 (한 번 더 남았다)
+                var g = new ChainTable();
+                g.SetHandSize(g.O1, 3);
+                Card growl = g.Give(g.O1, id => new Card(id, 2021, CardType.Counter, TargetType.TriggerSource,
+                    new CardEffect[] { new NegateEffect(), new DiscardEffect { subject = EffectSubject.Target, count = 2 }, new ChooseDiscardEffect { seconds = 5 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                g.PlayCard(g.Turn, g.Give(g.Turn, id => new Card(id, 1001, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve)), g.O1);
+                g.At(2);
+                g.Counter(g.O1, growl);
+                g.At(2 + (ChainTable.Reveal + 0.1));
+                g.Counter(g.O2, g.Give(g.O2, Dbl));
+                g.At(2 + (ChainTable.Reveal + 0.1) * 2);
+                g.Counter(g.Turn, g.Give(g.Turn, Dbl));
+                Check(g.RunUntil<ChoiceStarted>(40) != null, "2배가 된 으르렁 — 대가 고르기가 열림");
+                Same(g, "고르기 중 — 2배가 된 대가의 첫 장 (한 번 더 남음)");
+                GameServer copy2 = Clone(g, out _);
+                Check(copy2.Choose(g.O1, g.Hand(g.O1)[0].InstanceId).OfType<ChoiceStarted>().Any(), "되살린 방장이 한 장 더 고르게 한다");
+            }
+            {
+                // 아래 카드 표시 「손패 − 내 몫 무효」 (2019 안 놔!) 가 남은 채 고르기로 멈춘 순간 — 고르기 뒤의 빼앗기에서 내가 빠진다
+                var m = new ChainTable();
+                m.SetHandSize(m.O1, 3);
+                Card hold = m.Give(m.O1, id => new Card(id, 2019, CardType.Counter, TargetType.None,
+                    new CardEffect[] { new NegateHandLossEffect(), new DrawBlockedHandLossEffect { max = 3 } }, new[] { CardType.Action, CardType.Counter }, ChainTable.Reveal, ChainTable.Resolve, condition: ReactCondition.LosesMyHand));
+                m.PlayCard(m.Turn, m.Give(m.Turn, id => new Card(id, 1900, CardType.Action, TargetType.OneOther,
+                    new CardEffect[] { new DiscardOrDamageEffect { amount = 80, seconds = 5 }, new StealEffect { count = 1 } }, null, ChainTable.Reveal, ChainTable.Resolve)), m.O1);
+                m.At(2);
+                m.Counter(m.O1, hold);
+                Check(m.RunUntil<ChoiceStarted>(30) != null && m.HandCount(m.O1) == 4, $"안 놔! 가 걸린 카드 — 1장 뽑은 뒤 고르기가 열림 (손패 {m.HandCount(m.O1)})");
+                Same(m, "고르기 중 — 아래 카드 표시 「손패 − 내 몫 무효」 (2019)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.O1, 1);
+                copy.Tick();
+                Check(PlayersOf(copy)[m.O1].Hand.Count == 4 && DumpHp(copy, m.O1) == 20, $"되살린 방장이 표시대로 처리 — 피해 80 은 받고 빼앗기는 막힘 (손패 {PlayersOf(copy)[m.O1].Hand.Count} · ♥{DumpHp(copy, m.O1)})");
+            }
+            {
+                // 아래 카드 표시 「피해 같이 받기」 (2018 물귀신) 가 남은 채 고르기로 멈춘 순간 — 표시가 물귀신 카드를 가리킨다
+                var m = new ChainTable();
+                Card Ghost(int id) => new Card(id, 2018, CardType.Counter, TargetType.OneNotDamaged, new CardEffect[] { new ShareDamageEffect() }, new[] { CardType.Action, CardType.Counter },
+                    ChainTable.Reveal, ChainTable.Resolve, condition: ReactCondition.DamagesMe);
+                m.PlayCard(m.Turn, m.Give(m.Turn, Choice), m.O1);
+                m.At(2);
+                m.Counter(m.O1, m.Give(m.O1, Ghost), m.O2);
+                Check(m.RunUntil<ChoiceStarted>(30) != null, "물귀신이 걸린 1019 — 고르기가 열림");
+                Same(m, "고르기 중 — 아래 카드 표시 「피해 같이 받기」 (2018)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.O1, 1);
+                Check(DumpHp(copy, m.O1) == 20 && DumpHp(copy, m.O2) == 20, $"되살린 방장이 표시대로 처리 — 고른 사람도 80 (♥{DumpHp(copy, m.O1)} · ♥{DumpHp(copy, m.O2)})");
+            }
+            {
+                // 반사(2002)한 사람이 다시 쓴 1019 가 고르기로 멈춘 순간 — 고르는 사람이 원래 쓴 사람이다. 같은 카드를 가리키는 체인 항목이 둘(원래 것 · 다시 쓴 것)이다
+                var m = new ChainTable();
+                Card Mirror(int id) => new Card(id, 2002, CardType.Counter, TargetType.None, new CardEffect[] { new ReflectEffect() }, new[] { CardType.Action },
+                    ChainTable.Reveal, ChainTable.Resolve, condition: ReactCondition.AimedAtMe);
+                m.PlayCard(m.Turn, m.Give(m.Turn, Choice), m.O1);
+                m.At(2);
+                m.Counter(m.O1, m.Give(m.O1, Mirror));
+                ChoiceStarted asked = m.RunUntil<ChoiceStarted>(30);
+                Check(asked != null && asked.Actor == m.Turn, $"반사가 걸린 1019 — 쓴 사람의 고르기가 열림 (고르는 사람 {asked?.Actor})");
+                Same(m, "고르기 중 — 반사한 사람이 다시 쓴 카드 (2002)");
+                GameServer copy = Clone(m, out _);
+                copy.Choose(m.Turn, 1);
+                Check(DumpHp(copy, m.Turn) == 20 && DumpHp(copy, m.O1) == 100, $"되살린 방장이 다시 쓴 카드를 이어서 처리 — 쓴 사람이 80 (♥{DumpHp(copy, m.Turn)} · ♥{DumpHp(copy, m.O1)})");
+            }
+            {
+                // 턴 가로채기 (2013 새치기) 가 걸린 채 대가 고르기로 멈춘 순간 — 되살린 방장이 새치기 턴을 준다
+                var m = new ChainTable();
+                Card cut = m.Give(m.O2, id => new Card(id, 2013, CardType.Counter, TargetType.None,
+                    new CardEffect[] { new NegateEffect(), new TakeTurnEffect(), new ChooseDiscardEffect { seconds = 5 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                m.PlayCard(m.Turn, m.Give(m.Turn, id => new Card(id, 1001, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve)), m.O1);
+                m.At(2);
+                m.Counter(m.O2, cut);
+                Check(m.RunUntil<ChoiceStarted>(30) != null, "새치기의 대가 고르기가 열림 (2013)");
+                Same(m, "고르기 중 — 턴 가로채기가 걸림 (2013)");
+                GameServer copy = Clone(m, out _);
+                var after = copy.Choose(m.O2, m.Hand(m.O2)[0].InstanceId).ToList();
+                for (double end = m.Now + 15; m.Now < end && !after.OfType<TurnStarted>().Any(); m.At(m.Now + 0.1))
+                    after.AddRange(copy.Tick());
+                TurnStarted next = after.OfType<TurnStarted>().FirstOrDefault();
+                Check(next != null && next.Actor == m.O2, $"되살린 방장이 새치기 턴을 준다 (다음 턴 P{next?.Actor} · 기대 P{m.O2})");
+            }
+            {
+                // 손패에서 1장 고르기 (2013 · 2021 의 대가) 로 멈춘 순간
+                var m = new ChainTable();
+                m.SetHandSize(m.O1, 2);
+                Card growl = m.Give(m.O1, id => new Card(id, 2021, CardType.Counter, TargetType.TriggerSource,
+                    new CardEffect[] { new NegateEffect(), new DiscardEffect { subject = EffectSubject.Target, count = 2 }, new ChooseDiscardEffect { seconds = 5 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
+                m.PlayCard(m.Turn, m.Give(m.Turn, id => new Card(id, 1001, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve)), m.O1);
+                m.At(2);
+                m.Counter(m.O1, growl);
+                ChoiceStarted asked = m.RunUntil<ChoiceStarted>(30);
+                Check(asked != null && asked.Kind == ChoiceKind.HandCard, "손패 고르기가 열림 (2021)");
+                Same(m, "고르기 중 — 손패에서 1장 (2021 의 대가)");
+                GameServer copy = Clone(m, out _);
+                int drop = m.Hand(m.O1)[0].InstanceId;
+                var after = copy.Choose(m.O1, drop);
+                Check(after.OfType<CardsDiscarded>().Any(d => d.Actor == m.O1 && d.CardInstanceIds.SequenceEqual(new[] { drop })), "되살린 방장이 고른 카드를 버린다");
+            }
 
             GameServer clone = Clone(t, out _);
             clone.Choose(t.O1, 1);
@@ -3994,11 +5626,11 @@ public static class MultiTest
             Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1 && Sum(t, StatKind.ChapchuDeclared) == 1, "뽑아 10장 → 찹츄 선언 1");
         }
 
-        // 10. 112 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
+        // 10. 1012 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
         {
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
-            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 112) : null;
-            Check(big != null, "Deck_Main 에 112 대소동이 있다");
+            Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 1012) : null;
+            Check(big != null, "Deck_Main 에 1012 대소동이 있다");
             if (big != null)
             {
                 var t = new ChainTable();
@@ -4008,7 +5640,7 @@ public static class MultiTest
                     big.Trigger, big.TriggerValue, big.Condition, big.TargetCondition)));
                 events.AddRange(t.Run(t.Now + 3));
                 Check(events.OfType<GameRestarted>().Any() && t.Hp(t.O1) == 100 && Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20
-                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "112 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
+                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "1012 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
                 Check(Sum(t, StatKind.Healed) == 0 && Sum(t, StatKind.Drawn) == 0, "새 판의 HP 100 · 다시 받은 손패는 회복 · 드로우가 아니다");
             }
         }
@@ -4474,4 +6106,14 @@ public static class MultiTest
         Chapchu.Network.Events.GameEvents.OnCardPlayed += onPlayed;
         return "OK 카드 스크린샷 대기 → " + prefix + "_zoom.png · _reaction.png · _later.png";
     }
+}
+
+// 시험이 고르기 요청을 「지금 열린 고르기의 답」 으로 보내게 한다 — GameServer.Choose 는 답하는 고르기의 마감을 함께 받는다 (앞 고르기에 보낸 늦은 요청 거절).
+public static class MultiTestChoice
+{
+    public static double OpenChoiceDeadline(this GameServer server) =>
+        (double)typeof(GameServer).GetField("_choiceDeadline", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(server);
+
+    public static IReadOnlyList<GameEvent> Choose(this GameServer server, int requester, int option) =>
+        server.Choose(requester, option, server.OpenChoiceDeadline());
 }

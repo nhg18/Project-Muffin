@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Chapchu.Core;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -12,7 +13,7 @@ namespace Chapchu.UI.Fx
     /// 아티팩트 「4단계 공통 연출」 (V2CdpFSigVdDAiP95CZiGJ, 게시본 1795328736-a07a) 의 boomAt · burst · pshake · arenaShake · chipPop ·
     /// hit · heal · gain · lose · zap · fallout 을 옮겼다 (miss 「없음」 은 게임이 알려 주는 일이 없어 뺐다). 터지는 글자 = 색 별 + 잉크 테, 입자도 잉크 테 — 빛 · 떨어진 그림자 · 반투명 없이 작아지며 사라진다.
     /// 수치가 있는 결과는 수치에 비례해 별 · 입자 · 흔들림이 커진다 (HP 1 ~ 50, 장수 1 ~ 6 — 넘으면 최대).
-    /// 시안은 px 단위라 <see cref="pixelScale"/> 를 곱해 이 화면 단위로 바꾼다. 소리는 아직 없다 (게임에 효과음 장치가 없다).
+    /// 시안은 px 단위라 <see cref="pixelScale"/> 를 곱해 이 화면 단위로 바꾼다. 결과마다 효과음 하나 (SoundManager, 임시) — 피해 · 피폭은 양이 많을수록 크게.
     /// 이 오브젝트에 따로 Canvas 를 둔다 — 매 프레임 움직여도 HUD 가 있는 Canvas 는 다시 계산되지 않게.
     /// </summary>
     public class ResultFx : MonoBehaviour
@@ -56,6 +57,8 @@ namespace Chapchu.UI.Fx
         [Header("세기 — 수치를 0 ~ 1 로 (시안 AMP · GROW)")]
         [Tooltip("HP 수치 범위 (최소 → 0, 최대 → 1).")]
         [SerializeField] private Vector2 hpRange = new Vector2(1f, 50f);
+        [Tooltip("피해 · 피폭 1 의 효과음 음량 배율 — 최대 피해(hpRange 최대)면 1.")]
+        [SerializeField] [Range(0f, 1f)] private float minHitVolume = 0.7f;
         [Tooltip("장수 범위 (최소 → 0, 최대 → 1).")]
         [SerializeField] private Vector2 cardRange = new Vector2(1f, 6f);
         [Tooltip("세기 0 → 1 일 때 별(글자) 배율.")]
@@ -207,6 +210,7 @@ namespace Chapchu.UI.Fx
         public void Hit(Seat seat, int amount)
         {
             float k = Strength(amount, hpRange);
+            SoundManager.Play(Sfx.Hit, Mathf.Lerp(minHitVolume, 1f, k));
             Vector2 c = CenterOf(seat.Body);
             Boom(c, hitColor, "-" + amount, k);
             Burst(c, k, hitCount, hitColors, StarCircle, hitSpeed, hitGravity, burstSize);
@@ -218,6 +222,7 @@ namespace Chapchu.UI.Fx
         public void Heal(Seat seat, int amount)
         {
             float k = Strength(amount, hpRange);
+            SoundManager.Play(Sfx.Heal);
             Vector2 c = CenterOf(seat.Body);
             Boom(c, healColor, "+" + amount, k);
             Burst(c, k, healCount, healColors, HeartStar, healSpeed, healGravity, burstSize);
@@ -229,6 +234,7 @@ namespace Chapchu.UI.Fx
             if (count <= 0)
                 return;
             float k = Strength(count, cardRange);
+            SoundManager.Play(Sfx.CardGain);
             Vector2 c = CenterOf(seat.Body);
             Boom(c, gainColor, "+" + count + "장", k);
             Burst(c, k, gainCount, gainColors, CardStar, gainSpeed, gainGravity, cardParticleSize);
@@ -241,6 +247,7 @@ namespace Chapchu.UI.Fx
             if (count <= 0)
                 return;
             float k = Strength(count, cardRange);
+            SoundManager.Play(Sfx.CardLose);
             Vector2 c = CenterOf(seat.Body);
             Boom(c, loseColor, "−" + count + "장", k);
             Burst(c, k, loseCount, loseColors, CardOnly, loseSpeed, loseGravity, cardParticleSize);
@@ -252,6 +259,7 @@ namespace Chapchu.UI.Fx
         public void Zap(Seat seat, int amount)
         {
             float k = Strength(amount, hpRange);
+            SoundManager.Play(Sfx.Zap, Mathf.Lerp(minHitVolume, 1f, k));
             Vector2 c = CenterOf(seat.Body);
             Boom(c, zapColor, "-" + amount, k);
             Burst(c, k, zapCount, zapColors, StarCircle, zapSpeed, zapGravity, burstSize);

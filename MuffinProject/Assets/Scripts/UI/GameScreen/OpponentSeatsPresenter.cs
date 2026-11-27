@@ -20,7 +20,7 @@ namespace Chapchu.UI.GameScreen
     /// 늦게 열렸을 때는 Start 에서 각 Player 의 CustomProperties 와 방의 턴 주인을 한 번 읽는다 (09-network.md 6.1).
     /// 대상 선택(10-ui.md 6절)도 여기서 — 좌석에 빨간 고리 · 테를 켜고 안내 바(TargetAskView)를 띄운 뒤 탭을 모아 actorNumber 로 돌려준다.
     /// 나를 포함하는 카드(OneAny)는 내 패널도 빨간 테 + 탭을 받는다.
-    /// 취소 = 안내 바의 「취소」 버튼(모바일 포함) · PC 우클릭 · Esc · 내 턴이 끝남. 제한 시간은 없다 (턴 30초가 유일한 타이머).
+    /// 취소 = 안내 바의 「취소」 버튼(모바일 포함) · PC 우클릭 · Esc · 내 턴이 끝남. 제한 시간은 없다 (턴 제한 시간(GameServer.TurnTimeLimit, 03-turn.md 2절)이 유일한 타이머).
     /// </summary>
     public class OpponentSeatsPresenter : MonoBehaviour
     {
@@ -44,6 +44,8 @@ namespace Chapchu.UI.GameScreen
         private readonly List<int> _picked = new List<int>(); // 대상 선택 중 고른 actorNumber
         private bool _selecting;
         private bool _selectCancelled;
+        private int _selectCount;       // 이번 선택에서 고를 수
+        private bool _selectIncludeMe;  // 이번 선택에서 나도 고를 수 있다
         private int _aimedActor; // 끄는 카드가 겨눈 상대 (없으면 0)
 
         /// <summary>대상 선택 중인가 — 그동안 손패는 잠긴다 (HandPresenter).</summary>
@@ -118,7 +120,8 @@ namespace Chapchu.UI.GameScreen
 
                 seat.gameObject.SetActive(true);
                 string nickname = PlayerLook.NameOf(actor);
-                seat.SetNickname(BotRoster.IsBot(actor) ? string.Format(BotNicknameFormat, nickname) : nickname);
+                // 매치 방의 봇은 사람과 똑같이 닉네임만 (18-bot.md 8-2, PM 2026-11-26)
+                seat.SetNickname(BotRoster.IsBot(actor) && !BotRoster.IsMatchRoom ? string.Format(BotNicknameFormat, nickname) : nickname);
                 seat.SetLife(LifeState.Alive);
                 seat.SetChapchu(false);
                 seat.SetTurn(false);
@@ -285,15 +288,22 @@ namespace Chapchu.UI.GameScreen
                 _selectCancelled = true;
         }
 
-        /// <summary>이 화면 좌표에 앉은 상대의 actorNumber — 끄는 카드를 상대 위에 놓았는지 볼 때 (10-ui.md 4절). 없으면 0.</summary>
+        /// <summary>이 화면 좌표에 앉은 상대의 actorNumber — 끄는 카드를 상대 위에 놓았는지 볼 때 (10-ui.md 4절). 없거나 최종 사망한 상대면 0.</summary>
         public int ActorAt(Vector2 screenPoint)
         {
             foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
             {
                 if (pair.Value.ContainsScreenPoint(screenPoint))
-                    return pair.Key;
+                    return IsDead(pair.Key) ? 0 : pair.Key;
             }
             return 0;
+        }
+
+        /// <summary>대상 선택을 취소한다 — 안내 바의 「취소」 · 고르던 카드가 손패에서 빠졌을 때 · 카운터의 대상을 고르는 중에 반응 시간이 끝남 (HandPresenter). 선택 중이 아니면 아무 일도 없다.</summary>
+        public void CancelSelection()
+        {
+            if (_selecting)
+                _selectCancelled = true;
         }
 
         /// <summary>끄는 카드가 겨눈 상대의 좌석만 강조한다. 0 이면 모두 끈다. 대상 선택 중에는 건드리지 않는다 — 같은 고리 · 테를 쓴다.</summary>
@@ -307,8 +317,9 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 안내 바에 카드 이름을 띄우고, 앉은 상대 전부(includeMe 면 내 패널도)에 빨간 고리 · 테 + 탭.
-        /// 고른 자리는 강조를 꺼서 같은 사람을 두 번 못 고른다. 대상 후보 조건은 보지 않는다 — 맞지 않으면 방장이 거절한다 (04-card.md 11절).
+        /// 좌석에서 count 명을 고르게 한다 (10-ui.md 6절). 안내 바에 카드 이름을 띄우고, 앉은 상대 중 최종 사망하지 않은 사람(includeMe 면 내 패널도)에 빨간 고리 · 테 + 탭.
+        /// 고른 자리는 강조를 꺼서 같은 사람을 두 번 못 고른다. 그 밖의 대상 후보 조건은 보지 않는다 — 맞지 않으면 방장이 거절한다 (04-card.md 11절).
+        /// 고르는 중에 상대가 나가 남은 후보로 count 명을 채울 수 없으면 취소한다 (02-player.md 6절).
         /// 다 고르면 actorNumber 배열, 취소면 null 을 done 으로 돌려준다. 호출한 코루틴은 yield return 으로 끝까지 기다린다.
         /// </summary>
         public IEnumerator SelectTargetsRoutine(string cardName, int count, bool includeMe, Action<int[]> done)
@@ -323,9 +334,11 @@ namespace Chapchu.UI.GameScreen
             _selecting = true;
             _aimedActor = 0;
             _selectCancelled = false;
+            _selectCount = count;
+            _selectIncludeMe = includeMe;
             _picked.Clear();
-            foreach (OpponentSeatView seat in _seatOf.Values)
-                seat.SetTargetable(true);
+            foreach (KeyValuePair<int, OpponentSeatView> pair in _seatOf)
+                pair.Value.SetTargetable(!IsDead(pair.Key)); // 최종 사망한 상대는 고를 수 없다 (10-ui.md 6절 「강조」)
             myPanel.SetTargetable(includeMe);
             targetAsk.Show(cardName);
 
@@ -363,17 +376,13 @@ namespace Chapchu.UI.GameScreen
             if (!_selecting) return;
 
             int actorNumber = _seatOf.FirstOrDefault(pair => pair.Value == seat).Key;
-            if (actorNumber == 0 || _picked.Contains(actorNumber)) return;
+            if (actorNumber == 0 || _picked.Contains(actorNumber) || IsDead(actorNumber)) return;
 
             _picked.Add(actorNumber);
             seat.SetTargetable(false);
         }
 
-        private void HandleCancelClicked()
-        {
-            if (_selecting)
-                _selectCancelled = true;
-        }
+        private void HandleCancelClicked() => CancelSelection();
 
         private void HandlePlayerLeft(Player player)
         {
@@ -387,6 +396,27 @@ namespace Chapchu.UI.GameScreen
                 traps.gameObject.SetActive(false);
             }
             Debug.Log($"[{nameof(OpponentSeatsPresenter)}] P{player.ActorNumber} 퇴장 — 좌석을 숨김 (02-player.md 6절)", this);
+
+            if (_selecting)
+                ForgetLeftCandidate(player.ActorNumber);
         }
+
+        // 고르는 중에 나간 사람은 대상 후보에서 뺀다 (02-player.md 6절). 남은 후보로 다 채울 수 없으면 선택을 취소한다.
+        private void ForgetLeftCandidate(int actorNumber)
+        {
+            _picked.Remove(actorNumber);
+
+            int me = PhotonNetwork.LocalPlayer.ActorNumber;
+            int left = _seatOf.Keys.Count(actor => !_picked.Contains(actor) && !IsDead(actor));
+            if (_selectIncludeMe && !_picked.Contains(me))
+                left++;
+
+            if (_picked.Count + left < _selectCount)
+                _selectCancelled = true;
+        }
+
+        // 최종 사망(LifeState.Dead) — 방장이 쓴 공개 값을 읽는다. 대소동으로 되살아나면 방장이 Alive 로 되돌린다 (PunGameServer).
+        private static bool IsDead(int actorNumber)
+            => BotRoster.TryGetPublic(actorNumber, PlayerProps.LifeState, out object life) && life is byte lifeValue && lifeValue == (byte)LifeState.Dead;
     }
 }

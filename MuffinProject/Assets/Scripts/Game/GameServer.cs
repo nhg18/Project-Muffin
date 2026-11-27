@@ -16,7 +16,8 @@ namespace Chapchu.Game
         // 1. 파일을 하나 만든다: GameServer.Trap.cs — namespace Chapchu.Game { public partial class GameServer { ... } }
         //    한 클래스라 다른 파일의 필드 · 메서드를 그대로 쓴다. 규칙을 별도 클래스로 떼지 않는다 — 상태를 두루 봐야 한다.
         //
-        // 2. 원본 상태는 이 파일의 "원본 상태" 에 모은다. 플레이어별 값은 PlayerState 에 필드로.
+        // 2. 원본 상태 필드는 그 기능의 partial 파일에 둔다. 플레이어별 값은 PlayerState 에 필드로.
+        //    새 필드는 GameServer.Snapshot.cs 의 Capture · Restore 에 같은 자리로 더한다.
         //
         // 3. 요청 메서드는 requester 를 첫 인자로 받고, 검증 → 적용 → return TakeEvents() 순서다.
         //        public IReadOnlyList<GameEvent> SetTrap(int requester, int cardInstanceId)
@@ -75,6 +76,9 @@ namespace Chapchu.Game
             _falloutTurns = 0;
             _restartPending = false;
             _heldNext = -1;
+            _turnTaker = -1;
+            _reversed = false; // 게임 시작은 정방향 (03-turn.md 6절 #4)
+            _extraTurnActor = -1;
             TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)
             ResetGaepan();
             ClearChoice();

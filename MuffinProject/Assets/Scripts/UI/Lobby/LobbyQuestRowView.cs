@@ -6,13 +6,13 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 퀘스트 한 줄 (시안 .qrow) — 제목 · 진행 「p / 목표」 · 막대 · 보상 · 「받기」 / 진행 중 / 받음.
+    /// 퀘스트 한 줄 (시안 .qrow) — 제목 · 진행 「p / 목표」 · 막대 · 보상 · 「받기」 / 진행 중 / 완료.
     /// </summary>
     public class LobbyQuestRowView : MonoBehaviour
     {
         private const string ProgressFormat = "{0} / {1}";
         private const string InProgressText = "진행 중";
-        private const string ClaimedText = "받음";
+        private const string ClaimedText = "완료";
 
         [SerializeField] private CanvasGroup group;
         [SerializeField] private TMP_Text titleText;

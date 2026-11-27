@@ -31,8 +31,6 @@ namespace Chapchu.UI.Lobby
         private const string DefaultCaption = "기본";
 
         private static readonly string[] ShopTabNames = { "캐릭터", "이펙트", "기타" };
-        private static readonly Vector2 BoxCellSize = new Vector2(196f, 196f);
-        private static readonly Vector2 ShopCellSize = new Vector2(196f, 248f);
 
         [SerializeField] private GameObject content;
         [SerializeField] private LobbyTabView[] tabs;
@@ -41,6 +39,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GridLayoutGroup grid;
         [SerializeField] private ScrollRect scroll;
         [SerializeField] private LobbyItemCellView[] cells;
+
+        [Tooltip("꾸미기 칸 크기 (캔버스 px)")]
+        [SerializeField] private Vector2 boxCellSize = new Vector2(196f, 196f);
+
+        [Tooltip("상점 · 츄르 충전 칸 크기 (캔버스 px)")]
+        [SerializeField] private Vector2 shopCellSize = new Vector2(196f, 248f);
 
         [Header("아래 줄")]
         [SerializeField] private GameObject footNote;
@@ -128,7 +132,7 @@ namespace Chapchu.UI.Lobby
         public void ShowBox(LobbyHubData data, HubSlot slot, HubItem selected)
         {
             ShowTabs(5, (int)slot, index => LobbyHubData.SlotName((HubSlot)index));
-            grid.cellSize = BoxCellSize;
+            grid.cellSize = boxCellSize;
 
             List<HubItem> items = data.ItemsOf(slot);
             for (int i = 0; i < cells.Length; i++)
@@ -167,7 +171,7 @@ namespace Chapchu.UI.Lobby
         public void ShowShop(LobbyHubData data, LobbyShopItemTab tab, HubItem selected)
         {
             ShowTabs(ShopTabNames.Length, (int)tab, index => ShopTabNames[index]);
-            grid.cellSize = ShopCellSize;
+            grid.cellSize = shopCellSize;
 
             List<HubItem> items = data.ShopItems(tab == LobbyShopItemTab.Effect);
             for (int i = 0; i < cells.Length; i++)
@@ -197,7 +201,7 @@ namespace Chapchu.UI.Lobby
         public void ShowCoupon(LobbyHubData data, bool isSelected)
         {
             ShowTabs(ShopTabNames.Length, (int)LobbyShopItemTab.Etc, index => ShopTabNames[index]);
-            grid.cellSize = ShopCellSize;
+            grid.cellSize = shopCellSize;
             for (int i = 0; i < cells.Length; i++)
                 cells[i].gameObject.SetActive(i == 0);
             cells[0].BindCoupon(CouponCellId, data.NicknameCoupons, isSelected, ticketIcon);
@@ -221,7 +225,7 @@ namespace Chapchu.UI.Lobby
             content.SetActive(true);
             tabRow.SetActive(false);
             chargeLabel.SetActive(true);
-            grid.cellSize = ShopCellSize;
+            grid.cellSize = shopCellSize;
             for (int i = 0; i < cells.Length; i++)
             {
                 cells[i].gameObject.SetActive(i < data.Packs.Count);

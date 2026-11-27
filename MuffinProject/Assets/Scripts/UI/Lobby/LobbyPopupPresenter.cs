@@ -24,10 +24,10 @@ namespace Chapchu.UI.Lobby
         private const string UnblockMessage = "차단을 해제할까요? 친구로 돌아오지는 않아요.";
         private const string GuestText = "게스트";
         private const string AccountText = "계정";
-        private const string LoginNoteFormat = "{0} 계정으로 로그인";
         private const string LoginNameFormat = "{0} 로그인";
         private const string CopiedCodeToast = "친구 코드를 복사했어요.";
         private const string CopiedIdToast = "고유 ID를 복사했어요.";
+        private const string FriendLimitToastFormat = "친구는 {0}명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
         [SerializeField] private LobbyPresenter lobby;
@@ -220,7 +220,7 @@ namespace Chapchu.UI.Lobby
         {
             HidePopups();
             EnterPopupScreen(AnalyticsRecorder.ScreenName.Profile);
-            profile.Show(NetworkManager.Nickname, Data, AccountService.PlayerId, IsAccountLogin ? string.Format(LoginNoteFormat, AccountText) : GuestText);
+            profile.Show(NetworkManager.Nickname, Data, AccountService.PlayerId, IsAccountLogin ? string.Format(LoginNameFormat, AccountText) : GuestText);
             popupDimmer.SetActive(true);
         }
 
@@ -243,7 +243,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleSfxChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.SfxOn, isOn);
 
-        private void HandleBgmChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+        private void HandleBgmChanged(bool isOn)
+        {
+            SaveSwitch(PlayerPrefsKeys.BgmOn, isOn);
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.RefreshBgm();
+        }
 
         private void HandleInviteNoticeChanged(bool isOn) => SaveSwitch(PlayerPrefsKeys.InviteNoticeOn, isOn);
 
@@ -303,7 +308,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendAccepted(HubPerson request)
         {
-            Data.Accept(request);
+            if (!Data.Accept(request))
+            {
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.ShowTab(LobbyFriendsTab.Friends);
             friends.Flash(request.Nickname);
@@ -324,7 +334,12 @@ namespace Chapchu.UI.Lobby
 
         private void HandleFriendRequestRequested(HubSearchResult result)
         {
-            Data.Request(result);
+            if (!Data.Request(result))
+            {
+                fx.Toast(string.Format(FriendLimitToastFormat, LobbyHubData.MaxFriends));
+                return;
+            }
+
             lobby.RefreshBadges();
             friends.Refresh();
         }

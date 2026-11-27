@@ -17,12 +17,15 @@ namespace Chapchu.Game.Effects
         internal override int BotHandGain(Bots.BotView view, int[] receivers) =>
             receivers.Where(actor => actor != view.Bot).Sum(actor => Math.Min(count, view.Server.HandCountOf(actor)));
         internal override EffectTag Tag => EffectTag.TakeHand;
-        internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.ReceiversOf(EffectSubject.Target, entry);
+        internal override bool GainsHand => true;
+        internal override IEnumerable<int> Affected(GameServer server, ChainEntry entry) => server.HandLossReceiversOf(EffectSubject.Target, entry);
+        internal override int PredictHandLoss(GameServer server, ChainEntry entry, int actor, int handCount) =>
+            actor != entry.User && Affected(server, entry).Contains(actor) ? Math.Min(server.Scaled(entry, count), handCount) : 0;
 
         internal override void Apply(GameServer server, ChainEntry entry)
         {
-            foreach (int actor in server.ReceiversOf(EffectSubject.Target, entry))
-                server.StealRandom(actor, entry.User, count);
+            foreach (int actor in server.HandLossReceiversOf(EffectSubject.Target, entry))
+                server.StealRandom(actor, entry.User, server.Scaled(entry, count), entry.User);
         }
     }
 }

@@ -30,6 +30,13 @@ namespace Chapchu.DebugTools
 
         private void Awake()
         {
+            // 출시 빌드에선 끈다 — 디버그 키 · 손패 로그는 개발 빌드에서만 (CODE_CONVENTION 7절)
+            if (!Debug.isDebugBuild)
+            {
+                enabled = false;
+                return;
+            }
+
             if (server == null)
                 Debug.LogError($"[{nameof(GameDebugInput)}] {nameof(server)} 참조가 비어 있습니다.", this);
         }
@@ -362,8 +369,8 @@ namespace Chapchu.DebugTools
         }
 
         private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");
-        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline) => Log($"고르기 시작 — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
-        private void HandleChoiceMade(int actor, int option, bool timedOut) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
+        private void HandleChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind) => Log($"고르기 시작{(kind == Chapchu.Game.ChoiceKind.HandCard ? " (손패 1장)" : "")} — P{actor} (카드 {cardId} · P{user}) · 손패 {handCount}장 / {damage} 피해 · {deadline - startsAt:0.0}초");
+        private void HandleChoiceMade(int actor, int option, bool timedOut, int kind) => Log($"고르기 — P{actor} {(option < 0 ? "불발" : kind == Chapchu.Game.ChoiceKind.HandCard ? "버릴 카드 1장" : option == 0 ? "손패 전부 버리기" : "피해 받기")}{(timedOut ? " (시간 초과)" : "")}");
         private void HandleGaepanChanged(int caster, int left, bool again) => Log($"개판 — P{caster} · {left}바퀴 남음{(again ? " · 다시 처음부터" : "")}");
         private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values) => Log($"개판 판정 — 기준 {(byHp ? "HP" : "손패")} 꼴찌 P{loser} ({value}) · 동점 {tied.Length}명 · 값 {string.Join(" ", actors.Select((a, i) => $"P{a}={values[i]}"))}");
 

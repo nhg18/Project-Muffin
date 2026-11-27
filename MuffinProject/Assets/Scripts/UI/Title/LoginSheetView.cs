@@ -147,7 +147,7 @@ namespace Chapchu.UI.Title
 
         public void ShowAgree()
         {
-            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, LobbyStyle.Band, closable: true, agreeWidth);
+            Open(LoginSheetStep.Agree, AgreeTitle, listIcon, LobbyStyle.Band, closable: false, agreeWidth); // 닫기 X 없음 — 뒤에 갈 화면이 없다 (20 7-11)
             agreeBody.HideNeed(); // 판이 켜진 뒤에 — 꺼져 있으면 버튼 · 판의 Awake 가 아직 안 돌았다
         }
 

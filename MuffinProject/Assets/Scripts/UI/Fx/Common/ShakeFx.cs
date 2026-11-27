@@ -16,7 +16,14 @@ namespace Chapchu.UI.Fx.Common
 
         public override float DurationMs => durationMs;
 
+        // 꺼진 오브젝트는 Awake 가 늦게 돌 수 있어 쓸 때도 찾는다
         private FxShaker Shaker => _shaker != null ? _shaker : _shaker = GetComponentInParent<FxShaker>(true);
+
+        private void Awake()
+        {
+            if (Shaker == null)
+                Debug.LogError($"[{nameof(ShakeFx)}] 부모에 흔들 판(FxShaker)이 없습니다.", this);
+        }
 
         public override void ResetState()
         {
@@ -28,10 +35,7 @@ namespace Chapchu.UI.Fx.Common
         public override void Play(CardFxContext context, RectTransform target)
         {
             if (Shaker == null)
-            {
-                Debug.LogWarning($"[{nameof(ShakeFx)}] 부모에 흔들 판(FxShaker)이 없어 흔들지 않습니다.", this);
                 return;
-            }
             Shaker.Shake(amount, durationMs);
         }
     }

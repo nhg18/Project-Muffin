@@ -173,6 +173,9 @@ namespace Chapchu.UI.GameScreen
 
         public int Count => _cards.Count;
 
+        /// <summary>지금 손패의 카드들 — 왼쪽부터 (고르기 판이 읽는다, 10-ui.md 5절).</summary>
+        public IReadOnlyList<CardView> Cards => _cards;
+
         /// <summary>손패가 올라와 있는가 — 끄는 중이거나, 고른 카드 없이 포인터가 손패에 있다.</summary>
         public bool IsRaised => _dragging != null || (_selected == null && _revealed);
 

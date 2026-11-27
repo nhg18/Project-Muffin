@@ -79,7 +79,7 @@ namespace Chapchu.EditorTools
             serializedObject.ApplyModifiedProperties();
         }
 
-        // DamageEffect → Damage (11-card-list.md 5절의 효과 타입 이름)
+        // DamageEffect → Damage (11-card-list.md 부록 5의 효과 타입 이름)
         private static string GetDisplayName(Type type)
         {
             string name = type.Name;

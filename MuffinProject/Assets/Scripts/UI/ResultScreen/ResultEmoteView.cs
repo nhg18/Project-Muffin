@@ -2,6 +2,7 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.ResultScreen
@@ -32,16 +33,32 @@ namespace Chapchu.UI.ResultScreen
         /// <summary>이모트 버튼을 눌렀다 — 이모트 번호.</summary>
         public event Action<int> EmoteClicked;
 
+        // 버튼마다의 구독 — 같은 것으로 걸고 풀려고 Awake 에서 한 번 만든다.
+        private UnityAction[] _clickHandlers;
+
         private void Awake()
         {
             if (root == null || group == null || buttons == null || labels == null || buttons.Length != labels.Length)
                 Debug.LogError($"[{nameof(ResultEmoteView)}] 참조 중 비어 있는 것이 있습니다.", this);
 
+            _clickHandlers = new UnityAction[buttons.Length];
             for (int i = 0; i < buttons.Length; i++)
             {
                 int index = i;
-                buttons[i].onClick.AddListener(() => HandleClicked(index));
+                _clickHandlers[i] = () => HandleClicked(index);
             }
+        }
+
+        private void OnEnable()
+        {
+            for (int i = 0; i < buttons.Length; i++)
+                buttons[i].onClick.AddListener(_clickHandlers[i]);
+        }
+
+        private void OnDisable()
+        {
+            for (int i = 0; i < buttons.Length; i++)
+                buttons[i].onClick.RemoveListener(_clickHandlers[i]);
         }
 
         /// <summary>index 번 이모트의 글. 범위 밖이면 null.</summary>

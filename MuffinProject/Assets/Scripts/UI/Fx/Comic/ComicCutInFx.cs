@@ -96,7 +96,7 @@ namespace Chapchu.UI.Fx.Comic
                 yield return null;
             }
             _group.alpha = 0f;
-            yield return Wait(endPause);
+            yield return WaitRoutine(endPause);
         }
 
         public override IEnumerator PlayPostRoutine(CardFxContext context)
@@ -186,7 +186,7 @@ namespace Chapchu.UI.Fx.Comic
             return new Vector2(Mathf.Sin(t * shakeFrequency.x) * a, Mathf.Cos(t * shakeFrequency.y) * a * shakeVertical);
         }
 
-        private static IEnumerator Wait(float seconds)
+        private static IEnumerator WaitRoutine(float seconds)
         {
             for (float time = 0f; time < seconds; time += Time.deltaTime)
                 yield return null;

@@ -24,9 +24,9 @@ namespace Chapchu.UI.Popups
                 Debug.LogError($"[{nameof(MessageToast)}] {nameof(messageText)} 참조가 비어 있습니다.", this);
         }
 
-        protected override void OnOpen()
+        protected override void HandleOpened()
         {
-            base.OnOpen();
+            base.HandleOpened();
             transform.localScale = Vector3.zero;
             transform.DOScale(1f, popSeconds).SetEase(Ease.OutBack).SetUpdate(true).SetLink(gameObject);
         }

@@ -107,13 +107,17 @@ namespace Chapchu.UI.Lobby
     /// <summary>
     /// 로비 허브의 임시 데이터 — 「통합 화면 UI v2」 로비(게시본 1794316285-7080)의 시안 값 그대로.
     /// 친구 · 재화 · 퀘스트 · 상점 · 뽑기 서버가 아직 없어 이 기기 메모리에만 있고, 로비에 들어올 때마다 처음 값으로 돌아간다.
-    /// 값(가격 · 확률 · 보상)은 기획 「제안」 상태 — 서버가 붙으면 이 파일을 서버 응답으로 바꾼다 (docs/systems/13 · 19 · 24).
+    /// 값(가격 · 확률 · 보상)은 24 0절의 「가정 (시안 값)」 — 24 3~5절 확정 값과 다르며 어느 쪽으로 맞출지는 PM 결정.
+    /// 서버가 붙으면 이 파일을 서버 응답으로 바꾼다 (docs/systems/13 · 19 · 24).
     /// </summary>
     public sealed class LobbyHubData
     {
         public const string UnnamedItem = "이름 미정";
         public const string GachaName = "개판 상자";
-        public const string GachaSeason = "시즌 1 · 기간 미정";
+
+        /// <summary>친구 최대 인원 (13-friend 2절 「친구 최대 인원」)</summary>
+        public const int MaxFriends = 50;
+
         /// <summary>한 번에 여러 장 뽑기(10연)의 장수 — 10회는 희귀 이상 1개 보장 (24 0절 「등급 · 확률」, 시안 값)</summary>
         public const int GachaTenCount = 10;
 
@@ -217,7 +221,7 @@ namespace Chapchu.UI.Lobby
             _                      => "오프라인",
         };
 
-        /// <summary>등급 확률 (%)</summary>
+        /// <summary>등급 확률 (%) (24 0절 「등급 · 확률」, 시안 값)</summary>
         public static int GachaRate(HubGrade grade) => grade switch
         {
             HubGrade.Common   => 60,
@@ -226,7 +230,7 @@ namespace Chapchu.UI.Lobby
             _                 => 2,
         };
 
-        /// <summary>뽑기 중복 — 뼈다귀로 돌려받는 값</summary>
+        /// <summary>뽑기 중복 — 뼈다귀로 돌려받는 값 (24 0절 「중복」, 시안 값)</summary>
         public static int DuplicateRefund(HubGrade grade) => grade switch
         {
             HubGrade.Common   => 30,
@@ -235,7 +239,7 @@ namespace Chapchu.UI.Lobby
             _                 => 500,
         };
 
-        /// <summary>상점 값. 개판은 뽑기에서만 나와 false.</summary>
+        /// <summary>상점 값. 개판은 뽑기에서만 나와 false. (24 0절 「쓰는 길」, 시안 값)</summary>
         public static bool TryGetPrice(HubItem item, out HubCurrency currency, out int amount)
         {
             switch (item.Grade)
@@ -314,7 +318,8 @@ namespace Chapchu.UI.Lobby
 
         #region 퀘스트
 
-        public bool IsDailyBonusReady => !IsDailyBonusClaimed && Daily.TrueForAll(quest => quest.IsClaimed);
+        // 일일 목록이 비면(응답 실패 · 24 6-2 「빈 목록」) 받을 것이 없다
+        public bool IsDailyBonusReady => !IsDailyBonusClaimed && Daily.Count > 0 && Daily.TrueForAll(quest => quest.IsClaimed);
 
         public int DailyClaimedCount => Daily.FindAll(quest => quest.IsClaimed).Count;
 
@@ -435,12 +440,19 @@ namespace Chapchu.UI.Lobby
             return sorted;
         }
 
-        public void Accept(HubPerson request)
-        {
-            if (!RequestsIn.Remove(request))
-                return;
+        /// <summary>친구가 한도(MaxFriends)만큼 있는지 — 「요청」 비활성 · 수락 막힘 (13-friend 2절)</summary>
+        public bool IsFriendListFull => Friends.Count >= MaxFriends;
 
-            Friends.Add(new HubPerson(NewId(), request.Nickname));
+        /// <summary>받은 요청을 수락한다. 친구 한도면 받지 않고 false.</summary>
+        public bool Accept(HubPerson request)
+        {
+            if (IsFriendListFull)
+                return false;
+
+            if (RequestsIn.Remove(request))
+                Friends.Add(new HubPerson(NewId(), request.Nickname));
+
+            return true;
         }
 
         public void Block(HubPerson friend)
@@ -477,20 +489,39 @@ namespace Chapchu.UI.Lobby
             return results;
         }
 
-        /// <summary>친구 요청을 보낸다. 상대도 나에게 요청한 상태면 바로 친구가 된다 (13-friend 2절).</summary>
-        public void Request(HubSearchResult result)
+        /// <summary>
+        /// 친구 요청을 보낸다. 상대도 나에게 요청한 상태면 바로 친구가 된다 (13-friend 2절).
+        /// 이미 친구 · 요청한 상대면 관계만 맞춘다. 친구 한도면 보내지 않고 false.
+        /// </summary>
+        public bool Request(HubSearchResult result)
         {
+            if (Friends.Exists(person => person.Nickname == result.Nickname))
+            {
+                result.Relation = HubRelation.Friend;
+                return true;
+            }
+
+            if (RequestsOut.Exists(person => person.Nickname == result.Nickname))
+            {
+                result.Relation = HubRelation.Sent;
+                return true;
+            }
+
+            if (IsFriendListFull)
+                return false;
+
             HubPerson incoming = RequestsIn.Find(person => person.Nickname == result.Nickname);
             if (incoming != null)
             {
                 Accept(incoming);
                 result.Relation = HubRelation.Friend;
-                return;
+                return true;
             }
 
             result.Relation = HubRelation.Sent;
             result.IsJustSent = true;
             RequestsOut.Add(new HubPerson(NewId(), result.Nickname));
+            return true;
         }
 
         /// <summary>확인용 — 아직 관계가 없는 사람 한 명이 친구 요청을 보낸다. 보낼 사람이 없으면 null.</summary>
