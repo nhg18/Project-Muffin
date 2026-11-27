@@ -45,7 +45,7 @@ namespace Chapchu.EditorTools
         private const float BoardPillWidth = 282f;
 
         // 개판 제목 · 판정 — 상대 이름표(위 4 ~ 144) 아래로 (가운데 y). 도장은 제목 오른쪽, 턴 순서(1588 ~) 왼쪽
-        private const float GaepanTitleY = 470f, GaepanStampX = 1400f, GaepanStampY = 500f, GaepanBannerY = 440f, GaepanRollY = 590f;
+        private const float GaepanBannerY = 440f, GaepanRollY = 590f;
 
         private static TMP_FontAsset _pretendardBold;
         private static TMP_FontAsset PretendardBold => _pretendardBold != null ? _pretendardBold : _pretendardBold = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(PretendardBoldPath);
@@ -401,15 +401,10 @@ namespace Chapchu.EditorTools
             unit.fontSize = 22f;
         }
 
-        // 개판 시작 제목 · 판정 팻말 — 상대 이름표를 덮지 않게 판 가운데 쪽으로
+        // 개판 판정 팻말 — 상대 이름표를 덮지 않게 판 가운데 쪽으로
         private static void MoveGaepanTexts(Transform canvas)
         {
-            GaepanTitleView title = canvas.GetComponentInChildren<GaepanTitleView>(true);
             GaepanJudgeView judge = canvas.GetComponentInChildren<GaepanJudgeView>(true);
-            SetY(title != null ? title.transform.Find("Lines") : null, GaepanTitleY);
-            SetY(title != null ? title.transform.Find("Stamp") : null, GaepanStampY);
-            if (title != null && title.transform.Find("Stamp") is RectTransform stamp)
-                stamp.anchoredPosition = new Vector2(GaepanStampX, stamp.anchoredPosition.y);
             SetY(judge != null ? judge.transform.Find("Banner") : null, GaepanBannerY);
             SetY(judge != null ? judge.transform.Find("Roll") : null, GaepanRollY);
         }

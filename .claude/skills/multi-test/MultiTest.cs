@@ -5900,8 +5900,8 @@ public static class MultiTest
     }
 
     /// <summary>플레이 중인 게임 뷰를 PNG 로 찍는다 (끝 프레임에 쓰임 — 호출 뒤 파일이 생기길 기다린다). 화면 배치를 눈으로 볼 때.</summary>
-    // 1021 개판 연출 — 시작 제목 · 자명종 · 마지막 바퀴 · 판정 팻말이 화면에 뜨는 순간을 에디터 안에서 지켜보다 찍는다 (CLI 부름 사이로는 순간을 놓친다).
-    // prefix + "_title.png"(제목이 뜨고 1.6초) · "_hud.png"(자명종이 뜨고 0.6초) · "_hot.png"(마지막 바퀴 0.6초) · "_roll.png"(판정 1.3초 — 룰렛) · "_low.png"(판정 3.4초 — 꼴찌). 한 번씩.
+    // 1021 개판 연출 — 자명종 · 마지막 바퀴 · 판정 팻말이 화면에 뜨는 순간을 에디터 안에서 지켜보다 찍는다 (CLI 부름 사이로는 순간을 놓친다). 시작 제목은 카드 컷인 (ArmGameFxShots).
+    // prefix + "_hud.png"(자명종이 뜨고 0.6초) · "_hot.png"(마지막 바퀴 0.6초) · "_roll.png"(판정 1.3초 — 룰렛) · "_low.png"(판정 3.4초 — 꼴찌). 한 번씩.
     public static string ArmGaepanShots(string prefix)
     {
         if (!EditorApplication.isPlaying) return "FAIL 플레이 중이 아님";
@@ -5916,7 +5916,6 @@ public static class MultiTest
                 return;
             }
             double now = EditorApplication.timeSinceStartup;
-            GaepanTitleView title = Object.FindFirstObjectByType<GaepanTitleView>(FindObjectsInactive.Include);
             GaepanHudView hud = Object.FindFirstObjectByType<GaepanHudView>(FindObjectsInactive.Include);
             GaepanJudgeView judge = Object.FindFirstObjectByType<GaepanJudgeView>(FindObjectsInactive.Include);
             bool hot = hud != null && hud.gameObject.activeInHierarchy
@@ -5929,15 +5928,14 @@ public static class MultiTest
                 ScreenCapture.CaptureScreenshot(prefix + "_" + key + ".png");
                 taken.Add(key);
             }
-            Watch("title", title != null && title.gameObject.activeInHierarchy, 1.6);
             Watch("hud", hud != null && hud.gameObject.activeInHierarchy && !hot, 0.6);
             Watch("hot", hot, 0.6);
             Watch("roll", judge != null && judge.gameObject.activeInHierarchy, 1.3);
             Watch("low", judge != null && judge.gameObject.activeInHierarchy, 3.4);
-            if (taken.Count == 5) EditorApplication.update -= tick;
+            if (taken.Count == 4) EditorApplication.update -= tick;
         };
         EditorApplication.update += tick;
-        return "OK 개판 스크린샷 대기 → " + prefix + "_title · _hud · _hot · _roll · _low";
+        return "OK 개판 스크린샷 대기 → " + prefix + "_hud · _hot · _roll · _low";
     }
 
     // 1021 자명종 — 보이면 「HUD n」(남은 바퀴), 없으면 「NONE」.

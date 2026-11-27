@@ -19,13 +19,13 @@ namespace Chapchu.EditorTools
         private static readonly Color GpPink = Hex(0xFF7EA4);
         private static readonly Color GpPinkDeep = Hex(0xFF5C8A);
         private static readonly Color GpPaw = Hex(0xFF8FB0);
-        private static readonly Color GpPawShine = Hex(0xFFC3D5);
         private static readonly Color GpYellow = Hex(0xFFE27A);
         private static readonly Color GpSegmentOff = Hex(0xF1E2CF);
         private static readonly Color GpCardIcon = Hex(0x74B8F5);
 
         /// <summary>
-        /// 개판 연출 셋을 만든다 — 자명종(hudParent = BoardLayer, 왼쪽 위) · 시작 제목 · 판정 팻말(GaepanLayer — 캔버스 전체, 부르는 쪽이 서랍 앞에 둔다).
+        /// 개판 연출을 만든다 — 자명종(hudParent = BoardLayer, 왼쪽 위) · 판정 팻말(GaepanLayer — 캔버스 전체, 부르는 쪽이 서랍 앞에 둔다).
+        /// 시작 제목은 카드의 3 단계 컷인(GaepanFx)이 보인다 (PM 2026-11-27).
         /// 이미 만든 씬에 더할 때도 이 함수를 부른다.
         /// </summary>
         public static GaepanPresenter BuildGaepan(RectTransform canvasRect, RectTransform hudParent, OpponentSeatsPresenter seats, RectTransform myCharacter)
@@ -35,11 +35,10 @@ namespace Chapchu.EditorTools
 
             RectTransform layer = NewRect("GaepanLayer", canvasRect);
             Stretch(layer);
-            GaepanTitleView title = BuildGaepanTitle(layer, stickerFont, stickerMaterial, inkMaterial);
             GaepanJudgeView judge = BuildGaepanJudge(layer, stickerFont, stickerMaterial, inkMaterial);
 
             var presenter = layer.gameObject.AddComponent<GaepanPresenter>();
-            Wire(presenter, ("hud", hud), ("title", title), ("judge", judge), ("seats", seats), ("myCharacter", myCharacter));
+            Wire(presenter, ("hud", hud), ("judge", judge), ("seats", seats), ("myCharacter", myCharacter));
             return presenter;
         }
 
@@ -121,86 +120,6 @@ namespace Chapchu.EditorTools
             Anchor(needle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), new Vector2(0f, -1.5f * s), new Vector2(3f * s, 13.5f * s));
             GpDisc("Pin", clock, P(24f, 27f), 5.2f * s, GpInk);
             return clock;
-        }
-
-        // 시작 제목 (.gp-title · .gp-five, 컷인 장면 없이) — 캔버스 전체, 숨김으로 시작.
-        // 제목: 위 22% 가운데, −4°. 첫 줄 21vmin(227) 털색 「개판」, 둘째 줄 12.5vmin(135) 분홍 「오분전!」 · 위로 .12em · 오른쪽 1.1em.
-        // 도장: 82% · 26% 에 25vmin(270) 발바닥, 12°. 숫자 11.5vmin(124) · 「바퀴 동안」 3.6vmin(39) 알약.
-        private static GaepanTitleView BuildGaepanTitle(RectTransform parent, TMP_FontAsset font, Material stickerMaterial, Material inkMaterial)
-        {
-            RectTransform root = NewRect("GaepanTitle", parent);
-            Stretch(root);
-            var group = root.gameObject.AddComponent<CanvasGroup>();
-            group.blocksRaycasts = false;
-
-            RectTransform lines = NewRect("Lines", root);
-            Anchor(lines, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -1080f * 0.22f), Vector2.zero);
-            lines.localRotation = Quaternion.Euler(0f, 0f, 4f);
-            VerticalLayoutGroup column = lines.gameObject.AddComponent<VerticalLayoutGroup>();
-            column.childAlignment = TextAnchor.UpperCenter;
-            column.spacing = -0.12f * 135f;
-            column.childControlWidth = true;
-            column.childControlHeight = true;
-            column.childForceExpandWidth = false;
-            column.childForceExpandHeight = false;
-            FitBoth(lines.gameObject);
-
-            StickerWordView first = BuildStickerLine("First", lines, font, stickerMaterial, 227f, new RectOffset());
-            StickerWordView second = BuildStickerLine("Second", lines, font, stickerMaterial, 135f, new RectOffset(Mathf.RoundToInt(1.1f * 135f), 0, 0, 0));
-
-            // 발바닥 도장 (PAW, viewBox 100 → 270, 1 = 2.7)
-            const float s = 2.7f;
-            Vector2 P(float x, float y) => new Vector2((x - 50f) * s, (50f - y) * s);
-            RectTransform stamp = NewRect("Stamp", root);
-            Anchor(stamp, new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(1920f * 0.82f, -1080f * 0.26f), new Vector2(100f * s, 100f * s));
-            stamp.localRotation = Quaternion.Euler(0f, 0f, -12f);
-            stamp.gameObject.AddComponent<CanvasGroup>();
-
-            (Vector2 c, Vector2 r, float rot, Vector2 shine, Vector2 shineR)[] beanSpecs =
-            {
-                (new Vector2(20f, 38f), new Vector2(10.5f, 12.5f), -24f, new Vector2(17f, 34f), new Vector2(3f, 4f)),
-                (new Vector2(38f, 20f), new Vector2(11f, 13.5f), -8f, new Vector2(34f, 17f), new Vector2(3.5f, 4.5f)),
-                (new Vector2(62f, 20f), new Vector2(11f, 13.5f), 8f, new Vector2(58f, 17f), new Vector2(3.5f, 4.5f)),
-                (new Vector2(80f, 38f), new Vector2(10.5f, 12.5f), 24f, new Vector2(76f, 34f), new Vector2(3f, 4f)),
-            };
-            var beans = new RectTransform[beanSpecs.Length];
-            for (int i = 0; i < beanSpecs.Length; i++)
-            {
-                (Vector2 c, Vector2 r, float rot, Vector2 shine, Vector2 shineR) = beanSpecs[i];
-                RectTransform bean = NewRect($"Bean{i}", stamp);
-                Anchor(bean, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(c.x, c.y), Vector2.zero);
-                bean.localRotation = Quaternion.Euler(0f, 0f, -rot); // SVG rotate(+) = 시계 방향
-                GpOval("Ink", bean, Vector2.zero, (r * 2f + Vector2.one * 4.5f) * s, GpInk);
-                GpOval("Fill", bean, Vector2.zero, (r * 2f - Vector2.one * 4.5f) * s, GpPaw);
-                Vector2 local = Quaternion.Euler(0f, 0f, rot) * (P(shine.x, shine.y) - P(c.x, c.y));
-                GpOval("Shine", bean, local, shineR * 2f * s, GpPawShine);
-                beans[i] = bean;
-            }
-            // 발바닥 (시안 path — 위가 좁고 아래가 넓은 둥근 덩어리, 가로 21 ~ 79 · 세로 42 ~ 86) — 둥근 사각형으로 비슷하게
-            GpOval("PadInk", stamp, P(50f, 64f), new Vector2(58f + 4.5f, 44f + 4.5f) * s, GpInk);
-            GpOval("PadFill", stamp, P(50f, 64f), new Vector2(58f - 4.5f, 44f - 4.5f) * s, GpPaw);
-
-            TMP_Text rounds = NewText("Rounds", stamp, "5", 124f, GpCream, true);
-            rounds.font = font;
-            rounds.fontSharedMaterial = inkMaterial;
-            Anchor(rounds.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(50f, 63f), new Vector2(200f, 160f));
-
-            RectTransform pill = NewRect("Caption", stamp);
-            Anchor(pill, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(50f, 104f), Vector2.zero);
-            pill.localRotation = Quaternion.Euler(0f, 0f, 12f);
-            HorizontalLayout(pill, new RectOffset(23, 23, 2, 5), 0f, TextAnchor.MiddleCenter, true, true);
-            FitBoth(pill.gameObject);
-            Image pillShadow = RoundImage("Shadow", pill, GpInk, 40f);
-            Stretch(pillShadow.rectTransform, 0f, 5f, 0f, -5f);
-            pillShadow.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            RoundBox(pill, GpInk, 6f, 40f, GpCream);
-            NewText("Text", pill, "바퀴 동안", 39f, GpInk, true);
-
-            var view = root.gameObject.AddComponent<GaepanTitleView>();
-            Wire(view, ("group", group), ("firstLine", first), ("secondLine", second), ("stamp", stamp), ("roundsText", rounds));
-            WireArray(view, "beans", beans);
-            root.gameObject.SetActive(false);
-            return view;
         }
 
         // 판정 팻말 (GP_FX.judge) — 캔버스 전체, 숨김으로 시작. 어둡게(43,30,26 · 42%) · 띠(위 17%, 10vmin=108, −3°) · 기준 팻말(위 31%, 5.6vmin=60, −3°) · 머리 위 값 표 템플릿(4.4vmin=48).
@@ -300,14 +219,6 @@ namespace Chapchu.EditorTools
 
             tag.gameObject.SetActive(false);
             return tag;
-        }
-
-        // 스티커 글자 한 줄 — HorizontalLayoutGroup + StickerWordView + 글자 칸 템플릿
-        private static StickerWordView BuildStickerLine(string name, RectTransform parent, TMP_FontAsset font, Material material, float size, RectOffset padding)
-        {
-            RectTransform line = NewRect(name, parent);
-            HorizontalLayout(line, padding, 0f, TextAnchor.MiddleCenter, true, true);
-            return AddStickerWord(line, font, material, size);
         }
 
         private static StickerWordView AddStickerWord(RectTransform line, TMP_FontAsset font, Material material, float size)
