@@ -1,8 +1,9 @@
 // 3D 카드의 종이 한 면 — 앞면 · 뒷면 (시안 통합 UI v3.20 카드 4번 .card, 앞면 110 × 164 px → 226 × 336 u).
 //   아래부터: 종이 두께 띠 3 겹(종이를 아래로 1 · 2 · 3 px 민 모양, 시안 box-shadow) → 흰 종이(앞면보다 사방 6.8 px 큰 둥근 사각형)
 //   → 앞면 칸의 그림(틀 · 뒷면 그림, 모서리 1.5 px) → 노란 형광펜(고른 카드 · 놓으면 사용 — 종이 테에서 바깥으로 12 u, 흔들림)
-//   → 잉크 선 한 줄(종이 테 위 3 u, 살짝 흔들림) → 등급 수만큼 낙서 별 (일반 0 · 고급 1 · 희귀 2 · 개판 3).
-// 형광펜(_Mark) · 별 수(_Grade) · 흐림(_Filter)은 CardView 가 MaterialPropertyBlock 으로 넣는다. 뒷면은 형광펜 · 별 없이 종이 · 뒷면 그림 · 잉크 선만.
+//   → 잉크 선 한 줄(종이 테 위 3 u, 살짝 흔들림) → 등급 수만큼 낙서 별 (일반 0 · 고급 1 · 희귀 2 · 개판 3) → 등급 표면 빛 (CardFilter.cginc CardSheen).
+// 형광펜(_Mark) · 별 수(_Grade) · 별 보이기(_StarShow) · 흐림(_Filter) · 표면 빛(_Sheen*)은 CardView 가 MaterialPropertyBlock 으로 넣는다.
+// 별은 등급 연출과 같이 보이고 숨는다 — 손패에서는 숨긴다 (10-ui.md 2-1 「카드 등급 연출」). 머티리얼 기본값은 보임(1) — 등급 연출을 모르는 화면은 그대로. 뒷면은 형광펜 · 별 없이 종이 · 뒷면 그림 · 잉크 선만.
 // 모양 값(_Size · _Paper · _Face · _Star*)은 TableBuilder 가 카드 크기에서 계산해 넣는다. 길이는 전부 u (캔버스 px, 1 유닛 = 100).
 // 흔들림 = SVG feTurbulence(fractalNoise) + feDisplacementMap 흉내 — 잉크 cdwobs(주파수 0.02 · 1 겹 · 세기 1.6) · 형광펜 cdwob(0.03 · 2 겹 · 3.4).
 // 깊이는 종이에만 쓰고(첫 패스) 색은 미리 곱한 알파로 섞어 그린다(둘째 패스) — 앞 층 렌더 텍스처(투명 바탕)에서도 덮인 정도가 맞다.
@@ -30,6 +31,13 @@ Shader "Chapchu/Card Paper"
         _Star3 ("Star 3 (x, y, 배율)", Vector) = (-134.82, 134.22, 0.75, 0)
         [HideInInspector] _Mark ("Mark (형광펜)", Range(0, 1)) = 0
         [HideInInspector] _Grade ("Grade (별 수)", Float) = 0
+        [HideInInspector] _StarShow ("Star Show (별 보이기 0 ~ 1)", Range(0, 1)) = 1
+        [HideInInspector] _Sheen ("Sheen (가운데, 반폭, 세기)", Vector) = (0, 1, 0, 0)
+        [HideInInspector] _SheenLine ("Sheen Line (축 x, 축 y, 더할 값, 흰 띠 비율)", Vector) = (1, 0, 0, 0.42)
+        [HideInInspector] _SheenA ("Sheen .25", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenB ("Sheen .5", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenC ("Sheen .75", Vector) = (1, 1, 1, 0)
+        [HideInInspector] _SheenWhite ("Sheen White", Float) = 0
         [HideInInspector] _Filter ("Filter (채도, 밝기, 대비)", Vector) = (1, 1, 1, 0)
     }
 
@@ -41,7 +49,7 @@ Shader "Chapchu/Card Paper"
     float4 _MainTex_ST;
     float4 _Size, _Paper, _Face, _InkWobble, _MarkWobble, _Star1, _Star2, _Star3;
     fixed4 _Thick1, _Thick2, _Thick3, _InkColor, _MarkColor;
-    float _ThickStep, _InkWidth, _MarkWidth, _StarUnit, _Mark, _Grade;
+    float _ThickStep, _InkWidth, _MarkWidth, _StarUnit, _Mark, _Grade, _StarShow;
 
     // 별(시안 CSTAR) 곡선의 첫 8분면 — (10, 0) 에서 (2.675, 2.675) 까지, 3차 곡선을 t 0 ~ 0.5 에서 8 마디로. 별은 8 겹 대칭이라 이것만 본다.
     static const float2 StarCurve[9] =
@@ -139,8 +147,8 @@ Shader "Chapchu/Card Paper"
         float2 local = float2(c * d.x + s * d.y, -s * d.x + c * d.y) / unit;
         float dist = StarDistance(local) * unit;
         float halfStroke = 0.9 * unit;
-        float4 o = Over(below, fill, Coverage(dist, aa));
-        return Over(o, _InkColor.rgb, _InkColor.a * Coverage(abs(dist) - halfStroke, aa));
+        float4 o = Over(below, fill, _StarShow * Coverage(dist, aa));
+        return Over(o, _InkColor.rgb, _InkColor.a * _StarShow * Coverage(abs(dist) - halfStroke, aa));
     }
 
     float4 PaperColor(float2 p)
@@ -178,7 +186,7 @@ Shader "Chapchu/Card Paper"
         }
 
         // 6. 등급 별 (시안 cardStars — 칠 색 고급 #fff6c4 / 희귀 #d9c6ff · #fff / 개판 #ffe45f · #ff8fc8 · #7fe0ff)
-        if (_Grade > 0.5)
+        if (_Grade > 0.5 && _StarShow > 0.001)
         {
             float3 first = _Grade > 2.5 ? float3(1.0, 0.894, 0.373) : _Grade > 1.5 ? float3(0.851, 0.776, 1.0) : float3(1.0, 0.965, 0.769);
             c = DrawStar(c, p, _Star1.xyz, first, aa);
@@ -227,7 +235,7 @@ Shader "Chapchu/Card Paper"
             {
                 float4 c = PaperColor(i.p);
                 clip(c.a - 0.002);
-                float3 color = CardFilter(c.rgb / c.a);
+                float3 color = CardSheen(CardFilter(c.rgb / c.a), i.p);
                 return fixed4(color * c.a, c.a);
             }
             ENDCG

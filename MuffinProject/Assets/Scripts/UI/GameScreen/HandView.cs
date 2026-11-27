@@ -246,6 +246,7 @@ namespace Chapchu.UI.GameScreen
             card.transform.localRotation = Quaternion.Euler(drawTilt, 0f, 0f) * Quaternion.Euler(0f, 180f, 0f);
             card.Setup(instanceId, data);
             card.SetRaycastBlocking(!IsLocked);
+            card.SetGradeFx(show ? CardView.GradeFx.Full : CardView.GradeFx.Hand); // 등급 연출 — 크게 보여 주는 동안 전부, 손패에서는 글로우만 (10-ui.md 2-1)
             if (show)
                 _shown.Add(card);
             else
@@ -318,6 +319,7 @@ namespace Chapchu.UI.GameScreen
         {
             card.transform.SetParent(transform, true);
             card.SetRaycastBlocking(!IsLocked);
+            card.SetGradeFx(CardView.GradeFx.Hand);
             _cards.Add(card);
             Layout();
         }
@@ -434,6 +436,7 @@ namespace Chapchu.UI.GameScreen
                 _held = null;
             if (_shown.Remove(card))
             {
+                card.SetGradeFx(CardView.GradeFx.Hand); // 내려가기 시작하면 표면 빛 · 반짝이는 꺼지고 글로우만 남는다
                 // 크게 보여 주던 카드 — 위에서 내려오는 동안은 HUD 위 층에 둔다 (가는 길에 내 패널 뒤로 꺼지지 않게)
                 _arriveAt[card] = Time.time + showReturnDuration;
                 _onTop = true;
@@ -819,6 +822,7 @@ namespace Chapchu.UI.GameScreen
             _poses.Remove(card);
             _arriveAt.Remove(card);
             ClearMarks(card);
+            card.SetGradeFx(CardView.GradeFx.Off); // 받는 쪽(체인 등)이 다시 켠다
             topLayer.Set(card, false);
             card.transform.DOKill();
         }

@@ -230,6 +230,7 @@ namespace Chapchu.UI.GameScreen
             Transform t = card.transform;
             t.SetParent(transform, true); // 손패 올리기 · 내리기에 끌려가지 않게
             card.SetRaycastBlocking(false);
+            card.SetGradeFx(CardView.GradeFx.Full); // 낸 카드 — 체인에 있는 동안 등급 연출 전부 (10-ui.md 2-1 「카드 등급 연출」)
             topLayer.SetChain(card, true); // 좌석 캐릭터 · 패널(HUD)에 가리지 않게 — 손패보다는 뒤
 
             _chain.RemoveAll(e => e.Card == null); // 앞 체인의 처리 도중에 새 카드가 나왔다 — 떠난 카드의 빈자리를 걷고 다시 줄 세운다
@@ -289,6 +290,7 @@ namespace Chapchu.UI.GameScreen
 
             foreach (CardView card in cards)
             {
+                card.SetGradeFx(CardView.GradeFx.Off);
                 MoveTo(card, discardSpot.position, discardSpot.rotation, discardSpot.lossyScale, discardDuration, Ease.InQuad);
             }
 
@@ -327,6 +329,7 @@ namespace Chapchu.UI.GameScreen
                 return null;
 
             CardView card = entry.Card;
+            card.SetGradeFx(CardView.GradeFx.Off); // 떠나기 시작하면 꺼진다 — 버림 더미 · 좌석 · 손패로
             entry.Card = null; // 자리는 남긴다 — 남은 카드는 제자리
             if (_big == entry) _big = null;
             if (_chain.TrueForAll(e => e.Card == null))
