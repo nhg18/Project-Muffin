@@ -96,6 +96,7 @@ namespace Chapchu.UI.GameScreen
         private bool _chapchu;
         private bool _targetable;
         private bool _aimed;
+        private bool _targeted;
         private LifeState _life;
         private int _hp = GameServer.MaxHp;
         private int _handCount;
@@ -180,6 +181,13 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
+        /// <summary>처리를 기다리는 체인 맨 위 카드의 대상이다 — 겨눔과 같은 빨간 이름 칸 + 발밑 타원 (10-ui.md 5-2 #3 「대상 표시」). 탭은 받지 않는다.</summary>
+        public void SetTargeted(bool targeted)
+        {
+            _targeted = targeted;
+            Refresh();
+        }
+
         /// <summary>살아 있음 · 최종 사망 (06-health.md) — 이름 칸 · HP 자리 · 캐릭터 팻말. 사망 대기는 살아 있을 때와 같다.</summary>
         public void SetLife(LifeState life)
         {
@@ -210,7 +218,7 @@ namespace Chapchu.UI.GameScreen
         private void Refresh()
         {
             bool dead = _life == LifeState.Dead;
-            bool aim = _aimed && !dead;
+            bool aim = (_aimed || _targeted) && !dead;
             bool pick = _targetable && !dead;
 
             bool chapchuTag = !dead && !aim && !_isTurn && _chapchu;

@@ -89,6 +89,8 @@ namespace Chapchu.UI.GameScreen
 
         private bool _isMyTurn;
         private bool _chapchu;
+        private bool _targetable;
+        private bool _targeted;
         private LifeState _life;
         private int _hp = GameServer.MaxHp;
         private float _hpFontSize;
@@ -176,10 +178,22 @@ namespace Chapchu.UI.GameScreen
                 if (targetable)
                     pickLayers[i].sortingOrder = pickLayers[i].rootCanvas.sortingOrder + 1 + i;
             }
-            pickRing.SetActive(targetable);
-            pickOutline.SetActive(targetable);
+            _targetable = targetable;
+            pickRing.SetActive(targetable || _targeted);
+            pickOutline.SetActive(targetable || _targeted);
             tapArea.raycastTarget = targetable;
         }
+
+        /// <summary>처리를 기다리는 체인 맨 위 카드의 대상이 나다 — 발밑 빨간 타원 · HUD 빨간 점선 (10-ui.md 5-2 #3 「대상 표시」). 층을 올리거나 탭을 받지는 않는다.</summary>
+        public void SetTargeted(bool targeted)
+        {
+            _targeted = targeted;
+            pickRing.SetActive(_targetable || targeted);
+            pickOutline.SetActive(_targetable || targeted);
+        }
+
+        /// <summary>내 캐릭터 가운데(화면 좌표) — 대상 표시 점선이 닿는 자리.</summary>
+        public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
 
         public void OnPointerClick(PointerEventData eventData)
         {

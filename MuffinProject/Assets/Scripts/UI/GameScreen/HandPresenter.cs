@@ -100,6 +100,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
         public event System.Action<bool> OnRaisedChanged;
 
+        /// <summary>조준 화살표 — 대상 표시 점선(GameScreenPresenter)이 같은 모양을 복제해 쓴다 (10-ui.md 5-2 #3).</summary>
+        public AimArrowView AimArrow => aimArrow;
+
         /// <summary>반응 시간이 열려 있고 내가 낼 수 있는 카운터가 있다 · 없다 — 스킵 버튼을 켜고 끈다 (10-ui.md 5절).</summary>
         public event System.Action<bool> OnReactionAsked;
 

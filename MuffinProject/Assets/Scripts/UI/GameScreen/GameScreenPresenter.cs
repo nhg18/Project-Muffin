@@ -67,6 +67,10 @@ namespace Chapchu.UI.GameScreen
         private readonly Queue<Func<IEnumerator>> _steps = new Queue<Func<IEnumerator>>();
         private Coroutine _playing;
 
+        // 대상 표시 (10-ui.md 5-2 #3) — 체인 맨 위 카드의 대상과, 카드에서 대상마다 그리는 빨간 점선 (조준 화살표를 복제)
+        private int[] _markedTargets = Array.Empty<int>();
+        private readonly List<AimArrowView> _targetArrows = new List<AimArrowView>();
+
         // 덱의 카드 그림 — 게임 화면이 떠 있는 동안 붙들어 둔다. 판 도중에는 불러오지 않는다 (26-card-data.md 6-3)
         private List<Sprite> _cardArt;
 
@@ -137,6 +141,7 @@ namespace Chapchu.UI.GameScreen
         {
             hand.OnRaisedChanged += HandleHandRaised;
             chainCards.OnBottomChanged += reactionTimer.SetCardsBottom;
+            chainCards.OnTopTargetsChanged += HandleTopTargetsChanged;
             hand.OnReactionAsked += reactionTimer.SetSkipVisible;
             reactionTimer.OnSkipClicked += hand.SkipReaction;
             GameEvents.OnHpChanged += HandleHpChanged;
@@ -190,6 +195,7 @@ namespace Chapchu.UI.GameScreen
         {
             hand.OnRaisedChanged -= HandleHandRaised;
             chainCards.OnBottomChanged -= reactionTimer.SetCardsBottom;
+            chainCards.OnTopTargetsChanged -= HandleTopTargetsChanged;
             hand.OnReactionAsked -= reactionTimer.SetSkipVisible;
             reactionTimer.OnSkipClicked -= hand.SkipReaction;
             GameEvents.OnHpChanged -= HandleHpChanged;
@@ -261,6 +267,53 @@ namespace Chapchu.UI.GameScreen
             bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0 && _pendingActors.Count == 0;
             deck.ShowCanDraw(canAct && !seats.IsSelectingTargets);
             turnTimer.TickForMe = canAct;
+            UpdateTargetArrows();
+        }
+
+        // 체인 맨 위 카드의 대상이 바뀌었다 — 대상 좌석 · 내 패널을 빨갛게, 점선은 LateUpdate 가 카드를 따라 그린다. 화면만의 연출 (판정은 방장)
+        private void HandleTopTargetsChanged(int[] targets)
+        {
+            _markedTargets = targets;
+            seats.ShowTargeted(targets);
+            myPanel.ShowTargeted(Array.IndexOf(targets, PhotonNetwork.LocalPlayer.ActorNumber) >= 0);
+
+            AimArrowView template = hand.AimArrow;
+            while (template != null && _targetArrows.Count < targets.Length)
+            {
+                AimArrowView arrow = Instantiate(template, template.transform.parent);
+                arrow.name = "TargetArrow";
+                arrow.transform.SetSiblingIndex(template.transform.GetSiblingIndex()); // 끄는 카드의 조준 화살표가 위에 그려지게
+                arrow.Hide();
+                _targetArrows.Add(arrow);
+            }
+
+            for (int i = targets.Length; i < _targetArrows.Count; i++)
+                _targetArrows[i].Hide();
+        }
+
+        // 카드 가장자리에서 대상 캐릭터까지 — 카드가 비키거나(손패 올림) 줄이 바뀌어도 따라간다. 대상 자리가 없으면(나간 사람) 그 점선만 끈다
+        private void UpdateTargetArrows()
+        {
+            for (int i = 0; i < _markedTargets.Length && i < _targetArrows.Count; i++)
+            {
+                int target = _markedTargets[i];
+                Vector2 to;
+                bool found;
+                if (IsMe(target))
+                {
+                    to = myPanel.CharacterScreenPoint;
+                    found = true;
+                }
+                else
+                {
+                    found = seats.TryGetCharacterScreenPoint(target, out to);
+                }
+
+                if (found && chainCards.TryGetTopCardEdge(to, out Vector2 from))
+                    _targetArrows[i].Show(from, to, true);
+                else
+                    _targetArrows[i].Hide();
+            }
         }
 
         // 내 손패 올림 · 내림은 내 포인터의 일이라 연출 큐를 거치지 않고 바로 — 가운데 카드 · 반응 타이머가 비킨다.
