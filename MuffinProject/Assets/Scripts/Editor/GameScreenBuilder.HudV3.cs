@@ -480,10 +480,6 @@ namespace Chapchu.EditorTools
             headerFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             NewText("Text", header, "턴 방향", 28f, Ink, true).rectTransform.sizeDelta = new Vector2(100f, 52f);
             Image arrow = FixedIcon("Arrow", header, Hud("icon_arrow_down"), 20f, 26f, Ink);
-            UIShape halt = NewShape("Halt", header, WarnFill, 8f, 3f, Ink);
-            SetLayoutSize(halt.rectTransform, 32f, 32f);
-            Icon("Icon", halt.transform, Hud("icon_pause"), 18f, Ink);
-            halt.gameObject.SetActive(false);
 
             // 세로 막대 — 높이는 줄 수에 맞춰 뷰가 정한다
             UIShape track = NewShape("Track", root, TrackFill, 64f, Line4, Ink);
@@ -526,7 +522,7 @@ namespace Chapchu.EditorTools
 
             var view = root.gameObject.AddComponent<TurnOrderView>();
             Wire(view,
-                ("headerFill", headerFill), ("directionArrow", arrow.rectTransform), ("haltBox", halt.gameObject), ("track", track.rectTransform), ("rows", rows),
+                ("headerFill", headerFill), ("directionArrow", arrow.rectTransform), ("track", track.rectTransform), ("rows", rows),
                 ("rowPrefab", EnsureTurnOrderRowPrefab()), ("currentTab", tab), ("currentNameText", currentName), ("currentNameLayout", currentNameLayout),
                 ("currentBand", band), ("currentCrown", crown.gameObject));
             var presenter = root.gameObject.AddComponent<TurnOrderPresenter>();

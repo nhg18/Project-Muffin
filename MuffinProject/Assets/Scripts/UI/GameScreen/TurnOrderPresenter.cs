@@ -52,7 +52,6 @@ namespace Chapchu.UI.GameScreen
         private void Start()
         {
             _view.SetReversed(false);
-            _view.SetHalted(false);
             RebuildRows();
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
 
@@ -101,14 +100,13 @@ namespace Chapchu.UI.GameScreen
             RefreshHp(actorNumber);
         }
 
-        /// <summary>생사 (OnDeathPending · OnDeathAvoided · OnPlayerDied) — 사망이면 흐리게, 누구든 사망 대기면 알약에 멈춤.</summary>
+        /// <summary>생사 (OnDeathAvoided · OnPlayerDied) — 사망이면 흐리게.</summary>
         public void ShowLife(int actorNumber, LifeState life)
         {
             _life[actorNumber] = life;
             int index = _actors.IndexOf(actorNumber);
             _view.SetDead(index, life == LifeState.Dead);
             RefreshHp(actorNumber);
-            _view.SetHalted(_life.Values.Any(state => state == LifeState.DeathPending));
         }
 
         private void RefreshHp(int actorNumber)
@@ -155,7 +153,6 @@ namespace Chapchu.UI.GameScreen
             _hp.Remove(player.ActorNumber);
             _chapchuActors.Remove(player.ActorNumber);
             RebuildRows();
-            _view.SetHalted(_life.Values.Any(state => state == LifeState.DeathPending));
         }
     }
 }

@@ -228,7 +228,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴 · 연출 · 체인 진행 중 · 내 함정 칸이 다 찼는지. 표시만 한다.</summary>
-        public void ShowPlayState(bool myTurn, bool busy, bool trapsFull) => _view.SetPlayState(myTurn, busy, trapsFull);
+        public void ShowPlayState(bool myTurn, bool busy, bool trapsFull, bool actionBlocked) => _view.SetPlayState(myTurn, busy, trapsFull, actionBlocked);
 
         /// <summary>내가 설치한 함정 — 손패에서 떼어 함정 칸(slot 의 위치 · 회전 · 배율)으로 보내 지운다. 연출 큐가 기다릴 코루틴. 손패에 없으면(빼앗아 온 함정) 바로 끝난다.</summary>
         public IEnumerator SetTrapRoutine(int cardInstanceId, Transform slot)
