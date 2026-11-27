@@ -139,7 +139,7 @@
       "id": 2021, "name": "으르렁", "type": "Counter", "target": "TriggerSource", "targetCondition": "None", "grade": "Rare", "count": 2,
       "text": "나에게 오는 행동 카드를 막고, 쓴 사람은 2장 버린다. 대신 나도 1장 버린다",
       "art": "",
-      "reactsTo": "Action, Counter", "reactCondition": "AimedAtMe",
+      "reactsTo": "Action", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DiscardEffect", "args": "subject=Target, count=2" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
     },
     {
