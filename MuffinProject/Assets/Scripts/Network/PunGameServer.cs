@@ -510,11 +510,6 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnEmptyDeckDamaged), empty.Actor, empty.Amount);
                         break;
 
-                    case DeathPending pending:
-                        Broadcast(nameof(RPC_OnDeathPending), pending.Actor, pending.StartsAt, pending.Deadline);
-                        PlayerPropsOf(playerProps, pending.Actor)[PlayerProps.LifeState] = (byte)LifeState.DeathPending;
-                        break;
-
                     case PlayerDied died:
                         Broadcast(nameof(RPC_OnPlayerDied), died.Actor, died.CardIds, died.DiscardCount);
                         PlayerPropsOf(playerProps, died.Actor)[PlayerProps.LifeState] = (byte)LifeState.Dead;
@@ -943,13 +938,6 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseEmptyDeckDamaged(actorNumber, amount);
-        }
-
-        [PunRPC]
-        private void RPC_OnDeathPending(int seq, int actorNumber, double startsAt, double deadline, PhotonMessageInfo info)
-        {
-            if (Accept(seq, info))
-                GameEvents.RaiseDeathPending(actorNumber, startsAt, deadline);
         }
 
         [PunRPC]

@@ -6,7 +6,7 @@ namespace Chapchu.Game
     public enum LifeState : byte
     {
         Alive,
-        DeathPending, // HP 0, 사망 대응 시간 — 게임이 멈춘다
+        DeathPending, // HP 0, 사망 정리 중 — 방장 안에서만 잠깐 (사망 대기 능력을 처리하는 사이). 밖에 알리지 않는다 (06-health.md 8절)
         Dead          // 최종 사망 — 턴 순서 · 대상 후보에서 빠진다
     }
 

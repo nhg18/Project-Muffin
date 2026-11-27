@@ -21,7 +21,6 @@ namespace Chapchu.Network.Events
         public static event Action<int, int, int, int[], int> OnCardResolved; // actorNumber, cardInstanceId, cardId, targets, discardCount — 효과 적용 (연출 4 단계), 효과 결과가 뒤따른다
         public static event Action<int, int, int, int> OnCardNegated;        // actorNumber, cardInstanceId, cardId, discardCount — 무효화, 4 단계 없이 버림 더미로
         public static event Action<int, int> OnEmptyDeckDamaged;             // actorNumber, amount — 빈 덱 피해, 체력은 뒤따르는 OnHpChanged
-        public static event Action<int, double, double> OnDeathPending;      // actorNumber, startsAt, deadline — 사망 대기, 게임이 멈춘다
         public static event Action<int, int[], int> OnPlayerDied;            // actorNumber, cardIds, discardCount — 최종 사망, 손패 0. cardIds = 버림 더미에 들어간 순서(손패 → 함정)
         public static event Action<int, int[], int, bool> OnPlayerLeftGame;        // actorNumber, cardIds, discardCount, forced(강제 퇴장인지) — 게임 중 나감, 손패 0 (좌석 제거는 RoomEvents.OnPlayerLeft)
         public static event Action<int, bool> OnChapchuChanged;              // actorNumber, isChapchu — 선언 · 해제
@@ -48,7 +47,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (1012)
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)
         public static event Action<int, int, int, int> OnCardReturnedToHand; // actorNumber, cardInstanceId, cardId, handCount — 체인의 카드가 시전자 손패로 (C01)
-        public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기에서 생존
+        public static event Action<int, int> OnDeathAvoided;                 // actorNumber, hp — 사망 대기 능력으로 생존
         public static event Action<int, GameEndReason> OnGameEnded;          // winner(무승부 -1), reason — 요약은 NetworkManager.LastResult, 곧 방장이 전원을 결과 씬으로 옮긴다
         public static event Action OnGameHalted;                             // 방장 이주에 실패해 판을 중지했다 — 곧 새 방장이 전원을 방으로 옮긴다 (09-network.md 9.1)
 
@@ -71,7 +70,6 @@ namespace Chapchu.Network.Events
         public static void RaiseCardResolved(int actorNumber, int cardInstanceId, int cardId, int[] targets, int discardCount) => OnCardResolved?.Invoke(actorNumber, cardInstanceId, cardId, targets, discardCount);
         public static void RaiseCardNegated(int actorNumber, int cardInstanceId, int cardId, int discardCount) => OnCardNegated?.Invoke(actorNumber, cardInstanceId, cardId, discardCount);
         public static void RaiseEmptyDeckDamaged(int actorNumber, int amount) => OnEmptyDeckDamaged?.Invoke(actorNumber, amount);
-        public static void RaiseDeathPending(int actorNumber, double startsAt, double deadline) => OnDeathPending?.Invoke(actorNumber, startsAt, deadline);
         public static void RaisePlayerDied(int actorNumber, int[] cardIds, int discardCount) => OnPlayerDied?.Invoke(actorNumber, cardIds, discardCount);
         public static void RaisePlayerLeftGame(int actorNumber, int[] cardIds, int discardCount, bool forced) => OnPlayerLeftGame?.Invoke(actorNumber, cardIds, discardCount, forced);
         public static void RaiseChapchuChanged(int actorNumber, bool isChapchu) => OnChapchuChanged?.Invoke(actorNumber, isChapchu);

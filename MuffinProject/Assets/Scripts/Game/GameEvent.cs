@@ -169,24 +169,6 @@
     }
 
     /// <summary>
-    /// HP 0 — 사망 대기 (06-health.md 8절). 게임이 멈춘다. 대응 시간은 StartsAt(피해 연출이 끝나는 서버 시각)부터 Deadline 까지.
-    /// 여럿이 함께 0 이 되면 같은 시각으로 하나씩 온다 (06 11절).
-    /// </summary>
-    public sealed class DeathPending : GameEvent
-    {
-        public int Actor { get; }
-        public double StartsAt { get; }
-        public double Deadline { get; }
-
-        public DeathPending(int actor, double startsAt, double deadline)
-        {
-            Actor = actor;
-            StartsAt = startsAt;
-            Deadline = deadline;
-        }
-    }
-
-    /// <summary>
     /// 최종 사망 (06-health.md 9절). 손패(와 함정)가 버림 더미로 갔다 — 손패 0. 턴 순서 · 대상 후보에서 빠진다.
     /// CardIds 는 버림 더미에 들어간 순서(손패 → 함정)의 카드 종류 — 버림 더미는 공개다 (05-deck.md 7절 · 09-network.md 3절). 없으면 빈 배열.
     /// </summary>
