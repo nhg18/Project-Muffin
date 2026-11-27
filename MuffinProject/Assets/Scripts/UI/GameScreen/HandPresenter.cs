@@ -15,7 +15,8 @@ namespace Chapchu.UI.GameScreen
     /// 넣고 빼기는 GameScreenPresenter 가 연출 큐 순서로 부른다 — 내가 뽑은 카드를 덱 자리에서 꺼내 붙이고, 방장이 승인한 내 카드 사용만 뺀다.
     /// 카드 종류로 요청이 갈린다 (04-card.md 5 ~ 7절): 행동 = 카드 사용, 카운터 = 카운터 사용(턴과 관계없이 반응 시간에), 함정 = 설치(대상 없음).
     /// 반응 시간 동안은 방장이 알려 준 「낼 수 있는 카운터」 에 초록 빛을 켠다 (10-ui.md 5절) — 무엇을 낼 수 있는지는 방장이 판정하고 여기는 켜기만 한다.
-    /// 사용 요청은 세 길로 온다 (10-ui.md 4절 「사용 요청」): 끌어서 사용 기준선 위에 놓기 · 끌어서 상대 위에 놓기(그 상대가 대상) · 더블클릭.
+    /// 사용 요청은 쥔 카드(끌기 · 클릭으로 집기)를 놓을 때 온다 (10-ui.md 4절 「사용 요청」): 사용 기준선 위에 놓기 · 상대 위에 놓기(그 상대가 대상).
+    /// 한 명을 겨누는 카드는 쥔 채 기준선을 넘으면 카드가 손패 자리 위에 멈추고 조준 화살표가 포인터를 따라간다 (AimArrowView) — 상대 위에서 놓으면 그 상대로.
     /// 대상 타입에 따라 바로 요청하거나(자동 대상 — 방장이 정한다) 상대 좌석에서 대상을 고르게 한 뒤 요청한다. 고르는 동안 그 카드는 테이블 가운데에, 가림판 위에 밝게 둔다 (10-ui.md 6절).
     /// 요청 뒤에도 카드는 손패에 남는다 — 승인(OnCardPlayed)이 오면 빠지고, 거절이면 그대로다 (04-card.md 10절). 거절 문구는 RejectToastPresenter.
     /// 승인된 카드는 손패에서 떼어 체인 카드 연출(ChainCardsPresenter)에 넘긴다 — 테이블에 내고 크게 보여 주고 버리는 것은 그쪽. 「손패로 반환」이면 돌려받아 다시 붙인다.
@@ -39,6 +40,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private OpponentSeatsPresenter seats;
         [Tooltip("끄는 동안 보이는 사용 기준선.")]
         [SerializeField] private PlayLineView playLine;
+        [Tooltip("한 명을 겨누는 카드를 쥔 채 기준선을 넘으면 카드에서 포인터까지 그리는 조준 화살표.")]
+        [SerializeField] private AimArrowView aimArrow;
         [Tooltip("손패가 올라와 덮는 HUD (내 패널 · 찹츄 버튼) — 덮인 동안 눌리지 않게 한다.")]
         [SerializeField] private CanvasGroup[] coveredHud = new CanvasGroup[0];
 
@@ -94,8 +97,6 @@ namespace Chapchu.UI.GameScreen
         private CardView _targetingCard; // 대상을 고르는 중인 카드 — 손패에서 빠지면 선택을 취소한다
 
         private HandView _view;
-        private HandInput _input;
-        private bool _hudRestorePending; // 손패는 내려갔지만 더블클릭 창이 지날 때까지 덮였던 HUD 를 막아 둔다
 
         /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
         public event System.Action<bool> OnRaisedChanged;
@@ -106,17 +107,15 @@ namespace Chapchu.UI.GameScreen
         private void Awake()
         {
             _view = GetComponent<HandView>();
-            _input = GetComponent<HandInput>();
 
-            if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || topLayer == null || revealView == null)
-                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(topLayer)} · {nameof(revealView)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (deck == null || drawOrigin == null || server == null || seats == null || discardSpot == null || playLine == null || aimArrow == null || topLayer == null || revealView == null)
+                Debug.LogError($"[{nameof(HandPresenter)}] {nameof(deck)} · {nameof(drawOrigin)} · {nameof(server)} · {nameof(seats)} · {nameof(discardSpot)} · {nameof(playLine)} · {nameof(aimArrow)} · {nameof(topLayer)} · {nameof(revealView)} 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable()
         {
             _view.OnCardDropped += HandleCardDropped;
             _view.OnCardDragged += HandleCardDragged;
-            _view.OnCardUseRequested += HandleCardUseRequested;
             _view.OnRaisedChanged += HandleRaisedChanged;
             _view.OnDraggingChanged += HandleDraggingChanged;
         }
@@ -125,7 +124,6 @@ namespace Chapchu.UI.GameScreen
         {
             _view.OnCardDropped -= HandleCardDropped;
             _view.OnCardDragged -= HandleCardDragged;
-            _view.OnCardUseRequested -= HandleCardUseRequested;
             _view.OnRaisedChanged -= HandleRaisedChanged;
             _view.OnDraggingChanged -= HandleDraggingChanged;
 
@@ -147,14 +145,6 @@ namespace Chapchu.UI.GameScreen
 
         private void Update()
         {
-            // 더블클릭 창이 지났다 — 막아 두었던 HUD 를 되살린다
-            if (_hudRestorePending && !_input.IsAwaitingDoubleClick)
-            {
-                _hudRestorePending = false;
-                foreach (CanvasGroup group in coveredHud)
-                    group.blocksRaycasts = true;
-            }
-
             // 보여 주는 중에 화면을 누르면 바로 손패로
             if (_showing.Count > 0 && Input.GetMouseButtonDown(0) && Time.time - _showLastAddAt > showClickGuard)
                 FinishShow();
@@ -452,7 +442,8 @@ namespace Chapchu.UI.GameScreen
                 Destroy(card.gameObject);
         }
 
-        // 끄는 동안 — 놓으면 사용되는 자리(기준선 위 · 상대 위)면 카드 링 · 기준선 색 · 그 좌석 강조로 알린다 (10-ui.md 4절).
+        // 쥔 동안 — 놓으면 사용되는 자리(기준선 위 · 상대 위)면 카드 빛 · 기준선 색 · 그 좌석 강조로 알린다 (10-ui.md 4절).
+        // 한 명을 겨누는 카드는 기준선을 넘으면 손패 자리 위에 멈추고, 카드에서 포인터까지 조준 화살표를 그린다 — 상대 위면 화살표가 겨눔 색.
         private void HandleCardDragged(CardView card, Vector2 screenPosition)
         {
             int seatActor = SeatUnder(card, screenPosition);
@@ -460,25 +451,49 @@ namespace Chapchu.UI.GameScreen
             _view.SetArmed(armed);
             playLine.SetArmed(armed);
             seats.ShowAim(seatActor);
+
+            bool aiming = armed && AimsOne(card);
+            _view.SetAiming(aiming);
+            if (aiming && _view.TryGetAimOrigin(out Vector2 origin))
+                aimArrow.Show(origin, screenPosition, seatActor != 0);
+            else
+                aimArrow.Hide();
         }
 
         private void HandleDraggingChanged(bool dragging)
         {
             playLine.SetVisible(dragging);
             if (!dragging)
+            {
                 seats.ShowAim(0);
+                aimArrow.Hide();
+            }
+        }
+
+        // 한 명을 겨누는 카드인가 — 조준 화살표를 쓴다. 여럿을 고르는 카드(TwoOthers · 가로채기의 여러 명)는 놓은 뒤 좌석에서 고른다 (Use).
+        private bool AimsOne(CardView card)
+        {
+            CardData data = deck.GetCard(card.CardId);
+            if (data == null || data.type == CardType.Trap) return false;
+
+            switch (data.targetType)
+            {
+                case TargetType.OneOther:
+                case TargetType.OneAny:
+                case TargetType.OneNotDamaged:
+                    return true;
+                case TargetType.SameCountAny:
+                    return _chainTopTargets <= 1;
+                default:
+                    return false;
+            }
         }
 
         // 올라온 손패가 덮는 HUD 는 그동안 눌리지 않는다 — 올라온 손패 위의 누름을 덮인 HUD(내 패널 등)가 가로채 HandInput.IsOverHud 로 손패 입력이 무시되지 않게 (프로토타입 v2 #game.handup).
         private void HandleRaisedChanged(bool raised)
         {
-            // 카드를 골라 내려간 직후에는 더블클릭의 둘째 누름이 올 수 있다 — 그 누름을 덮인 HUD 가 가로채 손패 입력이 무시되지 않게 창이 지난 뒤에 되살린다 (Update)
-            _hudRestorePending = !raised && _input != null && _input.IsAwaitingDoubleClick;
-            if (!_hudRestorePending)
-            {
-                foreach (CanvasGroup group in coveredHud)
-                    group.blocksRaycasts = !raised;
-            }
+            foreach (CanvasGroup group in coveredHud)
+                group.blocksRaycasts = !raised;
 
             OnRaisedChanged?.Invoke(raised);
         }
@@ -496,9 +511,6 @@ namespace Chapchu.UI.GameScreen
             Use(card, seatActor);
         }
 
-        // 더블클릭 · 고른 카드 다시 탭 — 놓은 상대가 없다.
-        private void HandleCardUseRequested(CardView card) => Use(card, 0);
-
         // 끄는 카드 아래의 상대 (actorNumber, 없으면 0). 함정은 대상이 없어 상대 위에 놓는 것이 뜻이 없다.
         private int SeatUnder(CardView card, Vector2 screenPosition)
         {
@@ -506,7 +518,8 @@ namespace Chapchu.UI.GameScreen
             return data != null && data.type != CardType.Trap ? seats.ActorAt(screenPosition) : 0;
         }
 
-        // 사용 요청 (04-card.md 5 ~ 7 · 11절). 자동 타입은 빈 대상으로 바로 요청(방장이 정한다), 고르는 타입은 놓은 상대가 있으면 그 상대로 · 없으면 좌석 탭으로.
+        // 사용 요청 (04-card.md 5 ~ 7 · 11절). 자동 타입은 빈 대상으로 바로 요청(방장이 정한다), 고르는 타입은 놓은 상대가 있으면 그 상대로 · 없으면 좌석 탭으로 —
+        // 화살표로 겨누다 상대가 아닌 곳에 놓아도 좌석 고르기로 이어진다 (작은 화면에서 좌석을 놓쳐도 다시 고를 수 있게).
         // 로컬 조건은 보지 않는다 — 방장이 거절하면 토스트 (10-ui.md 4절).
         private void Use(CardView card, int seatActor)
         {
