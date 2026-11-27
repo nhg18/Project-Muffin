@@ -97,12 +97,12 @@ namespace Chapchu.UI.Fx.Common
             SpawnGhost(new Vector2(-ghostOffset, 0f), leftGhost, length, thickness, angle);
             SpawnGhost(new Vector2(ghostOffset, 0f), rightGhost, length, thickness, angle);
 
-            DOVirtual.DelayedCall(Seconds(endMs), Slashes.ResetState).SetLink(gameObject);
+            DOVirtual.DelayedCall(Seconds(endMs), Slashes.ResetState, false).SetLink(gameObject);
             DOVirtual.DelayedCall(Seconds(flashDelayMs), () =>
             {
                 Flash(flash, flashAlpha, flashMs);
-                DOVirtual.DelayedCall(Seconds(shakeDelayMs), () => _shaker?.ShakeKeys(shakeKeys, shakeMs)).SetLink(gameObject);
-            }).SetLink(gameObject);
+                DOVirtual.DelayedCall(Seconds(shakeDelayMs), () => _shaker?.ShakeKeys(shakeKeys, shakeMs), false).SetLink(gameObject);
+            }, false).SetLink(gameObject);
         }
 
         private void SpawnGhost(Vector2 offset, Color color, float length, float thickness, float angle)
