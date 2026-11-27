@@ -4,11 +4,38 @@
 
 ---
 
-## 2026-11-27 · 함정 시스템 기반 (묶음 0) — 코드만 고침, **컴파일 · 실행 미확인** (`feature/trap-cards`, 커밋 안 함)
+## 2026-11-27 · 함정 시스템 기반 (묶음 0) — **구현 플랜** (`feature/trap-cards`, 코드는 이 브랜치에 없다)
 
-**코드는 이 브랜치에 없다** — 데스크톱 PC 의 작업 폴더에만 있다(커밋 · 푸시 안 함). 원격에는 문서만 올렸다. 다른 PC 에서는 아래 「한 것」 이 보이지 않는다.
+데스크톱 PC 에서 아래 플랜대로 코드를 고쳤으나 에디터가 멈춰 **컴파일 · 실행 확인을 못 했고, 커밋하지 않았다**. 원격에는 문서만 있다. 다른 PC 에서는 이 플랜으로 처음부터 구현한다 (데스크톱의 작업 폴더 코드는 참고용 — 확인 안 된 것이다).
 
-### 한 것 (규칙 계층만 — 화면 · 네트워크는 그대로)
+### 구현 플랜 — 순서대로
+
+기준 문서: `04-card` 6절 · 9.2, `06-health` 3 · 8절. 고치는 곳은 규칙 계층(`Assets/Scripts/Game/GameServer.*.cs`)뿐이다.
+
+1. **사건 기록을 줄마다 따로** (`GameServer.After.cs`)
+   - `TakeAfterRecords()` 추가 — `_afterRecords` 를 복사해 돌려주고 비운다.
+   - `FindAfterRecord` 가 `_afterRecords` 대신 받은 목록을 보게: `FindAfterRecord(List<AfterRecord> records, int actor, Card trap, ICollection<AfterRecord> taken)`.
+2. **순서 도우미** (`GameServer.Turn.cs`) — `TurnOrderFromCurrent()`: 현재 턴 플레이어부터 진행 방향 한 바퀴(`TurnOrderFrom`), 턴이 없으면 `_turnOrder`.
+3. **사망 정리** (`GameServer.Health.cs`)
+   - `SettleDeaths(at)`: `TurnOrderFromCurrent()` 순으로 HP 0 · `Alive` 인 사람을 모은다 → 각자 `Life = DeathPending`(안에서만, 사건 안 냄) → 「본인 사망」 함정을 슬롯 순서로 `ResolveTrap(actor, trap, null, at)` (HP 가 0 보다 커지면 멈춤) → `_afterRecords.Clear()`(사망 대기 능력은 함정 줄을 열지 않는다) → 아직 `DeathPending` 인 사람: HP > 0 이면 `Alive` + `DeathAvoided`, 아니면 `Dead`(킬 지표 · `OutTurn` · `DiscardAll` · `PlayerDied` · `EndWaitOf` · `ClearChapchu`) → 죽은 사람이 있으면 `CheckElimination()`.
+   - `SettleAfter(at)`: `records = TakeAfterRecords()` → `SettleDeaths` → `SettleChapchu` → 게임이 안 끝났으면 `FireTraps(records, at, 1)`. 끝나는 시각을 돌려준다.
+   - 지운다: `DeathResponseTime` · `_deathDeadline` · `IsDeathPending` · `CheckDeathPending` · `FinalizeDeaths`.
+4. **함정 줄** (`GameServer.Trap.cs`) — `FireTraps(List<AfterRecord> records, double at, int depth)`, `MaxTrapLineDepth = 4`
+   - 줄 만들기: `TurnOrderFromCurrent()` × 슬롯 순서. `IsAfterTrigger` 가 아니거나 이 사람이 이 줄에 이미 올린 `CardId` 면 건너뛴다. `FindAfterRecord(records, …, taken)` 이 있으면 줄에 올린다.
+   - 한 장씩: 직전 재확인(주인이 게임에 있나 · 함정이 아직 슬롯에 있나 · 대상이 `TriggerSource` 인데 그 사람이 빠졌나) — 안 되면 발동하지 않고 슬롯에 남긴다 → `ResolveTrap` → `made = TakeAfterRecords()` → `SettleDeaths` → `SettleChapchu` → `depth < 4` 면 `FireTraps(made, at, depth + 1)`. `_gameOver` · `_restartPending` 이면 멈춘다.
+   - `ResolveTrap` 은 그대로.
+5. **부르는 곳을 `SettleAfter` 로**
+   - `Chain.cs` `ContinueResolve` 끝: `FireTraps(settleAt)` + `CheckDeathPending` → `SettleAfter(settleAt)` → `DelayTurnUntil` → `CheckElimination`. `CanPlayCounter` 의 사망 대기 조건 삭제.
+   - `Deck.cs` `DrawForTurn`: 뽑은 뒤 `SettleAfter(now)`. 게임이 끝났으면 return, `settled > now` 면 `_mainActionUsed = true; _nextTurnAt = settled`, 아니면 `AdvanceTurn()`.
+   - `Turn.cs`: `Advance` 의 사망 대기 블록 삭제 · `FinishGaepanJudge` 뒤 `_gameOver` 면 return · 「턴 주인이 빠졌다 → 다음 사람」 분기에서 `_turnPaused` 조건 빼기 · `AdvanceTurn` 끝은 항상 `DelayTurnUntil(SettleAfter(_clock()))` · `SetTurn` 의 `CheckDeathPending` 삭제 · `IsPaused` 에서 사망 대기 빼기.
+   - `Restart.cs` 피폭 뒤: `SettleAfter(now)` → `_gameOver` 면 return true. `HoldForTurnEnd` 에서 사망 대기 빼기.
+   - `Gaepan.cs` `FinishGaepanJudge`: `SetHp(loser, 0)` 뒤 `DelayTurnUntil(SettleAfter(now))`.
+   - `Effects.cs`: `ApplyDamage` 의 `DeathPending → Alive` 블록 삭제, `SurviveNow` 의 `_deathDeadline` 줄 삭제(`DeathPending → Alive` + `DeathAvoided` 는 유지).
+   - `Win.cs` `CheckElimination` 가드 · `Bot.cs` `DeathDeadline` · `GameServer.cs` 초기화에서 사망 대기 흔적 삭제.
+6. **스냅샷** (`GameServer.Snapshot.cs`) — `_deathDeadline` 쓰기 · 읽기와 `ResumeAfterMigration` 의 사망 대기 블록 삭제 (형식이 바뀐다 → `migrate` 로 확인).
+7. **시험 도구** (`.claude/skills/multi-test/MultiTest.cs`) → 아래 「다음 할 일」. 고친 뒤 `rules` · `solo` · `migrate`.
+
+### 데스크톱에서 한 것 (위 1 ~ 6, 미확인)
 - `GameServer.Health.cs` — `SettleAfter`(사망 정리 → 찹츄 선언 → 함정 줄) · `SettleDeaths`(기다림 없이 그 자리에서: 사망 대기 능력 → 최종 사망). 사망 대응 5초(`_deathDeadline` · `CheckDeathPending` · `FinalizeDeaths`)를 지웠다.
 - `GameServer.Trap.cs` `FireTraps(records, at, depth)` — 현재 턴 플레이어부터 턴 방향 · 슬롯 순서, 한 사람의 같은 카드는 한 줄에 한 장, 발동 직전 재확인(안 되면 슬롯에 남는다), 한 장마다 사망 정리 → 그 함정이 만든 사건으로 다음 단 줄, 최대 4단.
 - 부르는 곳: 체인 끝(`Chain`) · 턴 뽑기(`Deck`) · 턴 시작(`Turn` `AdvanceTurn` — 스킵 · 빈 덱 피해) · 피폭(`Restart`) · 개판 판정(`Gaepan`). 스냅샷에서 사망 대기 마감 시각을 뺐다(형식이 바뀜).
