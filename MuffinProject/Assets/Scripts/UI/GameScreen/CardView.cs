@@ -57,6 +57,10 @@ namespace Chapchu.UI.GameScreen
         private static readonly int SparkBId = Shader.PropertyToID("_SparkB");
         private static readonly int SparkCId = Shader.PropertyToID("_SparkC");
 
+        // 종이 테의 네 변 — 시작 모서리 원 가운데의 부호 · 바깥 방향 (PaperEdgePoint, 위 변부터 시계 방향)
+        private static readonly Vector2[] EdgeCornerSigns = { new Vector2(-1f, 1f), new Vector2(1f, 1f), new Vector2(1f, -1f), new Vector2(-1f, -1f) };
+        private static readonly Vector2[] EdgeNormals = { Vector2.up, Vector2.right, Vector2.down, Vector2.left };
+
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text descriptionText;
         [Tooltip("그림이 아직 없는 카드에만 켜는 「그림 준비 중」 글자 (시안 v3.21 도감 .art.none).")]
@@ -121,6 +125,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Color sheenColorHigh = new Color(1f, 0.871f, 0.549f, 0.6f);
         [Tooltip("곱하기 색 띠 — 희귀.")]
         [SerializeField] private Color sheenColorRare = new Color(0.804f, 0.706f, 1f, 0.6f);
+        [Tooltip("고급 · 희귀 색 띠의 양 옆 .25 · .75 마디 알파 배율 (가운데 알파 × 이 값).")]
+        [SerializeField, Range(0f, 1f)] private float sheenSideAlpha = 0.3f;
         [Tooltip("곱하기 색 띠 — 개판의 .25 · .5 · .75 마디 (금 · 분홍 · 하늘).")]
         [SerializeField] private Color[] sheenColorsTop =
         {
@@ -148,6 +154,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float glowBreathSpeed = 1.7f;
         [Tooltip("숨이 가장 높을 때 커지는 비율.")]
         [SerializeField] private float glowBreathScale = 0.012f;
+        [Tooltip("카드마다 숨 위상이 흩어지는 폭 (초) — 카드마다 0 ~ 이 값만큼 숨이 앞서 간다.")]
+        [SerializeField] private float glowBreathSpread = 10f;
+        [Tooltip("글로우 판을 그림자 판에서 민 로컬 z (유닛, 음수가 카메라 쪽).")]
+        [SerializeField] private float glowDepth = -0.001f;
         [Tooltip("종이보다 사방으로 큰 u · 모서리 반지름 u · CSS 흐림 반지름 u (시안 inset −4 · 18 · blur(13px) = 흐림 반지름 26).")]
         [SerializeField] private Vector3 glowShape = new Vector3(4f, 18f, 26f);
 
@@ -171,6 +181,14 @@ namespace Chapchu.UI.GameScreen
         };
         [Tooltip("반짝이 판의 크기 — 그림자 판의 이 배 (둘레 밖 번짐이 잘리지 않게).")]
         [SerializeField] private float sparkQuadScale = 1.25f;
+        [Tooltip("반짝이 판을 그림자 판에서 민 로컬 z (유닛, 음수가 카메라 쪽).")]
+        [SerializeField] private float sparkDepth = -0.03f;
+        [Tooltip("별이 튀어나오며 커지는 구간 — 수명의 이 비율까지 (그 뒤 줄어든다). 가장 클 때 십자 빛줄기.")]
+        [SerializeField, Range(0.01f, 0.99f)] private float sparkPop = 0.3f;
+        [Tooltip("십자 빛줄기가 보이는 폭 — 가장 클 때에서 수명 비율로 이만큼 앞뒤.")]
+        [SerializeField] private float sparkFlareWidth = 0.22f;
+        [Tooltip("한 수명 동안 도는 각 (rad).")]
+        [SerializeField] private float sparkSpin = 1.3f;
 
         private BoxCollider _collider;
         private MaterialPropertyBlock _block;
@@ -191,6 +209,9 @@ namespace Chapchu.UI.GameScreen
         private float _fxSince;          // 그 효과가 켜진 시각 — 표면 빛 첫 띠의 기준
         private float _fxOn;             // 표면 빛 · 반짝이 · 별의 세기 0 ~ 1
         private float _glow;             // 글로우 세기 0 ~ 1 (손패는 glowInHand)
+        private float _glowGoal;         // 지금 향하는 글로우 세기
+        private float _glowStep;         // 그 전환에서 초당 움직이는 양 — 차이를 glowFade 초에 지나게
+        private Camera _view;            // 앞면이 마주 보는지 재는 카메라 (Awake 에서 한 번)
         private float _fxPhase;          // 카드마다 다른 숨 · 그라디언트 출발점
         private Vector2 _paperHalf;      // 종이 반폭 · 반높이 u
         private float _paperRadius;
@@ -252,6 +273,7 @@ namespace Chapchu.UI.GameScreen
         {
             if (nameText == null || descriptionText == null || pendingText == null || frameRenderer == null || artRenderer == null || backRenderer == null || shadowRenderer == null)
                 Debug.LogError($"[{nameof(CardView)}] 글자 · 면 · 그림자 참조 중 비어 있는 것이 있습니다.", this);
+            _view = Camera.main;
         }
 
         private void Update()
@@ -494,6 +516,8 @@ namespace Chapchu.UI.GameScreen
             _fxFull = false;
             _fxOn = 0f;
             _glow = 0f;
+            _glowGoal = 0f;
+            _glowStep = 0f;
             _sparks.Clear();
             _fxIdle = false;
             _fxPhase = Random.value;
@@ -516,13 +540,13 @@ namespace Chapchu.UI.GameScreen
             if (!Application.isPlaying) return;
 
             if (_grade >= 2 && _glowRenderer == null)
-                _glowRenderer = CloneShadowQuad("GradeGlow", shadowRenderer.sortingOrder, -0.001f, 1f);
+                _glowRenderer = CloneShadowQuad("GradeGlow", shadowRenderer.sortingOrder, glowDepth, 1f);
             if (_grade >= 3 && _sparkRenderer == null)
             {
                 int top = 0;
                 foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
                     top = Mathf.Max(top, r.sortingOrder);
-                _sparkRenderer = CloneShadowQuad("GradeSparks", top + 1, -0.03f, sparkQuadScale);
+                _sparkRenderer = CloneShadowQuad("GradeSparks", top + 1, sparkDepth, sparkQuadScale);
                 Vector4 size = shadowRenderer.sharedMaterial.GetVector(SizeId);
                 _sparkQuadSize = new Vector2(size.x, size.y) * sparkQuadScale;
             }
@@ -546,8 +570,7 @@ namespace Chapchu.UI.GameScreen
         // 한 프레임 — 목표 세기로 넘어가고 그린다
         private void TickGradeFx(float dt)
         {
-            Camera view = Camera.main;
-            float facing = view != null ? Vector3.Dot(transform.forward, view.transform.forward) : 1f;
+            float facing = _view != null ? Vector3.Dot(transform.forward, _view.transform.forward) : 1f;
             bool faceUp = facing >= fxFacing;
             bool full = _fxState == GradeFx.Full && faceUp;
             if (full && !_fxFull)
@@ -557,13 +580,18 @@ namespace Chapchu.UI.GameScreen
             float onTarget = full ? 1f : 0f;
             _fxOn = Mathf.MoveTowards(_fxOn, onTarget, dt / Mathf.Max(full ? fxFadeIn : fxFadeOut, 1e-3f));
             float glowTarget = _grade < 2 ? 0f : full ? 1f : _fxState == GradeFx.Hand && faceUp ? glowInHand : 0f; // 글로우는 희귀부터
-            _glow = Mathf.MoveTowards(_glow, glowTarget, dt / Mathf.Max(glowTarget > _glow ? glowFade.x : glowFade.y, 1e-3f));
+            if (glowTarget != _glowGoal)
+            {
+                _glowGoal = glowTarget;
+                _glowStep = Mathf.Abs(glowTarget - _glow) / Mathf.Max(glowTarget > _glow ? glowFade.x : glowFade.y, 1e-3f);
+            }
+            _glow = Mathf.MoveTowards(_glow, glowTarget, dt * _glowStep);
             if (_grade >= 3)
                 StepSparks(dt, full && _fxOn > 0.5f);
 
             ApplyGradeFx();
             bool glowStays = _grade >= 2 && _fxState != GradeFx.Off; // 손패의 글로우는 숨 쉬느라 계속 그린다
-            _fxIdle = _fxOn <= 0f && _glow <= 0f && _sparks.Count == 0 && !glowStays;
+            _fxIdle = _fxOn <= 0f && _glow <= 0f && _sparks.Count == 0 && !glowStays && _fxState != GradeFx.Full; // Full 은 앞면이 설 때까지 기다린다
         }
 
         // 지금 세기로 셰이더 값을 넣는다 — 별 · 표면 빛 · 글로우 · 반짝이
@@ -602,7 +630,7 @@ namespace Chapchu.UI.GameScreen
             else
             {
                 b = _grade == 2 ? sheenColorRare : sheenColorHigh;
-                a = c = new Color(b.r, b.g, b.b, b.a * 0.3f);
+                a = c = new Color(b.r, b.g, b.b, b.a * sheenSideAlpha);
             }
 
             var sheen = new Vector4(center, halfWidth, amount, 0f);
@@ -630,7 +658,7 @@ namespace Chapchu.UI.GameScreen
             _glowRenderer.enabled = level > 0.001f;
             if (!_glowRenderer.enabled) return;
 
-            float breath = 0.5f + 0.5f * Mathf.Sin((Time.time + _fxPhase * 10f) * glowBreathSpeed - Mathf.PI / 2f);
+            float breath = 0.5f + 0.5f * Mathf.Sin((Time.time + _fxPhase * glowBreathSpread) * glowBreathSpeed - Mathf.PI / 2f);
             Vector2 alphaRange = _grade >= 3 ? glowAlphaTop : glowAlphaRare;
             float scale = 1f + glowBreathScale * breath;
             Vector2 half = (_paperHalf + Vector2.one * glowShape.x) * scale;
@@ -721,11 +749,11 @@ namespace Chapchu.UI.GameScreen
 
                 Spark spark = _sparks[i];
                 float n = spark.Age / spark.Life;
-                // 별: 0.3 까지 튀어나오며 커지고(outBack) 그 뒤 줄어든다 · 가장 클 때 십자 빛줄기. 알갱이: 두 번 깜빡임
-                float size = n < 0.3f ? OutBack(n / 0.3f) : 1f - Mathf.SmoothStep(0f, 1f, (n - 0.3f) / 0.7f);
-                float flare = Mathf.Max(0f, 1f - Mathf.Abs(n - 0.3f) / 0.22f);
+                // 별: sparkPop 까지 튀어나오며 커지고(outBack) 그 뒤 줄어든다 · 가장 클 때 십자 빛줄기. 알갱이: 두 번 깜빡임
+                float size = n < sparkPop ? OutBack(n / sparkPop) : 1f - Mathf.SmoothStep(0f, 1f, (n - sparkPop) / (1f - sparkPop));
+                float flare = Mathf.Max(0f, 1f - Mathf.Abs(n - sparkPop) / Mathf.Max(sparkFlareWidth, 1e-3f));
                 float blink = Mathf.Abs(Mathf.Sin(n * Mathf.PI * 2f));
-                _sparkA[i] = new Vector4(spark.Position.x, spark.Position.y, spark.Radius, spark.Rotation + n * 1.3f);
+                _sparkA[i] = new Vector4(spark.Position.x, spark.Position.y, spark.Radius, spark.Rotation + n * sparkSpin);
                 _sparkB[i] = new Vector4(spark.Color.r, spark.Color.g, spark.Color.b, spark.Dot ? 1f : 0f);
                 _sparkC[i] = new Vector4(size, flare, blink, 0f);
             }
@@ -748,19 +776,20 @@ namespace Chapchu.UI.GameScreen
             float r = _paperRadius, hx = _paperHalf.x - r, hy = _paperHalf.y - r, arc = Mathf.PI / 2f * r;
             float s = Mathf.Repeat(u, 1f) * (4f * (hx + hy) + 4f * arc);
             // 변마다 (모서리 원의 가운데에서 가운데로 · 바깥 방향), 변 끝의 모서리는 그 바깥 방향에서 시계 방향으로 90°
-            Vector2[] from = { new Vector2(-hx, hy), new Vector2(hx, hy), new Vector2(hx, -hy), new Vector2(-hx, -hy) };
-            Vector2[] normal = { Vector2.up, Vector2.right, Vector2.down, Vector2.left };
+            var corner = new Vector2(hx, hy);
             for (int side = 0; side < 4; side++)
             {
-                Vector2 to = from[(side + 1) % 4];
-                float length = Vector2.Distance(from[side], to);
+                Vector2 from = Vector2.Scale(EdgeCornerSigns[side], corner);
+                Vector2 to = Vector2.Scale(EdgeCornerSigns[(side + 1) % 4], corner);
+                Vector2 normal = EdgeNormals[side];
+                float length = Vector2.Distance(from, to);
                 if (s <= length)
-                    return Vector2.Lerp(from[side], to, s / Mathf.Max(length, 1e-3f)) + normal[side] * (r + distance);
+                    return Vector2.Lerp(from, to, s / Mathf.Max(length, 1e-3f)) + normal * (r + distance);
                 s -= length;
 
                 if (s <= arc)
                 {
-                    float angle = Mathf.Atan2(normal[side].y, normal[side].x) - s / arc * Mathf.PI / 2f;
+                    float angle = Mathf.Atan2(normal.y, normal.x) - s / arc * Mathf.PI / 2f;
                     return to + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (r + distance);
                 }
                 s -= arc;
