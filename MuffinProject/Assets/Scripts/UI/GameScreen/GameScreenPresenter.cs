@@ -20,8 +20,8 @@ namespace Chapchu.UI.GameScreen
     /// · 곧 씬이 바뀌는 알림의 경고 예약과 방 나가기 (내 강제 퇴장 · 판 중지 — GameMenuPresenter 를 받은 자리에서 바로 부른다).
     /// 체인: 카드가 나오면(OnCardPlayed) ChainCardsPresenter 가 크게 보여 주고, 반응 시간(OnReactionStarted)이 오면 그 아래에 반응 타이머. 처리 결과가 오면 카드를 치우고 체인이 비면 타이머를 숨긴다 (10-ui.md 5절).
     /// 버림 더미: 버림이 생기는 일(효과 적용 · 무효화 · 강제 버림 · 함정 파괴 · 사망 · 나감)마다 내 카드가 있으면 더미로 보낸 뒤 맨 위 카드 · 장수를 바꾼다 (10-ui.md 2-1 「버림 더미」).
-    /// 사망 대기(06-health.md 8절): 보이지 않는 상태라 좌석 · 내 HUD 는 HP 0 그대로 (10-ui.md 2-1). 게임이 멈춰 턴 순서 알약은 멈춤, 턴 타이머는 멈춘 초에 선다. 이어지면(OnTurnResumed) 다시 센다.
-    /// 「뽑고 턴 끝」 버튼은 재생한 기준으로 내 턴 · 메인 행동 전 · 체인 없음 · 대상 선택 아님 · 사망 대기 없음일 때만 보인다 (통합 화면 UI v3 .drawbtn). 표시만 — 판정은 방장.
+    /// 사망 대기는 방장이 그 자리에서 끝내 화면에 오지 않는다 (06-health.md 8절) — HP 0 뒤에 살아남(OnDeathAvoided) 또는 최종 사망(OnPlayerDied)이 바로 온다.
+    /// 「뽑고 턴 끝」 버튼은 재생한 기준으로 내 턴 · 메인 행동 전 · 체인 없음 · 대상 선택 아님일 때만 보인다 (통합 화면 UI v3 .drawbtn). 표시만 — 판정은 방장.
     /// </summary>
     public class GameScreenPresenter : MonoBehaviour
     {
@@ -80,7 +80,7 @@ namespace Chapchu.UI.GameScreen
         // 「뽑고 턴 끝」 버튼 · 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) 의 조건 — 재생한 기준. 연출 큐 단계 안에서만 바꾼다.
         private bool _isMyTurn;
         private bool _myMainActionDone; // 이번 내 턴에 카드를 냈다 — 뽑기는 메인 행동이라 더 못 한다 (03-turn.md 3절)
-        private readonly HashSet<int> _pendingActors = new HashSet<int>(); // 사망 대기 중 — 그동안 게임이 멈춘다
+        private bool _myActionBlocked;  // 이번 턴 행동 카드 금지 (1007 짖기) — 행동 카드를 흐리게
         private readonly HashSet<int> _deadActors = new HashSet<int>();    // 재생한 기준으로 죽은 사람 — 카드 연출에 넘기는 「판에 남은 사람」 에서 뺀다
         private bool _reversed; // 재생한 기준의 턴 방향 — 카드 연출에 넘기는 「받는 사람」 순서 (1018). 연출 큐 단계 안에서만 바꾼다.
 
@@ -178,7 +178,6 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardsDiscarded += HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed += HandleTrapDestroyed;
             GameEvents.OnPlayerDied += HandlePlayerDied;
-            GameEvents.OnDeathPending += HandleDeathPending;
             GameEvents.OnDeathAvoided += HandleDeathAvoided;
             GameEvents.OnPlayerLeftGame += HandlePlayerLeftGame;
             GameEvents.OnGameHalted += HandleGameHalted;
@@ -231,7 +230,6 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardsDiscarded -= HandleCardsDiscarded;
             GameEvents.OnTrapDestroyed -= HandleTrapDestroyed;
             GameEvents.OnPlayerDied -= HandlePlayerDied;
-            GameEvents.OnDeathPending -= HandleDeathPending;
             GameEvents.OnDeathAvoided -= HandleDeathAvoided;
             GameEvents.OnPlayerLeftGame -= HandlePlayerLeftGame;
             GameEvents.OnGameHalted -= HandleGameHalted;
@@ -246,7 +244,7 @@ namespace Chapchu.UI.GameScreen
             _steps.Clear();
             _hasPendingMyCard = false;
             _chainCount = 0;
-            _pendingActors.Clear();
+            _myActionBlocked = false;
             _shownHp.Clear();
             _resolving = false;
             _hpSource = HpSource.Normal;
@@ -257,7 +255,7 @@ namespace Chapchu.UI.GameScreen
         // 「뽑고 턴 끝」 버튼 · 마지막 초 째깍 소리 — 재생한 상태로 매 프레임 (대상 선택은 큐 밖에서 열리고 닫힌다)
         private void LateUpdate()
         {
-            bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0 && _pendingActors.Count == 0;
+            bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0;
             deck.ShowCanDraw(canAct && !seats.IsSelectingTargets);
             turnTimer.TickForMe = canAct;
         }
@@ -405,7 +403,7 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 사망 대기로 멈췄던 턴이 이어졌다 (메인 행동 전) — 같은 사람의 턴, 새 마감으로 다시 센다.
+        // 체인 · 함정으로 멈췄던 턴이 이어졌다 (메인 행동 전) — 같은 사람의 턴, 새 마감으로 다시 센다.
         private void HandleTurnResumed(int actorNumber, double deadline)
         {
             Enqueue(() =>
@@ -802,7 +800,14 @@ namespace Chapchu.UI.GameScreen
         private void HandleTurnSkipMarked(int actorNumber) => Enqueue(() => { history.ShowTurnSkipMarked(actorNumber); ShowSkipMarked(actorNumber, true); return null; });
 
         // 행동 카드 금지 (1007 짖기) — 다음 턴 · 이번 턴 동안 이름표 옆 「행동 금지」
-        private void HandleActionBlockChanged(int actorNumber, ActionBlock state) => Enqueue(() => { history.ShowActionBlock(actorNumber, state); ShowBlocked(actorNumber, state != ActionBlock.None); return null; });
+        private void HandleActionBlockChanged(int actorNumber, ActionBlock state) => Enqueue(() =>
+        {
+            history.ShowActionBlock(actorNumber, state);
+            ShowBlocked(actorNumber, state != ActionBlock.None);
+            if (IsMe(actorNumber))
+                _myActionBlocked = state == ActionBlock.ThisTurn;
+            return null;
+        });
 
         private void HandleTurnSkipCleared(int actorNumber) => Enqueue(() => { ShowSkipMarked(actorNumber, false); return null; });
 
@@ -846,7 +851,7 @@ namespace Chapchu.UI.GameScreen
             hand.EndReaction();
             reactionTimer.Hide();
             _chainCount = 0;
-            _pendingActors.Clear(); // 죽은 사람 · 사망 대기 중인 사람도 새 판에서 다시 산다 (11-card-list 1012)
+            _myActionBlocked = false; // 새 판은 상태가 없다 (11-card-list 1012)
 
             myTraps.Clear();
             myTraps.ShowCount(0);
@@ -992,24 +997,11 @@ namespace Chapchu.UI.GameScreen
             });
         }
 
-        // 사망 대기 (06-health.md 8절) — 게임이 멈춘다. 사람에게는 보이지 않는 상태라(10-ui.md 2-1) 좌석 · 내 HUD 는 그대로 두고, 턴 순서 알약은 멈춤 · 턴 타이머는 지금 초에 선다.
-        private void HandleDeathPending(int actorNumber, double startsAt, double deadline)
-        {
-            Enqueue(() =>
-            {
-                _pendingActors.Add(actorNumber);
-                turnOrder.ShowLife(actorNumber, LifeState.DeathPending);
-                turnTimer.ShowPaused();
-                return null;
-            });
-        }
-
-        // 사망 대기에서 살아났다 — HP 는 이 알림의 값.
+        // 사망 대기 능력으로 살아났다 (06-health.md 8절) — HP 는 이 알림의 값.
         private void HandleDeathAvoided(int actorNumber, int hp)
         {
             Enqueue(() =>
             {
-                _pendingActors.Remove(actorNumber);
                 ShowLife(actorNumber, LifeState.Alive);
                 if (IsMe(actorNumber))
                     myPanel.ShowHp(hp);
@@ -1040,7 +1032,6 @@ namespace Chapchu.UI.GameScreen
 
             Enqueue(() =>
             {
-                _pendingActors.Remove(actorNumber);
                 ShowLife(actorNumber, LifeState.Dead);
                 SoundManager.Play(Sfx.PlayerOut);
 
@@ -1059,7 +1050,6 @@ namespace Chapchu.UI.GameScreen
         {
             Enqueue(() =>
             {
-                _pendingActors.Remove(actorNumber);
                 discardPile.Show(cardIds, discardCount);
                 return null;
             });
@@ -1159,11 +1149,12 @@ namespace Chapchu.UI.GameScreen
             ShowHandPlayState(false);
         }
 
-        // 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) — 연출이 있는 단계를 재생하는 동안 · 체인이 남은 동안 · 사망 대기 동안은 진행 중이라 커지지 않는다.
-        // 이번 턴에 카드를 이미 냈으면(메인 행동 끝) 턴이 넘어갈 때까지 커지지 않는다 — 「뽑고 턴 끝」 버튼과 같은 조건 (03-turn.md 3절).
+        // 손패의 「지금 낼 수 있는 카드」 표시 (시안 v3.5) — 지금 낼 수 없는 카드는 모두 흐리다 (HandView.IsUnplayable, PM 2026-11-28).
+        // 연출이 있는 단계를 재생하는 동안 · 체인이 남은 동안(반응 시간이 끝나 처리하는 사이 포함)은 진행 중이라 아무것도 낼 수 없다 — 반응 시간에 낼 수 있는 카운터만 예외.
+        // 이번 턴에 카드를 이미 냈으면(메인 행동 끝) 턴이 넘어갈 때까지 진행 중이다 — 「뽑고 턴 끝」 버튼과 같은 조건 (03-turn.md 3절).
         // 큐가 빌 때와 연출 단계를 시작할 때만 고친다 — 단계 사이마다 고치면 연달아 오는 단계 사이에 카드가 잠깐 커졌다 줄어든다.
         private void ShowHandPlayState(bool stepRunning) =>
-            hand.ShowPlayState(_isMyTurn, stepRunning || _chainCount > 0 || _myMainActionDone || _pendingActors.Count > 0, myTraps.IsFull);
+            hand.ShowPlayState(_isMyTurn, stepRunning || _chainCount > 0 || _myMainActionDone, myTraps.IsFull, _myActionBlocked);
 
         // 연출 코루틴을 직접 돌린다 — 안쪽 코루틴(yield return IEnumerator)까지 MoveNext 를 감싸, 예외가 나면 그 단계를 끝낸다
         private IEnumerator Guarded(IEnumerator step)

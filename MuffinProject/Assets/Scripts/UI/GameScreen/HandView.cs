@@ -167,6 +167,7 @@ namespace Chapchu.UI.GameScreen
         private bool _myTurn;          // 지금 낼 수 있는 카드를 가리는 판 상태 (SetPlayState)
         private bool _busy;
         private bool _trapsFull;
+        private bool _actionBlocked;   // 이번 턴 행동 카드 금지 (1007 짖기)
         private bool _wasRaised;
         private bool _onTop;           // 카드가 HUD 위 층에 있다 — 내려갈 때는 자리로 돌아간 뒤에 내린다
         private float _dropLayerAt = -1f;
@@ -337,16 +338,17 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴인지, 연출 · 체인이 진행 중인지, 내 함정 칸이 다 찼는지.
-        /// 내 턴엔 카운터 · 칸이 찬 함정이 흐려지며 작아지고, 진행 중이 아니면 나머지가 커진다. 판정이 아니라 표시 — 내면 방장이 판정한다.
+        /// 지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴인지, 연출 · 체인이 진행 중인지, 내 함정 칸이 다 찼는지, 이번 턴 행동 카드 금지인지.
+        /// 지금 낼 수 없는 카드는 모두 흐려지며 작아지고, 낼 수 있는 카드는 커진다 (IsUnplayable). 판정이 아니라 표시 — 내면 방장이 판정한다.
         /// </summary>
-        public void SetPlayState(bool myTurn, bool busy, bool trapsFull)
+        public void SetPlayState(bool myTurn, bool busy, bool trapsFull, bool actionBlocked)
         {
-            if (_myTurn == myTurn && _busy == busy && _trapsFull == trapsFull) return;
+            if (_myTurn == myTurn && _busy == busy && _trapsFull == trapsFull && _actionBlocked == actionBlocked) return;
 
             _myTurn = myTurn;
             _busy = busy;
             _trapsFull = trapsFull;
+            _actionBlocked = actionBlocked;
             Layout();
         }
 
@@ -644,10 +646,18 @@ namespace Chapchu.UI.GameScreen
             SyncRaised(raised);
         }
 
-        // 지금 낼 수 없는 카드 (시안 v3.5 dim) — 반응 시간엔 낼 수 있는 카운터 말고 전부, 내 턴엔 카운터 · 칸이 다 찬 함정. 대상 고르는 중(잠김)에는 가리지 않는다.
-        private bool IsUnplayable(CardView card) => _reacting
-            ? !_usable.Contains(card.InstanceId)
-            : _myTurn && !IsLocked && (card.Type == CardType.Counter || (card.Type == CardType.Trap && _trapsFull));
+        // 지금 낼 수 없는 카드 (시안 v3.5 dim) — 지금 낼 수 없으면 흐리게가 일반 규칙이다 (10-ui.md 2-1 「손패 입력 값」, PM 2026-11-28).
+        // 반응 시간에 물어 온 사람이면 낼 수 있는 카운터 말고 전부. 그 밖에 맑은 카드는 내 턴 · 진행 중 아님일 때의 행동 카드(행동 금지가 아니면) · 함정(칸이 남으면)뿐 —
+        // 남의 턴 · 체인(반응 시간이 끝나 처리 · 연출하는 사이 포함) · 연출 중 · 메인 행동 뒤에는 전부 흐리다. 대상 고르는 중(잠김)에는 가리지 않는다 — 가림판이 덮는다.
+        private bool IsUnplayable(CardView card)
+        {
+            if (_reacting) return !_usable.Contains(card.InstanceId);
+            if (IsLocked) return false;
+            if (!_myTurn || _busy) return true;
+            return card.Type == CardType.Counter
+                || (card.Type == CardType.Trap && _trapsFull)
+                || (card.Type == CardType.Action && _actionBlocked);
+        }
 
         // 지금 낼 수 있는 카드 (시안 v3.5 can) — 반응 시간엔 낼 수 있는 카운터, 내 턴엔 흐리지 않은 카드 (연출 · 체인이 진행 중이 아닐 때).
         private bool CanPlay(bool unplayable) => _reacting ? !unplayable : _myTurn && !IsLocked && !_busy && !unplayable;
