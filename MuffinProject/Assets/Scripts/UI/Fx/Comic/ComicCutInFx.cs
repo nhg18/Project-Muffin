@@ -71,6 +71,7 @@ namespace Chapchu.UI.Fx.Comic
                 yield break;
             }
             _context = new ComicContext(context, _scene.Hits);
+            LoadSound(context);
             _group.alpha = 0f;
             ApplyLook(context);
             _scene.Begin(_context);
@@ -86,6 +87,7 @@ namespace Chapchu.UI.Fx.Comic
             float length = _scene.Length;
             float end = length + coverHold;
             float start = Time.time;
+            StartSound();
             _group.alpha = 1f;
             while (true)
             {
