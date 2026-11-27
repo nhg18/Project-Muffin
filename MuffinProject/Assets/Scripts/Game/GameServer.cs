@@ -65,10 +65,9 @@ namespace Chapchu.Game
             _chain.Clear();
             _resolving.Clear();
             _chainOrder.Clear();
-            _deathDeadline = -1;
             _gameOver = false;
             _afterRecords.Clear();
-            _trapSetOrder.Clear();
+            _claimedCards.Clear();
             _waitCasters.Clear();
             _allCards.Clear();
             _allCards.AddRange(deck);
@@ -93,7 +92,6 @@ namespace Chapchu.Game
                 SetHp(actor, MaxHp);
 
             DealInitialHands(actors);
-            SettleHands(); // 처음 받은 손패는 「10장이 된」 것이 아니다 (3004)
             StartFirstTurn();
             return TakeEvents();
         }

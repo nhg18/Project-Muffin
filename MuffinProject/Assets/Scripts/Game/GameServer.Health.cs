@@ -4,16 +4,9 @@ using System.Linq;
 
 namespace Chapchu.Game
 {
-    // GameServer.Health.cs — 체력 원본(PlayerState.Hp) 변경 · 사망 대기 · 최종 사망 (06-health.md)
+    // GameServer.Health.cs — 체력 원본(PlayerState.Hp) 변경 · 사망 정리(사망 대기 능력 · 최종 사망) (06-health.md)
     public partial class GameServer
     {
-        // 확정 (06-health.md 2절).
-        private const double DeathResponseTime = 5;
-
-        private double _deathDeadline = -1; // 사망 대기 마감. 음수면 사망 대기 없음 — 있으면 게임이 멈춘다 (06 8절)
-
-        private bool IsDeathPending => _deathDeadline >= 0;
-
         /// <summary>체력을 amount 만큼 줄인다. 카드 효과(Effects/)가 부른다. source = 피해를 준 사람 (없으면 -1) — 「피해 받은 후」 함정의 조건.</summary>
         internal void DealDamage(int actor, int amount, int source)
         {
@@ -44,39 +37,38 @@ namespace Chapchu.Game
             return player.Hp - before;
         }
 
-        // 체인 처리 · 빈 덱 피해 뒤에 부른다. HP 0 인 생존자 전원을 사망 대기로 (06 8 · 11절).
-        // startsAt = HP 0 이 되는 연출이 끝나는 시각 — 대응 5초는 그 뒤부터 (06 8절).
-        private void CheckDeathPending(double startsAt)
+        // 사망 정리 (06 3 · 8 · 9절, 04 9.2) — 처리가 끝날 때마다(체인 끝 · 함정 한 장 뒤 · 체인 밖 처리 뒤) 부른다. 기다림이 없다 — 그 자리에서 끝난다.
+        // HP 0 인 사람: 사망 대기 능력(「본인 사망」 함정 — 3008 죽은 척)이 있으면 바로 발동한다 — 현재 턴 플레이어부터 턴 방향, 한 사람 안에서는 슬롯 순서.
+        // 생존 능력으로 HP 가 1 이상이 되면 남은 사망 능력은 쓰지 않는다. 능력을 모두 처리한 뒤 남은 HP 0 인 사람을 함께 최종 사망 (06 11절).
+        // 사망 대기 능력이 만든 사건으로는 함정 줄을 열지 않는다 (04 6절). at = 앞 연출이 끝나는 시각, 능력의 연출이 끝나는 시각을 돌려준다.
+        private double SettleDeaths(double at)
         {
-            int[] dying = _turnOrder.Where(a => IsInGame(a) && _players[a].Life == LifeState.Alive && _players[a].Hp == 0).ToArray();
+            int[] dying = TurnOrderFromCurrent().Where(a => IsInGame(a) && _players[a].Life == LifeState.Alive && _players[a].Hp <= 0).ToArray();
             if (dying.Length == 0)
-                return;
+                return at;
 
-            double deadline = startsAt + DeathResponseTime;
-            _deathDeadline = Math.Max(_deathDeadline, deadline);
+            foreach (int actor in dying)
+                _players[actor].Life = LifeState.DeathPending; // 방장 안에서만 — 알리지 않는다 (06 13절)
+
             foreach (int actor in dying)
             {
-                _players[actor].Life = LifeState.DeathPending;
-                _events.Add(new DeathPending(actor, startsAt, deadline));
+                foreach (Card trap in _players[actor].Traps.Where(t => t.Trigger == TrapTrigger.SelfDeathPending).ToList())
+                {
+                    if (_players[actor].Hp > 0 || !_players[actor].Traps.Contains(trap))
+                        break;
+                    at = ResolveTrap(actor, trap, null, at);
+                    if (_restartPending || _gameOver)
+                        break;
+                }
             }
-        }
+            _afterRecords.Clear(); // 사망 대기 능력이 만든 일은 함정 줄을 열지 않는다
 
-        // 사망 대기 마감에 Tick 이 부른다. 대응 뒤에도 HP 0 인 사람을 함께 최종 사망 (06 9 · 11절).
-        private void FinalizeDeaths()
-        {
-            _deathDeadline = -1;
-            foreach (int actor in _turnOrder)
+            bool died = false;
+            foreach (int actor in dying)
             {
                 PlayerState player = _players[actor];
                 if (player.Life != LifeState.DeathPending)
-                    continue;
-
-                if (player.HasLeft)
-                {
-                    player.Life = LifeState.Dead; // 대기 중에 나갔다 — 나감 처리(PlayerLeft)가 이미 끝났다
-                    AddStat(player.DownedBy, StatKind.Kills); // 결과 화면의 「○○에게 당함」 과 같게 센다
-                    continue;
-                }
+                    continue; // 살아났다 (SurviveNow)
 
                 if (player.Hp > 0)
                 {
@@ -86,6 +78,7 @@ namespace Chapchu.Game
                     continue;
                 }
 
+                died = true;
                 player.Life = LifeState.Dead;
                 AddStat(player.DownedBy, StatKind.Kills); // 킬은 최종 사망이 확정될 때 (07 11-3)
                 player.OutTurn = TurnSerial; // 턴 밖(사망 대기)에 죽으면 그때 진행 중인 턴의 번호 (07 11-3)
@@ -94,6 +87,10 @@ namespace Chapchu.Game
                 EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 1023)
                 ClearChapchu(actor); // 죽은 사람의 찹츄 표시가 남지 않게 해제를 알린다 (07 9절)
             }
+
+            if (died)
+                CheckElimination();
+            return at;
         }
 
         // 사망 · 나감 — 손패(와 설치 함정)를 전부 버림 더미로 (06 9절 · 01 6절). 버림 더미에 들어간 순서의 카드 종류를 돌려준다 — 버림 더미는 공개 (05 7절).

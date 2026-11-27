@@ -22,7 +22,7 @@ namespace Chapchu.Game
 
         // 자동 선언 (07-win-condition.md 4.1, 2026-11-14) — 손패가 바뀐 사람 중 정확히 10장인 사람을 찹츄 상태로. 내 턴 · 남의 턴을 가리지 않는다.
         // 효과 하나가 끝난 뒤의 장수만 본다 — 여러 장을 뽑다 지나친 10장은 선언이 아니다 (PM 2026-11-19).
-        // HP 0 · 사망 대기 중에는 선언하지 않는다. 살아나면 그때 10장인지 다시 본다 (FinalizeDeaths, PM 2026-11-19).
+        // HP 0 · 사망 대기 중에는 선언하지 않는다. 살아나면 그때 10장인지 다시 본다 (SettleDeaths · SurviveNow, PM 2026-11-19).
         private void SettleChapchu()
         {
             if (_handDirty.Count == 0)
@@ -49,11 +49,11 @@ namespace Chapchu.Game
             _events.Add(new ChapchuChanged(actor, value));
         }
 
-        // 처치 승리 · 무승부 (07 3절). 체인 · 사망 대기가 모두 끝난 뒤에만 판정한다.
+        // 처치 승리 · 무승부 (07 3절). 체인이 끝난 뒤에만 판정한다 — 사망 정리(SettleDeaths)에서 누가 죽으면 그 자리에서.
         // 고르기(1019)로 멈춘 처리도 체인 중이다 — 이어 간 처리 끝(ContinueResolve)에서 다시 판정한다.
         private void CheckElimination()
         {
-            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsResolvePaused || IsChoosing || IsDeathPending)
+            if (_gameOver || !_judgesElimination || _chain.Count > 0 || IsResolvePaused || IsChoosing)
                 return;
 
             int[] remaining = _turnOrder.Where(IsInGame).ToArray();

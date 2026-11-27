@@ -44,7 +44,7 @@ namespace Chapchu.Game.Effects
             foreach (int actor in server.ReceiversOf(subject, entry))
             {
                 server.MarkSkipTurn(actor);
-                server.RecordBlocked(actor, entry); // 「막힌 뒤」 (3012 편안)
+                server.RecordBlocked(actor, entry, GameServer.BlockKindSkipTurn); // 「막는 카드에 당한 후」 (3012 편안)
             }
         }
     }

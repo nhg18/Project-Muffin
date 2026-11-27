@@ -55,17 +55,19 @@ namespace Chapchu.Game
                     _falloutTurns++;
                     int damage = FalloutDamage(_falloutTurns, _restartCount);
                     _events.Add(new FalloutChanged(_restartCount, _falloutTurns));
+                    MarkHandsBefore();
                     foreach (int actor in AliveActors())
                         DealDamage(actor, damage, -1);
 
                     double now = _clock();
-                    double settled = FireTraps(now); // 피폭 뒤 함정 (「본인 사망 대기」 — 피폭은 사람이 준 피해가 아니다)
+                    double settled = SettleAfter(now); // 피폭 뒤 — 사망 정리(3008) → 함정 줄(3009 등. 피폭은 사람이 준 피해가 아니다)
                     if (_restartPending)
                     {
                         Restart();
                         return true;
                     }
-                    CheckDeathPending(settled);
+                    if (_gameOver)
+                        return true;
                     if (HoldForTurnEnd(settled))
                         return true;
                 }
@@ -82,11 +84,11 @@ namespace Chapchu.Game
             return false;
         }
 
-        // 이 턴은 끝났다 — 함정 연출(settledAt 까지) · 사망 대기 · 개판 판정이 끝나면 Advance 가 다시 넘긴다 (남은 시간을 되살리지 않게 메인 행동을 쓴 것으로)
+        // 이 턴은 끝났다 — 사망 대기 능력 · 함정 연출(settledAt 까지) · 개판 판정이 끝나면 Advance 가 다시 넘긴다 (남은 시간을 되살리지 않게 메인 행동을 쓴 것으로)
         private bool HoldForTurnEnd(double settledAt)
         {
             double now = _clock();
-            if (!IsDeathPending && !IsGaepanJudging && settledAt <= now)
+            if (!IsGaepanJudging && settledAt <= now)
                 return false;
 
             _mainActionUsed = true;
@@ -112,9 +114,8 @@ namespace Chapchu.Game
             _chain.Clear();
             _resolving.Clear();
             _chainOrder.Clear();
-            _deathDeadline = -1;
             _afterRecords.Clear();
-            _trapSetOrder.Clear();
+            _claimedCards.Clear();
             _waitCasters.Clear();
             _reversed = false;
             _extraTurnActor = -1;
@@ -131,7 +132,6 @@ namespace Chapchu.Game
             foreach (int actor in _turnOrder)
                 SetHp(actor, MaxHp);
             DealInitialHands(_turnOrder);
-            SettleHands();
             _events.Add(new FalloutChanged(_restartCount, 0));
 
             CurrentTurnActor = -1; // 지난 판의 턴 주인 상태(행동 금지 해제 등)는 이미 지웠다

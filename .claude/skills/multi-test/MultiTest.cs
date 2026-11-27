@@ -32,7 +32,7 @@ using Object = UnityEngine.Object;
 public static class MultiTest
 {
     // ── 부르는 함수 (코드에서 이름이 바뀌면 여기를 고친다) ──
-    private const string JoinButtonMethod = "ClickJoinButton";             // DebugScript
+    private const string JoinButtonMethod = "HandleJoinClicked";             // DebugScript
     private const string StartRequestedMethod = "HandleStartRequested";    // RoomPresenter
     private const string TappedMethod = "HandleTapped";                    // TitlePresenter — 「화면을 눌러 시작」
     private const string AllAgreeMethod = "HandleAllClicked";              // TermsAgreeView — 「모두 동의하기」
@@ -80,8 +80,6 @@ public static class MultiTest
     private const string ServerPlayersField = "_players";                  // GameServer — 플레이어 원본 상태
     private const string ServerTurnOrderField = "_turnOrder";              // GameServer — 턴 순서
     private const string ServerDiscardField = "_discardPile";              // GameServer — 버림 더미
-    private const string ServerTrapSetOrderField = "_trapSetOrder";        // GameServer — 함정 설치 순서
-    private const string ServerNextTrapSetOrderField = "_nextTrapSetOrder";
     private const string ServerDeckListField = "_deck";                    // GameServer — 덱
     private const string RulesDeckPath = "Assets/Cards/Decks/Deck_Default.asset";
     private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset"; // 카드 묶음 (11-card-list 0절 — 값은 cards.json, 26-card-data 6-1)
@@ -1978,26 +1976,25 @@ public static class MultiTest
             sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
         }
 
-        // 1. 카드 피해로 HP 0 → 피해 연출 뒤 5초 사망 대기(게임 멈춤) → 최종 사망 → 손패 버림 · 턴에서 빠짐
+        // 1. 카드 피해로 HP 0 → 체인 끝 사망 정리에서 바로 최종 사망(기다림 없음, 06 8절) → 손패 버림 · 피해 연출 뒤 다음 턴은 죽은 사람을 건너뛴다
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            DeathPending pending = t.Tick().OfType<DeathPending>().FirstOrDefault();
-            double startsAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
-            Check(pending != null && pending.Actor == t.O1 && Math.Abs(pending.StartsAt - startsAt) < 1e-6 && Math.Abs(pending.Deadline - (startsAt + 5)) < 1e-6,
-                "HP 0 → 사망 대기 (피해 연출 뒤부터 5초)");
-            t.At(startsAt + 1);
-            Check(!t.Tick().OfType<TurnStarted>().Any(), "사망 대기 중엔 다음 턴 없음");
             int discardBefore = t.DiscardCount;
-            t.At(startsAt + 5);
             List<GameEvent> events = t.Tick().ToList();
+            double startsAt = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve;
             PlayerDied died = events.OfType<PlayerDied>().FirstOrDefault();
-            Check(died != null && died.Actor == t.O1 && t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 6, "마감 → 최종 사망 · 손패 6장 버림 더미로");
+            Check(died != null && died.Actor == t.O1 && !events.OfType<DeathPending>().Any(), "HP 0 → 체인 끝 사망 정리에서 바로 최종 사망 (사망 대기 없음)");
+            Check(t.HandCount(t.O1) == 0 && t.DiscardCount == discardBefore + 1 + 6, "손패 6장 버림 더미로 (쓴 카드 1장 다음에)");
             Check(died != null && died.CardIds.Length == 6, "사망 일에 버려진 카드 6장의 종류가 실린다");
+            t.At(startsAt - 0.01);
+            Check(!t.Tick().OfType<TurnStarted>().Any(), "피해 연출(4 단계) 동안은 다음 턴 없음");
+            t.At(startsAt);
+            events = t.Tick().ToList();
             Check(events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O2, "다음 턴은 죽은 사람을 건너뛴다 (P" + t.Server.CurrentTurnActor + ")");
-            double myTurn = startsAt + 6; // O2 의 턴 1초째 — 턴 제한 시간(15초) 안에 내야 대상 판정까지 간다
+            double myTurn = startsAt + 1; // O2 의 턴 1초째 — 턴 제한 시간(15초) 안에 내야 대상 판정까지 간다
             t.At(myTurn);
             Check(t.Code(t.Play(t.O2, ChainTable.Hit, t.O1)) == RejectCode.InvalidTarget, "죽은 사람은 대상이 될 수 없다 → 5");
             t.Play(t.O2, ChainTable.Hit, t.Turn);
@@ -2005,17 +2002,15 @@ public static class MultiTest
             Check(t.Code(t.Counter(t.O1, ChainTable.Negate)) == RejectCode.NotAlive, "죽은 사람의 카운터 → 10");
         }
 
-        // 2. 두 사람이 함께 HP 0 — 같은 마감, 함께 최종 사망 (06 11절)
+        // 2. 두 사람이 함께 HP 0 — 함께 최종 사망 (06 11절)
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 10);
             t.SetHp(t.O2, 10);
             t.Play(t.Turn, ChainTable.Wave, null);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            DeathPending[] pendings = t.Tick().OfType<DeathPending>().ToArray();
-            Check(pendings.Length == 2 && pendings[0].Deadline == pendings[1].Deadline, "동시 HP 0 → 둘 다 사망 대기 · 같은 마감");
-            t.At(100);
-            Check(t.Tick().OfType<PlayerDied>().Count() == 2, "함께 최종 사망");
+            List<GameEvent> events = t.Tick().ToList();
+            Check(events.OfType<PlayerDied>().Count() == 2 && !events.OfType<DeathPending>().Any(), "동시 HP 0 → 함께 최종 사망 (사망 대기 없음)");
         }
 
         // 3. 턴 뽑기는 2장, 손패가 찹츄 장수 − 1 이면 1장 (05 4절)
@@ -2044,18 +2039,16 @@ public static class MultiTest
             Check(t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 97, "두 번째 → 피해 3 + 4 (사람마다 따로)");
         }
 
-        // 4. 빈 덱 피해로 HP 0 → 바로 5초 사망 대기 → 사망 뒤 다음 턴
+        // 4. 빈 덱 피해로 HP 0 → 뽑기 직후 사망 정리에서 최종 사망 → 바로 다음 사람 턴
         {
             var t = new ChainTable();
             t.EmptyDeck();
             t.SetHp(t.Turn, 1);
+            int drawer = t.Turn;
             t.At(3);
             List<GameEvent> events = t.Server.Draw(t.Turn).ToList();
-            DeathPending pending = events.OfType<DeathPending>().FirstOrDefault();
-            Check(pending != null && Math.Abs(pending.StartsAt - 3) < 1e-6 && !events.OfType<TurnStarted>().Any(), "빈 덱 피해로 HP 0 → 바로 사망 대기 · 턴은 대기 뒤");
-            t.At(8);
-            events = t.Tick().ToList();
-            Check(events.OfType<PlayerDied>().Any() && events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1, "사망 → 다음 사람 턴");
+            Check(events.OfType<PlayerDied>().Any(e => e.Actor == drawer) && !events.OfType<DeathPending>().Any() && events.OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1,
+                "빈 덱 피해로 HP 0 → 바로 최종 사망 → 다음 사람 턴");
         }
 
         // 5. 나감 — 손패가 버림 더미로 (01 6절)
@@ -2240,17 +2233,17 @@ public static class MultiTest
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Chapchu, "재선언한 뒤 다음 자기 턴에 승리");
         }
 
-        // 2-2. 사망 대기 중에는 선언하지 않는다 → 살아난 뒤 10장이면 선언 (PM 2026-11-19)
+        // 2-2. HP 0 인 동안(체인 중)에는 선언하지 않는다 → 사망 정리에서 살아난 뒤(3008 죽은 척) 10장이면 선언 (PM 2026-11-19)
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 10);
             t.SetHandSize(t.O1, 9);
+            t.SetTrapCard(t.O1, id => new Card(id, 902, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 20, now = true } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending, 0));
             List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Act(TargetType.OneOther, new DamageEffect { subject = EffectSubject.Target, amount = 10 }, new DrawEffect { subject = EffectSubject.Target, count = 1 })), t.O1);
-            bool pending = events.OfType<DeathPending>().Any(e => e.Actor == t.O1);
-            Check(pending && t.HandCount(t.O1) == 10 && !t.State(t.O1).IsChapchu, "HP 0 · 사망 대기 중 10장 → 선언하지 않는다");
-            t.SetHp(t.O1, 30); // 대기 중 회복
-            events = t.Run(t.Now + 8);
-            Check(events.OfType<DeathAvoided>().Any(e => e.Actor == t.O1) && Declared(events, t.O1), "살아난 뒤 10장 → 선언");
+            int avoided = events.FindIndex(e => e is DeathAvoided d && d.Actor == t.O1);
+            int declared = events.FindIndex(e => e is ChapchuChanged c && c.Actor == t.O1 && c.IsChapchu);
+            Check(avoided >= 0 && declared > avoided && t.HandCount(t.O1) == 10 && t.State(t.O1).IsChapchu,
+                "HP 0 인 동안 10장 → 선언하지 않고, 살아난 뒤 10장 → 선언");
         }
 
         // 2-3. 부여된 찹츄 (A20 · T16) — 장수 조건 없이 붙고, 그 사람의 턴 시작에 판정 (07 7 · 8절)
@@ -2262,15 +2255,13 @@ public static class MultiTest
             Check(Cleared(events, t.O1) && events.OfType<TurnStarted>().Any(e => e.Actor == t.O1) && !t.Server.IsGameOver, "부여된 찹츄도 턴 시작에 10장이 아니면 무효");
         }
 
-        // 3. 처치 승리 — 마지막 1인, 사망 대기가 끝난 뒤
+        // 3. 처치 승리 — 마지막 1인, 체인 끝 사망 정리에서 바로
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 10);
             t.SetHp(t.O2, 10);
             t.Play(t.Turn, ChainTable.Wave, null);
             t.At(ChainTable.Reveal + ReactionSeconds);
-            Check(!t.Tick().OfType<GameEnded>().Any(), "사망 대기 중엔 판정 안 함");
-            t.At(100);
             List<GameEvent> events = t.Tick().ToList();
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<TurnStarted>().Any(), "남은 1인 처치 승리");
@@ -2288,8 +2279,6 @@ public static class MultiTest
                 t.SetHp(actor, 10);
             t.Play(t.Turn, ChainTable.Storm, null);
             t.At(100);
-            t.Tick();
-            t.At(200);
             GameEnded ended = t.Tick().OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == -1 && ended.Reason == GameEndReason.Draw, "전원 사망 → 무승부");
             Check(ended != null && ended.Actors.SequenceEqual(new[] { 1, 2, 3 }) && ended.Ranks.All(rank => rank == 1)
@@ -2433,7 +2422,7 @@ public static class MultiTest
             Check(t.Server.CurrentTurnActor == t.O1, "함정 연출이 끝나면 다음 턴");
         }
 
-        // 3. 함정의 효과는 다른 함정을 부르지 않는다 · 함정에는 카운터 못 함 · 지난 사건으로는 발동하지 않음
+        // 3. 함정의 효과도 함정을 부른다 — 함정 연쇄 (04 6절, 사용자 2026-11-27 프로토타입 v3.4) · 함정에는 카운터 못 함 · 지난 사건으로는 발동하지 않음
         {
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
@@ -2441,16 +2430,18 @@ public static class MultiTest
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
             List<GameEvent> events = t.Tick().ToList();
-            Check(events.OfType<TrapActivated>().Count() == 1 && t.TrapCount(t.Turn) == 1 && t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 80, "함정에 맞은 사람의 함정은 발동하지 않는다");
+            Check(events.OfType<TrapActivated>().Select(e => e.Actor).SequenceEqual(new[] { t.O1, t.Turn }) && t.TrapCount(t.Turn) == 0 && t.Hp(t.Turn) == 90 && t.Hp(t.O1) == 70,
+                $"함정에 맞은 사람의 함정도 연쇄 줄에서 발동 (♥{t.Hp(t.Turn)} · ♥{t.Hp(t.O1)})");
             int code = t.Code(t.Counter(t.Turn, ChainTable.Negate));
             Check(code != 0, "함정에 카운터 → 거절 " + code);
+            t.GiveTrap(t.Turn, ChainTable.TrapHit); // 지난 피해(O1 의 함정)가 남아 있으면 이 함정이 다음 체인에서 발동한다
             t.RunUntilTurn(t.O1, 60);
             t.Play(t.O1, ChainTable.Hit, t.O2);
             events = t.Run(t.Now + ChainTable.Reveal + ReactionSeconds + 1);
             Check(events.OfType<CardResolved>().Any() && !events.OfType<TrapActivated>().Any() && t.TrapCount(t.Turn) == 1, "지난 피해로는 다음 체인에서도 발동하지 않음");
         }
 
-        // 4. 여러 함정 — 방 전체에서 설치한 순서대로
+        // 4. 여러 함정 — 턴 순서대로: 현재 턴 플레이어부터 턴 방향 (설치한 순서가 아니다, 사용자 2026-11-27)
         {
             var t = new ChainTable();
             t.GiveTrap(t.O2, ChainTable.TrapHit);
@@ -2458,10 +2449,26 @@ public static class MultiTest
             t.Play(t.Turn, ChainTable.Wave, null);
             t.At(ChainTable.Reveal + ReactionSeconds);
             List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
-            Check(traps.Select(e => e.Actor).SequenceEqual(new[] { t.O2, t.O1 }) && t.Hp(t.Turn) == 80, "먼저 설치한 O2 → O1 순으로 발동 (♥80)");
+            Check(traps.Select(e => e.Actor).SequenceEqual(new[] { t.O1, t.O2 }) && t.Hp(t.Turn) == 80, "나중에 설치했어도 턴 순서가 앞인 O1 → O2 (♥80)");
         }
 
-        // 5. HP 0 — 「본인 사망 대기」 함정만, 다른 함정은 남고 사망 대기 → 최종 사망
+        // 4-1. 연쇄는 최대 4단 — 서로 「피해 받은 후」 를 3장씩: O1 → 나 → O1 → 나 에서 멈춘다. 한 사람의 같은 이름 함정은 한 줄에 한 장
+        {
+            var t = new ChainTable();
+            for (int i = 0; i < 3; i++)
+            {
+                t.GiveTrap(t.O1, ChainTable.TrapHit);
+                t.GiveTrap(t.Turn, ChainTable.TrapHit);
+            }
+            t.Play(t.Turn, ChainTable.Hit, t.O1);
+            t.At(ChainTable.Reveal + ReactionSeconds);
+            List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
+            Check(traps.Select(e => e.Actor).SequenceEqual(new[] { t.O1, t.Turn, t.O1, t.Turn }) && t.TrapCount(t.O1) == 1 && t.TrapCount(t.Turn) == 1
+                  && t.Hp(t.O1) == 60 && t.Hp(t.Turn) == 80,
+                $"4단에서 멈춘다 — 함정 {traps.Count}장 · 남은 함정 {t.TrapCount(t.O1)} · {t.TrapCount(t.Turn)} (♥{t.Hp(t.O1)} · ♥{t.Hp(t.Turn)})");
+        }
+
+        // 5. HP 0 — 사망 정리에서 「본인 사망」 함정(효과 없음)만 바로 발동 → 그래도 HP 0 → 바로 최종 사망. 다른 함정은 발동하지 않는다
         {
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
@@ -2471,27 +2478,29 @@ public static class MultiTest
             t.At(ChainTable.Reveal + ReactionSeconds);
             List<GameEvent> events = t.Tick().ToList();
             List<TrapActivated> traps = events.OfType<TrapActivated>().ToList();
-            Check(traps.Count == 1 && traps[0].CardId == ChainTable.TrapDying && t.TrapCount(t.O1) == 1 && t.Hp(t.Turn) == 100, "HP 0 → 본인 사망 대기 함정만 발동 · 피해 받은 후 함정은 남음");
-            Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1), "함정 뒤 사망 대기");
-            Check(t.Run(60).OfType<PlayerDied>().Any(e => e.Actor == t.O1), "사망 대기가 끝나면 최종 사망");
+            Check(traps.Count == 1 && traps[0].CardId == ChainTable.TrapDying && t.Hp(t.Turn) == 100, "HP 0 → 본인 사망 함정만 발동 · 피해 받은 후 함정은 발동하지 않음");
+            Check(events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && !events.OfType<DeathPending>().Any() && t.TrapCount(t.O1) == 0, "살아나지 못했다 → 바로 최종 사망 (남은 함정은 버림 더미로)");
         }
 
-        // 6. 같은 사건에 맞는 함정은 모두 발동한다 — 한 사람이 여러 장이어도, 한 장당 한 번 (04 6절 「발동 조건」 · 「여러 함정 동시 발동」, 2026-11-18)
+        // 6. 같은 사건에 맞는 함정은 모두 발동한다 — 한 사람이 여러 장이어도, 한 장당 한 번 (04 6절 「발동 조건」 · 「여러 함정 동시 발동」, 2026-11-18).
+        //    단 한 사람의 같은 이름 함정은 한 줄에 한 장 (2026-11-27)
+        Func<int, Card> hitBack = id => new Card(id, 3901, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterDamaged);
         {
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.SetTrapCard(t.O1, hitBack);
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(ChainTable.Reveal + ReactionSeconds);
             List<TrapActivated> traps = t.Tick().OfType<TrapActivated>().ToList();
-            Check(traps.Count == 2 && traps.All(e => e.Actor == t.O1 && e.Targets.SequenceEqual(new[] { t.Turn })) && t.TrapCount(t.O1) == 0 && t.Hp(t.Turn) == 80,
-                $"한 번 맞은 O1 의 함정 두 장이 모두 발동 · 대상 = 피해를 준 사람 (함정 {traps.Count}장 · ♥{t.Hp(t.Turn)})");
+            Check(traps.Count == 2 && traps.All(e => e.Actor == t.O1 && e.Targets.SequenceEqual(new[] { t.Turn })) && t.TrapCount(t.O1) == 1 && t.Hp(t.Turn) == 80,
+                $"한 번 맞은 O1 의 다른 이름 함정 두 장이 모두 발동 · 같은 이름은 한 장만 (함정 {traps.Count}장 · 남은 {t.TrapCount(t.O1)} · ♥{t.Hp(t.Turn)})");
         }
         {
             // 사건이 둘이면(때린 사람이 다름) 함정마다 다른 사건부터 쓴다 — 때린 두 사람에게 한 장씩. 문서에 정해진 순서는 없다 — 앞서부터 이렇게 돌던 동작을 그대로 둔 것
             var t = new ChainTable();
             t.GiveTrap(t.O1, ChainTable.TrapHit);
-            t.GiveTrap(t.O1, ChainTable.TrapHit);
+            t.SetTrapCard(t.O1, hitBack);
             Card hitToo = t.Give(t.O2, id => new Card(id, 901, CardType.Counter, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, new[] { CardType.Action }, ChainTable.Reveal, ChainTable.Resolve));
             t.Play(t.Turn, ChainTable.Hit, t.O1);
             t.At(2);
@@ -2520,7 +2529,7 @@ public static class MultiTest
         Func<int, Card> freeze = id => new Card(id, 901, CardType.Action, TargetType.OneOther, new CardEffect[] { new SkipTurnEffect { subject = EffectSubject.Target } }, null, ChainTable.Reveal, ChainTable.Resolve);
         Func<int, Card> poke = id => new Card(id, 902, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve);
         {
-            // 3002 멈춰 — 나를 고른 행동 카드 → 쓴 사람의 다음 턴 스킵. 전원 카드에는 발동하지 않는다
+            // 3002 멈춰 — 행동 카드 효과를 받은 뒤 → 쓴 사람의 다음 턴 스킵. 전원 카드에도 (v3.4). 함정의 효과에는 발동하지 않는다
             var t = new ChainTable();
             t.SetTrapCard(t.O1, stop);
             var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
@@ -2529,7 +2538,12 @@ public static class MultiTest
             var t2 = new ChainTable();
             t2.SetTrapCard(t2.O1, stop);
             t2.PlayAndResolve(t2.Turn, t2.Find2(t2.Turn, ChainTable.Wave));
-            Check(t2.TrapCount(t2.O1) == 1 && !t2.State(t2.Turn).SkipNextTurn, "3002 멈춰 — 전원 카드에는 발동하지 않는다");
+            Check(t2.TrapCount(t2.O1) == 0 && t2.State(t2.Turn).SkipNextTurn, "3002 멈춰 — 전원 카드에도 발동한다");
+            var t3 = new ChainTable();
+            t3.GiveTrap(t3.O1, ChainTable.TrapHit);
+            t3.SetTrapCard(t3.Turn, stop);
+            t3.PlayAndResolve(t3.Turn, t3.Find2(t3.Turn, ChainTable.Hit), t3.O1);
+            Check(t3.Hp(t3.Turn) == 90 && t3.TrapCount(t3.Turn) == 1, "3002 멈춰 — 함정의 효과(O1 의 반격 피해)에는 발동하지 않는다");
         }
         {
             // 3004 사이렌 — 남이 정확히 10장이 된 뒤 15 피해. 11장이 되면 · 원래 10장이면 발동하지 않는다. 턴 뽑기 직후에도
@@ -2539,13 +2553,19 @@ public static class MultiTest
             Card hit = t.Give(t.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
             t.PlayAndResolve(t.Turn, hit, t.O1); // 12 → 내고 11 — 10장이 아니다
             Check(t.TrapCount(t.O2) == 1 && t.Hp(t.Turn) == 100, "3004 사이렌 — 11장이 되면 발동하지 않는다");
+            var t1 = new ChainTable();
+            t1.SetTrapCard(t1.O2, siren);
+            t1.SetHandSize(t1.Turn, 10);
+            Card hit1 = t1.Give(t1.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t1.PlayAndResolve(t1.Turn, hit1, t1.O1); // 11 → 내고 10 — 처리 전에 이미 10장
+            Check(t1.TrapCount(t1.O2) == 1, "3004 사이렌 — 11장에서 카드를 내 10장 → 「10장 미만 → 10장」 이 아니다");
             var t2 = new ChainTable();
-            t2.SetTrapCard(t2.O2, siren);
-            t2.SetHandSize(t2.Turn, 10);
-            Card hit2 = t2.Give(t2.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
-            var events = t2.PlayAndResolve(t2.Turn, hit2, t2.O1); // 11 → 내고 10
-            Check(events.OfType<TrapActivated>().Any(e => e.Actor == t2.O2 && e.Targets.SequenceEqual(new[] { t2.Turn })) && t2.Hp(t2.Turn) == 85,
-                $"3004 사이렌 — 카드를 내 10장이 됨 → 그 사람에게 15 피해 (♥{t2.Hp(t2.Turn)})");
+            t2.SetTrapCard(t2.Turn, siren);
+            t2.SetHandSize(t2.O1, 9);
+            Card gift = t2.Give(t2.Turn, id => new Card(id, 903, CardType.Action, TargetType.OneOther, new CardEffect[] { new DrawEffect { subject = EffectSubject.Target, count = 1 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            var events = t2.PlayAndResolve(t2.Turn, gift, t2.O1); // O1 9 → 10
+            Check(events.OfType<TrapActivated>().Any(e => e.Actor == t2.Turn && e.Targets.SequenceEqual(new[] { t2.O1 })) && t2.Hp(t2.O1) == 85,
+                $"3004 사이렌 — 내 카드로 남이 10장 → 내 사이렌도 발동 (v3.4) · 그 사람에게 15 피해 (♥{t2.Hp(t2.O1)})");
             var t3 = new ChainTable();
             t3.SetTrapCard(t3.O2, siren);
             t3.SetHandSize(t3.Turn, 8);
@@ -2582,23 +2602,31 @@ public static class MultiTest
             Check(t3.Hand(t3.O1).Contains(wave) && t3.TrapCount(t3.O1) == 0 && t3.TrapCount(t3.O2) == 1, "3007 두고 보자 — 둘이 맞으면 먼저 설치한 사람이 가져가고, 뒤 함정은 카드가 없어 슬롯에 남는다");
         }
         {
-            // 3008 죽은 척 — 사망 대기 → HP 20 으로 생존. 함정 줄에서 HP 0 이 된 사람도
+            // 3008 죽은 척 — 사망 정리 때 바로 → HP 20 으로 생존 (함정 줄보다 먼저). 함정 줄에서 HP 0 이 된 사람도. 살아난 사람의 다른 함정은 그 처리의 사건으로 발동
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
             t.SetTrapCard(t.O1, playDead);
+            int hand = t.HandCount(t.O1);
             var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
-            int pending = events.FindIndex(e => e is DeathPending d && d.Actor == t.O1), avoided = events.FindIndex(e => e is DeathAvoided d && d.Actor == t.O1);
-            Check(pending >= 0 && avoided > pending && t.Hp(t.O1) == 20 && t.State(t.O1).Life == LifeState.Alive && t.TrapCount(t.O1) == 0,
-                $"3008 죽은 척 — 사망 대기 → HP 20 으로 생존 (♥{t.Hp(t.O1)} · {t.State(t.O1).Life})");
+            int avoided = events.FindIndex(e => e is DeathAvoided d && d.Actor == t.O1);
+            Check(avoided >= 0 && !events.OfType<DeathPending>().Any() && t.Hp(t.O1) == 20 && t.State(t.O1).Life == LifeState.Alive && t.TrapCount(t.O1) == 0 && t.HandCount(t.O1) == hand,
+                $"3008 죽은 척 — 사망 정리에서 바로 HP 20 으로 생존 · 손패는 그대로 (♥{t.Hp(t.O1)} · {t.State(t.O1).Life})");
             Check(!t.Run(t.Now + 10).OfType<PlayerDied>().Any(), "3008 죽은 척 — 최종 사망하지 않는다");
             var t2 = new ChainTable();
             t2.SetTrapCard(t2.O2, siren);
-            t2.SetHp(t2.Turn, 10);
-            t2.SetTrapCard(t2.Turn, playDead);
-            t2.SetHandSize(t2.Turn, 10);
-            Card hit = t2.Give(t2.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
-            t2.PlayAndResolve(t2.Turn, hit, t2.O1);
-            Check(t2.Hp(t2.Turn) == 20 && t2.State(t2.Turn).Life == LifeState.Alive, $"3008 죽은 척 — 사이렌에 HP 0 이 돼도 살아난다 (♥{t2.Hp(t2.Turn)})");
+            t2.SetHp(t2.O1, 10);
+            t2.SetTrapCard(t2.O1, playDead);
+            t2.SetHandSize(t2.O1, 9);
+            Card gift = t2.Give(t2.Turn, id => new Card(id, 903, CardType.Action, TargetType.OneOther, new CardEffect[] { new DrawEffect { subject = EffectSubject.Target, count = 1 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t2.PlayAndResolve(t2.Turn, gift, t2.O1);
+            Check(t2.Hp(t2.O1) == 20 && t2.State(t2.O1).Life == LifeState.Alive && t2.TrapCount(t2.O2) == 0, $"3008 죽은 척 — 사이렌(함정 줄)에 HP 0 이 돼도 그 뒤 사망 정리에서 살아난다 (♥{t2.Hp(t2.O1)})");
+            var t3 = new ChainTable();
+            t3.SetHp(t3.O1, 20);
+            t3.SetTrapCard(t3.O1, playDead);
+            t3.GiveTrap(t3.O1, ChainTable.TrapHit);
+            events = t3.PlayAndResolve(t3.Turn, t3.Find2(t3.Turn, ChainTable.Hit), t3.O1);
+            Check(t3.Hp(t3.O1) == 20 && events.OfType<TrapActivated>().Any(e => e.Actor == t3.O1 && e.CardId == ChainTable.TrapHit) && t3.Hp(t3.Turn) == 90,
+                $"3008 죽은 척 — 살아난 사람의 「피해 받은 후」 함정도 그 피해로 발동 (♥{t3.Hp(t3.Turn)})");
         }
         {
             // 3009 나만 아니면 돼 — 남이 20 이상 피해를 받은 뒤 그 사람에게 10. 20 미만 · 내가 받은 피해에는 발동하지 않는다
@@ -2614,21 +2642,26 @@ public static class MultiTest
             t3.SetTrapCard(t3.O2, notMe);
             t3.PlayAndResolve(t3.Turn, t3.Find2(t3.Turn, ChainTable.Hit), t3.O2);
             Check(t3.TrapCount(t3.O2) == 1 && t3.Hp(t3.O2) == 80, "3009 나만 아니면 돼 — 내가 받은 피해에는 발동하지 않는다");
+            var t4 = new ChainTable();
+            t4.SetTrapCard(t4.Turn, notMe);
+            t4.PlayAndResolve(t4.Turn, t4.Find2(t4.Turn, ChainTable.Hit), t4.O1);
+            Check(t4.TrapCount(t4.Turn) == 0 && t4.Hp(t4.O1) == 70, $"3009 나만 아니면 돼 — 내가 준 20 피해에도 발동 (v3.4, ♥{t4.Hp(t4.O1)})");
         }
         {
-            // 3012 편안 — 남의 카드로 턴 스킵이 걸린 뒤 → HP 가득 · 막기 상태 해제 (방금 걸린 것도). 함정(멈춰)이 건 스킵으로는 발동하지 않는다
+            // 3012 편안 — 남의 카드로 막는 상태가 걸린 뒤 → HP 가득 · 막는 상태 해제. 방금 걸린 종류는 풀지 않는다 (v3.4). 함정(멈춰)이 건 스킵에도 연쇄 줄에서
             var t = new ChainTable();
             t.SetHp(t.O1, 30);
             t.SetTrapCard(t.O1, rest);
+            t.State(t.O1).BlockActionNextTurn = true;
             var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, freeze), t.O1);
-            Check(t.Hp(t.O1) == 100 && !t.State(t.O1).SkipNextTurn && events.OfType<TurnSkipCleared>().Any(e => e.Actor == t.O1),
-                $"3012 편안 — 턴 스킵에 당함 → HP 100 · 스킵 풀림 (♥{t.Hp(t.O1)} · 스킵 {t.State(t.O1).SkipNextTurn})");
+            Check(t.Hp(t.O1) == 100 && t.State(t.O1).SkipNextTurn && !t.State(t.O1).BlockActionNextTurn && !events.OfType<TurnSkipCleared>().Any(),
+                $"3012 편안 — 턴 스킵에 당함 → HP 100 · 행동 금지는 풀고 방금 걸린 스킵은 그대로 (♥{t.Hp(t.O1)} · 스킵 {t.State(t.O1).SkipNextTurn})");
             var t2 = new ChainTable();
             t2.SetHp(t2.Turn, 30);
             t2.SetTrapCard(t2.Turn, rest);
             t2.SetTrapCard(t2.O1, stop);
             t2.PlayAndResolve(t2.Turn, t2.Find2(t2.Turn, ChainTable.Hit), t2.O1);
-            Check(t2.State(t2.Turn).SkipNextTurn && t2.TrapCount(t2.Turn) == 1 && t2.Hp(t2.Turn) == 30, "3012 편안 — 함정(멈춰)이 건 스킵으로는 발동하지 않는다 (함정은 함정을 부르지 않는다)");
+            Check(t2.State(t2.Turn).SkipNextTurn && t2.TrapCount(t2.Turn) == 0 && t2.Hp(t2.Turn) == 100, $"3012 편안 — 함정(멈춰)이 건 스킵에도 연쇄 줄에서 발동 (♥{t2.Hp(t2.Turn)})");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -3848,7 +3881,7 @@ public static class MultiTest
                     t.At(2);
                     t.Counter(t.O1, grab);
                     var events = t.Run(2 + ChainTable.Reveal + 8);
-                    Check(t.Hp(t.O1) == 0 && t.State(t.O1).Life == LifeState.DeathPending && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O1), "2020 대가로 HP 0 → 사망 대기 · 막은 카드는 받는다");
+                    Check(t.Hp(t.O1) == 0 && t.State(t.O1).Life == LifeState.Dead && events.OfType<CardReturnedToHand>().Any(e => e.Actor == t.O1), "2020 대가로 HP 0 → 최종 사망 · 막은 카드는 받는다");
                 }
                 // ── 카운터 묶음 2 (11-card-list 1-3) — 2001 침착 ──
                 {
@@ -3881,8 +3914,8 @@ public static class MultiTest
                     t.At(2);
                     t.Counter(t.O1, calm);
                     var events = t.Run(20);
-                    Check(t.Hp(t.O1) == 0 && events.Any(e => e.GetType().Name.Contains("DeathPending")) && !events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp > 0),
-                        $"2001 침착 — HP 10 · 20 피해 → 0 이면 회복 없이 사망 대기 (♥{t.Hp(t.O1)})");
+                    Check(t.Hp(t.O1) == 0 && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && !events.OfType<HpChanged>().Any(e => e.Actor == t.O1 && e.Hp > 0),
+                        $"2001 침착 — HP 10 · 20 피해 → 0 이면 회복 없이 최종 사망 (♥{t.Hp(t.O1)})");
                 }
                 {
                     var t = new ChainTable();
@@ -4239,10 +4272,10 @@ public static class MultiTest
                     t.SetHp(t.O1, 10);
                     int mine = t.HandCount(t.Turn);
                     var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1015)), t.O1);
-                    bool together = t.HandCount(t.Turn) == mine + 1 && events.OfType<DeathPending>().Any(e => e.Actor == t.O1);
+                    bool together = t.HandCount(t.Turn) == mine + 1 && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1);
                     events = t.Run(t.Now + 10);
-                    Check(together && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
-                        "1015 대상이 HP 0 이 돼도 — 피해와 강탈이 함께 (멈추지 않는다) → 사망 대기 → 최종 사망 · 다음 턴");
+                    Check(together && events.OfType<TurnStarted>().Any(),
+                        "1015 대상이 HP 0 이 돼도 — 피해와 강탈이 함께 (멈추지 않는다) → 체인 끝에 최종 사망 · 다음 턴");
                 }
                 {
                     var t = new ChainTable();
@@ -4350,7 +4383,7 @@ public static class MultiTest
                     events = t.Server.Draw(restarted?.Order[0] ?? t.Turn).ToList();
                     events.AddRange(t.Run(t.Now + 10));
                     GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
-                    Check(events.OfType<DeathPending>().Count() == 3 && ended != null && ended.Reason == GameEndReason.Draw && !events.OfType<TurnStarted>().Any(),
+                    Check(events.OfType<PlayerDied>().Count() == 3 && ended != null && ended.Reason == GameEndReason.Draw && !events.OfType<TurnStarted>().Any(),
                         "1012 피폭으로 남은 사람이 동시에 모두 죽으면 무승부 · 다음 턴 없음");
                 }
                 {
@@ -4470,11 +4503,11 @@ public static class MultiTest
                     bool listed = judged != null && judged.Actors.Length == 3 && judged.Values[System.Array.IndexOf(judged.Actors, t.O2)] == judged.Value;
                     bool held = t.Run(t.Now + 3.9).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
                     var after = t.Run(t.Now + 0.5);
-                    bool zero = t.Hp(t.O2) == 0 && after.OfType<DeathPending>().Any(e => e.Actor == t.O2);
+                    bool zero = t.Hp(t.O2) == 0 && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2);
                     after = t.Run(t.Now + 20);
                     Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && listed && held && zero
-                          && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2) && after.OfType<TurnStarted>().Any(),
-                        $"1021 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 4.17초 공개 뒤 꼴찌 HP 0 → 사망 대기 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
+                          && after.OfType<TurnStarted>().Any(),
+                        $"1021 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 4.17초 공개 뒤 꼴찌 HP 0 → 바로 최종 사망 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
                 }
                 {
                     var t = new ChainTable();
@@ -4617,8 +4650,8 @@ public static class MultiTest
                     t.PlayAndResolve(t.Turn, t.Give(t.Turn, Real(1019)), t.O1);
                     var events = t.Server.Choose(t.O1, 1).ToList();
                     events.AddRange(t.Run(t.Now + 15));
-                    Check(events.OfType<DeathPending>().Any(e => e.Actor == t.O1) && events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
-                        "1019 피해 받기로 HP 0 — 사망 대기 → 최종 사망 → 다음 턴");
+                    Check(events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<TurnStarted>().Any(),
+                        "1019 피해 받기로 HP 0 — 최종 사망 → 다음 턴");
                 }
                 {
                     double now = 0;
@@ -5402,12 +5435,14 @@ public static class MultiTest
             Check(DumpHp(clone, t.O1) == 20, "되살린 방장에게 고르기 → 피해 80 (♥20)");
         }
         {
+            // 사망 정리는 그 자리에서 끝난다 (06 8절) — 사본에 남는 것은 사망 대기 능력(3008 죽은 척) · 함정의 연출 시간뿐
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
+            t.SetTrapCard(t.O1, id => new Card(id, 3008, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 20, now = true } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending));
+            t.GiveTrap(t.O1, ChainTable.TrapHit);
             t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
-            t.Run(t.Now + ChainTable.Resolve + 0.2);
-            Check(t.State(t.O1).Life == LifeState.DeathPending, "사망 대기까지 진행");
-            Same(t, "사망 대기 중 — 버림 더미 · 「~한 후」 기록 · 지표");
+            Check(t.State(t.O1).Life == LifeState.Alive && t.Hp(t.O1) == 20 && t.Hp(t.Turn) == 90, "죽은 척으로 살아나 반격까지 (연출 중)");
+            Same(t, "함정 연출 중 — 버림 더미 · 「~한 후」 기록 · 처리 전 손패 · 지표");
         }
 
         // 2. 새 방장이 이어 간다 — 멈췄던 단계의 시간을 처음부터 (ResumeAfterMigration)
@@ -5449,20 +5484,18 @@ public static class MultiTest
             Check(clone.CurrentTurnActor != t.Turn, "새 마감 → 턴 넘어감");
         }
         {
-            // 사망 대기 · 고르기: 처음부터 다시
+            // 사망 정리 뒤 · 고르기: 사망은 다시 열지 않고, 고르기는 처음부터 다시
             var t = new ChainTable();
             t.SetHp(t.O1, 20);
             t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
-            t.Run(t.Now + ChainTable.Resolve + 0.2);
             GameServer clone = Clone(t, out _);
             double at = t.Now + 30;
             t.At(at);
-            DeathPending pending = clone.ResumeAfterMigration().OfType<DeathPending>().FirstOrDefault();
-            Check(pending != null && pending.Actor == t.O1 && System.Math.Abs(pending.Deadline - (at + 5)) < 0.01, "사망 대기 중 이주 — 5초를 다시 센다");
-            t.At(at + 4.9);
-            Check(!clone.Tick().OfType<PlayerDied>().Any(), "4.9초 — 아직");
-            t.At(at + 5);
-            Check(clone.Tick().OfType<PlayerDied>().Any(), "5초 → 최종 사망");
+            var resumed = clone.ResumeAfterMigration().ToList();
+            Check(!resumed.OfType<DeathPending>().Any() && !resumed.OfType<PlayerDied>().Any() && DumpHp(clone, t.O1) == 0, "최종 사망 뒤 이주 — 사망을 다시 처리하지 않는다");
+            t.At(at + 20);
+            clone.Tick();
+            Check(clone.CurrentTurnActor != t.Turn && clone.CurrentTurnActor != t.O1, "이어 가면 다음 턴 — 죽은 사람은 건너뛴다");
 
             t = new ChainTable();
             t.PlayAndResolve(t.Turn, t.Give(t.Turn, Choice), t.O1);
@@ -5649,9 +5682,12 @@ public static class MultiTest
             t.SetHp(t.O1, 5);
             t.PlayAndResolve(t.Turn, Held(t, t.Turn, ChainTable.Hit), t.O1);
             Check(Stat(t, t.Turn, StatKind.Dealt) == 5 && Stat(t, t.O1, StatKind.Taken) == 5, "HP 5 에 피해 20 → 실제로 깎인 5 만");
-            Check(Sum(t, StatKind.Kills) == 0, "사망 대기 중엔 킬이 아니다");
-            t.Run(t.Now + 8);
-            Check(t.State(t.O1).Life == LifeState.Dead && Stat(t, t.Turn, StatKind.Kills) == 1 && Sum(t, StatKind.Kills) == 1, "최종 사망 → 당하게 한 사람 킬 1");
+            Check(t.State(t.O1).Life == LifeState.Dead && Stat(t, t.Turn, StatKind.Kills) == 1 && Sum(t, StatKind.Kills) == 1, "체인 끝 최종 사망 → 당하게 한 사람 킬 1");
+            var t2 = new ChainTable();
+            t2.SetHp(t2.O1, 5);
+            t2.SetTrapCard(t2.O1, id => new Card(id, 3008, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 20, now = true } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending));
+            t2.PlayAndResolve(t2.Turn, Held(t2, t2.Turn, ChainTable.Hit), t2.O1);
+            Check(Sum(t2, StatKind.Kills) == 0, "죽은 척으로 살아나면 킬이 아니다");
         }
 
         // 3. 자기 피해 — 받은 피해에만
@@ -5847,7 +5883,7 @@ public static class MultiTest
 
         // 시험용 카드 (make = 인스턴스 ID → 카드)
         public Card Give(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Hand.Add(c); return c; }
-        public Card SetTrapCard(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Traps.Add(c); RecordSetOrder(c); return c; }
+        public Card SetTrapCard(int actor, Func<int, Card> make) { Card c = make(_nextInstance++); ((PlayerState)_players[actor]).Traps.Add(c); return c; }
         public PlayerState State(int actor) => (PlayerState)_players[actor];
         public List<Card> Hand(int actor) => State(actor).Hand;
         public int TrapCount(int actor) => State(actor).Traps.Count;
@@ -5894,17 +5930,6 @@ public static class MultiTest
         {
             Card c = MakeCard(_nextInstance++, kind);
             ((PlayerState)_players[actor]).Traps.Add(c);
-            RecordSetOrder(c);
-        }
-
-        // SetTrap 처럼 설치 순서를 남긴다 — 여러 함정은 설치한 순서대로 발동 (04 6절)
-        private void RecordSetOrder(Card c)
-        {
-            var order = (Dictionary<int, int>)typeof(GameServer).GetField(ServerTrapSetOrderField, Private).GetValue(Server);
-            FieldInfo next = typeof(GameServer).GetField(ServerNextTrapSetOrderField, Private);
-            int n = (int)next.GetValue(Server);
-            order[c.InstanceId] = n;
-            next.SetValue(Server, n + 1);
         }
 
         public IReadOnlyList<GameEvent> SetTrap(int actor, int kind) => Server.SetTrap(actor, Find(actor, kind));

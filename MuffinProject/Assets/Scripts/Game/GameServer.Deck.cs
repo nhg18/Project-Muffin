@@ -53,18 +53,17 @@ namespace Chapchu.Game
         // 턴 뽑기(메인 행동)의 적용 — 직접 뽑기 · 시간 초과 자동 뽑기가 함께 쓴다. 끝나면 턴이 넘어간다.
         private void DrawForTurn(int actor, int count)
         {
+            MarkHandsBefore();
             for (int i = 0; i < count && _players[actor].Hp > 0; i++)
                 CountDraw(actor); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
-            // 뽑기가 끝난 즉시 함정 — 「10장이 된 뒤」(3004) · 빈 덱 피해의 사망 대기 능력(3008) (04 6절 「체인 밖의 상태 변경」)
+            // 뽑기가 끝난 즉시 — 사망 정리(빈 덱 피해의 3008 죽은 척) → 함정 줄(「10장이 된 뒤」 3004 등) (04 6절 「체인 밖의 상태 변경」 · 9.2)
             double now = _clock();
-            _processActor = actor;
-            double settled = FireTraps(now);
+            double settled = SettleAfter(now);
             if (_gameOver)
                 return;
-            CheckDeathPending(settled); // 빈 덱 피해에는 카드 연출이 없다 — 대응 시간은 바로 (06 8절)
 
-            // 드로우는 끝나면 턴 종료. 함정 연출 · 빈 덱 피해의 사망 대기가 있으면 그것이 끝난 뒤 (03-turn.md 4절)
-            if (IsDeathPending || settled > now)
+            // 드로우는 끝나면 턴 종료. 사망 대기 능력 · 함정 연출이 있으면 그것이 끝난 뒤 (03-turn.md 4절)
+            if (settled > now)
             {
                 _mainActionUsed = true;
                 _nextTurnAt = System.Math.Max(_nextTurnAt, settled);

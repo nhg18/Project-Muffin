@@ -23,20 +23,20 @@ namespace Chapchu.Game
             _events.Add(new ActionBlockChanged(actor, ActionBlockOf(player)));
         }
 
-        /// <summary>actor 의 막기 상태를 모두 푼다 — 다음 턴 스킵 · 행동 카드 금지(다음 · 이번 턴). 찹츄는 건드리지 않는다 (3012 편안).</summary>
-        internal void ClearBlockStatus(int actor)
+        /// <summary>actor 의 막는 상태를 푼다 — 다음 턴 스킵 · 행동 카드 금지(다음 · 이번 턴). keepKind(방금 걸린 종류, BlockKind*)는 그대로. 찹츄는 건드리지 않는다 (3012 편안).</summary>
+        internal void ClearBlockStatus(int actor, int keepKind)
         {
             if (!IsInGame(actor))
                 return;
 
             PlayerState player = _players[actor];
-            if (player.SkipNextTurn)
+            if (player.SkipNextTurn && keepKind != BlockKindSkipTurn)
             {
                 player.SkipNextTurn = false;
                 _events.Add(new TurnSkipCleared(actor));
             }
 
-            if (player.BlockActionNextTurn || player.ActionBlocked)
+            if ((player.BlockActionNextTurn || player.ActionBlocked) && keepKind != BlockKindAction)
             {
                 player.BlockActionNextTurn = false;
                 player.ActionBlocked = false;

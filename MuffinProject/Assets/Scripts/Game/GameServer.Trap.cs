@@ -10,10 +10,6 @@ namespace Chapchu.Game
         // 확정 (04-card.md 2절).
         internal const int TrapSlotCount = 3;
 
-        // 함정을 설치한 순서 — 여럿이 함께 발동할 때 방 전체에서 먼저 설치한 것부터 (04 6절 「여러 함정 동시 발동」, 2026-11-15)
-        private readonly Dictionary<int, int> _trapSetOrder = new Dictionary<int, int>(); // 카드 InstanceId → 설치 번호
-        private int _nextTrapSetOrder;
-
         /// <summary>함정 설치 (04-card.md 6절). 내 턴 · 메인 행동 전 · 빈 슬롯이 있으면 몇 장이든. 메인 행동이 아니다. 종류는 소유자만 안다.</summary>
         public IReadOnlyList<GameEvent> SetTrap(int requester, int cardInstanceId)
         {
@@ -50,93 +46,110 @@ namespace Chapchu.Game
 
             player.Hand.RemoveAt(index);
             player.Traps.Add(card);
-            _trapSetOrder[card.InstanceId] = _nextTrapSetOrder++;
             _events.Add(new TrapSet(requester, card.InstanceId, card.CardId, player.Hand.Count, player.Traps.Count));
             OnHandChanged(requester);
             return TakeEvents();
         }
 
-        // 행동(체인) · 턴 뽑기 · 턴 끝 피폭 · 턴 스킵 · 개판 판정이 끝난 뒤 — 그사이 생긴 사건에 맞는 함정을 모두 자동 발동한다 (04 6절 · 9.2, 2026-11-15 PM).
-        // 같은 사건에 맞는 함정이 여럿이면 사람이 달라도 · 한 사람이 여러 장이어도 모두 발동한다 — 함정 한 장은 한 번만 (04 6절 「여러 함정 동시 발동」, 2026-11-18).
-        // 발동할 함정은 지금 정하고, 설치한 순서대로 한 장씩: 조건 다시 보기 → 공개 → 효과 → 버림 더미. 카운터 · 반응 시간은 없다.
-        // 함정의 효과로 생긴 사건은 다른 함정을 부르지 않는다 — 끝나면 사건 기록을 비운다.
-        // 함정 줄이 끝나면 HP 0 인 사람을 사망 대기로 두고 「본인 사망」 함정(사망 대기 능력)을 설치한 순서대로 — 함정 줄에서 HP 0 이 된 사람도 (06 8절).
-        // at = 앞 연출이 끝나는 시각. 마지막 함정의 연출이 끝나는 시각을 돌려준다 (발동한 것이 없으면 at 그대로).
-        private double FireTraps(double at)
+        // 함정 줄의 최대 단 — 첫 줄 + 연쇄 3번. 4단째 함정이 만든 사건으로는 새 줄을 열지 않는다 (04 6절 「함정 연쇄」, 사용자 2026-11-27)
+        private const int MaxTrapLineDepth = 4;
+
+        // 3007 두고 보자가 잡은 행동 카드 — 함정 줄이 다 끝난 뒤 잡은 사람 손패로 (04 9.2 · 11-card-list 1-4). 카드 InstanceId → 잡은 사람, 잡은 순서대로
+        private readonly List<(int CardInstanceId, int Owner)> _claimedCards = new List<(int, int)>();
+
+        // 처리(체인 · 턴 뽑기 · 턴 시작 · 피폭 · 개판 판정)가 끝난 뒤 — 사망 정리 → 찹츄 선언 → 함정 줄 (04 9.2, 사용자 2026-11-27 프로토타입 v3.4 기준).
+        // at = 앞 연출이 끝나는 시각. 마지막 연출(사망 대기 능력 · 함정)이 끝나는 시각을 돌려준다 (없으면 at 그대로).
+        private double SettleAfter(double at)
         {
-            RecordHandReachedTen();
-            var fired = new List<(int Owner, Card Trap, AfterRecord After)>();
+            RecordHandReachedTen(_handBefore);
+            List<AfterRecord> records = TakeAfterRecords();
+            at = SettleDeaths(at);
+            SettleChapchu();
+            if (!_gameOver && !_restartPending)
+                at = FireTraps(records, at, 1);
+            DeliverClaimedCards();
+            return at;
+        }
+
+        // 함정 줄 한 단 (04 6절 · 9.2). records = 이 줄이 보는 사건 — 첫 줄은 그 처리의 사건, 연쇄 줄은 방금 처리한 함정이 만든 사건만.
+        // 줄은 지금 정한다: 현재 턴 플레이어부터 턴 방향, 한 사람 안에서는 슬롯 순서. 한 사람의 같은 이름 함정은 한 줄에 한 장 (2026-11-27).
+        // 같은 사건에 맞는 함정은 사람이 달라도 · 한 사람이 여러 장이어도 모두 오른다 — 함정 한 장은 한 번만 (2026-11-18).
+        // 한 장씩: 직전에 조건 다시 보기(풀렸으면 슬롯에 남는다) → 공개 → 효과 → 버림 더미 → 사망 정리 → 그 함정이 만든 사건으로 다음 단 → 줄의 다음 함정.
+        private double FireTraps(List<AfterRecord> records, double at, int depth)
+        {
+            if (records.Count == 0)
+                return at;
+
+            var line = new List<(int Owner, Card Trap, AfterRecord After)>();
             var taken = new List<AfterRecord>(); // 앞 함정이 이미 쓴 사건 — 맞는 사건이 여럿이면 함정마다 다른 사건부터 쓴다 (FindAfterRecord)
-            foreach (int owner in _turnOrder)
+            foreach (int owner in TurnOrderFromCurrent())
             {
-                if (!IsInGame(owner))
+                if (!IsInGame(owner) || _players[owner].Life != LifeState.Alive)
                     continue;
 
-                PlayerState player = _players[owner];
-                if (player.Hp <= 0)
-                    continue; // 그 처리에서 HP 0 — 사망 대기 능력만 (아래, 06 3 · 8절)
-
-                foreach (Card trap in player.Traps)
+                var names = new HashSet<int>(); // 이 사람이 이 줄에 올린 카드 종류
+                foreach (Card trap in _players[owner].Traps)
                 {
-                    if (!IsAfterTrigger(trap.Trigger))
+                    if (!IsAfterTrigger(trap.Trigger) || names.Contains(trap.CardId))
                         continue;
 
-                    AfterRecord after = FindAfterRecord(owner, trap, taken);
+                    AfterRecord after = FindAfterRecord(records, owner, trap, taken);
                     if (after == null)
                         continue;
 
+                    names.Add(trap.CardId);
                     taken.Add(after);
-                    fired.Add((owner, trap, after));
+                    line.Add((owner, trap, after));
                 }
             }
-            _afterRecords.Clear();
 
-            foreach (var (owner, trap, after) in fired.OrderBy(f => SetOrderOf(f.Trap)))
+            foreach (var (owner, trap, after) in line)
             {
-                // 앞 함정의 효과로 주인이 나갔거나 · HP 0 이 됐거나 · 그 함정이 파괴 · 이동됐거나 · 조건이 풀렸으면 발동하지 않는다 (04 6절)
-                if (!IsInGame(owner) || _players[owner].Hp <= 0 || !_players[owner].Traps.Contains(trap) || !StillHolds(trap, after))
+                // 앞 함정(과 그 연쇄)의 효과로 주인이 나갔거나 · 그 함정이 파괴 · 이동됐거나 · 조건이 풀렸으면 발동하지 않는다 — 슬롯에 남는다 (04 6절)
+                if (!IsInGame(owner) || _players[owner].Life != LifeState.Alive || !_players[owner].Traps.Contains(trap) || !StillHolds(trap, after))
                     continue;
 
+                Dictionary<int, int> handBefore = HandCounts();
                 at = ResolveTrap(owner, trap, after, at);
                 if (_restartPending || _gameOver)
-                    break;
-            }
+                    return at;
 
-            if (!_restartPending && !_gameOver)
-                at = FireDeathAbilities(at);
-
-            _afterRecords.Clear(); // 함정의 효과로 생긴 사건은 쓰지 않는다
-            SettleHands();
-            return at;
-        }
-
-        // 사망 대기 능력 (06 8절) — HP 0 인 사람을 사망 대기로 두고, 그 사람의 「본인 사망」 함정을 설치한 순서대로. 원인은 묻지 않는다 (04 6절).
-        // 생존 능력으로 HP 가 1 이상이 되면 그 사람의 남은 사망 능력은 쓰지 않는다. 능력이 없으면 사망 대기는 부른 쪽(CheckDeathPending)이 정한다.
-        private double FireDeathAbilities(double at)
-        {
-            List<(int Owner, Card Trap)> abilities = _turnOrder
-                .Where(owner => IsInGame(owner) && _players[owner].Hp <= 0)
-                .SelectMany(owner => _players[owner].Traps.Where(t => t.Trigger == TrapTrigger.SelfDeathPending).Select(t => (owner, t)))
-                .OrderBy(a => SetOrderOf(a.t))
-                .ToList();
-            if (abilities.Count == 0)
-                return at;
-
-            CheckDeathPending(at); // 사망 대기 등록 → 능력 발동 → 생존 복귀 (06 8절 「처리」)
-            foreach (var (owner, trap) in abilities)
-            {
-                if (!IsInGame(owner) || _players[owner].Hp > 0 || !_players[owner].Traps.Contains(trap))
-                    continue;
-
-                at = ResolveTrap(owner, trap, null, at);
+                RecordHandReachedTen(handBefore);
+                List<AfterRecord> made = TakeAfterRecords();
+                at = SettleDeaths(at);
+                SettleChapchu();
                 if (_restartPending || _gameOver)
-                    break;
+                    return at;
+
+                if (depth < MaxTrapLineDepth)
+                    at = FireTraps(made, at, depth + 1);
+                if (_restartPending || _gameOver)
+                    return at;
             }
 
             return at;
         }
 
-        private int SetOrderOf(Card trap) => _trapSetOrder.TryGetValue(trap.InstanceId, out int order) ? order : int.MaxValue;
+        /// <summary>3007 두고 보자 — 그 행동 카드를 잡는다. 손패로는 함정 줄이 다 끝난 뒤 (DeliverClaimedCards).</summary>
+        internal void ClaimTriggerCard(int owner, int cardInstanceId)
+        {
+            if (cardInstanceId >= 0 && !IsClaimed(cardInstanceId))
+                _claimedCards.Add((cardInstanceId, owner));
+        }
+
+        private bool IsClaimed(int cardInstanceId) => _claimedCards.Any(c => c.CardInstanceId == cardInstanceId);
+
+        // 함정 줄이 다 끝났다 — 잡힌 카드를 잡은 사람 손패로. 그사이 최종 사망 · 나갔으면 버림 더미에 남는다 (11-card-list 1-4 「3007」)
+        private void DeliverClaimedCards()
+        {
+            foreach (var (cardInstanceId, owner) in _claimedCards)
+                if (!_gameOver && IsInGame(owner))
+                    TakeFromDiscard(owner, cardInstanceId);
+            _claimedCards.Clear();
+        }
+
+        // 사람마다 지금 손패 장수 — 함정 한 장의 「처리 전 장수」 (3004)
+        private Dictionary<int, int> HandCounts() => _players.ToDictionary(p => p.Key, p => p.Value.Hand.Count);
 
         // 함정 한 장 — 슬롯에서 공개 → 효과 → 버림 더미. at 에 공개 연출이 시작되고, 돌려준 시각에 후처리 연출이 끝난다.
         private double ResolveTrap(int owner, Card trap, AfterRecord after, double at)
@@ -146,7 +159,6 @@ namespace Chapchu.Game
             int[] targets = ResolveTargets(owner, trap.Target, RandomPicks(owner, trap.Target), source, fromHand: false) ?? new int[0];
 
             player.Traps.Remove(trap);
-            _trapSetOrder.Remove(trap.InstanceId);
             AddStat(owner, StatKind.Traps);
             _events.Add(new TrapActivated(owner, trap.InstanceId, trap.CardId, targets, player.Traps.Count));
 

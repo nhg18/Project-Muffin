@@ -132,8 +132,7 @@ namespace Chapchu.Game
             w.Ints(Ids(_discardPile));
             w.Ints(Ids(_allCards));
 
-            // 사망 대기 · 개판 · 대소동
-            w.Time(_deathDeadline);
+            // 개판 · 대소동
             w.Int(_gaepanCaster);
             w.Int(_gaepanLeft);
             w.Int(_gaepanTurns);
@@ -145,7 +144,7 @@ namespace Chapchu.Game
             w.Bool(_restartPending);
             w.Int(_turnEndStage);
 
-            // 「~한 후」 기록 · 지표 · 기다려 · 함정 설치 순서
+            // 「~한 후」 기록 · 처리 전 손패 · 지표 · 기다려
             w.Int(_afterRecords.Count);
             foreach (AfterRecord r in _afterRecords)
             {
@@ -155,8 +154,7 @@ namespace Chapchu.Game
                 w.Int(r.Amount);
                 w.Int(r.CardInstanceId);
             }
-            w.Map(_settledHand);
-            w.Int(_processActor);
+            w.Map(_handBefore);
             w.Int(_stats.Count);
             foreach (KeyValuePair<int, int[]> pair in _stats)
             {
@@ -164,8 +162,6 @@ namespace Chapchu.Game
                 w.Ints(pair.Value);
             }
             w.Ints(_waitCasters);
-            w.Map(_trapSetOrder);
-            w.Int(_nextTrapSetOrder);
 
             // 승리
             w.Bool(_gameOver);
@@ -343,8 +339,7 @@ namespace Chapchu.Game
             ReadCards(_discardPile);
             ReadCards(_allCards);
 
-            // 사망 대기 · 개판 · 대소동
-            _deathDeadline = r.Time();
+            // 개판 · 대소동
             _gaepanCaster = r.Int();
             _gaepanLeft = r.Int();
             _gaepanTurns = r.Int();
@@ -356,14 +351,13 @@ namespace Chapchu.Game
             _restartPending = r.Bool();
             _turnEndStage = r.Int();
 
-            // 「~한 후」 기록 · 지표 · 기다려 · 함정 설치 순서
+            // 「~한 후」 기록 · 처리 전 손패 · 지표 · 기다려
             _afterRecords.Clear();
             int afterCount = r.Count();
             for (int i = 0; i < afterCount; i++)
                 _afterRecords.Add(new AfterRecord { Kind = (AfterKind)r.Int(), Subject = r.Int(), Source = r.Int(), Amount = r.Int(), CardInstanceId = r.Int() });
-            _settledHand.Clear();
-            r.Map(_settledHand);
-            _processActor = r.Int();
+            _handBefore.Clear();
+            r.Map(_handBefore);
             _stats.Clear();
             int statCount = r.Count();
             for (int i = 0; i < statCount; i++)
@@ -376,9 +370,6 @@ namespace Chapchu.Game
             }
             _waitCasters.Clear();
             _waitCasters.AddRange(r.Ints());
-            _trapSetOrder.Clear();
-            r.Map(_trapSetOrder);
-            _nextTrapSetOrder = r.Int();
 
             // 승리
             _gameOver = r.Bool();
@@ -412,13 +403,6 @@ namespace Chapchu.Game
                 // 연출은 이미 지나갔다 — 반응 시간을 지금부터. 물을 사람이 없으면 바로 처리
                 _reactionOpensAt = now;
                 _reactionDeadline = _reactionAsked.Count > 0 ? now + ReactionTimeLimit : now;
-            }
-
-            if (IsDeathPending)
-            {
-                _deathDeadline = now + DeathResponseTime;
-                foreach (int actor in _turnOrder.Where(a => _players[a].Life == LifeState.DeathPending && !_players[a].HasLeft && !departed.Contains(a)))
-                    _events.Add(new DeathPending(actor, now, _deathDeadline));
             }
 
             if (IsChoosing)
