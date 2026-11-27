@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Chapchu.Cards;
 using Chapchu.Core;
 using Chapchu.Game;
@@ -701,9 +702,11 @@ namespace Chapchu.UI.GameScreen
         }
 
         // 카드를 한 장씩 받는 사람 (1018 무야호 — 쓴 사람부터 턴 순서대로, 대상은 빼고). 대상 손패가 모자라면 재생한 기준의 대상 장수까지만 받는다.
-        // 턴 순서 = 좌석 순서, 역방향이면 거꾸로 (03-turn.md 6절 #4 — 재생한 기준의 방향). 받는 사람을 정하는 카드가 아니면 연출이 쓰지 않는다.
+        // 턴 순서 = 방장이 섞은 순서(PlayerLook.TurnOrderActors), 역방향이면 거꾸로 (03-turn.md 6절 #4 — 재생한 기준의 방향). 받는 사람을 정하는 카드가 아니면 연출이 쓰지 않는다.
         private List<CardFxSeat> ReceiversOf(List<CardFxSeat> fxSeats, CardFxSeat caster, List<CardFxSeat> targets)
         {
+            List<int> turnOrder = PlayerLook.TurnOrderActors();
+            fxSeats = fxSeats.OrderBy(seat => turnOrder.IndexOf(seat.Actor) is int index && index >= 0 ? index : int.MaxValue).ToList();
             int limit = targets.Count == 1 && TryGetShownHandCount(targets[0].Actor, out int targetHand) ? targetHand : int.MaxValue;
             int start = fxSeats.IndexOf(caster);
             var receivers = new List<CardFxSeat>();
