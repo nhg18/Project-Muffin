@@ -146,5 +146,5 @@ MonoBehaviour:
   coreRatio: 0.08
   shake: 6
   punch: 0
-  flashAlpha: 0.9
+  flashAlpha: 1
   flashMs: 60
