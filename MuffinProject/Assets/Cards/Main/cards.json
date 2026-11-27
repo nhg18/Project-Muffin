@@ -87,7 +87,7 @@
     },
     {
       "id": 1023, "name": "기다려!", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Rare", "count": 1,
-      "text": "내 다음 턴까지 아무도 못 이긴다",
+      "text": "내 다음 턴까지 아무도 찹츄로 못 이긴다",
       "effects": [ { "type": "StartWaitEffect", "args": "" } ]
     },
     {
@@ -123,7 +123,7 @@
     },
     {
       "id": 2001, "name": "침착", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Normal", "count": 3,
-      "text": "방금 나온 행동 카드의 피해를 20 줄이고, 나는 HP를 10 회복한다",
+      "text": "방금 나온 행동 카드의 피해를 20 줄이고, 나는 10 회복한다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "HasDamage",
       "effects": [ { "type": "ReduceDamageEffect", "args": "amount=20, everyone=true" }, { "type": "HealAfterBelowEffect", "args": "amount=10" } ]
@@ -172,7 +172,7 @@
     },
     {
       "id": 2002, "name": "반사", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
-      "text": "나에게 오는 효과를 쓴 사람에게 되돌린다",
+      "text": "나에게 오는 행동 카드를 막고, 그 카드를 내가 다시 쓴다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "ReflectEffect", "args": "" } ]
