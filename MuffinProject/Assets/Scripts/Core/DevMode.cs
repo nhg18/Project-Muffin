@@ -12,7 +12,7 @@ namespace Chapchu.Core
     {
         // TODO(중계 서버): 암호를 빌드 안에서 확인한다 — 디컴파일하면 해시가 보이고, 해시를 바꿔 치거나 암호를 대입해 볼 수 있다.
         // 시간이 없어 일단 빌드에 둔다 (PM 2026-11-26). 중계 서버가 암호를 확인하고 결과만 돌려주게 바꿔야 한다
-        private const string PasswordSha256 = "f0a81aa6f3af48fa794f0c09289e8cb3f793441e035a59eab4bffbf665cb8db5";
+        private const string PasswordSha256 = "48bf520a053fe68f37d2e6a317ed8cdb447981abfd5d65f2e52a8bf1eb0201da";
 
         public static bool IsOn => PlayerPrefs.GetInt(PlayerPrefsKeys.DevMode, 0) == 1;
 
