@@ -25,7 +25,16 @@ ugs login --service-key-id <키 ID> --secret-key-stdin < <비밀 키 파일>
 ugs config set project-id 36edb1bd-5445-4554-8ed7-d7c526a59a6d   # ProjectSettings 의 cloudProjectId
 ugs config set environment-name production
 ugs deploy server/cloud-code/SetNickname.js
-ugs cloud-code scripts list                                     # 올라갔는지
+ugs cloud-code scripts get SetNickname                          # params 에 nickname 이 있는지
+```
+
+`ugs deploy` 는 스크립트를 실행해 `module.exports.params` 를 읽는데, PC 에 `@unity-services/*` 모듈이 없으면 **params 가 빈 채로 올라간다** — 그러면 Cloud Code 가 인자를 버려 모든 요청이 `invalid` 가 된다 (2026-11-27 실서버). `params: []` 이면 관리 API 로 코드 · params 를 직접 올리고 게시한다:
+
+```bash
+S=https://services.api.unity.com/cloud-code/v1/projects/$P/environments/$E/scripts/SetNickname
+# body = {"code": <파일 내용>, "params": [{"name":"nickname","type":"STRING","required":true}]}
+curl -u "<키 ID>:<비밀 키>" -X PATCH -H "Content-Type: application/json" --data-binary @body.json "$S"
+curl -u "<키 ID>:<비밀 키>" -X POST  -H "Content-Type: application/json" -d '{}' "$S/publish"
 ```
 
 ### 이름 자물쇠 만들기 (환경마다 한 번)
@@ -36,13 +45,13 @@ ugs cloud-code scripts list                                     # 올라갔는�
 P=36edb1bd-5445-4554-8ed7-d7c526a59a6d
 E=<환경 ID>                                                     # ugs env list
 for b in $(seq 0 15); do
-  curl -sS -u "<키 ID>:<비밀 키>" -H "Content-Type: application/json"     -d "{\"key\":\"b$b\",\"value\":{\"holder\":null,\"until\":0}}"     "https://services.api.unity.com/cloud-save/v1/data/projects/$P/environments/$E/custom/nicklock/private-items"
+  curl -sS -u "<키 ID>:<비밀 키>" -H "Content-Type: application/json"     -d "{\"key\":\"b$b\",\"value\":{\"holder\":null,\"until\":0}}"     "https://services.api.unity.com/cloud-save/v1/data/projects/$P/environments/$E/custom/nicklock/private/items"
 done
 ```
 
 칸 수(16)를 바꾸면 `SetNickname.js` 의 `LOCK_BUCKETS` 와 같이 바꾼다.
 
-서비스 계정 역할: 프로젝트에 Cloud Code 편집 역할 + Cloud Save 편집 역할(자물쇠 만들기) + 환경 보기 역할.
+서비스 계정 `chapchu-deploy` (2026-11-27) — 프로젝트 역할: Cloud Code Editor · Cloud Code Script Publisher · Cloud Save Editor(자물쇠 만들기) · Remote Config API Viewer · Unity Environments Viewer · Unity Project Viewer. 관리자 웹의 `ugs-admin-viewer` 와 따로 둔다.
 
 ## 고칠 때
 

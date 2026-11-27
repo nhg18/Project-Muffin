@@ -55,7 +55,8 @@ module.exports = async ({ params, context, logger }) => {
   if (!isValid(nickname))
     return { result: "invalid" };
 
-  const cloudSave = new DataApi(context);
+  // 이름 장부 · 자물쇠(비공개 게임 데이터) · 보호 칸은 서버 권한으로만 쓴다 — 플레이어 토큰(context 그대로)은 403
+  const cloudSave = new DataApi({ accessToken: context.serviceToken });
 
   try {
     const mine = await loadMine(cloudSave, projectId, playerId);
@@ -243,6 +244,7 @@ async function loadWords(context, projectId, environmentId, playerId) {
     environmentId,
     userId: playerId,
     key: [RC_BANNED, RC_ALLOWED],
+    attributes: { unity: {}, app: {}, user: {} }, // 없으면 400 「Invalid request value at path: …["attributes"]」 (실서버 2026-11-27)
   });
 
   const settings = res.data?.configs?.settings ?? {};
