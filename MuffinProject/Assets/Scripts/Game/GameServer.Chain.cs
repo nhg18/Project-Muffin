@@ -11,6 +11,8 @@ namespace Chapchu.Game
         private const double ReactionTimeLimit = 5;
         // 고민 연장 — 낼 수 있는 카운터를 집으면 마감을 「그 순간 + 이 초」 까지 늦춘다. 한 사람당 반응 시간 한 번에 1회 (04-card.md 8절).
         private const double ReactionHoldSeconds = 3;
+        // 읽는 시간 — 카드가 체인에 오른 뒤 이 초가 지나기 전에는 처리하지 않는다. 아무도 낼 수 없거나 모두 스킵해도 (04-card.md 8절, PM 2026-11-28)
+        private const double MinReadSeconds = 3;
 
         private readonly List<ChainEntry> _chain = new List<ChainEntry>(); // [0] = 맨 아래(메인 행동 카드), 끝 = 맨 위
         private double _reactionOpensAt;  // 이 전은 연출 중 — 카운터를 받지 않는다 (04 8절)
@@ -205,7 +207,10 @@ namespace Chapchu.Game
             }
         }
 
-        // Tick 이 반응 마감 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
+        // 맨 위 카드의 읽는 시간이 끝나는 시각 — 등록 시각(반응 시작 − 등장 시간)부터 센다. 반응 시간과 따로 본다: 반응 마감은 그대로라 스킵 · 고민 연장 판정은 바뀌지 않는다.
+        private double ReadEndsAt => _reactionOpensAt - _chain[_chain.Count - 1].Card.RevealSeconds + MinReadSeconds;
+
+        // Tick 이 반응 마감 · 읽는 시간 뒤에 부른다. 위에서부터 한 번에 처리하고 다시 기다리지 않는다 (04 8 · 9절).
         // 무효화 · 불발이어도 카드는 버림 더미로 간다 (04 4절) — 체인이 끝난 뒤 쓴 순서대로 (9.1). 맨 아래 카드의 후처리 연출 뒤에
         // 사망 정리 · 함정 줄 (9.2) → 메인 행동의 체인이면 다음 턴, 메인 행동 전(남의 턴에 낸 카운터 등)이면 턴을 이어 간다.
         private void ResolveChain()
