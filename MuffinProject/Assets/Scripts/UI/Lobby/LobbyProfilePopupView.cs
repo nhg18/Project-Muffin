@@ -31,6 +31,7 @@ namespace Chapchu.UI.Lobby
             [NonSerialized] public string Mask;
         }
 
+        private const string NoValueText = "—";
         private const string CodeMask = "••••••";
         private const string IdMask = "••••••••••••";
 
@@ -114,20 +115,18 @@ namespace Chapchu.UI.Lobby
             content.SetActive(true);
             SetNickname(nickname);
 
-            levelText.text = $"Lv.{data.Level}";
-            xpFill.anchorMax = new Vector2(data.XpNext > 0 ? Mathf.Clamp01((float)data.Xp / data.XpNext) : 0f, 1f);
-            xpText.text = $"{data.Xp} / {data.XpNext}";
-            nextText.text = $"다음 레벨까지 {Mathf.Max(0, data.XpNext - data.Xp)} XP";
+            // 레벨 · 경험치 · 전적은 서버가 없어 값이 없다 — 레벨 줄은 비우고 전적 칸은 「—」 (레벨 시스템 미정 17 12절 #14)
+            levelText.text = string.Empty;
+            xpFill.anchorMax = new Vector2(0f, 1f);
+            xpText.text = string.Empty;
+            nextText.text = string.Empty;
             couponText.text = $"변경 쿠폰 {data.NicknameCoupons}장";
 
-            // 승률 = 승 ÷ 판 수, 반올림 정수 · 판 0 이면 0 (17 7-3)
-            int games = data.Wins + data.Losses;
-            int rate = games > 0 ? Mathf.RoundToInt(data.Wins * 100f / games) : 0;
-            winRateText.text = $"{rate}<space=2><size=34>%</size>";
-            recordText.text = $"{data.Wins}승 {data.Losses}패";
-            gamesText.text = games.ToString();
-            killWinsText.text = data.KillWins.ToString();
-            chapchuWinsText.text = data.ChapchuWins.ToString();
+            winRateText.text = NoValueText;
+            recordText.text = string.Empty;
+            gamesText.text = NoValueText;
+            killWinsText.text = NoValueText;
+            chapchuWinsText.text = NoValueText;
 
             codeRow.Value = data.MyCode;
             idRow.Value = playerId ?? string.Empty;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Chapchu.Account;
 
 namespace Chapchu.UI.Lobby
 {
@@ -105,9 +106,9 @@ namespace Chapchu.UI.Lobby
     }
 
     /// <summary>
-    /// 로비 허브의 임시 데이터 — 「통합 화면 UI v2」 로비(게시본 1794316285-7080)의 시안 값 그대로.
-    /// 친구 · 재화 · 퀘스트 · 상점 · 뽑기 서버가 아직 없어 이 기기 메모리에만 있고, 로비에 들어올 때마다 처음 값으로 돌아간다.
-    /// 값(가격 · 확률 · 보상)은 24 0절의 「가정 (시안 값)」 — 24 3~5절 확정 값과 다르며 어느 쪽으로 맞출지는 PM 결정.
+    /// 로비 허브의 데이터. 친구 · 재화 · 퀘스트 · 전적 · 레벨 · 친구 코드는 서버가 아직 없어 **비어 있다**(친구 0 · 퀘스트 0 · 재화 0) — 가짜 값을 넣지 않는다.
+    /// 진짜인 것은 닉네임 변경 쿠폰 수(AccountService)뿐. 아이템 목록 · 가격 · 확률은 「통합 화면 UI v2」 로비(게시본 1794316285-7080)의 시안 값 —
+    /// 24 0절의 「가정 (시안 값)」 이며 어느 쪽으로 맞출지는 PM 결정. 이 기기 메모리에만 있고 로비에 들어올 때마다 처음 값으로 돌아간다.
     /// 서버가 붙으면 이 파일을 서버 응답으로 바꾼다 (docs/systems/13 · 19 · 24).
     /// </summary>
     public sealed class LobbyHubData
@@ -141,35 +142,22 @@ namespace Chapchu.UI.Lobby
 
         private static readonly string[] ShopCharacterIds = { "c2", "c3", "c4", "c5", "c6" };
         private static readonly string[] ShopEffectIds = { "e3", "e5", "d2", "d4", "k2", "k4", "k6", "a2", "a4", "a6" };
-        private static readonly string[] RequestCandidates = { "꼬마젤리", "발바닥도장", "카드한장", "별사탕", "고양이손", "구름빵" };
-
-        // 닉네임 · 친구 코드 · 나를 차단했는지 (차단한 사람은 검색에 나오지 않는다)
-        private static readonly (string nickname, string code, bool blockedMe)[] SearchPool =
-        {
-            ("콩떡", "KD10-TT44", false), ("콩떡볶이", "BT88-LL12", false), ("콩콩이", "GR20-BB06", false), ("말랑콩", "PS61-BB77", false),
-            ("초코칩", "CC07-PP31", false), ("광고왕", "AD00-XX11", false), ("콩깍지", "HD99-ZZ00", true),
-        };
 
         private readonly List<HubItem> _items = new List<HubItem>();
         private readonly Dictionary<HubSlot, HubItem> _equipped = new Dictionary<HubSlot, HubItem>();
         private readonly Random _random = new Random();
-        private int _bone = 1240;
-        private int _churu = 12;
+        private int _bone;
+        private int _churu;
+        private int _boughtCoupons;
         private int _nextId;
 
-        public string MyCode => "ML01-JY22";
-        public int Wins => 12;
-        public int Losses => 9;
-        public int KillWins => 7;
-        public int ChapchuWins => 5;
+        // 전적 · 레벨 · 경험치는 서버가 없어 두지 않는다 — 화면은 비워 둔다 (레벨 시스템 미정, 17 12절 #14)
 
-        // 레벨 · 경험치 — 시안의 자리 확인용 값. 무엇으로 얻는지 · 레벨별 필요량은 레벨 시스템 미정 (17 12절 #14)
-        public int Level => 7;
-        public int Xp => 340;
-        public int XpNext => 500;
+        /// <summary>내 친구 코드 — 친구 서버(UGS Friends, 17 2절)가 없어 아직 없다. 빈 문자열</summary>
+        public string MyCode => string.Empty;
 
-        // 닉네임 변경 쿠폰 — 처음 1장 무료 (17 5-2) · 상점 「기타」 에서 더 산다 (17 7-7). 쓰면 줄고 7일 쿨다운이 붙는 것은 서버가 정한다 (24 3-4)
-        public int NicknameCoupons { get; private set; } = 1;
+        // 닉네임 변경 쿠폰 — 서버(Cloud Save)의 값. 처음 1장 무료 (23 7-8) · 상점 「기타」 에서 더 산다 (17 7-7). 쓰면 줄고 7일 쿨다운이 붙는 것은 서버가 정한다 (24 3-4)
+        public int NicknameCoupons => (AccountService.Nickname?.Coupons ?? NicknameState.FreeCoupons) + _boughtCoupons;
 
         public List<HubPerson> Friends { get; } = new List<HubPerson>();
         public List<HubPerson> RequestsIn { get; } = new List<HubPerson>();
@@ -181,13 +169,11 @@ namespace Chapchu.UI.Lobby
         public bool IsDailyBonusClaimed { get; private set; }
 
         /// <summary>마지막 개판 뒤로 뽑은 횟수 — GachaPityMax 번째는 개판</summary>
-        public int GachaPity { get; private set; } = 13;
+        public int GachaPity { get; private set; }
 
         public LobbyHubData()
         {
             SeedItems();
-            SeedFriends();
-            SeedQuests();
             Packs.Add(new HubPack("p1", 30, 0));
             Packs.Add(new HubPack("p2", 80, 8));
             Packs.Add(new HubPack("p3", 200, 30));
@@ -310,7 +296,7 @@ namespace Chapchu.UI.Lobby
                 return false;
 
             Add(currency, -price);
-            NicknameCoupons++;
+            _boughtCoupons++;
             return true;
         }
 
@@ -462,31 +448,12 @@ namespace Chapchu.UI.Lobby
         }
 
         /// <summary>
-        /// 닉네임 일부 또는 친구 코드 일부(- 없이)로 찾는다. 차단한 사람 · 나를 차단한 사람은 나오지 않는다. 빈 검색어는 null.
+        /// 닉네임 또는 친구 코드로 찾는다 (13-friend 2절). 친구 서버가 없어 결과는 늘 비어 있다. 빈 검색어는 null.
         /// </summary>
         public List<HubSearchResult> Search(string query)
         {
             string text = query?.Trim();
-            if (string.IsNullOrEmpty(text))
-                return null;
-
-            string key = text.ToUpperInvariant().Replace("-", string.Empty);
-            var results = new List<HubSearchResult>();
-            foreach ((string nickname, string code, bool blockedMe) in SearchPool)
-            {
-                if (blockedMe || Blocked.Exists(person => person.Nickname == nickname))
-                    continue;
-
-                if (!nickname.Contains(text) && !code.Replace("-", string.Empty).Contains(key))
-                    continue;
-
-                HubRelation relation = Friends.Exists(person => person.Nickname == nickname) ? HubRelation.Friend
-                    : RequestsOut.Exists(person => person.Nickname == nickname) ? HubRelation.Sent
-                    : HubRelation.None;
-                results.Add(new HubSearchResult(nickname, code, relation));
-            }
-
-            return results;
+            return string.IsNullOrEmpty(text) ? null : new List<HubSearchResult>();
         }
 
         /// <summary>
@@ -524,27 +491,6 @@ namespace Chapchu.UI.Lobby
             return true;
         }
 
-        /// <summary>확인용 — 아직 관계가 없는 사람 한 명이 친구 요청을 보낸다. 보낼 사람이 없으면 null.</summary>
-        public HubPerson ReceiveRequest()
-        {
-            var candidates = new List<string>(RequestCandidates);
-            candidates.RemoveAll(nickname => Friends.Exists(person => person.Nickname == nickname) || RequestsIn.Exists(person => person.Nickname == nickname)
-                || RequestsOut.Exists(person => person.Nickname == nickname) || Blocked.Exists(person => person.Nickname == nickname));
-            if (candidates.Count == 0)
-                return null;
-
-            var request = new HubPerson(NewId(), candidates[_random.Next(candidates.Count)]);
-            RequestsIn.Add(request);
-            return request;
-        }
-
-        /// <summary>확인용 — 초대를 보낼 온라인 친구 한 명. 없으면 null.</summary>
-        public HubPerson PickInviter()
-        {
-            List<HubPerson> online = Friends.FindAll(person => person.Status == HubFriendStatus.Online);
-            return online.Count == 0 ? null : online[_random.Next(online.Count)];
-        }
-
         private string NewId() => "n" + _nextId++;
 
         #endregion
@@ -563,7 +509,6 @@ namespace Chapchu.UI.Lobby
                 HubGrade.Common, HubGrade.Common, HubGrade.Uncommon, HubGrade.Rare, HubGrade.Rare, HubGrade.Legend);
             AddItems(HubSlot.Aura, "a", "없음",
                 HubGrade.Common, HubGrade.Common, HubGrade.Uncommon, HubGrade.Rare, HubGrade.Rare, HubGrade.Legend);
-            FindItem("e2").IsOwned = true;
         }
 
         // 슬롯의 첫 아이템이 기본(보유 · 장착). 나머지는 이름이 아직 없다
@@ -577,33 +522,6 @@ namespace Chapchu.UI.Lobby
                 if (isDefault)
                     _equipped[slot] = item;
             }
-        }
-
-        private void SeedFriends()
-        {
-            Friends.Add(new HubPerson(NewId(), "치와와대장", HubFriendStatus.Online));
-            Friends.Add(new HubPerson(NewId(), "카드요정", HubFriendStatus.InGame));
-            Friends.Add(new HubPerson(NewId(), "콩떡", HubFriendStatus.Online));
-            Friends.Add(new HubPerson(NewId(), "새벽세시", HubFriendStatus.Offline));
-            Friends.Add(new HubPerson(NewId(), "보리차", HubFriendStatus.Offline));
-            Friends.Add(new HubPerson(NewId(), "멍뭉이", HubFriendStatus.InGame));
-            Friends.Add(new HubPerson(NewId(), "꼬리콥터", HubFriendStatus.Online));
-            RequestsIn.Add(new HubPerson(NewId(), "초코칩"));
-            RequestsIn.Add(new HubPerson(NewId(), "젤리빈"));
-            RequestsOut.Add(new HubPerson(NewId(), "꼬마발바닥"));
-            Blocked.Add(new HubPerson(NewId(), "광고왕"));
-        }
-
-        private void SeedQuests()
-        {
-            Daily.Add(new HubQuest("d1", "판 3번 하기", 3, HubCurrency.Bone, 100, 2));
-            Daily.Add(new HubQuest("d2", "1번 이기기", 1, HubCurrency.Bone, 150, 1));
-            Daily.Add(new HubQuest("d3", "찹츄 1번 외치기", 1, HubCurrency.Churu, 3, 0));
-            Daily.Add(new HubQuest("d4", "친구와 1판 하기", 1, HubCurrency.Bone, 80, 0));
-            Weekly.Add(new HubQuest("w1", "판 15번 하기", 15, HubCurrency.Churu, 10, 9));
-            Weekly.Add(new HubQuest("w2", "5번 이기기", 5, HubCurrency.Bone, 600, 2));
-            Weekly.Add(new HubQuest("w3", "함정 카드 10번 쓰기", 10, HubCurrency.Bone, 300, 6));
-            Weekly.Add(new HubQuest("w4", "찹츄 3번 외치기", 3, HubCurrency.Churu, 8, 1));
         }
 
         #endregion

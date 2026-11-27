@@ -6,7 +6,7 @@
     public static class RoomProps
     {
         public const string TurnActor = "turnActor";
-        public const string TurnDeadline = "turnDeadline"; // 턴 마감 서버 시각(PhotonNetwork.Time, 초)
+        public const string TurnDeadline = "turnDeadline"; // 턴 마감 게임 시각(GameClock, 초)
         public const string DeckCount = "deckCount";
         public const string DiscardCount = "discardCount"; // 버림 더미 장수 (05-deck.md 7절)
         public const string DiscardTop = "discardTop";     // 버림 더미 맨 위 카드 종류 ID (int). 더미가 비면 키를 지운다 (09-network.md 6절)

@@ -5,7 +5,6 @@ using Chapchu.Cards;
 using Chapchu.Game;
 using Chapchu.Network;
 using DG.Tweening;
-using Photon.Pun;
 using UnityEngine;
 
 namespace Chapchu.UI.GameScreen
@@ -159,7 +158,7 @@ namespace Chapchu.UI.GameScreen
             if (_showing.Count > 0 && Input.GetMouseButtonDown(0) && Time.time - _showLastAddAt > showClickGuard)
                 FinishShow();
 
-            bool glow = _usableCounters.Count > 0 && _reactionPending && PhotonNetwork.Time >= _reactionOpensAt;
+            bool glow = _usableCounters.Count > 0 && _reactionPending && GameClock.Now >= _reactionOpensAt;
             if (glow)
                 SendHoldIfHeld();
             if (glow == _glowing) return;

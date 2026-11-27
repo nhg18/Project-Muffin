@@ -20,7 +20,7 @@ namespace Chapchu.UI.GameScreen
         private ReactionTimerView _view;
         private bool _showing;
         private bool _skipShown;
-        private double _opensAt;  // 서버 시각(PhotonNetwork.Time, 초)
+        private double _opensAt;  // 게임 시각(GameClock, 초)
         private double _deadline;
 
         private void Awake()
@@ -54,7 +54,7 @@ namespace Chapchu.UI.GameScreen
         {
             if (!_showing) return;
 
-            double now = PhotonNetwork.Time;
+            double now = Chapchu.Network.GameClock.Now;
             if (now < _opensAt)
             {
                 _view.ShowSoon();

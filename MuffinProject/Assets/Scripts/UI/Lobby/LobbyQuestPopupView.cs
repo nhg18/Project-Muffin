@@ -120,8 +120,10 @@ namespace Chapchu.UI.Lobby
                 rows[i].Bind(quests[i], quests[i].RewardCurrency == HubCurrency.Bone ? boneIcon : churuIcon);
             }
 
-            bonusRow.gameObject.SetActive(IsDaily);
-            if (IsDaily)
+            // 일일 퀘스트가 없으면(서버 없음 · 응답 실패) 「다 끝내기」 줄도 없다
+            bool hasBonus = IsDaily && _data.Daily.Count > 0;
+            bonusRow.gameObject.SetActive(hasBonus);
+            if (hasBonus)
             {
                 bonusRow.transform.SetSiblingIndex(quests.Count);
                 bonusRow.BindBonus(BonusTitle, _data.DailyClaimedCount, _data.Daily.Count, churuIcon, LobbyHubData.DailyBonusChuru,

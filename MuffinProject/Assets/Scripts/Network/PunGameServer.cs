@@ -72,6 +72,7 @@ namespace Chapchu.Network
             if (deck == null)
                 Debug.LogError($"[{nameof(PunGameServer)}] {nameof(deck)} 참조가 비어 있습니다.", this);
 
+            GameClock.ResetForNewGame(); // 지난 판에 멈춘 시간을 비운다 — 이 씬의 누구도 게임 시각을 읽기 전에
             _server = CreateServer();
 
             if (PhotonNetwork.InRoom)
@@ -375,12 +376,12 @@ namespace Chapchu.Network
         // 시작 경로(Awake)와 이주 경로(TakeOver)가 함께 쓴다 — 한쪽만 바뀌어 이주한 판만 다르게 움직이지 않게
         private static GameServer CreateServer()
         {
-            return new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+            return new GameServer(new SecureRandom(), () => GameClock.Now); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
         }
 
         private BotDriver CreateBots(int[] bots)
         {
-            return new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
+            return new BotDriver(_server, bots, new System.Random(), () => GameClock.Now, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
         }
 
         // 판을 이어 갈 수 없다 — 전원에게 알리고 방(대기 화면)으로 돌아간다. 거기서 다시 시작할 수 있다 (09-network.md 9.1, PM 2026-11-19)
