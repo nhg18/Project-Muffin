@@ -18,12 +18,13 @@ MonoBehaviour:
   targetType: 5
   targetCondition: 0
   grade: 2
-  description: "\uB0B4 \uB2E4\uC74C \uD134\uAE4C\uC9C0 \uC544\uBB34\uB3C4 \uBABB
-    \uC774\uAE34\uB2E4"
+  description: "\uB0B4 \uB2E4\uC74C \uD134\uAE4C\uC9C0 \uC544\uBB34\uB3C4 \uCC39\uCE04\uB85C
+    \uBABB \uC774\uAE34\uB2E4"
   reactsTo: 
   trapTrigger: 0
   triggerValue: 0
   reactCondition: 0
+  uncounterable: 0
   revealSeconds: 1
   resolveSeconds: 3.65
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}

@@ -3,6 +3,8 @@
 #      test_build 에 머지된 뒤 한 번 더 돌아 Library 캐시를 test_build 에 저장한다 → 다음 PR 빌드가 빨라진다
 # CD : v* 태그 push (예: v0.2.0) → 서명된 AAB 빌드 → 아티팩트 업로드 (+ 플레이 콘솔 업로드는 아래 주석 참고)
 # PC : release/* push · v* 태그 · 수동 실행 → Windows 64비트 빌드 (Mono) → zip 아티팩트. release/* push 에는 Android 를 돌리지 않는다
+# 배포 : v* 태그 빌드가 끝나면 GitHub Release 를 만든다 — PC zip + 설치용 APK(AAB 를 같은 키로 변환). 0.x 는 Pre-release
+#        이미 있는 태그를 다시 올릴 때: 수동 실행에 release_tag 를 넣으면 빌드 없이 그 태그 빌드의 아티팩트로 Release 만 만든다
 name: Unity 빌드
 
 on:
@@ -16,6 +18,11 @@ on:
     tags: ["v*"]
     paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "빌드 없이 Release 만 만들 태그 (예: v0.1.3). 비우면 평소 빌드"
+        required: false
+        default: ""
 
 concurrency:
   group: unity-${{ github.ref }}
@@ -47,7 +54,7 @@ jobs:
 
   android:
     # release/* push 는 PC 빌드만 — Android 확인 빌드는 git-workflow 표대로 CI 를 고칠 때 붙인다
-    if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
+    if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) && !inputs.release_tag }}
     runs-on: ubuntu-latest
     steps:
       # Android 에디터 이미지가 커서 기본 러너 디스크가 모자란다
@@ -106,7 +113,7 @@ jobs:
 
   # PC (Windows 64비트) — Ubuntu 러너에서 Mono 로 빌드한다 (IL2CPP 는 Windows 러너가 있어야 한다)
   windows:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && !inputs.release_tag }}
     runs-on: ubuntu-latest
     steps:
       - uses: jlumbroso/free-disk-space@v1.3.1
@@ -143,3 +150,85 @@ jobs:
           name: chapchu-windows-${{ github.run_number }}
           path: build/StandaloneWindows64
           retention-days: 14
+
+  # 배포 페이지 — v* 태그 빌드가 끝나면 (또는 수동 실행 release_tag) GitHub Release 를 만든다
+  release:
+    needs: [android, windows]
+    # Android 가 실패해도 PC 만으로 올린다. 이미 있으면 파일만 바꿔 올린다
+    if: ${{ !cancelled() && ((startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success') || inputs.release_tag) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: 태그 · 빌드 실행 찾기
+        id: meta
+        run: |
+          TAG="${{ inputs.release_tag || github.ref_name }}"
+          VER="${TAG#v}"
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            RUN_ID=$(gh run list --workflow unity-ci.yml --branch "$TAG" --status success --limit 1 --json databaseId -q '.[0].databaseId')
+            [ -n "$RUN_ID" ] || { echo "::error::$TAG 의 성공한 빌드가 없다"; exit 1; }
+          else
+            RUN_ID="${{ github.run_id }}"
+          fi
+          # 빌드 이름 = 태그 메시지 (docs/versioning.md 「태그」)
+          OBJ=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" -q '.object.type + " " + .object.sha')
+          if [ "${OBJ%% *}" = "tag" ]; then
+            NAME=$(gh api "repos/$GH_REPO/git/tags/${OBJ#* }" -q '.message' | head -n1)
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "name=${NAME:-$VER}" >> "$GITHUB_OUTPUT"
+
+      - name: 아티팩트 받기
+        run: |
+          gh run download "${{ steps.meta.outputs.run_id }}" -p 'chapchu-windows-*' -D pc
+          gh run download "${{ steps.meta.outputs.run_id }}" -p 'android-*' -D android || echo "Android 아티팩트 없음 — PC 만 올린다"
+
+      - name: PC zip
+        run: |
+          DIR=$(dirname "$(find pc -name ChapChu.exe | head -n1)")
+          rm -rf "$DIR"/*_BurstDebugInformation_DoNotShip
+          mkdir -p out
+          (cd "$DIR" && zip -qr "$GITHUB_WORKSPACE/out/ChapChu-${{ steps.meta.outputs.ver }}-windows.zip" .)
+
+      - name: 설치용 APK (AAB → universal APK, 같은 서명 키)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          KEY_PASS: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+        run: |
+          AAB=$(find android -name '*.aab' 2>/dev/null | head -n1)
+          [ -n "$AAB" ] || { echo "AAB 없음 — APK 건너뜀"; exit 0; }
+          gh release download -R google/bundletool -p 'bundletool-all-*.jar' -O bundletool.jar
+          echo "$KS_B64" | base64 -d > release.keystore
+          java -jar bundletool.jar build-apks --bundle="$AAB" --output=app.apks --mode=universal \
+            --ks=release.keystore --ks-pass="pass:$KS_PASS" --ks-key-alias="$KEY_ALIAS" --key-pass="pass:$KEY_PASS"
+          unzip -p app.apks universal.apk > "out/ChapChu-${{ steps.meta.outputs.ver }}-android.apk"
+          rm -f release.keystore
+
+      - name: Release 만들기
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"; VER="${{ steps.meta.outputs.ver }}"
+          PRE=""; case "$VER" in 0.*) PRE="--prerelease";; esac
+          APK_LINE=""; [ -f "out/ChapChu-$VER-android.apk" ] && APK_LINE="- Android: \`ChapChu-$VER-android.apk\` 을 휴대폰에서 받아 설치 (출처를 알 수 없는 앱 허용)"
+          cat > notes.md <<NOTES
+          ## 받기 · 실행
+          - PC: \`ChapChu-$VER-windows.zip\` 을 풀고 \`ChapChu.exe\` 실행
+          $APK_LINE
+
+          ## 참고
+          - 같은 버전($VER)끼리만 매칭된다
+          - 빌드: 태그 \`$TAG\` 커밋 (CI Unity 빌드 run ${{ steps.meta.outputs.run_id }})
+          NOTES
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+          else
+            gh release create "$TAG" out/* --verify-tag --title "${{ steps.meta.outputs.name }}" $PRE --notes-file notes.md --generate-notes
+          fi

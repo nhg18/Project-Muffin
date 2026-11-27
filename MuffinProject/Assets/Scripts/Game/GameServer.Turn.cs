@@ -45,8 +45,8 @@ namespace Chapchu.Game
         {
             if (_chain.Count > 0)
             {
-                if (now < _reactionDeadline)
-                    return;
+                if (now < _reactionDeadline || now < ReadEndsAt)
+                    return; // 반응 시간 · 읽는 시간 (04-card.md 8절)
                 ResolveChain();
                 if (_gameOver)
                     return; // 체인 중에 나가 1명만 남았다 — 처리 뒤 바로 끝, 턴을 넘기지 않는다 (07 3 · 6절)

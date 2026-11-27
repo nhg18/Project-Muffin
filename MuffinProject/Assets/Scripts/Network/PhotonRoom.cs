@@ -62,6 +62,11 @@ namespace Chapchu.Network
             PhotonNetwork.JoinRoom(roomName.Trim().ToUpper());
         }
     
+        /// <summary>
+        /// 랜덤 매칭 — 매치 방에 들어가고, 없으면 그 자리에서 매치 방을 만든다 (08-room.md 4절 「매치」).
+        /// 찾기와 만들기를 한 요청(JoinRandomOrCreateRoom)으로 보낸다 — 「못 찾음」 을 받고 다시 만들기를 보내면, 그 사이에 거의 같이 누른 사람도
+        /// 못 찾고 각자 방을 만들어 둘 다 봇과 하게 된다 (2026-11-28 전시판 버그).
+        /// </summary>
         public void JoinRandomRoom()
         {
             if (!PhotonConnection.ValidConnect)
@@ -69,7 +74,9 @@ namespace Chapchu.Network
                 RoomEvents.RaiseJoinRandomFailed(NotConnectedCode, NotConnectedMessage);
                 return;
             }
-            PhotonNetwork.JoinRandomRoom(MatchFilter, 0);
+
+            _creating = CreatingKind.Match;
+            PhotonNetwork.JoinRandomOrCreateRoom(MatchFilter, 0, roomName: RandomCode.GenerateRandomCode().Trim().ToUpper(), roomOptions: MatchRoomOptions());
         }
     
         public void LeaveRoom()
@@ -109,15 +116,21 @@ namespace Chapchu.Network
             }
 
             _creating = CreatingKind.Match;
+            string code = RandomCode.GenerateRandomCode();
+
+            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), MatchRoomOptions());
+        }
+
+        // 매치 방 설정 — 공개 고정, 랜덤 매칭이 거르는 Match 속성을 로비에 보인다
+        private RoomOptions MatchRoomOptions()
+        {
             RoomOptions options = CreateRoomOptions(NetworkManager.MaxPlayers, true, true);
             options.CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
             {
                 [RoomProps.Match] = true,
             };
             options.CustomRoomPropertiesForLobby = new[] { RoomProps.Match };
-            string code = RandomCode.GenerateRandomCode();
-
-            PhotonNetwork.CreateRoom(code.Trim().ToUpper(), options);
+            return options;
         }
 
         /// <summary>
@@ -313,6 +326,7 @@ namespace Chapchu.Network
         /// </summary>
         public void OnJoinRandomFailed(short returnCode, string message)
         {
+            // JoinRandomOrCreateRoom 은 못 찾으면 스스로 만든다 — 여기 오는 것은 찾기 자체가 실패한 경우다. 매치 방을 따로 만들어 이어 간다
             Debug.LogWarning($"[{nameof(PhotonRoom)}] 랜덤 입장 실패 — 새 매치 방을 만든다: {message}");
             CreateMatchRoom();
         }

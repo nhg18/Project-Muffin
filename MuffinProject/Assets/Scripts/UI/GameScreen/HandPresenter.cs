@@ -100,6 +100,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>손패가 올라왔다 · 내려갔다 — 가운데 카드 · 반응 타이머가 비킨다 (10-ui.md 2-1 「카드 연출 자리」).</summary>
         public event System.Action<bool> OnRaisedChanged;
 
+        /// <summary>조준 화살표 — 대상 표시 점선(GameScreenPresenter)이 같은 모양을 복제해 쓴다 (10-ui.md 5-2 #3).</summary>
+        public AimArrowView AimArrow => aimArrow;
+
         /// <summary>반응 시간이 열려 있고 내가 낼 수 있는 카운터가 있다 · 없다 — 스킵 버튼을 켜고 끈다 (10-ui.md 5절).</summary>
         public event System.Action<bool> OnReactionAsked;
 
@@ -228,7 +231,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>지금 낼 수 있는 카드를 가리는 판 상태 (시안 v3.5) — 내 턴 · 연출 · 체인 진행 중 · 내 함정 칸이 다 찼는지. 표시만 한다.</summary>
-        public void ShowPlayState(bool myTurn, bool busy, bool trapsFull) => _view.SetPlayState(myTurn, busy, trapsFull);
+        public void ShowPlayState(bool myTurn, bool busy, bool trapsFull, bool actionBlocked) => _view.SetPlayState(myTurn, busy, trapsFull, actionBlocked);
 
         /// <summary>내가 설치한 함정 — 손패에서 떼어 함정 칸(slot 의 위치 · 회전 · 배율)으로 보내 지운다. 연출 큐가 기다릴 코루틴. 손패에 없으면(빼앗아 온 함정) 바로 끝난다.</summary>
         public IEnumerator SetTrapRoutine(int cardInstanceId, Transform slot)

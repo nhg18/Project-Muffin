@@ -108,6 +108,7 @@ namespace Chapchu.UI.GameScreen
             public CardView Card;
             public string Name;
             public bool Negates; // 바로 아래 카드를 무효화하는 카운터인가 (본인만 무효는 아니다)
+            public int[] Targets; // 이 카드의 대상 (actorNumber) — 처리를 기다리는 동안 대상 표시 (10-ui.md 5-2 #3). 없으면 빈 배열
         }
 
         private struct Slot
@@ -131,6 +132,7 @@ namespace Chapchu.UI.GameScreen
         private float _cardHeight;
         private Camera _camera;
         private Tween _dimTween;
+        private int[] _shownTargets = System.Array.Empty<int>(); // 마지막으로 알린 맨 위 카드의 대상
 
         /// <summary>체인 맨 위 카드(반응을 기다리는 카드)의 이름. 체인이 비었으면 null.</summary>
         public string TopCardName
@@ -148,6 +150,60 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>배치가 바뀌었다 — 체인 맨 아래 줄 카드의 아래 끝 (캔버스 y, 화면 가운데가 0 · 위가 +). 반응 타이머가 따라온다.</summary>
         public event System.Action<float> OnBottomChanged;
+
+        /// <summary>
+        /// 처리를 기다리는 맨 위 카드의 대상이 바뀌었다 (actorNumber 배열). 체인이 비었거나, 새 카드가 3 단계(가운데에서 크게 · 주인 태그)인 동안은 빈 배열.
+        /// 대상 표시(10-ui.md 5-2 #3 — 빨간 점선 · 대상 강조)가 따라온다.
+        /// </summary>
+        public event System.Action<int[]> OnTopTargetsChanged;
+
+        /// <summary>맨 위 카드의 가장자리 중 화면 좌표 toward 쪽 점 (화면 좌표) — 대상 표시 점선이 나가는 자리. 맨 위 카드가 없으면 false.</summary>
+        public bool TryGetTopCardEdge(Vector2 toward, out Vector2 edge)
+        {
+            edge = default;
+            Entry top = TopEntry();
+            if (top == null || _camera == null)
+                return false;
+
+            Transform t = top.Card.transform;
+            float scale = t.lossyScale.y;
+            Vector3 centerWorld = t.position + t.up * (_cardHeight * scale / 2f);
+            Vector2 center = _camera.WorldToScreenPoint(centerWorld);
+            Vector2 corner = _camera.WorldToScreenPoint(centerWorld + t.right * (_cardWidth * scale / 2f) + t.up * (_cardHeight * scale / 2f));
+            float halfWidth = Mathf.Abs(corner.x - center.x);
+            float halfHeight = Mathf.Abs(corner.y - center.y);
+
+            Vector2 delta = toward - center;
+            float fx = Mathf.Abs(delta.x) > 0.01f ? halfWidth / Mathf.Abs(delta.x) : float.PositiveInfinity;
+            float fy = Mathf.Abs(delta.y) > 0.01f ? halfHeight / Mathf.Abs(delta.y) : float.PositiveInfinity;
+            edge = center + delta * Mathf.Min(1f, Mathf.Min(fx, fy));
+            return true;
+        }
+
+        // 처리를 기다리는 맨 위 카드 (떠난 카드 · 3 단계 카드 제외). 없으면 null.
+        private Entry TopEntry()
+        {
+            if (_big != null)
+                return null;
+
+            for (int i = _chain.Count - 1; i >= 0; i--)
+            {
+                if (_chain[i].Card != null) return _chain[i];
+            }
+
+            return null;
+        }
+
+        // 맨 위 카드의 대상이 바뀌었으면 알린다
+        private void NotifyTopTargets()
+        {
+            int[] targets = TopEntry()?.Targets ?? System.Array.Empty<int>();
+            if (targets.SequenceEqual(_shownTargets))
+                return;
+
+            _shownTargets = targets;
+            OnTopTargetsChanged?.Invoke(targets);
+        }
 
         private void Awake()
         {
@@ -234,9 +290,11 @@ namespace Chapchu.UI.GameScreen
             topLayer.SetChain(card, true); // 좌석 캐릭터 · 패널(HUD)에 가리지 않게 — 손패보다는 뒤
 
             _chain.RemoveAll(e => e.Card == null); // 앞 체인의 처리 도중에 새 카드가 나왔다 — 떠난 카드의 빈자리를 걷고 다시 줄 세운다
-            var entry = new Entry { Id = cardInstanceId, CardId = cardId, Card = card, Name = data != null ? data.cardName : null, Negates = IsNegating(data) };
+            var entry = new Entry { Id = cardInstanceId, CardId = cardId, Card = card, Name = data != null ? data.cardName : null, Negates = IsNegating(data),
+                Targets = targets != null ? targets.Distinct().ToArray() : System.Array.Empty<int>() };
             _chain.Add(entry);
             _big = entry;
+            NotifyTopTargets(); // 3 단계 동안은 주인 태그가 알린다 — 앞 카드의 대상 표시를 걷는다
             _cardWidth = card.Width;
             _cardHeight = card.Height;
 
@@ -255,6 +313,8 @@ namespace Chapchu.UI.GameScreen
                 _big = null;
                 Place(null);
             }
+
+            NotifyTopTargets();
         }
 
         /// <summary>체인의 카드가 처리됐다 (효과 적용 · 무효화) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴. 여기 없는 카드(함정 칸에서 나온 카드)면 바로 끝난다.</summary>
@@ -285,6 +345,7 @@ namespace Chapchu.UI.GameScreen
             _chain.Clear();
             _big = null;
             _focused = false;
+            NotifyTopTargets();
             if (cards.Count == 0)
                 yield break;
 
@@ -342,6 +403,7 @@ namespace Chapchu.UI.GameScreen
                 Place(null); // 고르기 판이 열린 뒤에 위 카드가 떠났다 — 고르게 한 카드를 판 자리에 다시 맞춘다
             }
 
+            NotifyTopTargets(); // 아래 카드가 맨 위가 됐다 · 체인이 비었다
             return card;
         }
 
@@ -378,7 +440,12 @@ namespace Chapchu.UI.GameScreen
                 float scale = slot.Scale * _near;
                 Vector3 center = bigCenter + (showSpot.right * slot.Center.x + showSpot.up * slot.Center.y) * _near + showSpot.forward * (stackZ * i);
                 Vector3 position = center - rotation * Vector3.up * (_cardHeight * scale / 2f);
-                MoveTo(entry.Card, position, rotation, Vector3.one * scale, entry == entering ? zoomMoveDuration : layoutDuration, Ease.OutQuart);
+                float duration = entry == entering ? zoomMoveDuration : layoutDuration;
+                MoveTo(entry.Card, position, rotation, Vector3.one * scale, duration, Ease.OutQuart);
+
+                // 주인 태그는 3 단계 카드의 아래 가장자리를 따라간다 — 손패를 올려 카드가 작게 · 위로 비키면 태그도 올라가 손패에 가리지 않는다
+                if (entry == _big)
+                    ownerTag.SetOffsetY((_cardHeight * (_bigScale - slot.Scale) / 2f + slot.Center.y) * CanvasPerUnit, duration);
             }
 
             OnBottomChanged?.Invoke((bigCenter.y / _near + bottom) * CanvasPerUnit);
