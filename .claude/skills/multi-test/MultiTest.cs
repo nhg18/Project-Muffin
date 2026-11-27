@@ -3836,6 +3836,29 @@ public static class MultiTest
                     int picked = (int)typeof(ChooseDiscardEffect).GetMethod("BotPick", Private).Invoke(pick, new object[] { t.Server, t.O1 });
                     Check(picked == c2.InstanceId, "2021 봇이 대가로 버릴 카드 — 카운터(뒤쪽) 먼저");
                 }
+                {
+                    // 으르렁은 행동 카드에만 낸다 — 나를 노린 카운터(으르렁의 벌칙 · 물귀신 · 가로채기가 고른 사람) 위에는 거절 9 (사용자 2026-11-28)
+                    var t = new ChainTable();
+                    Card back = t.Give(t.Turn, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2021)));
+                    t.At(Second);
+                    int growl = t.Code(t.Counter(t.Turn, back));
+                    var s = new ChainTable();
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O1, s.Give(s.O1, Real(2018)), s.O2);
+                    s.At(Second);
+                    int ghost = s.Code(s.Counter(s.O2, s.Give(s.O2, Real(2021))));
+                    var u = new ChainTable();
+                    u.PlayCard(u.Turn, u.Give(u.Turn, Real(1001)), u.O1);
+                    u.At(2);
+                    u.Counter(u.O1, u.Give(u.O1, Real(2015)), u.O2);
+                    u.At(Second);
+                    int grab = u.Code(u.Counter(u.O2, u.Give(u.O2, Real(2021))));
+                    Check(growl == RejectCode.CannotReact && ghost == RejectCode.CannotReact && grab == RejectCode.CannotReact, $"2021 카운터 위에는 거절 9 (으르렁 {growl} · 물귀신 {ghost} · 가로채기 {grab})");
+                }
                 // ── 카운터 묶음 3 (11-card-list 1-3) — 2020 내 거야! ──
                 {
                     var t = new ChainTable();
