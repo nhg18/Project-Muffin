@@ -2,6 +2,7 @@
 # CI : test_build 로 가는 PR 에서만 Android 빌드 검사 (develop · 기능 브랜치에서는 돌지 않는다)
 #      test_build 에 머지된 뒤 한 번 더 돌아 Library 캐시를 test_build 에 저장한다 → 다음 PR 빌드가 빨라진다
 # CD : v* 태그 push (예: v0.2.0) → 서명된 AAB 빌드 → 아티팩트 업로드 (+ 플레이 콘솔 업로드는 아래 주석 참고)
+# PC : release/* push · v* 태그 · 수동 실행 → Windows 64비트 빌드 (Mono) → zip 아티팩트. release/* push 에는 Android 를 돌리지 않는다
 name: Unity 빌드
 
 on:
@@ -9,7 +10,9 @@ on:
     branches: [test_build]
     paths-ignore: ["docs/**", "**/*.md"]
   push:
-    branches: [test_build]   # 캐시용. 머지 뒤 빌드가 필요 없으면 이 줄을 지운다
+    branches:
+      - test_build   # 캐시용. 머지 뒤 빌드가 필요 없으면 이 줄을 지운다
+      - "release/*"  # PC 빌드 (windows job)
     tags: ["v*"]
     paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
@@ -43,6 +46,8 @@ jobs:
   #         githubToken: ${{ secrets.GITHUB_TOKEN }}
 
   android:
+    # release/* push 는 PC 빌드만 — Android 확인 빌드는 git-workflow 표대로 CI 를 고칠 때 붙인다
+    if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: ubuntu-latest
     steps:
       # Android 에디터 이미지가 커서 기본 러너 디스크가 모자란다
@@ -98,3 +103,43 @@ jobs:
       #     releaseFiles: build/Android/*.aab
       #     track: internal
       #     status: draft
+
+  # PC (Windows 64비트) — Ubuntu 러너에서 Mono 로 빌드한다 (IL2CPP 는 Windows 러너가 있어야 한다)
+  windows:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: MuffinProject/Library
+          key: Library-windows-${{ hashFiles('MuffinProject/Assets/**', 'MuffinProject/Packages/**', 'MuffinProject/ProjectSettings/**') }}
+          restore-keys: Library-windows-
+
+      - name: 빌드
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: MuffinProject
+          targetPlatform: StandaloneWindows64
+          buildName: ChapChu
+          # 버전은 Player Settings 값 그대로 쓴다 (docs/versioning.md 규칙 유지)
+          versioning: None
+
+      - uses: actions/upload-artifact@v4
+        with:
+          # ref_name 에 / 가 들어가면(release/0.1.0) 아티팩트 이름으로 못 쓴다 → 실행 번호만
+          name: chapchu-windows-${{ github.run_number }}
+          path: build/StandaloneWindows64
+          retention-days: 14
