@@ -46,10 +46,10 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private ResultReadyDotView dotPrefab;
 
         [Header("색 (시안 :root)")]
-        [SerializeField] private Color ink = new Color32(0x5E, 0x50, 0x47, 0xFF);
-        [SerializeField] private Color yellow = new Color32(0xFF, 0xDC, 0x6E, 0xFF);
+        [SerializeField] private Color ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
+        [SerializeField] private Color yellow = new Color32(0xFF, 0xC1, 0x2E, 0xFF);
         [Tooltip("내가 준비했을 때의 「한 판 더」 면 색.")]
-        [SerializeField] private Color yellowHigh = new Color32(0xFF, 0xF1, 0xBD, 0xFF);
+        [SerializeField] private Color yellowHigh = new Color32(0xFF, 0xD7, 0x66, 0xFF);
         [Tooltip("꺼진 「한 판 더」 의 면 색.")]
         [SerializeField] private Color offFill = new Color32(0xF7, 0xF3, 0xED, 0xFF);
         [Tooltip("꺼진 「한 판 더」 의 테 · 그림자 색.")]
@@ -79,11 +79,27 @@ namespace Chapchu.UI.ResultScreen
             if (root == null || group == null || boardButton == null || lobbyButton == null || lobbyBox == null || lobbySubText == null || againButton == null || againBox == null
                 || againShadow == null || againText == null || againSubText == null || dotRow == null || dotPrefab == null)
                 Debug.LogError($"[{nameof(ResultButtonsView)}] 참조 중 비어 있는 것이 있습니다.", this);
-
-            boardButton.onClick.AddListener(() => BoardClicked?.Invoke());
-            lobbyButton.onClick.AddListener(() => LobbyClicked?.Invoke());
-            againButton.onClick.AddListener(() => AgainClicked?.Invoke());
         }
+
+        private void OnEnable()
+        {
+            boardButton.onClick.AddListener(HandleBoardButtonClicked);
+            lobbyButton.onClick.AddListener(HandleLobbyButtonClicked);
+            againButton.onClick.AddListener(HandleAgainButtonClicked);
+        }
+
+        private void OnDisable()
+        {
+            boardButton.onClick.RemoveListener(HandleBoardButtonClicked);
+            lobbyButton.onClick.RemoveListener(HandleLobbyButtonClicked);
+            againButton.onClick.RemoveListener(HandleAgainButtonClicked);
+        }
+
+        private void HandleBoardButtonClicked() => BoardClicked?.Invoke();
+
+        private void HandleLobbyButtonClicked() => LobbyClicked?.Invoke();
+
+        private void HandleAgainButtonClicked() => AgainClicked?.Invoke();
 
         /// <summary>준비 점을 사람 수만큼 만든다 — 한 번만.</summary>
         public void BuildDots(int count)

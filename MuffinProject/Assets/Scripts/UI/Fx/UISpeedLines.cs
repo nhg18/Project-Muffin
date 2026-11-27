@@ -14,11 +14,13 @@ namespace Chapchu.UI.Fx
         [SerializeField] private int count = 44;
         [Tooltip("쐐기 바깥 끝까지의 반지름 — 화면 모서리보다 멀어야 한다 (시안 hypot(960, 540) × 2).")]
         [SerializeField] private float outerRadius = 2203f;
-        [Tooltip("쐐기 안쪽 끝의 반지름 — 바깥 반지름에 대한 비율의 가장 작은 값 · 가장 큰 값 (시안 0.3 ~ 0.42).")]
+        [Tooltip("쐐기 안쪽 끝의 반지름 — 바깥 반지름에 대한 비율의 가장 작은 값 (시안 0.3).")]
         [SerializeField] private float innerMin = 0.3f;
+        [Tooltip("쐐기 안쪽 끝의 반지름 — 바깥 반지름에 대한 비율의 가장 큰 값 (시안 0.42).")]
         [SerializeField] private float innerMax = 0.42f;
-        [Tooltip("쐐기 바깥쪽 벌어진 각 (라디안) 의 가장 작은 값 · 가장 큰 값 (시안 0.022 ~ 0.042).")]
+        [Tooltip("쐐기 바깥쪽 벌어진 각 (라디안) 의 가장 작은 값 (시안 0.022).")]
         [SerializeField] private float widthMin = 0.022f;
+        [Tooltip("쐐기 바깥쪽 벌어진 각 (라디안) 의 가장 큰 값 (시안 0.042).")]
         [SerializeField] private float widthMax = 0.042f;
         [Tooltip("쐐기 각도가 고른 간격에서 어긋나는 가장 큰 값 (라디안, 시안 0.06).")]
         [SerializeField] private float angleJitter = 0.06f;

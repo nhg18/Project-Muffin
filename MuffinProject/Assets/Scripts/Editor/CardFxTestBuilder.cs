@@ -42,6 +42,8 @@ namespace Chapchu.EditorTools
         private const string CommonSprites = SpriteFolder + "/Common/";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
         private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
+        private const string ResultFontPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";              // 4 단계 터지는 글자 (게임 화면과 같은 글꼴)
+        private const string ResultFontMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Outline.mat"; // 흰 글자 + 잉크 테
         private const string BackgroundPath = "Assets/Sprites/UI/Background/bg_ingame.png";
         private const string RoundSpritePath = "Assets/Sprites/UI/Common/ui_round64.png";
         private const string MainDeckPath = "Assets/Cards/Main/Deck_Main.asset";
@@ -274,11 +276,22 @@ namespace Chapchu.EditorTools
                 ("dot", Common("fx_dot")), ("glow", Common("fx_glow_soft")), ("streak", Common("fx_streak")),
                 ("starburst", Common("fx_starburst")), ("boomFont", _font));
 
+            // 4 단계 공통 연출 — 게임 화면과 같은 것, 연출 레이어 위에 같이 (입자는 자식 하나가 메시 하나로 그린다)
+            ResultFx resultFx = GetOrAdd<ResultFx>(fxLayerRect.gameObject);
+            RectTransform particlesRect = Child(fxLayerRect, "ResultParticles");
+            if (particlesRect == null)
+                particlesRect = NewStretch("ResultParticles", fxLayerRect);
+            InkParticles particles = GetOrAdd<InkParticles>(particlesRect.gameObject);
+            particles.raycastTarget = false;
+            Wire(resultFx, ("stage", stage), ("particles", particles),
+                ("boomFont", AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(ResultFontPath)),
+                ("boomMaterial", AssetDatabase.LoadAssetAtPath<Material>(ResultFontMaterialPath)));
+
             CardFxTestBench bench = GetOrAdd<CardFxTestBench>(canvasGo);
             Wire(bench,
                 ("actionCardPrefab", LoadHandCard("HandCard_Action")), ("counterCardPrefab", LoadHandCard("HandCard_Counter")),
                 ("trapCardPrefab", LoadHandCard("HandCard_Trap")), ("handArea", hand), ("playSpot", playSpot),
-                ("discardPile", pile), ("fxLayer", fxLayer), ("caster", caster), ("target", target),
+                ("discardPile", pile), ("fxLayer", fxLayer), ("resultFx", resultFx), ("caster", caster), ("target", target),
                 ("captionText", caption), ("replayButton", replay), ("resetButton", reset), ("playedGlow", Common("fx_card_glow")),
                 ("cardDeck", AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath)), ("cardBack", LoadSprite(CardBackPath)),
                 ("character", LoadSprite(CharacterPath)));
@@ -529,7 +542,7 @@ namespace Chapchu.EditorTools
         {
             var card = AssetDatabase.LoadAssetAtPath<HandCardView>($"{HandCardPrefabFolder}/{name}.prefab");
             if (card == null)
-                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Build UI 로 먼저 만들 것.");
+                Debug.LogError($"[{nameof(CardFxTestBuilder)}] 손패 카드 프리팹이 없다: {name} — Chapchu/Game Screen/Rebuild Hand Card Prefabs 로 먼저 만들 것.");
             return card;
         }
 

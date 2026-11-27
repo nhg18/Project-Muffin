@@ -8,7 +8,7 @@ namespace Chapchu.UI.Fx.Comic
 {
     /// <summary>
     /// 만화 글자 — 굵은 먹 테 · 안쪽 색 테 · 입체(아래로 쌓인 그림자 색) · 흐린 그림자 · 윗부분 광택을 두른 제목 · 효과음 글자 (시안 word(txt, {size, fill, stroke, sw, inner, ext, extCol, gap, jit, seed, shadow, shine})).
-    /// TMP SDF 글꼴 그림을 읽어 겹마다 다른 굵기로 그린다 — 머티리얼은 ComicWord (셰이더 Chapchu/UI Comic Word). 글꼴은 프로젝트 글꼴(Jua SDF).
+    /// TMP SDF 글꼴 그림을 읽어 겹마다 다른 굵기로 그린다 — 머티리얼은 ComicWord (셰이더 Chapchu/UI Comic Word). 글꼴은 프로젝트 제목 글꼴(Taebaek SDF).
     /// 기준점 = 이 RectTransform 의 피벗 = 시안 글자 그림의 (가운데, 위에서 pad + 0.55·size) — 시안 stamp 가 그 점을 (x, y) 에 놓는 것과 같다.
     /// 등장 움직임(튀어나오며 찍히기)은 같은 오브젝트의 <see cref="ComicStamp"/>. 투명도 = Graphic.color.a.
     /// 시안 fill 의 위아래 두 색 그라데이션은 시안 캔버스에서 실제로는 위 색 하나로 칠해진다 (그라데이션 좌표가 글자마다 옮겨진 판 기준이라) — 보이는 그대로 한 색(<see cref="Fill"/>)만 둔다.
@@ -68,11 +68,11 @@ namespace Chapchu.UI.Fx.Comic
         [Tooltip("들쭉날쭉 씨앗 (시안 seed).")]
         [SerializeField] private int seed = 1;
         [Tooltip("흐린 그림자를 깐다 (시안 shadow).")]
-        [SerializeField] private bool shadow = true;
+        [SerializeField] private bool shadow;
         [Tooltip("그림자 색 · 진하기 (시안 shCol · 0.35).")]
         [SerializeField] private Color shadowColor = new Color(0f, 0f, 0f, 0.35f);
         [Tooltip("윗부분을 밝게 (시안 shine).")]
-        [SerializeField] private bool shine = true;
+        [SerializeField] private bool shine;
 
         private readonly List<Glyph> _glyphs = new List<Glyph>();
         private readonly HashSet<uint> _missing = new HashSet<uint>();

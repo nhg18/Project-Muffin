@@ -30,6 +30,15 @@ namespace Chapchu.Game.Bots
         private const double LowHpPenalty = 20;          // 남는 HP 가 LowHp 미만이면 더 깎는다
         private const double BreakOwnChapchuPenalty = 50; // 찹츄 상태인데 스스로 10장을 깸
 
+        // 18-bot.md 7-1 「회복」 — 내 HP 가 LowHp 미만 · MidHp 미만 · HighHp 미만 · 그 밖일 때의 배수
+        private const double HealWeightLow = 1.5, HealWeightMid = 1.0, HealWeightHigh = 0.6, HealWeightFull = 0.3;
+
+        // 18-bot.md 7-1 「찹츄 가까움」 — 상대 손패 10장 · 한 번 뽑으면 10장(8 ~ 9장) · 11장 · 두 번 뽑으면(7장)
+        private const double NearTenScore = 50, NearOneDrawScore = 35, NearElevenScore = 20, NearTwoDrawsScore = 12;
+
+        // 18-bot.md 7-1 「내 손패」 — 9장 · 8장 가산점(× 내다보기), 10장을 넘은 1장마다
+        private const double NineCardBonus = 15, OneDrawBonus = 10, OverTenPenalty = -18;
+
         public readonly GameServer Server;
         public readonly int Bot;
         public readonly BotLevelSpec Level;
@@ -77,7 +86,7 @@ namespace Chapchu.Game.Bots
             const int ten = GameServer.ChapchuHandCount;
             bool oneDraw = hand >= ten - GameServer.TurnDrawCount && hand < ten; // 한 번 뽑으면 10장 (손패 ten − 1 이면 1장만 뽑는다, 05-deck 4절)
             bool twoDraws = hand == ten - 1 - GameServer.TurnDrawCount;          // 한 번 뽑아 ten − 1 → 다음에 1장 뽑아 10장
-            double near = hand == ten ? 50 : oneDraw ? 35 : hand == ten + 1 ? 20 : twoDraws ? 12 : 0;
+            double near = hand == ten ? NearTenScore : oneDraw ? NearOneDrawScore : hand == ten + 1 ? NearElevenScore : twoDraws ? NearTwoDrawsScore : 0;
             return near * Level.Foresight;
         }
 
@@ -148,7 +157,7 @@ namespace Chapchu.Game.Bots
             if (actor != Bot)
                 return -healed;
 
-            double weight = hp < LowHp ? 1.5 : hp < MidHp ? 1.0 : hp < HighHp ? 0.6 : 0.3;
+            double weight = hp < LowHp ? HealWeightLow : hp < MidHp ? HealWeightMid : hp < HighHp ? HealWeightHigh : HealWeightFull;
             return healed * weight;
         }
 
@@ -159,9 +168,9 @@ namespace Chapchu.Game.Bots
         public double HandPotential(int hand)
         {
             double bonus = hand == GameServer.ChapchuHandCount ? ChapchuReady
-                : hand == GameServer.ChapchuHandCount - 1 ? 15 * Level.Foresight
-                : hand >= GameServer.ChapchuHandCount - GameServer.TurnDrawCount && hand < GameServer.ChapchuHandCount - 1 ? 10 * Level.Foresight // 한 번 뽑으면 10장
-                : hand > GameServer.ChapchuHandCount ? -18 * (hand - GameServer.ChapchuHandCount)
+                : hand == GameServer.ChapchuHandCount - 1 ? NineCardBonus * Level.Foresight
+                : hand >= GameServer.ChapchuHandCount - GameServer.TurnDrawCount && hand < GameServer.ChapchuHandCount - 1 ? OneDrawBonus * Level.Foresight // 한 번 뽑으면 10장
+                : hand > GameServer.ChapchuHandCount ? OverTenPenalty * (hand - GameServer.ChapchuHandCount)
                 : 0;
             return hand * CardValue + bonus;
         }

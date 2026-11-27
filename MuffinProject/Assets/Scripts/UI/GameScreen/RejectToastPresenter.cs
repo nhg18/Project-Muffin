@@ -1,4 +1,5 @@
-﻿using Chapchu.Network;
+﻿using Chapchu.Core;
+using Chapchu.Network;
 using Chapchu.Network.Events;
 using Chapchu.UI.Popups;
 using UnityEngine;
@@ -28,6 +29,7 @@ namespace Chapchu.UI.GameScreen
                 return;
             }
 
+            SoundManager.Play(Sfx.Reject);
             PopupManager.Instance.ShowToast(RejectText.Get(code));
         }
     }

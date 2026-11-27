@@ -405,8 +405,8 @@ namespace Chapchu.UI.Fx.Comic
             }
         }
 
-        // 가우스 흐림 근사 — 상자 흐림 세 번 (가로 · 세로), 미리 곱한 RGBA
-        private static void Blur(float[] data, int width, int height, float sigma)
+        // 가우스 흐림 근사 — 상자 흐림 세 번 (가로 · 세로), 미리 곱한 RGBA. 판 밖은 투명으로 본다 (띠 컷인 그림의 빛도 쓴다)
+        internal static void Blur(float[] data, int width, int height, float sigma)
         {
             if (sigma <= 0f)
                 return;
@@ -440,11 +440,11 @@ namespace Chapchu.UI.Fx.Comic
             int lines = horizontal ? height : width, length = horizontal ? width : height;
             int stride = horizontal ? 4 : width * 4;
             float scale = 1f / (radius * 2 + 1);
-            var sum = new float[4];
-            for (int line = 0; line < lines; line++)
+            // 줄끼리는 서로 안 건드린다 — 여러 스레드로 나눠 돈다
+            Parallel.For(0, lines, line =>
             {
                 int start = horizontal ? line * width * 4 : line * 4;
-                sum[0] = sum[1] = sum[2] = sum[3] = 0f;
+                var sum = new float[4];
                 for (int i = 0; i <= radius && i < length; i++)
                 {
                     for (int ch = 0; ch < 4; ch++)
@@ -463,7 +463,7 @@ namespace Chapchu.UI.Fx.Comic
                             sum[ch] -= from[start + remove * stride + ch];
                     }
                 }
-            }
+            });
         }
 
 #if UNITY_EDITOR

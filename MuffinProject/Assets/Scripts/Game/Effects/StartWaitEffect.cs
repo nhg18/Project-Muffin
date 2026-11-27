@@ -10,6 +10,8 @@ namespace Chapchu.Game.Effects
     [Serializable]
     public sealed class StartWaitEffect : CardEffect
     {
+        internal override bool BoardWide => true;
+
         // 18-bot.md 7-3 「찹츄 승리 미루기」
         private const double BotChapchuScore = 110;
         private const double BotNearChapchuWeight = 0.3; // 가장 가까운 상대의 「찹츄 가까움」 × 이 값

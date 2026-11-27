@@ -23,15 +23,15 @@ namespace Chapchu.UI.Title
     /// <summary>닉네임 길이 · 글자 · 금칙어 검사와 실패 문구, 추천 닉네임 (12-title-ui.md 4-2절 · 23-login.md 8절). 검사는 입력한 클라이언트가 한다.</summary>
     public static class NicknameValidator
     {
-        /// <summary>최대 길이 (12-title-ui.md 4-2). 입력창도 여기서 막는다.</summary>
+        /// <summary>최대 길이 — 글자 수가 아니라 폭 (GetWidth, 12-title-ui.md 4-2). 입력창도 여기서 막는다.</summary>
         public const int MaxLength = 16;
 
-        /// <summary>최소 길이 (12-title-ui.md 4-2).</summary>
+        /// <summary>최소 길이 — 글자 수 (12-title-ui.md 4-2).</summary>
         public const int MinLength = 2;
 
-        // 한글 완성형 · 영문 · 숫자만 (12-title-ui.md 4-2)
+        // 한글 완성형 · 영문 · 숫자 · 가나 · 한자 (12-title-ui.md 4-2, 2026-11-15). 히라가나 · 가타카나(장음 ー 포함, 가운뎃점 ・ 제외) · 々 · 확장 A · 통합 · 호환 한자
         private static readonly Regex AllowedCharsRegex =
-            new(@"^[가-힣a-zA-Z0-9]+$", RegexOptions.Compiled);
+            new(@"^[가-힣a-zA-Z0-9ぁ-ゟァ-ヺー-ヿ々㐀-䶿一-鿿豈-﫿]+$", RegexOptions.Compiled);
 
         // 23 8-2 3단계 — 숫자 → 영문 유사문자. 1 은 두 갈래(l · ㅣ)라 따로 만든다
         private static readonly (char from, char to)[] DigitLookAlikes =
@@ -39,13 +39,13 @@ namespace Chapchu.UI.Title
             ('0', 'o'), ('5', 's'), ('8', 'b'), ('3', 'e'), ('4', 'a'), ('7', 't'),
         };
 
-        // 추천 닉네임 = 꾸밈말 + 이름 + 두 자리 — 최대 8자라 4-2 를 늘 통과한다 (통합 화면 UI v2 타이틀)
+        // 추천 닉네임 = 꾸밈말 + 이름 + 두 자리 — 최대 폭 14 라 4-2 를 늘 통과한다 (통합 화면 UI v2 타이틀)
         private static readonly string[] SuggestAdjectives = { "용감한", "배고픈", "졸린", "신난", "수상한", "날쌘", "씩씩한", "엉뚱한", "느긋한", "말랑한" };
         private static readonly string[] SuggestNouns = { "치와와", "멍멍이", "찹츄", "강아지", "뼈다귀" };
 
         /// <summary>
         /// 남의 닉네임을 화면에 쓰기 전에 거른다 — 검사는 입력한 클라이언트만 하므로 고친 클라이언트가 보낸 이름도 들어온다.
-        /// TMP 서식 태그(&lt; &gt;) · 보이지 않는 제어 · 서식 문자(줄바꿈 · 폭 0 · 방향 바꿈)를 지우고 앞뒤 공백을 자른 뒤 MaxLength 글자까지만 남긴다.
+        /// TMP 서식 태그(&lt; &gt;) · 보이지 않는 제어 · 서식 문자(줄바꿈 · 폭 0 · 방향 바꿈)를 지우고 앞뒤 공백을 자른 뒤 폭 MaxLength 까지만 남긴다.
         /// 검사를 통과한 닉네임은 그대로다. 다 지워지면 빈 문자열 — 부른 쪽이 대체 이름을 쓴다.
         /// </summary>
         public static string ForDisplay(string nickname)
@@ -65,13 +65,35 @@ namespace Chapchu.UI.Title
                 sb.Append(c);
             }
 
-            string cleaned = sb.ToString().Trim();
-            if (cleaned.Length <= MaxLength)
-                return cleaned;
+            return TrimToWidth(sb.ToString().Trim());
+        }
 
-            // 서로게이트 쌍(이모지 등)을 반으로 자르지 않는다
-            int cut = char.IsHighSurrogate(cleaned[MaxLength - 1]) ? MaxLength - 1 : MaxLength;
-            return cleaned.Substring(0, cut);
+        /// <summary>폭 (12-title-ui.md 4-2) — 영문 · 숫자 1, 한글 · 가나 · 한자 등 그 밖의 글자 2. 서로게이트 쌍(이모지 등)은 한 글자로 센다.</summary>
+        public static int GetWidth(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return 0;
+
+            int width = 0;
+            foreach (char c in text)
+                width += CharWidth(c);
+            return width;
+        }
+
+        /// <summary>폭 MaxLength 안에 드는 앞부분만 남긴다. 서로게이트 쌍을 반으로 자르지 않는다.</summary>
+        public static string TrimToWidth(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            int width = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                width += CharWidth(text[i]);
+                if (width > MaxLength)
+                    return text.Substring(0, i);
+            }
+            return text;
         }
 
         /// <summary>앞뒤 공백을 자른 닉네임을 검사한다. 순서: 비었음 → 짧음 → 김 → 허용 안 된 문자.</summary>
@@ -83,7 +105,7 @@ namespace Chapchu.UI.Title
             if (nickname.Length < MinLength)
                 return NicknameValidationResult.TooShort;
 
-            if (nickname.Length > MaxLength)
+            if (GetWidth(nickname) > MaxLength)
                 return NicknameValidationResult.TooLong;
 
             if (!AllowedCharsRegex.IsMatch(nickname))
@@ -135,6 +157,9 @@ namespace Chapchu.UI.Title
         /// <summary>추천 닉네임 — 꾸밈말 + 이름 + 10 ~ 99.</summary>
         public static string Suggest()
             => SuggestAdjectives[Random.Range(0, SuggestAdjectives.Length)] + SuggestNouns[Random.Range(0, SuggestNouns.Length)] + Random.Range(10, 100);
+
+        // ASCII 1, 그 밖의 글자 2. 서로게이트 쌍의 뒤쪽은 0 — 쌍 하나가 2
+        private static int CharWidth(char c) => c < 0x80 ? 1 : char.IsLowSurrogate(c) ? 0 : 2;
 
         private static bool ContainsAny(string normalized, IReadOnlyList<string> banned, IReadOnlyList<string> allowed)
         {

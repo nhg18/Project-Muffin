@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 26856220}
   - component: {fileID: 26856221}
   - component: {fileID: 26856222}
+  - component: {fileID: 1300100200}
   m_Layer: 5
   m_Name: FxLayer
   m_TagString: Untagged
@@ -148,7 +149,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1300100202}
   m_Father: {fileID: 1449552960}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1241,6 +1243,7 @@ GameObject:
   m_Component:
   - component: {fileID: 711506746}
   - component: {fileID: 711506745}
+  - component: {fileID: 711506747}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1314,6 +1317,14 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!81 &711506747
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 711506744}
+  m_Enabled: 1
 --- !u!1 &766973450
 GameObject:
   m_ObjectHideFlags: 0
@@ -2357,7 +2368,6 @@ MonoBehaviour:
   cardDeck: {fileID: 11400000, guid: 914cd90ad35768b48b8f4d8014fb49c5, type: 2}
   cardBack: {fileID: 21300000, guid: 6c6d3da36f0471547afc349c85010741, type: 3}
   character: {fileID: -7354470638215815053, guid: 599b26570ad96994687ba4d688c4e2b3, type: 3}
-  bigHitDamage: 30
   speed: 1
   actionCardPrefab: {fileID: 8746199917930865594, guid: 95d440bff65d429449b4867ea850aded, type: 3}
   counterCardPrefab: {fileID: 395479221002092175, guid: 4667c9c7f6c9f4a469d49563baed2198, type: 3}
@@ -2366,6 +2376,7 @@ MonoBehaviour:
   playSpot: {fileID: 986475311}
   discardPile: {fileID: 617465896}
   fxLayer: {fileID: 26856221}
+  resultFx: {fileID: 1300100200}
   caster: {fileID: 415916938}
   target: {fileID: 239506773}
   captionText: {fileID: 292920922}
@@ -2799,6 +2810,87 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 45}
   m_SizeDelta: {x: 225, y: 27}
   m_Pivot: {x: 0.5, y: 0}
+--- !u!114 &1300100200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 26856219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbeaa56756b6424fb32697c6462651ee, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.ResultFx
+  stage: {fileID: 1342525832}
+  particles: {fileID: 1300100204}
+  boomFont: {fileID: 11400000, guid: 961c0105a7acc2b4ab1f990268b41f3b, type: 2}
+  boomMaterial: {fileID: 2100000, guid: fbdc9199b0ca49948964521c43644426, type: 2}
+--- !u!1 &1300100201
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1300100202}
+  - component: {fileID: 1300100203}
+  - component: {fileID: 1300100204}
+  m_Layer: 5
+  m_Name: ResultParticles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1300100202
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1300100201}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 26856220}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &1300100203
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1300100201}
+  m_CullTransparentMesh: 1
+--- !u!114 &1300100204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1300100201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 022a9a932d394e4e9dde44029cf238ce, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.InkParticles
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -35,7 +35,7 @@ namespace Chapchu.Network.Events
         public static void RaiseJoinRoomFailed(short returnCode, string message) => OnJoinRoomFailed?.Invoke(returnCode, message);
         public static void RaiseJoinRandomFailed(short returnCode, string message) => OnJoinRandomFailed?.Invoke(returnCode, message);
         public static void RaisePlayerEntered(Player newPlayer) => OnPlayerEntered?.Invoke(newPlayer);
-        public static void RaisePlayerLeft(Player newPlayer) => OnPlayerLeft?.Invoke(newPlayer);
+        public static void RaisePlayerLeft(Player player) => OnPlayerLeft?.Invoke(player);
         public static void RaiseRoomListUpdate(List<RoomInfo> roomList) => OnRoomListUpdate?.Invoke(roomList);
         public static void RaiseMasterClientSwitched(Player newMasterClient) => OnMasterClientSwitched?.Invoke(newMasterClient);
         public static void RaiseBotsChanged(int[] botNumbers) => OnBotsChanged?.Invoke(botNumbers);

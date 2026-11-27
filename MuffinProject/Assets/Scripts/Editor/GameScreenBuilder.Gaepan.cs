@@ -1,10 +1,8 @@
-﻿using System.IO;
-using Chapchu.UI.Fx;
+﻿using Chapchu.UI.Fx;
 using Chapchu.UI.GameScreen;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TextCore.LowLevel;
 using UnityEngine.UI;
 
 namespace Chapchu.EditorTools
@@ -12,41 +10,34 @@ namespace Chapchu.EditorTools
     // GameScreenBuilder.Gaepan.cs — 1021 개판 오분전 연출 (프로토타입 v2 .gp-hud · .gp-title · .gp-five · GP_FX.judge, 960 시안 × 2)
     public static partial class GameScreenBuilder
     {
-        // 스티커 글꼴 — 게임 글꼴(Galmuri11 Bold)에서 쓰는 글자만 구운 정적 에셋. 게임 글꼴 에셋은 여백이 5 라 시안의 굵은 흰 테 · 잉크 선이 들어가지 않는다.
-        // 이미 있는 에셋은 다시 만들지 않는다 — 글자를 더하면 에셋을 지우고 다시 만들 것
-        private const string StickerFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold Sticker SDF.asset";
-        private const string StickerInkMaterialPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold Sticker SDF - Ink.mat";
-        private const string StickerCharacters = "개판오분전!땡끝꼴찌는?♥0123456789";
-        private const int StickerSamplingSize = 96;
-        private const int StickerPadding = 24;
-        private const int StickerAtlasSize = 1024;
+        // 스티커 글자 = 게임 제목 글꼴(태백체, 여백 10) + 머티리얼 둘. 「Sticker」 = 잉크 선 + 흰 바깥 테(밑깔기) — 제목 · 띠. 「Outline」 = 잉크 선만 — 숫자 · 하트.
+        private const string StickerMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Sticker.mat";
+        private const string StickerInkMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Outline.mat";
 
         private static readonly Color GpInk = Hex(0x2B1E1A);
         private static readonly Color GpCream = Hex(0xFFFCF6);
         private static readonly Color GpPink = Hex(0xFF7EA4);
         private static readonly Color GpPinkDeep = Hex(0xFF5C8A);
-        private static readonly Color GpPaw = Hex(0xFF8FB0);
-        private static readonly Color GpPawShine = Hex(0xFFC3D5);
         private static readonly Color GpYellow = Hex(0xFFE27A);
         private static readonly Color GpSegmentOff = Hex(0xF1E2CF);
         private static readonly Color GpCardIcon = Hex(0x74B8F5);
 
         /// <summary>
-        /// 개판 연출 셋을 만든다 — 자명종(hudParent = BoardLayer, 왼쪽 위) · 시작 제목 · 판정 팻말(GaepanLayer — 캔버스 전체, 부르는 쪽이 서랍 앞에 둔다).
+        /// 개판 연출을 만든다 — 자명종(hudParent = BoardLayer, 왼쪽 위) · 판정 팻말(GaepanLayer — 캔버스 전체, 부르는 쪽이 서랍 앞에 둔다).
+        /// 시작 제목은 카드의 3 단계 컷인(GaepanFx)이 보인다 (PM 2026-11-27).
         /// 이미 만든 씬에 더할 때도 이 함수를 부른다.
         /// </summary>
         public static GaepanPresenter BuildGaepan(RectTransform canvasRect, RectTransform hudParent, OpponentSeatsPresenter seats, RectTransform myCharacter)
         {
-            TMP_FontAsset stickerFont = EnsureStickerFont(out Material inkMaterial);
+            TMP_FontAsset stickerFont = LoadStickerFont(out Material stickerMaterial, out Material inkMaterial);
             GaepanHudView hud = BuildGaepanHud(hudParent, inkMaterial, stickerFont);
 
             RectTransform layer = NewRect("GaepanLayer", canvasRect);
             Stretch(layer);
-            GaepanTitleView title = BuildGaepanTitle(layer, stickerFont, inkMaterial);
-            GaepanJudgeView judge = BuildGaepanJudge(layer, stickerFont, inkMaterial);
+            GaepanJudgeView judge = BuildGaepanJudge(layer, stickerFont, stickerMaterial, inkMaterial);
 
             var presenter = layer.gameObject.AddComponent<GaepanPresenter>();
-            Wire(presenter, ("hud", hud), ("title", title), ("judge", judge), ("seats", seats), ("myCharacter", myCharacter));
+            Wire(presenter, ("hud", hud), ("judge", judge), ("seats", seats), ("myCharacter", myCharacter));
             return presenter;
         }
 
@@ -130,88 +121,8 @@ namespace Chapchu.EditorTools
             return clock;
         }
 
-        // 시작 제목 (.gp-title · .gp-five, 컷인 장면 없이) — 캔버스 전체, 숨김으로 시작.
-        // 제목: 위 22% 가운데, −4°. 첫 줄 21vmin(227) 털색 「개판」, 둘째 줄 12.5vmin(135) 분홍 「오분전!」 · 위로 .12em · 오른쪽 1.1em.
-        // 도장: 82% · 26% 에 25vmin(270) 발바닥, 12°. 숫자 11.5vmin(124) · 「바퀴 동안」 3.6vmin(39) 알약.
-        private static GaepanTitleView BuildGaepanTitle(RectTransform parent, TMP_FontAsset font, Material inkMaterial)
-        {
-            RectTransform root = NewRect("GaepanTitle", parent);
-            Stretch(root);
-            var group = root.gameObject.AddComponent<CanvasGroup>();
-            group.blocksRaycasts = false;
-
-            RectTransform lines = NewRect("Lines", root);
-            Anchor(lines, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -1080f * 0.22f), Vector2.zero);
-            lines.localRotation = Quaternion.Euler(0f, 0f, 4f);
-            VerticalLayoutGroup column = lines.gameObject.AddComponent<VerticalLayoutGroup>();
-            column.childAlignment = TextAnchor.UpperCenter;
-            column.spacing = -0.12f * 135f;
-            column.childControlWidth = true;
-            column.childControlHeight = true;
-            column.childForceExpandWidth = false;
-            column.childForceExpandHeight = false;
-            FitBoth(lines.gameObject);
-
-            StickerWordView first = BuildStickerLine("First", lines, font, 227f, new RectOffset());
-            StickerWordView second = BuildStickerLine("Second", lines, font, 135f, new RectOffset(Mathf.RoundToInt(1.1f * 135f), 0, 0, 0));
-
-            // 발바닥 도장 (PAW, viewBox 100 → 270, 1 = 2.7)
-            const float s = 2.7f;
-            Vector2 P(float x, float y) => new Vector2((x - 50f) * s, (50f - y) * s);
-            RectTransform stamp = NewRect("Stamp", root);
-            Anchor(stamp, new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(1920f * 0.82f, -1080f * 0.26f), new Vector2(100f * s, 100f * s));
-            stamp.localRotation = Quaternion.Euler(0f, 0f, -12f);
-            stamp.gameObject.AddComponent<CanvasGroup>();
-
-            (Vector2 c, Vector2 r, float rot, Vector2 shine, Vector2 shineR)[] beanSpecs =
-            {
-                (new Vector2(20f, 38f), new Vector2(10.5f, 12.5f), -24f, new Vector2(17f, 34f), new Vector2(3f, 4f)),
-                (new Vector2(38f, 20f), new Vector2(11f, 13.5f), -8f, new Vector2(34f, 17f), new Vector2(3.5f, 4.5f)),
-                (new Vector2(62f, 20f), new Vector2(11f, 13.5f), 8f, new Vector2(58f, 17f), new Vector2(3.5f, 4.5f)),
-                (new Vector2(80f, 38f), new Vector2(10.5f, 12.5f), 24f, new Vector2(76f, 34f), new Vector2(3f, 4f)),
-            };
-            var beans = new RectTransform[beanSpecs.Length];
-            for (int i = 0; i < beanSpecs.Length; i++)
-            {
-                (Vector2 c, Vector2 r, float rot, Vector2 shine, Vector2 shineR) = beanSpecs[i];
-                RectTransform bean = NewRect($"Bean{i}", stamp);
-                Anchor(bean, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(c.x, c.y), Vector2.zero);
-                bean.localRotation = Quaternion.Euler(0f, 0f, -rot); // SVG rotate(+) = 시계 방향
-                GpOval("Ink", bean, Vector2.zero, (r * 2f + Vector2.one * 4.5f) * s, GpInk);
-                GpOval("Fill", bean, Vector2.zero, (r * 2f - Vector2.one * 4.5f) * s, GpPaw);
-                Vector2 local = Quaternion.Euler(0f, 0f, rot) * (P(shine.x, shine.y) - P(c.x, c.y));
-                GpOval("Shine", bean, local, shineR * 2f * s, GpPawShine);
-                beans[i] = bean;
-            }
-            // 발바닥 (시안 path — 위가 좁고 아래가 넓은 둥근 덩어리, 가로 21 ~ 79 · 세로 42 ~ 86) — 둥근 사각형으로 비슷하게
-            GpOval("PadInk", stamp, P(50f, 64f), new Vector2(58f + 4.5f, 44f + 4.5f) * s, GpInk);
-            GpOval("PadFill", stamp, P(50f, 64f), new Vector2(58f - 4.5f, 44f - 4.5f) * s, GpPaw);
-
-            TMP_Text rounds = NewText("Rounds", stamp, "5", 124f, GpCream, true);
-            rounds.font = font;
-            rounds.fontSharedMaterial = inkMaterial;
-            Anchor(rounds.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(50f, 63f), new Vector2(200f, 160f));
-
-            RectTransform pill = NewRect("Caption", stamp);
-            Anchor(pill, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), P(50f, 104f), Vector2.zero);
-            pill.localRotation = Quaternion.Euler(0f, 0f, 12f);
-            HorizontalLayout(pill, new RectOffset(23, 23, 2, 5), 0f, TextAnchor.MiddleCenter, true, true);
-            FitBoth(pill.gameObject);
-            Image pillShadow = RoundImage("Shadow", pill, GpInk, 40f);
-            Stretch(pillShadow.rectTransform, 0f, 5f, 0f, -5f);
-            pillShadow.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            RoundBox(pill, GpInk, 6f, 40f, GpCream);
-            NewText("Text", pill, "바퀴 동안", 39f, GpInk, true);
-
-            var view = root.gameObject.AddComponent<GaepanTitleView>();
-            Wire(view, ("group", group), ("firstLine", first), ("secondLine", second), ("stamp", stamp), ("roundsText", rounds));
-            WireArray(view, "beans", beans);
-            root.gameObject.SetActive(false);
-            return view;
-        }
-
         // 판정 팻말 (GP_FX.judge) — 캔버스 전체, 숨김으로 시작. 어둡게(43,30,26 · 42%) · 띠(위 17%, 10vmin=108, −3°) · 기준 팻말(위 31%, 5.6vmin=60, −3°) · 머리 위 값 표 템플릿(4.4vmin=48).
-        private static GaepanJudgeView BuildGaepanJudge(RectTransform parent, TMP_FontAsset font, Material inkMaterial)
+        private static GaepanJudgeView BuildGaepanJudge(RectTransform parent, TMP_FontAsset font, Material stickerMaterial, Material inkMaterial)
         {
             RectTransform root = NewRect("GaepanJudge", parent);
             Stretch(root);
@@ -229,7 +140,7 @@ namespace Chapchu.EditorTools
             banner.gameObject.AddComponent<CanvasGroup>();
             HorizontalLayout(banner, new RectOffset(), 0f, TextAnchor.MiddleCenter, true, true);
             FitBoth(banner.gameObject);
-            StickerWordView bannerWord = AddStickerWord(banner, font, 108f);
+            StickerWordView bannerWord = AddStickerWord(banner, font, stickerMaterial, 108f);
 
             // 기준 팻말 — 잉크 테 .08em(5) · 흰 고리 .07em(4) · 아래 그림자 .12em · 반지름 .5em. 안: 하트(.9em) 또는 카드 아이콘(.62 × .84em, −8°) + 「HP 꼴찌」
             RectTransform roll = NewRect("Roll", root);
@@ -309,21 +220,13 @@ namespace Chapchu.EditorTools
             return tag;
         }
 
-        // 스티커 글자 한 줄 — HorizontalLayoutGroup + StickerWordView + 글자 칸 템플릿
-        private static StickerWordView BuildStickerLine(string name, RectTransform parent, TMP_FontAsset font, float size, RectOffset padding)
-        {
-            RectTransform line = NewRect(name, parent);
-            HorizontalLayout(line, padding, 0f, TextAnchor.MiddleCenter, true, true);
-            return AddStickerWord(line, font, size);
-        }
-
-        private static StickerWordView AddStickerWord(RectTransform line, TMP_FontAsset font, float size)
+        private static StickerWordView AddStickerWord(RectTransform line, TMP_FontAsset font, Material material, float size)
         {
             RectTransform cell = NewRect("CharTemplate", line);
             cell.gameObject.AddComponent<LayoutElement>();
             TMP_Text glyph = NewText("Glyph", cell, "개", size, Color.white, true);
             glyph.font = font;
-            glyph.fontSharedMaterial = font.material;
+            glyph.fontSharedMaterial = material;
             Anchor(glyph.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(size * 1.4f, size * 1.4f));
             cell.gameObject.SetActive(false);
 
@@ -332,52 +235,14 @@ namespace Chapchu.EditorTools
             return view;
         }
 
-        // 스티커 글꼴 + 머티리얼 둘: 에셋 기본 = 잉크 선 + 흰 바깥 테(밑깔기) — 제목 · 띠. 「Ink」 = 잉크 선만 — 숫자 · 하트.
-        // 시안: 잉크 선 .2em(바깥 .1em) · 흰 테 .36em(바깥 .18em, .06em 아래로). 값은 화면을 보며 맞췄다
-        private static TMP_FontAsset EnsureStickerFont(out Material inkMaterial)
+        // 스티커 글꼴(태백체) + 머티리얼 둘 — Fonts/Taebaek 의 프리셋. 시안: 잉크 선 .2em(바깥 .1em) · 흰 테 .36em(바깥 .18em, .06em 아래로). 값은 화면을 보며 맞췄다
+        private static TMP_FontAsset LoadStickerFont(out Material stickerMaterial, out Material inkMaterial)
         {
-            var asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(StickerFontAssetPath);
-            if (asset == null)
-            {
-                var font = AssetDatabase.LoadAssetAtPath<Font>(BoldFontPath);
-                asset = TMP_FontAsset.CreateFontAsset(font, StickerSamplingSize, StickerPadding, GlyphRenderMode.SDFAA,
-                    StickerAtlasSize, StickerAtlasSize, AtlasPopulationMode.Dynamic, true);
-                asset.name = Path.GetFileNameWithoutExtension(StickerFontAssetPath);
-                AssetDatabase.CreateAsset(asset, StickerFontAssetPath);
-                asset.material.name = asset.name + " Material";
-                asset.atlasTextures[0].name = asset.name + " Atlas";
-                AssetDatabase.AddObjectToAsset(asset.material, asset);
-                AssetDatabase.AddObjectToAsset(asset.atlasTextures[0], asset);
-                asset.TryAddCharacters(StickerCharacters);
-                asset.atlasPopulationMode = AtlasPopulationMode.Static;
-
-                Material sticker = asset.material;
-                sticker.EnableKeyword(ShaderUtilities.Keyword_Outline);
-                sticker.SetColor(ShaderUtilities.ID_OutlineColor, GpInk);
-                sticker.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.4f);
-                sticker.SetFloat(ShaderUtilities.ID_FaceDilate, 0.4f);
-                sticker.EnableKeyword(ShaderUtilities.Keyword_Underlay);
-                sticker.SetColor(ShaderUtilities.ID_UnderlayColor, White);
-                sticker.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.85f);
-                sticker.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.25f);
-                ShaderUtilities.UpdateShaderRatios(sticker);
-                EditorUtility.SetDirty(sticker);
-                EditorUtility.SetDirty(asset);
-                AssetDatabase.SaveAssets();
-            }
-
+            stickerMaterial = AssetDatabase.LoadAssetAtPath<Material>(StickerMaterialPath);
             inkMaterial = AssetDatabase.LoadAssetAtPath<Material>(StickerInkMaterialPath);
-            if (inkMaterial == null)
-            {
-                inkMaterial = new Material(asset.material) { name = Path.GetFileNameWithoutExtension(StickerInkMaterialPath) };
-                inkMaterial.DisableKeyword(ShaderUtilities.Keyword_Underlay);
-                inkMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.3f);
-                inkMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, 0.3f);
-                ShaderUtilities.UpdateShaderRatios(inkMaterial);
-                AssetDatabase.CreateAsset(inkMaterial, StickerInkMaterialPath);
-                AssetDatabase.SaveAssets();
-            }
-            return asset;
+            if (stickerMaterial == null || inkMaterial == null)
+                Debug.LogError($"[{nameof(GameScreenBuilder)}] 스티커 글자 머티리얼이 없다: {StickerMaterialPath} · {StickerInkMaterialPath}");
+            return BoldFont;
         }
 
         private static Image GpDisc(string name, Transform parent, Vector2 center, float diameter, Color color)

@@ -1,12 +1,13 @@
-﻿using TMPro;
+﻿using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 반응 타이머 — 크게 둔 처리 카드의 아래 가장자리에 걸치는 알약 (10-ui.md 5절 「반응 타이머」 · 2-1 「카드 연출 자리」, 시안 .rt2).
-    /// 열리기 전: 회색 「반응 · 곧」. 진행 중: 노란 막대가 줄고 남은 초, 얼마 안 남으면 빨강. 마감 뒤: 「‖ 처리하는 중」.
+    /// 처리 카드 아래 알약 — 크게 둔 처리 카드의 아래 가장자리에 걸친다 (10-ui.md 5절 · 2-1 「카드 연출 자리」, 시안 .rt2). 반응 타이머는 없다 (04-card.md 8절).
+    /// 반응 시간에는 「스킵」 버튼. 남이 고르는 중(1019)이면 「{이름} 고르는 중」 + 노란 막대 · 남은 초, 얼마 안 남으면 빨강. 마감 뒤: 「‖ 처리하는 중」.
     /// 값은 ReactionTimerPresenter 가 매 프레임 넘긴다. 받은 값을 표시만 한다.
     /// </summary>
     public class ReactionTimerView : MonoBehaviour
@@ -14,7 +15,6 @@ namespace Chapchu.UI.GameScreen
         private const string ReactionLabel = "반응";
         private const string ResolvingLabel = "처리하는 중";
         private const string SoonText = "곧";
-        private const string SkipLabel = "스킵";
 
         [Tooltip("켜고 끄는 몸통 — 루트는 켜 둔다.")]
         [SerializeField] private GameObject body;
@@ -27,8 +27,21 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image barFill;
         [SerializeField] private TMP_Text secondsText;
         [SerializeField] private GameObject unitText;
-        [Tooltip("알약 전체를 누르는 버튼 — 스킵일 때만 켠다.")]
+        [Tooltip("알약 전체를 누르는 버튼 — 고르는 중 알약은 누르지 않으므로 늘 꺼 둔다 (스킵은 skipCornerButton).")]
         [SerializeField] private Button skipButton;
+
+        [Header("반응 시간 스킵 (통합 화면 UI v3)")]
+        [Tooltip("오른쪽 아래 「스킵」 버튼 (시안 .btn.skip) — 낼 수 있는 카운터가 있을 때만 켠다.")]
+        [SerializeField] private Button skipCornerButton;
+        [Tooltip("내 캐릭터 머리 옆 「!」 (시안 .bang.me) — 스킵 버튼과 같이 켠다. 튀어나온 뒤 위아래로 흔들린다.")]
+        [SerializeField] private RectTransform bang;
+        [Tooltip("「!」 가 튀어나오는 시간 (시안 popin .3s).")]
+        [SerializeField] private float bangPopSeconds = 0.3f;
+        [Tooltip("「!」 흔들림 높이 · 한 번 오르는 시간 (시안 bob 1s · −4px × 2).")]
+        [SerializeField] private float bangBobHeight = 8f;
+        [SerializeField] private float bangBobSeconds = 0.5f;
+
+        private Vector2 _bangRest;
 
         /// <summary>스킵을 눌렀다.</summary>
         public event System.Action SkipClicked;
@@ -62,13 +75,15 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null || cardNameText == null || skipButton == null)
+            if (body == null || border == null || clockIcon == null || pauseIcon == null || labelText == null || bar == null || barFill == null || secondsText == null || unitText == null || cardNameText == null || skipButton == null
+                || skipCornerButton == null || bang == null)
             {
                 Debug.LogError($"[{nameof(ReactionTimerView)}] 참조 중 비어 있는 것이 있습니다.", this);
                 return;
             }
 
             _normalY = ((RectTransform)transform).anchoredPosition.y;
+            _bangRest = bang.anchoredPosition;
             cardNameText.gameObject.SetActive(false);
             Hide();
         }
@@ -106,12 +121,12 @@ namespace Chapchu.UI.GameScreen
                 cardNameText.text = _cardName;
         }
 
-        /// <summary>반응 시간이 아직 열리지 않았다 (카드 연출 중) — 회색 「반응 · 곧」.</summary>
-        public void ShowSoon()
+        /// <summary>고르는 중 알약의 시작 전 — 회색 「{label} · 곧」. label 이 없으면 「반응」.</summary>
+        public void ShowSoon(string label = null)
         {
             ShowParts(true);
             border.color = soonBorder;
-            labelText.text = ReactionLabel;
+            labelText.text = label ?? ReactionLabel;
             labelText.color = soonInk;
             SetFill(0f, fillColor);
             secondsText.text = SoonText;
@@ -119,7 +134,7 @@ namespace Chapchu.UI.GameScreen
             unitText.SetActive(false);
         }
 
-        /// <summary>반응 시간 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강. label 이 있으면 「반응」 대신 (1019 「{이름} 고르는 중」).</summary>
+        /// <summary>고르는 중 알약 진행 중 — 남은 초 · 남은 비율(0~1). low 면 빨강. label 이 있으면 「반응」 대신 (1019 「{이름} 고르는 중」).</summary>
         public void ShowRemaining(int seconds, float fraction, bool low, string label = null)
         {
             ShowParts(true);
@@ -141,33 +156,53 @@ namespace Chapchu.UI.GameScreen
             labelText.color = ink;
         }
 
-        /// <summary>반응 시간에 내가 낼 수 있는 카운터가 있다 — 「스킵」 버튼. 남은 시간은 보이지 않는다 (10-ui.md 5절).</summary>
+        /// <summary>반응 시간에 내가 낼 수 있는 카운터가 있다 — 오른쪽 아래 「스킵」 버튼 + 내 머리 옆 「!」. 남은 시간은 보이지 않는다 (10-ui.md 5절).</summary>
         public void ShowSkip()
         {
-            body.SetActive(true);
-            clockIcon.SetActive(false);
-            pauseIcon.SetActive(false);
-            bar.SetActive(false);
-            secondsText.gameObject.SetActive(false);
-            unitText.SetActive(false);
-            border.color = ink;
-            labelText.text = SkipLabel;
-            labelText.color = ink;
-            skipButton.enabled = true;
+            body.SetActive(false);
+            skipCornerButton.gameObject.SetActive(true);
+            ShowBang();
         }
 
-        public void Hide() => body.SetActive(false);
+        public void Hide()
+        {
+            body.SetActive(false);
+            HideSkip();
+        }
+
+        private void HideSkip()
+        {
+            skipCornerButton.gameObject.SetActive(false);
+            bang.DOKill();
+            bang.gameObject.SetActive(false);
+        }
+
+        // 튀어나와(0 → 1, 살짝 넘침) 위아래로 계속 흔들린다 (시안 popin · bob)
+        private void ShowBang()
+        {
+            if (bang.gameObject.activeSelf)
+                return;
+
+            bang.DOKill();
+            bang.gameObject.SetActive(true);
+            bang.anchoredPosition = _bangRest;
+            bang.localScale = Vector3.zero;
+            bang.DOScale(1f, bangPopSeconds).SetEase(Ease.OutBack, 2.4f).OnComplete(() =>
+                bang.DOAnchorPosY(_bangRest.y + bangBobHeight, bangBobSeconds).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo));
+        }
 
         private void OnEnable()
         {
-            if (skipButton != null)
-                skipButton.onClick.AddListener(HandleSkipClicked);
+            if (skipCornerButton != null)
+                skipCornerButton.onClick.AddListener(HandleSkipClicked);
         }
 
         private void OnDisable()
         {
-            if (skipButton != null)
-                skipButton.onClick.RemoveListener(HandleSkipClicked);
+            if (skipCornerButton != null)
+                skipCornerButton.onClick.RemoveListener(HandleSkipClicked);
+            if (bang != null)
+                bang.DOKill();
         }
 
         private void HandleSkipClicked() => SkipClicked?.Invoke();
@@ -176,6 +211,7 @@ namespace Chapchu.UI.GameScreen
         private void ShowParts(bool counting)
         {
             body.SetActive(true);
+            HideSkip();
             skipButton.enabled = false; // 고르는 중 알약은 누르는 것이 아니다
             clockIcon.SetActive(counting);
             pauseIcon.SetActive(!counting);

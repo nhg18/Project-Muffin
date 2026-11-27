@@ -1,4 +1,5 @@
 ﻿using System;
+using Chapchu.Core;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -7,8 +8,9 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 로비 홈 — 프로필 칩 · 아래 왼쪽 줄(퀘스트 · 꾸미기 · 상점) · 플레이 묶음. 섹션으로 가면 0.2초에 사라진다.
-    /// 기준: 「통합 화면 UI v2」 로비 #home
+    /// 로비 홈 — 프로필 칩(닉네임 · 레벨 줄) · 아래 왼쪽 줄(퀘스트 · 꾸미기 · 상점) · 플레이 묶음. 섹션으로 가면 0.2초에 사라진다.
+    /// 플레이 묶음의 작은 버튼 셋(혼자 하기 · 방 만들기 · 코드로 참가)은 개발자 모드에서만 풀린다 — 평소엔 자물쇠 · 꺼진 모양 (14-lobby-ui 5절).
+    /// 기준: 「통합 화면 UI v3」 로비 #home, docs/systems/17-lobby-ui-full.md 4-1
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class LobbyHomeView : MonoBehaviour
@@ -16,7 +18,9 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button profileButton;
         [SerializeField] private TMP_Text nicknameText;
         [SerializeField] private LayoutElement nicknameSize;
-        [SerializeField] private TMP_Text codeText;
+        [SerializeField] private TMP_Text levelText;
+        [SerializeField] private RectTransform xpFill;
+        [SerializeField] private TMP_Text xpText;
         [SerializeField] private Button questButton;
         [SerializeField] private GameObject questBadge;
         [SerializeField] private TMP_Text questBadgeText;
@@ -27,6 +31,12 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private Button codeButton;
         [SerializeField] private Button randomButton;
 
+        [Header("개발자 모드 잠금 — 작은 버튼 셋의 아이콘")]
+        [SerializeField] private Image soloIcon;
+        [SerializeField] private Image createIcon;
+        [SerializeField] private Image codeIcon;
+        [SerializeField] private Sprite lockSprite;
+
         [Tooltip("닉네임 글자 폭 한도 (캔버스 px) — 넘으면 말줄임")]
         [SerializeField] private float nicknameMaxWidth = 560f;
 
@@ -35,6 +45,7 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private float fadeSeconds = 0.2f;
 
         private CanvasGroup _group;
+        private Sprite[] _openSprites; // 작은 버튼 셋의 원래 아이콘 — 개발자 모드를 켜면 되돌린다
 
         public event Action OnProfileRequested;
         public event Action OnQuestsRequested;
@@ -48,12 +59,32 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             _group = GetComponent<CanvasGroup>();
-            if (profileButton == null || nicknameText == null || nicknameSize == null || codeText == null
+            if (profileButton == null || nicknameText == null || nicknameSize == null || levelText == null || xpFill == null || xpText == null
                 || questButton == null || questBadge == null || questBadgeText == null || decoButton == null || shopButton == null)
                 Debug.LogError($"[{nameof(LobbyHomeView)}] 칩 · 아래 줄 참조가 비어 있습니다.", this);
 
             if (soloButton == null || createButton == null || codeButton == null || randomButton == null)
                 Debug.LogError($"[{nameof(LobbyHomeView)}] 플레이 버튼 참조가 비어 있습니다.", this);
+
+            if (soloIcon == null || createIcon == null || codeIcon == null || lockSprite == null)
+                Debug.LogError($"[{nameof(LobbyHomeView)}] 개발자 모드 잠금 참조가 비어 있습니다.", this);
+
+            _openSprites = new[] { soloIcon.sprite, createIcon.sprite, codeIcon.sprite };
+        }
+
+        // PressableButton 이 Awake 에서 원래 색을 기억한 뒤에 꺼진 모양으로 바꾼다
+        private void Start() => SetDevMode(DevMode.IsOn);
+
+        /// <summary>개발자 모드 — 켜면 작은 버튼 셋이 원래 아이콘으로 풀리고, 끄면 자물쇠 · 꺼진 모양으로 잠긴다.</summary>
+        public void SetDevMode(bool on)
+        {
+            Button[] buttons = { soloButton, createButton, codeButton };
+            Image[] icons = { soloIcon, createIcon, codeIcon };
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                icons[i].sprite = on ? _openSprites[i] : lockSprite;
+                LobbyStyle.SetEnabled(buttons[i], on);
+            }
         }
 
         private void OnEnable()
@@ -81,11 +112,18 @@ namespace Chapchu.UI.Lobby
             _group.DOKill();
         }
 
-        public void SetProfile(string nickname, string friendCode)
+        public void SetProfile(string nickname)
         {
             nicknameText.text = nickname;
             nicknameSize.preferredWidth = Mathf.Min(nicknameText.GetPreferredValues(nickname).x, nicknameMaxWidth);
-            codeText.text = friendCode;
+        }
+
+        /// <summary>레벨 줄 — 「Lv.{n}」 · 경험치 막대 · 「{현재} / {다음 레벨까지 총량}」</summary>
+        public void SetLevel(int level, int xp, int xpNext)
+        {
+            levelText.text = $"Lv.{level}";
+            xpFill.anchorMax = new Vector2(xpNext > 0 ? Mathf.Clamp01((float)xp / xpNext) : 0f, 1f);
+            xpText.text = $"{xp} / {xpNext}";
         }
 
         /// <summary>퀘스트 배지 = 받을 수 있는 보상 수.</summary>

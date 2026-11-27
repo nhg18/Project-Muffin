@@ -29,6 +29,13 @@ namespace Chapchu.UI
                 Apply();
         }
 
+        // 가로 왼쪽 ↔ 오른쪽 180° 회전은 크기가 안 바뀌어 위 콜백이 안 온다. 노치 쪽이 바뀌면 여기서 잡는다.
+        private void Update()
+        {
+            if (_rect != null && Screen.safeArea != _applied)
+                Apply();
+        }
+
         private void Apply()
         {
             Rect safe = Screen.safeArea;

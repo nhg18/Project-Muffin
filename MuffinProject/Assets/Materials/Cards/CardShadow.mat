@@ -25,12 +25,14 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Blur: 27.7
-    - _Radius: 13.83
+    - _Blur: 24.65
+    - _Offset: 16.39
+    - _Radius: 13.77
     - _ZTest: 8
     m_Colors:
-    - _Color: {r: 0.16470589, g: 0.14117648, b: 0.1254902, a: 0.3}
-    - _Half: {r: 126.83, g: 181.83, b: 0, a: 0}
-    - _Size: {r: 364.46002, g: 474.46002, b: 0, a: 0}
+    - _Color: {r: 0.27450982, g: 0.1764706, b: 0.11764706, a: 0.3}
+    - _Filter: {r: 1, g: 1, b: 1, a: 0}
+    - _Half: {r: 126.97, g: 181.97, b: 0, a: 0}
+    - _Size: {r: 361.94, g: 543.94, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

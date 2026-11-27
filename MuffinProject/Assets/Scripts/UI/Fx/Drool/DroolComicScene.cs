@@ -11,7 +11,7 @@ namespace Chapchu.UI.Fx.Drool
     /// 오른쪽 위 「+N」. 카드를 뺏긴 쪽 창엔 「-1」 표와 땀.
     /// 상대 창 수 = 낸 사람이 아닌 사람 수(<see cref="ComicContext.Others"/>, 많아야 셋 · 모르면 셋 — 시안은 늘 셋을 그린다), 얼굴은 <see cref="CardFxContext.Character"/> (사람마다 그림이 생기기 전까지 모두 같다).
     /// 4 단계 장식은 없다 (시안 FXA 군침이 싹 도노 s4 = 카드 옮기기뿐 — 게임 화면 몫).
-    /// 연출 길이 2.46초 (3 단계만) — 카드 처리 시간(resolveSeconds)은 게임 화면에 연출을 붙일 때 맞춘다 (PM 결정 2026-11-15).
+    /// 연출 길이 2.46초 (3 단계만) — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// </summary>
     public class DroolComicScene : ComicScene
     {
@@ -46,7 +46,7 @@ namespace Chapchu.UI.Fx.Drool
         // 시안 over: 두 눈에 반짝
         private static readonly Vector2[] Eyes = { FxDog.EyeLeft, FxDog.EyeRight };
 
-        /// <summary>상대 한 사람 — 얼굴 창(동그라미 · 얼굴 · 「-1」 표 · 땀)과 그 아래 카드 한 장 + 잔상.</summary>
+        /// <summary>상대 한 사람 — 얼굴 창(동그라미 · 얼굴 · 「-1」 표 · 땀)과 그 아래 카드 한 장 (날 때 잔상 없이 — 시안 잔상 셋은 반투명 카드가 겹쳐 보였다).</summary>
         [Serializable]
         private class Rival
         {
@@ -60,8 +60,6 @@ namespace Chapchu.UI.Fx.Drool
             public GameObject lostTag;
             [Tooltip("땀.")]
             public ComicSweat sweat;
-            [Tooltip("카드 잔상 셋 — 가까운 것부터 (시안 g = 1 → 3). 진하기는 각자의 CanvasGroup, 그림자 없음.")]
-            public ComicCard[] trails = new ComicCard[3];
             [Tooltip("카드.")]
             public ComicCard card;
         }
@@ -161,8 +159,8 @@ namespace Chapchu.UI.Fx.Drool
         [SerializeField] private float droolLine = 6f;
 
         [Header("상대 얼굴 창 (시안: (170 + 170i, 120 + 16i), back((t − 0.08 − 0.06i) / 0.25, 1.8))")]
-        [Tooltip("첫 창 자리 · 다음 창까지 (설계 px, 시안 (170, 120) · (170, 16)).")]
-        [SerializeField] private Vector4 badgeLayout = new Vector4(170f, 120f, 170f, 16f);
+        [Tooltip("첫 창 자리 · 다음 창까지 (설계 px, 시안 (170, 120) · (170, 16)) — 폰 가로 화면은 판 위가 잘려(설계 약 97 부터 보임) 창 · 「-1」 표가 들어오게 내렸다.")]
+        [SerializeField] private Vector4 badgeLayout = new Vector4(170f, 175f, 170f, 16f);
         [Tooltip("튀어나오기 시작 · 창마다 늦게 · 걸리는 시간 (초, 시안 0.08 · 0.06 · 0.25).")]
         [SerializeField] private Vector3 badgePop = new Vector3(0.08f, 0.06f, 0.25f);
         [Tooltip("튀어나올 때 지나치는 정도 (시안 back 1.8).")]
@@ -191,8 +189,6 @@ namespace Chapchu.UI.Fx.Drool
         [SerializeField] private float flyShrink = 0.35f;
         [Tooltip("날며 도는 빠르기 (라디안 / 진행, 시안 6).")]
         [SerializeField] private float flySpin = 6f;
-        [Tooltip("잔상 사이 (진행, 시안 0.07).")]
-        [SerializeField] private float trailGap = 0.07f;
 
         [Header("부스러기 (시안: 삼키고 0.45 초 — 10 조각, 위로 140 ~ 360 · 아래로 420τ²)")]
         [Tooltip("부스러기가 사는 시간 (초, 시안 0.45).")]
@@ -260,11 +256,6 @@ namespace Chapchu.UI.Fx.Drool
                 {
                     Debug.LogError($"[{nameof(DroolComicScene)}] {name} 의 {nameof(rivals)}[{i}] 에 빈 참조가 있다");
                     continue;
-                }
-                for (int g = 0; g < rival.trails.Length; g++)
-                {
-                    if (rival.trails[g] == null)
-                        Debug.LogError($"[{nameof(DroolComicScene)}] {name} 의 {nameof(rivals)}[{i}].{nameof(Rival.trails)}[{g}] 가 비었다");
                 }
             }
         }
@@ -350,8 +341,6 @@ namespace Chapchu.UI.Fx.Drool
             if (e <= 0f)
             {
                 rival.card.gameObject.SetActive(false);
-                foreach (ComicCard trail in rival.trails)
-                    trail.gameObject.SetActive(false);
                 return;
             }
             ComicKit.Place(rival.badge, ax, ay);
@@ -364,8 +353,6 @@ namespace Chapchu.UI.Fx.Drool
             float sx = ax + cardOffset.x, sy = ay + cardOffset.y;
             bool flying = q >= 0f && q < 1f;
             rival.card.gameObject.SetActive(q < 1f);
-            foreach (ComicCard trail in rival.trails)
-                trail.gameObject.SetActive(flying);
             if (q < 0f)
             {
                 PlaceCard(rival.card, sx, sy + Mathf.Sin(t * cardBob.y + i) * cardBob.x, cardWidth, cardTilt.x + i * cardTilt.y);
@@ -373,11 +360,6 @@ namespace Chapchu.UI.Fx.Drool
             }
             if (!flying)
                 return;
-            for (int g = 0; g < rival.trails.Length; g++)
-            {
-                float qq = Mathf.Max(0f, q - (g + 1) * trailGap);
-                PlaceFlying(rival.trails[g], sx, sy, qq);
-            }
             PlaceFlying(rival.card, sx, sy, q);
         }
 

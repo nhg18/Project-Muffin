@@ -52,7 +52,7 @@
 * 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
 * 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
 * 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
-* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 장식은 `PlayPostRoutine`. 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
+* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 연출은 `PlayPostRoutine` — **개판 등급 카드만** 쓴다 (10-ui 5-1 「4 단계 공통 연출」). 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`, 빼앗기 · 얻기 등 결과별 공통 연출)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
 * 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
 ## 6. 네트워크
@@ -101,6 +101,7 @@ C# 9 까지. file-scoped namespace · `record struct` · `global using` 등 C# 1
 | 그림자 · 빛 (`box-shadow` · `blur`) | `ui_shadow_soft` 를 늘리고 색을 입힌다. 모양을 따라 번지는 그림자(타원 판의 바닥 그림자 등)는 `UIShape` 의 번짐(`feather`). 시안 · 문서의 「번짐」(CSS blur)은 `feather` 에 **× 2** 로 넣는다 — blur 는 가장자리 안팎으로 그만큼 번지는 가우스, `feather` 는 투명해지는 전체 폭(안팎 절반씩). uGUI `Shadow` · `Outline` 은 글자 · 작은 아이콘에만 쓴다 (정점이 늘어난다) |
 | 그라데이션 | `Common` 의 흰 → 투명 띠 스프라이트 + 색 |
 | 글자 | TMP. 글자를 이미지에 넣지 않는다 |
+| 글 안 아이콘 (낱말 앞 작은 그림) | TMP 스프라이트 에셋. 그림 한 장은 `Sprites/UI/Common/`, 에셋은 TMP 가 이름으로 찾는 `Resources/Sprite Assets/<이름>.asset` 에 두고 글에서 `<sprite="<이름>" name="…">` 로 부른다 — 글마다 에셋을 잇지 않는다. 에셋은 에디터 메뉴로 만든다 (예: 카드 키워드 `CardKeywordIconBuilder`, `11-card-list` 5-4) |
 
 그리는 횟수(batches)를 늘리지 않게:
 

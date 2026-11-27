@@ -67,7 +67,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   text: "\uC648!!"
-  font: {fileID: 11400000, guid: 3b2941360bdea8944acae6811c980a5e, type: 2}
+  font: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   size: 160
   fill: {r: 1, g: 1, b: 1, a: 1}
   stroke: {r: 0.09019608, g: 0.06666667, b: 0.05882353, a: 1}
@@ -79,9 +79,9 @@ MonoBehaviour:
   gap: 0.02
   jitter: 0
   seed: 1
-  shadow: 1
+  shadow: 0
   shadowColor: {r: 0, g: 0, b: 0, a: 0.35}
-  shine: 1
+  shine: 0
 --- !u!114 &3887506894762912446
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,6 +29,12 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("체인 층 그림을 얹는 RawImage — HUD 에서 상대 좌석보다 뒤(위), 반응 타이머 · 주인 태그보다 앞(아래) 형제. 앞 층 합성 재질.")]
         [SerializeField] private RawImage chainImage;
 
+        [Header("대상 선택 중 체인 층 흐리게 (10-ui.md 6절)")]
+        [Tooltip("대상을 고르는 동안 체인 층의 불투명도 — 뒤의 상대 좌석이 보이게.")]
+        [SerializeField] private float chainFadedAlpha = 0.25f;
+        [Tooltip("흐려지고 돌아오는 초.")]
+        [SerializeField] private float chainFadeDuration = 0.15f;
+
         // 한 층 — 카메라가 텍스처에 그리고 RawImage 가 얹는다
         private sealed class Pass
         {
@@ -41,6 +48,7 @@ namespace Chapchu.UI.GameScreen
         private Pass _top;
         private Pass _chain;
         private int _handLayer;
+        private float _chainAlpha = 1f;
 
         private void Awake()
         {
@@ -80,6 +88,7 @@ namespace Chapchu.UI.GameScreen
 
         private void OnDestroy()
         {
+            DOTween.Kill(this);
             Release(_top);
             Release(_chain);
         }
@@ -89,6 +98,22 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>체인의 카드(낸 카드)를 체인 층(HUD 위 · 알약 · 손패 아래)에 올리거나(true) 손패 레이어로 내린다(false). 같은 값을 다시 넣어도 된다.</summary>
         public void SetChain(CardView card, bool onTop) => Put(card, onTop, _chain.Layer);
+
+        /// <summary>체인 층 전체를 흐리게(true) · 원래대로(false) — 대상을 고르는 동안 체인의 카드가 상대 좌석을 가리지 않게 (10-ui.md 6절). 같은 값을 다시 넣어도 된다.</summary>
+        public void SetChainFaded(bool faded)
+        {
+            if (_chain == null) return;
+
+            DOTween.Kill(this);
+            DOTween.To(() => _chainAlpha, SetChainAlpha, faded ? chainFadedAlpha : 1f, chainFadeDuration).SetTarget(this).SetLink(gameObject);
+        }
+
+        // 합성 재질이 미리 곱한 알파(One · OneMinusSrcAlpha)라 색과 알파를 같이 낮춘다
+        private void SetChainAlpha(float alpha)
+        {
+            _chainAlpha = alpha;
+            _chain.Image.color = new Color(alpha, alpha, alpha, alpha);
+        }
 
         private void Put(CardView card, bool onTop, int layer)
         {

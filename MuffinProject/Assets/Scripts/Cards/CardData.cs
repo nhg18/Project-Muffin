@@ -49,11 +49,14 @@ namespace Chapchu.Cards
         [Tooltip("카운터 · 「카드 반응」 함정: 반응 조건 (04-card.md 7절 「반응 조건」).")]
         public ReactCondition reactCondition;
 
+        [Tooltip("이 카드에는 카운터를 낼 수 없다 (04-card.md 7절 사용 조건 6 — 2014 알아).")]
+        public bool uncounterable;
+
         [Header("연출 시간 (10-ui.md 5-1) — 방장이 반응 · 턴 시각 계산에 쓴다. 연출 길이를 바꾸면 같이 바꾼다")]
         [Tooltip("2 ~ 3 단계(카드 이펙트 · 가운데 확대) 초 — 1 단계는 없다 (2026-11-11). 반응 시간이 이 뒤에 열린다.")]
         [Min(0)] public float revealSeconds = 1f;
 
-        [Tooltip("4 단계 + 버림 더미로 이동 초. 체인 맨 아래 카드면 체인을 처리하고 이만큼 뒤에 다음 턴.")]
+        [Tooltip("3 · 4 단계 + 버림 더미로 이동 초 (기본 1.28 — 카드만의 3 단계 연출이 있으면 그 길이를 더한다, 10-ui.md 5-1). 체인 맨 아래 카드면 체인을 처리하고 이만큼 뒤에 다음 턴.")]
         [Min(0)] public float resolveSeconds = 1.28f;
 
         [Header("화면 덮기 (10-ui.md 5-1) — 효과가 적용될 때 모든 화면을 이 색으로 덮었다가 걷는다. 화면만의 연출이라 방장 시각 계산에 들지 않는다")]

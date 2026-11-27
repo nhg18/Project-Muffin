@@ -119,14 +119,39 @@ namespace Chapchu.UI.Fx
         [Header("맞음 · 회복 (시안 hit · heal — 4 단계 공통)")]
         [Tooltip("피해 숫자 · 파편 색.")]
         [SerializeField] private Color hitColor = new Color32(0xff, 0x4f, 0x2e, 0xff);
+        [Tooltip("맞음 파편 색 — 하나씩 골라 쓴다 (시안 hit).")]
         [SerializeField] private Color[] hitColors = { new Color32(0xff, 0x4f, 0x2e, 0xff), new Color32(0xff, 0xd2, 0x3f, 0xff), Color.white };
         [Tooltip("회복 숫자 색.")]
         [SerializeField] private Color healColor = new Color32(0x3d, 0xdc, 0x84, 0xff);
+        [Tooltip("회복 파편 색 — 하나씩 골라 쓴다 (시안 heal).")]
         [SerializeField] private Color[] healColors = { new Color32(0x3d, 0xdc, 0x84, 0xff), new Color32(0xff, 0x5c, 0x8a, 0xff), Color.white };
         [Tooltip("터짐 숫자가 자리 가운데에서 떨어지는 범위 (시안 px — 가로 ±x, 위로 y 최소 · 최대).")]
         [SerializeField] private Vector3 boomJitter = new Vector3(30f, 30f, 60f);
+        [Tooltip("맞음 파편 개수 (작은 피해).")]
+        [SerializeField] private int hitBurstCount = 20;
+        [Tooltip("맞음 파편 개수 (큰 피해).")]
+        [SerializeField] private int hitBigBurstCount = 40;
+        [Tooltip("맞음 파편 속도 (시안 px/초, 최소 · 최대).")]
+        [SerializeField] private Vector2 hitBurstSpeed = new Vector2(200f, 520f);
+        [Tooltip("맞음 파편 중력 (시안 px/초², + 가 아래로).")]
+        [SerializeField] private float hitBurstGravity = 500f;
+        [Tooltip("큰 피해 번짐 크기 (시안 px).")]
+        [SerializeField] private float hitBloomSize = 260f;
+        [Tooltip("큰 피해 번짐 초.")]
+        [SerializeField] private float hitBloomLife = 0.4f;
+        [Tooltip("맞음 판 흔들 양 (시안 px, 작은 피해).")]
+        [SerializeField] private float hitShake = 6f;
+        [Tooltip("맞음 판 흔들 양 (시안 px, 큰 피해).")]
+        [SerializeField] private float hitBigShake = 14f;
+        [Tooltip("회복 파편 개수.")]
+        [SerializeField] private int healBurstCount = 22;
+        [Tooltip("회복 파편 속도 (시안 px/초, 최소 · 최대).")]
+        [SerializeField] private Vector2 healBurstSpeed = new Vector2(120f, 320f);
+        [Tooltip("회복 파편 중력 (시안 px/초², - 면 위로 떠오른다).")]
+        [SerializeField] private float healBurstGravity = -80f;
 
         [Header("자리 흔들기 (시안 .plate.shake 380ms)")]
+        [Tooltip("흔드는 초 (시안 380ms).")]
         [SerializeField] private float seatShakeSeconds = 0.38f;
         [Tooltip("키프레임마다 가로 이동 (시안 px) — 0 · 20 · 40 · 60 · 80 · 100%.")]
         [SerializeField] private float[] seatShakeXs = { 0f, -9f, 9f, -6f, 4f, 0f };
@@ -134,18 +159,25 @@ namespace Chapchu.UI.Fx
         [SerializeField] private float[] seatShakeAngles = { 0f, -3f, 3f, 0f, 0f, 0f };
 
         [Header("말풍선 (시안 vbubble · .vw-bub)")]
+        [Tooltip("글자 크기 (시안 px).")]
         [SerializeField] private float bubbleFontSize = 26f;
         [Tooltip("글자 둘레 여백 (시안 px, 가로 · 세로).")]
         [SerializeField] private Vector2 bubblePadding = new Vector2(14f, 4f);
+        [Tooltip("모서리 둥근 반지름 (시안 px).")]
         [SerializeField] private float bubbleRadius = 20f;
+        [Tooltip("테두리 두께 (시안 px).")]
         [SerializeField] private float bubbleBorder = 3f;
         [Tooltip("아래로 떨어진 그림자 (시안 box-shadow 0 4px 0).")]
         [SerializeField] private float bubbleShadow = 4f;
+        [Tooltip("테두리 · 그림자 · 글자 색.")]
         [SerializeField] private Color bubbleInk = new Color32(0x17, 0x11, 0x0f, 0xff);
+        [Tooltip("떠 있는 초.")]
         [SerializeField] private float bubbleSeconds = 1.4f;
         [Tooltip("키프레임 시점 (0 ~ 1). 아래 배율 · 투명도와 개수가 같아야 한다.")]
         [SerializeField] private float[] bubbleKeys = { 0f, 0.4f, 0.6f, 0.85f, 1f };
+        [Tooltip("키프레임마다 배율.")]
         [SerializeField] private float[] bubbleScales = { 0f, 1.25f, 1f, 1f, 0.9f };
+        [Tooltip("키프레임마다 투명도.")]
         [SerializeField] private float[] bubbleAlphas = { 1f, 1f, 1f, 1f, 0f };
 
         [Header("판 흔들기 (시안 arenaShake · shakeStage)")]
@@ -406,10 +438,10 @@ namespace Chapchu.UI.Fx
         {
             Vector2 center = CenterOf(seat);
             Boom(BoomPoint(center), hitColor, "-" + amount);
-            Burst(center, big ? 40 : 20, hitColors, new Vector2(200f, 520f), 500f);
+            Burst(center, big ? hitBigBurstCount : hitBurstCount, hitColors, hitBurstSpeed, hitBurstGravity);
             if (big)
-                Bloom(center, hitColor, 260f, 0.4f);
-            ShakeStage(big ? 14f : 6f, false);
+                Bloom(center, hitColor, hitBloomSize, hitBloomLife);
+            ShakeStage(big ? hitBigShake : hitShake, false);
             ShakeSeat(seat);
         }
 
@@ -418,7 +450,7 @@ namespace Chapchu.UI.Fx
         {
             Vector2 center = CenterOf(seat);
             Boom(BoomPoint(center), healColor, "+" + amount);
-            Burst(center, 22, healColors, new Vector2(120f, 320f), -80f);
+            Burst(center, healBurstCount, healColors, healBurstSpeed, healBurstGravity);
         }
 
         /// <summary>시안 boomAt 의 자리 — 가운데에서 가로로 조금, 위로 조금 떨어진 곳.</summary>

@@ -35,15 +35,25 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject emIcon;
 
         [Header("색 · 크기 (HUD v2)")]
+        [Tooltip("선언 전 말풍선 · 꼬리 바탕색.")]
         [SerializeField] private Color unavailableFill = Color.white;
+        [Tooltip("선언 전 「찹츄!」 글자색 (회색).")]
         [SerializeField] private Color unavailableLabel = new Color32(0xc4, 0xba, 0xb0, 0xFF);
+        [Tooltip("선언 전 말풍선 그림자색.")]
         [SerializeField] private Color unavailableShadow = new Color32(0xdd, 0xd3, 0xc8, 0xFF);
+        [Tooltip("선언 뒤 말풍선 · 꼬리 바탕색 (분홍).")]
         [SerializeField] private Color readyFill = new Color32(0xff, 0x4f, 0x8b, 0xFF);
+        [Tooltip("선언 뒤 「찹츄 완료」 글자색.")]
         [SerializeField] private Color readyLabel = Color.white;
+        [Tooltip("선언 뒤 「찹츄 완료」 글자 외곽선 색 (잉크). 선언 뒤엔 그림자를 끈다.")]
         [SerializeField] private Color readyShadow = new Color32(0x2a, 0x24, 0x20, 0xFF);
+        [Tooltip("손패 수 점 — 꺼진 점 색.")]
         [SerializeField] private Color pipOff = Color.white;
+        [Tooltip("손패 수 점 — 켜진 점 색 (분홍).")]
         [SerializeField] private Color pipOn = new Color32(0xff, 0x4f, 0x8b, 0xFF);
+        [Tooltip("선언 전 글자 크기 (pt).")]
         [SerializeField] private float unavailableLabelSize = 68f;
+        [Tooltip("선언 뒤 글자 크기 (pt).")]
         [SerializeField] private float readyLabelSize = 76f;
         [Tooltip("선언 뒤 흰 글자 둘레 잉크 외곽선 두께 (TMP outline, 0~1).")]
         [SerializeField] private float readyOutline = 0.25f;

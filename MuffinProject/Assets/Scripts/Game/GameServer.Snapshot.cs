@@ -10,7 +10,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 담는 순서가 바뀌면 올린다 — 다른 번호의 스냅샷은 되살리지 않는다 (앱 버전이 섞인 방)
-        private const int SnapshotVersion = 1;
+        private const int SnapshotVersion = 2;
 
         /// <summary>
         /// 상태가 바뀔 때마다 는다 — 전송 층이 「예비 방장에게 다시 보낼 때」 를 아는 값. 거절만 일어난 요청 · 매 프레임 미루는 마감은 올리지 않는다
@@ -61,6 +61,7 @@ namespace Chapchu.Game
             w.Bool(_reversed);
             w.Int(_extraTurnActor);
             w.Int(_heldNext);
+            w.Int(_turnTaker);
 
             // 체인 — 카드 한 장(ChainEntry)을 번호로 바꿔 적는다. 세 목록 · 고르기 · 「아래 카드」 가 같은 것을 가리킨다
             List<ChainEntry> entries = _chainOrder.Concat(_chain).Concat(_resolving).Distinct().ToList();
@@ -70,6 +71,9 @@ namespace Chapchu.Game
             {
                 if (entries[i].Below != null && !entries.Contains(entries[i].Below))
                     entries.Add(entries[i].Below);
+                foreach (ChainEntry share in entries[i].DamageSharers.Values)
+                    if (!entries.Contains(share))
+                        entries.Add(share);
             }
 
             w.Int(entries.Count);
@@ -81,12 +85,18 @@ namespace Chapchu.Game
                 w.Int(e.TriggerAmount);
                 w.Bool(e.Negated);
                 w.Int(e.NegatedBy);
-                w.Bool(e.ReturnToCaster);
+                w.Int(e.ReturnTo);
                 w.Bool(e.Returned);
                 w.Ints(e.Excluded);
                 w.Ints(e.DamageToHeal);
                 w.Ints(e.HealToDamage);
                 w.Map(e.DamageReduction);
+                w.Int(e.DamageReductionAll);
+                w.Map(e.HealAfter);
+                w.Map(e.HandLossBlocked);
+                w.Bool(e.Doubled);
+                w.Int(e.ReflectedBy);
+                w.Map(e.DamageSharers.ToDictionary(pair => pair.Key, pair => entries.IndexOf(pair.Value))); // 물귀신 카드는 번호로
                 w.Map(e.SurviveAt);
                 w.Ints(e.ProtectTraps);
                 w.Map(e.Rolled.ToDictionary(pair => IndexOfEffect(e.Card, pair.Key), pair => pair.Value)); // 효과는 그 카드의 몇 번째인지로
@@ -115,6 +125,7 @@ namespace Chapchu.Game
             w.Int(_choiceEntry == null ? -1 : entries.IndexOf(_choiceEntry));
             w.Int(_choiceEntry == null ? -1 : IndexOfEffect(_choiceEntry.Card, _choiceEffect));
             w.Time(_choiceDeadline);
+            w.Int(_choiceMore);
 
             // 덱
             w.Ints(Ids(_deck));
@@ -241,6 +252,7 @@ namespace Chapchu.Game
             _reversed = r.Bool();
             _extraTurnActor = r.Int();
             _heldNext = r.Int();
+            _turnTaker = r.Int();
             if (CurrentTurnActor != -1 && !_players.ContainsKey(CurrentTurnActor))
                 throw new InvalidOperationException("턴 주인이 참가자가 아니다");
 
@@ -248,6 +260,7 @@ namespace Chapchu.Game
             int entryCount = r.Count();
             var entries = new List<ChainEntry>(entryCount);
             var belows = new int[entryCount];
+            var sharers = new Dictionary<int, int>[entryCount];
             for (int i = 0; i < entryCount; i++)
             {
                 Card card = CardOf(r.Int());
@@ -256,12 +269,19 @@ namespace Chapchu.Game
                 e.TriggerAmount = r.Int();
                 e.Negated = r.Bool();
                 e.NegatedBy = r.Int();
-                e.ReturnToCaster = r.Bool();
+                e.ReturnTo = r.Int();
                 e.Returned = r.Bool();
                 e.Excluded.UnionWith(r.Ints());
                 e.DamageToHeal.UnionWith(r.Ints());
                 e.HealToDamage.UnionWith(r.Ints());
                 r.Map(e.DamageReduction);
+                e.DamageReductionAll = r.Int();
+                r.Map(e.HealAfter);
+                r.Map(e.HandLossBlocked);
+                e.Doubled = r.Bool();
+                e.ReflectedBy = r.Int();
+                sharers[i] = new Dictionary<int, int>();
+                r.Map(sharers[i]);
                 r.Map(e.SurviveAt);
                 e.ProtectTraps.UnionWith(r.Ints());
                 var rolled = new Dictionary<int, int>();
@@ -275,7 +295,11 @@ namespace Chapchu.Game
             }
             ChainEntry EntryAt(int index) => index == -1 ? null : entries[index];
             for (int i = 0; i < entryCount; i++)
+            {
                 entries[i].Below = EntryAt(belows[i]);
+                foreach (KeyValuePair<int, int> pair in sharers[i])
+                    entries[i].DamageSharers[pair.Key] = entries[pair.Value];
+            }
             void ReadEntries(List<ChainEntry> into)
             {
                 into.Clear();
@@ -303,8 +327,11 @@ namespace Chapchu.Game
             _choiceActor = r.Int();
             _choiceEntry = EntryAt(r.Int());
             int choiceEffect = r.Int();
-            _choiceEffect = _choiceEntry == null ? null : (DiscardOrDamageEffect)EffectAt(_choiceEntry.Card, choiceEffect);
+            _choiceEffect = _choiceEntry == null ? null : EffectAt(_choiceEntry.Card, choiceEffect);
+            if (_choiceEffect != null && !(_choiceEffect is DiscardOrDamageEffect) && !(_choiceEffect is ChooseDiscardEffect))
+                throw new InvalidOperationException("고르기 효과가 아닌 효과를 고르는 중으로 되살릴 수 없다");
             _choiceDeadline = r.Time();
+            _choiceMore = r.Int();
             if ((_choiceActor != -1) != (_choiceEntry != null))
                 throw new InvalidOperationException("고르는 사람과 고르는 카드가 맞지 않는다");
 
@@ -390,10 +417,10 @@ namespace Chapchu.Game
 
             if (IsChoosing)
             {
-                _choiceDeadline = now + _choiceEffect.seconds;
+                _choiceDeadline = now + ChoiceSeconds;
                 if (!departed.Contains(_choiceActor))
                     _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
-                        _choiceEffect.amount, now, _choiceDeadline));
+                        _choiceEffect is DiscardOrDamageEffect option ? Scaled(_choiceEntry, option.amount) : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
             }
 
             if (IsGaepanJudging)

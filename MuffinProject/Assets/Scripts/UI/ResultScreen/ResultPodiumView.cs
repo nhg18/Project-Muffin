@@ -138,16 +138,22 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float bubblePopSeconds = 0.25f;
         [Tooltip("말풍선이 나타나고 사라지며 투명도가 바뀌는 시간 (초, 시안 0.2).")]
         [SerializeField] private float bubbleFadeSeconds = 0.2f;
+        [Tooltip("말풍선이 튀어나올 때 제 크기를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float bubblePopOvershoot = 2f;
 
         [Header("등장 연출 (시안 .stage.intro)")]
         [Tooltip("시상대가 아래에서 솟는 시간 (초).")]
         [SerializeField] private float podiumRiseSeconds = 0.55f;
+        [Tooltip("시상대가 솟을 때 제 높이를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float podiumRiseOvershoot = 1.2f;
         [Tooltip("시상대가 솟기 시작한 뒤 캐릭터 · 이름표가 떨어지기까지 (초).")]
         [SerializeField] private float dropDelay = 0.35f;
         [Tooltip("캐릭터 · 이름표가 떨어지기 시작하는 높이 (시안 drop 180).")]
         [SerializeField] private float dropHeight = 180f;
         [Tooltip("캐릭터 · 이름표가 떨어지는 시간 (초).")]
         [SerializeField] private float dropSeconds = 0.5f;
+        [Tooltip("캐릭터 · 이름표가 떨어질 때 제자리를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float dropOvershoot = 1.8f;
         [Tooltip("캐릭터 · 이름표가 떨어지며 나타나는 시간 (초).")]
         [SerializeField] private float dropFadeSeconds = 0.25f;
         [Tooltip("시상대가 솟기 시작한 뒤 HP 판이 떠오르기까지 (초).")]
@@ -166,12 +172,16 @@ namespace Chapchu.UI.ResultScreen
         [SerializeField] private float crownTilt = 30f;
         [Tooltip("왕관이 떨어져 자리 잡는 시간 (초).")]
         [SerializeField] private float crownSeconds = 0.6f;
+        [Tooltip("왕관이 자리 잡을 때 제자리 · 기울기를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float crownOvershoot = 2f;
         [Tooltip("왕관이 나타나는 시간 (초).")]
         [SerializeField] private float crownFadeSeconds = 0.3f;
         [Tooltip("찹츄 승리 마크가 줄어들기 시작하는 크기 (배).")]
         [SerializeField] private float winMarkStartScale = 2.2f;
         [Tooltip("찹츄 승리 마크가 제 크기로 줄어드는 시간 (초).")]
         [SerializeField] private float winMarkSeconds = 0.45f;
+        [Tooltip("찹츄 승리 마크가 줄어들 때 제 크기를 넘어가는 정도 (OutBack 이징의 overshoot).")]
+        [SerializeField] private float winMarkOvershoot = 2.2f;
         [Tooltip("찹츄 승리 마크가 나타나는 시간 (초).")]
         [SerializeField] private float winMarkFadeSeconds = 0.2f;
         [Tooltip("승자가 깡충 뛰기 전에 쉬는 시간 (초, 시안 hop 1.6초 주기의 70%).")]
@@ -230,18 +240,18 @@ namespace Chapchu.UI.ResultScreen
         [Tooltip("순위별 시상대 면 색 — 1 · 2 · 3 · 4위.")]
         [SerializeField] private Color[] podiumColors =
         {
-            new Color32(0xFF, 0xDE, 0x78, 0xFF), new Color32(0xF4, 0xF7, 0xFE, 0xFF), new Color32(0xFD, 0xE8, 0xD2, 0xFF), new Color32(0xFF, 0xFC, 0xF7, 0xFF),
+            new Color32(0xFF, 0xC1, 0x2E, 0xFF), new Color32(0xF4, 0xF7, 0xFE, 0xFF), new Color32(0xFD, 0xE8, 0xD2, 0xFF), new Color32(0xFF, 0xFC, 0xF7, 0xFF),
         };
         [Tooltip("순위별 시상대 밝은 띠 색 — 1 · 2 · 3 · 4위.")]
         [SerializeField] private Color[] podiumHighlightColors =
         {
-            new Color32(0xFF, 0xF2, 0xC6, 0xFF), Color.white, new Color32(0xFF, 0xF4, 0xE8, 0xFF), Color.white,
+            new Color32(0xFF, 0xD7, 0x66, 0xFF), Color.white, new Color32(0xFF, 0xF4, 0xE8, 0xFF), Color.white,
         };
-        [SerializeField] private Color ink = new Color32(0x5E, 0x50, 0x47, 0xFF);
+        [SerializeField] private Color ink = new Color32(0x2A, 0x24, 0x20, 0xFF);
         [Tooltip("흐린 글자 — 나간 사람의 이름 · 탈락한 사람의 HP 숫자.")]
-        [SerializeField] private Color muted = new Color32(0xA8, 0x9E, 0x95, 0xFF);
+        [SerializeField] private Color muted = new Color32(0x6E, 0x64, 0x5C, 0xFF);
         [Tooltip("HP 가 낮을 때의 숫자 색.")]
-        [SerializeField] private Color danger = new Color32(0xEC, 0x6B, 0x5D, 0xFF);
+        [SerializeField] private Color danger = new Color32(0xEC, 0x3B, 0x46, 0xFF);
         [Tooltip("탈락한 사람의 HP 판 테 색.")]
         [SerializeField] private Color outBorder = new Color32(0xB5, 0xAD, 0xA3, 0xFF);
         [Tooltip("탈락한 사람의 빈 뼈다귀 색.")]
@@ -379,7 +389,7 @@ namespace Chapchu.UI.ResultScreen
             bubbleText.text = text;
             _bubbleTween?.Kill();
             _bubbleTween = DOTween.Sequence().SetLink(bubble.gameObject)
-                .Append(bubble.DOScale(1f, bubblePopSeconds).SetEase(Ease.OutBack, 2f))
+                .Append(bubble.DOScale(1f, bubblePopSeconds).SetEase(Ease.OutBack, bubblePopOvershoot))
                 .Join(bubbleGroup.DOFade(1f, bubbleFadeSeconds))
                 .AppendInterval(bubbleSeconds - bubblePopSeconds)
                 .Append(bubble.DOScale(0f, bubblePopSeconds).SetEase(Ease.InQuad))
@@ -413,7 +423,7 @@ namespace Chapchu.UI.ResultScreen
         public void PlayIntro(float delay, float crownAt, float markAt, float hopAt)
         {
             podium.localScale = new Vector3(1f, 0f, 1f);
-            podium.DOScaleY(1f, podiumRiseSeconds).SetDelay(delay).SetEase(Ease.OutBack, 1.2f).SetLink(gameObject);
+            podium.DOScaleY(1f, podiumRiseSeconds).SetDelay(delay).SetEase(Ease.OutBack, podiumRiseOvershoot).SetLink(gameObject);
 
             Drop(character, characterGroup, delay + dropDelay);
             Drop(nameTag, nameTagGroup, delay + dropDelay);
@@ -427,8 +437,8 @@ namespace Chapchu.UI.ResultScreen
                 crown.anchoredPosition = crownHome + new Vector2(0f, crownDropHeight);
                 crown.localRotation = Quaternion.Euler(0f, 0f, crownTilt);
                 crownGroup.alpha = 0f;
-                crown.DOAnchorPos(crownHome, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
-                crown.DOLocalRotate(Vector3.zero, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, 2f).SetLink(gameObject);
+                crown.DOAnchorPos(crownHome, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, crownOvershoot).SetLink(gameObject);
+                crown.DOLocalRotate(Vector3.zero, crownSeconds).SetDelay(crownAt).SetEase(Ease.OutBack, crownOvershoot).SetLink(gameObject);
                 crownGroup.DOFade(1f, crownFadeSeconds).SetDelay(crownAt).SetLink(gameObject);
             }
 
@@ -436,7 +446,7 @@ namespace Chapchu.UI.ResultScreen
             {
                 winMark.localScale = Vector3.one * winMarkStartScale;
                 winMarkGroup.alpha = 0f;
-                winMark.DOScale(1f, winMarkSeconds).SetDelay(markAt).SetEase(Ease.OutBack, 2.2f).SetLink(gameObject);
+                winMark.DOScale(1f, winMarkSeconds).SetDelay(markAt).SetEase(Ease.OutBack, winMarkOvershoot).SetLink(gameObject);
                 winMarkGroup.DOFade(1f, winMarkFadeSeconds).SetDelay(markAt).SetLink(gameObject);
             }
 
@@ -481,7 +491,7 @@ namespace Chapchu.UI.ResultScreen
             Vector2 home = target.anchoredPosition;
             target.anchoredPosition = home + new Vector2(0f, dropHeight);
             group.alpha = 0f;
-            target.DOAnchorPos(home, dropSeconds).SetDelay(delay).SetEase(Ease.OutBack, 1.8f).SetLink(gameObject);
+            target.DOAnchorPos(home, dropSeconds).SetDelay(delay).SetEase(Ease.OutBack, dropOvershoot).SetLink(gameObject);
             group.DOFade(1f, dropFadeSeconds).SetDelay(delay).SetLink(gameObject);
         }
     }

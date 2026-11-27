@@ -15,6 +15,7 @@ namespace Chapchu.EditorTools
     /// **새 카드를 넣을 때** 쓴다: 에셋을 만들고 Deck_Main 의 목록에 넣는다. 값만 바뀐 것은 누르지 않아도 된다 — 게임이 플레이를 시작할 때 파일 값을 얹는다 (DeckData).
     /// 누르면 이름 · 종류 · 대상 · 대상 후보 조건 · 문구 · 등급 · 장수 · 효과 값을 파일 값으로 덮어, 인스펙터에 보이는 에셋 값도 파일과 같아진다.
     /// 효과의 종류와 순서는 에셋이 정한다: 에셋에 효과가 하나도 없을 때만 파일의 종류대로 처음 만들고, 그 뒤로 파일과 다르면 그 카드는 실패로 알린다.
+    /// 카운터의 반응 종류 · 반응 조건 · 「막을 수 없음」 은 파일에 reactsTo 가 적힌 카드만 덮는다 — 가져오기만 옮기고, 게임이 얹는 값에는 들지 않는다.
     /// cards.json 에는 구현할 카드(노션 확정 + 효과가 만들어진 카드)만 적는다.
     /// </summary>
     public static class CardImporter
@@ -81,7 +82,7 @@ namespace Chapchu.EditorTools
                             copy.effects = effects;
                     }
 
-                    if (!CardSheet.TryApply(entry, copy, out error))
+                    if (!TryApplyReaction(entry, copy, out error) || !CardSheet.TryApply(entry, copy, out error))
                     {
                         Debug.LogError($"[{nameof(CardImporter)}] {error} — 에셋의 효과 구성과 cards.json 을 맞추기", data);
                         failed++;
@@ -120,6 +121,38 @@ namespace Chapchu.EditorTools
             Debug.Log($"[{nameof(CardImporter)}] 카드 {sheet.cards.Length}종 (새로 {created} · 바뀜 {changed} · 실패 {failed}) · Deck_Main {entries.Sum(e => e.count)}장");
         }
 
+        // 카운터의 반응 종류 · 반응 조건 · 「막을 수 없음」 — 비어 있으면 어디에도 못 내는 카드가 된다 (CardData.reactsTo). 파일에 reactsTo 가 적힌 카드만 덮는다
+        private static bool TryApplyReaction(CardSheetEntry entry, CardData data, out string error)
+        {
+            error = null;
+            if (string.IsNullOrWhiteSpace(entry.reactsTo))
+                return true;
+
+            var reactsTo = new List<CardType>();
+            foreach (string raw in entry.reactsTo.Split(','))
+            {
+                if (!TryParseName(raw.Trim(), out CardType type))
+                {
+                    error = $"카드 {entry.id}: 반응 종류 「{raw.Trim()}」 를 모른다";
+                    return false;
+                }
+
+                reactsTo.Add(type);
+            }
+
+            ReactCondition condition = ReactCondition.Any;
+            if (!string.IsNullOrEmpty(entry.reactCondition) && !TryParseName(entry.reactCondition, out condition))
+            {
+                error = $"카드 {entry.id}: 반응 조건 「{entry.reactCondition}」 를 모른다";
+                return false;
+            }
+
+            data.reactsTo = reactsTo;
+            data.reactCondition = condition;
+            data.uncounterable = entry.uncounterable;
+            return true;
+        }
+
         // enum 이름이 정확히 맞을 때만 — CardSheet 의 이름 읽기와 같은 기준 (숫자 · 쉼표 목록은 받지 않는다)
         private static bool TryParseName<T>(string raw, out T value) where T : struct, Enum
         {
@@ -135,7 +168,8 @@ namespace Chapchu.EditorTools
         private static string Describe(CardData data)
         {
             string effects = string.Join(" + ", data.effects.Select(e => e == null ? "(빈 칸)" : $"{e.GetType().Name}{JsonUtility.ToJson(e)}"));
-            return $"{data.cardName} · {data.type} · {data.targetType} · {data.targetCondition} · {data.grade} · 「{data.description}」 · {effects}";
+            string reaction = data.reactsTo.Count > 0 ? $" · 반응 {string.Join("/", data.reactsTo)} {data.reactCondition}{(data.uncounterable ? " 막을 수 없음" : "")}" : "";
+            return $"{data.cardName} · {data.type} · {data.targetType} · {data.targetCondition} · {data.grade} · 「{data.description}」 · {effects}{reaction}";
         }
 
         // 그림 파일이 아직 Sprite 가 아니면 가져오기 설정을 바꾼다 — CardData.LoadArt 가 Sprite 로 불러온다. 그림이 없는 카드는 넘어간다

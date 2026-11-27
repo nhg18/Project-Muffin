@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Chapchu.Core;
 using Chapchu.UI.Fx;
 using Chapchu.UI.Fx.Common;
 using DG.Tweening;
@@ -33,29 +34,37 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float settleEnd = 0.32f;
         [Tooltip("사라지기 시작하는 때 (비율).")]
         [SerializeField] private float fadeStart = 0.82f;
-        [Tooltip("처음 크기 배율 · 넘친 크기 배율 · 사라질 때 크기 배율.")]
+        [Tooltip("처음 크기 배율.")]
         [SerializeField] private float startScale = 0.2f;
+        [Tooltip("튀어나와 넘쳤을 때 크기 배율.")]
         [SerializeField] private float popScale = 1.14f;
+        [Tooltip("사라질 때 크기 배율.")]
         [SerializeField] private float endScale = 1.04f;
-        [Tooltip("처음 · 넘쳤을 때 · 돌아왔을 때 Z 회전 (도). 시계 방향 기울기가 음수 — 시안 −10° · 3° · −2° 의 부호를 뒤집은 값.")]
+        [Tooltip("처음 Z 회전 (도). 시계 방향 기울기가 음수 — 시안 −10° 의 부호를 뒤집은 값.")]
         [SerializeField] private float startAngle = 10f;
+        [Tooltip("넘쳤을 때 Z 회전 (도) — 시안 3° 의 부호를 뒤집은 값.")]
         [SerializeField] private float popAngle = -3f;
+        [Tooltip("제 크기로 돌아왔을 때 Z 회전 (도) — 시안 −2° 의 부호를 뒤집은 값.")]
         [SerializeField] private float settleAngle = 2f;
         [Tooltip("흰 글자 둘레 잉크 외곽선 두께 (TMP outline, 0~1) — 시안 92 글자에 잉크 선 12.")]
         [SerializeField] private float outline = 0.25f;
+        [Tooltip("흰 글자 둘레 외곽선 색 (잉크).")]
         [SerializeField] private Color outlineColor = new Color32(0x2a, 0x24, 0x20, 0xFF);
         [Tooltip("말풍선이 이보다 넓으면(긴 이름) 이 폭에 맞춰 줄인다.")]
         [SerializeField] private float maxWidth = 1760f;
 
         [Header("집중선 (시안 fxSpeed 1초)")]
+        [Tooltip("집중선이 나타났다 사라지기까지의 초.")]
         [SerializeField] private float linesSeconds = 1f;
-        [Tooltip("집중선이 다 나타나는 때 · 사라지기 시작하는 때 (비율).")]
+        [Tooltip("집중선이 다 나타나는 때 (전체에 대한 비율).")]
         [SerializeField] private float linesInEnd = 0.12f;
+        [Tooltip("집중선이 사라지기 시작하는 때 (비율).")]
         [SerializeField] private float linesOutStart = 0.6f;
 
         [Header("흔들림 (시안 fxShake 9 · 520 → × 2)")]
         [Tooltip("처음 흔들리는 폭 — 점점 줄어든다.")]
         [SerializeField] private float shakeAmount = 18f;
+        [Tooltip("흔들림이 제자리로 돌아오기까지의 밀리초.")]
         [SerializeField] private float shakeMilliseconds = 520f;
         [Tooltip("세로 흔들림 = 가로의 이 비율.")]
         [SerializeField] private float shakeVertical = 0.3f;
@@ -96,6 +105,7 @@ namespace Chapchu.UI.GameScreen
         {
             _playing = true;
             gameObject.SetActive(true);
+            SoundManager.Play(Sfx.Chapchu); // 10-ui 5-2 #1 「효과음 1회」 — 외침이 실제로 시작할 때
 
             label.text = text;
             label.outlineWidth = outline;
