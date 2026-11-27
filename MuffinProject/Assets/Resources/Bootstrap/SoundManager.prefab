@@ -179,6 +179,7 @@ MonoBehaviour:
   bgmLoopSource: {fileID: 4041380260726709068}
   bgmIntro: {fileID: 8300000, guid: 0382d125bda65314fb9ea50bb57ba7ed, type: 3}
   bgmLoop: {fileID: 8300000, guid: 272c0e6b327c219429d1e81a0040a516, type: 3}
+  gameBgmLoop: {fileID: 8300000, guid: 149b5476a8ad65c4888542ec5cceb6ad, type: 3}
   bgmVolume: 0.5
   sfx:
   - id: 0

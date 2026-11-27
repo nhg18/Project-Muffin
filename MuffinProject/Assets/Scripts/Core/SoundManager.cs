@@ -32,9 +32,10 @@ namespace Chapchu.Core
     }
 
     /// <summary>
-    /// 타이틀 · 로비에서 배경음을 틀고, 효과음을 낸다. 설정의 효과음 · 배경음 스위치(17-lobby-ui-full 5-4)를 따른다.
+    /// 타이틀 · 로비 · 게임에서 배경음을 틀고, 효과음을 낸다. 설정의 효과음 · 배경음 스위치(17-lobby-ui-full 5-4)를 따른다.
     /// 소리 전체(기능 13)가 정해지기 전의 임시 (PM 2026-11-27 「어울리는 대로 만들어」).
-    /// 배경음 = 처음 한 번 듣는 앞부분(intro) 뒤에 반복 부분(loop)을 샘플 단위로 이어 붙인다. 두 파일은 한 곡을 마디에 맞춰 자른 것이다.
+    /// 타이틀 · 로비 배경음 = 처음 한 번 듣는 앞부분(intro) 뒤에 반복 부분(loop)을 샘플 단위로 이어 붙인다. 두 파일은 한 곡을 마디에 맞춰 자른 것이다.
+    /// 게임 배경음 = 「카드 이펙트 v2」 시안이 코드로 합성하던 8마디 루프를 한 바퀴(15초) 녹음한 파일 하나를 반복한다 (PM 2026-11-28).
     /// 효과음은 여러 개가 겹쳐도 되게 소스 몇 개를 돌려 쓰고, 자주 나는 소리는 음 높이를 조금씩 흔들어 똑같이 반복되지 않게 한다.
     /// </summary>
     public class SoundManager : SingletonPersistent<SoundManager>
@@ -45,8 +46,15 @@ namespace Chapchu.Core
         // 같은 효과음이 이 안에 또 오면 새로 울리지 않는다 — 여러 좌석이 한꺼번에 맞을 때 같은 파일이 겹쳐 커지지 않게
         private const float SfxRepeatGapSeconds = 0.05f;
 
-        // 배경음을 트는 화면 (PM 2026-11-27). 방 · 게임 · 결과에서는 멈춘다
-        private static readonly string[] BgmScenes = { ScenePaths.Title, ScenePaths.Lobby };
+        // 타이틀 · 로비 배경음을 트는 화면 (PM 2026-11-27). 게임은 게임 배경음 (PM 2026-11-28), 방 · 결과에서는 멈춘다
+        private static readonly string[] MainBgmScenes = { ScenePaths.Title, ScenePaths.Lobby };
+
+        private enum BgmTrack
+        {
+            None,
+            Main,   // 타이틀 · 로비
+            Game,   // 게임
+        }
 
         [Serializable]
         private struct SfxEntry
@@ -63,10 +71,14 @@ namespace Chapchu.Core
         [SerializeField] private AudioSource bgmLoopSource;
         [SerializeField] private AudioClip bgmIntro;
         [SerializeField] private AudioClip bgmLoop;
+        [Tooltip("게임 화면 배경음 — 한 파일을 반복한다")]
+        [SerializeField] private AudioClip gameBgmLoop;
         [Tooltip("배경음 음량")]
         [SerializeField] [Range(0f, 1f)] private float bgmVolume = 0.5f;
         [Tooltip("배경음을 멈출 때 줄어드는 초")]
         [SerializeField] private float bgmStopFadeSeconds = 0.5f;
+        [Tooltip("게임 배경음이 커지는 초 — 시안 1.2초")]
+        [SerializeField] private float gameBgmFadeInSeconds = 1.2f;
         [Tooltip("효과음 표 — 종류마다 한 줄")]
         [SerializeField] private SfxEntry[] sfx;
         [Tooltip("카드 연출 소리(Resources/CardFxSound) 음량 — 파일끼리는 이미 맞춰 두었다")]
@@ -77,7 +89,8 @@ namespace Chapchu.Core
         private readonly List<RaycastResult> _pointerHits = new();
         private AudioSource[] _voices;
         private int _nextVoice;
-        private bool _isBgmPlaying;
+        private AudioSource _gameBgmSource;
+        private BgmTrack _bgm;
 
         // 누르고 있는 버튼 · 스위치 — 그 위에서 놓아야 Tap
         private Selectable _pressed;
@@ -109,6 +122,9 @@ namespace Chapchu.Core
             if (bgmLoop == null)
                 Debug.LogError($"[{nameof(SoundManager)}] {nameof(bgmLoop)} 참조가 비어 있습니다.", this);
 
+            if (gameBgmLoop == null)
+                Debug.LogError($"[{nameof(SoundManager)}] {nameof(gameBgmLoop)} 참조가 비어 있습니다.", this);
+
             foreach (SfxEntry entry in sfx ?? Array.Empty<SfxEntry>())
             {
                 if (entry.clip == null)
@@ -130,6 +146,10 @@ namespace Chapchu.Core
                 _voices[i] = gameObject.AddComponent<AudioSource>();
                 _voices[i].playOnAwake = false;
             }
+
+            _gameBgmSource = gameObject.AddComponent<AudioSource>();
+            _gameBgmSource.playOnAwake = false;
+            _gameBgmSource.loop = true;
         }
 
         private void OnEnable()
@@ -188,14 +208,24 @@ namespace Chapchu.Core
         /// <summary>배경음을 지금 화면 · 스위치에 맞춘다 — 설정에서 배경음 스위치를 바꾼 뒤 부른다. 효과음 스위치는 낼 때마다 읽는다.</summary>
         public void RefreshBgm()
         {
-            bool wanted = IsBgmOn && bgmIntro != null && bgmLoop != null
-                && Array.IndexOf(BgmScenes, SceneManager.GetActiveScene().name) >= 0;
-            if (wanted == _isBgmPlaying) return;
+            BgmTrack wanted = IsBgmOn ? TrackFor(SceneManager.GetActiveScene().name) : BgmTrack.None;
+            if (wanted == _bgm) return;
 
-            if (wanted)
-                StartBgm();
-            else
-                StopBgm();
+            StopBgm();
+            _bgm = wanted;
+            if (wanted == BgmTrack.Main)
+                StartMainBgm();
+            else if (wanted == BgmTrack.Game)
+                StartGameBgm();
+        }
+
+        private BgmTrack TrackFor(string sceneName)
+        {
+            if (Array.IndexOf(MainBgmScenes, sceneName) >= 0 && bgmIntro != null && bgmLoop != null)
+                return BgmTrack.Main;
+            if (sceneName == ScenePaths.Game && gameBgmLoop != null)
+                return BgmTrack.Game;
+            return BgmTrack.None;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode) => RefreshBgm();
@@ -273,22 +303,39 @@ namespace Chapchu.Core
                 : float.PositiveInfinity;
         }
 
-        private void StartBgm()
+        private void StartMainBgm()
         {
             if (bgmIntroSource == null || bgmLoopSource == null) return;
 
-            _isBgmPlaying = true;
             double startAt = AudioSettings.dspTime + BgmScheduleLeadSeconds;
             double introSeconds = (double)bgmIntro.samples / bgmIntro.frequency;
             Schedule(bgmIntroSource, bgmIntro, false, startAt);
             Schedule(bgmLoopSource, bgmLoop, true, startAt + introSeconds);
         }
 
+        private void StartGameBgm()
+        {
+            _gameBgmSource.DOKill();
+            _gameBgmSource.clip = gameBgmLoop;
+            _gameBgmSource.volume = 0f;
+            _gameBgmSource.Play();
+            _gameBgmSource.DOFade(bgmVolume, gameBgmFadeInSeconds);
+        }
+
+        // 지금 트는 배경음을 줄여 멈춘다
         private void StopBgm()
         {
-            _isBgmPlaying = false;
-            FadeOut(bgmIntroSource);
-            FadeOut(bgmLoopSource);
+            if (_bgm == BgmTrack.Main)
+            {
+                FadeOut(bgmIntroSource);
+                FadeOut(bgmLoopSource);
+            }
+            else if (_bgm == BgmTrack.Game)
+            {
+                FadeOut(_gameBgmSource);
+            }
+
+            _bgm = BgmTrack.None;
         }
 
         private void Schedule(AudioSource source, AudioClip clip, bool loop, double startAt)
