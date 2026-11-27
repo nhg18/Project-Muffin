@@ -14,13 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
   id: 2001
   cardName: "\uCE68\uCC29"
-  cardImage: {fileID: 0}
   type: 1
   targetType: 0
   targetCondition: 0
   grade: 0
   description: "\uBC29\uAE08 \uB098\uC628 \uD589\uB3D9 \uCE74\uB4DC\uC758 \uD53C\uD574\uB97C
-    20 \uC904\uC774\uACE0, \uB098\uB294 HP\uB97C 10 \uD68C\uBCF5\uD55C\uB2E4"
+    20 \uC904\uC774\uACE0, \uB098\uB294 10 \uD68C\uBCF5\uD55C\uB2E4"
   reactsTo: 00000000
   trapTrigger: 0
   triggerValue: 0
