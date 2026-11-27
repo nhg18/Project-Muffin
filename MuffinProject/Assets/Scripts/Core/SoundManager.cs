@@ -69,6 +69,8 @@ namespace Chapchu.Core
         [SerializeField] private float bgmStopFadeSeconds = 0.5f;
         [Tooltip("효과음 표 — 종류마다 한 줄")]
         [SerializeField] private SfxEntry[] sfx;
+        [Tooltip("카드 연출 소리(Resources/CardFxSound) 음량 — 파일끼리는 이미 맞춰 두었다")]
+        [SerializeField] [Range(0f, 1f)] private float cardFxVolume = 1f;
 
         private readonly Dictionary<Sfx, SfxEntry> _sfx = new();
         private readonly Dictionary<Sfx, (float time, AudioSource voice)> _lastSfx = new();
@@ -165,6 +167,22 @@ namespace Chapchu.Core
         {
             if (Instance != null)
                 Instance.PlaySfx(id, volumeScale);
+        }
+
+        /// <summary>
+        /// 카드 연출 소리를 한 번 낸다 — 효과음 표에 없고 연출이 그때 불러온 파일 (CardFx.StartSound). 효과음 스위치를 따른다.
+        /// skipSeconds = 파일 앞에서 건너뛸 초 (불러오는 동안 장면이 먼저 흐른 만큼).
+        /// </summary>
+        public static void PlayCardFx(AudioClip clip, float skipSeconds = 0f)
+        {
+            if (Instance == null || clip == null || !IsSfxOn || skipSeconds >= clip.length) return;
+
+            AudioSource voice = Instance.NextVoice();
+            voice.clip = clip;
+            voice.volume = Instance.cardFxVolume;
+            voice.pitch = 1f;
+            voice.time = Mathf.Max(0f, skipSeconds);
+            voice.Play();
         }
 
         /// <summary>배경음을 지금 화면 · 스위치에 맞춘다 — 설정에서 배경음 스위치를 바꾼 뒤 부른다. 효과음 스위치는 낼 때마다 읽는다.</summary>

@@ -52,7 +52,7 @@
 * 규칙 수치(체력 · 장수 · 초)는 `int` 상수 또는 ScriptableObject. 상수에는 기준 문서 절을 주석으로 남긴다. 코드 가운데 숫자를 바로 쓰지 않는다.
 * 연출값(시간 · 색 · 거리)과 참조는 `[SerializeField]` 로 Inspector 에서 바꾼다. 값 필드에는 `[Tooltip]` 한 줄 — 코드를 열지 않고 Inspector 에서 뜻을 알 수 있게.
 * 문자열 키(씬 이름 · PlayerPrefs · CustomProperties · Resources 경로)는 상수 클래스에 모은다 (`ScenePaths` · `PlayerPrefsKeys` · `ResourcePaths`).
-* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 연출은 `PlayPostRoutine` — **개판 등급 카드만** 쓴다 (10-ui 5-1 「4 단계 공통 연출」). 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`, 빼앗기 · 얻기 등 결과별 공통 연출)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1).
+* 카드별 연출 프리팹은 `Resources/CardFx/Card_{카드 ID}.prefab` (`CardFxLoader.NameOf`) 에 두고 이름으로 불러온다. 연출이 없는 카드는 프리팹도 없다. 루트에 `CardFx` 를 상속한 컴포넌트 하나 — 3 단계(능력 발동)는 `PlayRoutine`, 4 단계의 카드만의 연출은 `PlayPostRoutine` — **개판 등급 카드만** 쓴다 (10-ui 5-1 「4 단계 공통 연출」). 4 단계 공통 결과(맞음 · 회복 숫자 — `FxLayer.Hit` · `Heal`, 빼앗기 · 얻기 등 결과별 공통 연출)는 부르는 쪽(연출 시험장 · 게임 화면)이 그리므로 카드 연출에 넣지 않는다. 카드 연출 확인은 연출 시험장(`CardFxTestScene`, `run.sh fx <카드 ID>`)에서 한다. 씬 · 프리팹에서 직접 참조하지 않는다 — 참조하면 그 씬을 열 때 그림까지 메모리에 올라온다 (10-ui 5-1). 카드 연출 소리는 `Resources/CardFxSound/Card_{카드 ID}`(4 단계는 `_Post`) 한 파일 — 연출이 맨 앞에서 `LoadSound`, 장면 시계가 0 이 되는 줄에서 `StartSound` 를 부른다. 파일이 없으면 소리 없이 지나간다.
 * 사람에게 보이는 문구는 클래스마다 한 곳(문구를 돌려주는 함수 또는 상수)에 모은다. 로직 사이에 흩어 두지 않는다.
 
 ## 6. 네트워크
