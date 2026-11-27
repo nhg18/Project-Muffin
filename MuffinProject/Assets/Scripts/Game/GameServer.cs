@@ -65,10 +65,9 @@ namespace Chapchu.Game
             _chain.Clear();
             _resolving.Clear();
             _chainOrder.Clear();
-            _deathDeadline = -1;
             _gameOver = false;
             _afterRecords.Clear();
-            _trapSetOrder.Clear();
+            _claimedCards.Clear();
             _waitCasters.Clear();
             _allCards.Clear();
             _allCards.AddRange(deck);

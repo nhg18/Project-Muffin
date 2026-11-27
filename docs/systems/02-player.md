@@ -58,7 +58,7 @@
 ## 4. 상태 흐름 (생존 상태)
 
 ```
-Alive → (HP 0) → DeathPending → (대응 처리) → Alive 복귀
+Alive → (HP 0) → DeathPending → (사망 대기 능력) → Alive 복귀
                                             → Dead (최종 사망)
 ```
 

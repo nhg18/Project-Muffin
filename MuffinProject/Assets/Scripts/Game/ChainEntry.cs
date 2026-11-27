@@ -14,6 +14,8 @@ namespace Chapchu.Game
 
         /// <summary>함정이 쓰는 사건 값 — 「버려진 후」(T09)의 버려진 장수.</summary>
         public int TriggerAmount;
+        /// <summary>함정이 쓰는 사건의 카드 — 「행동 카드에 당한 뒤」(3007 두고 보자)의 그 카드. 없으면 -1.</summary>
+        public int TriggerCardInstanceId = -1;
 
         /// <summary>효과 전체가 무효화됐다 — 효과 없이 버림 더미로 (ReturnTo 가 있으면 그 사람 손패로).</summary>
         public bool Negated;

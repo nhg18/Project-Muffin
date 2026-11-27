@@ -256,6 +256,8 @@ namespace Chapchu.Cards
         public string reactsTo;        // 카운터: 반응하는 카드 종류 — CardType 이름을 쉼표로 (예: "Action, Counter"). 비우면 건드리지 않는다
         public string reactCondition;  // 카운터: ReactCondition 이름, 비우면 Any
         public bool uncounterable;     // 이 카드에는 카운터를 낼 수 없다 (2014)
+        public string trapTrigger;     // 함정: TrapTrigger 이름. 비우면 건드리지 않는다 — 가져오기만 옮긴다
+        public int triggerValue;       // 함정: 발동 조건의 값 (「20 이상 피해」 의 20)
         public CardSheetEffect[] effects;
     }
 

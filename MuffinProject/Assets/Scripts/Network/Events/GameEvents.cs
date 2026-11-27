@@ -35,6 +35,7 @@ namespace Chapchu.Network.Events
         public static event Action<int, int, int, int> OnTrapMoved;          // from, to, fromTrapCount, toTrapCount — 함정 빼앗기 (종류는 두 사람만)
         public static event Action<int> OnTurnSkipMarked;                    // actorNumber — 다음 턴 스킵이 걸림
         public static event Action<int> OnTurnSkipped;                       // actorNumber — 턴이 스킵됨
+        public static event Action<int> OnTurnSkipCleared;                   // actorNumber — 걸려 있던 턴 스킵이 풀림 (3012 편안)
         public static event Action<int, int, int, int, int, int> OnDiscardTaken; // actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId(비면 0) — 버림 더미 맨 위를 손패로 (1009)
         public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (1045)
         public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (1007 짖기: 다음 실제 턴 · 이번 턴 · 없음)
@@ -88,6 +89,7 @@ namespace Chapchu.Network.Events
         public static void RaiseTrapMoved(int from, int to, int fromTrapCount, int toTrapCount) => OnTrapMoved?.Invoke(from, to, fromTrapCount, toTrapCount);
         public static void RaiseTurnSkipMarked(int actorNumber) => OnTurnSkipMarked?.Invoke(actorNumber);
         public static void RaiseTurnSkipped(int actorNumber) => OnTurnSkipped?.Invoke(actorNumber);
+        public static void RaiseTurnSkipCleared(int actorNumber) => OnTurnSkipCleared?.Invoke(actorNumber);
         public static void RaiseDiscardTaken(int actorNumber, int cardInstanceId, int cardId, int handCount, int discardCount, int topCardId) => OnDiscardTaken?.Invoke(actorNumber, cardInstanceId, cardId, handCount, discardCount, topCardId);
         public static void RaiseTurnDirectionChanged(bool reversed, int extraTurn) => OnTurnDirectionChanged?.Invoke(reversed, extraTurn);
         public static void RaiseActionBlockChanged(int actorNumber, ActionBlock state) => OnActionBlockChanged?.Invoke(actorNumber, state);
