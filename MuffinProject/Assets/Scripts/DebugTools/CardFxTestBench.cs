@@ -15,7 +15,8 @@ namespace Chapchu.DebugTools
     /// 카드 연출 시험장 (CardFxTestScene, RPG 스킬 시험장처럼). 덱의 카드가 모두 손패로 깔리고, 누르면 그 카드의 연출
     /// (Resources/CardFx/Card_{카드 ID})을 게임과 같은 순서로 튼다 (10-ui 5-1):
     /// 체력 초기화 → 250ms → 카드가 가운데로 날아가 놓임 → 3 단계(<see cref="CardFx.PlayRoutine"/>) →
-    /// 4 단계: 카드 장식(<see cref="CardFx.PlayPostRoutine"/>)과 같이 공통 결과(<see cref="ResultFx"/> — 맞음 · 회복 · +n장, 게임 화면과 같은 것) → 장식이 끝나고 900ms → 버림 더미로.
+    /// 4 단계: 개판 등급이고 정해진 카드만의 4 단계가 있으면(<see cref="CardFx.HasPostStage"/>) 그것(<see cref="CardFx.PlayPostRoutine"/> — 끝날 때까지 기다린다) → 공통 결과(<see cref="ResultFx"/> — 맞음 · 회복 · +n장, 게임 화면과 같은 것) → 900ms → 버림 더미로.
+    /// 개판 밖 카드의 예전 4 단계 장식은 게임처럼 틀지 않는다 (10-ui 5-1 「카드마다 다른 장식은 넣지 않는다」).
     /// 규칙 · 네트워크는 거치지 않는다. 공통 결과는 카드 효과 데이터의 피해(DamageEffect) · 회복(HealEffect) 값과 HP 맞바꾸기(SwapHpEffect)로 흉내 내고, 뽑기(DrawEffect)는 「+n장」 과 장수 알림 — 손패 이동 등 그 밖의 결과는 그리지 않는다.
     /// 자리는 둘 — 나(낸 사람) · 상대(대상). 연출 프리팹이 없는 카드는 3 단계 없이 결과만.
     /// 키: Space = 마지막 카드 다시, R = 체력 초기화. 배속은 인스펙터 <see cref="speed"/>. 자동 확인(run.sh fx)은 <see cref="PlayCard"/> 로 튼다.
@@ -213,10 +214,9 @@ namespace Chapchu.DebugTools
             CardFx fx = null;
             yield return CardFxLoader.CreateRoutine(CardFxLoader.NameOf(data.id), fxLayer.transform, created => fx = created, false);
             CardFxContext context = CreateContext(data);
-            // 3 단계가 결과를 보여 줄 순간을 정하면(Impact) 그때, 아니면 3 단계 뒤에 (게임에서는 결과가 3 단계 뒤에 온다)
+            // 카드만의 4 단계가 결과를 보여 줄 순간을 정하면(Impact) 그때, 아니면 그 뒤에 (게임에서는 결과가 3 · 4 단계 뒤에 온다)
             var shown = new HashSet<CardFxSeat>();
             context.Impact = seat => ShowResults(data, context, shown, seat);
-            Coroutine post = null;
 
             if (fx != null)
             {
@@ -226,8 +226,8 @@ namespace Chapchu.DebugTools
                 yield return fx.PlayRoutine(context);
                 Debug.Log($"[{nameof(CardFxTestBench)}] 카드 {data.id} {data.cardName} 3 단계 {Time.time - PlayingSince:0.00}초");
                 PlayingCardId = 0;
-                // StartCoroutine 은 첫 yield 까지 바로 돈다 — 장식이 결과 알림을 구독한 뒤에 결과를 보여 준다
-                post = StartCoroutine(fx.PlayPostRoutine(context));
+                if (data.grade == CardGrade.Gaepan && fx.HasPostStage)
+                    yield return fx.PlayPostRoutine(context);
             }
             else
             {
@@ -235,8 +235,6 @@ namespace Chapchu.DebugTools
             }
 
             ShowResults(data, context, shown, null);
-            if (post != null)
-                yield return post;
             yield return new WaitForSeconds(0.9f);
             yield return ClearRoutine(played);
             if (fx != null)

@@ -36859,6 +36859,148 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.TrapSlotView
   empty: {fileID: 2108922769}
   filled: {fileID: 927550946}
+--- !u!1001 &1608769043
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1842077309}
+    m_Modifications:
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8207631286200464541, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: stage
+      value: 
+      objectReference: {fileID: 1490500835}
+    - target: {fileID: 8792503607362027235, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      propertyPath: m_Name
+      value: CardFx
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8792503607362027235, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1608769047}
+  m_SourcePrefab: {fileID: 100100000, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+--- !u!114 &1608769044 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8207631286200464541, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+  m_PrefabInstance: {fileID: 1608769043}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1608769045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27d14a6fde791d04e9f0d43bbe36aa8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.FxLayer
+--- !u!1 &1608769045 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8792503607362027235, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+  m_PrefabInstance: {fileID: 1608769043}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &1608769046 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7373553274398769242, guid: 16ad00eaff449c143b63c00b342e8978, type: 3}
+  m_PrefabInstance: {fileID: 1608769043}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1608769047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1608769045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 004128a17fc3b6340a18136f06d6a44d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.CardFxPresenter
+  fxLayer: {fileID: 1608769044}
+  cardBack: {fileID: 21300000, guid: 6c6d3da36f0471547afc349c85010741, type: 3}
+  character: {fileID: -7354470638215815053, guid: 599b26570ad96994687ba4d688c4e2b3, type: 3}
+  postTailSeconds: 0.6
+  skipCardIds: fd030000
 --- !u!1 &1617752807
 GameObject:
   m_ObjectHideFlags: 0
@@ -41203,6 +41345,7 @@ MonoBehaviour:
   reactionTimer: {fileID: 618628863}
   choicePopup: {fileID: 1013332104}
   myTraps: {fileID: 2070668516}
+  cardFx: {fileID: 1608769047}
   screenFlash: {fileID: 437836665}
   chapchuShout: {fileID: 1660868202}
   resultFx: {fileID: 1300100103}
@@ -41369,6 +41512,7 @@ RectTransform:
   - {fileID: 1211240101}
   - {fileID: 834791764}
   - {fileID: 437836668}
+  - {fileID: 1608769046}
   - {fileID: 1300100101}
   - {fileID: 402069717}
   - {fileID: 526070935}

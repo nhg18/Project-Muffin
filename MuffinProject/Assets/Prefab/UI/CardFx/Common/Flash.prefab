@@ -89,5 +89,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Fx.Common.FlashFx
   startMs: 0
-  alpha: 0.5
-  durationMs: 160
+  alpha: 1
+  durationMs: 60

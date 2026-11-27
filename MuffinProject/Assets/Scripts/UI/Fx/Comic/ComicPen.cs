@@ -338,6 +338,31 @@ namespace Chapchu.UI.Fx.Comic
         }
 
         /// <summary>
+        /// 둥근 띠 그라데이션 — 반지름 innerRadius 에서 inner, outerRadius 에서 outer 로 (시안 createRadialGradient(x, y, r0, x, y, r1) 의 r0 ~ r1 사이).
+        /// 경로와 상관없이 띠만 칠한다 — r1 밖도 끝 색으로 덮으려면 같은 색 둘로 더 큰 띠를 한 번 더 부른다.
+        /// </summary>
+        public void FillRing(float x, float y, float innerRadius, float outerRadius, Color inner, Color outer)
+        {
+            float r = outerRadius * _matrix.Scale;
+            int n = Mathf.Clamp(Mathf.CeilToInt(Mathf.PI * 2f * r / (CurveStep * 2f)), 16, 96);
+            int start = _vh.currentVertCount;
+            Color32 innerPaint = Paint(inner), outerPaint = Paint(outer);
+            for (int i = 0; i < n; i++)
+            {
+                float a = i * Mathf.PI * 2f / n;
+                float cos = Mathf.Cos(a), sin = Mathf.Sin(a);
+                AddVert(_matrix.Apply(x + cos * innerRadius, y + sin * innerRadius), innerPaint);
+                AddVert(_matrix.Apply(x + cos * outerRadius, y + sin * outerRadius), outerPaint);
+            }
+            for (int i = 0; i < n; i++)
+            {
+                int here = start + i * 2, next = start + (i + 1) % n * 2;
+                _vh.AddTriangle(here, here + 1, next + 1);
+                _vh.AddTriangle(here, next + 1, next);
+            }
+        }
+
+        /// <summary>
         /// 경로 안에 그림을 깐다 — 시안 clip(경로) + drawImage(im, x, y, w, h). (x, y, w, h) 는 지금 변환의 좌표,
         /// uv 는 그 칸에 들어갈 그림 영역 (Graphic 의 mainTexture 기준, 0 ~ 1). 색은 흰색 × 투명도.
         /// </summary>
