@@ -212,6 +212,7 @@ namespace Chapchu.Game
         private void ResolveChain()
         {
             double animationEnd = _clock() + _chain[0].Card.ResolveSeconds;
+            _processActor = _chain[0].User; // 이 처리를 일으킨 사람 — 「10장이 된 뒤」(3004)의 「내가 만든 일」 판정
 
             _chainOrder.Clear();
             _chainOrder.AddRange(_chain);
@@ -250,6 +251,7 @@ namespace Chapchu.Game
 
                     int[] targets = entry.Targets.Where(t => !entry.Excluded.Contains(t)).ToArray();
                     _events.Add(new CardResolved(entry.User, entry.Card.InstanceId, entry.Card.CardId, targets, _discardPile.Count));
+                    RecordActionReceived(entry, targets.Where(IsInGame).ToArray());
                 }
 
                 IReadOnlyList<CardEffect> effects = entry.Card.Effects;

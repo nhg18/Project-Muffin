@@ -82,7 +82,7 @@ namespace Chapchu.EditorTools
                             copy.effects = effects;
                     }
 
-                    if (!TryApplyReaction(entry, copy, out error) || !CardSheet.TryApply(entry, copy, out error))
+                    if (!TryApplyReaction(entry, copy, out error) || !TryApplyTrapTrigger(entry, copy, out error) || !CardSheet.TryApply(entry, copy, out error))
                     {
                         Debug.LogError($"[{nameof(CardImporter)}] {error} — 에셋의 효과 구성과 cards.json 을 맞추기", data);
                         failed++;
@@ -153,6 +153,24 @@ namespace Chapchu.EditorTools
             return true;
         }
 
+        // 함정의 발동 조건 종류 · 값 — 파일에 trapTrigger 가 적힌 카드만 덮는다 (04-card.md 6절 「발동 조건」)
+        private static bool TryApplyTrapTrigger(CardSheetEntry entry, CardData data, out string error)
+        {
+            error = null;
+            if (string.IsNullOrWhiteSpace(entry.trapTrigger))
+                return true;
+
+            if (!TryParseName(entry.trapTrigger.Trim(), out TrapTrigger trigger))
+            {
+                error = $"카드 {entry.id}: 함정 발동 조건 「{entry.trapTrigger}」 를 모른다";
+                return false;
+            }
+
+            data.trapTrigger = trigger;
+            data.triggerValue = entry.triggerValue;
+            return true;
+        }
+
         // enum 이름이 정확히 맞을 때만 — CardSheet 의 이름 읽기와 같은 기준 (숫자 · 쉼표 목록은 받지 않는다)
         private static bool TryParseName<T>(string raw, out T value) where T : struct, Enum
         {
@@ -169,7 +187,8 @@ namespace Chapchu.EditorTools
         {
             string effects = string.Join(" + ", data.effects.Select(e => e == null ? "(빈 칸)" : $"{e.GetType().Name}{JsonUtility.ToJson(e)}"));
             string reaction = data.reactsTo.Count > 0 ? $" · 반응 {string.Join("/", data.reactsTo)} {data.reactCondition}{(data.uncounterable ? " 막을 수 없음" : "")}" : "";
-            return $"{data.cardName} · {data.type} · {data.targetType} · {data.targetCondition} · {data.grade} · 「{data.description}」 · {effects}{reaction}";
+            string trap = data.trapTrigger != TrapTrigger.None ? $" · 발동 {data.trapTrigger}{(data.triggerValue > 0 ? " " + data.triggerValue : "")}" : "";
+            return $"{data.cardName} · {data.type} · {data.targetType} · {data.targetCondition} · {data.grade} · 「{data.description}」 · {effects}{reaction}{trap}";
         }
 
         // 그림 파일이 아직 Sprite 가 아니면 가져오기 설정을 바꾼다 — CardData.LoadArt 가 Sprite 로 불러온다. 그림이 없는 카드는 넘어간다

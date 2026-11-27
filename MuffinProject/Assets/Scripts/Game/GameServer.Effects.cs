@@ -222,6 +222,21 @@ namespace Chapchu.Game
             OnHandChanged(actor);
         }
 
+        /// <summary>버림 더미의 그 카드를 actor 손패로 (3007 두고 보자). 맨 위가 아니어도 된다. 더미에 없으면 불발.</summary>
+        internal void TakeFromDiscard(int actor, int cardInstanceId)
+        {
+            int index = _discardPile.FindIndex(c => c.InstanceId == cardInstanceId);
+            if (index < 0 || !IsInGame(actor))
+                return;
+
+            Card card = _discardPile[index];
+            _discardPile.RemoveAt(index);
+            _players[actor].Hand.Add(card);
+            int top = _discardPile.Count > 0 ? _discardPile[_discardPile.Count - 1].CardId : 0;
+            _events.Add(new DiscardTaken(actor, card.InstanceId, card.CardId, _players[actor].Hand.Count, _discardPile.Count, top));
+            OnHandChanged(actor);
+        }
+
         /// <summary>
         /// 대상 손패에서 나머지 모두가 1장씩 가져간다 (1018 무야호). 받는 순서는 쓴 사람부터 턴 진행 방향 — 카드가 떨어지면 거기서 끝 (11-card-list 1018).
         /// 가져가기는 훔침이라 「훔쳐진 후」 기록이 남는다 — 한 사람은 카드를 쓴 사람, 대상이 쓴 사람 자신이면 남지 않는다.

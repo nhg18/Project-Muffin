@@ -21,7 +21,7 @@ namespace Chapchu.Game
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
 
             CountDamage(actor, source, -SetHp(actor, _players[actor].Hp - amount, source));
-            RecordDamage(actor, source);
+            RecordDamage(actor, source, amount);
         }
 
         // 체력은 여기서만 바꾼다 — 원본 변경과 일어난 일이 항상 같이 나간다. 0 미만 · 최대치 초과 불가 (06-health.md 2절).

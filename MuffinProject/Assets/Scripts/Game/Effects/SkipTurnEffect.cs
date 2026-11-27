@@ -42,7 +42,10 @@ namespace Chapchu.Game.Effects
         internal override void Apply(GameServer server, ChainEntry entry)
         {
             foreach (int actor in server.ReceiversOf(subject, entry))
+            {
                 server.MarkSkipTurn(actor);
+                server.RecordBlocked(actor, entry); // 「막힌 뒤」 (3012 편안)
+            }
         }
     }
 }

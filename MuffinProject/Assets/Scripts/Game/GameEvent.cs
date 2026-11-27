@@ -461,6 +461,17 @@
         }
     }
 
+    /// <summary>걸려 있던 다음 턴 스킵이 풀렸다 — 턴을 건너뛰지 않는다 (3012 편안).</summary>
+    public sealed class TurnSkipCleared : GameEvent
+    {
+        public int Actor { get; }
+
+        public TurnSkipCleared(int actor)
+        {
+            Actor = actor;
+        }
+    }
+
     /// <summary>턴이 스킵됐다 — 그 사람의 턴은 시작하지 않고 다음 사람으로.</summary>
     public sealed class TurnSkipped : GameEvent
     {

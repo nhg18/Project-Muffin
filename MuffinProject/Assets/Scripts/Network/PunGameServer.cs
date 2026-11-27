@@ -598,6 +598,10 @@ namespace Chapchu.Network
                         Broadcast(nameof(RPC_OnTurnSkipped), skipped.Actor);
                         break;
 
+                    case TurnSkipCleared skipCleared:
+                        Broadcast(nameof(RPC_OnTurnSkipCleared), skipCleared.Actor);
+                        break;
+
                     case CardReturnedToHand back:
                         Broadcast(nameof(RPC_OnCardReturnedToHand), back.Actor, back.CardInstanceId, back.CardId, back.HandCount);
                         PlayerPropsOf(playerProps, back.Actor)[PlayerProps.HandCount] = back.HandCount;
@@ -1064,6 +1068,13 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseTurnSkipped(actorNumber);
+        }
+
+        [PunRPC]
+        private void RPC_OnTurnSkipCleared(int seq, int actorNumber, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseTurnSkipCleared(actorNumber);
         }
 
         [PunRPC]

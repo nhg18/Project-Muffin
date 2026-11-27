@@ -23,6 +23,27 @@ namespace Chapchu.Game
             _events.Add(new ActionBlockChanged(actor, ActionBlockOf(player)));
         }
 
+        /// <summary>actor 의 막기 상태를 모두 푼다 — 다음 턴 스킵 · 행동 카드 금지(다음 · 이번 턴). 찹츄는 건드리지 않는다 (3012 편안).</summary>
+        internal void ClearBlockStatus(int actor)
+        {
+            if (!IsInGame(actor))
+                return;
+
+            PlayerState player = _players[actor];
+            if (player.SkipNextTurn)
+            {
+                player.SkipNextTurn = false;
+                _events.Add(new TurnSkipCleared(actor));
+            }
+
+            if (player.BlockActionNextTurn || player.ActionBlocked)
+            {
+                player.BlockActionNextTurn = false;
+                player.ActionBlocked = false;
+                _events.Add(new ActionBlockChanged(actor, ActionBlockOf(player)));
+            }
+        }
+
         /// <summary>user 의 다음 실제 턴이 시작되기 전까지 「기다려」 (1023). 이미 걸어 둔 사람이 다시 쓰면 그대로.</summary>
         internal void StartWait(int user)
         {

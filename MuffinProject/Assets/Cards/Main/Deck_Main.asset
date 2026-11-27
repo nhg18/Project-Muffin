@@ -77,4 +77,16 @@ MonoBehaviour:
     count: 1
   - card: {fileID: 11400000, guid: 790bd8ba65ecd8548bffad96d5d1a107, type: 2}
     count: 2
+  - card: {fileID: 11400000, guid: 91802b016d5ebfc488735c4411856417, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 583138fee952d244990306a67071cf15, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 4dc9044ca26629f448994ecb16db521a, type: 2}
+    count: 2
+  - card: {fileID: 11400000, guid: 70e69842bee7b5840b9ec002f5dc71bf, type: 2}
+    count: 1
+  - card: {fileID: 11400000, guid: 3a5b3336852529d4ca999854a30b0932, type: 2}
+    count: 3
+  - card: {fileID: 11400000, guid: 9b83c9e2cc5ad4d4f8ef43bb5d0ec265, type: 2}
+    count: 2
   sheet: {fileID: 4900000, guid: b5bc381f71aa40d4f8b411c8fa221a8a, type: 3}

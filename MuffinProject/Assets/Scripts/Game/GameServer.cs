@@ -93,6 +93,7 @@ namespace Chapchu.Game
                 SetHp(actor, MaxHp);
 
             DealInitialHands(actors);
+            SettleHands(); // 처음 받은 손패는 「10장이 된」 것이 아니다 (3004)
             StartFirstTurn();
             return TakeEvents();
         }

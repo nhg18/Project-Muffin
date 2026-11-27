@@ -2510,6 +2510,127 @@ public static class MultiTest
             Check(left != null && left.DiscardCount == before + 6 + 2 && left.CardIds.Length == 8, "나감 → 손패 6 + 함정 2 버림 더미로 (카드 종류 8장이 실린다)");
         }
 
+        // 8. 확정 함정 6장 (11-card-list 3절) — 노션 카드 DB 의 확정 행과 같은 조건 · 효과로 만든 카드
+        Func<int, Card> stop = id => new Card(id, 3002, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new SkipTurnEffect { subject = EffectSubject.Target } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterTargetedByOther);
+        Func<int, Card> siren = id => new Card(id, 3004, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 15 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterHandReachedTen);
+        Func<int, Card> payback = id => new Card(id, 3007, CardType.Trap, TargetType.Self, new CardEffect[] { new TakeTriggerCardEffect() }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterHitByAction);
+        Func<int, Card> playDead = id => new Card(id, 3008, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 20, now = true } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending);
+        Func<int, Card> notMe = id => new Card(id, 3009, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterBigDamage, 20);
+        Func<int, Card> rest = id => new Card(id, 3012, CardType.Trap, TargetType.Self, new CardEffect[] { new HealEffect { subject = EffectSubject.Self, amount = 100 }, new ClearStatusEffect { subject = EffectSubject.Self } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterBlocked);
+        Func<int, Card> freeze = id => new Card(id, 901, CardType.Action, TargetType.OneOther, new CardEffect[] { new SkipTurnEffect { subject = EffectSubject.Target } }, null, ChainTable.Reveal, ChainTable.Resolve);
+        Func<int, Card> poke = id => new Card(id, 902, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+        {
+            // 3002 멈춰 — 나를 고른 행동 카드 → 쓴 사람의 다음 턴 스킵. 전원 카드에는 발동하지 않는다
+            var t = new ChainTable();
+            t.SetTrapCard(t.O1, stop);
+            var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            Check(events.OfType<TrapActivated>().Any(e => e.Actor == t.O1 && e.Targets.SequenceEqual(new[] { t.Turn })) && t.State(t.Turn).SkipNextTurn,
+                "3002 멈춰 — 나를 고른 카드 → 쓴 사람에게 턴 스킵");
+            var t2 = new ChainTable();
+            t2.SetTrapCard(t2.O1, stop);
+            t2.PlayAndResolve(t2.Turn, t2.Find2(t2.Turn, ChainTable.Wave));
+            Check(t2.TrapCount(t2.O1) == 1 && !t2.State(t2.Turn).SkipNextTurn, "3002 멈춰 — 전원 카드에는 발동하지 않는다");
+        }
+        {
+            // 3004 사이렌 — 남이 정확히 10장이 된 뒤 15 피해. 11장이 되면 · 원래 10장이면 발동하지 않는다. 턴 뽑기 직후에도
+            var t = new ChainTable();
+            t.SetTrapCard(t.O2, siren);
+            t.SetHandSize(t.Turn, 11);
+            Card hit = t.Give(t.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t.PlayAndResolve(t.Turn, hit, t.O1); // 12 → 내고 11 — 10장이 아니다
+            Check(t.TrapCount(t.O2) == 1 && t.Hp(t.Turn) == 100, "3004 사이렌 — 11장이 되면 발동하지 않는다");
+            var t2 = new ChainTable();
+            t2.SetTrapCard(t2.O2, siren);
+            t2.SetHandSize(t2.Turn, 10);
+            Card hit2 = t2.Give(t2.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            var events = t2.PlayAndResolve(t2.Turn, hit2, t2.O1); // 11 → 내고 10
+            Check(events.OfType<TrapActivated>().Any(e => e.Actor == t2.O2 && e.Targets.SequenceEqual(new[] { t2.Turn })) && t2.Hp(t2.Turn) == 85,
+                $"3004 사이렌 — 카드를 내 10장이 됨 → 그 사람에게 15 피해 (♥{t2.Hp(t2.Turn)})");
+            var t3 = new ChainTable();
+            t3.SetTrapCard(t3.O2, siren);
+            t3.SetHandSize(t3.Turn, 8);
+            var drawn = t3.Server.Draw(t3.Turn).ToList();
+            Check(t3.HandCount(t3.Turn) == 10 && drawn.OfType<TrapActivated>().Any(e => e.Actor == t3.O2) && t3.Hp(t3.Turn) == 85, $"3004 사이렌 — 턴 뽑기로 10장 → 뽑기 직후 발동 (♥{t3.Hp(t3.Turn)})");
+            t3.Run(t3.Now + ChainTable.Reveal + ChainTable.Resolve + 0.5);
+            Check(t3.Server.CurrentTurnActor == t3.O1, "3004 사이렌 — 함정 연출 뒤 다음 턴");
+            var t4 = new ChainTable();
+            t4.SetTrapCard(t4.Turn, siren);
+            t4.SetHandSize(t4.Turn, 8);
+            t4.Server.Draw(t4.Turn);
+            Check(t4.TrapCount(t4.Turn) == 1, "3004 사이렌 — 내 손패가 10장이 되면 내 함정은 발동하지 않는다");
+        }
+        {
+            // 3007 두고 보자 — 나에게 처리된 행동 카드를 버림 더미에서 내 손패로. 효과는 그대로 받는다. 본인 무효면 발동하지 않는다
+            var t = new ChainTable();
+            t.SetTrapCard(t.O1, payback);
+            Card hit = t.Find2(t.Turn, ChainTable.Hit);
+            var events = t.PlayAndResolve(t.Turn, hit, t.O1);
+            Check(t.Hand(t.O1).Contains(hit) && !t.Discard.Contains(hit) && t.Hp(t.O1) == 80 && events.OfType<DiscardTaken>().Any(e => e.Actor == t.O1 && e.CardInstanceId == hit.InstanceId),
+                $"3007 두고 보자 — 피해는 받고(♥{t.Hp(t.O1)}) 그 카드는 내 손패로");
+            var t2 = new ChainTable();
+            t2.SetTrapCard(t2.O1, payback);
+            t2.PlayCard(t2.Turn, t2.Find2(t2.Turn, ChainTable.Hit), t2.O1);
+            t2.At(2);
+            t2.Counter(t2.O1, ChainTable.SelfOnly);
+            t2.Run(t2.Now + 20);
+            Check(t2.TrapCount(t2.O1) == 1 && t2.Hp(t2.O1) == 100, "3007 두고 보자 — 내 몫을 무효했으면 당한 게 아니다");
+            var t3 = new ChainTable();
+            t3.SetTrapCard(t3.O1, payback);
+            t3.SetTrapCard(t3.O2, payback);
+            Card wave = t3.Find2(t3.Turn, ChainTable.Wave);
+            t3.PlayAndResolve(t3.Turn, wave);
+            Check(t3.Hand(t3.O1).Contains(wave) && t3.TrapCount(t3.O1) == 0 && t3.TrapCount(t3.O2) == 1, "3007 두고 보자 — 둘이 맞으면 먼저 설치한 사람이 가져가고, 뒤 함정은 카드가 없어 슬롯에 남는다");
+        }
+        {
+            // 3008 죽은 척 — 사망 대기 → HP 20 으로 생존. 함정 줄에서 HP 0 이 된 사람도
+            var t = new ChainTable();
+            t.SetHp(t.O1, 20);
+            t.SetTrapCard(t.O1, playDead);
+            var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            int pending = events.FindIndex(e => e is DeathPending d && d.Actor == t.O1), avoided = events.FindIndex(e => e is DeathAvoided d && d.Actor == t.O1);
+            Check(pending >= 0 && avoided > pending && t.Hp(t.O1) == 20 && t.State(t.O1).Life == LifeState.Alive && t.TrapCount(t.O1) == 0,
+                $"3008 죽은 척 — 사망 대기 → HP 20 으로 생존 (♥{t.Hp(t.O1)} · {t.State(t.O1).Life})");
+            Check(!t.Run(t.Now + 10).OfType<PlayerDied>().Any(), "3008 죽은 척 — 최종 사망하지 않는다");
+            var t2 = new ChainTable();
+            t2.SetTrapCard(t2.O2, siren);
+            t2.SetHp(t2.Turn, 10);
+            t2.SetTrapCard(t2.Turn, playDead);
+            t2.SetHandSize(t2.Turn, 10);
+            Card hit = t2.Give(t2.Turn, id => new Card(id, ChainTable.Hit, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 20 } }, null, ChainTable.Reveal, ChainTable.Resolve));
+            t2.PlayAndResolve(t2.Turn, hit, t2.O1);
+            Check(t2.Hp(t2.Turn) == 20 && t2.State(t2.Turn).Life == LifeState.Alive, $"3008 죽은 척 — 사이렌에 HP 0 이 돼도 살아난다 (♥{t2.Hp(t2.Turn)})");
+        }
+        {
+            // 3009 나만 아니면 돼 — 남이 20 이상 피해를 받은 뒤 그 사람에게 10. 20 미만 · 내가 받은 피해에는 발동하지 않는다
+            var t = new ChainTable();
+            t.SetTrapCard(t.O2, notMe);
+            var events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            Check(events.OfType<TrapActivated>().Any(e => e.Actor == t.O2 && e.Targets.SequenceEqual(new[] { t.O1 })) && t.Hp(t.O1) == 70, $"3009 나만 아니면 돼 — 20 피해 받은 O1 에게 10 더 (♥{t.Hp(t.O1)})");
+            var t2 = new ChainTable();
+            t2.SetTrapCard(t2.O2, notMe);
+            t2.PlayAndResolve(t2.Turn, t2.Give(t2.Turn, poke), t2.O1);
+            Check(t2.TrapCount(t2.O2) == 1 && t2.Hp(t2.O1) == 90, "3009 나만 아니면 돼 — 10 피해에는 발동하지 않는다");
+            var t3 = new ChainTable();
+            t3.SetTrapCard(t3.O2, notMe);
+            t3.PlayAndResolve(t3.Turn, t3.Find2(t3.Turn, ChainTable.Hit), t3.O2);
+            Check(t3.TrapCount(t3.O2) == 1 && t3.Hp(t3.O2) == 80, "3009 나만 아니면 돼 — 내가 받은 피해에는 발동하지 않는다");
+        }
+        {
+            // 3012 편안 — 남의 카드로 턴 스킵이 걸린 뒤 → HP 가득 · 막기 상태 해제 (방금 걸린 것도). 함정(멈춰)이 건 스킵으로는 발동하지 않는다
+            var t = new ChainTable();
+            t.SetHp(t.O1, 30);
+            t.SetTrapCard(t.O1, rest);
+            var events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, freeze), t.O1);
+            Check(t.Hp(t.O1) == 100 && !t.State(t.O1).SkipNextTurn && events.OfType<TurnSkipCleared>().Any(e => e.Actor == t.O1),
+                $"3012 편안 — 턴 스킵에 당함 → HP 100 · 스킵 풀림 (♥{t.Hp(t.O1)} · 스킵 {t.State(t.O1).SkipNextTurn})");
+            var t2 = new ChainTable();
+            t2.SetHp(t2.Turn, 30);
+            t2.SetTrapCard(t2.Turn, rest);
+            t2.SetTrapCard(t2.O1, stop);
+            t2.PlayAndResolve(t2.Turn, t2.Find2(t2.Turn, ChainTable.Hit), t2.O1);
+            Check(t2.State(t2.Turn).SkipNextTurn && t2.TrapCount(t2.Turn) == 1 && t2.Hp(t2.Turn) == 30, "3012 편안 — 함정(멈춰)이 건 스킵으로는 발동하지 않는다 (함정은 함정을 부르지 않는다)");
+        }
+
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
     }
 
@@ -2639,8 +2760,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2 };
-            Check(ids.Length == 65 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 65장 (행동 45 + 카운터 20, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2, [3002] = 2, [3004] = 2, [3007] = 2, [3008] = 1, [3009] = 3, [3012] = 2 };
+            Check(ids.Length == 77 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 77장 (행동 45 + 카운터 20 + 함정 12, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -2648,7 +2769,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 65)
+            if (ids.Length == 77)
             {
                 // ── 카운터 묶음 5 (11-card-list 1-3) — 2005 묻고 따블로 가 ──
                 // 차례인 사람의 행동 카드 ← O2 의 2003 진짜 할거야? ← O1 의 따블 → 2003 무효 · 행동 카드 2배. 20초까지 돌린 사건을 돌려준다

@@ -79,7 +79,9 @@ namespace Chapchu.Game
                 return; // 공개 중에 나갔거나 이미 사망 대기 — 그대로
 
             SetHp(loser, 0);
-            CheckDeathPending(now);
+            double settled = FireTraps(now); // 사망 대기 능력(3008 죽은 척)은 HP 설정에도 발동한다
+            DelayTurnUntil(settled);
+            CheckDeathPending(settled);
         }
 
         // 1012 대소동 · 게임 시작 — 개판은 처음으로

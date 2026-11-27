@@ -131,6 +131,7 @@ namespace Chapchu.Game
             foreach (int actor in _turnOrder)
                 SetHp(actor, MaxHp);
             DealInitialHands(_turnOrder);
+            SettleHands();
             _events.Add(new FalloutChanged(_restartCount, 0));
 
             CurrentTurnActor = -1; // 지난 판의 턴 주인 상태(행동 금지 해제 등)는 이미 지웠다
