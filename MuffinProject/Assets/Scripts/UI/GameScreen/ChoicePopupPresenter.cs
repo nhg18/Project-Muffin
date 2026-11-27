@@ -84,7 +84,7 @@ namespace Chapchu.UI.GameScreen
                 return;
 
             double total = _deadline - _startsAt;
-            _view.SetFraction(total > 0 ? (float)((_deadline - PhotonNetwork.Time) / total) : 0f);
+            _view.SetFraction(total > 0 ? (float)((_deadline - GameClock.Now) / total) : 0f);
         }
 
         // 내가 고르는 사람 — 바로 연다. HP 는 지금 방 속성 값 (피해가 들어가기 전).
@@ -184,7 +184,7 @@ namespace Chapchu.UI.GameScreen
         {
             if (!_open || !_mine || !_requested || code != RejectCode.NotChoosing)
                 return;
-            if (PhotonNetwork.Time < _deadline)
+            if (GameClock.Now < _deadline)
                 _requested = false;
         }
 

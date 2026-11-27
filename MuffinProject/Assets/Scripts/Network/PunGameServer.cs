@@ -72,6 +72,7 @@ namespace Chapchu.Network
             if (deck == null)
                 Debug.LogError($"[{nameof(PunGameServer)}] {nameof(deck)} 참조가 비어 있습니다.", this);
 
+            GameClock.ResetForNewGame(); // 지난 판에 멈춘 시간을 비운다 — 이 씬의 누구도 게임 시각을 읽기 전에
             _server = CreateServer();
 
             if (PhotonNetwork.InRoom)
@@ -119,7 +120,10 @@ namespace Chapchu.Network
                 _bots = CreateBots(bots);
 
             _started = true;
-            Send(_server.StartGame(actors, cards, bots)); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
+            IReadOnlyList<GameEvent> started = _server.StartGame(actors, cards, bots); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
+            // 섞은 턴 순서를 첫 턴 알림보다 먼저 — 화면의 턴 순서가 좌석 순서가 아니라 이 순서를 그린다 (03-turn.md 6절 #2)
+            NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.TurnOrder] = _server.TurnOrder.ToArray() });
+            Send(started);
         }
 
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
@@ -375,12 +379,12 @@ namespace Chapchu.Network
         // 시작 경로(Awake)와 이주 경로(TakeOver)가 함께 쓴다 — 한쪽만 바뀌어 이주한 판만 다르게 움직이지 않게
         private static GameServer CreateServer()
         {
-            return new GameServer(new SecureRandom(), () => PhotonNetwork.Time); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+            return new GameServer(new SecureRandom(), () => GameClock.Now); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
         }
 
         private BotDriver CreateBots(int[] bots)
         {
-            return new BotDriver(_server, bots, new System.Random(), () => PhotonNetwork.Time, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
+            return new BotDriver(_server, bots, new System.Random(), () => GameClock.Now, bot => BotRoster.LevelOf(bot - BotRoster.ActorBase));
         }
 
         // 판을 이어 갈 수 없다 — 전원에게 알리고 방(대기 화면)으로 돌아간다. 거기서 다시 시작할 수 있다 (09-network.md 9.1, PM 2026-11-19)
@@ -644,6 +648,7 @@ namespace Chapchu.Network
                         roomProps[RoomProps.DiscardCount] = 0;
                         roomProps[RoomProps.DiscardTop] = null;
                         roomProps[RoomProps.TurnDirection] = null;
+                        roomProps[RoomProps.TurnOrder] = restarted.Order; // 새 판은 순서를 다시 섞는다
                         roomProps[RoomProps.WaitCasters] = null;
                         Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
                         break;
@@ -771,7 +776,7 @@ namespace Chapchu.Network
             var roomReset = new Hashtable
             {
                 [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null,
-                [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null, [RoomProps.TurnActor] = null, [RoomProps.TurnDeadline] = null, [RoomProps.DeckCount] = null,
+                [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null, [RoomProps.TurnActor] = null, [RoomProps.TurnOrder] = null, [RoomProps.TurnDeadline] = null, [RoomProps.DeckCount] = null,
                 [RoomProps.EventSeq] = null, // 처리 번호는 판마다 1부터 — 지난 판 번호를 새 방장이 이어받지 않게
             };
             foreach (int bot in BotRoster.Actors)
