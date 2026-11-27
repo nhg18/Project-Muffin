@@ -290,6 +290,8 @@ namespace Chapchu.UI.GameScreen
         {
             _fxState = state;
             _fxIdle = false;
+            if (state != GradeFx.Off)
+                EnsureGradeFxQuads();
         }
 
         /// <summary>false 면 포인터를 가리지 않고 아래 오브젝트(좌석 등)로 넘긴다. 보이는 것은 그대로.</summary>
@@ -508,7 +510,7 @@ namespace Chapchu.UI.GameScreen
 
         // ── 등급 연출 ─────────────────────────────────────────
 
-        // 등급이 정해질 때 — 처음은 꺼진 상태(별도 숨김). 띠 축 · 판은 이때 잡는다.
+        // 등급이 정해질 때 — 처음은 꺼진 상태(별도 숨김). 띠 축은 이때 잡는다 (판은 EnsureGradeFxQuads).
         private void SetupGradeFx(int grade)
         {
             _grade = Mathf.Clamp(grade, 0, 3);
@@ -537,6 +539,11 @@ namespace Chapchu.UI.GameScreen
             _sheenArt = new Vector4(axis.x, axis.y, fromCorner + Vector2.Dot(artCenter, axis), sheenWhite.x);
 
             ApplyGradeFx();
+        }
+
+        // 글로우 · 반짝이 판 — 처음으로 Hand · Full 자리에 놓일 때 만든다 (이미 있으면 그대로 쓴다). 늘 Off 인 버림 더미 · 함정 크게 보기는 만들지 않는다.
+        private void EnsureGradeFxQuads()
+        {
             if (!Application.isPlaying) return;
 
             if (_grade >= 2 && _glowRenderer == null)
