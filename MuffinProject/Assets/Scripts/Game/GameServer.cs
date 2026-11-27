@@ -45,6 +45,9 @@ namespace Chapchu.Game
 
         public int CurrentTurnActor { get; private set; } = -1;
 
+        /// <summary>턴 순서 (정방향, 03-turn.md 6절) — 빠진 사람도 자리에 남는다. 화면에 알리는 값.</summary>
+        public IReadOnlyList<int> TurnOrder => _turnOrder;
+
         public GameServer(Random random, Func<double> clock)
         {
             _random = random;
