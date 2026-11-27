@@ -18,9 +18,9 @@ namespace Chapchu.UI.Lobby
         private const string FriendsTabFormat = "친구 {0}";
         private const string RequestsTabText = "요청";
         private const string RequestsTabFormat = "요청 {0}";
-        private const string NoFriendsText = "아직 친구가 없어요.";
+        private const string NoFriendsText = "아직 친구가 없어요. 「추가」 에서 친구를 찾아보세요.";
         private const string NoRequestsText = "받거나 보낸 요청이 없어요.";
-        private const string NoResultText = "찾는 플레이어가 없어요.";
+        private const string NoResultText = "찾는 플레이어가 없어요. 닉네임 또는 친구 코드를 확인해 주세요.";
 
         [SerializeField] private GameObject content;
         [SerializeField] private RectTransform frame;
