@@ -305,7 +305,7 @@ MonoBehaviour:
   heavyDrawMs: 55
   heavyExtraLifeMs: 120
   heavyShake: 22
-  heavyFlashAlpha: 0.45
-  heavyFlashMs: 70
+  heavyFlashAlpha: 1
+  heavyFlashMs: 50
   heavyPunch: 0.05
   heavyPunchMs: 160

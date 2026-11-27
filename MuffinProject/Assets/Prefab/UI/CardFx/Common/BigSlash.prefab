@@ -281,7 +281,7 @@ MonoBehaviour:
   ghostMs: 140
   flashDelayMs: 60
   flashAlpha: 1
-  flashMs: 180
+  flashMs: 70
   shakeDelayMs: 140
   shakeMs: 380
   shakeKeys:

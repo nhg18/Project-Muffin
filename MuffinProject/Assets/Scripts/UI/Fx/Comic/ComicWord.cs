@@ -68,11 +68,11 @@ namespace Chapchu.UI.Fx.Comic
         [Tooltip("들쭉날쭉 씨앗 (시안 seed).")]
         [SerializeField] private int seed = 1;
         [Tooltip("흐린 그림자를 깐다 (시안 shadow).")]
-        [SerializeField] private bool shadow = true;
+        [SerializeField] private bool shadow;
         [Tooltip("그림자 색 · 진하기 (시안 shCol · 0.35).")]
         [SerializeField] private Color shadowColor = new Color(0f, 0f, 0f, 0.35f);
         [Tooltip("윗부분을 밝게 (시안 shine).")]
-        [SerializeField] private bool shine = true;
+        [SerializeField] private bool shine;
 
         private readonly List<Glyph> _glyphs = new List<Glyph>();
         private readonly HashSet<uint> _missing = new HashSet<uint>();

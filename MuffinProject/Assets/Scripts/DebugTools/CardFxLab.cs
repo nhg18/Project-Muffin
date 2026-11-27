@@ -284,6 +284,8 @@ namespace Chapchu.DebugTools
                 {
                     captionText.text = $"{cards[_card].cardName} — 전체";
                     yield return fx.PlayRoutine(context);
+                    if (fx.HasPostStage)
+                        yield return fx.PlayPostRoutine(context);
                 }
                 else if (_effect < effects.Count)
                 {

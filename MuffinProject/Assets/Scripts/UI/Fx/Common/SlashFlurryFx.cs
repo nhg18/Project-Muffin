@@ -102,9 +102,11 @@ namespace Chapchu.UI.Fx.Common
         [SerializeField] private float heavyShake = 22f;
         [Range(0f, 1f)]
         [Tooltip("묵직한 칼선 때 번쩍이는 판의 투명도.")]
-        [SerializeField] private float heavyFlashAlpha = 0.45f;
-        [Tooltip("번쩍임이 사라지는 시간 (ms).")]
-        [SerializeField] private float heavyFlashMs = 70f;
+        [SerializeField] private float heavyFlashAlpha = 1f;
+        [Tooltip("번쩍임을 켜 두는 시간 (ms) — 지나면 딱 꺼진다.")]
+        [SerializeField] private float heavyFlashMs = 50f;
+        [Tooltip("번쩍임 사이 최소 간격 (ms) — 이보다 가까운 묵직한 칼선은 번쩍 없이 긋는다. 판 전체가 하얗게 바뀌는 번쩍이 1초에 3번을 넘으면 광과민 기준(WCAG 2.3.1)에 걸리고, 칼선 간격은 화면 주사율에 따라 좁아진다.")]
+        [SerializeField] private float heavyFlashGapMs = 400f;
         [Tooltip("판이 튕기는 크기 (1 에 더하는 값).")]
         [SerializeField] private float heavyPunch = 0.05f;
         [Tooltip("판이 튕기는 시간 (ms).")]
@@ -144,6 +146,7 @@ namespace Chapchu.UI.Fx.Common
             float start = Time.time;
             float lastSpawn = float.NegativeInfinity;
             float lastBackground = float.NegativeInfinity;
+            float lastFlash = float.NegativeInfinity;
             int spawned = 0;
 
             while (true)
@@ -177,7 +180,11 @@ namespace Chapchu.UI.Fx.Common
                         _shaker?.Shake(heavy ? heavyShake : bandShake, shakeMs);
                         if (heavy)
                         {
-                            Flash(flash, heavyFlashAlpha, heavyFlashMs);
+                            if (elapsedMs - lastFlash >= heavyFlashGapMs)
+                            {
+                                lastFlash = elapsedMs;
+                                Flash(flash, heavyFlashAlpha, heavyFlashMs);
+                            }
                             _shaker?.Punch(heavyPunch, heavyPunchMs);
                         }
                     }

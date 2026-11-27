@@ -41,7 +41,7 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private Color accent = Color.white;
         [Tooltip("진한 색 — 제목 입체 · 띠 그림자 (시안 deep).")]
         [SerializeField] private Color deep = Color.black;
-        [Tooltip("밝은 색 (시안 light — 제목 면 아래 색이지만 시안 캔버스에서 보이지 않는다).")]
+        [Tooltip("밝은 색 — 상자 없는 한마디(plainTag)의 글자 색 (시안 light. 제목 면 아래 색이기도 하지만 시안 캔버스에서 보이지 않는다).")]
         [SerializeField] private Color lightColor = Color.white;
         [Tooltip("장면 밑바탕 색 — 장면 그림 뒤 화면 전체 (시안 bgCol).")]
         [SerializeField] private Color background = Color.black;
@@ -53,6 +53,12 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private float titleAt = 1f;
         [Tooltip("판 흔들림 (x = 시각 초, y = 세기 — 시안 hits).")]
         [SerializeField] private Vector2[] hits = Array.Empty<Vector2>();
+        [Tooltip("제목 뒤 붓질 띠를 그리지 않는다 (시안 noBand).")]
+        [SerializeField] private bool noBand;
+        [Tooltip("한마디를 상자 없이 밝은 색 글자 + 진한 그림자로 (시안 tagPlain).")]
+        [SerializeField] private bool plainTag;
+        [Tooltip("제목 글자 · 띠를 빼고 한마디만 — 장면 안에서 카드 이름을 이미 크게 외칠 때 (같은 글자가 두 번 나오지 않게).")]
+        [SerializeField] private bool noTitle;
 
         /// <summary>장면 길이 (초, 시안 len).</summary>
         public float Length => length;
@@ -80,6 +86,15 @@ namespace Chapchu.UI.Fx.Comic
 
         /// <summary>판 흔들림 (시각, 세기) (시안 hits).</summary>
         public Vector2[] Hits => hits;
+
+        /// <summary>제목 뒤 띠를 그리지 않는다 (시안 noBand).</summary>
+        public bool NoBand => noBand;
+
+        /// <summary>한마디를 상자 없이 글자만 (시안 tagPlain).</summary>
+        public bool PlainTag => plainTag;
+
+        /// <summary>제목 글자 · 띠를 빼고 한마디만.</summary>
+        public bool NoTitle => noTitle;
 
         /// <summary>장면을 시작하기 전에 한 번 — 누가 누구인지(강아지 키 · 얼굴)를 그림에 넣는다. 그림 만들기(스티커)는 틀이 기다려 준다.</summary>
         public virtual void Begin(ComicContext context)
