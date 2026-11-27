@@ -100,6 +100,8 @@ namespace Chapchu.UI.Fx
         {
             ResetState();
             FitCamera();
+            LoadSound(context);
+            StartSound();
             yield return TimelineRoutine(_cutIn, context, null);
         }
 
@@ -108,10 +110,13 @@ namespace Chapchu.UI.Fx
         // 대상 자리마다 한꺼번에 마무리 칼질 → impactMs 에 결과 (부르는 쪽이 이 루틴이 끝나면 공통 피해 연출을 보인다)
         public override IEnumerator PlayPostRoutine(CardFxContext context)
         {
+            LoadSound(context, true);
             yield return new WaitForSeconds(finishDelayMs / 1000f);
             if (context.Targets == null || context.Targets.Count == 0)
                 yield break;
 
+            // 칼질 소리는 대상이 여럿이어도 한 번 — 대상마다 겹쳐 틀면 커지기만 한다
+            StartSound();
             foreach (RectTransform target in context.Targets)
                 StartCoroutine(TimelineRoutine(_finish, context, target));
             yield return new WaitForSeconds(impactMs / 1000f);

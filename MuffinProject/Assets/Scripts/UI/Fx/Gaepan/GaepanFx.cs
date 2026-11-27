@@ -167,7 +167,9 @@ namespace Chapchu.UI.Fx.Gaepan
             // 한 장면에 그리는 수 — 무리(또는 썰매) + 앞장선 강아지, 달리는 녀석마다 눈보라, 나무
             int dogs = Mathf.Max(dogCounts.x, dogCounts.y) + 1;
             world.Begin(dogs, dogs * SprayPuffs, treeCount);
+            LoadSound(context);
             float start = Time.time;
+            StartSound();
             for (float t = 0f; t < duration; t = Time.time - start)
             {
                 Render(t);
