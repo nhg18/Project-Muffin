@@ -18,7 +18,6 @@ namespace Chapchu.EditorTools
         private static readonly Color GpCream = Hex(0xFFFCF6);
         private static readonly Color GpPink = Hex(0xFF7EA4);
         private static readonly Color GpPinkDeep = Hex(0xFF5C8A);
-        private static readonly Color GpPaw = Hex(0xFF8FB0);
         private static readonly Color GpYellow = Hex(0xFFE27A);
         private static readonly Color GpSegmentOff = Hex(0xF1E2CF);
         private static readonly Color GpCardIcon = Hex(0x74B8F5);
