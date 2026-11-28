@@ -40,10 +40,10 @@ namespace Chapchu.Game.Effects
             return BotBaseScore + view.Server.HandCountOf(target) * BotPerHandCard + (mustDiscard ? BotMustDiscardBonus : 0) + (mustDiscard && view.SeesChapchu(target) ? Bots.BotView.BreakChapchu : 0);
         }
 
-        /// <summary>봇이 대상일 때 (프로토타입 v2): HP ≤ 받을 피해(2배 반영)면 버리기, 아니면 손패 5장 이상이거나 찹츄면 피해, 그 밖은 버리기.</summary>
+        /// <summary>봇이 대상일 때 (프로토타입 v2): HP ≤ 받을 피해(2배 · 감소 반영)면 버리기, 아니면 손패 5장 이상이거나 찹츄면 피해, 그 밖은 버리기.</summary>
         internal int BotOption(GameServer server, ChainEntry entry, int bot)
         {
-            if (server.PlayerHp(bot) <= server.Scaled(entry, amount))
+            if (server.PlayerHp(bot) <= server.ExpectedDamage(entry, bot, amount))
                 return DiscardAll;
             return server.HandCountOf(bot) >= BotTakeDamageHand || server.StateOf(bot).IsChapchu ? TakeDamage : DiscardAll;
         }
