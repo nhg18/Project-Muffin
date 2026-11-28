@@ -13,7 +13,7 @@
 - 시험: `rules` 에 「2021 카운터 위에는 거절 9」 추가 — 통과
 
 ### 남은 일
-- [ ] `run.sh counter cost` · `counter reflect` 가 「스킵 버튼이 아직 꺼져 있다」 로 실패한다 — 방장 규칙은 카운터를 물어 오는데(`CountersUsable`) 화면의 스킵 버튼이 안 켜진다. 이번 변경과 무관(반사도 같다), 원인 미확인
+- [x] `run.sh counter cost` · `counter reflect` 가 「스킵 버튼이 아직 꺼져 있다」 로 실패한다 → **게임 버그 아님**: 11-26 v3 화면부터 스킵은 오른쪽 아래 `skipCornerButton` 인데 시험 도구(`MultiTest.cs`)가 늘 꺼진 알약 버튼 `skipButton` 을 보고 있었다. 시험 도구를 고침 (`docs/multitest-skip-corner`, 2026-11-28)
 - [ ] 반사 · 기다려! · 침착 문구(PR #257, `hotfix_roh`)는 develop 과 충돌 상태
 
 ---
