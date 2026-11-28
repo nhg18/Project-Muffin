@@ -263,7 +263,7 @@ namespace Chapchu.UI.GameScreen
         private void LateUpdate()
         {
             bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0;
-            deck.ShowCanDraw(canAct && !seats.IsSelectingTargets);
+            deck.ShowCanDraw(canAct, seats.IsSelectingTargets || hand.IsHoldingCard);
             turnTimer.TickForMe = canAct;
             UpdateTargetArrows();
         }

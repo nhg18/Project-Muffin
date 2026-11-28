@@ -17,6 +17,8 @@ namespace Chapchu.UI.GameScreen
 
         private DeckView _view;
         private bool _drawRequested; // 뽑기를 보냈다 — 턴이 바뀌거나 거절될 때까지 버튼을 다시 띄우지 않는다 (두 번 누름 방지)
+        private bool _picking;       // 손패 카드를 쥐었거나 대상을 고르는 중 — 덱 탭 · 버튼으로 뽑지 않는다
+        private bool _pressBlocked;  // 덱을 누를 때 _picking 이었다 — 쥔 카드를 덱 위에 놓는 클릭이 떼는 순간 뽑기로 이어지지 않게
 
         private void Awake()
         {
@@ -29,12 +31,16 @@ namespace Chapchu.UI.GameScreen
         private void OnEnable()
         {
             _view.DrawClicked += HandleDrawClicked;
+            _view.Pressed += HandlePressed;
+            _view.Tapped += HandleTapped;
             GameEvents.OnMyRequestRejected += HandleRequestRejected;
         }
 
         private void OnDisable()
         {
             _view.DrawClicked -= HandleDrawClicked;
+            _view.Pressed -= HandlePressed;
+            _view.Tapped -= HandleTapped;
             GameEvents.OnMyRequestRejected -= HandleRequestRejected;
         }
 
@@ -50,14 +56,34 @@ namespace Chapchu.UI.GameScreen
         /// <summary>덱 잔여 장수 — 누가 뽑든 · 다시 채워지든 전원에게 온다.</summary>
         public void ShowDeckCount(int deckCount) => _view.SetDeckCount(deckCount);
 
-        /// <summary>「뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다).</summary>
-        public void ShowCanDraw(bool canDraw) => _view.SetCanDraw(canDraw && !_drawRequested);
+        /// <summary>
+        /// 「뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다).
+        /// picking = 손패 카드를 쥐었거나 대상을 고르는 중. 그동안은 덱 탭도 받지 않는다 — 방장은 내 화면의 선택 상태를 모르므로 화면이 막는다.
+        /// </summary>
+        public void ShowCanDraw(bool canDraw, bool picking)
+        {
+            _picking = picking;
+            _view.SetCanDraw(canDraw && !picking && !_drawRequested);
+        }
 
         /// <summary>턴이 바뀌었다 — 다음 내 턴에 다시 뽑을 수 있다.</summary>
         public void ShowTurnChanged() => _drawRequested = false;
 
+        private void HandlePressed() => _pressBlocked = _picking;
+
+        private void HandleTapped()
+        {
+            bool blocked = _pressBlocked;
+            _pressBlocked = false;
+            if (blocked) return;
+
+            HandleDrawClicked();
+        }
+
         private void HandleDrawClicked()
         {
+            if (_picking) return;
+
             _drawRequested = true;
             _view.SetCanDraw(false);
             server?.RequestDraw();

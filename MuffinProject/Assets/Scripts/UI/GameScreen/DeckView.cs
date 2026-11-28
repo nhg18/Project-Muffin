@@ -11,7 +11,7 @@ namespace Chapchu.UI.GameScreen
     /// 탭은 카메라의 PhysicsRaycaster 가 눕힌 더미(자식)의 BoxCollider 로 맞추고, 클릭 이벤트가 부모인 이 컴포넌트로 올라온다. 뽑을 수 있는지 스스로 판정하지 않는다 — 안 되면 서버가 거절로 알려준다.
     /// 덱 위 노란 「뽑고 턴 끝」 버튼(통합 화면 UI v3 .drawbtn)도 같은 요청을 알린다 — 언제 보일지는 프레젠터가 정한다. 남은 장수는 덱 아래 「덱 n」 알약(HUD).
     /// </summary>
-    public class DeckView : MonoBehaviour, IPointerClickHandler
+    public class DeckView : MonoBehaviour, IPointerDownHandler, IPointerClickHandler
     {
         private const string CountFormat = "덱 {0}";
 
@@ -23,7 +23,14 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("덱 위 「뽑고 턴 끝」 버튼 (HUD) — 내 턴에 뽑을 수 있을 때만 보인다.")]
         [SerializeField] private Button drawButton;
 
+        /// <summary>「뽑고 턴 끝」 버튼을 눌렀다.</summary>
         public event Action DrawClicked;
+
+        /// <summary>덱 더미를 눌렀다(아직 떼기 전) — 누를 때의 상태로 그 탭을 받을지 프레젠터가 정한다.</summary>
+        public event Action Pressed;
+
+        /// <summary>덱 더미를 탭했다 (누르고 뗌).</summary>
+        public event Action Tapped;
 
         private void Awake()
         {
@@ -52,12 +59,19 @@ namespace Chapchu.UI.GameScreen
                 drawButton.gameObject.SetActive(canDraw);
         }
 
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left) return;
+
+            Pressed?.Invoke();
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
             // 우클릭은 취소 입력 (10-ui.md 9절) — 왼쪽(터치)만 드로우.
             if (eventData.button != PointerEventData.InputButton.Left) return;
 
-            DrawClicked?.Invoke();
+            Tapped?.Invoke();
         }
 
         private void HandleDrawButton() => DrawClicked?.Invoke();

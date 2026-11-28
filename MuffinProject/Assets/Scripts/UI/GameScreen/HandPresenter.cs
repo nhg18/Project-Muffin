@@ -103,6 +103,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>조준 화살표 — 대상 표시 점선(GameScreenPresenter)이 같은 모양을 복제해 쓴다 (10-ui.md 5-2 #3).</summary>
         public AimArrowView AimArrow => aimArrow;
 
+        /// <summary>손패 카드를 쥐고 있다(끌기 · 클릭으로 집기 · 조준) — 그동안 덱으로 뽑지 않는다 (DeckPresenter).</summary>
+        public bool IsHoldingCard => _view.IsDragging;
+
         /// <summary>반응 시간이 열려 있고 내가 낼 수 있는 카운터가 있다 · 없다 — 스킵 버튼을 켜고 끈다 (10-ui.md 5절).</summary>
         public event System.Action<bool> OnReactionAsked;
 
