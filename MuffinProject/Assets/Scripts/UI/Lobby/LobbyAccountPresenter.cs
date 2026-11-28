@@ -80,7 +80,7 @@ namespace Chapchu.UI.Lobby
                 StartCoroutine(ServerConfig.FetchRoutine());
 
             NicknameState state = AccountService.Nickname;
-            if (state?.Nickname != null)
+            if (AccountService.SavesNicknameChangeToServer && state?.Nickname != null) // 0.1 빌드는 이 기기에만 저장 — 쿠폰 · 쿨다운 없음
             {
                 TimeSpan left = state.CooldownLeft(DateTimeOffset.UtcNow);
                 if (left > TimeSpan.Zero)
@@ -102,7 +102,7 @@ namespace Chapchu.UI.Lobby
         private void ShowNicknameInput(string value)
         {
             NicknameState state = AccountService.Nickname;
-            string note = state?.Nickname != null ? string.Format(CouponNoteFormat, state.Coupons) : null;
+            string note = AccountService.SavesNicknameChangeToServer && state?.Nickname != null ? string.Format(CouponNoteFormat, state.Coupons) : null;
             modal.ShowInput(LobbyInputKind.Nickname, value, note);
         }
 
@@ -188,6 +188,14 @@ namespace Chapchu.UI.Lobby
 
         private IEnumerator RenameRoutine(string nickname)
         {
+            // 0.1 빌드 — 서버에 보내지 않고 이 기기에만 (AccountService.SavesNicknameChangeToServer)
+            if (!AccountService.SavesNicknameChangeToServer && AccountService.Nickname?.Nickname != null)
+            {
+                AccountService.SetNicknameLocal(nickname);
+                ApplyRenamed(nickname, RenamedToast);
+                yield break;
+            }
+
             modal.ShowLoading(RenamingText);
             Task<NicknameSave> save = AccountService.IsSignedIn
                 ? AccountService.SetNicknameAsync(nickname)
