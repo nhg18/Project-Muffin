@@ -1,6 +1,6 @@
 # 21. 글꼴 — 목록 · 라이선스 · 통일 계획
 
-**최종 수정일**: 2026-11-28 (3-3 — GOAT 컷인 제목은 글자 그림). 2026-11-22 (글꼴을 **태백체 + Pretendard** 로 — 2026-11-21 PM 확정 「찹츄 글꼴 조합」 추천 ④ https://claude.ai/artifact/MAF5rMnxXmszjiuQYXtNdr. Jua 한 종 · 고정폭 IBM Plex Mono 는 폐기. 2절 · 3절 · 4절 · 5절 · 6절). 이전: 2026-11-15 (2절 #10 · #11 · 7절 #5 — 일본어 · 중국어 화면 글꼴 · 이름 폴백, `25-localization`). 이전: 2026-11-11 (본문 글꼴도 **Jua** — 글꼴은 Jua 한 종 + 고정폭, 2절 #2 · #4 · 4절 — PM). 이전: 2026-11-07 (7절 미정 4건 확정 — PM)
+**최종 수정일**: 2026-11-28 (3-1 「지금 쓰는 곳」 을 지금 프로젝트대로 — 인게임 남은 Galmuri · 입력칸 둥근미소를 태백체 · Pretendard 로 바꿈, 5절 3단계 끝남). 2026-11-28 (3-3 — GOAT 컷인 제목은 글자 그림). 2026-11-22 (글꼴을 **태백체 + Pretendard** 로 — 2026-11-21 PM 확정 「찹츄 글꼴 조합」 추천 ④ https://claude.ai/artifact/MAF5rMnxXmszjiuQYXtNdr. Jua 한 종 · 고정폭 IBM Plex Mono 는 폐기. 2절 · 3절 · 4절 · 5절 · 6절). 이전: 2026-11-15 (2절 #10 · #11 · 7절 #5 — 일본어 · 중국어 화면 글꼴 · 이름 폴백, `25-localization`). 이전: 2026-11-11 (본문 글꼴도 **Jua** — 글꼴은 Jua 한 종 + 고정폭, 2절 #2 · #4 · 4절 — PM). 이전: 2026-11-07 (7절 미정 4건 확정 — PM)
 **분류**: MVP (출시 빌드에 들어가는 글꼴의 라이선스는 출시 조건 — [`store-release.md`](../store-release.md) 4절)
 **출처**: 2026-11-03 사용자 요청 「흩어진 글꼴 정보를 한곳에, 상업 이용 가능 여부 포함, 통일」. 그 전까지는 `10-ui` 2-1 · `12-title-ui` 9-2 · `14` · `16` · `17` · `store-release` 에 따로 적혀 있었다. 글꼴 **전환 방향**(Jua)은 `worklog` 2026-11-02 결정.
 
@@ -38,19 +38,19 @@
 
 | 글꼴 | 파일 | TMP 에셋 | 라이선스 | 상업 이용 | 확인 | 지금 쓰는 곳 | 계획 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Galmuri11** Regular | `Fonts/GlaMuri/Galmuri11.ttf` | `Galmuri11 SDF` (동적) | OFL 1.1 | ○ | 외부 — quiple.dev/galmuri · github quiple/galmuri | GameScene · 손패 카드 프리팹 3종 | **폐기 예정** → Jua |
-| **Galmuri11** Bold | `Fonts/GlaMuri/Galmuri11-Bold.ttf` | `Galmuri11-Bold SDF` (동적) | OFL 1.1 | ○ | 외부 | GameScene · CardFxTestScene · 손패 카드 프리팹 3종 | **폐기 예정** |
-| Galmuri9 | `Fonts/GlaMuri/Galmuri9.ttf` | `Galmuri9 SDF` | OFL 1.1 | ○ | 외부 | RoomScene | **폐기 예정** |
+| **Galmuri11** Regular | `Fonts/GlaMuri/Galmuri11.ttf` | `Galmuri11 SDF` (동적) | OFL 1.1 | ○ | 외부 — quiple.dev/galmuri · github quiple/galmuri | 없음 (2026-11-28 마지막 인게임 프리팹 · 카드 연출 시험 씬까지 바꿈) | **삭제** (5절 4단계) |
+| **Galmuri11** Bold | `Fonts/GlaMuri/Galmuri11-Bold.ttf` | `Galmuri11-Bold SDF` (동적) | OFL 1.1 | ○ | 외부 | 없음 (2026-11-28 마지막 인게임 프리팹 · 카드 연출 시험 씬까지 바꿈) | **삭제** (5절 4단계) |
+| Galmuri9 | `Fonts/GlaMuri/Galmuri9.ttf` | `Galmuri9 SDF` | OFL 1.1 | ○ | 외부 | 없음 | **삭제** |
 | Galmuri7 | `Fonts/GlaMuri/Galmuri7.ttf` | `Galmuri7 SDF` | OFL 1.1 | ○ | 외부 | 없음 | **삭제** |
 | GalmuriMono 7 · 9 · 11 | `Fonts/GlaMuri/GalmuriMono*.ttf` | 없음 | OFL 1.1 | ○ | 외부 | 없음 | **삭제** |
-| **학교안심 둥근미소** B | `TextMesh Pro/Fonts/Hakgyoansim Dunggeunmiso OTF B.otf` | `…OTF B SDF` + 머티리얼 Logo · Subtitle · Error · `SDF 1` | OFL | ○ | 문서 — store-release 4절 (KERIS 교육저작권지원센터) | TitleScene · LobbyScene · RoomScene · DebugLobbyScene · OldGameScene · PillButton · 팝업 3종(Input · Warning · Toast) · 옛 카드 프리팹 4종 | **폐기 예정** → Jua |
-| **학교안심 둥근미소** R | `TextMesh Pro/Fonts/Hakgyoansim Dunggeunmiso OTF R.otf` | `…OTF R SDF` | OFL | ○ | 문서 | RoomScene · PlayerSeatUI · PillInputField · WarningPopup | **폐기 예정** → Jua |
-| **IBM Plex Mono** Regular | `Fonts/IBMPlexMono-Regular.ttf` | `IBMPlexMono SDF` | OFL 1.1 | ○ | 저장소 — `Fonts/IBMPlexMono-OFL.txt` | TitleScene (카운터) | **폐기 예정** → Pretendard Bold (2절 #5) |
+| **학교안심 둥근미소** B | `TextMesh Pro/Fonts/Hakgyoansim Dunggeunmiso OTF B.otf` | `…OTF B SDF` + 머티리얼 Logo · Subtitle · Error · `SDF 1` | OFL | ○ | 문서 — store-release 4절 (KERIS 교육저작권지원센터) | `OldGameScene` 과 그 씬만 쓰는 옛 카드 프리팹 4종(`PlayerActionCard` · `… Dummy` · `PlayerCounterCard` · `PlayerTrapCard`) | **삭제** — `OldGameScene` 과 함께 (5절 4단계) |
+| **학교안심 둥근미소** R | `TextMesh Pro/Fonts/Hakgyoansim Dunggeunmiso OTF R.otf` | `…OTF R SDF` | OFL | ○ | 문서 | `PlayerSeatUI`(`OldGameScene` 만 씀) | **삭제** — `OldGameScene` 과 함께 |
+| **IBM Plex Mono** Regular | `Fonts/IBMPlexMono-Regular.ttf` | `IBMPlexMono SDF` | OFL 1.1 | ○ | 저장소 — `Fonts/IBMPlexMono-OFL.txt` | 없음 | **삭제** |
 | NeoDunggeunmo Pro | `TextMesh Pro/Fonts/NeoDunggeunmoPro-Regular.ttf` | 없음 | OFL 1.1 | ○ | 외부 — github neodgm | 없음 | **삭제** |
 | Liberation Sans | `TextMesh Pro/Fonts/LiberationSans.ttf` | `LiberationSans SDF` + Fallback · 머티리얼 2 | OFL 1.1 | ○ | 저장소 — `TextMesh Pro/Fonts/LiberationSans - OFL.txt` | OldGameScene · **TMP 기본 글꼴** | TMP 패키지 기본. 기본 글꼴 자리는 한글 글꼴로 바꾼다 (2절 #7) |
-| **Jua** | `Fonts/Jua/Jua-Regular.ttf` | `Jua SDF` (동적 · 여백 10) · `Jua Logo SDF` (로고 3글자 정적) · 머티리얼 `Jua SDF - Outline` | OFL 1.1 | ○ | 저장소 — `Fonts/Jua/OFL.txt` (Google Fonts, BM Jua · 우아한형제들) | 지금 화면 전부 · 아티팩트 시안 | **폐기 예정** → 태백체 · Pretendard (2026-11-21) |
-| **태백체** | `Fonts/Taebaek/` (넣을 것) | `Taebaek SDF` | 태백시 무료 글꼴 — 인쇄 · 웹 · 영상 · 임베딩 · 로고 허용, 글꼴 파일 판매 금지 | ○ | 외부 — 산돌구름 무료 글꼴 안내(저작권자 태백시). 원문을 받아 넣을 것 (6절) | 「찹츄 글꼴 조합」 · 통합 v3 시안 | **넣는다** — 제목 · 버튼 · 이름 (2절 #2) |
-| **Pretendard** Regular · Bold | `Fonts/Pretendard/` (넣을 것) | `Pretendard SDF` · `Pretendard Bold SDF` | OFL 1.1 | ○ | 외부 — github orioncactus/pretendard | 「찹츄 글꼴 조합」 · 통합 v3 시안 | **넣는다** — 문구 · 본문 · 코드 · 숫자 (2절 #2 · #5) |
+| **Jua** | `Fonts/Jua/Jua-Regular.ttf` | `Jua SDF` (동적 · 여백 10) · `Jua Logo SDF` (로고 3글자 정적) · 머티리얼 `Jua SDF - Outline` | OFL 1.1 | ○ | 저장소 — `Fonts/Jua/OFL.txt` (Google Fonts, BM Jua · 우아한형제들) | 없음 | **삭제** |
+| **태백체** | `Fonts/Taebaek/` | `Taebaek SDF` | 태백시 무료 글꼴 — 인쇄 · 웹 · 영상 · 임베딩 · 로고 허용, 글꼴 파일 판매 금지 | ○ | 외부 — 산돌구름 무료 글꼴 안내(저작권자 태백시). 원문을 받아 넣을 것 (6절) | 화면 전부의 제목 · 버튼 · 이름 · 스티커 글자 · 터지는 글자. `Taebaek Logo SDF` = 타이틀 로고 · 4 단계 결과 글자 | 쓴다 (2절 #2) |
+| **Pretendard** Regular · Bold | `Fonts/Pretendard/` | `Pretendard SDF` · `Pretendard Bold SDF` | OFL 1.1 | ○ | 외부 — github orioncactus/pretendard | 화면 전부의 문구 · 본문 · 수치 · 입력칸 · 토스트. `Pretendard SDF` = TMP 기본 글꼴 | 쓴다 (2절 #2 · #5) |
 
 ### 3-2. 게임에 쓰지 않는 글꼴 (Photon 데모 — 빌드에서 뺀다)
 
@@ -94,7 +94,7 @@
 | 0 | 태백체 · Pretendard(Regular · Bold) 파일 + 라이선스 원문을 `Assets/Fonts/Taebaek/` · `Assets/Fonts/Pretendard/` 에 넣고 TMP 동적 SDF 생성 (2절 #6 설정). `TMP Settings` 기본 · 폴백 변경 (4절) | 빈 씬에 TMP 텍스트를 놓고 한글 · 영문 · 숫자가 나온다 | 제안 |
 | 1 | 화면 문서의 글꼴 이름 교체: `10-ui` · `12-title-ui` · `14` · `16` · `17` · `20` · `22-popup-ui` — "Jua" · "IBM Plex Mono" · "학교안심 둥근미소" · "Galmuri11" → 4절 용도대로 태백체 / Pretendard. 화면 문서에 글꼴 이름이 나오면 이 문서가 옳다 | 문서에 옛 글꼴 이름이 3-3 외에 남지 않는다 | 제안 |
 | 2 | 공용 프리팹: 버튼 · 입력칸 · 팝업 · 좌석 이름표 | 타이틀 · 로비 · 룸 · 팝업 글자가 4절대로 태백체 · Pretendard | 제안 |
-| 3 | 씬: TitleScene → LobbyScene → RoomScene → GameScene(손패 카드 프리팹 3종 포함) → CardFxTestScene | 각 씬 텍스트 컴포넌트에 둥근미소 · Galmuri 참조 0 | 제안 — 씬은 사람이 Unity 에서 작업 중인 것을 덮어쓰지 않게 저장 확인 뒤 |
+| 3 | 씬: TitleScene → LobbyScene → RoomScene → GameScene(손패 카드 프리팹 3종 포함) → CardFxTestScene | 각 씬 텍스트 컴포넌트에 둥근미소 · Galmuri 참조 0 | **끝남** (2026-11-28) — 옛 글꼴 참조는 `OldGameScene` 과 그 씬만 쓰는 옛 프리팹에만 남는다 → 4단계 |
 | 4 | 삭제: Jua · IBM Plex Mono · Galmuri 전부 · 둥근미소 otf · SDF · 머티리얼 · NeoDunggeunmo · `OldGameScene` 의 참조 정리 | 3-1 에서 "폐기 예정 · 삭제" 행이 사라진다. 프로젝트 전체 검색에 글꼴 GUID 참조 0 | 제안 — 삭제 전에 `archive/` 태그 불필요 (글꼴은 다시 받을 수 있다) |
 | 5 | 이 문서 3절 갱신 · `store-release` 4절 폰트 링크를 태백체 · Pretendard 로 | — | 제안 |
 | 6 (출시 전) | `Taebaek SDF` · `Pretendard SDF` · `Pretendard Bold SDF` 를 **정적**으로 다시 굽는다 — 한글 2,350자 + ASCII + 사용하는 기호(… · — · 「」 등). 아틀라스 크기는 글자가 전부 들어가는 최소 2의 거듭제곱. 동적 설정은 개발용 복사본에만 남긴다 | 출시 빌드의 TMP 에셋에 Dynamic 이 없다. 모든 씬 · 팝업에서 □ 가 없다 (`multi-test ui`). 문서에 없는 글자(예: 희귀 한자)가 쓰이면 그 글자를 문자 집합에 더한다 | 확정 (전환, 2026-11-07 · 2절 #6) / 제안 (문자 집합 세부) |
