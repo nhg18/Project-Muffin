@@ -6,7 +6,7 @@
     public static class RoomProps
     {
         public const string TurnActor = "turnActor";
-        public const string TurnOrder = "turnOrder";       // 턴 순서 — 방장이 섞은 actorNumber 배열 (int[], 03-turn.md 6절 #2). 게임 시작 · 대소동 새 판에 쓴다
+        public const string TurnOrder = "turnOrder";       // 턴 순서 — 방장이 섞은 actorNumber 배열 (int[], 03-turn.md 6절 #2). 게임 시작 · 대폭발 새 판에 쓴다
         public const string TurnDeadline = "turnDeadline"; // 턴 마감 게임 시각(GameClock, 초)
         public const string DeckCount = "deckCount";
         public const string DiscardCount = "discardCount"; // 버림 더미 장수 (05-deck.md 7절)
@@ -16,7 +16,7 @@
         public const string BotLevels = "botLv";           // 봇 난이도 (int[3] — [봇 번호 − 1] 자리에 BotLevel, 18-bot.md 9절). 키가 없으면 전부 보통
         public const string TurnDirection = "turnDir"; // 턴 진행 방향 — true 면 역방향 (bool, 03-turn.md 6절 #4). 정방향이면 키를 지운다
         public const string Gaepan = "gaepan";            // 개판 오분전 [건 사람, 남은 바퀴] (int[], 1021). 개판이 없으면 키를 지운다
-        public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 1012 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
+        public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 1012 대폭발 — n 번째 대폭발 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
         public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 1023 기다려! — 07 4.3). 아무도 없으면 키를 지운다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
         public const string Match = "match";               // 랜덤 매칭이 만든 방 (bool) — 랜덤 매칭은 이 방에만 들어간다. 로비 목록에도 실어 거른다 (08-room.md 4절)

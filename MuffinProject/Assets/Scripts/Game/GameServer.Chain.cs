@@ -267,7 +267,7 @@ namespace Chapchu.Game
                     if (_restartPending)
                     {
                         CheckElimination(); // 체인 중에 나가 한 명만 남았다 — 새 판 · 턴 지연 전에 처치 승리 (07 3절)
-                        return; // 대소동 — 남은 처리는 버린다 (RequestRestart)
+                        return; // 대폭발 — 남은 처리는 버린다 (RequestRestart)
                     }
                     if (IsChoosing)
                         return; // 대상이 고르는 중 (1019) — 고르면 Advance 가 이어 간다
@@ -281,7 +281,7 @@ namespace Chapchu.Game
             double settled = SettleAfter(settleAt); // 체인이 끝난 뒤 — 사망 정리 → 찹츄 선언 → 함정 줄 (04 9.2)
             if (_restartPending)
             {
-                CheckElimination(); // 함정의 대소동 — 위와 같다
+                CheckElimination(); // 함정의 대폭발 — 위와 같다
                 return;
             }
             DelayTurnUntil(settled);
