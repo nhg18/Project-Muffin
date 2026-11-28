@@ -57,13 +57,13 @@ namespace Chapchu.UI.GameScreen
         public void ShowDeckCount(int deckCount) => _view.SetDeckCount(deckCount);
 
         /// <summary>
-        /// 「뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다).
+        /// 「n장 뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다). drawCount = 이번에 뽑는 장수 (10-ui.md 5-2 「뽑기 안내」).
         /// picking = 손패 카드를 쥐었거나 대상을 고르는 중. 그동안은 덱 탭도 받지 않는다 — 방장은 내 화면의 선택 상태를 모르므로 화면이 막는다.
         /// </summary>
-        public void ShowCanDraw(bool canDraw, bool picking)
+        public void ShowCanDraw(bool canDraw, bool picking, int drawCount)
         {
             _picking = picking;
-            _view.SetCanDraw(canDraw && !picking && !_drawRequested);
+            _view.SetCanDraw(canDraw && !picking && !_drawRequested, drawCount);
         }
 
         /// <summary>턴이 바뀌었다 — 다음 내 턴에 다시 뽑을 수 있다.</summary>
@@ -85,7 +85,7 @@ namespace Chapchu.UI.GameScreen
             if (_picking) return;
 
             _drawRequested = true;
-            _view.SetCanDraw(false);
+            _view.SetCanDraw(false, 0);
             server?.RequestDraw();
         }
 
