@@ -117,6 +117,8 @@ MonoBehaviour:
   - RPC_OnBackup
   - RPC_OnGameHalted
   - RPC_OnTurnSkipCleared
+  - RPC_OnDomainChanged
+  - RPC_OnGoatChanged
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

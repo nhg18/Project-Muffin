@@ -32,6 +32,13 @@ namespace Chapchu.UI.GameScreen
         private const string BlockThisText = "이번 턴 행동 카드 금지";
         private const string WaitStartText = "기다려! — 다음 턴까지 찹츄 승리 없음";
         private const string WaitEndText = "기다려 끝";
+        private const string DomainStartFormat = "영역전개! 내 턴 시작마다 모두에게서 {0}장 빼앗고 {1} 피해 ({2}번)";
+        private const string DomainTickFormat = "영역 — 모두에게서 {0}장 빼앗고 {1} 피해";
+        private const string DomainEndText = "영역이 사라짐";
+        private const string DomainResult = "영역전개!";
+        private const string GoatStartText = "GOAT! 주는 피해 2배";
+        private const string GoatEndText = "GOAT 끝";
+        private const string GoatResult = "GOAT!";
         private const string ChapchuHeldText = "찹츄 판정 미룸 (기다려)";
         private const string RestartFormat = "대소동! 게임을 새로 시작 ({0}번째)";
         private const string NewRoundFormat = "새 판: {0} 순서, {1}부터";
@@ -123,6 +130,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float resultSize = 30f;
 
         private readonly List<HistoryEntry> _entries = new List<HistoryEntry>();
+        private readonly HashSet<int> _goatActors = new HashSet<int>();  // 마지막으로 본 GOAT 인 사람들 — 시작 · 끝 줄을 가린다
         private readonly HashSet<int> _waitCasters = new HashSet<int>(); // 마지막으로 본 「기다려」 를 건 사람들 — 시작 · 끝 줄을 가린다
         private readonly Dictionary<int, int> _lastHp = new Dictionary<int, int>(); // actorNumber → 마지막으로 본 HP (변화량 계산용)
         private bool _turnStarted; // 첫 턴이 시작됐는가 — 그 전의 뽑기는 초기 배분
@@ -176,7 +184,7 @@ namespace Chapchu.UI.GameScreen
             // 변화량의 기준 — 지금 HP 스냅샷 (봇의 값은 방 속성에 있다, 18-bot.md 9절)
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _lastHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 남이 잠깐 바꾼 값일 수 있다 (09-network.md 13절 #8)
+                    _lastHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.HpLimit); // 남이 잠깐 바꾼 값일 수 있다 (09-network.md 13절 #8)
 
             // 씬이 늦게 열려 첫 턴 이벤트를 놓쳤을 때 — 턴 주인이 이미 있으면 게임이 진행 중이라 그 뒤 뽑기는 기록한다
             _turnStarted = PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(RoomProps.TurnActor);
@@ -393,6 +401,37 @@ namespace Chapchu.UI.GameScreen
             _waitCasters.UnionWith(now);
         }
 
+        /// <summary>영역이 바뀌었다 (1008) — 시작 · 주인의 턴 시작 처리 · 끝 줄.</summary>
+        public void ShowDomainChanged(int owner, int left, int take, int damage, bool ticked)
+        {
+            if (ticked)
+                Add(new HistoryEntry { Actor = owner, Text = string.Format(DomainTickFormat, take, damage), Icon = HistoryIcon.Card });
+            else if (left > 0)
+            {
+                SetResult(DomainResult);
+                Add(new HistoryEntry { Actor = owner, Text = string.Format(DomainStartFormat, take, damage, left), Icon = HistoryIcon.Card });
+            }
+
+            if (left <= 0)
+                Add(new HistoryEntry { Actor = owner, Text = DomainEndText, Icon = HistoryIcon.Card });
+        }
+
+        /// <summary>GOAT 인 사람들이 바뀌었다 (1067) — 새로 된 사람은 시작, 빠진 사람은 끝 줄.</summary>
+        public void ShowGoatChanged(int[] actors)
+        {
+            var now = new HashSet<int>(actors ?? System.Array.Empty<int>());
+            foreach (int ended in _goatActors.Where(a => !now.Contains(a)).ToArray())
+                Add(new HistoryEntry { Actor = ended, Text = GoatEndText, Icon = HistoryIcon.Card });
+            foreach (int started in now.Where(a => !_goatActors.Contains(a)).ToArray())
+            {
+                SetResult(GoatResult);
+                Add(new HistoryEntry { Actor = started, Text = GoatStartText, Icon = HistoryIcon.Card });
+            }
+
+            _goatActors.Clear();
+            _goatActors.UnionWith(now);
+        }
+
         /// <summary>
         /// 대소동으로 새 판 (1012) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
         /// </summary>
@@ -407,6 +446,7 @@ namespace Chapchu.UI.GameScreen
             foreach (int actor in order)
                 _lastHp[actor] = GameServer.MaxHp;
             _waitCasters.Clear();
+            _goatActors.Clear();
             _turnStarted = false;
         }
 

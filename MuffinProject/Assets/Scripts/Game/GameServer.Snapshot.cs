@@ -10,7 +10,7 @@ namespace Chapchu.Game
     public partial class GameServer
     {
         // 담는 순서가 바뀌면 올린다 — 다른 번호의 스냅샷은 되살리지 않는다 (앱 버전이 섞인 방)
-        private const int SnapshotVersion = 3;
+        private const int SnapshotVersion = 4;
 
         /// <summary>
         /// 상태가 바뀔 때마다 는다 — 전송 층이 「예비 방장에게 다시 보낼 때」 를 아는 값. 거절만 일어난 요청 · 매 프레임 미루는 마감은 올리지 않는다
@@ -46,6 +46,9 @@ namespace Chapchu.Game
                 w.Int(p.OutTurn);
                 w.Bool(p.OutByLeaving);
                 w.Int(p.DownedBy);
+                w.Int(p.GoatTurns);
+                w.Int(p.GoatMaxHp);
+                w.Int(p.GoatDamageTimes);
             }
 
             // 턴
@@ -163,6 +166,12 @@ namespace Chapchu.Game
             }
             w.Ints(_waitCasters);
 
+            // 영역 (1008)
+            w.Int(_domainOwner);
+            w.Int(_domainLeft);
+            w.Int(_domainTake);
+            w.Int(_domainDamage);
+
             // 승리
             w.Bool(_gameOver);
             w.Bool(_judgesElimination);
@@ -234,6 +243,9 @@ namespace Chapchu.Game
                 p.OutTurn = r.Int();
                 p.OutByLeaving = r.Bool();
                 p.DownedBy = r.Int();
+                p.GoatTurns = r.Int();
+                p.GoatMaxHp = r.Int();
+                p.GoatDamageTimes = r.Int();
             }
             if (_turnOrder.Any(actor => !_players.ContainsKey(actor)))
                 throw new InvalidOperationException("턴 순서에 없는 사람이 있다");
@@ -370,6 +382,12 @@ namespace Chapchu.Game
             }
             _waitCasters.Clear();
             _waitCasters.AddRange(r.Ints());
+
+            // 영역 (1008)
+            _domainOwner = r.Int();
+            _domainLeft = r.Int();
+            _domainTake = r.Int();
+            _domainDamage = r.Int();
 
             // 승리
             _gameOver = r.Bool();

@@ -677,6 +677,16 @@ namespace Chapchu.Network
                         roomProps[RoomProps.WaitCasters] = wait.Casters.Length > 0 ? wait.Casters : null;
                         break;
 
+                    case DomainChanged domain:
+                        Broadcast(nameof(RPC_OnDomainChanged), domain.Owner, domain.Left, domain.Take, domain.Damage, domain.Ticked);
+                        roomProps[RoomProps.Domain] = domain.Left > 0 ? new[] { domain.Owner, domain.Left, domain.Take, domain.Damage } : null;
+                        break;
+
+                    case GoatChanged goat:
+                        Broadcast(nameof(RPC_OnGoatChanged), goat.Actors);
+                        roomProps[RoomProps.Goat] = goat.Actors.Length > 0 ? goat.Actors : null;
+                        break;
+
                     case GameRestarted restarted:
                         Broadcast(nameof(RPC_OnGameRestarted), restarted.User, restarted.Count, restarted.Order);
                         foreach (int actor in restarted.Order)
@@ -693,6 +703,8 @@ namespace Chapchu.Network
                         roomProps[RoomProps.TurnDirection] = null;
                         roomProps[RoomProps.TurnOrder] = restarted.Order; // 새 판은 순서를 다시 섞는다
                         roomProps[RoomProps.WaitCasters] = null;
+                        roomProps[RoomProps.Domain] = null;
+                        roomProps[RoomProps.Goat] = null;
                         Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
                         break;
 
@@ -819,6 +831,7 @@ namespace Chapchu.Network
             var roomReset = new Hashtable
             {
                 [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null,
+                [RoomProps.Domain] = null, [RoomProps.Goat] = null,
                 [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null, [RoomProps.TurnActor] = null, [RoomProps.TurnOrder] = null, [RoomProps.TurnDeadline] = null, [RoomProps.DeckCount] = null,
                 [RoomProps.EventSeq] = null, // 처리 번호는 판마다 1부터 — 지난 판 번호를 새 방장이 이어받지 않게
             };
@@ -1144,6 +1157,20 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseWaitChanged(Ints(casters));
+        }
+
+        [PunRPC]
+        private void RPC_OnDomainChanged(int seq, int owner, int left, int take, int damage, bool ticked, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseDomainChanged(owner, left, take, damage, ticked);
+        }
+
+        [PunRPC]
+        private void RPC_OnGoatChanged(int seq, int[] actors, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseGoatChanged(Ints(actors));
         }
 
         [PunRPC]

@@ -18,6 +18,8 @@
         public const string Gaepan = "gaepan";            // 개판 오분전 [건 사람, 남은 바퀴] (int[], 1021). 개판이 없으면 키를 지운다
         public const string Fallout = "fallout";           // 피폭 [n, k] (int[], 1012 대소동 — n 번째 대소동 · 새로 시작한 뒤 피폭이 들어간 턴 수). 피폭이 없으면 키를 지운다
         public const string WaitCasters = "wait";          // 「기다려」 를 건 사람들 (int[], 1023 기다려! — 07 4.3). 아무도 없으면 키를 지운다
+        public const string Domain = "domain";             // 영역 [주인, 남은 턴 시작 횟수, 빼앗는 장수, 피해] (int[], 1008 영역전개). 영역이 없으면 키를 지운다
+        public const string Goat = "goat";                 // GOAT 인 사람들 (int[], 1067 GOAT). 아무도 없으면 키를 지운다
         public const string Solo = "solo";                 // 「혼자 하기」 방 (bool) — 다시 열어도 랜덤 매칭에서 뺀다 (18-bot.md 10절)
         public const string Match = "match";               // 랜덤 매칭이 만든 방 (bool) — 랜덤 매칭은 이 방에만 들어간다. 로비 목록에도 실어 거른다 (08-room.md 4절)
         public const string MatchStartAt = "matchAt";      // 매치 방이 시작하는 서버 시각 (double) — 지나면 방장이 빈자리를 봇으로 채우고 시작 (08-room.md 4절)

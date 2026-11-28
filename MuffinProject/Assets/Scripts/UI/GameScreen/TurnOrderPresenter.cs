@@ -126,7 +126,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>HP (OnHpChanged) — 얼굴 원의 고리.</summary>
         public void ShowHp(int actorNumber, int hp)
         {
-            _hp[actorNumber] = Mathf.Clamp(hp, 0, GameServer.MaxHp); // 방 속성은 남이 쓸 수 있다
+            _hp[actorNumber] = Mathf.Clamp(hp, 0, GameServer.HpLimit); // 방 속성은 남이 쓸 수 있다
             RefreshHp(actorNumber);
         }
 

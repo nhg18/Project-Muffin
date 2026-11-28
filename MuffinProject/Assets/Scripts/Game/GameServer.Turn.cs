@@ -140,6 +140,8 @@ namespace Chapchu.Game
             int[] discarded = DiscardAll(actor);
             _events.Add(new PlayerLeft(actor, discarded, _discardPile.Count, forced));
             EndWaitOf(actor);
+            EndDomainOf(actor);
+            EndGoatOf(actor);
             CancelChoiceOf(actor); // 고르는 중에 나갔다 — 그 효과는 불발 (1019)
             DropFromReaction(actor);
             if (_gameOver)
@@ -233,8 +235,11 @@ namespace Chapchu.Game
             }
 
             SetTurn(next);
-            // 스킵 · 턴 시작 뽑기(빈 덱 피해) 직후 — 사망 정리 → 함정 줄. 새 턴은 그 연출 뒤에 이어진다 (메인 행동 전이라 턴 시간이 멈춘다)
-            DelayTurnUntil(SettleAfter(_clock()));
+            // 턴 시작 상태 (03-turn.md 7절) — GOAT 가 먼저 줄고(끝나는 턴의 영역 피해는 2배가 아니다), 영역이 빼앗고 피해를 준다. 찹츄 판정 뒤라 여기서 10장이 되면 선언만 된다
+            TickGoat(next);
+            double shownAt = _clock() + (TickDomain(next) ? DomainTickSeconds : 0);
+            // 스킵 · 턴 시작 뽑기(빈 덱 피해) · 영역 직후 — 사망 정리 → 함정 줄. 새 턴은 그 연출 뒤에 이어진다 (메인 행동 전이라 턴 시간이 멈춘다)
+            DelayTurnUntil(SettleAfter(shownAt));
         }
 
         private void SetTurn(int actor)
