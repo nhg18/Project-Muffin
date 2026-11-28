@@ -49,8 +49,9 @@ namespace Chapchu.EditorTools
         private const float PlateWidth = 192f, PlateHeight = 140f, PlateBottom = 144f;
 
         // 상대 함정 칸 (3D) — 칸 가운데가 화면에 보이는 자리 · 배율. 테이블 면처럼 40° 눕힌다.
-        private static readonly float[][] SeatTrapX = { new[] { 438.8f, 503.5f, 568.5f }, new[] { 894.5f, 960f, 1025.5f }, new[] { 1351f, 1416.5f, 1480f } };
-        private const float SeatTrapY = 391.4f, SeatTrapScale = 0.235f;
+        // 가운데 칸이 캐릭터 발 가운데(SeatFootX) 바로 아래, 양옆 칸은 SeatTrapStep 만큼. 가운데 → 왼쪽 → 오른쪽 순으로 채운다 — 한 장이면 캐릭터 가운데 (PM 2026-11-28)
+        private const float SeatTrapStep = 65f, SeatTrapY = 391.4f, SeatTrapScale = 0.235f;
+        private static readonly int[] SeatTrapFillOrder = { 1, 0, 2 };
 
         // 내 함정 칸 (시안 .mtrap 56 × 78) — 첫 칸 왼쪽 위 · 칸 사이. 3D 카드는 칸 아래 가운데에 세운다.
         private const int MyTrapSlotCount = 3; // 방장 규칙의 함정 칸 수 (GameServer.TrapSlotCount) — 3D 칸 줄과 같다
@@ -479,7 +480,7 @@ namespace Chapchu.EditorTools
             Stretch(headerFill.rectTransform);
             headerFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             NewText("Text", header, "턴 방향", 28f, Ink, true).rectTransform.sizeDelta = new Vector2(100f, 52f);
-            Image arrow = FixedIcon("Arrow", header, Hud("icon_arrow_down"), 20f, 26f, Ink);
+            FixedIcon("Arrow", header, Hud("icon_arrow_down"), 20f, 26f, Ink);
 
             // 세로 막대 — 높이는 줄 수에 맞춰 뷰가 정한다
             UIShape track = NewShape("Track", root, TrackFill, 64f, Line4, Ink);
@@ -522,7 +523,7 @@ namespace Chapchu.EditorTools
 
             var view = root.gameObject.AddComponent<TurnOrderView>();
             Wire(view,
-                ("headerFill", headerFill), ("directionArrow", arrow.rectTransform), ("track", track.rectTransform), ("rows", rows),
+                ("headerFill", headerFill), ("track", track.rectTransform), ("rows", rows),
                 ("rowPrefab", EnsureTurnOrderRowPrefab()), ("currentTab", tab), ("currentNameText", currentName), ("currentNameLayout", currentNameLayout),
                 ("currentBand", band), ("currentCrown", crown.gameObject));
             var presenter = root.gameObject.AddComponent<TurnOrderPresenter>();
@@ -1090,19 +1091,31 @@ namespace Chapchu.EditorTools
 
             Transform trapRows = myTraps.transform.parent;
             Quaternion tilt = Quaternion.Euler(TableBuilder.TableTilt, 0f, 0f);
-            for (int row = 0; row < SeatTrapX.Length; row++)
+            for (int row = 0; row < SeatFootX.Length; row++)
             {
                 Transform seatRow = trapRows.Find($"Seat{row + 1}");
-                for (int i = 0; seatRow != null && i < SeatTrapX[row].Length && i < seatRow.childCount; i++)
+                if (seatRow == null)
+                    continue;
+
+                // 칸 이름 Slot0 · 1 · 2 = 화면 왼쪽 · 가운데 · 오른쪽
+                var fillOrder = new Object[SeatTrapFillOrder.Length];
+                for (int n = 0; n < SeatTrapFillOrder.Length; n++)
                 {
+                    int i = SeatTrapFillOrder[n];
                     Transform slot = seatRow.Find($"Slot{i}");
                     if (slot == null)
+                    {
+                        Debug.LogError($"[{nameof(GameScreenBuilder)}] 상대 함정 칸 Seat{row + 1}/Slot{i} 이 없다.");
                         continue;
+                    }
                     float cardHeight = SlotCardHeight(slot);
+                    float x = SeatFootX[row] + (i - 1) * SeatTrapStep;
                     slot.rotation = tilt;
                     slot.localScale = Vector3.one * SeatTrapScale;
-                    slot.position = TableBuilder.CanvasToWorld(SeatTrapX[row][i], SeatTrapY) - tilt * new Vector3(0f, cardHeight * SeatTrapScale / 2f, 0f); // 칸 루트 = 카드 아래 가운데
+                    slot.position = TableBuilder.CanvasToWorld(x, SeatTrapY) - tilt * new Vector3(0f, cardHeight * SeatTrapScale / 2f, 0f); // 칸 루트 = 카드 아래 가운데
+                    fillOrder[n] = slot.GetComponent<TrapSlotView>();
                 }
+                WireArray(seatRow.GetComponent<TrapSlotsView>(), "slots", fillOrder);
             }
 
             for (int i = 0; i < MyTrapSlotCount; i++)
