@@ -18,7 +18,7 @@ MonoBehaviour:
   targetType: 5
   targetCondition: 0
   grade: 3
-  description: "5\uBC14\uD034 \uB4A4 HP \uAF34\uCC0C\uB098 \uC190\uD328 \uAF34\uCC0C\uAC00
+  description: "5\uBC14\uD034 \uB4A4, HP \uAF34\uCC0C\uB098 \uC190\uD328 \uAF34\uCC0C\uB294
     HP 0\uC774 \uB41C\uB2E4"
   reactsTo: 
   trapTrigger: 0
