@@ -10,7 +10,7 @@
 #   run.sh chapchu [클라이언트=2]       메인 + 클론: 뽑기만 → 손패 10장 자동 선언 → 표시 → 찹츄 승리 → 결과 화면
 #   run.sh skip                         메인 + 클론: 반응 시간에 방장에게 카운터를 쥐여 줌 → 초록 빛 · 「스킵」 버튼 · 남은 초 없음 → 누르면 꺼짐 · 그 뒤 카운터 거절
 #   run.sh counter pick                 2018 물귀신 — 카운터를 낼 때 화면에서 대상(상대 좌석)을 고름 → 나 · 고른 사람이 같은 피해
-#   run.sh counter cost                 위에 이어 2021 으르렁의 대가 — 고르기 판의 카드 칸을 눌러 1장 버림
+#   run.sh counter cost                 위에 이어 2021 으르렁의 대가 — 고르기 판 없이 손패 무작위 1장이 버려짐
 #   run.sh counter                      메인 + 클론: 방장에게 실제 카운터(2003)를 쥐여 줌 → 화면에서 냄 → 막힌 카드는 쓴 사람 손패로 · 화면 = 방장
 #   run.sh timeout                      메인 + 클론: 클론의 턴만 시간 초과 → 자동 뽑기 2번 → 3번째에 강제 퇴장 → 클론은 로비 + 경고 팝업, 메인은 결과 화면
 #   run.sh fx <카드 ID> [ms=300,800,1500] 메인 혼자, 연출 시험장(CardFxTestScene): 그 카드를 냄 → 3 단계 시작부터 ms 마다 찍기(SHOT_DIR) → 끝까지 → 콘솔 오류
@@ -886,7 +886,7 @@ run_skip() {
 # → 막힌 카드는 클론 손패로 · 두 화면의 손패 장수가 방장 값과 같다.
 run_counter() {
     local out project arm="arm"
-    [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 1장 고르기까지
+    [ "${1:-}" = "cost" ] && arm="arm2021" # 2021 으르렁 — 대가로 손패 무작위 1장까지
     [ "${1:-}" = "pick" ] && arm="arm2018" # 2018 물귀신 — 낼 때 화면에서 대상 1명 고르기
     [ "${1:-}" = "reflect" ] && arm="arm2002" # 2002 반사 — 막고 내가 쓴 사람에게 다시 쓴다
     enter_game 2 || return
@@ -926,23 +926,13 @@ run_counter() {
     fi
     if [ -n "${SHOT_DIR:-}" ]; then mkdir -p "$SHOT_DIR"; sleep 1; for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/counter_$(name_of "$project").png")"; done; fi
     if [ "$arm" = "arm2021" ]; then
-        log "▶ 대가 — 고르기 판에 내 손패가 카드 칸으로 뜨고, 누르면 그 카드가 버려진다 (다른 화면은 「고르는 중」)"
-        for _ in $(seq 1 60); do
+        log "▶ 대가 — 고르기 판 없이 방장이 내 손패에서 무작위 1장을 버린다"
+        for _ in $(seq 1 40); do
             out=$(call "$MAIN" ReactionSkipProbe cost)
-            case "$out" in
-                WAIT*) sleep 0.5 ;;
-                SHOT*) if [ -n "${SHOT_DIR:-}" ]; then for project in "${EDITORS[@]}"; do log "  $(call "$project" Shot "$SHOT_DIR/cost_$(name_of "$project").png")"; done; fi ;;
-                *) break ;;
-            esac
-        done
-        log "  $out"
-        case "$out" in OK*) ;; *) fail "대가 고르기: $out"; return ;; esac
-        for _ in $(seq 1 20); do
-            out=$(call "$MAIN" ReactionSkipProbe costdone)
             case "$out" in WAIT*) sleep 0.5 ;; *) break ;; esac
         done
         log "  $out"
-        case "$out" in OK*) ;; *) fail "대가 결과: $out" ;; esac
+        case "$out" in OK*) ;; *) fail "대가: $out"; return ;; esac
     fi
     for _ in $(seq 1 20); do
         out=$(call "$MAIN" ReactionSkipProbe countered)
@@ -1310,40 +1300,18 @@ run_gaepan() {
     done
 }
 
-# 1019 목표 조준: 방장이 턴 주인에게 1019 를 쥐여 상대에게 쓰게 한다 → 대상 화면에 고르기 판 · 다른 화면에 「고르는 중」 → 대상이 판의 「피해 받기」 를 누른다(화면 경로)
-# → 모든 화면에 같은 고르기 줄 · 표가 방장 값과 같은지.
+# 1019 목표 조준: 방장이 턴 주인에게 1019 를 쥐여 상대에게 쓰게 한다 → 고르기 판 없이 방장이 무작위로 (손패 전부 버리기 / 80 피해, PM 2026-11-28)
+# → 어느 화면에도 고르기 줄이 없고 · 표가 방장 값과 같은지.
 run_aim() {
-    local clients="${1:-2}" project out lines shot first="" opened="" seen=""
+    local clients="${1:-2}" project lines
     enter_game "$clients" || return
-    # 5초 안에 눌러야 해서 고르기는 에디터 안에서 한다 (ArmChoice) — CLI 부름은 한 번에 몇 초라 늦다.
-    for project in "${EDITORS[@]}"; do
-        shot="-"
-        [ -n "${SHOT_DIR:-}" ] && { mkdir -p "$SHOT_DIR"; shot="$SHOT_DIR/aim_choice_$(name_of "$project").png"; }
-        call "$project" ArmChoice 1 "$shot" >/dev/null
-    done
     until_ok "$MAIN" ForceCard 1019 || return
-    log "▶ 고르기 판 (반응 시간 · 체인 처리 뒤 시작)"
-    for project in "${EDITORS[@]}"; do
-        for _ in $(seq 1 30); do
-            out=$(call "$project" ChoiceResult)
-            case "$out" in WAIT*) sleep 1 ;; *) break ;; esac
-        done
-        log "  $(name_of "$project"): $out"
-        case "$out" in
-            OPEN*) opened="$project" ;;
-            SEEN*) seen="$project" ;;
-            *) fail "$(name_of "$project"): $out" ;;
-        esac
-    done
-    [ -n "$opened" ] || { fail "고르기 판을 누른 화면이 없다"; return; }
-    [ "$clients" -lt 2 ] || [ -n "$seen" ] || fail "다른 화면에 「고르는 중」 이 보이지 않았다"
     sleep 12
-    log "▶ 판정"
+    log "▶ 판정 — 고르기 판이 열리지 않는다"
     for project in "${EDITORS[@]}"; do
-        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '고르기 시작 — |고르기 — ' | sed -E 's/.*(고르기 시작 — |고르기 — )/\1/')
-        log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
-        printf '%s' "$lines" | grep -q '고르기 — P[0-9]* 피해 받기$' || fail "$(name_of "$project") 「피해 받기」 줄이 없다 (시간 초과면 '(시간 초과)')"
-        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 고르기 줄이 메인과 다르다"; fi
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '고르기 시작 — |고르기 — ')
+        log "  $(name_of "$project"): 고르기 줄 $(printf '%s' "$lines" | grep -c . )개"
+        [ -z "$lines" ] || fail "$(name_of "$project") 에 고르기 줄이 있다: $(printf '%s\n' "$lines" | tr '\n' '/')"
     done
     compare_turns
     check_table_ui aim
