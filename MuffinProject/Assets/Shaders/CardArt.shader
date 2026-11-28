@@ -95,7 +95,8 @@ Shader "Chapchu/Card Art"
                 // 그림 — 흰 바탕 위에
                 float2 artUv = i.uv * _MainTex_ST.xy + _MainTex_ST.zw;
                 fixed4 tex = tex2D(_MainTex, artUv);
-                float2 inside = step(_ArtRect.xy, artUv) * step(artUv, _ArtRect.zw); // 스프라이트 밖은 텍스처 가장자리가 번지지 않게 비운다
+                float2 artOut = max(_ArtRect.xy - artUv, artUv - _ArtRect.zw); // 스프라이트 밖은 텍스처 가장자리가 번지지 않게 비운다
+                float2 inside = saturate(0.5 - artOut / max(fwidth(artUv), 1e-6)); // 경계는 화면 1 px 폭으로 섞는다 (Coverage 와 같은 방식)
                 float3 art = lerp(float3(1.0, 1.0, 1.0), tex.rgb, tex.a * inside.x * inside.y);
 
                 // 그림 준비 중 — 바탕 · 점선 테 · 발바닥
