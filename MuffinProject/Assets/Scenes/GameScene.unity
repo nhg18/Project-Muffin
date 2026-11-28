@@ -20553,6 +20553,7 @@ GameObject:
   - component: {fileID: 807199486}
   - component: {fileID: 807199485}
   - component: {fileID: 807199488}
+  - component: {fileID: 807199489}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -20653,6 +20654,19 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_MaxRayIntersections: 0
+--- !u!114 &807199489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 807199484}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06ce3a0d338f62d4baa2c63abfd2cfdb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.TableCameraFit
+  verticalFov: 40
 --- !u!1 &812076227
 GameObject:
   m_ObjectHideFlags: 0
