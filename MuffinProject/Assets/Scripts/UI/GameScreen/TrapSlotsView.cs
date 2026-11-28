@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 한 사람의 함정 칸 3개 (04-card.md 2절 「최대 3장」 · 10-ui.md 4-1 「함정 슬롯」). 설치된 장수만큼 앞에서부터 뒷면으로 채운다 — 개수는 공개, 종류는 비공개.
+    /// 한 사람의 함정 칸 3개 (04-card.md 2절 「최대 3장」 · 10-ui.md 4-1 「함정 슬롯」). 설치된 장수만큼 slots 순서대로 뒷면으로 채운다 — 개수는 공개, 종류는 비공개.
+    /// 내 칸은 왼쪽부터, 상대 칸은 가운데 → 왼쪽 → 오른쪽 (10-ui.md 2-1 「함정 칸」 — 한 장이면 캐릭터 발밑 가운데).
     /// 값을 받아 표시만 한다. 탭은 칸 번호로 알린다.
     /// </summary>
     public class TrapSlotsView : MonoBehaviour
