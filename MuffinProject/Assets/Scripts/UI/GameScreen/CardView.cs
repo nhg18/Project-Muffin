@@ -23,13 +23,13 @@ namespace Chapchu.UI.GameScreen
     [RequireComponent(typeof(BoxCollider))]
     public class CardView : MonoBehaviour
     {
-        private const float ArtFocusFromTop = 0.3f; // 그림을 자를 때 세로 기준 — 위에서 30 % (시안 object-position 50% 30%)
         private const float CanvasPerUnit = 100f;   // 셰이더 길이 u = 캔버스 px, 1 유닛 = 100 (10-ui.md 2-1 「3D 층 구현」)
         private const int MaxSparks = 11;            // Chapchu/Card Soft 의 MAX_SPARKS 와 같게
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int MainTexStId = Shader.PropertyToID("_MainTex_ST");
         private static readonly int HasTexId = Shader.PropertyToID("_HasTex");
+        private static readonly int ArtRectId = Shader.PropertyToID("_ArtRect");
         private static readonly int TypeColorId = Shader.PropertyToID("_TypeColor");
         private static readonly int GradeId = Shader.PropertyToID("_Grade");
         private static readonly int MarkId = Shader.PropertyToID("_Mark");
@@ -67,7 +67,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private TMP_Text pendingText;
         [Tooltip("앞면 종이 (Chapchu/Card Paper) — 틀 · 잉크 선 · 형광펜 · 등급 별을 그린다.")]
         [SerializeField] private MeshRenderer frameRenderer;
-        [Tooltip("그림 칸 (Chapchu/Card Art). 프리팹에서의 크기가 그림 칸이고, 그림을 칸에 꽉 채워(넘치는 쪽은 잘라) 입힌다. 그림이 없는 카드는 「그림 준비 중」.")]
+        [Tooltip("그림 칸 (Chapchu/Card Art). 프리팹에서의 크기가 그림 칸이고, 그림 전체가 칸 안에 들어오게(남는 쪽은 흰 바탕) 입힌다. 그림이 없는 카드는 「그림 준비 중」.")]
         [SerializeField] private MeshRenderer artRenderer;
         [Tooltip("뒷면 종이 — 흐림만 같이 받는다.")]
         [SerializeField] private MeshRenderer backRenderer;
@@ -392,8 +392,8 @@ namespace Chapchu.UI.GameScreen
             descriptionText.text = CardKeywords.Format(_description, Type, color => Filter(color, filter));
         }
 
-        // 그림 스프라이트의 텍스처를 그림 칸에 입힌다 — 칸에 꽉 채우고 넘치는 쪽을 자른다: 가로는 가운데, 세로는 위에서 30 % (시안 cover · object-position 50% 30%).
-        // 아틀라스에 묶인 스프라이트도 되게 UV 는 textureRect 로 잡는다. 그림이 아직 없는 카드는 「그림 준비 중」 칸 + 글자.
+        // 그림 스프라이트의 텍스처를 그림 칸에 입힌다 — 그림 전체가 칸 안에 들어오게 줄여 가운데에 두고, 남는 쪽은 흰 바탕 (10-ui.md 2-1 「그림」, PM 2026-11-28).
+        // 아틀라스에 묶인 스프라이트도 되게 UV 는 textureRect 로 잡고, 그 밖(_ArtRect 밖)은 셰이더가 비운다. 그림이 아직 없는 카드는 「그림 준비 중」 칸 + 글자.
         private void SetArt(Sprite sprite)
         {
             pendingText.gameObject.SetActive(sprite == null);
@@ -412,18 +412,20 @@ namespace Chapchu.UI.GameScreen
             Rect rect = sprite.textureRect;
             Vector3 box = artRenderer.transform.localScale;
             float boxAspect = box.x / box.y, aspect = rect.width / rect.height;
-            Vector2 visible = Vector2.one; // 그림 안에서 칸에 들어가는 부분 (0 ~ 1)
-            if (aspect > boxAspect)
-                visible.x = boxAspect / aspect;
+            Vector2 span = Vector2.one; // 칸 폭 · 높이를 그림 크기로 잰 값 (1 이상 — 남는 쪽은 그림 밖)
+            if (aspect < boxAspect)
+                span.x = boxAspect / aspect;
             else
-                visible.y = aspect / boxAspect;
-            var start = new Vector2((1f - visible.x) * 0.5f, (1f - visible.y) * (1f - ArtFocusFromTop)); // UV 는 아래가 0 — 잘리는 몫의 70 % 가 아래
+                span.y = aspect / boxAspect;
+            Vector2 start = (Vector2.one - span) * 0.5f; // 가운데
 
             block.SetFloat(HasTexId, 1f);
             block.SetTexture(MainTexId, texture);
             block.SetVector(MainTexStId, new Vector4(
-                rect.width * visible.x / texture.width, rect.height * visible.y / texture.height,
+                rect.width * span.x / texture.width, rect.height * span.y / texture.height,
                 (rect.x + rect.width * start.x) / texture.width, (rect.y + rect.height * start.y) / texture.height));
+            block.SetVector(ArtRectId, new Vector4(
+                rect.xMin / texture.width, rect.yMin / texture.height, rect.xMax / texture.width, rect.yMax / texture.height));
             artRenderer.SetPropertyBlock(block);
         }
 

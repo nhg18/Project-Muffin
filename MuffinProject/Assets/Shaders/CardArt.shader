@@ -1,5 +1,5 @@
 // 3D 카드의 그림 칸 (시안 통합 UI v3.20 .card .art — 앞면 x 5.6 ~ 94.4 % · 위에서 15.6 ~ 60.1 %, 흰 바탕, 모서리 없음).
-//   그림은 칸에 꽉 채워(cover) 넘치는 쪽을 자른다 — 자를 자리(_MainTex_ST)는 CardView 가 넣는다 (가로 가운데 · 세로는 위에서 30 %, 시안 object-position 50% 30%).
+//   그림은 전체가 칸 안에 들어오게 줄여 가운데에 둔다(contain, PM 2026-11-28) — 자리(_MainTex_ST)는 CardView 가 넣는다. 스프라이트 밖(_ArtRect 밖)은 흰 바탕.
 //   틀의 발바닥 배지 자리(틀 그림 원 (121, 117) r 109)는 뚫는다 — 아래 틀이 보여 시안 .bdg 처럼 배지가 그림 위로 온다.
 //   그림이 아직 없는 카드(_HasTex 0)는 「그림 준비 중」 칸 (시안 v3.21 도감 .art.none): 종류 색 5 % 바탕 · 38 % 점선 테 · 30 % 발바닥. 글자는 CardView 의 TMP.
 //   점선 테는 시안을 그린 크롬 그대로 — .7 cqw 테는 1 px 보다 얇아 1 px(2.05 u)로 올라가고, 얇은 테의 칸 · 틈은 두께 × 3 · × 2 다.
@@ -10,6 +10,7 @@ Shader "Chapchu/Card Art"
     {
         _MainTex ("Art", 2D) = "white" {}
         [MaterialToggle] _HasTex ("Has Art (끄면 그림 준비 중)", Float) = 1
+        [HideInInspector] _ArtRect ("Art UV Rect (x min, y min, x max, y max)", Vector) = (0, 0, 1, 1)
         _Size ("Quad Size u (w, h)", Vector) = (200.69, 149.52, 0, 0)
         _Badge ("Badge Hole (x, y, 반지름 u)", Vector) = (-79.65, 95.0, 30.04, 0)
         _PendingDash ("Pending Dash (테 두께 u, 칸 u, 틈 u)", Vector) = (2.0545, 6.1636, 4.1091, 0)
@@ -42,7 +43,7 @@ Shader "Chapchu/Card Art"
             #include "CardFilter.cginc"
 
             sampler2D _MainTex;
-            float4 _MainTex_ST, _Size, _Badge, _PendingDash, _PendingPaw;
+            float4 _MainTex_ST, _ArtRect, _Size, _Badge, _PendingDash, _PendingPaw;
             fixed4 _TypeColor;
             float _HasTex;
 
@@ -92,8 +93,11 @@ Shader "Chapchu/Card Art"
                 float2 halfBox = _Size.xy * 0.5;
 
                 // 그림 — 흰 바탕 위에
-                fixed4 tex = tex2D(_MainTex, i.uv * _MainTex_ST.xy + _MainTex_ST.zw);
-                float3 art = lerp(float3(1.0, 1.0, 1.0), tex.rgb, tex.a);
+                float2 artUv = i.uv * _MainTex_ST.xy + _MainTex_ST.zw;
+                fixed4 tex = tex2D(_MainTex, artUv);
+                float2 artOut = max(_ArtRect.xy - artUv, artUv - _ArtRect.zw); // 스프라이트 밖은 텍스처 가장자리가 번지지 않게 비운다
+                float2 inside = saturate(0.5 - artOut / max(fwidth(artUv), 1e-6)); // 경계는 화면 1 px 폭으로 섞는다 (Coverage 와 같은 방식)
+                float3 art = lerp(float3(1.0, 1.0, 1.0), tex.rgb, tex.a * inside.x * inside.y);
 
                 // 그림 준비 중 — 바탕 · 점선 테 · 발바닥
                 float3 tc = _TypeColor.rgb;
