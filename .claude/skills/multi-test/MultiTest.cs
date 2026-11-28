@@ -2364,7 +2364,7 @@ public static class MultiTest
             int resolvedAt = events.FindIndex(e => e is CardResolved), discardAt = events.FindIndex(e => e is ChainDiscarded), trapAt = events.FindIndex(e => e is TrapActivated);
             Check(resolvedAt >= 0 && discardAt > resolvedAt && trapAt > discardAt && !events.OfType<ReactionStarted>().Any(), $"행동 카드 처리 → 버림 더미 → 함정, 반응 시간 없음 ({resolvedAt} · {discardAt} · {trapAt})");
             Check(t.Discard[t.Discard.Count - 1].CardId == ChainTable.TrapHit, "발동한 함정도 버림 더미 맨 위로");
-            double next = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve + ChainTable.Reveal + ChainTable.Resolve;
+            double next = ChainTable.Reveal + ReactionSeconds + ChainTable.Resolve + System.Math.Max(ChainTable.Reveal, GameServer.TrapReadSeconds) + ChainTable.Resolve; // 함정은 읽는 시간 3초 (#274)
             t.At(next - 0.1);
             Check(!t.Tick().OfType<TurnStarted>().Any(), "함정 연출 중엔 다음 턴 없음");
             t.At(next + 0.1);
@@ -2521,7 +2521,7 @@ public static class MultiTest
             t3.SetHandSize(t3.Turn, 8);
             var drawn = t3.Server.Draw(t3.Turn).ToList();
             Check(t3.HandCount(t3.Turn) == 10 && drawn.OfType<TrapActivated>().Any(e => e.Actor == t3.O2) && t3.Hp(t3.Turn) == 85, $"3004 사이렌 — 턴 뽑기로 10장 → 뽑기 직후 발동 (♥{t3.Hp(t3.Turn)})");
-            t3.Run(t3.Now + ChainTable.Reveal + ChainTable.Resolve + 0.5);
+            t3.Run(t3.Now + System.Math.Max(ChainTable.Reveal, GameServer.TrapReadSeconds) + ChainTable.Resolve + 0.5);
             Check(t3.Server.CurrentTurnActor == t3.O1, "3004 사이렌 — 함정 연출 뒤 다음 턴");
             var t4 = new ChainTable();
             t4.SetTrapCard(t4.Turn, siren);
