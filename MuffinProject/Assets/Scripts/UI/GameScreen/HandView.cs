@@ -71,6 +71,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float hoverLift = 0.08f;
         [Tooltip("포인터 아래 카드의 배율.")]
         [SerializeField] private float hoverScale = 1.12f;
+        [Tooltip("터치로 고른(손가락 x 에 가장 가까운) 카드가 더 올라오는 높이 (10-ui.md 2-1 「손패 입력 값」 터치 × 0.16).")]
+        [SerializeField] private float touchHoverLift = 0.16f;
+        [Tooltip("터치로 고른 카드의 배율 (터치 1.18 배).")]
+        [SerializeField] private float touchHoverScale = 1.18f;
         [Tooltip("지금 낼 수 있는 카드의 배율 (시안 v3.5 .can — 내 턴엔 흐리지 않은 카드, 반응 시간엔 낼 수 있는 카운터).")]
         [SerializeField] private float playableScale = 1.1f;
         [Tooltip("지금 낼 수 없는 카드의 배율 — 흐림과 함께 (시안 v3.5 .dim).")]
@@ -138,6 +142,12 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("크게 보여 주는 새 카드를 앞에 그리는 거리 — 올라온 손패 · 끄는 카드보다 앞.")]
         [SerializeField] private float showDepth = 1f;
 
+        [Header("길게 누르기 크게 보기 (10-ui.md 4절 모바일)")]
+        [Tooltip("크게 보는 카드의 배율 — 화면 가운데.")]
+        [SerializeField] private float inspectScale = 2.3f;
+        [Tooltip("크게 보는 동안 켜는 잉크 55% 판 (HUD 안, 손패 층 그림 바로 아래 형제) — 나머지 손패는 이 판 아래 층으로 내린다.")]
+        [SerializeField] private GameObject inspectDim;
+
         private readonly List<CardView> _cards = new List<CardView>();
         private readonly List<CardView> _laidOut = new List<CardView>();                        // 자리를 받은 카드 — _cards 에서 따로 둔 카드를 뺀 것
         private readonly List<Vector3> _slots = new List<Vector3>();                            // 계산용 — x · y · 시계 방향 각도
@@ -146,6 +156,8 @@ namespace Chapchu.UI.GameScreen
         private readonly HashSet<int> _usable = new HashSet<int>();
         private Camera _camera;
         private CardView _hovered;
+        private bool _touchHover;      // 지금 호버가 터치(손가락 x 에 가장 가까운 카드)로 정해졌다 — 터치 값으로 더 올린다
+        private CardView _inspected;   // 길게 눌러 크게 보는 카드 — 자리 계산에서 빼고 화면 가운데에
         private CardView _dragging;
 
         /// <summary>지금 쥐고 있는 카드 (끌기 · 클릭으로 집기). 없으면 null.</summary>
@@ -181,6 +193,12 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>카드를 쥐고 있는가 (끌기 · 클릭으로 집기).</summary>
         public bool IsDragging => _dragging != null;
+
+        /// <summary>포인터 · 손가락으로 고른 카드 (더 올라온 카드). 없으면 null.</summary>
+        public CardView HoveredCard => _hovered;
+
+        /// <summary>길게 눌러 크게 보는 중인가.</summary>
+        public bool IsInspecting => _inspected != null;
 
         /// <summary>쥔 카드의 위 가장자리 가운데 (화면 좌표) — 조준 화살표가 나가는 곳. 쥔 카드가 없으면 false.</summary>
         public bool TryGetAimOrigin(out Vector2 screenPoint)
@@ -220,8 +238,10 @@ namespace Chapchu.UI.GameScreen
         {
             _camera = Camera.main;
 
-            if (actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || topLayer == null)
-                Debug.LogError($"[{nameof(HandView)}] 종류별 카드 프리팹 · {nameof(topLayer)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || topLayer == null || inspectDim == null)
+                Debug.LogError($"[{nameof(HandView)}] 종류별 카드 프리팹 · {nameof(topLayer)} · {nameof(inspectDim)} 참조 중 비어 있는 것이 있습니다.", this);
+            else
+                inspectDim.SetActive(false);
             if (_camera == null)
                 Debug.LogError($"[{nameof(HandView)}] MainCamera 태그의 카메라가 없습니다 — 자리 · 포인터 좌표를 못 푼다.", this);
         }
@@ -402,6 +422,7 @@ namespace Chapchu.UI.GameScreen
             IsLocked = locked;
             if (locked)
             {
+                EndInspect();
                 StopDragging();
                 _hovered = null;
                 _revealed = false;
@@ -459,10 +480,73 @@ namespace Chapchu.UI.GameScreen
 
             CardView card = CardAt(screenPosition);
             bool revealed = card != null || (_revealed && IsInHandZone(screenPosition));
-            if (card == _hovered && revealed == _revealed) return;
+            if (card == _hovered && revealed == _revealed && !_touchHover) return;
 
             _hovered = card;
             _revealed = revealed;
+            _touchHover = false;
+            Layout();
+        }
+
+        /// <summary>
+        /// 손가락이 손패에 닿아 있다 (터치 · 좌우로 훑기, 10-ui.md 4절 모바일) — 손패를 올리고, 손가락 x 에 가장 가까운 카드를 더 올린다. 손을 떼도 올라온 채.
+        /// 고른 카드가 바뀌었으면 true (진동은 부른 쪽이).
+        /// </summary>
+        public bool SetTouchPointer(Vector2 screenPosition)
+        {
+            if (IsLocked || _dragging != null || _inspected != null) return false;
+
+            float x = ToPlane(screenPosition).x;
+            CardView nearest = null;
+            float best = float.MaxValue;
+            foreach (CardView card in _laidOut)
+            {
+                if (!_poses.TryGetValue(card, out Pose pose)) continue;
+
+                float distance = Mathf.Abs(pose.Center.x - x);
+                if (distance >= best) continue;
+
+                best = distance;
+                nearest = card;
+            }
+
+            bool changed = nearest != _hovered;
+            if (!changed && _revealed && _touchHover) return false;
+
+            _hovered = nearest;
+            _revealed = true;
+            _touchHover = true;
+            Layout();
+            return changed && nearest != null;
+        }
+
+        /// <summary>
+        /// 길게 누르기 크게 보기 — 그 카드를 화면 가운데에 크게 (잉크 55% 판 위), 나머지 손패는 판 아래로. EndInspect 로 자리에 돌린다.
+        /// </summary>
+        public void Inspect(CardView card)
+        {
+            if (IsLocked || _dragging != null || !_cards.Contains(card) || card == _held || _shown.Contains(card)) return;
+
+            EndInspect();
+            _inspected = card;
+            _poses.Remove(card);
+            ClearMarks(card);
+            // Pose 의 Center 는 카드 가운데 — 화면 가운데에
+            Vector2 center = ToPlane(new Vector2(Screen.width / 2f, Screen.height / 2f));
+            MoveTo(card, new Pose { Center = center, Angle = 0f, Scale = inspectScale, Lift = showDepth, TiltX = 0f });
+            inspectDim.SetActive(true);
+            Layout();
+        }
+
+        /// <summary>크게 보던 카드를 손패 자리로 돌리고 판을 끈다. 크게 보는 중이 아니면 아무 일 없다.</summary>
+        public void EndInspect()
+        {
+            if (_inspected == null) return;
+
+            _poses.Remove(_inspected);
+            _inspected = null;
+            if (inspectDim != null)
+                inspectDim.SetActive(false);
             Layout();
         }
 
@@ -473,6 +557,7 @@ namespace Chapchu.UI.GameScreen
             if (_hovered == null && (!lower || !_revealed)) return;
 
             _hovered = null;
+            _touchHover = false;
             if (lower)
                 _revealed = false;
             Layout();
@@ -481,7 +566,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>카드를 쥔다 (끌기 시작 · 클릭으로 집기) — pressScreenPosition(눌렀던 곳)에서 잡은 지점을 유지한 채 따라온다. 손패는 올라온 채.</summary>
         public void BeginDrag(CardView card, Vector2 pressScreenPosition)
         {
-            if (IsLocked || !_cards.Contains(card) || card == _held || _shown.Contains(card)) return;
+            if (IsLocked || !_cards.Contains(card) || card == _held || _shown.Contains(card) || card == _inspected) return;
 
             Vector2 pointer = ToPlane(pressScreenPosition);
             Vector2 center = _poses.TryGetValue(card, out Pose pose) ? pose.Center : pointer;
@@ -498,6 +583,19 @@ namespace Chapchu.UI.GameScreen
 
             Layout();
             OnDraggingChanged?.Invoke(true);
+        }
+
+        /// <summary>
+        /// 카드를 손가락 위로 집는다 (위로 쓸어 올리기, 10-ui.md 4절 모바일) — 카드 가운데가 손가락보다 카드 높이 × heightsAbove 위라 손가락에 가리지 않는다. 자리에서 빠르게 따라붙는다.
+        /// </summary>
+        public void BeginDragAbove(CardView card, Vector2 fingerScreenPosition, float heightsAbove)
+        {
+            BeginDrag(card, fingerScreenPosition);
+            if (_dragging != card) return;
+
+            _dragOffset = new Vector2(0f, CardHeight * heightsAbove);
+            _dragCenter = ToPlane(fingerScreenPosition) + _dragOffset;
+            _catchingUp = true;
         }
 
         /// <summary>끄는 중 — 움직인 만큼 좌우로 기운다 (10-ui.md 4절 「끌기」).</summary>
@@ -606,12 +704,13 @@ namespace Chapchu.UI.GameScreen
             _laidOut.Clear();
             foreach (CardView card in _cards)
             {
-                if (card != _held && !_shown.Contains(card))
+                if (card != _held && !_shown.Contains(card) && card != _inspected)
                     _laidOut.Add(card);
             }
 
             bool raised = IsRaised;
-            ComputeSlots(_laidOut.Count, raised, _slots);
+            bool fanRaised = raised && _inspected == null; // 크게 보는 동안 나머지 손패는 내려 둔다 — 잉크 판 아래
+            ComputeSlots(_laidOut.Count, fanRaised, _slots);
 
             float cardHeight = CardHeight;
             for (int i = 0; i < _laidOut.Count; i++)
@@ -633,7 +732,7 @@ namespace Chapchu.UI.GameScreen
 
                 Vector3 slot = _slots[i];
                 var pose = new Pose { Center = new Vector2(slot.x, slot.y), Angle = -slot.z, Scale = stateScale, Lift = i * cardDepthStep, TiltX = restTilt };
-                if (raised)
+                if (fanRaised)
                     pose.Center.y += cardHeight / 2f + raisedBottomGap;
 
                 if (dragging) // 겨누는 카드 — 자기 자리 위로, 맨 앞에
@@ -641,10 +740,10 @@ namespace Chapchu.UI.GameScreen
                     pose.Center.y += cardHeight * aimLift;
                     pose.Lift = dragDepth;
                 }
-                else if (hovered)
+                else if (hovered && fanRaised)
                 {
-                    pose.Center.y += cardHeight * hoverLift;
-                    pose.Scale *= hoverScale;
+                    pose.Center.y += cardHeight * (_touchHover ? touchHoverLift : hoverLift);
+                    pose.Scale *= _touchHover ? touchHoverScale : hoverScale;
                     pose.Lift += hoverDepth;
                 }
 
@@ -806,7 +905,7 @@ namespace Chapchu.UI.GameScreen
             foreach (CardView card in _cards)
             {
                 if (card != _held && !_shown.Contains(card))
-                    topLayer.Set(card, _onTop);
+                    topLayer.Set(card, card == _inspected || (_onTop && _inspected == null));
             }
         }
 
@@ -830,6 +929,11 @@ namespace Chapchu.UI.GameScreen
                 _hovered = null;
             if (_held == card)
                 _held = null;
+            if (_inspected == card)
+            {
+                _inspected = null;
+                inspectDim.SetActive(false);
+            }
             _shown.Remove(card);
             _poses.Remove(card);
             _arriveAt.Remove(card);
