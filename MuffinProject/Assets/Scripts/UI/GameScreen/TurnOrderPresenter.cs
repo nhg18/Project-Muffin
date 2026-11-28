@@ -90,31 +90,6 @@ namespace Chapchu.UI.GameScreen
             RebuildRows();
         }
 
-        /// <summary>
-        /// 「내 턴이 아니에요」 안내 (10-ui.md 8-2) — 지금 턴인 사람의 이름과, 그 사람 다음부터 내 앞까지 남은 사람 수(사망은 건너뛴다).
-        /// 지금 턴인 줄을 톡 튀운다. 지금 턴을 모르거나 내 턴이면 false.
-        /// </summary>
-        public bool TryDescribeWait(int me, out string turnName, out int before)
-        {
-            turnName = null;
-            before = 0;
-            int current = _actors.IndexOf(_turnActor);
-            int mine = _actors.IndexOf(me);
-            if (current < 0 || mine < 0 || current == mine) return false;
-
-            int step = _reversed ? -1 : 1;
-            int count = _actors.Count;
-            for (int i = (current + step + count) % count; i != mine; i = (i + step + count) % count)
-            {
-                if (!_life.TryGetValue(_actors[i], out LifeState life) || life != LifeState.Dead)
-                    before++;
-            }
-
-            turnName = PlayerLook.NameOf(_turnActor);
-            _view.Ping(_rowActors.IndexOf(_turnActor));
-            return true;
-        }
-
         /// <summary>찹츄 상태 (OnChapchuChanged) — 지금 턴 꼬리표의 형광펜이 분홍 + 왕관.</summary>
         public void ShowChapchu(int actorNumber, bool isChapchu)
         {

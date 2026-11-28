@@ -16,7 +16,7 @@ namespace Chapchu.UI.GameScreen
     /// 무효가 된 카드는 흐리게 + 줄, 무효로 만든 카드의 결과는 「무효」. 카드 이름 · 그림은 덱 에셋에서 찾는다.
     /// 기록은 이 화면이 열린 뒤의 것만 — 늦게 열렸을 때 지난 기록은 복구하지 않는다 (스냅샷에 없다).
     /// 첫 턴이 시작되기 전의 뽑기는 초기 손패 배분(01-game-flow.md 5 · 05-deck.md 5장)이라 기록하지 않는다.
-    /// 줄에 마우스를 올리면(PC) · 탭하면 그 카드를 크게 보기 자리에 크게 + 아래에 「누가 → 누구」 태그 (10-ui.md 2-1 「낸 카드 기록」). 탭으로 연 것은 다음 탭(어디든)에 닫는다.
+    /// 줄에 마우스를 올리면(PC) · 탭하면 그 카드를 기록 오른쪽에 크게 + 아래에 「누가 → 누구」 태그 (10-ui.md 2-1 「낸 카드 기록」). 탭으로 연 것은 다음 탭(어디든)에 닫는다 — 그 탭은 그대로 손패 · 버튼에 간다.
     /// </summary>
     public class HistoryPresenter : MonoBehaviour
     {
@@ -109,12 +109,24 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private CardView actionCardPrefab;
         [SerializeField] private CardView counterCardPrefab;
         [SerializeField] private CardView trapCardPrefab;
-        [Tooltip("크게 보기 자리 — 체인 카드를 크게 두는 자리와 같다 (위치 · 회전 · 배율). 내 함정 크게 보기와 같은 자리.")]
+        [Tooltip("크게 보기 카드의 판(3D) 쪽 기준 — 부모 · 회전 · 깊이만 쓴다 (체인 카드 큰 자리). 화면 자리는 기록 오른쪽.")]
         [SerializeField] private Transform zoomSpot;
         [Tooltip("크게 보기 카드를 체인 카드보다 카메라 쪽으로 띄우는 z.")]
         [SerializeField] private float zoomZ = -0.6f;
-        [Tooltip("크게 본 카드 아래 「누가 → 누구」 태그 — 3 단계 주인 태그와 같은 모양 · 자리.")]
+        [Tooltip("크게 본 카드 아래 「누가 → 누구」 태그 — 3 단계 주인 태그와 같은 모양. 카드 바로 아래로 옮겨 둔다. 누르기는 받지 않는다.")]
         [SerializeField] private CardOwnerTagView zoomTag;
+        [Tooltip("크게 보기 카드를 HUD 위에 그리는 앞 층 (손패 층) — HUD 에 가리지 않게.")]
+        [SerializeField] private TopCardLayerView topLayer;
+        [Tooltip("크게 보기 카드 높이 (캔버스 px) — 손패 카드 336 의 1.5 배.")]
+        [SerializeField] private float zoomHeight = 504f;
+        [Tooltip("기록 오른쪽 끝 → 카드 왼쪽 끝 (캔버스 px).")]
+        [SerializeField] private float zoomGap = 32f;
+        [Tooltip("카드 위끝 ↔ 화면 위끝 최소 틈 (캔버스 px).")]
+        [SerializeField] private float zoomTopMargin = 24f;
+        [Tooltip("카드 아래끝 ↔ 화면 아래끝 최소 틈 (캔버스 px) — 아래의 태그 · 내 패널(높이 168)이 들어갈 자리.")]
+        [SerializeField] private float zoomBottomMargin = 260f;
+        [Tooltip("카드 아래끝 → 태그 위끝 (캔버스 px).")]
+        [SerializeField] private float zoomTagGap = 16f;
 
         [Header("색 (통합 화면 UI v3)")]
         [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
@@ -148,15 +160,29 @@ namespace Chapchu.UI.GameScreen
         private bool _zoomPinned;
         private int _zoomOpenedFrame = -1; // 고정한 프레임 — 그 프레임의 누름으로 닫지 않는다
         private HistoryEntry _closedByPress; // 누름으로 닫은 줄 — 같은 탭의 클릭이 다시 열지 않게 (손을 떼면 지운다)
+        // 마우스가 멈춘 채 줄이 밀려 들어와 올라간 줄 — 마우스가 움직이면 그때 연다 (새 줄이 올 때마다 저절로 열리지 않게)
+        private HistoryItemView _pendingItem;
+        private HistoryEntry _pendingEntry;
+        private Vector3 _pushedMouse = new Vector3(float.NaN, float.NaN); // 마지막으로 줄이 밀린 때의 마우스 자리
+        private Camera _camera;
+        private readonly Vector3[] _corners = new Vector3[4];
 
         private void Awake()
         {
+            _camera = Camera.main;
             if (list == null || deck == null || cardBack == null
-                || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || zoomSpot == null || zoomTag == null)
-                Debug.LogError($"[{nameof(HistoryPresenter)}] 참조 중 비어 있는 것이 있습니다.", this);
+                || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || zoomSpot == null || zoomTag == null || topLayer == null || _camera == null)
+            {
+                Debug.LogError($"[{nameof(HistoryPresenter)}] 참조 중 비어 있는 것이 있습니다 (메인 카메라 포함).", this);
+                return;
+            }
+
+            // 태그는 보이기만 — 아래의 손패 · 버튼 누르기를 막지 않는다
+            foreach (UnityEngine.UI.Graphic graphic in zoomTag.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+                graphic.raycastTarget = false;
         }
 
-        // 고정한 크게 보기는 다음 누름(어디든)에 닫는다. 터치는 마우스로 흉내 내므로 마우스 버튼만 본다 (MyTrapsPresenter 와 같다)
+        // 고정한 크게 보기는 다음 누름(어디든)에 닫는다 — 그 누름은 그대로 손패 · 버튼에 간다. 터치는 마우스로 흉내 내므로 마우스 버튼만 본다 (MyTrapsPresenter 와 같다)
         private void Update()
         {
             if (_zoomEntry != null && _zoomItem == null)
@@ -166,6 +192,15 @@ namespace Chapchu.UI.GameScreen
             {
                 _closedByPress = _zoomEntry;
                 HideZoom();
+            }
+
+            if (_pendingItem != null && Input.mousePosition != _pushedMouse)
+            {
+                HistoryItemView item = _pendingItem;
+                HistoryEntry entry = _pendingEntry;
+                _pendingItem = null;
+                _pendingEntry = null;
+                HandleRowHovered(item, entry);
             }
         }
 
@@ -197,6 +232,8 @@ namespace Chapchu.UI.GameScreen
             _turnActor = actorNumber;
             _resolving = null;
             bool isMe = PhotonNetwork.InRoom && PhotonNetwork.LocalPlayer.ActorNumber == actorNumber;
+            if (isMe)
+                HideZoom(); // 내 턴 — 카드를 낼 차례라 걷는다
             _entries.Add(HistoryEntry.HeaderOf(isMe ? MyTurnHeader : string.Format(TurnHeaderFormat, PlayerLook.NameOf(actorNumber))));
         }
 
@@ -508,8 +545,9 @@ namespace Chapchu.UI.GameScreen
             _entries.Add(entry);
             if (!entry.InList) return;
 
-            HideZoom(); // 새 카드가 크게 놓이는 자리와 겹친다
+            HideZoom(); // 줄이 한 칸씩 밀려 보던 줄 자리가 바뀐다
 
+            _pushedMouse = Input.mousePosition;
             HistoryItemView item = list.Push(entry);
             item.OnHovered += view => HandleRowHovered(view, entry);
             item.OnUnhovered += view => HandleRowUnhovered(entry);
@@ -517,14 +555,28 @@ namespace Chapchu.UI.GameScreen
             Draw(item, entry);
         }
 
+        // PC 올리기 — 카드를 끄는 중(버튼을 누른 채)에 지나가면 열지 않는다. 마우스가 그대로인데 줄이 밀려 들어온 것이면 움직일 때까지 미룬다
         private void HandleRowHovered(HistoryItemView item, HistoryEntry entry)
         {
-            if (!_zoomPinned)
-                ShowZoom(item, entry);
+            if (_zoomPinned || Input.GetMouseButton(0)) return;
+
+            if (Input.mousePosition == _pushedMouse)
+            {
+                _pendingItem = item;
+                _pendingEntry = entry;
+                return;
+            }
+
+            ShowZoom(item, entry);
         }
 
         private void HandleRowUnhovered(HistoryEntry entry)
         {
+            if (_pendingEntry == entry)
+            {
+                _pendingItem = null;
+                _pendingEntry = null;
+            }
             if (!_zoomPinned && _zoomEntry == entry)
                 HideZoom();
         }
@@ -552,11 +604,44 @@ namespace Chapchu.UI.GameScreen
             _zoomCard = Instantiate(prefab, zoomSpot.parent); // 판(3D) 쪽 — 이 컴포넌트는 캔버스에 있다
             _zoomCard.Setup(entry.InstanceId, data);
             _zoomCard.SetRaycastBlocking(false);
-            _zoomCard.transform.SetPositionAndRotation(zoomSpot.position + zoomSpot.forward * zoomZ, zoomSpot.rotation);
-            _zoomCard.transform.localScale = zoomSpot.localScale;
+            PlaceZoom(_zoomCard, (RectTransform)item.transform);
+            topLayer.Set(_zoomCard, true); // HUD 위 — 내 패널 · 상대 좌석에 가리지 않게
             zoomTag.Show(data.type, WhoOf(entry));
             _zoomEntry = entry;
             _zoomItem = item;
+        }
+
+        // 크게 보기 자리 — 화면 가운데(체인 · 대상 고르기 · 손패를 끄는 곳)를 비우고 기록 바로 오른쪽, 그 줄 높이에 (위아래는 화면 안으로). 태그는 카드 바로 아래 (PM 2026-11-28).
+        // HUD 는 Overlay 캔버스라 RectTransform 의 월드 좌표가 곧 화면 px 이다.
+        private void PlaceZoom(CardView card, RectTransform row)
+        {
+            var listRect = (RectTransform)list.transform;
+            float px = listRect.lossyScale.y; // 캔버스 px → 화면 px
+            listRect.GetWorldCorners(_corners);
+            float listRight = _corners[2].x;
+            row.GetWorldCorners(_corners);
+            float rowCenterY = (_corners[0].y + _corners[1].y) / 2f;
+
+            float height = zoomHeight * px;
+            float width = height * card.Width / card.Height;
+            float x = listRight + zoomGap * px + width / 2f;
+            float low = zoomBottomMargin * px + height / 2f;
+            float high = Screen.height - zoomTopMargin * px - height / 2f;
+            float y = Mathf.Clamp(rowCenterY, low, Mathf.Max(low, high));
+
+            Vector3 anchor = zoomSpot.position + zoomSpot.forward * zoomZ;
+            Transform eye = _camera.transform;
+            float depth = Vector3.Dot(anchor - eye.position, eye.forward);
+            Vector3 center = _camera.ScreenToWorldPoint(new Vector3(x, y, depth));
+            Vector3 top = _camera.ScreenToWorldPoint(new Vector3(x, y + height / 2f, depth));
+            float worldScale = Vector3.Distance(center, top) * 2f / card.Height;
+
+            Transform t = card.transform;
+            t.rotation = zoomSpot.rotation;
+            t.localScale = Vector3.one * (worldScale / t.parent.lossyScale.y);
+            t.position = center - t.up * (card.Height * worldScale / 2f); // 카드의 기준점은 아래 가운데
+
+            zoomTag.transform.position = new Vector3(x, y - height / 2f - zoomTagGap * px, zoomTag.transform.position.z);
         }
 
         private void HideZoom()
@@ -568,6 +653,8 @@ namespace Chapchu.UI.GameScreen
                 zoomTag.Hide();
             if (_zoomCard == null) return;
 
+            if (topLayer != null)
+                topLayer.Set(_zoomCard, false); // 지우기 전에 내린다 (TopCardLayerView)
             Destroy(_zoomCard.gameObject);
             _zoomCard = null;
         }

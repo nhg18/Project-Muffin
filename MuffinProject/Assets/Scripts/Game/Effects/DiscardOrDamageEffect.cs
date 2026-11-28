@@ -5,8 +5,8 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 방장이 무작위로 하나 — 0 손패 전부 버리기 · 1 amount 피해 받기 (1019 목표 조준, 11-card-list 1019). 손패가 0장이어도 버리기가 나올 수 있다 — 아무 손해 없이 끝.
-    /// 2026-11-28 PM 「선택하게 하는 것은 다 무작위로」 — 대상이 고르던 것(고르기 판 · seconds)을 쓰지 않는다. seconds · BotOption 은 고르기 흐름(GameServer.Choice.cs)이 남아 있어 둔다.
+    /// 대상이 고른다 — 0 손패 전부 버리기 · 1 amount 피해 받기 (1019 목표 조준, 11-card-list 1019). seconds 안에 안 고르면 방장이 무작위.
+    /// 고르는 동안 처리가 멈춘다 (GameServer.Choice.cs). 손패가 0장이어도 버리기를 고를 수 있다 — 아무 손해 없이 끝.
     /// </summary>
     [Serializable]
     public sealed class DiscardOrDamageEffect : CardEffect
@@ -40,10 +40,10 @@ namespace Chapchu.Game.Effects
             return BotBaseScore + view.Server.HandCountOf(target) * BotPerHandCard + (mustDiscard ? BotMustDiscardBonus : 0) + (mustDiscard && view.SeesChapchu(target) ? Bots.BotView.BreakChapchu : 0);
         }
 
-        /// <summary>봇이 대상일 때 (프로토타입 v2): HP ≤ 받을 피해(2배 반영)면 버리기, 아니면 손패 5장 이상이거나 찹츄면 피해, 그 밖은 버리기.</summary>
+        /// <summary>봇이 대상일 때 (프로토타입 v2): HP ≤ 받을 피해(2배 · 감소 반영)면 버리기, 아니면 손패 5장 이상이거나 찹츄면 피해, 그 밖은 버리기.</summary>
         internal int BotOption(GameServer server, ChainEntry entry, int bot)
         {
-            if (server.PlayerHp(bot) <= server.Scaled(entry, amount))
+            if (server.PlayerHp(bot) <= server.ExpectedDamage(entry, bot, amount))
                 return DiscardAll;
             return server.HandCountOf(bot) >= BotTakeDamageHand || server.StateOf(bot).IsChapchu ? TakeDamage : DiscardAll;
         }
@@ -52,7 +52,7 @@ namespace Chapchu.Game.Effects
         {
             int[] receivers = server.ReceiversOf(EffectSubject.Target, entry);
             if (receivers.Length > 0)
-                ApplyOption(server, entry, receivers[0], server.RandomIndex(2)); // 대상은 1명 (OneOther)
+                server.BeginChoice(entry, this, receivers[0]); // 대상은 1명 (OneOther)
         }
 
         internal void ApplyOption(GameServer server, ChainEntry entry, int actor, int option)

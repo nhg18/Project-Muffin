@@ -19,7 +19,7 @@ MonoBehaviour:
   targetCondition: 0
   grade: 3
   description: "2\uBC14\uD034 \uB3D9\uC548 \uB0B4 \uD134 \uC2DC\uC791\uB9C8\uB2E4
-    \uC0C1\uB300 \uBAA8\uB450\uC5D0\uAC8C\uC11C 1\uC7A5\uC529 \uBE7C\uC557\uACE0
+    \uC0C1\uB300 \uBAA8\uB450\uC5D0\uAC8C\uC11C 1\uC7A5\uC529 \uBE7C\uC557\uACE0,
     10 \uD53C\uD574\uB97C \uC900\uB2E4"
   reactsTo: 
   trapTrigger: 0
@@ -27,7 +27,7 @@ MonoBehaviour:
   reactCondition: 0
   uncounterable: 0
   revealSeconds: 1
-  resolveSeconds: 1.28
+  resolveSeconds: 6.23
   resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
   resolveFlashSeconds: 0
   effects:
