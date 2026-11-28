@@ -238,7 +238,8 @@ namespace Chapchu.UI.GameScreen
             return data != null ? data.cardName : string.Empty;
         }
 
-        private static string Tag(int user, int actor) => string.Format(TagFormat, ShortName(user), ShortName(actor));
+        // 쓴 사람 → 고르는 사람. 대가 고르기(2013 · 2021)처럼 같은 사람이면 이름 하나 — 체인 카드의 주인 태그 · 기록 줄과 같게 (「나 → 나」 가 되지 않게)
+        private static string Tag(int user, int actor) => user == actor ? ShortName(user) : string.Format(TagFormat, ShortName(user), ShortName(actor));
 
         private static bool IsMe(int actor) => actor == PhotonNetwork.LocalPlayer.ActorNumber;
 
