@@ -71,7 +71,7 @@ public static class MultiTest
     private const string WarningMainTextField = "mainText";                // WarningPopup — 제목 (WarningPopupText)
     private const string WarningSubTextField = "subText";                  // WarningPopup — 사유
     private const string HandUsableField = "_usable";                      // HandView — 낼 수 있는 카운터 (ReactionSkipProbe)
-    private const string SkipButtonField = "skipButton";                   // ReactionTimerView — 스킵 버튼 (CounterProbe)
+    private const string SkipButtonField = "skipCornerButton";             // ReactionTimerView — 오른쪽 아래 「스킵」 버튼 (v3, 11-26~). 「skipButton」 은 알약 전체 버튼이라 늘 꺼져 있다
     private const string PillLabelField = "labelText";                     // ReactionTimerView — 알약 글자
     private const string NoTimeoutField = "_noTimeoutActors";              // GameServer — 시간 초과 대상이 아닌 사람 (ExpireTurn)
     private const string TurnDeadlineField = "_turnDeadline";              // GameServer — 턴 마감 (ExpireTurn)
@@ -429,10 +429,10 @@ public static class MultiTest
             {
                 bool listed = usable; // 위에서 본 「낼 수 있는 카운터」 표시
                 string usableLog = listed ? "낼 수 있는 카운터 표시 켜짐" : "낼 수 있는 카운터 표시 꺼짐";
-                // 스킵 버튼 — 낼 수 있는 카운터가 있으면 반응 시간 동안 알약이 「스킵」 으로 켜진다 (10-ui 5절)
+                // 스킵 버튼 — 낼 수 있는 카운터가 있으면 반응 시간 동안 오른쪽 아래 「스킵」 버튼이 켜진다 (10-ui 5절)
                 ReactionTimerView pill = Object.FindFirstObjectByType<ReactionTimerView>();
                 var skip = pill == null ? null : (UnityEngine.UI.Button)typeof(ReactionTimerView).GetField(SkipButtonField, Private).GetValue(pill);
-                string skipLog = skip == null ? "스킵 버튼 없음" : skip.isActiveAndEnabled ? "스킵 버튼 켜짐 「" + ReadText(pill, PillLabelField) + "」" : "스킵 버튼 꺼짐";
+                string skipLog = skip == null ? "스킵 버튼 없음" : skip.isActiveAndEnabled ? "스킵 버튼 켜짐 「" + SkipLabel(skip) + "」" : "스킵 버튼 꺼짐";
                 UseFromHand(instances[counter]);
                 return "OK P" + me + " 반응 시간에 카운터 (카운터 카드) · 화면 · " + usableLog + " · " + skipLog;
             }
@@ -1091,6 +1091,13 @@ public static class MultiTest
         return ((UnityEngine.UI.RawImage)typeof(TopCardLayerView).GetField("chainImage", Private).GetValue(layer)).color.a;
     }
 
+    // 「스킵」 버튼의 글자 (버튼 안 Label)
+    private static string SkipLabel(UnityEngine.UI.Button skip)
+    {
+        TMP_Text text = skip.GetComponentInChildren<TMP_Text>(true);
+        return text == null ? "" : text.text;
+    }
+
     public static string ReactionSkipProbe(string step)
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
@@ -1153,7 +1160,7 @@ public static class MultiTest
                 if (!skip.isActiveAndEnabled)
                     return "WAIT 스킵 버튼이 아직 꺼져 있다 (반응 시간 전)";
 
-                string label = ReadText(pill, PillLabelField);
+                string label = SkipLabel(skip);
                 // 손패 뷰가 그 카드를 「낼 수 있는 카운터」 로 알고 있는지 본다 — 화면에서는 그 카드만 크고(1.1 배) 나머지는 흐려진다 (시안 v3.5)
                 HandView handView = Object.FindFirstObjectByType<HandView>();
                 var usable = (HashSet<int>)typeof(HandView).GetField(HandUsableField, Private).GetValue(handView);
