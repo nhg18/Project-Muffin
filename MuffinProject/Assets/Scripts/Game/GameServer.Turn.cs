@@ -242,7 +242,7 @@ namespace Chapchu.Game
             EndTurnStatus(CurrentTurnActor);
             CurrentTurnActor = actor;
             _lastTickAt = _clock();
-            _turnDeadline = _lastTickAt + TurnTimeLimit;
+            _turnDeadline = _lastTickAt + TurnLength; // 개발자 도구 「턴 시간 무제한」 이면 아주 길다 (GameServer.Dev)
             _mainActionUsed = false;
             _nextTurnAt = -1;
             _resumeAt = -1;

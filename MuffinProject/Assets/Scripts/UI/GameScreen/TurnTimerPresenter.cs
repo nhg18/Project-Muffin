@@ -48,7 +48,8 @@ namespace Chapchu.UI.GameScreen
             if (_turnDeadline < 0) return;
 
             bool paused = GameClock.IsPaused; // 봇전에서 설정 판을 연 동안 멈춤 표시 (GameClock)
-            float remaining = Mathf.Max(0f, (float)(_turnDeadline - GameClock.Now));
+            // 개발자 도구 「턴 시간 무제한」 이면 마감이 아주 멀다 — 링은 가득, 글자는 제한 시간에 멈춘 채로 (GameServer.Dev)
+            float remaining = Mathf.Clamp((float)(_turnDeadline - GameClock.Now), 0f, (float)GameServer.TurnTimeLimit);
             int seconds = Mathf.CeilToInt(remaining);
             float fraction = remaining / (float)GameServer.TurnTimeLimit; // 링의 전체 길이 = 방장 규칙의 제한 시간
             // 링이 매 프레임 부드럽게 줄어들도록 매 프레임 넣는다 (글자는 초가 바뀔 때만 달라진다)
