@@ -2563,7 +2563,7 @@ public static class MultiTest
         Func<int, Card> payback = id => new Card(id, 3007, CardType.Trap, TargetType.Self, new CardEffect[] { new TakeTriggerCardEffect() }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterHitByAction);
         Func<int, Card> playDead = id => new Card(id, 3008, CardType.Trap, TargetType.Self, new CardEffect[] { new SurviveAtEffect { hp = 20, now = true } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.SelfDeathPending);
         Func<int, Card> notMe = id => new Card(id, 3009, CardType.Trap, TargetType.TriggerSource, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterBigDamage, 20);
-        Func<int, Card> rest = id => new Card(id, 3012, CardType.Trap, TargetType.Self, new CardEffect[] { new HealEffect { subject = EffectSubject.Self, amount = 100 }, new ClearStatusEffect { subject = EffectSubject.Self } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterBlocked);
+        Func<int, Card> rest = id => new Card(id, 3012, CardType.Trap, TargetType.Self, new CardEffect[] { new HealEffect { subject = EffectSubject.Self, full = true }, new ClearStatusEffect { subject = EffectSubject.Self } }, null, ChainTable.Reveal, ChainTable.Resolve, TrapTrigger.AfterBlocked);
         Func<int, Card> freeze = id => new Card(id, 901, CardType.Action, TargetType.OneOther, new CardEffect[] { new SkipTurnEffect { subject = EffectSubject.Target } }, null, ChainTable.Reveal, ChainTable.Resolve);
         Func<int, Card> poke = id => new Card(id, 902, CardType.Action, TargetType.OneOther, new CardEffect[] { new DamageEffect { subject = EffectSubject.Target, amount = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve);
         {
@@ -2700,6 +2700,14 @@ public static class MultiTest
             t2.SetTrapCard(t2.O1, stop);
             t2.PlayAndResolve(t2.Turn, t2.Find2(t2.Turn, ChainTable.Hit), t2.O1);
             Check(t2.State(t2.Turn).SkipNextTurn && t2.TrapCount(t2.Turn) == 0 && t2.Hp(t2.Turn) == 100, $"3012 편안 — 함정(멈춰)이 건 스킵에도 연쇄 줄에서 발동 (♥{t2.Hp(t2.Turn)})");
+            // GOAT(최대 HP 200)인 사람은 200 까지 채운다 — 「HP 를 모두 채운다」 는 100 회복이 아니다 (06 2절)
+            var t3 = new ChainTable();
+            t3.State(t3.O1).GoatTurns = 2;
+            t3.State(t3.O1).GoatMaxHp = 200;
+            t3.SetHp(t3.O1, 30);
+            t3.SetTrapCard(t3.O1, rest);
+            t3.PlayAndResolve(t3.Turn, t3.Give(t3.Turn, freeze), t3.O1);
+            Check(t3.Hp(t3.O1) == 200, $"3012 편안 — GOAT 중이면 최대 HP 200 까지 채움 (♥{t3.Hp(t3.O1)})");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();

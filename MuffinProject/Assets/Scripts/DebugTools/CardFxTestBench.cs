@@ -27,6 +27,7 @@ namespace Chapchu.DebugTools
         private const float DesignCardWidth = 110f;
         private const int MeActor = 1;
         private const int OtherActor = 2;
+        private const int BenchMissingHp = GameServer.MaxHp / 2; // 「HP 를 모두 채운다」(3012) 회복을 보이게 미리 깎아 둘 양
 
         [Header("카드")]
         [Tooltip("손패에 깔 카드 — 게임과 같은 덱 에셋 (Deck_Main). 이름 · 그림 · 종류 · 효과 값을 읽는다.")]
@@ -199,7 +200,7 @@ namespace Chapchu.DebugTools
             foreach (CardEffect effect in data.effects)
             {
                 if (effect is HealEffect heal)
-                    (heal.subject == EffectSubject.Self ? caster : target).ResetHp(GameServer.MaxHp - heal.amount);
+                    (heal.subject == EffectSubject.Self ? caster : target).ResetHp(GameServer.MaxHp - heal.AmountWhenMissing(BenchMissingHp));
                 // HP 가 같으면 맞바꿔도 달라지지 않는다 — 맞바꾸기 카드는 내 HP 를 반으로 깎아 둔다
                 else if (effect is SwapHpEffect)
                     caster.ResetHp(GameServer.MaxHp / 2);
@@ -277,7 +278,7 @@ namespace Chapchu.DebugTools
                 if (effect is DamageEffect damage)
                     Apply(context, shown, onlyAnchor, damage.subject, -damage.amount);
                 else if (effect is HealEffect heal)
-                    Apply(context, shown, onlyAnchor, heal.subject, heal.amount);
+                    Apply(context, shown, onlyAnchor, heal.subject, heal.AmountWhenMissing(BenchMissingHp));
                 else if (effect is SwapHpEffect)
                     SwapHp(context, shown, onlyAnchor);
                 else if (effect is DrawEffect draw && onlyAnchor == null)

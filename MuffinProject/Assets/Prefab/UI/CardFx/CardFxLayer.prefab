@@ -80,7 +80,7 @@ MonoBehaviour:
   glow: {fileID: 21300000, guid: a3d52e457fa619a45aa3de372c056974, type: 3}
   streak: {fileID: 21300000, guid: 93ee8ae0c22e6b0469ca196b481ffe6e, type: 3}
   starburst: {fileID: 21300000, guid: 2c33c3efcc732c046a5319a06a021885, type: 3}
-  boomFont: {fileID: 11400000, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
+  boomFont: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   ink: {r: 0.16862746, g: 0.15686275, b: 0.3372549, a: 1}
   burstSize: {x: 4, y: 10}
   burstLife: {x: 0.6, y: 1.1}

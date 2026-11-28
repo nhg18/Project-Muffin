@@ -234,7 +234,7 @@
       "text": "막는 카드에 당한 뒤 → HP를 모두 채우고, 걸린 상태를 모두 푼다 (찹츄 빼고)",
       "art": "",
       "trapTrigger": "AfterBlocked", "triggerValue": 0,
-      "effects": [ { "type": "HealEffect", "args": "subject=Self, amount=100" }, { "type": "ClearStatusEffect", "args": "subject=Self" } ]
+      "effects": [ { "type": "HealEffect", "args": "subject=Self, full=true" }, { "type": "ClearStatusEffect", "args": "subject=Self" } ]
     }
   ]
 }
