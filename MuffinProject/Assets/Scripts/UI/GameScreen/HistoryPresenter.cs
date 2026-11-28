@@ -16,6 +16,7 @@ namespace Chapchu.UI.GameScreen
     /// 무효가 된 카드는 흐리게 + 줄, 무효로 만든 카드의 결과는 「무효」. 카드 이름 · 그림은 덱 에셋에서 찾는다.
     /// 기록은 이 화면이 열린 뒤의 것만 — 늦게 열렸을 때 지난 기록은 복구하지 않는다 (스냅샷에 없다).
     /// 첫 턴이 시작되기 전의 뽑기는 초기 손패 배분(01-game-flow.md 5 · 05-deck.md 5장)이라 기록하지 않는다.
+    /// 줄에 마우스를 올리면(PC) · 탭하면 그 카드를 크게 보기 자리에 크게 + 아래에 「누가 → 누구」 태그 (10-ui.md 2-1 「낸 카드 기록」). 탭으로 연 것은 다음 탭(어디든)에 닫는다.
     /// </summary>
     public class HistoryPresenter : MonoBehaviour
     {
@@ -96,6 +97,18 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("함정 설치 줄의 그림 — 종류는 비공개라 카드 뒷면.")]
         [SerializeField] private Sprite cardBack;
 
+        [Header("크게 보기 (줄에 올리기 · 탭)")]
+        [Tooltip("크게 보기 카드 프리팹 — 손패 · 체인과 같은 것.")]
+        [SerializeField] private CardView actionCardPrefab;
+        [SerializeField] private CardView counterCardPrefab;
+        [SerializeField] private CardView trapCardPrefab;
+        [Tooltip("크게 보기 자리 — 체인 카드를 크게 두는 자리와 같다 (위치 · 회전 · 배율). 내 함정 크게 보기와 같은 자리.")]
+        [SerializeField] private Transform zoomSpot;
+        [Tooltip("크게 보기 카드를 체인 카드보다 카메라 쪽으로 띄우는 z.")]
+        [SerializeField] private float zoomZ = -0.6f;
+        [Tooltip("크게 본 카드 아래 「누가 → 누구」 태그 — 3 단계 주인 태그와 같은 모양 · 자리.")]
+        [SerializeField] private CardOwnerTagView zoomTag;
+
         [Header("색 (통합 화면 UI v3)")]
         [SerializeField] private Color actionColor = new Color32(0x00, 0x9d, 0xff, 0xFF);
         [SerializeField] private Color counterColor = new Color32(0x6f, 0xa4, 0x34, 0xFF);
@@ -120,11 +133,41 @@ namespace Chapchu.UI.GameScreen
         // 처리는 위에서부터라 결과 알림이 올 때마다 끝에서 하나씩 뺀다. 화면만의 기억이다 (중간에 들어와 비어 있으면 그 줄은 건너뛴다)
         private readonly List<(int Actor, int CardId)> _chain = new List<(int Actor, int CardId)>();
 
+        // 크게 보기 — 보이는 줄 · 카드. 탭(클릭)으로 연 것은 고정되어 다음 탭에 닫힌다, 올리기로 연 것은 커서가 나가면 닫힌다
+        private HistoryEntry _zoomEntry;
+        private HistoryItemView _zoomItem;
+        private CardView _zoomCard;
+        private bool _zoomPinned;
+        private int _zoomOpenedFrame = -1; // 고정한 프레임 — 그 프레임의 누름으로 닫지 않는다
+        private HistoryEntry _closedByPress; // 누름으로 닫은 줄 — 같은 탭의 클릭이 다시 열지 않게 (손을 떼면 지운다)
+
         private void Awake()
         {
-            if (list == null || deck == null || cardBack == null)
+            if (list == null || deck == null || cardBack == null
+                || actionCardPrefab == null || counterCardPrefab == null || trapCardPrefab == null || zoomSpot == null || zoomTag == null)
                 Debug.LogError($"[{nameof(HistoryPresenter)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
+
+        // 고정한 크게 보기는 다음 누름(어디든)에 닫는다. 터치는 마우스로 흉내 내므로 마우스 버튼만 본다 (MyTrapsPresenter 와 같다)
+        private void Update()
+        {
+            if (_zoomEntry != null && _zoomItem == null)
+                HideZoom(); // 줄이 밀려나 지워졌다
+
+            if (_zoomPinned && Input.GetMouseButtonDown(0) && Time.frameCount != _zoomOpenedFrame)
+            {
+                _closedByPress = _zoomEntry;
+                HideZoom();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (_closedByPress != null && !Input.GetMouseButton(0) && !Input.GetMouseButtonUp(0))
+                _closedByPress = null;
+        }
+
+        private void OnDestroy() => HideZoom();
 
         private void Start()
         {
@@ -423,8 +466,70 @@ namespace Chapchu.UI.GameScreen
         private void Add(HistoryEntry entry)
         {
             _entries.Add(entry);
-            if (entry.InList)
-                Draw(list.Push(entry), entry);
+            if (!entry.InList) return;
+
+            HideZoom(); // 새 카드가 크게 놓이는 자리와 겹친다
+
+            HistoryItemView item = list.Push(entry);
+            item.OnHovered += view => HandleRowHovered(view, entry);
+            item.OnUnhovered += view => HandleRowUnhovered(entry);
+            item.OnClicked += view => HandleRowClicked(view, entry);
+            Draw(item, entry);
+        }
+
+        private void HandleRowHovered(HistoryItemView item, HistoryEntry entry)
+        {
+            if (!_zoomPinned)
+                ShowZoom(item, entry);
+        }
+
+        private void HandleRowUnhovered(HistoryEntry entry)
+        {
+            if (!_zoomPinned && _zoomEntry == entry)
+                HideZoom();
+        }
+
+        private void HandleRowClicked(HistoryItemView item, HistoryEntry entry)
+        {
+            if (entry == _closedByPress) return; // 열린 크게 보기를 닫은 탭이다
+
+            ShowZoom(item, entry);
+            _zoomPinned = _zoomEntry != null;
+            _zoomOpenedFrame = Time.frameCount;
+        }
+
+        // 함정 설치 줄은 종류가 비공개라 크게 볼 것이 없다
+        private void ShowZoom(HistoryItemView item, HistoryEntry entry)
+        {
+            if (entry.IsTrapSet) return;
+            if (_zoomEntry == entry) return;
+
+            HideZoom();
+            CardData data = deck.GetCard(entry.CardId);
+            if (data == null) return;
+
+            CardView prefab = data.type == CardType.Counter ? counterCardPrefab : data.type == CardType.Trap ? trapCardPrefab : actionCardPrefab;
+            _zoomCard = Instantiate(prefab, zoomSpot.parent); // 판(3D) 쪽 — 이 컴포넌트는 캔버스에 있다
+            _zoomCard.Setup(entry.InstanceId, data);
+            _zoomCard.SetRaycastBlocking(false);
+            _zoomCard.transform.SetPositionAndRotation(zoomSpot.position + zoomSpot.forward * zoomZ, zoomSpot.rotation);
+            _zoomCard.transform.localScale = zoomSpot.localScale;
+            zoomTag.Show(data.type, WhoOf(entry));
+            _zoomEntry = entry;
+            _zoomItem = item;
+        }
+
+        private void HideZoom()
+        {
+            _zoomPinned = false;
+            _zoomEntry = null;
+            _zoomItem = null;
+            if (zoomTag != null)
+                zoomTag.Hide();
+            if (_zoomCard == null) return;
+
+            Destroy(_zoomCard.gameObject);
+            _zoomCard = null;
         }
 
         // 적용 중인 카드 줄의 결과 한 마디 — 먼저 붙은 결과(HP 포함)가 있으면 그대로 둔다
