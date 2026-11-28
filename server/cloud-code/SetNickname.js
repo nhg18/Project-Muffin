@@ -22,6 +22,9 @@ const MAX_WIDTH = 16;  // 폭 — 영문 · 숫자 1, 그 밖의 글자 2
 const ALLOWED = /^[가-힣a-zA-Z0-9ぁ-ゟァ-ヺー-ヿ々㐀-䶿一-鿿豈-﫿]+$/u;
 
 // 23 3절 #5 · 4절
+// 변경 제한(쿠폰 · 7일 쿨다운)을 쓰는가. 지금은 끔 — 몇 번이든 바꾸고 쿠폰 · 변경 시각을 건드리지 않는다 (PM 2026-11-28).
+// 켜려면 true 로 바꿔 다시 배포하고, 클라이언트 NicknameState.ChangeLimited 도 같이 바꾼다.
+const CHANGE_LIMITED = false;
 const COOLDOWN_MS = 168 * 60 * 60 * 1000;
 const FREE_COUPONS = 1; // 칸이 없으면 계정 생성 때 받은 1장 (7-8)
 
@@ -65,7 +68,8 @@ module.exports = async ({ params, context, logger }) => {
     if (!isFirst && mine.nickname === nickname)
       return { result: "same" };
 
-    if (!isFirst) {
+    const limited = !isFirst && CHANGE_LIMITED;
+    if (limited) {
       const remaining = COOLDOWN_MS - (Date.now() - mine.changedAt);
       if (mine.changedAt > 0 && remaining > 0)
         return { result: "cooldown", remainingSeconds: Math.ceil(remaining / 1000) };
@@ -80,8 +84,8 @@ module.exports = async ({ params, context, logger }) => {
     // 대소문자만 바꾸면 같은 이름 — 장부는 그대로 (23 7-8)
     const newId = registryId(nickname);
     const oldId = isFirst ? null : registryId(mine.nickname);
-    const coupons = isFirst ? mine.coupons : mine.coupons - 1;
-    const changedAt = isFirst ? mine.changedAt : Date.now();
+    const coupons = limited ? mine.coupons - 1 : mine.coupons;
+    const changedAt = limited ? Date.now() : mine.changedAt;
 
     const lock = newId === oldId ? null : await acquire(cloudSave, projectId, newId, playerId, logger);
     if (newId !== oldId && !lock)
@@ -99,7 +103,7 @@ module.exports = async ({ params, context, logger }) => {
       // 닉네임을 먼저 — 뒤의 쓰기가 실패하면 쿠폰을 덜 쓰는 쪽으로 남는다.
       // 바꾸기면 읽은 판의 쓰기 잠금을 건다 — 같은 사람의 요청 둘이 겹치면 늦은 쪽이 409 로 멈춰 쿠폰을 두 번 쓰지 않는다
       await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_NICKNAME, value: nickname, writeLock: mine.nicknameLock ?? undefined });
-      if (!isFirst) {
+      if (limited) {
         await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_COUPONS, value: coupons });
         await cloudSave.setProtectedItem(projectId, playerId, { key: KEY_CHANGED_AT, value: changedAt });
       }

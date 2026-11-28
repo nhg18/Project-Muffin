@@ -26,6 +26,12 @@ namespace Chapchu.Account
         /// <summary>쿠폰 칸이 없을 때의 장수 — 계정 생성 때 1장 무료 (23 7-8)</summary>
         public const int FreeCoupons = 1;
 
+        /// <summary>
+        /// 닉네임 변경 제한(쿠폰 · 7일 쿨다운)을 쓰는가. 지금은 끔 — 몇 번이든 바꾼다 (23 3절 #5, PM 2026-11-28).
+        /// 켜려면 true 로 바꾸고 서버 SetNickname.js 의 CHANGE_LIMITED 도 같이 바꿔 다시 배포한다.
+        /// </summary>
+        public static readonly bool ChangeLimited = false;
+
         /// <summary>바꾼 뒤 다시 바꿀 수 없는 시간 — 7일 (23 4절)</summary>
         public static readonly TimeSpan Cooldown = TimeSpan.FromHours(168);
 

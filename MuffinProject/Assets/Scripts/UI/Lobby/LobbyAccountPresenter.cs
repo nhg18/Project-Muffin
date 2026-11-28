@@ -70,7 +70,7 @@ namespace Chapchu.UI.Lobby
             modal.OnInputSubmitted -= HandleInputSubmitted;
         }
 
-        // 쿨다운 → 쿠폰 순으로 먼저 본다 — 서버가 다시 본다 (17 5-2). 아직 못 읽었으면 바로 입력 창, 판단은 서버에
+        // 쿨다운 → 쿠폰 순으로 먼저 본다 — 서버가 다시 본다 (17 5-2). 아직 못 읽었으면 바로 입력 창, 판단은 서버에. 제한을 끄면 보지 않는다 (NicknameState.ChangeLimited)
         private void HandleNicknameChangeRequested()
         {
             _nicknameRejectCount = 0;
@@ -80,7 +80,7 @@ namespace Chapchu.UI.Lobby
                 StartCoroutine(ServerConfig.FetchRoutine());
 
             NicknameState state = AccountService.Nickname;
-            if (state?.Nickname != null)
+            if (NicknameState.ChangeLimited && state?.Nickname != null)
             {
                 TimeSpan left = state.CooldownLeft(DateTimeOffset.UtcNow);
                 if (left > TimeSpan.Zero)
@@ -102,7 +102,7 @@ namespace Chapchu.UI.Lobby
         private void ShowNicknameInput(string value)
         {
             NicknameState state = AccountService.Nickname;
-            string note = state?.Nickname != null ? string.Format(CouponNoteFormat, state.Coupons) : null;
+            string note = NicknameState.ChangeLimited && state?.Nickname != null ? string.Format(CouponNoteFormat, state.Coupons) : null;
             modal.ShowInput(LobbyInputKind.Nickname, value, note);
         }
 
