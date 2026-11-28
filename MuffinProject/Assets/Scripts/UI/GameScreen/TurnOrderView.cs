@@ -9,7 +9,8 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 오른쪽 세로 턴 순서 (통합 화면 UI v3 .tord) — 위에 「턴 방향」 알약, 그 아래 둥근 기둥 안에 사람마다 한 줄(TurnOrderRowView 프리팹 복제).
     /// 지금 턴인 줄은 얼굴 원이 커지고, 왼쪽에 꼬리표(이름 + 형광펜 · 남은 초 배지)가 붙는다. 꼬리표는 하나를 지금 줄 높이로 옮겨 쓴다 — 남은 초 배지는 TurnTimerPresenter 가 채운다.
-    /// 역방향이면 알약이 주황 · 화살표가 위로, 꺾쇠도 위를 가리킨다. 값을 받아 그리기만 한다 — 누가 몇 번째인지는 TurnOrderPresenter 가 정한다.
+    /// 줄은 늘 위에서 아래로 차례가 이어지게 온다(TurnOrderPresenter 가 지금 턴을 맨 위에 둔다) — 화살표 · 꺾쇠는 항상 아래, 역방향은 알약 색(주황)으로만 알린다.
+    /// 값을 받아 그리기만 한다 — 누가 몇 번째인지는 TurnOrderPresenter 가 정한다.
     /// </summary>
     public class TurnOrderView : MonoBehaviour
     {
@@ -18,8 +19,6 @@ namespace Chapchu.UI.GameScreen
 
         [Header("「턴 방향」 알약")]
         [SerializeField] private UIShape headerFill;
-        [Tooltip("진행 방향 화살표 — 정방향은 아래, 역방향이면 위.")]
-        [SerializeField] private RectTransform directionArrow;
         [SerializeField] private Color headerColor = Color.white;
         [Tooltip("역방향일 때 알약 색 (시안 .tord .hd.rev).")]
         [SerializeField] private Color headerReversedColor = new Color32(0xff, 0xd9, 0xa8, 0xFF);
@@ -54,11 +53,10 @@ namespace Chapchu.UI.GameScreen
         private readonly List<string> _names = new List<string>();
         private readonly List<bool> _chapchu = new List<bool>();
         private int _current = -1;
-        private bool _reversed;
 
         private void Awake()
         {
-            if (headerFill == null || directionArrow == null || track == null || rows == null || rowPrefab == null
+            if (headerFill == null || track == null || rows == null || rowPrefab == null
                 || currentTab == null || currentNameText == null || currentNameLayout == null || currentBand == null || currentCrown == null)
                 Debug.LogError($"[{nameof(TurnOrderView)}] 참조 중 비어 있는 것이 있습니다.", this);
         }
@@ -80,7 +78,7 @@ namespace Chapchu.UI.GameScreen
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -i * rowPitch);
                 row.SetPlayer(players[i].name, players[i].face, players[i].accessory);
                 row.SetCurrent(false);
-                row.SetChevron(i < players.Count - 1, _reversed);
+                row.SetChevron(i < players.Count - 1);
                 _rows.Add(row);
                 _names.Add(players[i].name);
                 _chapchu.Add(false);
@@ -140,15 +138,8 @@ namespace Chapchu.UI.GameScreen
                 UIJuice.Pop(currentTab, PingFrom);
         }
 
-        /// <summary>진행 방향 — 역방향이면 알약이 주황 · 화살표 · 꺾쇠가 위로.</summary>
-        public void SetReversed(bool reversed)
-        {
-            _reversed = reversed;
-            headerFill.color = reversed ? headerReversedColor : headerColor;
-            directionArrow.localRotation = Quaternion.Euler(0f, 0f, reversed ? 180f : 0f);
-            for (int i = 0; i < _rows.Count; i++)
-                _rows[i].SetChevron(i < _rows.Count - 1, reversed);
-        }
+        /// <summary>진행 방향 — 역방향이면 알약이 주황. 줄 순서가 이미 진행 방향이라 화살표 · 꺾쇠는 그대로 아래.</summary>
+        public void SetReversed(bool reversed) => headerFill.color = reversed ? headerReversedColor : headerColor;
 
         private void RefreshTab()
         {

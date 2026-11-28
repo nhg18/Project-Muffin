@@ -19,7 +19,7 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private Image head;
         [Tooltip("머리 위에 겹치는 꾸미기(봇 스킨의 리본) — head 와 같은 크기 · 자리. 꾸미기가 없으면 끈다.")]
         [SerializeField] private Image accessory;
-        [Tooltip("다음 사람을 가리키는 꺾쇠 — 마지막 줄은 숨긴다. 역방향이면 위를 가리킨다.")]
+        [Tooltip("아래 줄(다음 사람)을 가리키는 꺾쇠 — 마지막 줄은 숨긴다.")]
         [SerializeField] private RectTransform chevron;
         [Tooltip("최종 사망이면 흐리게.")]
         [SerializeField] private CanvasGroup group;
@@ -79,11 +79,7 @@ namespace Chapchu.UI.GameScreen
             accessory.material = head.material;
         }
 
-        /// <summary>꺾쇠 — 마지막 줄이면 숨긴다. 역방향이면 위를 가리킨다.</summary>
-        public void SetChevron(bool visible, bool reversed)
-        {
-            chevron.gameObject.SetActive(visible);
-            chevron.localRotation = Quaternion.Euler(0f, 0f, reversed ? 180f : 0f);
-        }
+        /// <summary>꺾쇠 — 마지막 줄이면 숨긴다.</summary>
+        public void SetChevron(bool visible) => chevron.gameObject.SetActive(visible);
     }
 }
