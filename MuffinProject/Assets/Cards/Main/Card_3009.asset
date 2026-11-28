@@ -18,8 +18,8 @@ MonoBehaviour:
   targetType: 6
   targetCondition: 0
   grade: 0
-  description: "\uB204\uAC00 20 \uC774\uC0C1 \uD53C\uD574\uB97C \uBC1B\uC740 \uB4A4
-    \u2192 \uADF8 \uC0AC\uB78C\uC5D0\uAC8C 10 \uD53C\uD574\uB97C \uC900\uB2E4"
+  description: "\uB204\uAC00 20 \uC774\uC0C1 \uD53C\uD574\uB97C \uBC1B\uC73C\uBA74,
+    \uADF8 \uC0AC\uB78C\uC5D0\uAC8C 10 \uD53C\uD574\uB97C \uC900\uB2E4"
   reactsTo: 
   trapTrigger: 17
   triggerValue: 20

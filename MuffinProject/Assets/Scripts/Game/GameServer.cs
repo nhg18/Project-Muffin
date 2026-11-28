@@ -109,6 +109,21 @@ namespace Chapchu.Game
         /// </summary>
         public static double OpeningSeconds(int players) => OpeningIntroSeconds(players) + OpeningDealSeconds * InitialHandCount * players + OpeningMargin;
 
+        /// <summary>
+        /// 대폭발 새 판(1012)의 첫 턴을 멈춰 두는 초 — 화면이 남은 카드를 버림 더미로 날린 뒤(RestartClearSeconds) 게임 시작 연출 + 시작 손패 배분을 다시 한다 (10-ui.md 5-2 「게임 시작」).
+        /// 화면 전환 덮개는 없지만 알림이 닿는 틈은 같아 OpeningMargin 을 그대로 쓴다.
+        /// </summary>
+        public static double RestartOpeningSeconds(int players) => RestartClearSeconds + OpeningSeconds(players);
+
+        /// <summary>새 판 알림 뒤 화면이 가운데 체인 카드 → 내 손패를 버림 더미로 날리는 시간 — ChainCardsPresenter · HandPresenter 의 discardDuration 0.38 × 2.</summary>
+        public const double RestartClearSeconds = 0.8;
+
+        /// <summary>
+        /// 첫 턴을 게임 시작 연출 동안 멈출지 — 실제 게임(PunGameServer)만 켠다. 규칙 시험은 끈 채로 멈춤 없이 돈다.
+        /// 게임 시작은 StartGame 의 openingSeconds 로, 대폭발 새 판은 이 값으로 정한다 (RestartOpeningSeconds).
+        /// </summary>
+        public bool PlaysOpening { get; set; }
+
         /// <summary>게임 시작 연출(섞기 ~ 자리 배치)의 길이 — 화면이 이 안에 마친다.</summary>
         public static double OpeningIntroSeconds(int players) => 3.1 + 0.48 * players;
 

@@ -93,7 +93,7 @@ namespace Chapchu.Cards
             (new Regex(@"\d+(?:~\d+)?장(?:씩|을)? (?:뽑는다|가져온다)"), "draw"),
             (new Regex(@"\d+장(?:씩|을)? 빼앗(?:는다|고)"), "steal"),
             (new Regex(@"\d+장씩? 준다"), "give"),
-            (new Regex(@"손패를? 모두 버리(?:고|기)"), "discard"),
+            (new Regex(@"손패를? (?:모두|전부) 버(?:리고|리기|릴지)"), "discard"),
             (new Regex(@"못 (?:쓰게|이긴다)"), "ban"),
             (new Regex(@"\d+턴 건너뛴다"), "skip"),
             (new Regex(@"반대로"), "reverse"),

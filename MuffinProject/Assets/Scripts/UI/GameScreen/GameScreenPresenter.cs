@@ -995,6 +995,9 @@ namespace Chapchu.UI.GameScreen
             yield return chainCards.DiscardAllRoutine(); // 가운데에 남은 대폭발 · 그 위 카운터 — 처리 도중 버려진 체인이라 ChainDiscarded 가 오지 않는다
             yield return hand.DiscardHandRoutine();
             discardPile.Clear();
+
+            // 새 판도 처음처럼 — 게임 시작 연출(턴 순서 섞기 → 자리로) 뒤 뒤따르는 손패 배분. 방장은 그동안 첫 턴을 멈춰 둔다 (GameServer.RestartOpeningSeconds, 10-ui.md 5-2)
+            yield return StartIntroRoutine(order);
         }
 
         // 피폭 (1012) — 턴이 끝나 피해가 들어가면(turns > 0) 화면 가장자리가 자주로 번지고, 뒤따르는 모두의 HP 변화는 자주 피해 (시안 fallout · zap)
