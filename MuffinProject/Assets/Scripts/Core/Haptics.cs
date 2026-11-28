@@ -33,8 +33,11 @@ namespace Chapchu.Core
         }
 
         // 빌드가 진동 권한(VIBRATE)을 넣게 — Unity 는 Handheld.Vibrate 를 부르는 코드가 있으면 권한을 더한다. 실제로는 부르지 않는다.
+        // Handheld 는 모바일 빌드에만 있다 — PC 빌드가 깨지지 않게 안드로이드에서만 둔다.
+#if UNITY_ANDROID
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0051")]
         private static void KeepVibratePermission() => Handheld.Vibrate();
+#endif
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         private static AndroidJavaObject Vibrator()

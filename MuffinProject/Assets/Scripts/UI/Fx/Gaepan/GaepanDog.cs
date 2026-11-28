@@ -34,6 +34,12 @@ namespace Chapchu.UI.Fx.Gaepan
         public GaepanPose Pose;
         /// <summary>다리 · 꼬리 움직임의 위상 (시안 ph).</summary>
         public float Phase;
+        /// <summary>다리를 섞을 둘째 자세 — <see cref="PoseBlend"/> 만큼 (시안 "flail>tuck:0.4").</summary>
+        public GaepanPose PoseTo;
+        /// <summary>둘째 자세의 몫 (0 = Pose 그대로, 1 = PoseTo).</summary>
+        public float PoseBlend;
+        /// <summary>발밑 동그란 그림자를 그리지 않는다 (시안 shadow:false — 던져졌거나 하늘에 있는 강아지).</summary>
+        public bool NoBlob;
     }
 
     /// <summary>
@@ -115,7 +121,10 @@ namespace Chapchu.UI.Fx.Gaepan
             bool calm = state.Pose == GaepanPose.Stand || state.Pose == GaepanPose.Shake;
             float tailAngle = Mathf.Sin(state.Phase * 2.2f) * (calm ? 0.18f : 0.4f);
             for (int i = 0; i < _legAngles.Length; i++)
-                _legAngles[i] = LegAngle(state.Pose, state.Phase, i);
+            {
+                float angle = LegAngle(state.Pose, state.Phase, i);
+                _legAngles[i] = state.PoseBlend > 0f ? Mathf.Lerp(angle, LegAngle(state.PoseTo, state.Phase, i), state.PoseBlend) : angle;
+            }
 
             float scale = state.Size * HeightPerSize / FxDog.Height;
             Vector3 right = world.CameraRight;
@@ -131,7 +140,7 @@ namespace Chapchu.UI.Fx.Gaepan
             shadow.Apply(roll, flip, state.StretchY, slide, tailAngle, _legAngles);
 
             float height = state.Position.y;
-            bool showBlob = height < BlobMaxHeight;
+            bool showBlob = !state.NoBlob && height < BlobMaxHeight;
             if (blob.gameObject.activeSelf != showBlob)
                 blob.gameObject.SetActive(showBlob);
             if (!showBlob)

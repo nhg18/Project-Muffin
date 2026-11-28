@@ -21,8 +21,13 @@ namespace Chapchu.Game
         // 설치한 함정 — 내용은 소유자만, 개수는 공개. 최대 3 (04-card.md 6절).
         public readonly List<Card> Traps = new List<Card>();
 
-        // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md).
+        // 체력 — 공개. 0 ~ GameServer.MaxHp (06-health.md). GOAT 동안만 그 위로 올라간다 (06 2절).
         public int Hp;
+
+        // GOAT (1067) — 남은 「내 실제 턴 시작」 횟수. 0 이면 GOAT 가 아니다. 그동안 최대 HP 가 GoatMaxHp, 남에게 주는 피해가 GoatDamageTimes 배 (11-card-list 1067).
+        public int GoatTurns;
+        public int GoatMaxHp;
+        public int GoatDamageTimes;
 
         // 방을 나갔다 — 턴 순서 · 대상 후보에서 빠진다 (01-game-flow.md 6절). 턴 순서 목록에는 남겨 다음 사람 찾기의 기준으로 쓴다.
         // 최종 사망과 결과는 같지만 따로 기록한다 (06-health.md 12절).

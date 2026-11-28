@@ -9,7 +9,7 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 namespace Chapchu.UI.GameScreen
 {
     /// <summary>
-    /// 개판 오분전 연출 (1021, 프로토타입 v2): 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말.
+    /// 개판 오분전 연출 (1021, 프로토타입 v2): 왼쪽 위 자명종 → 바퀴마다 자명종이 넘어감 → 판정 팻말. 팻말 다음의 처형 장면은 카드 연출 레이어가 재생한다 (CardFxPresenter).
     /// 시작 제목 · 「5 바퀴 동안」 도장은 카드의 3 단계 컷인(GaepanFx)이 보인다 — 판 위에 따로 띄우면 같은 글자가 두 번 나온다 (PM 2026-11-27).
     /// 값은 GameScreenPresenter 가 연출 큐 순서로 넘긴다. 늦게 열렸을 때는 Start 에서 방 속성 「gaepan」 을 한 번 읽어 자명종만 보인다 (09-network.md 6.1).
     /// </summary>

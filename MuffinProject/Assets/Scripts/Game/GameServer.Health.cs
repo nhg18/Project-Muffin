@@ -13,11 +13,12 @@ namespace Chapchu.Game
             if (amount <= 0)
                 return; // 최종 피해 0 이면 사건 자체가 없다 (06 4절)
 
+            amount = DamageFrom(source, actor, amount); // 준 사람이 GOAT 면 2배 (1067)
             CountDamage(actor, source, -SetHp(actor, _players[actor].Hp - amount, source));
             RecordDamage(actor, source, amount);
         }
 
-        // 체력은 여기서만 바꾼다 — 원본 변경과 일어난 일이 항상 같이 나간다. 0 미만 · 최대치 초과 불가 (06-health.md 2절).
+        // 체력은 여기서만 바꾼다 — 원본 변경과 일어난 일이 항상 같이 나간다. 0 미만 · 최대치 초과 불가 (06-health.md 2절 — 최대치는 GOAT 동안만 늘어난다, HpCapOf).
         // source = 이 변화를 일으킨 카드의 주인 (없으면 -1). HP 가 0 이 되는 순간의 주인을 적어 둔다 — 결과 화면 「○○에게 당함」 (07 11-3 「킬」).
         // 자기 피해는 킬이 아니다. HP 가 다시 0 보다 커지면(사망을 면함) 지운다.
         // 돌려주는 값 = 실제로 변한 양 (늘면 +, 줄면 −) — 지표는 이 값으로 센다 (07 11-4).
@@ -25,7 +26,7 @@ namespace Chapchu.Game
         {
             PlayerState player = _players[actor];
             int before = player.Hp;
-            player.Hp = Math.Clamp(hp, 0, MaxHp);
+            player.Hp = Math.Clamp(hp, 0, HpCapOf(player));
             if (before <= 0 && player.Hp > 0)
                 _handDirty.Add(actor); // HP 0 에서 살아났다 — 지금 10장이면 찹츄 선언 (07 4.1, PM 2026-11-19)
             if (player.Hp > 0)
@@ -85,6 +86,8 @@ namespace Chapchu.Game
                 int[] discarded = DiscardAll(actor);
                 _events.Add(new PlayerDied(actor, discarded, _discardPile.Count));
                 EndWaitOf(actor); // 건 사람이 죽으면 「기다려」 즉시 종료 (11-card-list 1023)
+                EndDomainOf(actor); // 영역 · GOAT 도 같다 (11-card-list 1008 · 1067)
+                EndGoatOf(actor);
                 ClearChapchu(actor); // 죽은 사람의 찹츄 표시가 남지 않게 해제를 알린다 (07 9절)
             }
 

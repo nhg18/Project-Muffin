@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee88dcfa73374f14e83a2fd511908168, type: 3}
+  m_Name: Card_1008
+  m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
+  id: 1008
+  cardName: "\uC601\uC5ED\uC804\uAC1C"
+  type: 0
+  targetType: 3
+  targetCondition: 0
+  grade: 3
+  description: "2\uBC14\uD034 \uB3D9\uC548 \uB0B4 \uD134 \uC2DC\uC791\uB9C8\uB2E4
+    \uC0C1\uB300 \uBAA8\uB450\uC5D0\uAC8C\uC11C 1\uC7A5\uC529 \uBE7C\uC557\uACE0
+    10 \uD53C\uD574\uB97C \uC900\uB2E4"
+  reactsTo: 
+  trapTrigger: 0
+  triggerValue: 0
+  reactCondition: 0
+  uncounterable: 0
+  revealSeconds: 1
+  resolveSeconds: 1.28
+  resolveFlashColor: {r: 0, g: 0, b: 0, a: 0}
+  resolveFlashSeconds: 0
+  effects:
+  - rid: 5046878856943239168
+  references:
+    version: 2
+    RefIds:
+    - rid: 5046878856943239168
+      type: {class: StartDomainEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
+      data:
+        rounds: 2
+        take: 1
+        damage: 10

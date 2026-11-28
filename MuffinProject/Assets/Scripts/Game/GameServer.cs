@@ -59,7 +59,8 @@ namespace Chapchu.Game
         /// deck 의 카드는 장마다 고유 InstanceId 를 가져야 한다 (09-network.md 7절).
         /// </summary>
         /// <param name="noTimeoutActors">시간 초과 자동 행동 · 강제 퇴장을 받지 않는 사람 — 봇 (03-turn.md 4절). 없으면 전원이 받는다.</param>
-        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck, IEnumerable<int> noTimeoutActors = null)
+        /// <param name="openingSeconds">첫 턴이 멈춰 있는 초 — 화면의 게임 시작 연출 (<see cref="OpeningSeconds"/>). 시험은 0.</param>
+        public IReadOnlyList<GameEvent> StartGame(IReadOnlyList<int> actors, IReadOnlyList<Card> deck, IEnumerable<int> noTimeoutActors = null, double openingSeconds = 0)
         {
             _noTimeoutActors.Clear();
             if (noTimeoutActors != null)
@@ -83,6 +84,7 @@ namespace Chapchu.Game
             _extraTurnActor = -1;
             TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)
             ResetGaepan();
+            ResetDomain();
             ClearChoice();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)
@@ -95,9 +97,26 @@ namespace Chapchu.Game
                 SetHp(actor, MaxHp);
 
             DealInitialHands(actors);
-            StartFirstTurn();
+            StartFirstTurn(openingSeconds);
+            _events.Insert(0, new GameStarted(_turnOrder.ToArray(), openingSeconds)); // 시작 알림 묶음의 맨 앞 — 화면이 시작 연출을 먼저 줄 세운다
             return TakeEvents();
         }
+
+        /// <summary>
+        /// 첫 턴을 멈춰 두는 초 (01-game-flow.md 3절 #8 · 10-ui.md 5-2 「게임 시작 연출」 표) — 화면의 게임 시작 연출 + 시작 손패 배분이 끝날 때까지.
+        /// 연출 3.1 + 0.48 × 인원 (섞기 → 번호 공개 → 「{이름}부터 시작!」 → 자리로 날아가기) + 배분 0.15 × 5장 × 인원 + 알림이 닿는 틈.
+        /// 연출 값을 바꾸면 이 식도 같이 고친다 — GameStartIntroView 가 자기 시간표가 이보다 길면 경고한다.
+        /// </summary>
+        public static double OpeningSeconds(int players) => OpeningIntroSeconds(players) + OpeningDealSeconds * InitialHandCount * players + OpeningMargin;
+
+        /// <summary>게임 시작 연출(섞기 ~ 자리 배치)의 길이 — 화면이 이 안에 마친다.</summary>
+        public static double OpeningIntroSeconds(int players) => 3.1 + 0.48 * players;
+
+        /// <summary>시작 손패 1장을 나눠 주는 간격 — HandPresenter · OpponentSeatsPresenter 의 dealInterval.</summary>
+        public const double OpeningDealSeconds = 0.15;
+
+        /// <summary>게임 시작 연출이 방장보다 늦게 시작하는 틈 — 화면 전환 덮개가 걷히는 시간(머묾 0.2 + 걷기 0.28, 15-screen 9-3) + 알림이 닿는 시간.</summary>
+        public const double OpeningMargin = 0.8;
 
         /// <summary>actor 의 비공개 카드 — 손패 · 설치 함정 (09-network.md 10절 동기화). 그 사람에게만 보낸다.</summary>
         public void GetPrivateCards(int actor, out int[] handIds, out int[] handCardIds, out int[] trapIds, out int[] trapCardIds)
