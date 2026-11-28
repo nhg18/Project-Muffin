@@ -100,7 +100,7 @@ namespace Chapchu.Cards
             (new Regex(@"파괴"), "destroy"),
             (new Regex(@"서로 바꾼다"), "swap"),
             (new Regex(@"새 판"), "reset"),
-            (new Regex(@"다음 턴에|\d+바퀴 뒤|\d+바퀴 동안 내 턴 시작마다|이후 턴마다|내 다음 턴까지"), "time"),
+            (new Regex(@"다음 턴에|\d+바퀴 뒤|\d+바퀴 동안(?: 내 턴 시작마다)?|이후 턴마다|내 다음 턴까지"), "time"),
         };
 
         private static readonly Dictionary<string, CardKeyword> ById = BuildLookup();

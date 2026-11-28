@@ -12,6 +12,7 @@ namespace Chapchu.UI.GameScreen
 {
     /// <summary>
     /// 턴 순서에 값을 넣는다 (통합 화면 UI v3 .tord · 03-turn.md 6 · 7절). 순서는 방장이 섞은 실제 턴 순서(방 속성 turnOrder, PlayerLook.TurnOrderActors) — 봇 포함. 나는 「나」.
+    /// 줄은 지금 턴인 사람부터 진행 방향으로 쌓는다 — 맨 위가 지금 턴, 그 아래가 다음 차례 (10-ui.md 2-1 「턴 순서」). 턴 · 방향이 바뀔 때마다 줄을 다시 만든다.
     /// 얼굴은 그 사람의 캐릭터 모습(OpponentSeatsPresenter.LookOf — 봇은 봇마다 다르다). 턴 · HP · 찹츄 · 생사 · 방향은 GameScreenPresenter 가 연출 큐에서 넘긴다.
     /// 순서가 오거나(시작 · 대폭발 새 판) 누가 나가면 줄을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
@@ -24,7 +25,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private OpponentSeatsPresenter seats;
 
         private TurnOrderView _view;
-        private readonly List<int> _actors = new List<int>(); // 줄 순서 = 턴 순서
+        private readonly List<int> _actors = new List<int>();    // 방장이 섞은 턴 순서
+        private readonly List<int> _rowActors = new List<int>(); // 줄 순서 — 지금 턴인 사람부터 진행 방향으로
         private readonly HashSet<int> _chapchuActors = new HashSet<int>();
         private readonly Dictionary<int, int> _hp = new Dictionary<int, int>();
         private readonly Dictionary<int, LifeState> _life = new Dictionary<int, LifeState>();
@@ -53,7 +55,7 @@ namespace Chapchu.UI.GameScreen
         private void Start()
         {
             _view.SetReversed(false);
-            RebuildRows();
+            ReadTurnOrder();
             if (!PhotonNetwork.InRoom) return; // 에디터에서 씬을 직접 열었을 때
 
             // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
@@ -73,18 +75,19 @@ namespace Chapchu.UI.GameScreen
             ShowDirection(room.TryGetValue(RoomProps.TurnDirection, out object reversed) && reversed is bool reversedValue && reversedValue);
         }
 
-        /// <summary>턴이 바뀌었다 (OnTurnStarted).</summary>
+        /// <summary>턴이 바뀌었다 (OnTurnStarted) — 그 사람이 맨 윗줄로 온다.</summary>
         public void ShowTurn(int actorNumber)
         {
             _turnActor = actorNumber;
-            _view.SetCurrent(_actors.IndexOf(actorNumber));
+            RebuildRows();
         }
 
-        /// <summary>턴 진행 방향 (OnTurnDirectionChanged) — 역방향이면 알약 · 화살표 · 꺾쇠가 뒤집힌다.</summary>
+        /// <summary>턴 진행 방향 (OnTurnDirectionChanged) — 역방향이면 알약이 주황, 지금 턴 아래 줄들이 거꾸로 선다.</summary>
         public void ShowDirection(bool reversed)
         {
             _reversed = reversed;
             _view.SetReversed(reversed);
+            RebuildRows();
         }
 
         /// <summary>
@@ -108,7 +111,7 @@ namespace Chapchu.UI.GameScreen
             }
 
             turnName = PlayerLook.NameOf(_turnActor);
-            _view.Ping(current);
+            _view.Ping(_rowActors.IndexOf(_turnActor));
             return true;
         }
 
@@ -120,13 +123,13 @@ namespace Chapchu.UI.GameScreen
             else
                 _chapchuActors.Remove(actorNumber);
 
-            _view.SetChapchu(_actors.IndexOf(actorNumber), isChapchu);
+            _view.SetChapchu(_rowActors.IndexOf(actorNumber), isChapchu);
         }
 
         /// <summary>HP (OnHpChanged) — 얼굴 원의 고리.</summary>
         public void ShowHp(int actorNumber, int hp)
         {
-            _hp[actorNumber] = Mathf.Clamp(hp, 0, GameServer.MaxHp); // 방 속성은 남이 쓸 수 있다
+            _hp[actorNumber] = Mathf.Clamp(hp, 0, GameServer.HpLimit); // 방 속성은 남이 쓸 수 있다
             RefreshHp(actorNumber);
         }
 
@@ -134,8 +137,7 @@ namespace Chapchu.UI.GameScreen
         public void ShowLife(int actorNumber, LifeState life)
         {
             _life[actorNumber] = life;
-            int index = _actors.IndexOf(actorNumber);
-            _view.SetDead(index, life == LifeState.Dead);
+            _view.SetDead(_rowActors.IndexOf(actorNumber), life == LifeState.Dead);
             RefreshHp(actorNumber);
         }
 
@@ -143,38 +145,52 @@ namespace Chapchu.UI.GameScreen
         {
             bool alive = !_life.TryGetValue(actorNumber, out LifeState life) || life == LifeState.Alive;
             int hp = _hp.TryGetValue(actorNumber, out int value) ? value : GameServer.MaxHp;
-            _view.SetHp(_actors.IndexOf(actorNumber), alive ? (float)hp / GameServer.MaxHp : 0f);
+            _view.SetHp(_rowActors.IndexOf(actorNumber), alive ? (float)hp / GameServer.MaxHp : 0f);
         }
 
-        private void RebuildRows()
+        // 방장이 섞은 턴 순서를 다시 읽고 줄을 만든다 (시작 · 대폭발 새 판 · 누가 나감)
+        private void ReadTurnOrder()
         {
             _actors.Clear();
             _actors.AddRange(PlayerLook.TurnOrderActors());
+            RebuildRows();
+        }
+
+        // 줄 = 지금 턴인 사람부터 진행 방향으로 한 바퀴. 지금 턴을 모르면(첫 턴 전) 턴 순서 그대로
+        private void RebuildRows()
+        {
+            _rowActors.Clear();
+            int count = _actors.Count;
+            int start = _actors.IndexOf(_turnActor);
+            int step = _reversed ? -1 : 1;
+            for (int n = 0; n < count; n++)
+                _rowActors.Add(start < 0 ? _actors[n] : _actors[((start + step * n) % count + count) % count]);
+
             int me = PhotonNetwork.InRoom ? PhotonNetwork.LocalPlayer.ActorNumber : -1;
 
             var players = new List<(string, Sprite, Sprite)>();
-            foreach (int actor in _actors)
+            foreach (int actor in _rowActors)
             {
                 OpponentSeatsPresenter.CharacterLook look = seats.LookOf(actor);
                 players.Add((actor == me ? MeName : PlayerLook.NameOf(actor), look.body, look.accessory));
             }
 
             _view.SetPlayers(players);
-            for (int i = 0; i < _actors.Count; i++)
+            for (int i = 0; i < _rowActors.Count; i++)
             {
-                int actor = _actors[i];
+                int actor = _rowActors[i];
                 RefreshHp(actor);
                 _view.SetDead(i, _life.TryGetValue(actor, out LifeState life) && life == LifeState.Dead);
                 _view.SetChapchu(i, _chapchuActors.Contains(actor));
             }
-            _view.SetCurrent(_actors.IndexOf(_turnActor));
+            _view.SetCurrent(_rowActors.IndexOf(_turnActor));
         }
 
         // 턴 순서가 왔다 (게임 시작 · 대폭발 새 판) — 좌석 순서로 그려 둔 줄을 실제 순서로
         private void HandleRoomPropsChanged(Hashtable changed)
         {
             if (changed.ContainsKey(RoomProps.TurnOrder))
-                RebuildRows();
+                ReadTurnOrder();
         }
 
         private void HandlePlayerLeft(Player player)
@@ -182,7 +198,7 @@ namespace Chapchu.UI.GameScreen
             _life.Remove(player.ActorNumber);
             _hp.Remove(player.ActorNumber);
             _chapchuActors.Remove(player.ActorNumber);
-            RebuildRows();
+            ReadTurnOrder();
         }
     }
 }

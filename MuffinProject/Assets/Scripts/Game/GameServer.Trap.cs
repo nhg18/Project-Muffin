@@ -51,6 +51,9 @@ namespace Chapchu.Game
             return TakeEvents();
         }
 
+        // 함정의 읽는 시간 — 공개된 때부터 이 초가 지나야 효과 연출로 넘어간다. 체인의 읽는 시간(MinReadSeconds)과 같은 값이고, 화면(ChainCardsPresenter)도 이 값만큼 기다린다 (04 6절, PM 2026-11-28)
+        public const double TrapReadSeconds = MinReadSeconds;
+
         // 함정 줄의 최대 단 — 첫 줄 + 연쇄 3번. 4단째 함정이 만든 사건으로는 새 줄을 열지 않는다 (04 6절 「함정 연쇄」, 사용자 2026-11-27)
         private const int MaxTrapLineDepth = 4;
 
@@ -177,7 +180,7 @@ namespace Chapchu.Game
 
             _discardPile.Add(trap);
             _events.Add(new ChainDiscarded(new[] { trap.InstanceId }, new[] { trap.CardId }, _discardPile.Count));
-            return at + trap.RevealSeconds + trap.ResolveSeconds;
+            return at + System.Math.Max(trap.RevealSeconds, TrapReadSeconds) + trap.ResolveSeconds;
         }
 
         // 함정은 고르는 입력이 없다 — 고르는 대상이면 무작위 (04 6절). 고르지 않는 타입이면 null (ResolveTargets 가 정한다).

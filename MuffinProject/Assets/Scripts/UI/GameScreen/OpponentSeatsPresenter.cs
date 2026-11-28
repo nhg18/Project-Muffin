@@ -162,7 +162,7 @@ namespace Chapchu.UI.GameScreen
 
                 // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다. 봇의 값은 방 속성에 있다 (18-bot.md 9절).
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    seat.SetHp(Mathf.Clamp(hpValue, 0, GameServer.MaxHp), GameServer.MaxHp); // 방 속성은 남이 쓸 수 있다
+                    seat.SetHp(Mathf.Clamp(hpValue, 0, GameServer.HpLimit), GameServer.HpBarMax(hpValue)); // 방 속성은 남이 쓸 수 있다
 
                 if (BotRoster.TryGetPublic(actor, PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                     seat.SetHandCount(handCountValue);
@@ -199,7 +199,7 @@ namespace Chapchu.UI.GameScreen
         public void ShowHp(int actorNumber, int hp)
         {
             if (_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
-                seat.SetHp(hp, GameServer.MaxHp);
+                seat.SetHp(hp, GameServer.HpBarMax(hp)); // 100 을 넘으면(GOAT) 막대는 가득, 숫자만 그 값
         }
 
         /// <summary>상대의 손패 장수 (OnCardPlayed 의 handCount). 뒷면 부채꼴도 같이 준다.</summary>
@@ -228,6 +228,17 @@ namespace Chapchu.UI.GameScreen
                 return false;
 
             screenPoint = seat.CharacterScreenPoint;
+            return true;
+        }
+
+        /// <summary>게임 시작 연출에서 튀어나오는 상대 좌석 전체 (캐릭터 · 이름표 · 손패). 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetIntroParts(int actorNumber, out RectTransform[] parts)
+        {
+            parts = null;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            parts = new[] { (RectTransform)seat.transform };
             return true;
         }
 

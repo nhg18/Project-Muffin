@@ -103,6 +103,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>조준 화살표 — 대상 표시 점선(GameScreenPresenter)이 같은 모양을 복제해 쓴다 (10-ui.md 5-2 #3).</summary>
         public AimArrowView AimArrow => aimArrow;
 
+        /// <summary>손패 카드를 쥐고 있다(끌기 · 클릭으로 집기 · 조준) — 그동안 덱으로 뽑지 않는다 (DeckPresenter).</summary>
+        public bool IsHoldingCard => _view.IsDragging;
+
         /// <summary>반응 시간이 열려 있고 내가 낼 수 있는 카운터가 있다 · 없다 — 스킵 버튼을 켜고 끈다 (10-ui.md 5절).</summary>
         public event System.Action<bool> OnReactionAsked;
 
@@ -243,11 +246,13 @@ namespace Chapchu.UI.GameScreen
             Transform t = card.transform;
             t.SetParent(transform.parent, true);
             card.SetRaycastBlocking(false);
+            topLayer.Set(card, true); // HUD 위에서 날아간다 — 내 패널 · 칸의 점선 빈칸(HUD)이 날아드는 카드를 덮지 않게
             t.DOKill();
             t.DOMove(slot.position, trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);
             t.DORotateQuaternion(slot.rotation * Quaternion.Euler(0f, 180f, 0f), trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject); // 뒷면으로 눕는다
             t.DOScale(slot.lossyScale, trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);
             yield return new WaitForSeconds(trapSetDuration);
+            topLayer.Set(card, false); // 지우기 전에 내린다 (TopCardLayerView)
             Destroy(card.gameObject);
         }
 

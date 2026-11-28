@@ -56,6 +56,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ChapchuShoutView chapchuShout;
         [Tooltip("4 단계 공통 연출 — 피해 · 회복 · 카드 얻기 · 잃기 · 피폭 (10-ui.md 5-1 「4 단계 공통 연출」).")]
         [SerializeField] private ResultFx resultFx;
+        [Tooltip("게임 시작 연출 (10-ui.md 5-2) — 새 판 시작 알림(OnGameStarted)에만.")]
+        [SerializeField] private GameStartIntroView startIntro;
+        [Tooltip("내 턴 띠 「내 턴!」 (10-ui.md 5-2).")]
+        [SerializeField] private TurnBannerView turnBanner;
         [Tooltip("빼앗기 · 주고받기 — 잃는 사람의 「−n장」 뒤 얻는 사람의 「+n장」 까지 초 (시안 steal: 0.18초 + 카드가 건너가는 0.42초).")]
         [SerializeField] private float handMoveSeconds = 0.6f;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
@@ -95,6 +99,7 @@ namespace Chapchu.UI.GameScreen
         private bool _resolving;       // 체인 처리 중 — 효과 적용(OnCardResolved)부터 체인이 버림 더미로 갈 때까지. 이때 뽑은 카드만 「+n장」
         private HpSource _hpSource;    // 뒤따르는 HP 변화가 무엇에서 왔는지 — 다른 단계를 줄 세우면 보통으로 돌아간다
         private int _gaepanLoser = -1; // 개판 판정의 HP 0 은 피해가 아니라 설정 (11-card-list 1021) — 연출 없이
+        private int _gaepanCaster = -1; // 개판을 건 사람 — 처형 장면에서 그 사람의 강아지가 뭉치를 이끈다
         private DrawBatch _drawBatch;  // 바로 앞에 줄 세운 단계가 효과로 뽑은 카드면 그 묶음 — 같은 사람이 이어 뽑으면 붙인다
 
         private enum HpSource { Normal, Fallout, Quiet }
@@ -109,7 +114,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || choicePopup == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || choicePopup == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null || startIntro == null || turnBanner == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -128,7 +133,7 @@ namespace Chapchu.UI.GameScreen
 
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 방 · Player 속성은 남이 쓸 수 있다
+                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.HpLimit); // 방 · Player 속성은 남이 쓸 수 있다
 
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 _isMyTurn = IsMe(turnActorValue);
@@ -148,6 +153,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
             GameEvents.OnDeckRefilled += HandleDeckRefilled;
+            GameEvents.OnGameStarted += HandleGameStarted;
             GameEvents.OnTurnStarted += HandleTurnStarted;
             GameEvents.OnTurnResumed += HandleTurnResumed;
             GameEvents.OnCardPlayed += HandleCardPlayed;
@@ -174,6 +180,8 @@ namespace Chapchu.UI.GameScreen
             RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnDomainChanged += HandleDomainChanged;
+            GameEvents.OnGoatChanged += HandleGoatChanged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
@@ -201,6 +209,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
             GameEvents.OnDeckRefilled -= HandleDeckRefilled;
+            GameEvents.OnGameStarted -= HandleGameStarted;
             GameEvents.OnTurnStarted -= HandleTurnStarted;
             GameEvents.OnTurnResumed -= HandleTurnResumed;
             GameEvents.OnCardPlayed -= HandleCardPlayed;
@@ -227,6 +236,8 @@ namespace Chapchu.UI.GameScreen
             RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnDomainChanged -= HandleDomainChanged;
+            GameEvents.OnGoatChanged -= HandleGoatChanged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
@@ -256,6 +267,7 @@ namespace Chapchu.UI.GameScreen
             _resolving = false;
             _hpSource = HpSource.Normal;
             _gaepanLoser = -1;
+            _gaepanCaster = -1;
             _drawBatch = null;
         }
 
@@ -263,7 +275,7 @@ namespace Chapchu.UI.GameScreen
         private void LateUpdate()
         {
             bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0;
-            deck.ShowCanDraw(canAct && !seats.IsSelectingTargets);
+            deck.ShowCanDraw(canAct, seats.IsSelectingTargets || hand.IsHoldingCard, GameServer.TurnDrawCountFor(myPanel.HandCount)); // 장수는 방장과 같은 식 (05-deck.md 4절) — 표시만
             turnTimer.TickForMe = canAct;
             UpdateTargetArrows();
         }
@@ -452,9 +464,53 @@ namespace Chapchu.UI.GameScreen
                 turnTimer.ShowTurn(deadline);
                 history.ShowTurnStarted(actorNumber);
                 if (isMyTurn)
+                {
                     SoundManager.Play(Sfx.MyTurn);
+                    turnBanner.Play();
+                }
                 return null;
             });
+        }
+
+        // 새 판 시작 (시작 알림 묶음의 맨 앞) — 시작 연출이 끝나야 HP · 손패 배분 · 첫 턴이 이어진다. 방장은 그동안 첫 턴을 멈춰 둔다 (01-game-flow.md 3절 #8)
+        private void HandleGameStarted(int[] order, double openingSeconds)
+        {
+            Enqueue(() => StartIntroRoutine(order));
+        }
+
+        private IEnumerator StartIntroRoutine(int[] order)
+        {
+            // 자리 · 좌표는 숨기기 전에 잰다 — 숨기면(크기 0) 좌표가 기준점으로 모인다
+            var introSeats = new List<GameStartIntroView.Seat>();
+            foreach (int actor in order)
+            {
+                bool isMe = IsMe(actor);
+                Vector2 point;
+                RectTransform[] reveal;
+                if (isMe)
+                {
+                    point = myPanel.CharacterScreenPoint;
+                    reveal = myPanel.IntroParts;
+                }
+                else if (!seats.TryGetCharacterScreenPoint(actor, out point) || !seats.TryGetIntroParts(actor, out reveal))
+                {
+                    continue; // 시작 전에 나간 사람
+                }
+
+                OpponentSeatsPresenter.CharacterLook look = seats.LookOf(actor);
+                introSeats.Add(new GameStartIntroView.Seat
+                {
+                    Name = PlayerLook.NameOf(actor),
+                    Color = PlayerLook.ColorOf(actor),
+                    Body = look.body,
+                    Accessory = look.accessory,
+                    IsMe = isMe,
+                    ScreenPoint = point,
+                    Reveal = reveal,
+                });
+            }
+
+            return startIntro.Play(introSeats, turnOrder.transform as RectTransform);
         }
 
         // 체인 · 함정으로 멈췄던 턴이 이어졌다 (메인 행동 전) — 같은 사람의 턴, 새 마감으로 다시 센다.
@@ -514,7 +570,8 @@ namespace Chapchu.UI.GameScreen
                     seats.ShowTrapCount(actorNumber, trapCount);
                 }
 
-                return chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, null, slot);
+                // 함정은 반응 시간이 없다 — 공개된 뒤 읽는 시간(방장과 같은 값)이 지나야 뒤따르는 처리 결과를 재생한다. 여러 장이 터져도 한 장씩 (04-card.md 6절)
+                return chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, null, slot, (float)GameServer.TrapReadSeconds);
             });
         }
 
@@ -886,6 +943,12 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); boardEffects.ShowWait(casters); return null; });
 
+        // 영역 (1008) · GOAT (1067) — 판 효과 줄 + 기록. 빼앗기 · 피해 · HP 는 뒤따르는 알림이 평소대로 그린다
+        private void HandleDomainChanged(int owner, int left, int take, int damage, bool ticked) =>
+            Enqueue(() => { history.ShowDomainChanged(owner, left, take, damage, ticked); boardEffects.ShowDomain(owner, left, take, damage); return null; });
+
+        private void HandleGoatChanged(int[] actors) => Enqueue(() => { history.ShowGoatChanged(actors); boardEffects.ShowGoat(actors); return null; });
+
         private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
 
         // 대폭발 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
@@ -971,9 +1034,13 @@ namespace Chapchu.UI.GameScreen
             history.ShowChoiceMade(actor, option, timedOut, kind);
         }
 
-        // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
-        private void HandleGaepanChanged(int caster, int left, bool again) =>
+        // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말 → 처형 장면. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
+        private void HandleGaepanChanged(int caster, int left, bool again)
+        {
+            if (caster != -1)
+                _gaepanCaster = caster;
             Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); return gaepan.ChangedRoutine(left); });
+        }
 
         private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
@@ -983,8 +1050,32 @@ namespace Chapchu.UI.GameScreen
 
         private IEnumerator GaepanJudgedRoutine(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
+            // 처형 장면(10-ui.md 「개판 처형 장면」)은 팻말이 도는 동안 미리 읽어 둔다 — 팻말이 끝나자마자 이어지게. 개발자 도구 「이펙트 끄기」 면 건너뛴다
+            CardData card = DevToolsPanel.EffectsOff ? null : FindGaepanCard();
+            Chapchu.UI.Fx.Gaepan.GaepanFx execution = null;
+            Coroutine loading = card != null ? StartCoroutine(cardFx.PrepareGaepanExecutionRoutine(card, prepared => execution = prepared)) : null;
+
             yield return gaepan.JudgedRoutine(loser, byHp, actors, values);
             history.ShowGaepanJudged(loser, byHp, value, tied);
+
+            if (loading != null)
+                yield return loading;
+            if (execution == null)
+                yield break;
+            List<CardFxSeat> fxSeats = CreateFxSeats();
+            int caster = _gaepanCaster;
+            yield return cardFx.PlayGaepanExecutionRoutine(execution, card, fxSeats.Find(seat => seat.Actor == caster), fxSeats.Find(seat => seat.Actor == loser), fxSeats);
+        }
+
+        // 이 덱의 개판 오분전 카드 (개판을 거는 효과가 있는 카드) — 처형 장면의 연출 프리팹 · 소리를 이 카드 번호로 찾는다
+        private CardData FindGaepanCard()
+        {
+            foreach (DeckData.Entry entry in cardDeck.Entries)
+            {
+                if (entry.card != null && entry.card.effects.Exists(effect => effect is Chapchu.Game.Effects.StartGaepanEffect))
+                    return entry.card;
+            }
+            return null;
         }
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.

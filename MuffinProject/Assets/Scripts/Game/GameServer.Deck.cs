@@ -14,8 +14,8 @@ namespace Chapchu.Game
         // 봇 · 시간 초과 자동 뽑기는 기다리지 않는다. 체인의 읽는 시간(MinReadSeconds)과 같은 값이다.
         public const double DrawReadSeconds = 3;
 
-        // 턴 뽑기 장수 — 방장 판정과 봇 점수가 함께 쓴다 (05-deck.md 4절)
-        internal static int TurnDrawCountFor(int handCount) => handCount == ChapchuHandCount - 1 ? LastDrawCount : TurnDrawCount;
+        // 턴 뽑기 장수 — 방장 판정과 봇 점수, 화면의 「n장 뽑고 턴 끝」 이 함께 쓴다 (05-deck.md 4절)
+        public static int TurnDrawCountFor(int handCount) => handCount == ChapchuHandCount - 1 ? LastDrawCount : TurnDrawCount;
 
         private readonly List<Card> _deck = new List<Card>();
         private readonly List<Card> _discardPile = new List<Card>();
