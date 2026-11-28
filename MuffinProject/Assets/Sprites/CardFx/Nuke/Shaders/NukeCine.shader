@@ -52,8 +52,9 @@ Shader "Chapchu/Nuke/Cine"
                 float3 vO : TEXCOORD3;
                 float3 vNo : TEXCOORD4;
                 float4 vL : TEXCOORD5;
-                float4 mpA : TEXCOORD6;
-                float4 mpB : TEXCOORD7;
+                // 건물마다 하나인 값 — 보간하면 오차가 생기고, seed 가 sin 해시에 들어가 방 색 · 조명이 픽셀마다 튄다(유리 점 잡음)
+                nointerpolation float4 mpA : TEXCOORD6;
+                nointerpolation float4 mpB : TEXCOORD7;
             };
 
             v2f vert(appdata v)
@@ -190,7 +191,8 @@ Shader "Chapchu/Nuke/Cine"
             }
 
             // 방 안 광선 추적(인테리어 매핑): 창 안쪽에 진짜 깊이가 보인다. xyz=닿은 점, w=0 뒷벽 1 천장 2 바닥 3 옆벽
-            float4 room(float3 p0, float3 d, float hwid, float y0, float y1, float Dp)
+            // tt = 닿은 곳까지의 광선 값 t (방 안 무늬 흐림에 쓴다)
+            float4 room(float3 p0, float3 d, float hwid, float y0, float y1, float Dp, out float tt)
             {
                 float dx = abs(d.x) < 1e-4 ? (d.x < 0.0 ? -1e-4 : 1e-4) : d.x;
                 float dy = abs(d.y) < 1e-4 ? (d.y < 0.0 ? -1e-4 : 1e-4) : d.y;
@@ -198,13 +200,23 @@ Shader "Chapchu/Nuke/Cine"
                 float ty = ((dy > 0.0 ? y1 : y0) - p0.y) / dy;
                 float tz = Dp / d.z;
                 float t = clamp(min(tz, min(tx, ty)), 0.0, tz);
+                tt = t;
                 float3 hp = p0 + float3(dx, dy, d.z) * t;
                 hp.z = clamp(hp.z, 0.0, Dp);
                 return float4(hp, t >= tz - 1e-4 ? 0.0 : (t >= ty - 1e-4 ? (dy > 0.0 ? 1.0 : 2.0) : 3.0));
             }
 
+            // 방 안에서 닿은 점이 한 픽셀에 움직이는 거리(m). ang = 시선의 한 픽셀 각(라디안, frag 첫머리에서 구한다 —
+            // 분기 안의 fwidth 는 GPU 에서 값이 정해지지 않는다). 닿은 면을 비스듬히 볼수록 커진다.
+            float roomPx(float px, float ang, float3 d, float4 hp, float t)
+            {
+                float l = length(d);
+                float c = hp.w < 0.5 ? abs(d.z) : (hp.w < 2.5 ? abs(d.y) : abs(d.x));
+                return px + ang * t * l * l / max(c, 0.05 * l);
+            }
+
             // 건물 외벽: 창 · 창틀 · 벽 재질 · 1층 상가. rgb=벽 색, a=유리 · 간판 비율, em=그 빛
-            float4 facade(float3 c, float3 N, float3 V, float sh, float px, float3 vO, float3 vNo, float4 mpA, float4 mpB, float emi, out float3 em, inout float ks, inout float sp)
+            float4 facade(float3 c, float3 N, float3 V, float sh, float px, float ang, float3 vO, float3 vNo, float4 mpA, float4 mpB, float emi, out float3 em, inout float ks, inout float sp)
             {
                 em = 0;
                 bool zf = abs(vNo.z) > 0.5;
@@ -265,7 +277,10 @@ Shader "Chapchu/Nuke/Cine"
                     float fi = (1.0 - smoothstep(0.31 + px, 0.31, ed)) * smoothstep(-px, px, v - 0.52) * smoothstep(-px, px, top - 0.07 - v) * (1.0 - smoothstep(0.03 + px, 0.03, ax) * df);
                     frm = wm * (1.0 - fi);
                     wall = lerp(c * 0.72, float3(0.26, 0.26, 0.28), step(v, 0.45));
-                    float4 hp = room(float3((sp2 - 0.5) * 2.0 * bw, v, 0.0), d, bw, 0.0, g0 - 0.2, shop > 0.5 ? 5.5 : 9.0);
+                    float ht;
+                    float4 hp = room(float3((sp2 - 0.5) * 2.0 * bw, v, 0.0), d, bw, 0.0, g0 - 0.2, shop > 0.5 ? 5.5 : 9.0, ht);
+                    // 진열 칸(1/6m) · 선반 줄(0.38m)이 한 픽셀에 몰리면 점 잡음이 된다 — 그 전에 평균색으로
+                    float dfi = df * smoothstep(0.12, 0.04, roomPx(px, ang, d, hp, ht));
                     float dep = hp.z / (shop > 0.5 ? 5.5 : 9.0);
                     float lit = lon * step(0.16, h2);
                     float3 rc;
@@ -316,7 +331,7 @@ Shader "Chapchu/Nuke/Cine"
                         }
                         inner = rc * (lon * (0.72 - 0.3 * dep) * float3(1.0, 0.93, 0.82) + 0.16 * (_NkAmb + _NkSunC * 0.2));
                     }
-                    inner = lerp(float3(0.6, 0.52, 0.4) * (lit * 0.9 + 0.1), inner, df);
+                    inner = lerp(float3(0.6, 0.52, 0.4) * (lit * 0.9 + 0.1), inner, dfi);
                 }
                 else
                 {
@@ -330,7 +345,9 @@ Shader "Chapchu/Nuke/Cine"
                     frm = wm * (1.0 - fi * (1.0 - bar * df));
                     float lit = step(r1, mpB.y) * lon;
                     float Dp = 3.5 + 3.0 * r3;
-                    float4 hp = room(float3((cu - 0.5) * bw, cv * fh, 0.0), d, bw * 0.5, 0.0, fh, Dp);
+                    float ht;
+                    float4 hp = room(float3((cu - 0.5) * bw, cv * fh, 0.0), d, bw * 0.5, 0.0, fh, Dp, ht);
+                    float dfi = df * smoothstep(0.3, 0.1, roomPx(px, ang, d, hp, ht)); // 천장 조명 · 가구 무늬
                     float3 wt = lerp(float3(0.78, 0.7, 0.56), float3(0.56, 0.64, 0.7), r2);
                     float3 rc;
                     if (hp.w < 0.5)
@@ -356,9 +373,9 @@ Shader "Chapchu/Nuke/Cine"
                     if (r3 > 0.58)
                     {
                         float bl = s1 - (s1 - s0) * (0.25 + 0.7 * r2);
-                        inner = lerp(inner, float3(0.8, 0.78, 0.72) * (lit * 0.75 * lc + 0.4 * (_NkAmb + _NkSunC * 0.3)) * (0.8 + 0.2 * step(0.5, frac(cv * fh * 13.0))), step(bl, cv) * 0.92);
+                        inner = lerp(inner, float3(0.8, 0.78, 0.72) * (lit * 0.75 * lc + 0.4 * (_NkAmb + _NkSunC * 0.3)) * lerp(0.9, 0.8 + 0.2 * step(0.5, frac(cv * fh * 13.0)), smoothstep(0.05, 0.015, px)), step(bl, cv) * 0.92);
                     }
-                    inner = lerp(wt * (lit * 0.8 * lc + 0.1 * _NkAmb), inner, df);
+                    inner = lerp(wt * (lit * 0.8 * lc + 0.1 * _NkAmb), inner, dfi);
                     if (sty < 0.5)
                     {
                         float jl = max(smoothstep(0.025 + px, 0.025, ed), smoothstep(0.025 + px, 0.025, cv * fh));
@@ -439,6 +456,7 @@ Shader "Chapchu/Nuke/Cine"
                 float ao = 1.0;
                 float gm = 0.0;
                 float px = max(length(fwidth(vW)), 1e-4);
+                float ang = length(fwidth(V)); // 한 픽셀의 시선 각 — 분기 밖에서 (facade 의 방 안 무늬 흐림)
                 bool fol = false;
                 if (_Mat > 2.5 && _Mat < 3.5)
                 {
@@ -459,7 +477,7 @@ Shader "Chapchu/Nuke/Cine"
                 }
                 else if (vM > 0.775)
                 {
-                    float4 f = facade(c, N, V, sh, px, i.vO, normalize(i.vNo), i.mpA, i.mpB, emi, em, ks, sp);
+                    float4 f = facade(c, N, V, sh, px, ang, i.vO, normalize(i.vNo), i.mpA, i.mpB, emi, em, ks, sp);
                     c = f.rgb;
                     gm = f.a;
                 }

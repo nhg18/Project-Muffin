@@ -8,6 +8,7 @@ namespace Chapchu.UI.Lobby
 {
     /// <summary>
     /// 사람 한 줄 (시안 .prow) — 친구(상태 + 「⋯」) · 받은 요청(수락 · 거절) · 보낸 요청(취소) · 차단(차단 해제) · 검색 결과(코드 + 요청).
+    /// 설정 「화면 크기」 목록의 고르기 줄(얼굴 없이 이름 + 「선택」 / 「사용 중」)도 같은 줄을 쓴다.
     /// </summary>
     public class LobbyPersonRowView : MonoBehaviour
     {
@@ -18,8 +19,12 @@ namespace Chapchu.UI.Lobby
         private const string RequestText = "요청";
         private const string SentText = "요청됨";
         private const string FriendText = "친구";
+        private const string PickText = "선택";
+        private const string CurrentText = "사용 중";
 
         [SerializeField] private Image background;
+        [Tooltip("얼굴 — 고르기 줄(BindOption)에서는 끈다")]
+        [SerializeField] private GameObject avatar;
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private GameObject statusRow;
         [SerializeField] private RoundBox statusDot;
@@ -50,7 +55,7 @@ namespace Chapchu.UI.Lobby
 
         private void Awake()
         {
-            if (background == null || nameText == null || statusRow == null || statusDot == null || statusText == null || codeText == null
+            if (background == null || avatar == null || nameText == null || statusRow == null || statusDot == null || statusText == null || codeText == null
                 || primaryButton == null || primaryLabel == null || secondaryButton == null || secondaryLabel == null || menuButton == null || flatText == null)
                 Debug.LogError($"[{nameof(LobbyPersonRowView)}] 참조가 비어 있습니다.", this);
         }
@@ -115,6 +120,17 @@ namespace Chapchu.UI.Lobby
                 ShowFlat(result.Relation == HubRelation.Friend ? FriendText : SentText);
         }
 
+        /// <summary>고르기 줄 — 얼굴 없이 이름만. 지금 쓰는 것이면 「사용 중」, 아니면 「선택」 (설정 「화면 크기」 목록).</summary>
+        public void BindOption(string label, bool isCurrent)
+        {
+            Begin(null, null, label);
+            avatar.SetActive(false);
+            if (isCurrent)
+                ShowFlat(CurrentText);
+            else
+                ShowPrimary(PickText);
+        }
+
         /// <summary>방금 바뀐 줄 — 노랑에서 1.2초에 원래 색으로.</summary>
         public void Flash()
         {
@@ -128,6 +144,7 @@ namespace Chapchu.UI.Lobby
             Person = person;
             Result = result;
             nameText.text = nickname;
+            avatar.SetActive(true);
             statusRow.SetActive(false);
             codeText.gameObject.SetActive(false);
             primaryButton.gameObject.SetActive(false);

@@ -7,13 +7,16 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Lobby
 {
     /// <summary>
-    /// 설정 창과 그 안의 차단 목록 창 — 소리 · 초대 알림 스위치 · 차단 목록 · 계정(로그인 수단 · 계정 삭제) · 정보(버전 · 링크).
+    /// 설정 창과 그 안의 목록 창 — 소리 · 초대 알림 스위치 · 차단 목록 · 화면(PC) · 계정(로그인 수단 · 계정 삭제) · 정보(버전 · 링크).
+    /// 목록 창 하나를 차단 목록과 「화면 크기」 고르기가 함께 쓴다 — 머리 제목과 줄만 바뀐다.
     /// 로그아웃 버튼은 없다 (23-login 3절 #11). 버전 글자를 연달아 누르면 개발자 모드를 청한다 (14-lobby-ui 5절).
     /// 기준: 「통합 화면 UI v2」 로비 settingsBody · blockBody, docs/systems/17-lobby-ui-full.md 5-4
     /// </summary>
     public class LobbySettingsPopupView : MonoBehaviour
     {
         private const string BlockedCountFormat = "{0}명";
+        private const string BlockListTitle = "차단 목록";
+        private const string ResolutionListTitle = "화면 크기";
         private const int DevModeTaps = 5;          // 버전 글자를 이만큼 누르면 개발자 모드
         private const float DevModeTapGap = 0.6f;   // 누름 사이가 이보다 길면 처음부터 센다 (초)
 
@@ -35,8 +38,13 @@ namespace Chapchu.UI.Lobby
         [Tooltip("정보의 버전 글자 — 눌리는 모양 없이 누름만 받는다 (개발자 모드)")]
         [SerializeField] private Button versionButton;
 
-        [Header("차단 목록")]
+        [Tooltip("「화면」 줄 (PC) — 「변경」 을 누르면 목록 창에 화면 크기를 연다")]
+        [SerializeField] private LobbyResolutionView resolution;
+
+        [Header("목록 창 (차단 목록 · 화면 크기)")]
         [SerializeField] private GameObject blockContent;
+        [Tooltip("목록 창 머리 제목 — 「차단 목록」 / 「화면 크기」")]
+        [SerializeField] private TMP_Text listTitleText;
         [SerializeField] private Button blockCloseButton;
         [SerializeField] private Button backButton;
         [SerializeField] private RectTransform blockList;
@@ -44,12 +52,16 @@ namespace Chapchu.UI.Lobby
         [SerializeField] private GameObject blockEmpty;
 
         private readonly List<LobbyPersonRowView> _rows = new List<LobbyPersonRowView>();
+        private bool _isResolutionList; // 목록 창이 「화면 크기」 를 보이는 중
         private int _versionTaps;
         private float _versionTappedAt;
 
         public bool IsOpen => settingsContent.activeSelf || blockContent.activeSelf;
 
-        public bool IsBlockListOpen => blockContent.activeSelf;
+        /// <summary>목록 창(차단 목록 · 화면 크기)이 열려 있다 — 뒤로가기는 설정으로.</summary>
+        public bool IsListOpen => blockContent.activeSelf;
+
+        public bool IsBlockListOpen => blockContent.activeSelf && !_isResolutionList;
 
         public event Action OnCloseRequested;
         public event Action<bool> OnSfxChanged;
@@ -69,10 +81,10 @@ namespace Chapchu.UI.Lobby
         private void Awake()
         {
             if (settingsContent == null || closeButton == null || sfxSwitch == null || bgmSwitch == null || inviteSwitch == null || playRecordSwitch == null || blockedCountText == null
-                || manageButton == null || loginText == null || deleteButton == null || privacyButton == null || contactButton == null || versionButton == null)
+                || manageButton == null || loginText == null || deleteButton == null || privacyButton == null || contactButton == null || versionButton == null || resolution == null)
                 Debug.LogError($"[{nameof(LobbySettingsPopupView)}] 설정 참조가 비어 있습니다.", this);
 
-            if (blockContent == null || blockCloseButton == null || backButton == null || blockList == null || rowTemplate == null || blockEmpty == null)
+            if (blockContent == null || listTitleText == null || blockCloseButton == null || backButton == null || blockList == null || rowTemplate == null || blockEmpty == null)
                 Debug.LogError($"[{nameof(LobbySettingsPopupView)}] 차단 목록 참조가 비어 있습니다.", this);
         }
 
@@ -90,8 +102,12 @@ namespace Chapchu.UI.Lobby
             bgmSwitch.OnChanged += HandleSwitchChanged;
             inviteSwitch.OnChanged += HandleSwitchChanged;
             playRecordSwitch.OnChanged += HandleSwitchChanged;
+            resolution.OnListRequested += ShowResolutionList;
             foreach (LobbyPersonRowView row in _rows)
+            {
+                row.OnPrimaryClicked += HandleOptionClicked;
                 row.OnSecondaryClicked += HandleUnblockClicked;
+            }
         }
 
         private void OnDisable()
@@ -108,8 +124,12 @@ namespace Chapchu.UI.Lobby
             bgmSwitch.OnChanged -= HandleSwitchChanged;
             inviteSwitch.OnChanged -= HandleSwitchChanged;
             playRecordSwitch.OnChanged -= HandleSwitchChanged;
+            resolution.OnListRequested -= ShowResolutionList;
             foreach (LobbyPersonRowView row in _rows)
+            {
+                row.OnPrimaryClicked -= HandleOptionClicked;
                 row.OnSecondaryClicked -= HandleUnblockClicked;
+            }
         }
 
         public void ShowSettings(bool sfxOn, bool bgmOn, bool inviteOn, bool playRecordOn, int blockedCount, string loginName)
@@ -126,24 +146,48 @@ namespace Chapchu.UI.Lobby
 
         public void ShowBlockList(LobbyHubData data)
         {
+            OpenList(BlockListTitle, false);
+            blockEmpty.SetActive(data.Blocked.Count == 0);
+            UseRows(data.Blocked.Count);
+            for (int i = 0; i < data.Blocked.Count; i++)
+                _rows[i].BindBlocked(data.Blocked[i]);
+        }
+
+        /// <summary>「화면 크기」 목록 — 지금 쓰는 것은 「사용 중」, 나머지는 「선택」. 고르면 바로 바꾸고 목록에 남는다.</summary>
+        private void ShowResolutionList() => ShowResolutionList(resolution.CurrentIndex);
+
+        // current = 「사용 중」 으로 보일 줄 — 고른 직후에는 화면 크기가 다음 프레임에 바뀌어서 고른 줄을 넘긴다
+        private void ShowResolutionList(int current)
+        {
+            OpenList(ResolutionListTitle, true);
+            blockEmpty.SetActive(false);
+            IReadOnlyList<string> labels = resolution.Labels;
+            UseRows(labels.Count);
+            for (int i = 0; i < labels.Count; i++)
+                _rows[i].BindOption(labels[i], i == current);
+        }
+
+        private void OpenList(string title, bool isResolution)
+        {
+            _isResolutionList = isResolution;
+            listTitleText.text = title;
             settingsContent.SetActive(false);
             blockContent.SetActive(true);
-            blockEmpty.SetActive(data.Blocked.Count == 0);
-            for (int i = 0; i < data.Blocked.Count; i++)
-            {
-                if (i == _rows.Count)
-                {
-                    LobbyPersonRowView created = Instantiate(rowTemplate, blockList);
-                    created.OnSecondaryClicked += HandleUnblockClicked;
-                    _rows.Add(created);
-                }
+        }
 
-                _rows[i].gameObject.SetActive(true);
-                _rows[i].BindBlocked(data.Blocked[i]);
+        // 줄을 count 개 켠다 — 모자라면 템플릿에서 만들고, 남는 줄은 끈다
+        private void UseRows(int count)
+        {
+            while (_rows.Count < count)
+            {
+                LobbyPersonRowView created = Instantiate(rowTemplate, blockList);
+                created.OnPrimaryClicked += HandleOptionClicked;
+                created.OnSecondaryClicked += HandleUnblockClicked;
+                _rows.Add(created);
             }
 
-            for (int i = data.Blocked.Count; i < _rows.Count; i++)
-                _rows[i].gameObject.SetActive(false);
+            for (int i = 0; i < _rows.Count; i++)
+                _rows[i].gameObject.SetActive(i < count);
         }
 
         public void Hide()
@@ -189,5 +233,15 @@ namespace Chapchu.UI.Lobby
         }
 
         private void HandleUnblockClicked(LobbyPersonRowView row) => OnUnblockRequested?.Invoke(row.Person);
+
+        private void HandleOptionClicked(LobbyPersonRowView row)
+        {
+            if (!_isResolutionList)
+                return;
+
+            int index = _rows.IndexOf(row);
+            resolution.Select(index);
+            ShowResolutionList(index);
+        }
     }
 }
