@@ -13,7 +13,7 @@ namespace Chapchu.Game
 
         /// <summary>entry 의 피해 1건. 피해 → 회복 전환(C03) · 감소(C10) · 사망 방지(C11)를 계산한 뒤 한 번만 반영한다.</summary>
         internal void ApplyDamage(ChainEntry entry, int actor, int amount) =>
-            ApplyDamage(entry, actor, Scaled(entry, amount), entry.User, true); // 2배가 먼저, 감소는 그 다음 (04 7절)
+            ApplyDamage(entry, actor, DamageFrom(entry.User, actor, Scaled(entry, amount)), entry.User, true); // 2배(카드 · GOAT)가 먼저, 감소는 그 다음 (04 7절)
 
         // by = 피해를 준 사람. direct = 이 카드가 직접 준 피해 — 같이 받는 피해(2018)는 「쓰러뜨림」(1005)에 넣지 않는다.
         private void ApplyDamage(ChainEntry entry, int actor, int amount, int by, bool direct)
@@ -54,6 +54,7 @@ namespace Chapchu.Game
             amount = Scaled(entry, amount);
             if (entry.HealToDamage.Contains(actor))
             {
+                amount = DamageFrom(entry.User, actor, amount); // 피해가 됐다 — 준 사람이 GOAT 면 2배 (1067)
                 if (amount > 0)
                 {
                     CountDamage(actor, entry.User, -SetHp(actor, _players[actor].Hp - amount, entry.User)); // 피해의 주인 = 회복 카드를 낸 사람
@@ -81,7 +82,7 @@ namespace Chapchu.Game
             if (amount <= 0 || player.Life != LifeState.Alive || player.Hp <= 0)
                 return; // HP 0 에서 일반 회복은 불발 — 사망 대기 등록 전(같은 체인)도 같다 (06 15절)
 
-            int hp = Math.Min(MaxHp, player.Hp + amount);
+            int hp = Math.Min(HpCapOf(player), player.Hp + amount);
             if (hp != player.Hp)
                 AddStat(actor, StatKind.Healed, SetHp(actor, hp)); // 실제 회복량 0 이면 사건 없음 (06 6절)
         }
@@ -427,7 +428,7 @@ namespace Chapchu.Game
         internal int PredictDamageBelow(ChainEntry entry)
         {
             ChainEntry below = Below(entry);
-            return below == null ? 0 : Scaled(below, below.Card.Effects.Sum(e => e.PredictDamage(this, below, entry.User)));
+            return below == null ? 0 : DamageFrom(below.User, entry.User, Scaled(below, below.Card.Effects.Sum(e => e.PredictDamage(this, below, entry.User))));
         }
 
         /// <summary>손패로 반환 — 반응한 카드를 무효로 하고, 처리 때 버림 더미 대신 정한 사람 손패로 (쓴 사람 2003 · 이 카운터를 낸 사람 2020).</summary>

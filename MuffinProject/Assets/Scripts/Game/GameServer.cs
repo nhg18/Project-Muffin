@@ -83,6 +83,7 @@ namespace Chapchu.Game
             _extraTurnActor = -1;
             TurnSerial = 0; // 턴 번호는 판마다 1부터 (07 11-3)
             ResetGaepan();
+            ResetDomain();
             ClearChoice();
             _judgesElimination = actors.Count >= 2;
             foreach (int actor in actors)

@@ -39,6 +39,8 @@ namespace Chapchu.Network.Events
         public static event Action<bool, int> OnTurnDirectionChanged;            // reversed, extraTurn(2인 반전으로 다시 턴을 받는 사람, 없으면 -1) — 턴 진행 방향 (1045)
         public static event Action<int, ActionBlock> OnActionBlockChanged;   // actorNumber, state — 행동 카드 금지 (1007 짖기: 다음 실제 턴 · 이번 턴 · 없음)
         public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (1023). 비면 끝, 그동안 찹츄 승리 없음
+        public static event Action<int, int, int, int, bool> OnDomainChanged; // owner, left, take, damage, ticked — 영역 (1008 영역전개). left 0 이면 끝, ticked 면 방금 주인의 턴 시작 처리
+        public static event Action<int[]> OnGoatChanged;                     // actors — GOAT 인 사람들 (1067). 비면 아무도 없음
         public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (1012)
         public static event Action<int, int, int, int, int, double, double, int> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline, kind(ChoiceKind) — 대상이 고르기 시작 (1019). 그동안 게임 · 턴 시간 멈춤
         public static event Action<int, int, bool, int> OnChoiceMade;        // kind(ChoiceKind) 가 끝에 — actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (1019)
@@ -92,6 +94,8 @@ namespace Chapchu.Network.Events
         public static void RaiseTurnDirectionChanged(bool reversed, int extraTurn) => OnTurnDirectionChanged?.Invoke(reversed, extraTurn);
         public static void RaiseActionBlockChanged(int actorNumber, ActionBlock state) => OnActionBlockChanged?.Invoke(actorNumber, state);
         public static void RaiseWaitChanged(int[] casters) => OnWaitChanged?.Invoke(casters);
+        public static void RaiseDomainChanged(int owner, int left, int take, int damage, bool ticked) => OnDomainChanged?.Invoke(owner, left, take, damage, ticked);
+        public static void RaiseGoatChanged(int[] actors) => OnGoatChanged?.Invoke(actors);
         public static void RaiseGameRestarted(int user, int count, int[] order) => OnGameRestarted?.Invoke(user, count, order);
         public static void RaiseFalloutChanged(int n, int turns) => OnFalloutChanged?.Invoke(n, turns);
         public static void RaiseChoiceStarted(int actor, int user, int cardId, int handCount, int damage, double startsAt, double deadline, int kind) => OnChoiceStarted?.Invoke(actor, user, cardId, handCount, damage, startsAt, deadline, kind);

@@ -219,7 +219,7 @@ run_rules() {
     printf '%s\n' "$out" | sed 's/^/  /'
     case "$out" in OK*) ;; *) FAILED=1 ;; esac
     local scenario
-    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과" "Stats:판 지표 집계" "Migrate:방장 이주 — 상태 담기 · 되살리기 · 이어 가기"; do
+    for scenario in "Chain:체인 · 카운터" "Death:사망 · 빈 덱 피해 · 나감" "Win:찹츄 · 승리 · 종료" "Trap:함정" "Bot:봇" "Effects:카드 효과" "Stats:판 지표 집계" "Migrate:방장 이주 — 상태 담기 · 되살리기 · 이어 가기" "Domain:영역전개 · GOAT"; do
         log "▶ 규칙 계층 — ${scenario#*:} (3인, 메모리 카드)"
         out=$(call "$MAIN" "${scenario%%:*}")
         printf '%s\n' "$out" | sed 's/^/  /'

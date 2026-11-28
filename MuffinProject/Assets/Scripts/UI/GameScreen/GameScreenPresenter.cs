@@ -128,7 +128,7 @@ namespace Chapchu.UI.GameScreen
 
             foreach (int actor in PlayerLook.OrderedActors())
                 if (BotRoster.TryGetPublic(actor, PlayerProps.Hp, out object hp) && hp is int hpValue)
-                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.MaxHp); // 방 · Player 속성은 남이 쓸 수 있다
+                    _shownHp[actor] = Mathf.Clamp(hpValue, 0, GameServer.HpLimit); // 방 · Player 속성은 남이 쓸 수 있다
 
             if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(RoomProps.TurnActor, out object turnActor) && turnActor is int turnActorValue)
                 _isMyTurn = IsMe(turnActorValue);
@@ -174,6 +174,8 @@ namespace Chapchu.UI.GameScreen
             RoomEvents.OnMasterClientSwitched += HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged += HandleActionBlockChanged;
             GameEvents.OnWaitChanged += HandleWaitChanged;
+            GameEvents.OnDomainChanged += HandleDomainChanged;
+            GameEvents.OnGoatChanged += HandleGoatChanged;
             GameEvents.OnChapchuWinHeld += HandleChapchuWinHeld;
             GameEvents.OnGameRestarted += HandleGameRestarted;
             GameEvents.OnFalloutChanged += HandleFalloutChanged;
@@ -227,6 +229,8 @@ namespace Chapchu.UI.GameScreen
             RoomEvents.OnMasterClientSwitched -= HandleMasterClientSwitched;
             GameEvents.OnActionBlockChanged -= HandleActionBlockChanged;
             GameEvents.OnWaitChanged -= HandleWaitChanged;
+            GameEvents.OnDomainChanged -= HandleDomainChanged;
+            GameEvents.OnGoatChanged -= HandleGoatChanged;
             GameEvents.OnChapchuWinHeld -= HandleChapchuWinHeld;
             GameEvents.OnGameRestarted -= HandleGameRestarted;
             GameEvents.OnFalloutChanged -= HandleFalloutChanged;
@@ -886,6 +890,12 @@ namespace Chapchu.UI.GameScreen
         }
 
         private void HandleWaitChanged(int[] casters) => Enqueue(() => { history.ShowWaitChanged(casters); boardEffects.ShowWait(casters); return null; });
+
+        // 영역 (1008) · GOAT (1067) — 판 효과 줄 + 기록. 빼앗기 · 피해 · HP 는 뒤따르는 알림이 평소대로 그린다
+        private void HandleDomainChanged(int owner, int left, int take, int damage, bool ticked) =>
+            Enqueue(() => { history.ShowDomainChanged(owner, left, take, damage, ticked); boardEffects.ShowDomain(owner, left, take, damage); return null; });
+
+        private void HandleGoatChanged(int[] actors) => Enqueue(() => { history.ShowGoatChanged(actors); boardEffects.ShowGoat(actors); return null; });
 
         private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
 

@@ -163,7 +163,7 @@ namespace Chapchu.UI.GameScreen
             if (life == LifeState.Dead)
                 status.Clear();
             Refresh();
-            RefreshHp(GameServer.MaxHp);
+            RefreshHp(GameServer.HpBarMax(_hp));
         }
 
         /// <summary>대상으로 고를 수 있는 상태 — 발밑 빨간 타원 · HUD 빨간 점선을 켜고, 가림판 위로 올려 탭을 받는다 (10-ui.md 6절).</summary>

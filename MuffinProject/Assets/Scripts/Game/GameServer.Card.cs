@@ -126,7 +126,7 @@ namespace Chapchu.Game
             switch (condition)
             {
                 case TargetCondition.HasHand:    return player.Hand.Count > 0;
-                case TargetCondition.HpBelowMax: return player.Hp < MaxHp;
+                case TargetCondition.HpBelowMax: return player.Hp < HpCapOf(player);
                 case TargetCondition.HasTrap:    return player.Traps.Count > 0;
                 default:                         return true;
             }

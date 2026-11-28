@@ -2831,8 +2831,8 @@ public static class MultiTest
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             List<Card> mainCards = main != null ? main.CreateCards() : new List<Card>();
             int[] ids = mainCards.Select(c => c.CardId).ToArray();
-            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2, [3002] = 2, [3004] = 2, [3007] = 2, [3008] = 1, [3009] = 3, [3012] = 2 };
-            Check(ids.Length == 77 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 77장 (행동 45 + 카운터 20 + 함정 12, 11-card-list 1-1 장수) — {ids.Length}장");
+            var expected = new Dictionary<int, int> { [1001] = 3, [1002] = 3, [1006] = 2, [1014] = 3, [1017] = 1, [1004] = 2, [1009] = 3, [1011] = 2, [1013] = 2, [1016] = 3, [1018] = 3, [1045] = 2, [1007] = 1, [1020] = 3, [1023] = 1, [1015] = 3, [1012] = 1, [1005] = 3, [1021] = 1, [1019] = 3, [1008] = 1, [1067] = 1, [2003] = 2, [2014] = 2, [2016] = 2, [2001] = 3, [2020] = 2, [2021] = 2, [2019] = 1, [2005] = 1, [2015] = 1, [2018] = 1, [2002] = 1, [2013] = 2, [3002] = 2, [3004] = 2, [3007] = 2, [3008] = 1, [3009] = 3, [3012] = 2 };
+            Check(ids.Length == 79 && expected.All(pair => ids.Count(i => i == pair.Key) == pair.Value), $"Deck_Main 79장 (행동 47 + 카운터 20 + 함정 12, 11-card-list 1-1 장수) — {ids.Length}장");
 
             Func<int, Card> Real(int cardId)
             {
@@ -2840,7 +2840,7 @@ public static class MultiTest
                 return id => new Card(id, c.CardId, c.Type, c.Target, c.Effects, c.ReactsTo, ChainTable.Reveal, ChainTable.Resolve, c.Trigger, c.TriggerValue, c.Condition, c.TargetCondition, c.Uncounterable);
             }
 
-            if (ids.Length == 77)
+            if (ids.Length == 79)
             {
                 // ── 카운터 묶음 5 (11-card-list 1-3) — 2005 묻고 따블로 가 ──
                 // 차례인 사람의 행동 카드 ← O2 의 2003 진짜 할거야? ← O1 의 따블 → 2003 무효 · 행동 카드 2배. 20초까지 돌린 사건을 돌려준다
@@ -5878,6 +5878,172 @@ public static class MultiTest
             Check(ended != null && ended.Stats.Length == 3 * n && At(t.Turn, StatKind.Dealt) == 20 && At(t.O2, StatKind.Taken) == 20 && At(t.O1, StatKind.Dealt) == 0
                   && At(t.Turn, StatKind.Actions) == 1 && ended.EndTurn >= 1, "종료 요약 — 사람마다 지표 " + n + "개 · 끝난 턴");
             sb.AppendLine("  · " + Summary(ended));
+        }
+
+        return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
+    }
+
+    /// <summary>규칙 계층의 영역전개(1008) · GOAT(1067) — 턴 시작 처리 · 덮어쓰기 · 최대 HP · 피해 2배 · 끝나는 때 (11-card-list 1008 · 1067). ChainTable 을 같이 쓴다.</summary>
+    public static string Domain()
+    {
+        var sb = new StringBuilder();
+        bool failed = false;
+        void Check(bool ok, string what)
+        {
+            failed |= !ok;
+            sb.AppendLine((ok ? "  ✓ " : "FAIL ") + what);
+        }
+
+        Func<int, Card> domainCard = id => new Card(id, 1008, CardType.Action, TargetType.AllOthers,
+            new CardEffect[] { new StartDomainEffect { rounds = 2, take = 1, damage = 10 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+        Func<int, Card> goatCard = id => new Card(id, 1067, CardType.Action, TargetType.Self,
+            new CardEffect[] { new StartGoatEffect { rounds = 2, hp = 200, damageTimes = 2 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+        Func<int, Card> healCard = id => new Card(id, 901, CardType.Action, TargetType.Self,
+            new CardEffect[] { new HealEffect { subject = EffectSubject.Self, amount = 30 } }, null, ChainTable.Reveal, ChainTable.Resolve);
+
+        // 손패 3장(Hit · Wave · Storm)으로 — 카운터가 없어 반응 시간이 열리지 않고, 뽑아도 10장에 닿지 않는다
+        ChainTable Table()
+        {
+            var t = new ChainTable();
+            foreach (int actor in new[] { t.Turn, t.O1, t.O2 })
+                t.SetHandSize(actor, 3);
+            return t;
+        }
+        // 턴 시작 처리의 연출 시간(영역 1.2초)을 지나 그 턴 주인이 움직일 수 있을 때까지
+        void Settle(ChainTable t) => t.Run(t.Now + GameServer.DomainTickSeconds + 0.3);
+
+        // 1. 영역전개 — 낼 때는 상태만, 내 턴이 시작될 때마다 모두에게서 1장 + 10 피해, 2번 뒤 끝
+        {
+            ChainTable t = Table();
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, domainCard));
+            DomainChanged started = events.OfType<DomainChanged>().FirstOrDefault();
+            Check(started != null && started.Owner == t.Turn && started.Left == 2 && !started.Ticked && t.Hp(t.O1) == 100 && t.HandCount(t.O1) == 3,
+                "영역전개 → 영역 시작 (2번) · 낼 때는 빼앗기 · 피해 없음");
+
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.Server.Draw(t.O1);
+            events = t.Server.Draw(t.O2).ToList();
+            DomainChanged ticked = events.OfType<DomainChanged>().FirstOrDefault();
+            Check(ticked != null && ticked.Ticked && ticked.Left == 1 && events.OfType<TurnStarted>().Any(e => e.Actor == t.Turn),
+                "주인의 턴이 시작되면 영역 처리 (남은 1번)");
+            Check(t.Hp(t.O1) == 90 && t.Hp(t.O2) == 90 && t.Hp(t.Turn) == 100, "나를 뺀 모두 10 피해 — 주인은 그대로");
+            Check(t.HandCount(t.O1) == 4 && t.HandCount(t.O2) == 4 && t.HandCount(t.Turn) == 5, "모두에게서 1장씩 빼앗아 주인 손패 +2");
+            Check(t.Code(t.Server.Draw(t.Turn)) != 0, "영역 처리를 보이는 동안은 턴이 멈춘다 (뽑기 거절)");
+
+            Settle(t);
+            t.Server.Draw(t.Turn);
+            t.Server.Draw(t.O1);
+            events = t.Server.Draw(t.O2).ToList();
+            DomainChanged ended = events.OfType<DomainChanged>().FirstOrDefault();
+            Check(ended != null && ended.Ticked && ended.Left == 0 && t.Hp(t.O1) == 80 && t.Hp(t.O2) == 80, "두 번째 턴 시작 — 한 번 더 처리하고 영역 끝");
+
+            foreach (int actor in new[] { t.Turn, t.O1, t.O2 })
+                t.SetHandSize(actor, 3);
+            Settle(t);
+            t.Server.Draw(t.Turn);
+            t.Server.Draw(t.O1);
+            events = t.Server.Draw(t.O2).ToList();
+            Check(!events.OfType<DomainChanged>().Any() && t.Hp(t.O1) == 80 && t.HandCount(t.O1) == 5, "끝난 뒤의 턴 시작에는 아무 일 없음");
+        }
+
+        // 2. 다른 사람이 쓰면 덮어쓴다 · 주인이 최종 사망하면 즉시 끝
+        {
+            ChainTable t = Table();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, domainCard));
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            List<GameEvent> events = t.PlayAndResolve(t.O1, t.Give(t.O1, domainCard));
+            Check(events.OfType<DomainChanged>().Any(e => e.Owner == t.O1 && e.Left == 2), "다른 사람이 영역전개 → 새 주인의 영역");
+
+            t.RunUntilTurn(t.O2, t.Now + 20);
+            events = t.Server.Draw(t.O2).ToList();
+            Check(!events.OfType<DomainChanged>().Any() && t.Hp(t.O1) == 100 && t.Hp(t.O2) == 100, "옛 주인의 턴 시작에는 처리 없음 (영역은 판에 하나)");
+
+            t.Run(t.Now + 0.2);
+            t.SetHp(t.O1, 20);
+            events = t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            Check(events.OfType<PlayerDied>().Any(e => e.Actor == t.O1) && events.OfType<DomainChanged>().Any(e => e.Owner == t.O1 && e.Left == 0 && !e.Ticked),
+                "주인이 최종 사망 → 영역 즉시 끝");
+        }
+
+        // 3. GOAT — HP 200 · 주는 피해 2배 · 받는 피해는 그대로 · 두 번째 내 턴 시작에 끝 (HP 는 그대로, 더 늘지는 않는다)
+        {
+            ChainTable t = Table();
+            t.SetHp(t.Turn, 60);
+            List<GameEvent> events = t.PlayAndResolve(t.Turn, t.Give(t.Turn, goatCard));
+            Check(t.Hp(t.Turn) == 200 && events.OfType<GoatChanged>().Any(e => e.Actors.SequenceEqual(new[] { t.Turn })), "GOAT → HP 60 → 200 · GOAT 상태");
+
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.PlayAndResolve(t.O1, t.Find2(t.O1, ChainTable.Hit), t.Turn);
+            Check(t.Hp(t.Turn) == 180, "GOAT 가 받는 피해는 그대로 20");
+
+            t.RunUntilTurn(t.O2, t.Now + 20);
+            events = t.Server.Draw(t.O2).ToList();
+            Check(!events.OfType<GoatChanged>().Any(), "첫 번째 내 턴 시작 — GOAT 유지");
+            t.Run(t.Now + 0.2);
+            t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Hit), t.O1);
+            Check(t.Hp(t.O1) == 60, "GOAT 가 주는 피해 2배 — 20 → 40");
+
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.Server.Draw(t.O1);
+            events = t.Server.Draw(t.O2).ToList();
+            Check(events.OfType<GoatChanged>().Any(e => e.Actors.Length == 0) && t.Hp(t.Turn) == 180, "두 번째 내 턴 시작 → GOAT 끝 · HP 180 그대로");
+
+            t.Run(t.Now + 0.2);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, healCard));
+            Check(t.Hp(t.Turn) == 180, "끝난 뒤 100 을 넘는 HP 는 회복으로 늘지 않는다 (줄지도 않는다)");
+
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.Server.Draw(t.O1);
+            t.Server.Draw(t.O2);
+            t.Run(t.Now + 0.2);
+            t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Wave));
+            Check(t.Hp(t.O1) == 40 && t.Hp(t.O2) == 80, "끝난 뒤 주는 피해는 다시 20");
+        }
+
+        // 4. GOAT — 전원 피해에서 나에게 오는 몫은 2배가 아니다 · GOAT 동안 회복은 200 까지
+        {
+            ChainTable t = Table();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, goatCard));
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.Server.Draw(t.O1);
+            t.Server.Draw(t.O2);
+            t.Run(t.Now + 0.2);
+            t.PlayAndResolve(t.Turn, t.Find2(t.Turn, ChainTable.Storm));
+            Check(t.Hp(t.Turn) == 180 && t.Hp(t.O1) == 60 && t.Hp(t.O2) == 60, "전원 20 피해 — 남은 40 · 나는 20");
+        }
+        {
+            ChainTable t = Table();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, goatCard));
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.PlayAndResolve(t.O1, t.Find2(t.O1, ChainTable.Hit), t.Turn);
+            t.RunUntilTurn(t.O2, t.Now + 20);
+            t.Server.Draw(t.O2);
+            t.Run(t.Now + 0.2);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, healCard));
+            Check(t.Hp(t.Turn) == 200, "GOAT 동안 회복은 200 까지 (180 + 30 → 200)");
+        }
+
+        // 5. 영역 + GOAT — 영역 피해도 2배 · 되살린 상태가 같다 (방장 이주)
+        {
+            ChainTable t = Table();
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, domainCard));
+            t.RunUntilTurn(t.O1, t.Now + 20);
+            t.Server.Draw(t.O1);
+            t.Server.Draw(t.O2);
+            Settle(t);
+            t.PlayAndResolve(t.Turn, t.Give(t.Turn, goatCard));
+            t.RunUntilTurn(t.O1, t.Now + 20);
+
+            GameSnapshot snapshot = t.Server.Capture();
+            var clone = new GameServer(new System.Random(7), () => t.Now);
+            bool restored = clone.Restore(snapshot, CardsOf(t.Server));
+            string a = DumpState(t.Server), b = DumpState(clone);
+            Check(restored && a == b && a.Contains("_domainOwner = " + t.Turn) && a.Contains("GoatTurns=2"),
+                "영역 · GOAT 중의 상태를 담아 되살리면 같다" + (restored ? a == b ? "" : " — 다른 곳: " + FirstDifference(a, b) : " — 되살리기 실패: " + clone.RestoreError));
+
+            t.Server.Draw(t.O1);
+            List<GameEvent> events = t.Server.Draw(t.O2).ToList();
+            Check(t.Hp(t.O1) == 70 && t.Hp(t.O2) == 70 && events.OfType<DomainChanged>().Any(e => e.Ticked && e.Left == 0), "GOAT 인 주인의 영역 피해 2배 — 10 → 20");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();

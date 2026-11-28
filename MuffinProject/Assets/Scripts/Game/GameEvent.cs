@@ -561,6 +561,39 @@
         }
     }
 
+    /// <summary>
+    /// 영역이 바뀌었다 (1008 영역전개). Owner = 영역의 주인, Left = 남은 「주인의 턴 시작」 횟수 (0 이면 끝), Take · Damage = 턴 시작마다 한 사람에게서 빼앗는 장수 · 주는 피해.
+    /// Ticked = 방금 주인의 턴이 시작돼 처리했다 — 빼앗기 · 피해 알림이 뒤따른다. 다른 사람이 덮어쓰면 새 주인으로 한 번만 온다. 공개 — 전원.
+    /// </summary>
+    public sealed class DomainChanged : GameEvent
+    {
+        public int Owner { get; }
+        public int Left { get; }
+        public int Take { get; }
+        public int Damage { get; }
+        public bool Ticked { get; }
+
+        public DomainChanged(int owner, int left, int take, int damage, bool ticked)
+        {
+            Owner = owner;
+            Left = left;
+            Take = take;
+            Damage = damage;
+            Ticked = ticked;
+        }
+    }
+
+    /// <summary>GOAT 인 사람들이 바뀌었다 (1067 GOAT). 그동안 그 사람의 최대 HP 가 늘고 남에게 주는 피해가 배다. 비면 아무도 없다. 공개 — 전원.</summary>
+    public sealed class GoatChanged : GameEvent
+    {
+        public int[] Actors { get; }
+
+        public GoatChanged(int[] actors)
+        {
+            Actors = actors;
+        }
+    }
+
     /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
     public sealed class ChapchuWinHeld : GameEvent
     {

@@ -92,7 +92,9 @@ namespace Chapchu.Game
             string blocked = string.Join(" ", _players.Where(p => p.Value.ActionBlocked || p.Value.BlockActionNextTurn)
                 .Select(p => $"P{p.Key}{(p.Value.ActionBlocked ? "" : "(다음)")}"));
             string wait = string.Join(" ", _waitCasters.Select(a => $"P{a}"));
+            string goat = string.Join(" ", _players.Where(p => p.Value.GoatTurns > 0).Select(p => $"P{p.Key}({p.Value.GoatTurns})"));
             return (blocked.Length > 0 ? $" · 금지 {blocked}" : "") + (wait.Length > 0 ? $" · 기다려 {wait}" : "")
+                + (_domainOwner != -1 ? $" · 영역 P{_domainOwner}({_domainLeft})" : "") + (goat.Length > 0 ? $" · GOAT {goat}" : "")
                 + (_restartCount > 0 ? $" · 피폭 n{_restartCount} k{_falloutTurns}" : "")
                 + (_gaepanCaster != -1 ? $" · 개판 {_gaepanLeft}바퀴 ({_gaepanTurns}턴)" : "") + (IsGaepanJudging ? $" · 개판 판정 P{_gaepanLoser}" : "");
         }

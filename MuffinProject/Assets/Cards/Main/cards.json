@@ -66,6 +66,16 @@
       "effects": [ { "type": "ReverseTurnOrderEffect", "args": "" } ]
     },
     {
+      "id": 1008, "name": "영역전개", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "{0}바퀴 동안 내 턴 시작마다 상대 모두에게서 {1}장씩 빼앗고 {2} 피해를 준다",
+      "effects": [ { "type": "StartDomainEffect", "args": "rounds=2, take=1, damage=10" } ]
+    },
+    {
+      "id": 1067, "name": "GOAT", "type": "Action", "target": "Self", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "text": "{0}바퀴 동안 내 HP가 {1}이 되고, 내가 주는 피해가 {2}배가 된다",
+      "effects": [ { "type": "StartGoatEffect", "args": "rounds=2, hp=200, damageTimes=2" } ]
+    },
+    {
       "id": 1007, "name": "짖기", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Normal", "count": 1,
       "text": "다음 턴에 행동 카드를 못 쓰게 한다",
       "effects": [ { "type": "BlockActionEffect", "args": "subject=Target" } ]
