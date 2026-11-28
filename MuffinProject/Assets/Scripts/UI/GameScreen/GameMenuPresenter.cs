@@ -102,6 +102,6 @@ namespace Chapchu.UI.GameScreen
             NetworkManager.Instance.LeaveRoom();
         }
 
-        private void HandleLeftRoom() => SceneManager.LoadScene(ScenePaths.Lobby);
+        private void HandleLeftRoom() => ScreenTransition.Play(ScenePaths.Lobby, () => SceneManager.LoadScene(ScenePaths.Lobby));
     }
 }

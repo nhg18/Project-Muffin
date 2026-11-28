@@ -195,7 +195,7 @@ namespace Chapchu.UI.GameScreen
             if (life == LifeState.Dead)
                 status.Clear();
             Refresh();
-            RefreshHp(GameServer.MaxHp);
+            RefreshHp(GameServer.HpBarMax(_hp));
         }
 
         /// <summary>행동 카드 금지 (1007 짖기) — 이름표 옆 「행동 금지」.</summary>

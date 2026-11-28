@@ -51,6 +51,22 @@
         }
     }
 
+    /// <summary>
+    /// 게임이 시작됐다 (01-game-flow.md 3절) — 시작 알림 묶음의 맨 앞, 한 판에 한 번. Order = 섞은 턴 순서, OpeningSeconds = 첫 턴이 멈춰 있는 초.
+    /// 화면은 이걸 받았을 때만 게임 시작 연출(10-ui.md 5-2)을 튼다 — 늦게 연 화면 · 다시 들어온 사람 · 대폭발 새 판에는 오지 않는다.
+    /// </summary>
+    public sealed class GameStarted : GameEvent
+    {
+        public int[] Order { get; }
+        public double OpeningSeconds { get; }
+
+        public GameStarted(int[] order, double openingSeconds)
+        {
+            Order = order;
+            OpeningSeconds = openingSeconds;
+        }
+    }
+
     /// <summary>턴이 시작됐다 (03-turn.md). Deadline 은 마감 서버 시각(초) — 남은 시간은 각 클라이언트가 계산한다 (09-network.md 8절).</summary>
     public sealed class TurnStarted : GameEvent
     {
@@ -561,6 +577,39 @@
         }
     }
 
+    /// <summary>
+    /// 영역이 바뀌었다 (1008 영역전개). Owner = 영역의 주인, Left = 남은 「주인의 턴 시작」 횟수 (0 이면 끝), Take · Damage = 턴 시작마다 한 사람에게서 빼앗는 장수 · 주는 피해.
+    /// Ticked = 방금 주인의 턴이 시작돼 처리했다 — 빼앗기 · 피해 알림이 뒤따른다. 다른 사람이 덮어쓰면 새 주인으로 한 번만 온다. 공개 — 전원.
+    /// </summary>
+    public sealed class DomainChanged : GameEvent
+    {
+        public int Owner { get; }
+        public int Left { get; }
+        public int Take { get; }
+        public int Damage { get; }
+        public bool Ticked { get; }
+
+        public DomainChanged(int owner, int left, int take, int damage, bool ticked)
+        {
+            Owner = owner;
+            Left = left;
+            Take = take;
+            Damage = damage;
+            Ticked = ticked;
+        }
+    }
+
+    /// <summary>GOAT 인 사람들이 바뀌었다 (1067 GOAT). 그동안 그 사람의 최대 HP 가 늘고 남에게 주는 피해가 배다. 비면 아무도 없다. 공개 — 전원.</summary>
+    public sealed class GoatChanged : GameEvent
+    {
+        public int[] Actors { get; }
+
+        public GoatChanged(int[] actors)
+        {
+            Actors = actors;
+        }
+    }
+
     /// <summary>찹츄 상태로 자기 턴이 왔지만 「기다려」 라 판정을 건너뛰었다 (1023). 찹츄는 그대로 — 다음 자기 턴에 다시 판정한다.</summary>
     public sealed class ChapchuWinHeld : GameEvent
     {
@@ -638,7 +687,7 @@
 
     /// <summary>
     /// 개판 오분전 판정 (1021). ByHp = 기준 HP 꼴찌 (false 면 손패 꼴찌), Value = 그 꼴찌 값, Tied = 같은 값의 사람들 (2명 이상이면 그중 무작위).
-    /// Actors · Values = 판정 때 살아 있던 사람과 그 기준 값 (같은 순서) — 각자 머리 위 수치 표. 공개 GameServer.GaepanJudgeSeconds 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
+    /// Actors · Values = 판정 때 살아 있던 사람과 그 기준 값 (같은 순서) — 각자 머리 위 수치 표. 공개 GameServer.GaepanJudgeSeconds + GaepanExecutionSeconds (판정 팻말 + 처형 장면) 뒤 Loser 의 HP 가 0 이 된다 (HpChanged → 사망 대기). 공개 — 전원.
     /// </summary>
     public sealed class GaepanJudged : GameEvent
     {

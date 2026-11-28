@@ -54,20 +54,6 @@ namespace Chapchu.UI.Fx.Comic
         /// 자리의 강아지 키 (<see cref="FxDog.Keys"/>, 시안 DOGPILE.keyOf) — 이 화면의 주인 = 나(na), 나머지는 턴 순서대로 초코 · 콩이 · 보리.
         /// 자리마다 정해진 캐릭터 값이 생기면 그것으로 바꾼다.
         /// </summary>
-        public string DogKeyOf(CardFxSeat seat)
-        {
-            if (seat == null || seat.IsMe)
-                return FxDog.Keys[0];
-            int order = 0;
-            foreach (CardFxSeat other in Fx.Seats)
-            {
-                if (other == null || other.IsMe)
-                    continue;
-                order++;
-                if (other == seat)
-                    break;
-            }
-            return FxDog.Keys[Mathf.Clamp(order, 1, FxDog.Keys.Count - 1)];
-        }
+        public string DogKeyOf(CardFxSeat seat) => FxDog.KeyOf(seat, Fx.Seats);
     }
 }

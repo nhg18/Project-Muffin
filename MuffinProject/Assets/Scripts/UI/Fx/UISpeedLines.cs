@@ -24,6 +24,8 @@ namespace Chapchu.UI.Fx
         [SerializeField] private float widthMax = 0.042f;
         [Tooltip("쐐기 각도가 고른 간격에서 어긋나는 가장 큰 값 (라디안, 시안 0.06).")]
         [SerializeField] private float angleJitter = 0.06f;
+        [Tooltip("켜면 안쪽 끝 비율을 바깥 반지름이 아니라 그 방향의 화면(이 RectTransform) 가장자리까지 거리에 곱한다 — 화면 전환 집중선 (15-screen.md 9-4).")]
+        [SerializeField] private bool innerFromEdge;
 
         private int _seed = 1;
 
@@ -32,6 +34,16 @@ namespace Chapchu.UI.Fx
         {
             _seed = Random.Range(1, int.MaxValue);
             SetVerticesDirty();
+        }
+
+        // 가운데(피벗)에서 그 방향으로 이 RectTransform 가장자리까지
+        private float EdgeDistance(float angle)
+        {
+            Rect r = rectTransform.rect;
+            float cos = Mathf.Abs(Mathf.Cos(angle)), sin = Mathf.Abs(Mathf.Sin(angle));
+            float x = cos > 1e-4f ? r.width / 2f / cos : float.MaxValue;
+            float y = sin > 1e-4f ? r.height / 2f / sin : float.MaxValue;
+            return Mathf.Min(x, y);
         }
 
         protected override void OnPopulateMesh(VertexHelper vh)
@@ -46,7 +58,7 @@ namespace Chapchu.UI.Fx
             {
                 float angle = i / (float)count * Mathf.PI * 2f + Next(0f, angleJitter);
                 float angleEnd = angle + Next(widthMin, widthMax);
-                float inner = outerRadius * Next(innerMin, innerMax);
+                float inner = (innerFromEdge ? EdgeDistance(angle) : outerRadius) * Next(innerMin, innerMax);
 
                 vertex.position = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * outerRadius;
                 vh.AddVert(vertex);

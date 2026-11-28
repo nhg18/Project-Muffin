@@ -31,7 +31,7 @@ namespace Chapchu.Game.Bots
         private const double GrudgeScore = 4;       // 원한 1 마다 그 상대를 노리는 수에 더하는 점수
 
         private readonly GameServer _server;
-        private readonly int[] _bots;
+        private readonly List<int> _bots;
         private readonly Random _random;
         private readonly Func<double> _clock;
         private readonly Dictionary<int, BotMind> _minds = new Dictionary<int, BotMind>();
@@ -93,21 +93,44 @@ namespace Chapchu.Game.Bots
         public BotDriver(GameServer server, IEnumerable<int> botActors, Random random, Func<double> clock, Func<int, BotLevel> levelOf = null)
         {
             _server = server;
-            _bots = botActors.ToArray();
+            _bots = botActors.ToList();
             _random = random;
             _clock = clock;
 
-            BotStyle[] styles = (BotStyle[])Enum.GetValues(typeof(BotStyle));
             foreach (int bot in _bots)
+                AddMind(bot, levelOf != null ? levelOf(bot) : BotLevel.Normal);
+        }
+
+        public bool HasBots => _bots.Count > 0;
+
+        /// <summary>
+        /// 개발자 도구 「내 자리도 봇」 (10-ui.md 12절) — 사람 자리를 봇처럼 둔다(true) · 되돌린다(false). 방장 · 개발 방만 (PunGameServer 가 거른다).
+        /// 그 사람의 시간 초과 · 강제 퇴장 규칙은 그대로다 — 봇이 마감 전에 행동하므로 걸리지 않는다.
+        /// </summary>
+        public void SetDriven(int actor, bool driven, BotLevel level = BotLevel.Normal)
+        {
+            if (driven == _bots.Contains(actor))
+                return;
+
+            if (driven)
             {
-                BotLevel level = levelOf != null ? levelOf(bot) : BotLevel.Normal;
-                var mind = new BotMind { Spec = BotLevelSpec.Of(level), Style = styles[_random.Next(styles.Length)] };
-                _minds[bot] = mind;
-                Log(bot, $"난이도 {level} · 성향 {mind.Style}");
+                _bots.Add(actor);
+                AddMind(actor, level);
+            }
+            else
+            {
+                _bots.Remove(actor);
+                _minds.Remove(actor);
             }
         }
 
-        public bool HasBots => _bots.Length > 0;
+        private void AddMind(int bot, BotLevel level)
+        {
+            BotStyle[] styles = (BotStyle[])Enum.GetValues(typeof(BotStyle));
+            var mind = new BotMind { Spec = BotLevelSpec.Of(level), Style = styles[_random.Next(styles.Length)] };
+            _minds[bot] = mind;
+            Log(bot, $"난이도 {level} · 성향 {mind.Style}");
+        }
 
         /// <summary>지난 Tick 뒤로 봇이 한 행동의 이유 (방장 로그용, 18-bot.md 7-6). 꺼내면 비운다.</summary>
         public IReadOnlyList<string> TakeLogs()
@@ -144,11 +167,11 @@ namespace Chapchu.Game.Bots
         public IReadOnlyList<GameEvent> Tick()
         {
             var events = new List<GameEvent>();
-            if (_bots.Length == 0 || _server.IsGameOver)
+            if (_bots.Count == 0 || _server.IsGameOver)
                 return events;
 
             double now = _clock();
-            foreach (int bot in _bots)
+            foreach (int bot in _bots.ToArray())
                 ReactIfNeeded(bot, now, events);
 
             int turn = _server.CurrentTurnActor;

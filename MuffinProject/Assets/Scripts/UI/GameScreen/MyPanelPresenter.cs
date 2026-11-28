@@ -36,7 +36,7 @@ namespace Chapchu.UI.GameScreen
 
             // 씬이 늦게 열려 첫 이벤트를 놓쳤을 때를 위한 지금 값. 이벤트가 먼저 왔다면 같은 값이다.
             if (me.CustomProperties.TryGetValue(PlayerProps.Hp, out object hp) && hp is int hpValue)
-                ShowHp(Mathf.Clamp(hpValue, 0, GameServer.MaxHp)); // Player 속성은 남이 쓸 수 있다
+                ShowHp(Mathf.Clamp(hpValue, 0, GameServer.HpLimit)); // Player 속성은 남이 쓸 수 있다
 
             if (me.CustomProperties.TryGetValue(PlayerProps.HandCount, out object handCount) && handCount is int handCountValue)
                 ShowHandCount(handCountValue);
@@ -55,8 +55,8 @@ namespace Chapchu.UI.GameScreen
                 ShowLife((LifeState)lifeValue);
         }
 
-        /// <summary>HP — 막대는 최대 HP(GameServer.MaxHp) 대비 비율.</summary>
-        public void ShowHp(int hp) => _view.SetHp(hp, GameServer.MaxHp);
+        /// <summary>HP — 막대는 최대 HP(GameServer.MaxHp) 대비 비율. 100 을 넘으면(GOAT) 막대는 가득, 숫자만 그 값.</summary>
+        public void ShowHp(int hp) => _view.SetHp(hp, GameServer.HpBarMax(hp));
 
         /// <summary>4 단계 공통 연출 자리 (ResultFx).</summary>
         public ResultFx.Seat FxSeat => _view.FxSeat;
@@ -95,5 +95,8 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>내 캐릭터 가운데(화면 좌표).</summary>
         public Vector2 CharacterScreenPoint => _view.CharacterScreenPoint;
+
+        /// <summary>게임 시작 연출에서 튀어나오는 내 캐릭터 · HUD.</summary>
+        public RectTransform[] IntroParts => _view.IntroParts;
     }
 }

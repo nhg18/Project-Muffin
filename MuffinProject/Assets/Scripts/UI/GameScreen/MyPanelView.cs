@@ -163,7 +163,7 @@ namespace Chapchu.UI.GameScreen
             if (life == LifeState.Dead)
                 status.Clear();
             Refresh();
-            RefreshHp(GameServer.MaxHp);
+            RefreshHp(GameServer.HpBarMax(_hp));
         }
 
         /// <summary>대상으로 고를 수 있는 상태 — 발밑 빨간 타원 · HUD 빨간 점선을 켜고, 가림판 위로 올려 탭을 받는다 (10-ui.md 6절).</summary>
@@ -194,6 +194,9 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>내 캐릭터 가운데(화면 좌표) — 대상 표시 점선이 닿는 자리.</summary>
         public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
+
+        /// <summary>게임 시작 연출에서 내 카드가 닿을 때 튀어나오는 것 — 내 캐릭터 · 내 HUD (10-ui.md 5-2).</summary>
+        public RectTransform[] IntroParts => new[] { character.rectTransform, (RectTransform)transform };
 
         public void OnPointerClick(PointerEventData eventData)
         {

@@ -193,7 +193,7 @@ namespace Chapchu.UI.ResultScreen
                 podium.Show(new ResultPodiumInfo(
                     _names[i], _colors[i], _result.Ranks[i], IsTied(i),
                     isWinner: actor == _result.Winner, isMe: actor == me, isOut: isOut,
-                    hp: _result.Hps[i], maxHp: GameServer.MaxHp,
+                    hp: _result.Hps[i], maxHp: GameServer.HpBarMax(_result.Hps[i]),
                     stat: isOut ? string.Format(_result.Left[i] ? LeftStatFormat : OutStatFormat, _result.OutTurns[i]) : null,
                     sub: isOut && downedBy >= 0 ? string.Format(DownedByFormat, _names[downedBy]) : null,
                     hasWinMark: actor == _result.Winner && _result.Reason == GameEndReason.Chapchu));
@@ -401,7 +401,8 @@ namespace Chapchu.UI.ResultScreen
         private void HandleLeftRoom()
         {
             _isLeaving = true;
-            SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
+            string scene = SceneFlow.ReturnSceneAfterRoom;
+            ScreenTransition.Play(scene, () => SceneManager.LoadScene(scene));
         }
 
         #endregion

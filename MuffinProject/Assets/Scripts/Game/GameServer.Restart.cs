@@ -122,6 +122,7 @@ namespace Chapchu.Game
             _heldNext = -1;
             _turnTaker = -1;
             ResetGaepan(); // 개판도 처음으로 (사용자 2026-11-13)
+            ResetDomain(); // 영역도 — GOAT 는 사람 상태를 새로 만들어 이미 없다 (11-card-list 1008 · 1067)
             InitDeck(_allCards);
 
             _turnOrder.Clear();

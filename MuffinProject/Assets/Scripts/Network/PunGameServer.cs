@@ -47,6 +47,7 @@ namespace Chapchu.Network
         // 게임을 시작할 때의 닉네임 — 결과 화면이 나간 사람의 이름도 보이게 (07-win-condition.md 11-2). 모든 클라가 자기 것을 찍어 둔다
         private readonly Dictionary<int, string> _startNames = new Dictionary<int, string>();
         private bool _gameEnded; // 종료 알림을 받았다 — 이 뒤로는 요청을 보내지 않는다 (곧 결과 씬으로 넘어간다)
+        private bool _restarting; // 방장 — 개발자 도구 「새 판」 으로 이 씬을 다시 연다. 전환 동안 판을 더 굴리지 않는다 (옛 판의 알림이 새 씬에 닿지 않게)
 
         // ── 방장 이주 (09-network.md 9.1) ──
         private bool _started;          // 방장 — 이 기기의 규칙이 판을 갖고 있다 (시작했거나 사본으로 되살렸다)
@@ -120,7 +121,8 @@ namespace Chapchu.Network
                 _bots = CreateBots(bots);
 
             _started = true;
-            IReadOnlyList<GameEvent> started = _server.StartGame(actors, cards, bots); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
+            // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절). 첫 턴은 화면의 게임 시작 연출 동안 멈춘다 (01-game-flow.md 3절 #8)
+            IReadOnlyList<GameEvent> started = _server.StartGame(actors, cards, bots, GameServer.OpeningSeconds(actors.Length));
             // 섞은 턴 순서를 첫 턴 알림보다 먼저 — 화면의 턴 순서가 좌석 순서가 아니라 이 순서를 그린다 (03-turn.md 6절 #2)
             NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.TurnOrder] = _server.TurnOrder.ToArray() });
             Send(started);
@@ -129,7 +131,7 @@ namespace Chapchu.Network
         // 턴 마감 판정 · 봇의 판단은 방장만 한다 (09-network.md 8절 · 18-bot.md 3절 #1).
         private void Update()
         {
-            if (!NetworkManager.IsTrustedMaster)
+            if (!NetworkManager.IsTrustedMaster || _restarting)
                 return;
 
             Send(_server.Tick());
@@ -258,6 +260,53 @@ namespace Chapchu.Network
             if (!NetworkManager.IsTrustedMaster) return;
             if (!_limiter.Allow(info)) return;
             Send(_server.HoldReaction(info.Sender.ActorNumber, cardInstanceId));
+        }
+
+        /// <summary>개발자 도구 (10-ui.md 12절) — 개발 방(매치가 아닌 방)에서만 방장이 받는다. value 는 명령마다 (켜기 1 · 끄기 0 · 카드 종류 ID).</summary>
+        public void RequestDev(DevCommand command, int value) => SendRequest(nameof(RPC_RequestDev), (int)command, value);
+
+        public enum DevCommand
+        {
+            UnlimitedTurnTime = 1,
+            SeatBot = 2,
+            GiveCard = 3,
+            NewGame = 4,
+        }
+
+        [PunRPC]
+        private void RPC_RequestDev(int command, int value, PhotonMessageInfo info)
+        {
+            if (!NetworkManager.IsTrustedMaster) return;
+            if (!_limiter.Allow(info)) return;
+            // 매치 방(정식 판)에서는 받지 않는다 — 방 속성은 남이 쓸 수 있어 방장이 쓴 원본을 본다
+            if (NetworkManager.RoomProp(RoomProps.Match) is bool match && match)
+            {
+                Debug.LogWarning($"[{nameof(PunGameServer)}] 매치 방 — P{info.Sender.ActorNumber} 의 개발자 도구 요청 {command} 를 받지 않는다");
+                return;
+            }
+
+            int actor = info.Sender.ActorNumber;
+            switch ((DevCommand)command)
+            {
+                case DevCommand.UnlimitedTurnTime:
+                    Send(_server.SetUnlimitedTurnTime(value != 0));
+                    break;
+                case DevCommand.SeatBot:
+                    if (!_started) return;
+                    _bots ??= CreateBots(System.Array.Empty<int>());
+                    _bots.SetDriven(actor, value != 0);
+                    break;
+                case DevCommand.GiveCard:
+                    Send(_server.DevGiveCard(actor, value));
+                    break;
+                case DevCommand.NewGame:
+                    if (_gameEnded || _restarting) return;
+                    _gameEnded = true; // 이 판의 요청을 멈춘다 — 같은 씬을 다시 연다
+                    _restarting = true;
+                    ResetPublicProps();
+                    NetworkManager.Instance.LoadSceneForAll(SceneFlow.GameSceneAfterRoom); // 결과 화면의 「한 판 더」 와 같은 씬
+                    break;
+            }
         }
 
         public override void OnEnable()
@@ -481,6 +530,10 @@ namespace Chapchu.Network
                         roomProps[RoomProps.DiscardTop] = null; // 값이 null 이면 Photon 이 키를 지운다
                         break;
 
+                    case GameStarted started:
+                        Broadcast(nameof(RPC_OnGameStarted), started.Order, started.OpeningSeconds);
+                        break;
+
                     case TurnStarted turn:
                         Broadcast(nameof(RPC_OnTurnStarted), turn.Actor, turn.Deadline);
                         roomProps[RoomProps.TurnActor] = turn.Actor;
@@ -629,6 +682,16 @@ namespace Chapchu.Network
                         roomProps[RoomProps.WaitCasters] = wait.Casters.Length > 0 ? wait.Casters : null;
                         break;
 
+                    case DomainChanged domain:
+                        Broadcast(nameof(RPC_OnDomainChanged), domain.Owner, domain.Left, domain.Take, domain.Damage, domain.Ticked);
+                        roomProps[RoomProps.Domain] = domain.Left > 0 ? new[] { domain.Owner, domain.Left, domain.Take, domain.Damage } : null;
+                        break;
+
+                    case GoatChanged goat:
+                        Broadcast(nameof(RPC_OnGoatChanged), goat.Actors);
+                        roomProps[RoomProps.Goat] = goat.Actors.Length > 0 ? goat.Actors : null;
+                        break;
+
                     case GameRestarted restarted:
                         Broadcast(nameof(RPC_OnGameRestarted), restarted.User, restarted.Count, restarted.Order);
                         foreach (int actor in restarted.Order)
@@ -645,6 +708,8 @@ namespace Chapchu.Network
                         roomProps[RoomProps.TurnDirection] = null;
                         roomProps[RoomProps.TurnOrder] = restarted.Order; // 새 판은 순서를 다시 섞는다
                         roomProps[RoomProps.WaitCasters] = null;
+                        roomProps[RoomProps.Domain] = null;
+                        roomProps[RoomProps.Goat] = null;
                         Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
                         break;
 
@@ -771,6 +836,7 @@ namespace Chapchu.Network
             var roomReset = new Hashtable
             {
                 [RoomProps.DiscardCount] = 0, [RoomProps.DiscardTop] = null, [RoomProps.TurnDirection] = null, [RoomProps.WaitCasters] = null,
+                [RoomProps.Domain] = null, [RoomProps.Goat] = null,
                 [RoomProps.Fallout] = null, [RoomProps.Gaepan] = null, [RoomProps.TurnActor] = null, [RoomProps.TurnOrder] = null, [RoomProps.TurnDeadline] = null, [RoomProps.DeckCount] = null,
                 [RoomProps.EventSeq] = null, // 처리 번호는 판마다 1부터 — 지난 판 번호를 새 방장이 이어받지 않게
             };
@@ -893,6 +959,13 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseDeckRefilled(deckCount);
+        }
+
+        [PunRPC]
+        private void RPC_OnGameStarted(int seq, int[] order, double openingSeconds, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseGameStarted(Ints(order), openingSeconds);
         }
 
         [PunRPC]
@@ -1096,6 +1169,20 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseWaitChanged(Ints(casters));
+        }
+
+        [PunRPC]
+        private void RPC_OnDomainChanged(int seq, int owner, int left, int take, int damage, bool ticked, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseDomainChanged(owner, left, take, damage, ticked);
+        }
+
+        [PunRPC]
+        private void RPC_OnGoatChanged(int seq, int[] actors, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseGoatChanged(Ints(actors));
         }
 
         [PunRPC]

@@ -23,6 +23,12 @@ namespace Chapchu.UI.GameScreen
         private double _opensAt;  // 게임 시각(GameClock, 초)
         private double _deadline;
 
+        /// <summary>반응 시간 알약 · 스킵이 떠 있다 — 카드를 처리하는 중이다.</summary>
+        public bool IsOpen => _showing || _skipShown;
+
+        /// <summary>지금 내가 낼 수 있는 카운터가 있다 (스킵 버튼이 떠 있다).</summary>
+        public bool CountersOffered => _skipShown;
+
         private void Awake()
         {
             _view = GetComponent<ReactionTimerView>();
