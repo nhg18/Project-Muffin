@@ -10,6 +10,9 @@ namespace Chapchu.Game
         // 턴 뽑기(메인 행동) 장수 — 손패가 찹츄 장수 − 1 이면 1장만 뽑아 딱 맞게 한다 (05-deck.md 4절, 2026-11-11). 카드 효과 뽑기는 효과의 장수 그대로.
         public const int TurnDrawCount = 2;
         internal const int LastDrawCount = 1; // 손패가 찹츄 장수 − 1 일 때 (05-deck.md 4절)
+        // 뽑은 카드 읽는 시간 — 사람이 직접 뽑아 카드를 받으면 이 초가 지나기 전에는 다음 턴을 시작하지 않는다 (03-turn.md 3절, PM 2026-11-28).
+        // 봇 · 시간 초과 자동 뽑기는 기다리지 않는다. 체인의 읽는 시간(MinReadSeconds)과 같은 값이다.
+        public const double DrawReadSeconds = 3;
 
         // 턴 뽑기 장수 — 방장 판정과 봇 점수가 함께 쓴다 (05-deck.md 4절)
         internal static int TurnDrawCountFor(int handCount) => handCount == ChapchuHandCount - 1 ? LastDrawCount : TurnDrawCount;
@@ -42,7 +45,7 @@ namespace Chapchu.Game
                 return Reject(requester, RejectCode.NotYourTurn);
 
             _players[requester].TimeoutStreak = 0; // 직접 턴을 끝냈다 (03-turn.md 4절)
-            DrawForTurn(requester, TurnDrawCountFor(_players[requester].Hand.Count));
+            DrawForTurn(requester, TurnDrawCountFor(_players[requester].Hand.Count), !_noTimeoutActors.Contains(requester));
             return TakeEvents();
         }
 
@@ -51,8 +54,10 @@ namespace Chapchu.Game
             handCount < ChapchuHandCount ? System.Math.Min(TurnDrawCount, ChapchuHandCount - 1 - handCount) : TurnDrawCount;
 
         // 턴 뽑기(메인 행동)의 적용 — 직접 뽑기 · 시간 초과 자동 뽑기가 함께 쓴다. 끝나면 턴이 넘어간다.
-        private void DrawForTurn(int actor, int count)
+        // readTime = 사람이 직접 뽑았다 — 카드를 받았으면 읽는 시간(DrawReadSeconds)이 지난 뒤 넘어간다.
+        private void DrawForTurn(int actor, int count, bool readTime)
         {
+            int handBefore = _players[actor].Hand.Count;
             MarkHandsBefore();
             for (int i = 0; i < count && _players[actor].Hp > 0; i++)
                 CountDraw(actor); // 덱 · 버림 더미가 모두 비면 못 뽑은 장마다 빈 덱 피해 (05-deck.md 5절) — 그 피해로 HP 가 0 이 되면 멈춘다
@@ -62,7 +67,9 @@ namespace Chapchu.Game
             if (_gameOver)
                 return;
 
-            // 드로우는 끝나면 턴 종료. 사망 대기 능력 · 함정 연출이 있으면 그것이 끝난 뒤 (03-turn.md 4절)
+            // 드로우는 끝나면 턴 종료. 사망 대기 능력 · 함정 연출 · 읽는 시간이 있으면 그것이 끝난 뒤 (03-turn.md 3 · 4절)
+            if (readTime && _players[actor].Hand.Count > handBefore)
+                settled = System.Math.Max(settled, now + DrawReadSeconds);
             if (settled > now)
             {
                 _mainActionUsed = true;

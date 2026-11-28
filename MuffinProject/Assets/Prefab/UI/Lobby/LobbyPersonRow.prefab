@@ -2881,6 +2881,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.Lobby.LobbyPersonRowView
   background: {fileID: 8059705417545827078}
+  avatar: {fileID: 1115812774209736532}
   nameText: {fileID: 3700087990557119355}
   statusRow: {fileID: 6700248277181974775}
   statusDot: {fileID: 1450619511675900395}

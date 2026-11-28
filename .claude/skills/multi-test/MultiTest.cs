@@ -2033,6 +2033,23 @@ public static class MultiTest
             Check(nine.Server.Draw(nine.Turn).OfType<CardDrawn>().Count() == 1 && nine.HandCount(nine.Turn) == GameServer.ChapchuHandCount, "손패 9장에서 턴 뽑기 → 1장 · 딱 10장");
         }
 
+        // 3-0. 뽑은 카드 읽는 시간 — 사람이 직접 뽑으면 3초 뒤 다음 턴, 봇은 바로 (03-turn 3절, PM 2026-11-28)
+        {
+            var bots = new ChainTable(); // 기본 표는 모두 봇 취급
+            Check(bots.Server.Draw(bots.Turn).OfType<TurnStarted>().Any(), "봇의 직접 뽑기 → 읽는 시간 없이 바로 다음 턴");
+
+            var t = new ChainTable(null, true);
+            int drawer = t.Turn;
+            t.At(10);
+            bool startedNow = t.Server.Draw(drawer).OfType<TurnStarted>().Any();
+            t.At(10 + GameServer.DrawReadSeconds - 0.2);
+            t.Tick();
+            bool stillMine = t.Server.CurrentTurnActor == drawer;
+            t.At(10 + GameServer.DrawReadSeconds + 0.1);
+            bool advanced = t.Tick().OfType<TurnStarted>().Any() && t.Server.CurrentTurnActor == t.O1;
+            Check(!startedNow && stillMine && advanced, "직접 뽑기 → 읽는 시간 3초 동안 턴 그대로 · 뒤에 다음 사람");
+        }
+
         // 3-1. 빈 덱 피해 1 · 2 · 3 … (사람마다, 못 뽑은 장마다), 드로우는 턴 종료
         {
             var t = new ChainTable();
@@ -2067,13 +2084,20 @@ public static class MultiTest
         }
 
         double limit = GameServer.TurnTimeLimit + 0.3;
+        // 직접 뽑기 — 뽑은 카드 읽는 시간(3초)이 지나야 다음 턴 (03-turn 3절, PM 2026-11-28)
+        void DrawAndWait(ChainTable table, int actor)
+        {
+            table.Server.Draw(actor);
+            table.Run(table.Now + GameServer.DrawReadSeconds + 0.1);
+        }
+
         // 다른 두 사람이 직접 뽑아 턴을 돌린다 — 손패를 줄여 두어 뽑다가 10장(찹츄)이 되지 않게
         void PassOthers(ChainTable table)
         {
             foreach (int other in new[] { table.O1, table.O2 })
             {
                 table.SetHandSize(other, 3);
-                table.Server.Draw(other);
+                DrawAndWait(table, other);
             }
         }
 
@@ -2141,7 +2165,7 @@ public static class MultiTest
             }
             Check(t.State(a).TimeoutStreak == 2 && t.Server.CurrentTurnActor == a, "두 번 시간 초과 — 연속 2");
             t.SetHandSize(a, 3);
-            t.Server.Draw(a);
+            DrawAndWait(t, a);
             Check(t.State(a).TimeoutStreak == 0, "직접 뽑기 → 연속 0");
             PassOthers(t);
             t.Run(t.Now + limit);
@@ -3835,6 +3859,29 @@ public static class MultiTest
                     var pick = new ChooseDiscardEffect();
                     int picked = (int)typeof(ChooseDiscardEffect).GetMethod("BotPick", Private).Invoke(pick, new object[] { t.Server, t.O1 });
                     Check(picked == c2.InstanceId, "2021 봇이 대가로 버릴 카드 — 카운터(뒤쪽) 먼저");
+                }
+                {
+                    // 으르렁은 행동 카드에만 낸다 — 나를 노린 카운터(으르렁의 벌칙 · 물귀신 · 가로채기가 고른 사람) 위에는 거절 9 (사용자 2026-11-28)
+                    var t = new ChainTable();
+                    Card back = t.Give(t.Turn, Real(2021));
+                    t.PlayCard(t.Turn, t.Give(t.Turn, Real(1001)), t.O1);
+                    t.At(2);
+                    t.Counter(t.O1, t.Give(t.O1, Real(2021)));
+                    t.At(Second);
+                    int growl = t.Code(t.Counter(t.Turn, back));
+                    var s = new ChainTable();
+                    s.PlayCard(s.Turn, s.Give(s.Turn, Real(1001)), s.O1);
+                    s.At(2);
+                    s.Counter(s.O1, s.Give(s.O1, Real(2018)), s.O2);
+                    s.At(Second);
+                    int ghost = s.Code(s.Counter(s.O2, s.Give(s.O2, Real(2021))));
+                    var u = new ChainTable();
+                    u.PlayCard(u.Turn, u.Give(u.Turn, Real(1001)), u.O1);
+                    u.At(2);
+                    u.Counter(u.O1, u.Give(u.O1, Real(2015)), u.O2);
+                    u.At(Second);
+                    int grab = u.Code(u.Counter(u.O2, u.Give(u.O2, Real(2021))));
+                    Check(growl == RejectCode.CannotReact && ghost == RejectCode.CannotReact && grab == RejectCode.CannotReact, $"2021 카운터 위에는 거절 9 (으르렁 {growl} · 물귀신 {ghost} · 가로채기 {grab})");
                 }
                 // ── 카운터 묶음 3 (11-card-list 1-3) — 2020 내 거야! ──
                 {
