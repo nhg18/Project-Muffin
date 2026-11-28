@@ -47,7 +47,7 @@
     },
     {
       "id": 1013, "name": "기억 삭제", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "상대 모두 손패를 전부 버리고, 5장씩 뽑는다",
+      "text": "상대 모두가 손패를 전부 버리고, 5장씩 뽑는다",
       "effects": [ { "type": "RedealHandEffect", "args": "subject=Target" } ]
     },
     {
@@ -72,7 +72,7 @@
     },
     {
       "id": 1067, "name": "GOAT", "type": "Action", "target": "Self", "targetCondition": "None", "grade": "Gaepan", "count": 1,
-      "text": "{0}바퀴 동안 내 HP가 {1}이 되고, 내가 주는 피해가 {2}배가 된다",
+      "text": "내 HP가 {1}이 되고, {0}바퀴 동안 내가 주는 피해가 {2}배가 된다",
       "effects": [ { "type": "StartGoatEffect", "args": "rounds=2, hp=200, damageTimes=2" } ]
     },
     {
@@ -82,7 +82,7 @@
     },
     {
       "id": 1019, "name": "목표 조준", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 3,
-      "text": "손패 모두 버리기와 {0} 피해 중 하나를 고르게 한다",
+      "text": "손패를 모두 버릴지, {0} 피해를 받을지 고르게 한다",
       "effects": [ { "type": "DiscardOrDamageEffect", "args": "amount=80, seconds=5" } ]
     },
     {
@@ -140,7 +140,7 @@
     },
     {
       "id": 2020, "name": "내 거야!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "방금 나온 손패를 늘리는 카드를 막고, 그 카드를 가져온다. 대신 나는 20 피해를 받는다",
+      "text": "방금 나온 뽑기 · 빼앗기 · 가져오기 카드를 막고, 그 카드를 가져온다. 대신 나는 20 피해를 받는다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "HasHandGain",
       "effects": [ { "type": "ReturnToHandEffect", "args": "to=CounterUser" }, { "type": "DamageEffect", "args": "subject=Self, amount=20" } ]
@@ -154,7 +154,7 @@
     },
     {
       "id": 2019, "name": "안 놔!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
-      "text": "나에게 오는 손패를 줄이는 효과를 막고, 그만큼(최대 3장) 뽑는다",
+      "text": "나에게 오는 버리기 · 빼앗기를 막고, 그만큼(최대 3장) 뽑는다",
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "LosesMyHand",
       "effects": [ { "type": "NegateHandLossEffect", "args": "" }, { "type": "DrawBlockedHandLossEffect", "args": "max=3" } ]
@@ -175,7 +175,7 @@
     },
     {
       "id": 2018, "name": "물귀신", "type": "Counter", "target": "OneNotDamaged", "targetCondition": "None", "grade": "Fine", "count": 1,
-      "text": "나에게 오는 피해를 1명도 같이 받게 한다",
+      "text": "나에게 오는 피해를 다른 1명도 같이 받게 한다",
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
       "effects": [ { "type": "ShareDamageEffect", "args": "" } ]
