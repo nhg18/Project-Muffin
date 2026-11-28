@@ -40,7 +40,7 @@ namespace Chapchu.UI.GameScreen
         private const string GoatEndText = "GOAT 끝";
         private const string GoatResult = "GOAT!";
         private const string ChapchuHeldText = "찹츄 판정 미룸 (기다려)";
-        private const string RestartFormat = "대소동! 게임을 새로 시작 ({0}번째)";
+        private const string RestartFormat = "대폭발! 게임을 새로 시작 ({0}번째)";
         private const string NewRoundFormat = "새 판: {0} 순서, {1}부터";
         private const string OrderSeparator = " → ";
         private const string FalloutFormat = "피폭 피해: 모두 {0} ({1}턴째)";
@@ -433,7 +433,7 @@ namespace Chapchu.UI.GameScreen
         }
 
         /// <summary>
-        /// 대소동으로 새 판 (1012) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
+        /// 대폭발로 새 판 (1012) — 쓴 사람 줄 + 「새 판: 순서」 머리글. 기록은 이어진다. 새 판의 HP 100 은 변화로 적지 않고, 첫 턴 전 배분 뽑기도 적지 않는다.
         /// </summary>
         public void ShowGameRestarted(int user, int count, int[] order)
         {
@@ -461,7 +461,7 @@ namespace Chapchu.UI.GameScreen
             Add(new HistoryEntry { Actor = _turnActor, Text = string.Format(FalloutFormat, GameServer.FalloutDamage(turns, n), turns), Icon = HistoryIcon.Card });
         }
 
-        /// <summary>개판 오분전 (1021) — 시작 · 다시 처음부터 · 남은 바퀴. 대소동으로 지워짐(caster -1)은 적지 않는다. 문구는 프로토타입 v2.</summary>
+        /// <summary>개판 오분전 (1021) — 시작 · 다시 처음부터 · 남은 바퀴. 대폭발로 지워짐(caster -1)은 적지 않는다. 문구는 프로토타입 v2.</summary>
         public void ShowGaepan(int caster, int left, bool again, bool started)
         {
             if (caster < 0)

@@ -1,4 +1,4 @@
-// 대소동 3D 장면의 그림자 맵 — 해 쪽에서 본 깊이(0~1, 시안 LVP 의 z)를 RFloat 에 쓴다. NukeRender 가 명령 버퍼로만 부른다 (물체에 붙이지 않는다).
+// 대폭발 3D 장면의 그림자 맵 — 해 쪽에서 본 깊이(0~1, 시안 LVP 의 z)를 RFloat 에 쓴다. NukeRender 가 명령 버퍼로만 부른다 (물체에 붙이지 않는다).
 // 패스 0 = 물체, 패스 1 = 빛을 보는 판으로 세운 강아지 (그림이 옅은 곳은 버린다).
 Shader "Hidden/Chapchu/Nuke/ShadowDepth"
 {

@@ -209,7 +209,7 @@ namespace Chapchu.UI.GameScreen
         /// <summary>카드들이 버림 더미를 떠나 내 손패로 들어왔다.</summary>
         public void NoteLeftDiscard(int[] cardInstanceIds) => _discarded.ExceptWith(cardInstanceIds);
 
-        /// <summary>버림 더미가 비었다 (덱 리필 · 대소동).</summary>
+        /// <summary>버림 더미가 비었다 (덱 리필 · 대폭발).</summary>
         public void ClearDiscarded() => _discarded.Clear();
 
         // 고른 카드를 튀어나오게 하고 판을 닫는다. option < 0 (고르는 사람이 나가 불발) 이거나 손패 고르기면 고른 연출 없이 닫는다.

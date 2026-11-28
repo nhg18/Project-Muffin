@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 가로 그라데이션 막대 — CSS linear-gradient(90deg, …) 처럼 색 · 알파 키마다 세로 줄을 놓고 그 사이를 잇는다 (시안 「대소동」 글자 밑줄).
+    /// 가로 그라데이션 막대 — CSS linear-gradient(90deg, …) 처럼 색 · 알파 키마다 세로 줄을 놓고 그 사이를 잇는다 (시안 「대폭발」 글자 밑줄).
     /// 색은 <see cref="gradient"/> × Graphic.color.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]

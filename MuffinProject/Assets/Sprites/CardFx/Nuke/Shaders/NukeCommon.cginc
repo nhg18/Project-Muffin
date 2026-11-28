@@ -1,4 +1,4 @@
-// 대소동 3D 장면이 같이 쓰는 값 · 잡음 — 시안 D3R COMMON · NUKE3D GX NZ 와 같다.
+// 대폭발 3D 장면이 같이 쓰는 값 · 잡음 — 시안 D3R COMMON · NUKE3D GX NZ 와 같다.
 // 좌표는 시안 좌표 (유니티 월드 − _NkOrigin). 값은 NukeScene 이 매 프레임 전역으로 넣는다.
 #ifndef NUKE_COMMON_INCLUDED
 #define NUKE_COMMON_INCLUDED

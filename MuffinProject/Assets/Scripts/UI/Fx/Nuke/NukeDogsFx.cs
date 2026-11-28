@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 강아지 18마리 — 시안 NUKE3D dogsAt(t) · D3R buildDogs 와 같다.
+    /// 「대폭발」 강아지 18마리 — 시안 NUKE3D dogsAt(t) · D3R buildDogs 와 같다.
     /// 네거리를 어슬렁거리다(걷기) 사이렌에 멈칫하고(떨기), 달아나다 먼지 벽에 휩쓸려 날아가 구르고 미끄러진다.
     /// 강아지는 <see cref="FxDog"/> 부품(몸 · 꼬리 · 다리 넷)을 카메라 쪽으로 세운 판으로 그린다 — 먼 것부터 한 메시로.
     /// 발밑 둥근 그림자, 해 쪽 그림자 맵에 넣을 판(빛을 보고 선 판)도 같이 만든다.

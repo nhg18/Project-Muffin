@@ -5,16 +5,16 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 연출의 시간표 — 시안 NUKE3D (16.4초).
+    /// 「대폭발」 연출의 시간표 — 시안 NUKE3D (16.4초).
     /// 3 단계: 컷인 판이 나타나고 위아래 검은 띠가 들어온 뒤, 3D 장면(<see cref="NukeSceneFx"/> — 네거리 · 강아지 · 미사일 · 폭발 · 버섯구름 · 낙진)을 화면에 얹고,
     /// 낙진 장면이 보이는 13.2초에 큰 글자(<see cref="NukeTitleFx"/>)가 내려앉는다. 끝나기 0.26초 전부터 컷인이 사라진다. 두 시각 모두 장면 시간표(<see cref="NukeSceneFx.Timeline"/>)를 따른다.
-    /// 4 단계 장식: 쓴 사람 위 말풍선 「대소동!」 + 판 흔들기 (시안 FXA 대소동 s4 의 앞부분 — 손패 · 체력 · 피폭 표시는 공통 결과가 그린다).
+    /// 4 단계 장식: 쓴 사람 위 말풍선 「대폭발!」 + 판 흔들기 (시안 FXA 대폭발 s4 의 앞부분 — 손패 · 체력 · 피폭 표시는 공통 결과가 그린다).
     /// 연출 길이 16.4초 — 카드 처리 시간(resolveSeconds)에 3 단계 실측 길이를 더해 두었다 (10-ui.md 5-1). 길이를 바꾸면 그 값도 같이 바꾼다.
     /// 3 단계 = 시안 「카드 이펙트 v2」 게시본 1794734628-e725 의 NUKE3D — 11-card-list 의 「컷인 넣지 않음」은 PM 지시(2026-11-15: 확정 시안을 먼저 구현하고 기획 문서는 뒤에 고친다)로 따르지 않는다.
     /// </summary>
     public class NukeFx : CardFx
     {
-        private const string BubbleText = "대소동!";
+        private const string BubbleText = "대폭발!";
 
         [Header("그림")]
         [Tooltip("컷인 판 전체 (투명도 · 쿵 흔들림).")]
@@ -25,7 +25,7 @@ namespace Chapchu.UI.Fx.Nuke
         [SerializeField] private RawImage view;
         [Tooltip("3D 장면 (재생하면 UI 에서 떨어져 먼 곳에 놓인다).")]
         [SerializeField] private NukeSceneFx scene;
-        [Tooltip("큰 글자 「대소동」.")]
+        [Tooltip("큰 글자 「대폭발」.")]
         [SerializeField] private NukeTitleFx title;
         [Tooltip("위 검은 띠.")]
         [SerializeField] private RectTransform topBar;
