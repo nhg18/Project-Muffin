@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx
 {
     /// <summary>
-    /// 시안 DOG2D 의 강아지 부품을 맞추는 값 — 카드 연출(만화 컷인 · 개판 · 대소동)이 강아지를 몸 · 꼬리 · 다리 넷으로 나눠 움직일 때 쓴다.
+    /// 시안 DOG2D 의 강아지 부품을 맞추는 값 — 카드 연출(만화 컷인 · 개판 · 대폭발)이 강아지를 몸 · 꼬리 · 다리 넷으로 나눠 움직일 때 쓴다.
     /// 그림은 Sprites/CardFx/Common/Dog/dog_{키}_{부품}.png (키 = na · choco · kongi · bori, 부품 = body · tail · leg · snow(얼어붙은 몸)),
     /// 다리 · 꼬리만 있는 dog_snow_leg · dog_snow_tail 은 얼어붙은 강아지용.
     /// 좌표는 시안 그대로 — 강아지 원본 그림 좌표(왼쪽 위 0, 아래로 +, 단위 원본 px). 부품 그림은 원본의 <see cref="Scale"/> 배로 들어 있다.

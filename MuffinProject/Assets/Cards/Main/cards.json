@@ -106,7 +106,7 @@
       "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" }, { "type": "StealEffect", "args": "count=1" } ]
     },
     {
-      "id": 1012, "name": "대소동", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "id": 1012, "name": "대폭발", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
       "text": "새 판을 시작한다. 이후 턴마다 모두 점점 커지는 피해를 받는다",
       "effects": [ { "type": "RestartEffect", "args": "" } ]
     },

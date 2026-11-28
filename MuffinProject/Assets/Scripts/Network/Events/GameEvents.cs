@@ -42,10 +42,10 @@ namespace Chapchu.Network.Events
         public static event Action<int[]> OnWaitChanged;                     // casters — 「기다려」 를 건 사람들 (1023). 비면 끝, 그동안 찹츄 승리 없음
         public static event Action<int, int, int, int, bool> OnDomainChanged; // owner, left, take, damage, ticked — 영역 (1008 영역전개). left 0 이면 끝, ticked 면 방금 주인의 턴 시작 처리
         public static event Action<int[]> OnGoatChanged;                     // actors — GOAT 인 사람들 (1067). 비면 아무도 없음
-        public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대소동 n), order(새 턴 순서) — 대소동으로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (1012)
+        public static event Action<int, int, int[]> OnGameRestarted;         // user, count(대폭발 n), order(새 턴 순서) — 대폭발로 새 판. 뒤이어 HP · 손패 · 첫 턴이 시작처럼 온다 (1012)
         public static event Action<int, int, int, int, int, double, double, int> OnChoiceStarted; // actor, user, cardId, handCount, damage, startsAt, deadline, kind(ChoiceKind) — 대상이 고르기 시작 (1019). 그동안 게임 · 턴 시간 멈춤
         public static event Action<int, int, bool, int> OnChoiceMade;        // kind(ChoiceKind) 가 끝에 — actor, option(0 버리기 · 1 피해 · -1 나가서 불발), timedOut — 고르기 끝 (1019)
-        public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대소동으로 지움), again 이면 다시 써서 처음부터 (1021)
+        public static event Action<int, int, bool> OnGaepanChanged;          // caster, left, again — 개판 오분전. left 0 이면 끝 (caster -1 이면 대폭발로 지움), again 이면 다시 써서 처음부터 (1021)
         public static event Action<int, bool, int, int[], int[], int[]> OnGaepanJudged; // loser, byHp, value, tied, actors, values — 개판 판정 공개 (살아 있던 사람 · 기준 값). GaepanJudgeSeconds + GaepanExecutionSeconds 뒤 loser 의 HP 0 (1021)
         public static event Action<int, int> OnFalloutChanged;               // n, turns(k) — 피폭. turns ≥ 1 이면 방금 모두 k^n 피해, 다음 턴 끝은 (k+1)^n (1012)
         public static event Action<int> OnChapchuWinHeld;                    // actorNumber — 찹츄 상태로 턴이 왔지만 「기다려」 라 판정을 건너뜀 (찹츄는 그대로)

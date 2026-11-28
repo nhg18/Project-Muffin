@@ -710,7 +710,7 @@ namespace Chapchu.Network
                         roomProps[RoomProps.WaitCasters] = null;
                         roomProps[RoomProps.Domain] = null;
                         roomProps[RoomProps.Goat] = null;
-                        Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
+                        Debug.Log($"[{nameof(PunGameServer)}] 대폭발 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
                         break;
 
                     case FalloutChanged fallout:

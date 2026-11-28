@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 도시 · 미사일 · 불덩이 · 잔해를 장면 카메라에만 그린다 — 시안 NUKE3D meshes(t, tr) 와 같다.
+    /// 「대폭발」 도시 · 미사일 · 불덩이 · 잔해를 장면 카메라에만 그린다 — 시안 NUKE3D meshes(t, tr) 와 같다.
     /// 착탄 뒤에는 먼지 벽(36 m/s)이 닿는 차례로 건물이 기울고 주저앉고, 나무 · 가로등 · 소품이 휘고, 차가 날아간다.
     /// 그림자를 드리우는 것은 그림자 맵 명령 버퍼에도 같이 넣는다.
     /// </summary>

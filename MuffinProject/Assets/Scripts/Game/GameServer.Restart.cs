@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Chapchu.Game
 {
-    // GameServer.Restart.cs — 1012 대소동: 게임 새로 시작 · 피폭 피해 (11-card-list 1012)
+    // GameServer.Restart.cs — 1012 대폭발: 게임 새로 시작 · 피폭 피해 (11-card-list 1012)
     public partial class GameServer
     {
         // _turnEndStage 값 — 턴 끝 처리를 어디까지 했나 (프로토타입 v2 turnEnd2 순서)
@@ -12,30 +12,30 @@ namespace Chapchu.Game
         private const int TurnEndStageFallout = 1; // 피폭까지
         private const int TurnEndStageGaepan = 2;  // 개판 세기까지
 
-        private readonly List<Card> _allCards = new List<Card>(); // 이 게임의 덱 전체 — 새로 시작할 때 다시 섞는다 (대소동 자신도 들어간다)
-        private int _restartCount;      // 이 판에서 대소동을 쓴 횟수 n — 새로 시작해도 남는다
+        private readonly List<Card> _allCards = new List<Card>(); // 이 게임의 덱 전체 — 새로 시작할 때 다시 섞는다 (대폭발 자신도 들어간다)
+        private int _restartCount;      // 이 판에서 대폭발을 쓴 횟수 n — 새로 시작해도 남는다
         private int _falloutTurns;      // 새로 시작한 뒤 피폭이 들어간 턴 수 k. _restartCount 가 0 이면 피폭 없음
-        private bool _restartPending;   // 대소동이 처리됐다 — 지금 턴이 끝나면 피폭 없이 새 판
+        private bool _restartPending;   // 대폭발이 처리됐다 — 지금 턴이 끝나면 피폭 없이 새 판
         private int _turnEndStage;      // 이번 턴 끝 처리를 어디까지 했나 — 0 아직 · 1 피폭 · 2 개판 세기. 그 사망 대기 · 판정을 기다렸다 다시 올 때 건너뛴다. SetTurn 이 푼다
 
         internal int RestartCount => _restartCount;
         internal int FalloutTurns => _falloutTurns;
 
-        /// <summary>대소동 효과 (RestartEffect). 남은 처리는 버리고, 이 턴이 끝나면 새 판을 시작한다.</summary>
+        /// <summary>대폭발 효과 (RestartEffect). 남은 처리는 버리고, 이 턴이 끝나면 새 판을 시작한다.</summary>
         internal void RequestRestart()
         {
             _restartPending = true;
             _resolving.Clear(); // 체인에 남은 것 · 그 뒤처리는 새 판에서 의미가 없다
         }
 
-        // 턴이 끝나는 순간 (AdvanceTurn 첫머리) — 프로토타입 v2 turnEnd2 순서: 대소동이면 새 판 → 피폭 → 개판 세기.
+        // 턴이 끝나는 순간 (AdvanceTurn 첫머리) — 프로토타입 v2 turnEnd2 순서: 대폭발이면 새 판 → 피폭 → 개판 세기.
         // 피폭 피해의 함정 · 사망 대기, 개판 판정이 생기면 true (끝난 뒤 Advance 가 다시 오고, 한 단계는 한 번만).
         // 스킵된 턴은 여기를 지나지 않는다 — 피폭 없음 · k 도 그대로 (사용자 2026-11-13). 개판은 스킵된 턴도 센다 (AdvanceTurn).
         private bool HoldTurnEnd()
         {
             if (_restartPending)
             {
-                // 대소동 체인 중에 나가 한 명만 남았다 — 체인 뒤로 미룬 처치 승리 판정(Remove)을 새 판보다 먼저 한다 (07 3절)
+                // 대폭발 체인 중에 나가 한 명만 남았다 — 체인 뒤로 미룬 처치 승리 판정(Remove)을 새 판보다 먼저 한다 (07 3절)
                 CheckElimination();
                 if (_gameOver)
                     return true;
@@ -99,12 +99,12 @@ namespace Chapchu.Game
         /// <summary>피폭 피해 k^n (11-card-list 1012). 화면도 다음 턴 피해를 이 식으로 보인다.</summary>
         public static int FalloutDamage(int turns, int n) => (int)Math.Min(int.MaxValue, Math.Pow(turns, n));
 
-        // 지금 방에 있는 사람(나간 사람 제외, 죽은 사람 포함)으로 처음처럼 — 대소동 횟수 · 통계 · 기록만 남는다 (11-card-list 1012).
+        // 지금 방에 있는 사람(나간 사람 제외, 죽은 사람 포함)으로 처음처럼 — 대폭발 횟수 · 통계 · 기록만 남는다 (11-card-list 1012).
         private void Restart()
         {
             _restartPending = false;
             _restartCount++;
-            int user = CurrentTurnActor; // 대소동은 행동 카드라 쓴 사람의 턴이 끝나며 새 판이 된다
+            int user = CurrentTurnActor; // 대폭발은 행동 카드라 쓴 사람의 턴이 끝나며 새 판이 된다
             _falloutTurns = 0;
 
             int[] members = _turnOrder.Where(a => !_players[a].HasLeft).ToArray();

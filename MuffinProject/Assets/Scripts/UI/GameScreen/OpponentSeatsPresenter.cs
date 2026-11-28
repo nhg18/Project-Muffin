@@ -464,7 +464,7 @@ namespace Chapchu.UI.GameScreen
                 _selectCancelled = true;
         }
 
-        // 최종 사망(LifeState.Dead) — 방장이 쓴 공개 값을 읽는다. 대소동으로 되살아나면 방장이 Alive 로 되돌린다 (PunGameServer).
+        // 최종 사망(LifeState.Dead) — 방장이 쓴 공개 값을 읽는다. 대폭발로 되살아나면 방장이 Alive 로 되돌린다 (PunGameServer).
         private static bool IsDead(int actorNumber)
             => BotRoster.TryGetPublic(actorNumber, PlayerProps.LifeState, out object life) && life is byte lifeValue && lifeValue == (byte)LifeState.Dead;
     }

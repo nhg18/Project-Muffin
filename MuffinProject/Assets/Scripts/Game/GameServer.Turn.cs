@@ -171,7 +171,7 @@ namespace Chapchu.Game
         {
             SettleChapchu(); // 이 턴에 10장이 된 사람은 턴이 넘어가기 전에 선언된다 (07 4.1)
             if (HoldTurnEnd())
-                return; // 대소동 → 새 판 · 피폭 피해의 사망 정리 · 함정 시간 (11-card-list 1012)
+                return; // 대폭발 → 새 판 · 피폭 피해의 사망 정리 · 함정 시간 (11-card-list 1012)
 
             MarkHandsBefore(); // 턴 시작(스킵 · 턴 시작 뽑기)도 처리 하나다 — 끝에 사망 정리 · 함정 줄
 

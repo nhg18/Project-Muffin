@@ -61,7 +61,7 @@
             _events.Add(new DomainChanged(actor, 0, _domainTake, _domainDamage, false));
         }
 
-        // 게임 시작 · 1012 대소동의 새 판 — 알리지 않는다 (화면은 새 판 알림에서 지운다)
+        // 게임 시작 · 1012 대폭발의 새 판 — 알리지 않는다 (화면은 새 판 알림에서 지운다)
         private void ResetDomain()
         {
             _domainOwner = -1;
