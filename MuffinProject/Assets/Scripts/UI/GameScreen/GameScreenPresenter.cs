@@ -514,7 +514,8 @@ namespace Chapchu.UI.GameScreen
                     seats.ShowTrapCount(actorNumber, trapCount);
                 }
 
-                return chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, null, slot);
+                // 함정은 반응 시간이 없다 — 공개된 뒤 읽는 시간(방장과 같은 값)이 지나야 뒤따르는 처리 결과를 재생한다. 여러 장이 터져도 한 장씩 (04-card.md 6절)
+                return chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, null, slot, (float)GameServer.TrapReadSeconds);
             });
         }
 

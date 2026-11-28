@@ -14,7 +14,7 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 체인에 올라간 카드를 모든 화면에 보여 준다 (10-ui.md 5절 「현재 처리 카드」 · 5-1 단계 3 · 2-1 「카드 연출 자리」, 프로토타입 v2 FXV.show → settle).
     /// 내 카드는 손패에서 넘겨받고, 남의 카드는 그 좌석의 손 자리(발동한 함정은 그 칸)에서 앞면으로 만들어 바로 가운데 큰 자리로 보낸다 — 테이블에 눕히는 1 단계는 없다 (사용자 결정 2026-11-11).
-    /// 3 단계: 가운데로 세워 크게 — 3D 층(테이블 · 손패)만 어둡게 하고 카드 아래에 주인 태그. 끝나면 체인의 제자리에 둔다 (반응 시간 · 체인 처리 동안) — 혼자면 그 크기 그대로.
+    /// 3 단계: 가운데로 세워 크게 — 3D 층(테이블 · 손패)만 어둡게 하고 카드 아래에 주인 태그. 끝나면 체인의 제자리에 둔다 (반응 시간 · 체인 처리 동안) — 홀드 크기(1.4배)로 줄여 아래로 (PM 2026-11-28).
     /// 처리 결과가 오면 버림 더미로 보내 지운다 — 「손패로 반환」 이면 주인에게 돌려준다. 2 · 4 · 5 단계 · 무효 도장은 아직 없다.
     /// 카운터가 끼어들면 앞 카드 오른쪽에 붙는다 — 몇 장이든 이어지고, 무효될 카드의 묶음은 옆으로 비킨다 (ComputeLayout, 프로토타입 v2 chainLayout).
     /// 언제 무엇을 하는지는 GameScreenPresenter 가 연출 큐 순서로 부른다. 판정은 하지 않는다.
@@ -94,8 +94,14 @@ namespace Chapchu.UI.GameScreen
         [Tooltip("줄 사이 — 캔버스 24.")]
         [SerializeField] private float rowGap = 0.24f;
 
+        [Header("2 단계 뒤 홀드 (10-ui.md 2-1 「반응 시간의 카드」, PM 2026-11-28 — 가운데 좌석과 발밑 대상 표시를 가리지 않게)")]
+        [Tooltip("2 단계(크게)가 끝난 뒤 체인에 두는 배율의 위 끝 — 2 단계 동안만 showSpot 의 배율(1.85).")]
+        [SerializeField] private float holdMaxScale = 1.4f;
+        [Tooltip("홀드하는 동안 체인 전체가 내려가는 높이 — 캔버스 123 (카드 가운데 y 524 → 647, 1.4배 카드의 위 끝이 가운데 좌석 발밑 아래 412).")]
+        [SerializeField] private float holdDrop = 1.23f;
+
         [Header("손패를 올렸을 때 (프로토타입 v2 HANDUP_LAY)")]
-        [Tooltip("손패가 올라와 있는 동안 배율의 위 끝 — 평소는 showSpot 의 배율(1.85).")]
+        [Tooltip("손패가 올라와 있는 동안 배율의 위 끝 — 평소는 홀드 배율(holdMaxScale).")]
         [SerializeField] private float handUpMaxScale = 1.15f;
         [Tooltip("체인 전체가 올라가는 높이 — 시안 40 × 2 = 캔버스 80.")]
         [SerializeField] private float handUpRaise = 0.8f;
@@ -262,8 +268,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>
         /// 카드가 체인에 올라갔다 (OnCardPlayed) — 3 단계(가운데에서 크게) 뒤 그 자리에 둔다. 연출 큐가 기다릴 코루틴.
         /// fromHand = 내 손패에서 떼어 온 카드. null 이면 새로 만든다 — fromSlot(발동한 함정이 있던 칸)이 있으면 그 자리에서, 없으면(남의 카드) 낸 사람 좌석의 손 자리에서.
+        /// readSeconds = 카드가 나온 때부터 이 초가 될 때까지 다음 단계를 기다린다 (발동한 함정의 읽는 시간, 04-card.md 6절). 행동 · 카운터는 방장이 처리를 늦추므로 0.
         /// </summary>
-        public IEnumerator PlayRoutine(int actorNumber, int cardInstanceId, int cardId, int[] targets, CardView fromHand, Transform fromSlot = null)
+        public IEnumerator PlayRoutine(int actorNumber, int cardInstanceId, int cardId, int[] targets, CardView fromHand, Transform fromSlot = null, float readSeconds = 0f)
         {
             CardData data = deck.GetCard(cardId);
             Entry existing = Find(cardInstanceId);
@@ -305,7 +312,7 @@ namespace Chapchu.UI.GameScreen
             Place(entry); // 앞서 나온 카드는 새 카드의 자리를 비우며 옮겨 간다
             yield return new WaitForSeconds(zoomDuration);
 
-            // 어둠과 주인 태그를 걷고 체인의 제자리로 — 혼자면 그 크기 그대로, 앞 카드가 있으면 그 옆에
+            // 어둠과 주인 태그를 걷고 체인의 제자리로 — 홀드 크기로 줄어 내려앉는다 (가운데 좌석 · 대상 표시를 비운다), 앞 카드가 있으면 그 옆에
             ownerTag.Hide();
             FadeDim(false);
             if (_big == entry)
@@ -315,6 +322,10 @@ namespace Chapchu.UI.GameScreen
             }
 
             NotifyTopTargets();
+
+            // 읽는 시간 — 발동한 함정은 반응 시간이 없어, 공개된 카드를 읽을 동안 화면이 처리를 미룬다
+            if (readSeconds > zoomDuration)
+                yield return new WaitForSeconds(readSeconds - zoomDuration);
         }
 
         /// <summary>체인의 카드가 처리됐다 (효과 적용 · 무효화) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴. 여기 없는 카드(함정 칸에서 나온 카드)면 바로 끝난다.</summary>
@@ -497,9 +508,9 @@ namespace Chapchu.UI.GameScreen
 
             int rows = widths.Count;
 
-            float scale = Mathf.Max(minScale, Mathf.Min(_handRaised ? handUpMaxScale : _bigScale, maxRowWidth / widths.Max()));
+            float scale = Mathf.Max(minScale, Mathf.Min(_handRaised ? handUpMaxScale : holdMaxScale, maxRowWidth / widths.Max()));
             float rowStep = (_cardHeight + rowGap) * scale;
-            float raise = _handRaised ? handUpRaise : 0f;
+            float raise = _handRaised ? handUpRaise : -holdDrop;
 
             var slots = new Slot[count];
             float x = 0f;
