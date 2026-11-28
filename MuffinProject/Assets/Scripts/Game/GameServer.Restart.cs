@@ -136,7 +136,7 @@ namespace Chapchu.Game
             _events.Add(new FalloutChanged(_restartCount, 0));
 
             CurrentTurnActor = -1; // 지난 판의 턴 주인 상태(행동 금지 해제 등)는 이미 지웠다
-            SetTurn(_turnOrder[0]);
+            SetTurn(_turnOrder[0], PlaysOpening ? RestartOpeningSeconds(_turnOrder.Count) : 0); // 화면이 게임 시작 연출을 다시 하는 동안 멈춘다 (03-turn.md 4절)
         }
     }
 }

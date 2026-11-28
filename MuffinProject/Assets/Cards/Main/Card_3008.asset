@@ -18,7 +18,7 @@ MonoBehaviour:
   targetType: 4
   targetCondition: 0
   grade: 2
-  description: "\uC0AC\uB9DD\uD55C \uB4A4 \u2192 HP 20\uC73C\uB85C \uBD80\uD65C\uD55C\uB2E4"
+  description: "\uC0AC\uB9DD\uD558\uBA74, HP 20\uC73C\uB85C \uBD80\uD65C\uD55C\uB2E4"
   reactsTo: 
   trapTrigger: 4
   triggerValue: 0

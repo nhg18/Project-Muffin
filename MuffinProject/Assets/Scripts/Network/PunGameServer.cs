@@ -428,7 +428,8 @@ namespace Chapchu.Network
         // 시작 경로(Awake)와 이주 경로(TakeOver)가 함께 쓴다 — 한쪽만 바뀌어 이주한 판만 다르게 움직이지 않게
         private static GameServer CreateServer()
         {
-            return new GameServer(new SecureRandom(), () => GameClock.Now); // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1)
+            // 덱 순서를 나온 카드로 맞추지 못하게 (09-network.md 9.1). 대폭발 새 판도 화면의 시작 연출 동안 첫 턴을 멈춘다 (03-turn.md 4절)
+            return new GameServer(new SecureRandom(), () => GameClock.Now) { PlaysOpening = true };
         }
 
         private BotDriver CreateBots(int[] bots)
