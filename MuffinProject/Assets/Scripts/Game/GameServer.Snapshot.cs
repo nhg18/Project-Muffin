@@ -432,7 +432,7 @@ namespace Chapchu.Game
             }
 
             if (IsGaepanJudging)
-                _gaepanJudgeAt = now + GaepanJudgeSeconds; // 팻말 연출은 이미 나갔다 — 판정만 다시 센다
+                _gaepanJudgeAt = now + GaepanJudgeSeconds + GaepanExecutionSeconds; // 팻말 · 처형 장면은 이미 나갔다 — 어디까지 재생됐는지 모르니 처음부터 다시 센다 (장면 중에 판이 넘어가지 않게)
 
             // 후처리 연출은 이미 지나갔다 — 기다리던 다음 턴 · 턴 재개는 바로
             if (_nextTurnAt >= 0)

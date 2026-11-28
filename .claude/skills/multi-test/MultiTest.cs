@@ -4562,13 +4562,13 @@ public static class MultiTest
                     GaepanJudged judged = events.OfType<GaepanJudged>().FirstOrDefault();
                     int turns = StartsBefore(events.IndexOf(judged));
                     bool listed = judged != null && judged.Actors.Length == 3 && judged.Values[System.Array.IndexOf(judged.Actors, t.O2)] == judged.Value;
-                    bool held = t.Run(t.Now + 3.9).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
+                    bool held = t.Run(t.Now + GameServer.GaepanJudgeSeconds + GameServer.GaepanExecutionSeconds - 0.27).OfType<HpChanged>().All(h => h.Actor != t.O2) && t.Hp(t.O2) == 10;
                     var after = t.Run(t.Now + 0.5);
                     bool zero = t.Hp(t.O2) == 0 && after.OfType<PlayerDied>().Any(e => e.Actor == t.O2);
                     after = t.Run(t.Now + 20);
                     Check(started && round1 == 3 && judged != null && judged.Loser == t.O2 && turns == 15 && listed && held && zero
                           && after.OfType<TurnStarted>().Any(),
-                        $"1021 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 4.17초 공개 뒤 꼴찌 HP 0 → 바로 최종 사망 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
+                        $"1021 개판 — 쓴 턴 뒤 3턴에 한 바퀴 · 5바퀴(15턴) 뒤 판정 (생존자 3명 · 값 목록) · 팻말 4.17초 + 처형 장면 6.75초 뒤 꼴찌 HP 0 → 바로 최종 사망 → 다음 턴 (첫 바퀴 {round1}턴 · 판정까지 {turns}턴)");
                 }
                 {
                     var t = new ChainTable();
@@ -4589,7 +4589,7 @@ public static class MultiTest
                     var events = RunWhile(t, all => all.OfType<GaepanJudged>().Any(), 200);
                     int judgedAt = events.FindIndex(e => e is GaepanJudged);
                     bool skippedFirst = events.FindIndex(e => e is TurnSkipped s && s.Actor == x) is int k && k >= 0 && k < judgedAt;
-                    events.AddRange(t.Run(t.Now + 25));
+                    events.AddRange(t.Run(t.Now + 25 + GameServer.GaepanExecutionSeconds));
                     TurnStarted next = events.Skip(judgedAt + 1).OfType<TurnStarted>().FirstOrDefault();
                     Check(judgedAt >= 0 && skippedFirst && t.State(z).Life == LifeState.Dead && next != null && next.Actor == y,
                         $"1021 스킵된 턴 끝에 판정 — 사망 처리 뒤 스킵 다음 사람부터 (다음 턴 P{next?.Actor} · 기대 P{y})");
@@ -6305,10 +6305,16 @@ public static class MultiTest
             Watch("hot", hot, 0.6);
             Watch("roll", judge != null && judge.gameObject.activeInHierarchy, 1.3);
             Watch("low", judge != null && judge.gameObject.activeInHierarchy, 3.4);
-            if (taken.Count == 4) EditorApplication.update -= tick;
+            // 처형 장면 — 팻말(4.17초) 다음. 「low」 를 찍은 때(팻말 3.4초)부터 세어 언덕 · 하늘 · 뭉치 · 「탈락!」 을 찍는다
+            bool execution = taken.Contains("low") && Object.FindFirstObjectByType<Chapchu.UI.Fx.Gaepan.GaepanFx>() != null;
+            Watch("exec_hill", execution, 3.67);
+            Watch("exec_sky", execution, 4.67);
+            Watch("exec_clump", execution, 5.77);
+            Watch("exec_out", execution, 7.07);
+            if (taken.Count == 8) EditorApplication.update -= tick;
         };
         EditorApplication.update += tick;
-        return "OK 개판 스크린샷 대기 → " + prefix + "_hud · _hot · _roll · _low";
+        return "OK 개판 스크린샷 대기 → " + prefix + "_hud · _hot · _roll · _low · _exec_hill · _exec_sky · _exec_clump · _exec_out";
     }
 
     // 1021 자명종 — 보이면 「HUD n」(남은 바퀴), 없으면 「NONE」.

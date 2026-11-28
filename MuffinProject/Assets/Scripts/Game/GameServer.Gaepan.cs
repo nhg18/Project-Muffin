@@ -7,9 +7,11 @@ namespace Chapchu.Game
     {
         // 확정 (11-card-list 1021 · 사용자 2026-11-13).
         public const int GaepanRounds = 5;
-        // 판정 공개 뒤 HP 0 까지 — 프로토타입 v2 판정 팻말 연출(4명 기준 최대): 기준 룰렛 0.52 + 1.6 + 0.26 → 수치 표 1.14 → 「꼴찌는?!」 0.65.
-        // 처형씬(6.75초)은 넣지 않는다 (사용자 2026-11-13 — 2.3초를 이 길이로 바꿈). 화면은 GaepanJudgeView 가 같은 시간표로 그린다.
+        // 판정 팻말 길이 — 프로토타입 v2 판정 팻말 연출(4명 기준 최대): 기준 룰렛 0.52 + 1.6 + 0.26 → 수치 표 1.14 → 「꼴찌는?!」 0.65. 화면은 GaepanJudgeView 가 같은 시간표로 그린다.
         public const double GaepanJudgeSeconds = 4.17;
+        // 팻말 다음의 처형 장면 길이 — 「카드 이펙트 v2」 시안 DOGPILE 처형씬 (11-card-list 1021 · 10-ui 「개판 처형 장면」, PM 2026-11-28 — 11-13 의 「넣지 않는다」 를 뒤집음).
+        // 화면은 GaepanFx 가 같은 길이로 그린다. 판정 공개 뒤 팻말 + 처형 장면이 끝나면 꼴찌의 HP 가 0 이 된다.
+        public const double GaepanExecutionSeconds = 6.75;
 
         private int _gaepanCaster = -1; // 개판을 건 사람. -1 이면 개판 없음 — 건 사람이 죽거나 나가도 이어진다
         private int _gaepanLeft;        // 남은 바퀴
@@ -65,7 +67,7 @@ namespace Chapchu.Game
             int lowest = alive.Min(ValueOf);
             int[] tied = alive.Where(actor => ValueOf(actor) == lowest).ToArray();
             _gaepanLoser = tied[_random.Next(tied.Length)];
-            _gaepanJudgeAt = _clock() + GaepanJudgeSeconds;
+            _gaepanJudgeAt = _clock() + GaepanJudgeSeconds + GaepanExecutionSeconds;
             _events.Add(new GaepanJudged(_gaepanLoser, byHp, lowest, tied, alive, alive.Select(ValueOf).ToArray()));
         }
 

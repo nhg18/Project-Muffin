@@ -54,10 +54,12 @@ namespace Chapchu.UI.Fx
         /// 이 카드의 연출 소리(Resources/CardFxSound/Card_{카드 ID}, 4 단계는 _Post)를 불러오기 시작한다 — 장면을 준비하는 동안 같이 읽게 연출 맨 앞에서 부른다.
         /// 소리는 「카드 이펙트 v2」 시안의 소리를 장면 시작부터 그대로 녹음한 한 파일이라, 장면 시계가 0 이 되는 순간에 <see cref="StartSound"/> 로 틀면 시안과 같은 시각에 울린다. 파일이 없는 카드는 소리 없이 넘어간다.
         /// </summary>
-        protected void LoadSound(CardFxContext context, bool post = false)
+        protected void LoadSound(CardFxContext context, bool post = false) => LoadSound(context.CardId, post ? "_Post" : "");
+
+        /// <summary>카드 ID 와 파일 이름 끝(예: _Post)으로 연출 소리를 불러오기 시작한다 — 3 · 4 단계가 아닌 장면(개판 오분전의 처형 장면)용.</summary>
+        protected void LoadSound(int cardId, string suffix)
         {
-            string path = ResourcePaths.CardFxSound + CardFxLoader.NameOf(context.CardId) + (post ? "_Post" : "");
-            _soundLoad = Resources.LoadAsync<AudioClip>(path);
+            _soundLoad = Resources.LoadAsync<AudioClip>(ResourcePaths.CardFxSound + CardFxLoader.NameOf(cardId) + suffix);
         }
 
         /// <summary>장면 시계가 시작하는 순간에 부른다. 아직 덜 읽었으면 다 읽은 뒤 그동안 흐른 만큼 건너뛰고 튼다 — 소리가 장면보다 늦게 밀리지 않게.</summary>

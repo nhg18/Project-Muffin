@@ -7,10 +7,10 @@ namespace Chapchu.UI.Fx.Gaepan
 {
     /// <summary>
     /// 「개판 오분전」 연출. 3 단계 = 시안 DOGPILE.play({mode:"cast"}) — 눈 마을(3D)에서 번쩍 → 강아지 무리 돌진 → 옆에서 본 배 깔고 썰매, 그 위로 제목 · 「5 바퀴 동안」 도장.
-    /// 4 단계 장식은 없다 (개판 HUD · 이후 5 바퀴 시연은 게임 화면 몫).
+    /// 4 단계 장식은 없다 (개판 HUD · 이후 5 바퀴 시연은 게임 화면 몫). 5 바퀴 뒤의 처형 장면(시안 mode:"exec")은 GaepanFx.Execution.cs.
     /// 장면 값은 시안 DOGPILE.SC.flash · charge · slide 와 같다. 강아지 · 나무 · 눈송이 자리는 재생마다 무작위 (시안 mk).
     /// </summary>
-    public class GaepanFx : CardFx
+    public partial class GaepanFx : CardFx
     {
         // 시안 gait: 다리를 뻗을 때 뜨는 높이 · 코가 들리는 각 · 늘어나고 눌리는 양 (위상 0.6 늦게)
         private const float GaitLag = 0.6f, GaitLift = 0.27f, GaitNose = 0.1f, GaitStretch = 0.06f, GaitSquash = 0.07f;
@@ -45,7 +45,7 @@ namespace Chapchu.UI.Fx.Gaepan
         [SerializeField] private float afterMs = 80f;
 
         [Header("강아지 (시안 mk)")]
-        [Tooltip("앞장서는 강아지 (시전자의 강아지 — 지금은 늘 이 값).")]
+        [Tooltip("3 단계에서 앞장서는 강아지 (처형 장면은 부르는 쪽이 정한다).")]
         [SerializeField] private string heroKey = "na";
         [Tooltip("무리 수 · 썰매 수.")]
         [SerializeField] private Vector2Int dogCounts = new Vector2Int(12, 8);
@@ -126,6 +126,10 @@ namespace Chapchu.UI.Fx.Gaepan
         private Runner[] _sliders = new Runner[0];
         private Vector3[] _trees = new Vector3[0];
         private Vector3[] _sideTrees = new Vector3[0];
+        // 지금 재생하는 시간표 — 3 단계는 썰매에서 끝나고, 처형 장면은 썰매 뒤로 장면이 이어진다
+        private float _chargeAt, _slideAt, _slideEnd, _length;
+        private bool _execution;
+        private string _hero;
 
         // 시안 mk 의 강아지 하나 (무리: Offset = x, 썰매: Offset = dx · Speed = lag)
         private struct Runner
@@ -150,8 +154,13 @@ namespace Chapchu.UI.Fx.Gaepan
             Check(flash, nameof(flash));
             Check(title, nameof(title));
             Check(stamp, nameof(stamp));
+            Check(outSign, nameof(outSign));
             if (missing.Count > 0)
                 Debug.LogError($"[{nameof(GaepanFx)}] 비어 있는 참조: {string.Join(", ", missing)}", this);
+            CheckExecutionDuration();
+            // 미리 만들어 두었다가 재생할 수 있게 (처형 장면은 판정 팻말이 도는 동안 읽는다) 재생 전에는 보이지 않는다
+            if (group != null)
+                group.alpha = 0f;
         }
 
         private void OnDestroy()
@@ -163,7 +172,13 @@ namespace Chapchu.UI.Fx.Gaepan
 
         public override IEnumerator PlayRoutine(CardFxContext context)
         {
-            Scatter();
+            _execution = false;
+            _hero = heroKey;
+            _chargeAt = chargeStart;
+            _slideAt = slideStart;
+            _slideEnd = duration;
+            _length = duration;
+            Scatter(FxDog.Keys);
             // 한 장면에 그리는 수 — 무리(또는 썰매) + 앞장선 강아지, 달리는 녀석마다 눈보라, 나무
             int dogs = Mathf.Max(dogCounts.x, dogCounts.y) + 1;
             world.Begin(dogs, dogs * SprayPuffs, treeCount);
@@ -181,10 +196,9 @@ namespace Chapchu.UI.Fx.Gaepan
             yield return new WaitForSeconds(afterMs / 1000f);
         }
 
-        // 시안 mk: 재생마다 새로 뽑는 무리 · 썰매 · 나무 · 눈송이
-        private void Scatter()
+        // 시안 mk: 재생마다 새로 뽑는 무리 · 썰매 · 나무 · 눈송이. keys = 무리에 넣을 강아지 종류
+        private void Scatter(IReadOnlyList<string> keys)
         {
-            IReadOnlyList<string> keys = FxDog.Keys;
             _herd = new Runner[dogCounts.x];
             for (int i = 0; i < _herd.Length; i++)
             {
@@ -228,23 +242,28 @@ namespace Chapchu.UI.Fx.Gaepan
         private void Render(float t)
         {
             world.BeginFrame();
-            if (t < chargeStart)
+            if (t < _chargeAt)
             {
-                Flash(t, Mathf.Clamp01(t / chargeStart));
+                Flash(t, Mathf.Clamp01(t / _chargeAt));
             }
             else
             {
                 warp.Hide();
                 flash.color = new Color(1f, 1f, 1f, 0f);
-                if (t < slideStart)
-                    Charge(t, Mathf.Clamp01((t - chargeStart) / (slideStart - chargeStart)));
+                if (t < _slideAt)
+                    Charge(t, Mathf.Clamp01((t - _chargeAt) / (_slideAt - _chargeAt)));
+                else if (t < _slideEnd)
+                    Slide(t, t - _slideAt, Mathf.Clamp01((t - _slideAt) / (_slideEnd - _slideAt)));
                 else
-                    Slide(t, t - slideStart, Mathf.Clamp01((t - slideStart) / (duration - slideStart)));
+                    RenderExecution(t);
             }
             world.EndFrame();
-            title.Evaluate(t);
-            stamp.Evaluate(t);
-            float fade = (t - (duration - fadeOut)) / fadeOut;
+            if (!_execution)
+            {
+                title.Evaluate(t);
+                stamp.Evaluate(t);
+            }
+            float fade = (t - (_length - fadeOut)) / fadeOut;
             group.alpha = Mathf.Min(1f, t / fadeIn) * (fade > 0f ? 1f - GaepanEase.OutCubic(fade) : 1f);
         }
 
@@ -280,7 +299,7 @@ namespace Chapchu.UI.Fx.Gaepan
             }
             float heroZ = Mathf.Lerp(heroChargeDepth.x, heroChargeDepth.y, Mathf.Pow(u, heroChargeCurve)), heroPhase = t * 13.5f;
             Vector3 heroGait = Gait(heroPhase, 1.15f);
-            Dog(heroKey, new Vector3(Mathf.Sin(heroPhase * 0.5f) * 0.05f, heroGait.x, heroZ), heroChargeSize, Mathf.PI + Mathf.Sin(heroPhase * 0.5f) * 0.05f, heroGait.y, 0f, heroGait.z, GaepanPose.Run, heroPhase);
+            Dog(_hero, new Vector3(Mathf.Sin(heroPhase * 0.5f) * 0.05f, heroGait.x, heroZ), heroChargeSize, Mathf.PI + Mathf.Sin(heroPhase * 0.5f) * 0.05f, heroGait.y, 0f, heroGait.z, GaepanPose.Run, heroPhase);
             Spray(0f, heroZ + 0.8f, t, 0.3f, 0f, 1f, 1.1f);
             snowfall.Draw(t, snowAlpha, snowSpeed.x, yaw);
         }
@@ -307,7 +326,7 @@ namespace Chapchu.UI.Fx.Gaepan
             float heroX = position.x + 1.2f + u * 0.5f;
             float heroBounce = Mathf.Sin(t * 5.6f), heroHop = Mathf.Pow(Mathf.Max(0f, heroBounce), 3f);
             float heroStretch = 1f + heroHop * 0.05f - Mathf.Pow(Mathf.Max(0f, -heroBounce), 6f) * 0.08f;
-            Dog(heroKey, new Vector3(heroX, 0.02f + heroHop * 0.14f, heroSlideDepth), heroSlideSize, Mathf.PI / 2f + 0.5f, 0f, Mathf.Sin(t * 5.6f - 0.7f) * 0.06f, heroStretch, GaepanPose.Slide, t * 7f);
+            Dog(_hero, new Vector3(heroX, 0.02f + heroHop * 0.14f, heroSlideDepth), heroSlideSize, Mathf.PI / 2f + 0.5f, 0f, Mathf.Sin(t * 5.6f - 0.7f) * 0.06f, heroStretch, GaepanPose.Slide, t * 7f);
             Spray(heroX - 1f, heroSlideDepth, t, 0.5f, -1f, 0f, 1.1f);
             snowfall.Draw(t, snowAlpha, snowSpeed.y, slideAngles.x);
         }

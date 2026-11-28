@@ -12,7 +12,7 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 개판 오분전 판정 팻말 (프로토타입 v2 GP_FX.judge — 1021). 화면을 어둡게 → 「땡 개판 끝!」 → 기준 팻말(HP 꼴찌 / 카드 꼴찌)이 룰렛처럼 번갈아 뒤집히다 정해진 쪽에 멈춤
     /// → 살아 있는 사람 머리 위에 기준 값 표가 하나씩 → 꼴찌 표만 분홍 「꼴찌」, 나머지는 흐리게 · 띠는 「꼴찌는?!」 → 0.65초 뒤 사라진다.
-    /// 시안의 처형씬(치와와 뭉치)은 넣지 않는다 (사용자 2026-11-13). 시간표는 방장의 GameServer.GaepanJudgeSeconds 와 같다 — 끝나면 꼴찌의 HP 가 0 이 된다.
+    /// 팻말이 사라지면 처형 장면(GaepanFx.Execution — 강아지 뭉치)이 이어진다 (PM 2026-11-28). 시간표는 방장의 GameServer.GaepanJudgeSeconds 와 같다 — 처형 장면까지 끝나면 꼴찌의 HP 가 0 이 된다.
     /// 판정 · 꼴찌는 방장이 정해 보낸 값만 그린다.
     /// </summary>
     public class GaepanJudgeView : MonoBehaviour
@@ -83,7 +83,7 @@ namespace Chapchu.UI.GameScreen
             if (group == null || dim == null || banner == null || bannerWord == null || roll == null || rollGroup == null || rollFill == null || rollText == null || heartIcon == null || cardIcon == null || tagTemplate == null)
                 Debug.LogError($"[{nameof(GaepanJudgeView)}] 참조가 비어 있습니다.", this);
 
-            // 방장은 GaepanJudgeSeconds 뒤 꼴찌의 HP 를 0 으로 한다 — 정원(가장 긴 경우)의 「꼴찌는?!」 까지가 그 길이와 같아야 한다
+            // 방장은 GaepanJudgeSeconds + 처형 장면 길이 뒤 꼴찌의 HP 를 0 으로 한다 — 정원(가장 긴 경우)의 「꼴찌는?!」 까지가 GaepanJudgeSeconds 와 같아야 한다
             float judgeSeconds = RevealDelay(NetworkManager.MaxPlayers) + RevealAfter;
             if (Mathf.Abs(judgeSeconds - (float)GameServer.GaepanJudgeSeconds) > JudgeSecondsTolerance)
                 Debug.LogError($"[{nameof(GaepanJudgeView)}] 판정 시간표 {judgeSeconds:0.00}초가 GameServer.GaepanJudgeSeconds {GameServer.GaepanJudgeSeconds:0.00}초와 다릅니다.", this);
