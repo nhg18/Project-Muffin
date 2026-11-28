@@ -49938,6 +49938,7 @@ MonoBehaviour:
   zoomSpot: {fileID: 1971640734}
   zoomZ: -0.6
   zoomTag: {fileID: 651642672}
+  topLayer: {fileID: 1211240098}
   actionColor: {r: 0, g: 0.6156863, b: 1, a: 1}
   counterColor: {r: 0.43529412, g: 0.6431373, b: 0.20392157, a: 1}
   trapColor: {r: 0.9647059, g: 0.27450982, b: 0.07058824, a: 1}
