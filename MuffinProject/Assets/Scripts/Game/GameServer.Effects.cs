@@ -15,6 +15,22 @@ namespace Chapchu.Game
         internal void ApplyDamage(ChainEntry entry, int actor, int amount) =>
             ApplyDamage(entry, actor, DamageFrom(entry.User, actor, Scaled(entry, amount)), entry.User, true); // 2배(카드 · GOAT)가 먼저, 감소는 그 다음 (04 7절)
 
+        /// <summary>
+        /// ApplyDamage(entry, actor, amount) 가 지금 깎을 피해량 (처리 전 예측) — 2배(카드 · GOAT) 뒤 감소(2001 · 2016)까지, 회복 전환(C03)이면 0.
+        /// 1019 목표 조준의 「n 피해」 선택지 · 봇의 고르기가 실제로 받을 피해를 보게 (11-card-list 2001 「1019 에서 고른 피해 80 도 20 씩 준다」).
+        /// </summary>
+        internal int ExpectedDamage(ChainEntry entry, int actor, int amount)
+        {
+            if (entry.DamageToHeal.Contains(actor))
+                return 0;
+
+            int damage = DamageFrom(entry.User, actor, Scaled(entry, amount));
+            if (entry.DamageReduction.TryGetValue(actor, out int reduce))
+                damage -= reduce;
+            damage -= entry.DamageReductionAll;
+            return Math.Max(0, damage);
+        }
+
         // by = 피해를 준 사람. direct = 이 카드가 직접 준 피해 — 같이 받는 피해(2018)는 「쓰러뜨림」(1005)에 넣지 않는다.
         private void ApplyDamage(ChainEntry entry, int actor, int amount, int by, bool direct)
         {
@@ -489,9 +505,6 @@ namespace Chapchu.Game
 
         internal int PlayerHp(int actor) => _players[actor].Hp;
         internal int HandCountOf(int actor) => _players[actor].Hand.Count;
-
-        /// <summary>0 ~ count − 1 중 무작위 하나 — 방장의 난수 (사람에게 고르게 하던 효과를 무작위로, 2026-11-28 PM).</summary>
-        internal int RandomIndex(int count) => _random.Next(count);
         internal int TrapCountOf(int actor) => _players[actor].Traps.Count;
 
         // ── 내부 ──
