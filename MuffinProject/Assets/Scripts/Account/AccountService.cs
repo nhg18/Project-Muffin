@@ -8,6 +8,7 @@ using Unity.Services.CloudSave;
 using Unity.Services.CloudSave.Models;
 using Unity.Services.CloudSave.Models.Data.Player;
 using Unity.Services.Core;
+using UnityEngine;
 
 namespace Chapchu.Account
 {
@@ -25,12 +26,6 @@ namespace Chapchu.Account
     {
         /// <summary>쿠폰 칸이 없을 때의 장수 — 계정 생성 때 1장 무료 (23 7-8)</summary>
         public const int FreeCoupons = 1;
-
-        /// <summary>
-        /// 닉네임 변경 제한(쿠폰 · 7일 쿨다운)을 쓰는가. 지금은 끔 — 몇 번이든 바꾼다 (23 3절 #5, PM 2026-11-28).
-        /// 켜려면 true 로 바꾸고 서버 SetNickname.js 의 CHANGE_LIMITED 도 같이 바꿔 다시 배포한다.
-        /// </summary>
-        public static readonly bool ChangeLimited = false;
 
         /// <summary>바꾼 뒤 다시 바꿀 수 없는 시간 — 7일 (23 4절)</summary>
         public static readonly TimeSpan Cooldown = TimeSpan.FromHours(168);
@@ -148,6 +143,28 @@ namespace Chapchu.Account
         public static NicknameState Nickname { get; private set; }
 
         /// <summary>
+        /// 닉네임 「변경」 을 서버에 보내는가. 0.1 빌드는 보내지 않는다 — 이 기기에만 저장하고 몇 번이든 바꾼다 (23 3절 #5, PM 2026-11-28).
+        /// 처음 정하기는 그대로 서버에 저장한다. 0.2 부터는 서버 규칙(중복 · 쿠폰 · 7일 쿨다운)으로 돌아간다.
+        /// </summary>
+        public static bool SavesNicknameChangeToServer => !Application.version.StartsWith("0.1.", StringComparison.Ordinal);
+
+        // 이 기기에 저장한 바꾼 닉네임 — 계정마다 따로 (같은 기기에서 다른 계정으로 로그인하면 섞이지 않게)
+        private static string LocalNicknameKey(string playerId) => "nickname.local." + playerId;
+
+        /// <summary>
+        /// 닉네임을 이 기기에만 바꾼다 (SavesNicknameChangeToServer 가 거짓일 때). 서버의 닉네임 · 이름 장부는 그대로다 —
+        /// 중복은 보지 않고, 길이 · 문자 · 금칙어는 부르는 쪽이 NicknameValidator 로 먼저 본다.
+        /// </summary>
+        public static void SetNicknameLocal(string nickname)
+        {
+            if (!IsSignedIn || Nickname == null) return;
+
+            PlayerPrefs.SetString(LocalNicknameKey(PlayerId), nickname);
+            PlayerPrefs.Save();
+            Nickname = new NicknameState(nickname, Nickname.Coupons, Nickname.ChangedAtMs, null);
+        }
+
+        /// <summary>
         /// 내 닉네임 · 변경 쿠폰 · 마지막 변경 시각을 보호 칸(서버만 쓴다)에서 읽는다 (23 7-8). 결과는 Nickname 에도 남는다.
         /// 보호 칸에 닉네임이 없으면 2026-11-26 전에 클라이언트가 직접 쓴 옛 칸을 LegacyNickname 으로 읽는다 — 처음 정하기 창에 미리 채울 값.
         /// </summary>
@@ -165,6 +182,14 @@ namespace Chapchu.Account
             {
                 Dictionary<string, Item> old = await CloudSaveService.Instance.Data.Player.LoadAsync(new HashSet<string> { CloudKeys.Nickname });
                 legacy = old.TryGetValue(CloudKeys.Nickname, out Item oldName) ? oldName.Value.GetAs<string>() : null;
+            }
+
+            // 0.1 빌드에서 이 기기에만 바꾼 닉네임이 있으면 그것을 쓴다 — 서버에 처음 정한 닉네임이 있을 때만 (처음 정하기는 서버로)
+            if (!SavesNicknameChangeToServer && !string.IsNullOrEmpty(nickname))
+            {
+                string local = PlayerPrefs.GetString(LocalNicknameKey(PlayerId), null);
+                if (!string.IsNullOrEmpty(local))
+                    nickname = local;
             }
 
             Nickname = new NicknameState(string.IsNullOrEmpty(nickname) ? null : nickname, coupons, changedAt, string.IsNullOrEmpty(legacy) ? null : legacy);
