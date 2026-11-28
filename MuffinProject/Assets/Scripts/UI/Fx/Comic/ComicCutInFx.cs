@@ -8,7 +8,7 @@ namespace Chapchu.UI.Fx.Comic
     /// <summary>
     /// 만화 컷인(시안 CI2) 틀 — 카드 한 장의 3 단계. 화면 전체를 덮고, 장면(<see cref="ComicScene"/>)을 1280×720 설계 판에 그려 화면에 꽉 채운다 (시안 frame · play).
     /// 틀이 하는 것: 밑바탕 색 · 설계 판 꽉 채우기(가로 화면 — 짧은 쪽이 넘치게) · 처음 0.35 초 살짝 확대 1.05 → 1 · 판 흔들림(hits) · 위아래 레터박스 ·
-    /// 왼쪽 아래 제목 + 한마디(<see cref="ComicTitleBlock"/>) · 종이결(<see cref="ComicGrain"/>) · 들어오기/나가기 색 닦기(<see cref="ComicWipe"/>).
+    /// 왼쪽 아래 제목 + 한마디(<see cref="ComicTitleBlock"/>) · 들어오기/나가기 색 닦기(<see cref="ComicWipe"/>).
     /// 반투명으로 겹치지 않는다 — 닦기 띠가 화면을 다 덮은 채로 나타나 걷히고, 끝에는 다 덮은 채로 잠깐 멈췄다 한 번에 사라진다 (시안의 0.09 초 나타나기 · 0.16 초 사라지기는 게임 화면 위에 장면이 유령처럼 겹쳐 뺐다).
     /// 3 단계 길이 = 장면 길이 + 0.16 초 (시안 SPECIAL_MS = len + 80ms, 그 뒤 special2 가 80ms 더 기다린다) — 덮고 멈춤 0.1 + 빈 틈 0.06.
     /// 4 단계 장식은 장면의 <see cref="ComicScene.PostRoutine"/>.
@@ -25,8 +25,6 @@ namespace Chapchu.UI.Fx.Comic
         [SerializeField] private RectTransform stage;
         [Tooltip("제목 + 한마디 (화면 왼쪽 아래 기준).")]
         [SerializeField] private ComicTitleBlock titleBlock;
-        [Tooltip("종이결.")]
-        [SerializeField] private ComicGrain grain;
         [Tooltip("먹 닦기 판 (1280×720, 가운데 — 꽉 채우기만 걸린다).")]
         [SerializeField] private RectTransform wipeSpace;
         [Tooltip("먹 닦기.")]
@@ -117,8 +115,6 @@ namespace Chapchu.UI.Fx.Comic
                 Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(background)} 가 비었다");
             if (titleBlock == null)
                 Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(titleBlock)} 가 비었다");
-            if (grain == null)
-                Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(grain)} 가 비었다");
             if (wipeSpace == null)
                 Debug.LogError($"[{nameof(ComicCutInFx)}] {name} 의 {nameof(wipeSpace)} 가 비었다");
             if (wipe == null)
@@ -169,7 +165,6 @@ namespace Chapchu.UI.Fx.Comic
 
             _scene.Draw(t, _context);
             titleBlock.Draw(t - _scene.TitleAt);
-            grain.SetTime(t);
             wipe.Set(t, _scene.Length);
         }
 

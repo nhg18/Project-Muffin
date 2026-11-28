@@ -30,7 +30,7 @@ namespace Chapchu.UI.Fx.Comic
     /// burst → <see cref="ComicBurst"/>, sweat → <see cref="ComicSweat"/>,
     /// word + stamp → <see cref="ComicWord"/> + <see cref="ComicStamp"/>, stk → <see cref="ComicSticker"/>, dog · dogPt → <see cref="ComicDog"/> · <see cref="ComicDog.PointOf"/>,
     /// card → <see cref="ComicCard"/>, rr → <see cref="ComicPen.RoundRect"/>. 「lighter」 로 그린 것은 머티리얼 FxAdditive. 소리(sfx)는 넣지 않는다.
-    /// 제목 · 한마디 · 레터박스 · 종이결 · 들어오기/나가기 · 확대 · 흔들림은 틀(<see cref="ComicCutInFx"/>)이 한다.</para>
+    /// 제목 · 한마디 · 레터박스 · 들어오기/나가기 · 확대 · 흔들림은 틀(<see cref="ComicCutInFx"/>)이 한다.</para>
     /// </summary>
     public abstract class ComicScene : MonoBehaviour
     {
