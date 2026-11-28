@@ -888,7 +888,7 @@ namespace Chapchu.UI.GameScreen
 
         private void HandleChapchuWinHeld(int actorNumber) => Enqueue(() => { history.ShowChapchuWinHeld(actorNumber); return null; });
 
-        // 대소동 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
+        // 대폭발 (1012) — 판 상태를 처음으로: 가운데 체인 카드 · 내 손패는 버림 더미로 날린 뒤 더미를 비우고, 함정 · 찹츄 · 방향 · 판 효과를 지운다.
         // 새 HP · 손패 · 첫 턴은 뒤따르는 알림이 시작 때처럼 채운다. 기록은 이어진다. 컷인 · 테이블 빛 연출은 넣지 않는다 (사용자 2026-11-13).
         // 새 판 — 체인은 처리 도중 버려져 ChainDiscarded 가 오지 않는다. 뒤따르는 HP 100 · 손패 배분은 4 단계가 아니다 (조용히)
         private void HandleGameRestarted(int user, int count, int[] order)
@@ -929,7 +929,7 @@ namespace Chapchu.UI.GameScreen
                 seats.ShowTrapCount(actor, 0);
             }
 
-            yield return chainCards.DiscardAllRoutine(); // 가운데에 남은 대소동 · 그 위 카운터 — 처리 도중 버려진 체인이라 ChainDiscarded 가 오지 않는다
+            yield return chainCards.DiscardAllRoutine(); // 가운데에 남은 대폭발 · 그 위 카운터 — 처리 도중 버려진 체인이라 ChainDiscarded 가 오지 않는다
             yield return hand.DiscardHandRoutine();
             discardPile.Clear();
         }

@@ -74,7 +74,7 @@ namespace Chapchu.UI.GameScreen
             Refresh();
         }
 
-        /// <summary>새 판 (OnGameRestarted) — 대소동 외의 판 효과는 모두 처음으로. 피폭은 뒤따르는 OnFalloutChanged 가 넣는다.</summary>
+        /// <summary>새 판 (OnGameRestarted) — 대폭발 외의 판 효과는 모두 처음으로. 피폭은 뒤따르는 OnFalloutChanged 가 넣는다.</summary>
         public void ShowRestarted()
         {
             _waitCasters = System.Array.Empty<int>();

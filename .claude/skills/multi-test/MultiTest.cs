@@ -1000,7 +1000,7 @@ public static class MultiTest
         return (PhotonNetwork.CurrentRoom.IsOpen ? "WAIT 방이 열려 있다" : "OK 방 닫힘") + " · 공개 " + PhotonNetwork.CurrentRoom.IsVisible;
     }
 
-    /// <summary>가운데 체인 자리에 남은 카드 수 — 112 대소동의 새 판 뒤에는 0 이어야 한다 (ChainCardsPresenter 아래의 CardView).</summary>
+    /// <summary>가운데 체인 자리에 남은 카드 수 — 112 대폭발의 새 판 뒤에는 0 이어야 한다 (ChainCardsPresenter 아래의 CardView).</summary>
     public static string ChainCardsEmpty()
     {
         ChainCardsPresenter chain = Object.FindFirstObjectByType<ChainCardsPresenter>();
@@ -1029,7 +1029,7 @@ public static class MultiTest
         return "OK 모두 체력 " + hp + " — " + rules.DebugState();
     }
 
-    // 방장: 지금 턴 주인 손패에 카드 한 장을 넣고 바로 쓴다 (드문 카드의 네트워크 경로 확인 — 1012 대소동). 결과는 실제 Send 로 보낸다
+    // 방장: 지금 턴 주인 손패에 카드 한 장을 넣고 바로 쓴다 (드문 카드의 네트워크 경로 확인 — 1012 대폭발). 결과는 실제 Send 로 보낸다
     public static string ForceCard(string cardId)
     {
         PunGameServer server = Object.FindFirstObjectByType<PunGameServer>();
@@ -2378,13 +2378,13 @@ public static class MultiTest
             Check(t.Tick().OfType<GameEnded>().Any(), "체인 처리 뒤 처치 승리");
         }
 
-        // 대소동(새 판) 체인 중에 나가서 1명 — 새 판을 열지 않고 처치 승리 (07 3절 「판정 시점」 — 체인이 끝난 뒤)
+        // 대폭발(새 판) 체인 중에 나가서 1명 — 새 판을 열지 않고 처치 승리 (07 3절 「판정 시점」 — 체인이 끝난 뒤)
         {
             var t = new ChainTable();
             t.Server.RemovePlayer(t.O2);
             Card restart = t.Give(t.Turn, id => new Card(id, 1012, CardType.Action, TargetType.None, new CardEffect[] { new RestartEffect() }, null, ChainTable.Reveal, ChainTable.Resolve));
             t.PlayCard(t.Turn, restart);
-            Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대소동 체인 중에 상대가 나감 → 아직");
+            Check(!t.Server.RemovePlayer(t.O1).OfType<GameEnded>().Any(), "대폭발 체인 중에 상대가 나감 → 아직");
             List<GameEvent> events = t.Run(ReadSeconds + 0.5); // 물을 사람이 없어 읽는 시간(3초) 뒤 바로 처리 — 후처리 연출 · 턴 넘김(+1.28초) 전
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(ended != null && ended.Winner == t.Turn && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
@@ -2393,7 +2393,7 @@ public static class MultiTest
             events.AddRange(t.Run(t.Now + ChainTable.Resolve + 1));
             Check(!events.OfType<GameEnded>().Any() && !events.OfType<GameRestarted>().Any(), "끝난 뒤에는 남은 사람이 나가도 무승부 · 새 판이 없다");
         }
-        // 함정이 부른 대소동도 같다 — 때린 사람이 체인 중에 나가 1명이면 새 판 대신 처치 승리
+        // 함정이 부른 대폭발도 같다 — 때린 사람이 체인 중에 나가 1명이면 새 판 대신 처치 승리
         {
             var t = new ChainTable();
             t.Server.RemovePlayer(t.O2);
@@ -2404,7 +2404,7 @@ public static class MultiTest
             List<GameEvent> events = t.Run(t.Now + 12);
             GameEnded ended = events.OfType<GameEnded>().FirstOrDefault();
             Check(events.OfType<TrapActivated>().Any() && ended != null && ended.Winner == t.O1 && ended.Reason == GameEndReason.Elimination && !events.OfType<GameRestarted>().Any(),
-                "함정의 대소동 + 체인 중 이탈 → 새 판 대신 처치 승리");
+                "함정의 대폭발 + 체인 중 이탈 → 새 판 대신 처치 승리");
         }
 
         return (failed ? "FAIL\n" : "OK\n") + sb.ToString().TrimEnd();
@@ -3387,7 +3387,7 @@ public static class MultiTest
                     {
                         // 막힌 사람의 턴 끝 처리(피폭)는 보통대로 — 그 뒤 새치기 턴
                         var t = new ChainTable();
-                        typeof(GameServer).GetField("_restartCount", Private).SetValue(t.Server, 1); // 대소동 1번 뒤 — 턴이 끝날 때마다 피폭
+                        typeof(GameServer).GetField("_restartCount", Private).SetValue(t.Server, 1); // 대폭발 1번 뒤 — 턴이 끝날 때마다 피폭
                         List<GameEvent> events = Cut(t, t.O2, 25);
                         int fallout = events.FindIndex(e => e is FalloutChanged), start = events.FindIndex(e => e is TurnStarted);
                         Check(fallout >= 0 && fallout < start && Starts(events) == $"{t.O2}" && new[] { t.Turn, t.O1, t.O2 }.All(a => t.Hp(a) == 99),
@@ -3839,7 +3839,7 @@ public static class MultiTest
                     var t = new ChainTable();
                     int[] aimed = { 1001, 1002, 1014, 1013, 1017 }, wide = { 1012, 1021, 1023, 1045 };
                     bool Wide(int cardId) => mainCards.First(c => c.CardId == cardId).Effects.Any(e => (bool)typeof(CardEffect).GetProperty("BoardWide", Private).GetValue(e));
-                    Check(wide.All(Wide) && !aimed.Any(Wide), "2021 판 전체 상태 카드 = 1012 대소동 · 1021 개판 오분전 · 1023 기다려! · 1045 뒤로 돌아 (사용자 2026-11-21)");
+                    Check(wide.All(Wide) && !aimed.Any(Wide), "2021 판 전체 상태 카드 = 1012 대폭발 · 1021 개판 오분전 · 1023 기다려! · 1045 뒤로 돌아 (사용자 2026-11-21)");
                     Card growl = t.Give(t.O1, Real(2021));
                     t.PlayCard(t.Turn, t.Give(t.Turn, Real(1045)));
                     t.At(2);
@@ -4388,7 +4388,7 @@ public static class MultiTest
                     Check(t.Hp(t.O1) == 90 && t.HandCount(t.O1) == 0 && events.OfType<TurnStarted>().Any(), "1015 대상 손패 없음 — 피해만, 강탈 불발");
                 }
 
-                // ── 묶음 5 — 1012 대소동: 새 판 · 피폭 k^n (11-card-list 1012) ──
+                // ── 묶음 5 — 1012 대폭발: 새 판 · 피폭 k^n (11-card-list 1012) ──
                 {
                     var t = new ChainTable();
                     t.SetHp(t.O1, 30);
@@ -4403,7 +4403,7 @@ public static class MultiTest
                                  && t.Server.CurrentTurnActor == restarted.Order[0]
                                  && events.OfType<FalloutChanged>().Any(f => f.N == 1 && f.Turns == 0)
                                  && !events.OfType<HpChanged>().Any(h => h.Hp < 100 && events.IndexOf(h) > events.IndexOf(restarted));
-                    Check(fresh, "1012 대소동 — 쓴 턴이 끝나면 새 판: 죽은 사람 포함 전원 HP 100 · 손패 5 · 찹츄 해제 · 새 순서 첫 사람 · 쓴 턴은 피폭 없음");
+                    Check(fresh, "1012 대폭발 — 쓴 턴이 끝나면 새 판: 죽은 사람 포함 전원 HP 100 · 손패 5 · 찹츄 해제 · 새 순서 첫 사람 · 쓴 턴은 피폭 없음");
 
                     int first = restarted?.Order[0] ?? t.Turn, second = restarted?.Order[1] ?? t.O1, third = restarted?.Order[2] ?? t.O2;
                     t.State(second).SkipNextTurn = true;
@@ -4630,7 +4630,7 @@ public static class MultiTest
                     var events = t.PlayAndResolve(user, t.Give(user, Real(1012)));
                     events.AddRange(t.Run(t.Now + 3));
                     Check(events.OfType<GameRestarted>().Any() && events.OfType<GaepanChanged>().Any(g => g.Caster == -1 && g.Left == 0) && !t.Server.IsGaepanActive,
-                        "1021 개판은 1012 대소동 새 판에서 지워진다");
+                        "1021 개판은 1012 대폭발 새 판에서 지워진다");
                 }
                 {
                     double now = 0;
@@ -5293,7 +5293,7 @@ public static class MultiTest
 
     /// <summary>
     /// 판 지표 집계 (07-win-condition.md 11-4) — 방장이 세는 가한 · 받은 피해, 회복, 킬, 빼앗은 · 빼앗긴 카드, 드로우, 행동 · 카운터 · 함정 사용, 카운터 성공, 찹츄 선언.
-    /// 실제로 바뀐 만큼만 세는지, 세지 않기로 한 것(시작 손패 · 시작 HP · 손패 교환 · 대소동의 새 판)을 빼는지, 대소동을 넘어 이어지는지, 종료 요약에 실리는지 본다.
+    /// 실제로 바뀐 만큼만 세는지, 세지 않기로 한 것(시작 손패 · 시작 HP · 손패 교환 · 대폭발의 새 판)을 빼는지, 대폭발을 넘어 이어지는지, 종료 요약에 실리는지 본다.
     /// </summary>
     // ── 방장 이주 (09-network 9.1, PM 2026-11-19) — 상태 담기 · 되살리기 · 이어 가기 ──
     // 되살린 상태가 원래와 같은지는 GameServer 의 필드를 리플렉션으로 모두 적어 견준다 (DumpState) — 새 원본 필드를 Capture · Restore 에 빠뜨리면 여기서 걸린다.
@@ -5844,11 +5844,11 @@ public static class MultiTest
             Check(Stat(t, t.Turn, StatKind.ChapchuDeclared) == 1 && Sum(t, StatKind.ChapchuDeclared) == 1, "뽑아 10장 → 찹츄 선언 1");
         }
 
-        // 10. 1012 대소동 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
+        // 10. 1012 대폭발 — 새 판이 돼도 지표는 이어지고, 새 판의 HP 100 · 손패는 회복 · 드로우가 아니다
         {
             DeckData main = AssetDatabase.LoadAssetAtPath<DeckData>(MainDeckPath);
             Card big = main != null ? main.CreateCards().FirstOrDefault(c => c.CardId == 1012) : null;
-            Check(big != null, "Deck_Main 에 1012 대소동이 있다");
+            Check(big != null, "Deck_Main 에 1012 대폭발이 있다");
             if (big != null)
             {
                 var t = new ChainTable();
@@ -5858,7 +5858,7 @@ public static class MultiTest
                     big.Trigger, big.TriggerValue, big.Condition, big.TargetCondition)));
                 events.AddRange(t.Run(t.Now + 3));
                 Check(events.OfType<GameRestarted>().Any() && t.Hp(t.O1) == 100 && Stat(t, t.Turn, StatKind.Dealt) == 20 && Stat(t, t.O1, StatKind.Taken) == 20
-                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "1012 대소동 — 새 판(HP 100)이 돼도 지표는 이어진다");
+                      && Stat(t, t.Turn, StatKind.Actions) == 1 && Stat(t, t.O1, StatKind.Actions) == 1, "1012 대폭발 — 새 판(HP 100)이 돼도 지표는 이어진다");
                 Check(Sum(t, StatKind.Healed) == 0 && Sum(t, StatKind.Drawn) == 0, "새 판의 HP 100 · 다시 받은 손패는 회복 · 드로우가 아니다");
             }
         }

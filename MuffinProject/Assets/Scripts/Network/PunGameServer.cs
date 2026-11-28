@@ -693,7 +693,7 @@ namespace Chapchu.Network
                         roomProps[RoomProps.TurnDirection] = null;
                         roomProps[RoomProps.TurnOrder] = restarted.Order; // 새 판은 순서를 다시 섞는다
                         roomProps[RoomProps.WaitCasters] = null;
-                        Debug.Log($"[{nameof(PunGameServer)}] 대소동 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
+                        Debug.Log($"[{nameof(PunGameServer)}] 대폭발 — 새 판 ({restarted.Count}번째) · 순서 {string.Join(" → ", restarted.Order.Select(a => $"P{a}"))}");
                         break;
 
                     case FalloutChanged fallout:

@@ -132,7 +132,7 @@ namespace Chapchu.Game
             w.Ints(Ids(_discardPile));
             w.Ints(Ids(_allCards));
 
-            // 개판 · 대소동
+            // 개판 · 대폭발
             w.Int(_gaepanCaster);
             w.Int(_gaepanLeft);
             w.Int(_gaepanTurns);
@@ -339,7 +339,7 @@ namespace Chapchu.Game
             ReadCards(_discardPile);
             ReadCards(_allCards);
 
-            // 개판 · 대소동
+            // 개판 · 대폭발
             _gaepanCaster = r.Int();
             _gaepanLeft = r.Int();
             _gaepanTurns = r.Int();

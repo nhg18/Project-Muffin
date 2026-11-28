@@ -83,7 +83,7 @@ namespace Chapchu.Game
             DelayTurnUntil(SettleAfter(now));
         }
 
-        // 1012 대소동 · 게임 시작 — 개판은 처음으로
+        // 1012 대폭발 · 게임 시작 — 개판은 처음으로
         private void ResetGaepan()
         {
             bool had = _gaepanCaster != -1;

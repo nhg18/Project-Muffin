@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Chapchu.UI.Fx.Nuke
 {
-    /// <summary>「대소동」 장면 하나에서 카메라가 움직이는 방식.</summary>
+    /// <summary>「대폭발」 장면 하나에서 카메라가 움직이는 방식.</summary>
     public enum NukeShotPath
     {
         /// <summary>눈 · 보는 곳이 시작 → 끝으로 간다 (시안 좌표).</summary>
@@ -28,7 +28,7 @@ namespace Chapchu.UI.Fx.Nuke
     }
 
     /// <summary>
-    /// 「대소동」 3D 장면 하나의 카메라 키 — 시안 NUKE3D camera(t) 의 장면 하나와 같다.
+    /// 「대폭발」 3D 장면 하나의 카메라 키 — 시안 NUKE3D camera(t) 의 장면 하나와 같다.
     /// 장면이 시작하고 끝나는 때는 <see cref="NukeTimeline"/>, 장면 순서는 <see cref="NukeSceneFx"/> 의 shots 배열 순서 (12 개).
     /// </summary>
     [Serializable]
