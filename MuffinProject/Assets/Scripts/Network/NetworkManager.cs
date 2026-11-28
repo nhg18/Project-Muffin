@@ -175,7 +175,14 @@ namespace Chapchu.Network
 
             PhotonNetwork.RaiseEvent(LoadSceneEvent, scene, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
             PhotonNetwork.SendAllOutgoingCommands(); // LoadLevel 이 씬을 여는 동안 보내기를 멈춘다 — 그 전에 내보낸다
-            PhotonNetwork.LoadLevel(scene);
+            LoadLevelAfterTransition(scene);
+        }
+
+        // 전환 연출(15-screen.md 9절)이 화면을 덮은 뒤에 씬을 연다. 덮는 동안 온 메시지는 새 씬이 받게 받기를 멈춘다 — LoadLevel 이 씬을 연 뒤 다시 켠다
+        private static void LoadLevelAfterTransition(string scene)
+        {
+            PhotonNetwork.IsMessageQueueRunning = false;
+            ScreenTransition.Play(scene, () => PhotonNetwork.LoadLevel(scene));
         }
 
         public void OnEvent(EventData photonEvent)
@@ -194,7 +201,7 @@ namespace Chapchu.Network
                         return;
                     }
 
-                    PhotonNetwork.LoadLevel(scene);
+                    LoadLevelAfterTransition(scene);
                     break;
             }
         }

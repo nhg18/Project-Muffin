@@ -20,12 +20,17 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private GameObject sheet;
         [SerializeField] private Button closeButton;
         [SerializeField] private Button exitButton;
+        [Tooltip("「개발자 도구」 — 개발자 모드(DevMode)일 때만 보인다 (10-ui.md 12절).")]
+        [SerializeField] private Button devToolsButton;
         [SerializeField] private GameObject confirm;
         [SerializeField] private Button confirmCancelButton;
         [SerializeField] private Button confirmExitButton;
 
         /// <summary>확인 팝업에서 「나가기」를 눌렀다.</summary>
         public event Action ExitConfirmed;
+
+        /// <summary>설정 판의 「개발자 도구」 를 눌렀다 — 판은 닫혔다.</summary>
+        public event Action DevToolsClicked;
 
         /// <summary>설정 판이나 나가기 확인 팝업이 떴다(true) · 둘 다 닫혔다(false). 판 → 확인 팝업으로 바뀔 때는 알리지 않는다.</summary>
         public event Action<bool> OpenChanged;
@@ -43,6 +48,8 @@ namespace Chapchu.UI.GameScreen
             gearButton.onClick.AddListener(HandleGearClicked);
             closeButton.onClick.AddListener(HandleCloseClicked);
             exitButton.onClick.AddListener(HandleExitClicked);
+            if (devToolsButton != null)
+                devToolsButton.onClick.AddListener(HandleDevToolsClicked);
             confirmCancelButton.onClick.AddListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.AddListener(HandleExitConfirmed);
         }
@@ -52,6 +59,8 @@ namespace Chapchu.UI.GameScreen
             gearButton.onClick.RemoveListener(HandleGearClicked);
             closeButton.onClick.RemoveListener(HandleCloseClicked);
             exitButton.onClick.RemoveListener(HandleExitClicked);
+            if (devToolsButton != null)
+                devToolsButton.onClick.RemoveListener(HandleDevToolsClicked);
             confirmCancelButton.onClick.RemoveListener(HandleConfirmCancelClicked);
             confirmExitButton.onClick.RemoveListener(HandleExitConfirmed);
         }
@@ -61,6 +70,14 @@ namespace Chapchu.UI.GameScreen
             sheet.SetActive(false);
             confirm.SetActive(false);
             gearFill.color = Color.white;
+            if (devToolsButton != null)
+                devToolsButton.gameObject.SetActive(Chapchu.Core.DevMode.IsOn);
+        }
+
+        private void HandleDevToolsClicked()
+        {
+            CloseSheet();
+            DevToolsClicked?.Invoke();
         }
 
         // PC Esc 로도 설정 판을 닫는다 (10-ui.md 9절 「설정 버튼」). 확인 팝업은 버튼으로만 닫는다.

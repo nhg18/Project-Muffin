@@ -13,6 +13,9 @@ namespace Chapchu.UI.GameScreen
     /// </summary>
     public class TurnOrderView : MonoBehaviour
     {
+        // 톡 튀울 때 처음 배율 — 커졌다가 1 로 (UIJuice.Pop)
+        private const float PingFrom = 1.14f;
+
         [Header("「턴 방향」 알약")]
         [SerializeField] private UIShape headerFill;
         [Tooltip("진행 방향 화살표 — 정방향은 아래, 역방향이면 위.")]
@@ -125,6 +128,16 @@ namespace Chapchu.UI.GameScreen
             _chapchu[index] = declared;
             if (index == _current)
                 RefreshTab();
+        }
+
+        /// <summary>그 줄을 톡 튀운다 — 「내 턴이 아니에요」 때 지금 턴인 줄을 가리킨다 (시안 v2 .ping). 지금 턴이면 꼬리표도 같이.</summary>
+        public void Ping(int index)
+        {
+            if (index < 0 || index >= _rows.Count) return;
+
+            UIJuice.Pop((RectTransform)_rows[index].transform, PingFrom);
+            if (index == _current)
+                UIJuice.Pop(currentTab, PingFrom);
         }
 
         /// <summary>진행 방향 — 역방향이면 알약이 주황 · 화살표 · 꺾쇠가 위로.</summary>

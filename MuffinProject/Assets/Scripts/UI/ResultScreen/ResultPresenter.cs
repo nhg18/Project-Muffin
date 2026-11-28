@@ -401,7 +401,8 @@ namespace Chapchu.UI.ResultScreen
         private void HandleLeftRoom()
         {
             _isLeaving = true;
-            SceneManager.LoadScene(SceneFlow.ReturnSceneAfterRoom);
+            string scene = SceneFlow.ReturnSceneAfterRoom;
+            ScreenTransition.Play(scene, () => SceneManager.LoadScene(scene));
         }
 
         #endregion

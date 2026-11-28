@@ -487,7 +487,7 @@ namespace Chapchu.UI.GameScreen
                 else
                     seats.ShowHandCount(actorNumber, handCount);
 
-                return chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, isMe ? hand.TakeCard(cardInstanceId) : null);
+                return DevStageMeter.Wrap(DevStageMeter.Play, chainCards.PlayRoutine(actorNumber, cardInstanceId, cardId, targets, isMe ? hand.TakeCard(cardInstanceId) : null));
             });
         }
 
@@ -668,6 +668,7 @@ namespace Chapchu.UI.GameScreen
             {
                 reactionTimer.SetCardName(chainCards.TopCardName);
                 hand.ShowReaction(opensAt);
+                DevStageMeter.Begin(DevStageMeter.Wait); // 다음 단계가 시작되면 끝난다
                 return null;
             });
         }
@@ -692,7 +693,7 @@ namespace Chapchu.UI.GameScreen
                 history.ShowCardResolved(actorNumber, cardInstanceId, cardId, targets);
                 LeaveChain();
                 CardData data = cardDeck.GetCard(cardId);
-                return data != null ? CardResolvedRoutine(data, actorNumber, targets) : null;
+                return DevStageMeter.Wrap(DevStageMeter.Resolve, data != null ? CardResolvedRoutine(data, actorNumber, targets) : null, DevStageMeter.After);
             });
             _resolving = true;
         }
@@ -701,7 +702,7 @@ namespace Chapchu.UI.GameScreen
         {
             List<CardFxSeat> fxSeats = CreateFxSeats();
             CardFxSeat casterSeat = fxSeats.Find(seat => seat.Actor == caster) ?? GaepanCasterSeat(data, caster);
-            if (casterSeat != null)
+            if (casterSeat != null && !DevToolsPanel.EffectsOff) // 개발자 도구 「이펙트 끄기」 — 카드별 연출을 건너뛴다
             {
                 var targetSeats = new List<CardFxSeat>();
                 foreach (int target in targets)
@@ -797,7 +798,7 @@ namespace Chapchu.UI.GameScreen
             Enqueue(() =>
             {
                 history.ShowChainEnded();
-                return ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount);
+                return DevStageMeter.Wrap(DevStageMeter.After, ChainCardsToDiscardRoutine(cardInstanceIds, cardIds, discardCount));
             });
         }
 

@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Chapchu.UI.Fx;
 
@@ -9,9 +11,17 @@ namespace Chapchu.UI.GameScreen
     /// <summary>
     /// 「낸 카드 기록」 한 줄 (통합 화면 UI v3 .hitem) — 카드 이름 · 작은 카드(종류 색 테 + 그림) · 상자(누가 → 누구에게 / 결과). 프리팹 HistoryItem 을 HistoryListView 가 복제한다.
     /// 무효가 된 카드는 그림이 흐려지고 결과에 줄. 그림이 없는 카드는 카드의 「그림 준비 중」 처럼 옅은 종류 색 바탕 + 발바닥. 값은 HistoryPresenter 가 만든 글을 그대로 넣는다.
+    /// 마우스를 올리면 · 탭하면 알린다 — 크게 보기는 HistoryPresenter 가 띄운다 (10-ui.md 2-1 「낸 카드 기록」).
     /// </summary>
-    public class HistoryItemView : MonoBehaviour
+    public class HistoryItemView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
+        /// <summary>마우스가 줄 위로 올라왔다 (터치는 알리지 않는다).</summary>
+        public event Action<HistoryItemView> OnHovered;
+        /// <summary>마우스가 줄 밖으로 나갔다.</summary>
+        public event Action<HistoryItemView> OnUnhovered;
+        /// <summary>줄을 눌렀다 (클릭 · 탭).</summary>
+        public event Action<HistoryItemView> OnClicked;
+
         private const float TextSlack = 12f;
 
         [Tooltip("줄 내용 전체 — 새 줄이 튀어나올 때 가운데를 축으로 키운다.")]
@@ -69,6 +79,25 @@ namespace Chapchu.UI.GameScreen
             art.color = hasArt ? tint : Color.Lerp(Color.white, kind, noArtFillMix) * tint;
             noArtPaw.enabled = !hasArt;
             noArtPaw.color = Color.Lerp(Color.white, kind, noArtPawMix) * tint;
+        }
+
+        // 터치는 손가락 번호(0 이상), 마우스는 음수 — 올리기는 마우스만 (탭은 누를 때 들어오고 뗄 때 나간다)
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (eventData.pointerId < 0)
+                OnHovered?.Invoke(this);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            if (eventData.pointerId < 0)
+                OnUnhovered?.Invoke(this);
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+                OnClicked?.Invoke(this);
         }
 
         /// <summary>새 줄 — 작게 나와 살짝 커졌다 제자리로.</summary>
