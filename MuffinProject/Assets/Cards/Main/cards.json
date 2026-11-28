@@ -82,7 +82,7 @@
     },
     {
       "id": 1019, "name": "목표 조준", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 3,
-      "text": "손패 모두 버리기와 {0} 피해 중 하나를 고르게 한다",
+      "text": "손패 모두 버리기와 {0} 피해 중 하나를 무작위로 준다",
       "effects": [ { "type": "DiscardOrDamageEffect", "args": "amount=80, seconds=5" } ]
     },
     {
