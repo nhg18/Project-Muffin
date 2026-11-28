@@ -27,6 +27,7 @@ namespace Chapchu.UI.Lobby
         private const string LoginNameFormat = "{0} 로그인";
         private const string CopiedCodeToast = "친구 코드를 복사했어요.";
         private const string CopiedIdToast = "고유 ID를 복사했어요.";
+        private const string FriendAcceptedToastFormat = "{0}님과 친구가 됐어요.";
         private const string FriendLimitToastFormat = "친구는 {0}명까지 추가할 수 있어요."; // 13-friend 2절 「친구 최대 인원」
         private const string ClaimedAllToast = "보상을 모두 받았어요.";
 
@@ -143,13 +144,13 @@ namespace Chapchu.UI.Lobby
             rates.OnCloseRequested -= ClosePopups;
         }
 
-        /// <summary>뒤로가기 한 겹 — 친구 줄 메뉴 → 차단 목록 → 열린 창. 닫은 것이 있으면 true.</summary>
+        /// <summary>뒤로가기 한 겹 — 친구 줄 메뉴 → 설정의 목록 창(차단 목록 · 화면 크기) → 열린 창. 닫은 것이 있으면 true.</summary>
         public bool Back()
         {
             if (friends.IsOpen && friends.CloseMenu())
                 return true;
 
-            if (settings.IsBlockListOpen)
+            if (settings.IsListOpen)
             {
                 ShowSettings();
                 return true;
@@ -317,9 +318,10 @@ namespace Chapchu.UI.Lobby
                 return;
             }
 
+            // 요청 탭에 남는다 — 여러 명을 이어서 받게 (17-lobby-ui-full 「받은 요청 수락」, PM 2026-11-28)
             lobby.RefreshBadges();
-            friends.ShowTab(LobbyFriendsTab.Friends);
-            friends.Flash(request.Nickname);
+            friends.Refresh();
+            fx.Toast(string.Format(FriendAcceptedToastFormat, request.Nickname));
         }
 
         private void HandleFriendDeclined(HubPerson request)
