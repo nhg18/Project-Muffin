@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 3D 장면의 시간표 (초, 장면 시간축) — 시안 NUKE3D 의 T · HOLD 와 같다. 장면 · 도시 · 강아지 · 입자가 같이 본다.
+    /// 「대폭발」 3D 장면의 시간표 (초, 장면 시간축) — 시안 NUKE3D 의 T · HOLD 와 같다. 장면 · 도시 · 강아지 · 입자가 같이 본다.
     /// 장면 시간은 착탄 직전 느린 화면 동안 거의 멈춘다 (<see cref="SceneTime"/>). 미사일은 <see cref="MissileStart"/> 에 나타나 <see cref="Hit"/> 에 땅에 닿는다.
     /// 값은 <see cref="NukeSceneFx"/> 의 Inspector 에서 바꾼다.
     /// </summary>

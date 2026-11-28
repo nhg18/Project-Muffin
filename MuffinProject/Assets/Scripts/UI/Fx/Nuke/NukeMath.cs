@@ -3,7 +3,7 @@
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 3D 장면이 같이 쓰는 착탄점 · 미사일 길 · 보간 · 고정 난수 — 시안 NUKE3D 의 IMP · MP0 · MP1 · SW · bez · mPos · RND 와 같다.
+    /// 「대폭발」 3D 장면이 같이 쓰는 착탄점 · 미사일 길 · 보간 · 고정 난수 — 시안 NUKE3D 의 IMP · MP0 · MP1 · SW · bez · mPos · RND 와 같다.
     /// 시간표와 시각별 미사일 자리는 <see cref="NukeTimeline"/>.
     /// 좌표는 시안 그대로 (x 오른쪽 · y 위 · z 앞, 단위 m). 유니티 월드에는 <see cref="NukeSceneFx"/> 의 원점만큼 옮겨 놓는다.
     /// </summary>

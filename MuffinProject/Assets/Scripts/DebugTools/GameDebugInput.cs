@@ -360,7 +360,7 @@ namespace Chapchu.DebugTools
         private void HandleGameRestarted(int user, int count, int[] order)
         {
             ClearMyCards(); // 새 판 — 손패 · 함정은 처음부터 다시 나눈다 (11-card-list 1012)
-            Log($"대소동 — P{user} · 새 판 {count}번째 · 순서 {string.Join(" → ", System.Linq.Enumerable.Select(order, a => $"P{a}"))}");
+            Log($"대폭발 — P{user} · 새 판 {count}번째 · 순서 {string.Join(" → ", System.Linq.Enumerable.Select(order, a => $"P{a}"))}");
         }
 
         private void HandleFalloutChanged(int n, int turns) => Log($"피폭 — n {n} · k {turns}{(turns > 0 ? $" · 모두 −{Chapchu.Game.GameServer.FalloutDamage(turns, n)}" : "")}");

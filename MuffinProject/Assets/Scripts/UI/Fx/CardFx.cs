@@ -41,7 +41,7 @@ namespace Chapchu.UI.Fx
 
         /// <summary>
         /// 기획에서 정한 카드만의 4 단계가 있다 — 부르는 쪽은 개판 등급이고 이것이 true 일 때만 <see cref="PlayPostRoutine"/> 을 부른다.
-        /// 지금은 지옥참마도만 (10-ui 5-1 「개판 등급의 카드별 4 단계」 — 개판 오분전 · 대소동은 미정).
+        /// 지금은 지옥참마도만 (10-ui 5-1 「개판 등급의 카드별 4 단계」 — 개판 오분전 · 대폭발은 미정).
         /// </summary>
         public virtual bool HasPostStage => false;
 

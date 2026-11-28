@@ -44,7 +44,7 @@ namespace Chapchu.Game.Effects
         /// <summary>「손패 +」 키워드의 효과인가 — 뽑기 · 가져오기 · 빼앗기 (11-card-list.md 5-1 · 5-3). 「손패 + 효과가 있다」 반응 조건(2020)이 본다.</summary>
         internal virtual bool GainsHand => false;
 
-        /// <summary>판 전체 상태를 바꾸는 효과인가 — 이런 효과의 카드는 「나를 노린 카드」 가 아니다 (대소동 · 기다려! · 개판 오분전 · 뒤로 돌아, 11-card-list 1-3).</summary>
+        /// <summary>판 전체 상태를 바꾸는 효과인가 — 이런 효과의 카드는 「나를 노린 카드」 가 아니다 (대폭발 · 기다려! · 개판 오분전 · 뒤로 돌아, 11-card-list 1-3).</summary>
         internal virtual bool BoardWide => false;
 
         /// <summary>조건이 맞을 때만 쓴 사람에게 돌아오는 피해인가 (1005 드롭킥의 반동) — 「그 카드의 피해를 받고 있는 사람」 에 넣지 않는다 (2018 물귀신의 후보, 11-card-list 1-3).</summary>

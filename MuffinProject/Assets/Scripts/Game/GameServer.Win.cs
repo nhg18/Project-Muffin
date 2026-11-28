@@ -64,7 +64,7 @@ namespace Chapchu.Game
         }
 
         // 끝내면서 「게임 종료 요약」 을 만든다 (07 11-3). 순위: 승자 → 남은 사람(HP 높은 순) → 빠진 사람(늦게 빠진 순).
-        // 같은 값이면 공동 순위 · 다음 순위는 건너뛴다. 무승부는 전원 1위. 대소동이 나간 사람을 턴 순서에서 빼므로 _players 로 센다.
+        // 같은 값이면 공동 순위 · 다음 순위는 건너뛴다. 무승부는 전원 1위. 대폭발이 나간 사람을 턴 순서에서 빼므로 _players 로 센다.
         private void EndGame(int winner, GameEndReason reason)
         {
             _gameOver = true;

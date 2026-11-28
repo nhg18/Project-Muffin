@@ -403,7 +403,7 @@ namespace Chapchu.UI.GameScreen
             yield return FlyToDiscardRoutine(cards);
         }
 
-        /// <summary>내 손패 전부가 버려졌다 (최종 사망 · 대소동, 05-deck.md 6절) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
+        /// <summary>내 손패 전부가 버려졌다 (최종 사망 · 대폭발, 05-deck.md 6절) — 버림 더미로 보내 지운다. 연출 큐가 기다릴 코루틴.</summary>
         public IEnumerator DiscardHandRoutine()
         {
             FinishShow(); // 보여 주던 새 카드도 함께 버려진다 — 남은 시간 막대 · 안내 글을 내린다

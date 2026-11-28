@@ -805,17 +805,17 @@ run_chapchu() {
     done
 }
 
-# 1012 대소동 (드문 카드): 방장이 턴 주인에게 1012 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
+# 1012 대폭발 (드문 카드): 방장이 턴 주인에게 1012 를 쥐여 바로 쓰게 한 뒤, 모든 화면에 새 판 · 피폭 줄이 같게 왔는지 · 표가 방장 값과 같은지 본다.
 run_restart() {
     local clients="${1:-2}" project out lines first=""
     enter_game "$clients" || return
     until_ok "$MAIN" ForceCard 1012 || return
     log "▶ 처리 · 새 판 대기"
     sleep 20
-    log "▶ 새 판 — 가운데에 대소동 카드가 남지 않았나 (손패 · 체인 카드가 버림 더미로 날아간 뒤)"
+    log "▶ 새 판 — 가운데에 대폭발 카드가 남지 않았나 (손패 · 체인 카드가 버림 더미로 날아간 뒤)"
     for project in "${EDITORS[@]}"; do
         for _ in $(seq 1 15); do
-            console_lines "$project" | grep -q '\[GameDebugInput\].*대소동 — ' && break
+            console_lines "$project" | grep -q '\[GameDebugInput\].*대폭발 — ' && break
             sleep 1
         done
         sleep 2
@@ -835,11 +835,11 @@ run_restart() {
     done
     log "▶ 판정"
     for project in "${EDITORS[@]}"; do
-        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '대소동 — |피폭 — ' | sed -E 's/.*(대소동 — |피폭 — )/\1/')
+        lines=$(console_lines "$project" | grep '\[GameDebugInput\]' | grep -E '대폭발 — |피폭 — ' | sed -E 's/.*(대폭발 — |피폭 — )/\1/')
         log "  $(name_of "$project"): $(printf '%s\n' "$lines" | tr '\n' '/')"
-        printf '%s' "$lines" | grep -q '대소동 — P[0-9]* · 새 판 1번째' || fail "$(name_of "$project") 새 판 줄이 없다"
+        printf '%s' "$lines" | grep -q '대폭발 — P[0-9]* · 새 판 1번째' || fail "$(name_of "$project") 새 판 줄이 없다"
         printf '%s' "$lines" | grep -q '피폭 — n 1 · k 1 · 모두 −1' || fail "$(name_of "$project") 피폭 1턴째 줄이 없다"
-        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 대소동 · 피폭 줄이 메인과 다르다"; fi
+        if [ -z "$first" ]; then first="$lines"; elif [ "$lines" != "$first" ]; then fail "$(name_of "$project") 의 대폭발 · 피폭 줄이 메인과 다르다"; fi
     done
     compare_turns
     check_table_ui restart
