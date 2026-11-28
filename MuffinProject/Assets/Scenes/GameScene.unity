@@ -39372,6 +39372,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b162f77b66444a4f8db7f05b89f28b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.UI.GameScreen.RejectToastPresenter
+  turnOrder: {fileID: 1821080570}
+  reactionTimer: {fileID: 618628863}
 --- !u!114 &1842077305
 MonoBehaviour:
   m_ObjectHideFlags: 0
