@@ -17,6 +17,7 @@ namespace Chapchu.Core
             nameof(NetworkManager),
             nameof(PopupManager),
             nameof(SoundManager),
+            nameof(ScreenTransition),
         };
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

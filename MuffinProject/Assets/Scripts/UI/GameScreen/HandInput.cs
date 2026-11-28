@@ -87,7 +87,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Update()
         {
-            if (_view.IsLocked)
+            if (_view.IsLocked || ScreenTransition.IsPlaying) // 전환 중 입력은 무시한다 (15-screen.md 9-5)
             {
                 _pressed = null;
                 _carrying = false;
