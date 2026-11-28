@@ -62,7 +62,7 @@
                     return new BotLevelSpec(noise: 4, mistakeRate: 0, noticeRate: 1, foresight: 1, seesKill: true, leaderFocus: 0.3,
                         pace: 0.85, hesitateRate: 0.1, hesitateMin: 0.5, hesitateMax: 1.5, reactMin: 0.8, reactMax: 2.5);
                 default:
-                    return new BotLevelSpec(noise: 20, mistakeRate: 0.15, noticeRate: 0.7, foresight: 0.3, seesKill: true, leaderFocus: 0.1,
+                    return new BotLevelSpec(noise: 17, mistakeRate: 0.12, noticeRate: 0.78, foresight: 0.4, seesKill: true, leaderFocus: 0.1,
                         pace: 1, hesitateRate: 0.2, hesitateMin: 1, hesitateMax: 2.5, reactMin: 1, reactMax: 3);
             }
         }
