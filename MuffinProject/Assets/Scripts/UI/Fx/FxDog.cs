@@ -16,6 +16,26 @@ namespace Chapchu.UI.Fx
         /// <summary>강아지 키 — 시안 DOGPILE.KEYS (나 · 초코 · 콩이 · 보리).</summary>
         public static readonly IReadOnlyList<string> Keys = Array.AsReadOnly(new[] { "na", "choco", "kongi", "bori" });
 
+        /// <summary>
+        /// 자리의 강아지 키 (시안 DOGPILE.keyOf) — 이 화면의 주인 = 나(na), 나머지는 seats 순서대로 초코 · 콩이 · 보리.
+        /// 자리마다 정해진 캐릭터 값이 생기면 그것으로 바꾼다.
+        /// </summary>
+        public static string KeyOf(CardFxSeat seat, IReadOnlyList<CardFxSeat> seats)
+        {
+            if (seat == null || seat.IsMe)
+                return Keys[0];
+            int order = 0;
+            foreach (CardFxSeat other in seats)
+            {
+                if (other == null || other.IsMe)
+                    continue;
+                order++;
+                if (other == seat)
+                    break;
+            }
+            return Keys[Mathf.Clamp(order, 1, Keys.Count - 1)];
+        }
+
         /// <summary>부품 그림 크기 / 원본 좌표 크기.</summary>
         public const float Scale = 0.5f;
 

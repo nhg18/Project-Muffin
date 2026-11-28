@@ -4,9 +4,17 @@ using UnityEngine.UI;
 
 namespace Chapchu.UI.Fx.Gaepan
 {
+    /// <summary>처형 장면의 눈 소품 — 메시는 <see cref="GaepanSnowMeshes"/> 가 만든다.</summary>
+    public enum GaepanProp
+    {
+        Rock,
+        Heap,
+        Clod,
+    }
+
     /// <summary>
     /// 개판 오분전의 3D 눈 마을 — 「강아지 마을 얼음 연못」 (시안 D3R). 마을(땅 · 연못 · 개집 · 울타리 · 가로등 · 눈사람 · 설산 · 숲)은 프리팹에 놓여 있고,
-    /// 장면마다 바뀌는 강아지 · 눈뭉치 · 나무는 풀에서 꺼내 그린다 (시안처럼 매 프레임 「이번 프레임에 그릴 것」을 다시 부른다: BeginFrame → Dog · Puff · Tree → EndFrame).
+    /// 장면마다 바뀌는 강아지 · 눈뭉치 · 나무 · 눈 소품(바위 · 눈더미 · 눈덩이) · 눈 알갱이는 풀에서 꺼내 그린다 (시안처럼 매 프레임 「이번 프레임에 그릴 것」을 다시 부른다: BeginFrame → Dog · Puff · Tree · Prop · Grain → EndFrame).
     /// 카메라는 렌더 텍스처에 그리고, 화면에는 연출 판의 RawImage 로 보인다. 눈송이 · 번쩍임 · 제목 · 도장은 덧그림 카메라가 같은 텍스처 위에 그린다 —
     /// 시안처럼 연출 전체가 한 장으로 흐려지게 (겹친 글자 겹 · 테두리가 흐려질 때 비치지 않게).
     /// 게임 화면의 3D 카메라에 걸리지 않게 시작할 때 캔버스 밖 먼 곳으로 떼어 놓는다 — 이 오브젝트는 연출이 지워질 때 같이 지운다.
@@ -46,6 +54,8 @@ namespace Chapchu.UI.Fx.Gaepan
         [SerializeField] private MeshFilter treePrefab;
         [Tooltip("전나무 넷 (시안 tree0 ~ tree3).")]
         [SerializeField] private Mesh[] treeMeshes;
+        [Tooltip("처형 장면의 눈 소품 (바위 · 눈더미 · 눈덩이) — 메시는 그릴 때 넣는다.")]
+        [SerializeField] private MeshFilter propPrefab;
 
         [Header("마을")]
         [Tooltip("나무를 심지 않는 자리 (x, z, 반지름) — 개집 · 가로등 · 눈사람 (시안 OCC).")]
@@ -69,8 +79,11 @@ namespace Chapchu.UI.Fx.Gaepan
         private readonly List<GaepanDog> _dogs = new List<GaepanDog>();
         private readonly List<MeshRenderer> _puffs = new List<MeshRenderer>();
         private readonly List<MeshFilter> _trees = new List<MeshFilter>();
-        private int _dogsUsed, _puffsUsed, _treesUsed;
-        private int _dogsShown, _puffsShown, _treesShown;
+        private readonly List<MeshFilter> _props = new List<MeshFilter>();
+        private readonly List<MeshRenderer> _grains = new List<MeshRenderer>();
+        private int _dogsUsed, _puffsUsed, _treesUsed, _propsUsed, _grainsUsed;
+        private int _dogsShown, _puffsShown, _treesShown, _propsShown, _grainsShown;
+        private Mesh _rock, _heap, _clod;
         private RenderTexture _texture;
         private Rect _box;
         private float _focal;
@@ -110,6 +123,7 @@ namespace Chapchu.UI.Fx.Gaepan
             Check(dogPrefab, nameof(dogPrefab));
             Check(puffPrefab, nameof(puffPrefab));
             Check(treePrefab, nameof(treePrefab));
+            Check(propPrefab, nameof(propPrefab));
             if (treeMeshes == null || treeMeshes.Length == 0)
                 missing.Add(nameof(treeMeshes));
             if (missing.Count > 0)
@@ -126,10 +140,16 @@ namespace Chapchu.UI.Fx.Gaepan
         private void OnDestroy()
         {
             ReleaseTexture();
+            Destroy(_rock);
+            Destroy(_heap);
+            Destroy(_clod);
         }
 
-        /// <summary>재생 준비 — 렌더 텍스처를 만들어 카메라 · 화면에 잇고, 한 프레임에 그릴 수만큼 풀을 채우고, 구름을 새로 만든다.</summary>
-        public void Begin(int dogCount, int puffCount, int treeCount)
+        /// <summary>
+        /// 재생 준비 — 렌더 텍스처를 만들어 카메라 · 화면에 잇고, 한 프레임에 그릴 수만큼 풀을 채우고, 구름을 새로 만든다.
+        /// propCount · grainCount = 처형 장면의 눈 소품 · 눈 알갱이 수 (3 단계는 0).
+        /// </summary>
+        public void Begin(int dogCount, int puffCount, int treeCount, int propCount = 0, int grainCount = 0)
         {
             int width = Mathf.Max(Screen.width, 2), height = Mathf.Max(Screen.height, 2);
             if (_texture == null || _texture.width != width || _texture.height != height)
@@ -145,6 +165,14 @@ namespace Chapchu.UI.Fx.Gaepan
             Fill(_dogs, dogCount, () => Instantiate(dogPrefab, actors));
             Fill(_puffs, puffCount, () => Instantiate(puffPrefab, actors));
             Fill(_trees, treeCount, () => Instantiate(treePrefab, actors));
+            if (_rock == null && (propCount > 0 || grainCount > 0))
+            {
+                _rock = GaepanSnowMeshes.BuildRock();
+                _heap = GaepanSnowMeshes.BuildHeap();
+                _clod = GaepanSnowMeshes.BuildClod();
+            }
+            Fill(_props, propCount, () => Instantiate(propPrefab, actors));
+            Fill(_grains, grainCount, CreateGrain);
             sky.BuildClouds();
             worldCamera.enabled = true;
             overlayCamera.enabled = true;
@@ -187,6 +215,8 @@ namespace Chapchu.UI.Fx.Gaepan
             _dogsUsed = 0;
             _puffsUsed = 0;
             _treesUsed = 0;
+            _propsUsed = 0;
+            _grainsUsed = 0;
         }
 
         /// <summary>부르지 않은 풀 오브젝트를 숨기고, 빛 · 안개 · 하늘 값을 넣는다.</summary>
@@ -195,6 +225,8 @@ namespace Chapchu.UI.Fx.Gaepan
             _dogsShown = Hide(_dogs, _dogsUsed, _dogsShown);
             _puffsShown = Hide(_puffs, _puffsUsed, _puffsShown);
             _treesShown = Hide(_trees, _treesUsed, _treesShown);
+            _propsShown = Hide(_props, _propsUsed, _propsShown);
+            _grainsShown = Hide(_grains, _grainsUsed, _grainsShown);
 
             Shader.SetGlobalVector(LightDirId, LightDirection);
             Shader.SetGlobalColor(SunId, sun);
@@ -246,6 +278,34 @@ namespace Chapchu.UI.Fx.Gaepan
             t.localScale = Vector3.one * height;
         }
 
+        /// <summary>눈 소품 하나 (시안 G3 의 rock · heap · clod). size = 크기, stretchY = 세로 늘림, yaw · roll 은 라디안.</summary>
+        public void Prop(GaepanProp kind, Vector3 position, float size, float stretchY, float yaw, float roll)
+        {
+            if (_propsUsed >= _props.Count)
+                return;
+            MeshFilter prop = _props[_propsUsed];
+            _propsUsed = Show(prop.gameObject, _propsUsed, _propsShown);
+            Mesh mesh = kind == GaepanProp.Rock ? _rock : kind == GaepanProp.Heap ? _heap : _clod;
+            if (prop.sharedMesh != mesh)
+                prop.sharedMesh = mesh;
+            Transform t = prop.transform;
+            t.localPosition = position;
+            t.localRotation = Quaternion.Euler(0f, yaw * Mathf.Rad2Deg, roll * Mathf.Rad2Deg);
+            t.localScale = new Vector3(size, size * stretchY, size);
+        }
+
+        /// <summary>눈 알갱이 하나 (시안 PT 의 알갱이 — 눈뭉치처럼 투명도 대신 크기로 사라진다). alpha 가 아주 작으면 그리지 않는다.</summary>
+        public void Grain(Vector3 position, float radius, float alpha)
+        {
+            if (alpha < 0.06f || _grainsUsed >= _grains.Count)
+                return;
+            MeshRenderer grain = _grains[_grainsUsed];
+            _grainsUsed = Show(grain.gameObject, _grainsUsed, _grainsShown);
+            Transform t = grain.transform;
+            t.localPosition = position;
+            t.localScale = Vector3.one * (radius * Mathf.Pow(Mathf.Min(1f, alpha), 0.55f));
+        }
+
         /// <summary>땅 높이 — 마을 평지는 0, 연못은 살짝 파였고, 바깥은 언덕 (시안 D3R.groundH).</summary>
         public static float GroundHeight(float x, float z)
         {
@@ -291,6 +351,14 @@ namespace Chapchu.UI.Fx.Gaepan
             worldCamera.fieldOfView = 2f * Mathf.Atan(height / (2f * _focal)) * Mathf.Rad2Deg;
             worldCamera.nearClipPlane = nearClip;
             worldCamera.farClipPlane = farClip;
+        }
+
+        // 눈 알갱이 = 눈뭉치 프리팹(눈 머티리얼 · 그림자)에 작은 눈덩이 메시
+        private MeshRenderer CreateGrain()
+        {
+            MeshRenderer grain = Instantiate(puffPrefab, actors);
+            grain.GetComponent<MeshFilter>().sharedMesh = _clod;
+            return grain;
         }
 
         private void ReleaseTexture()

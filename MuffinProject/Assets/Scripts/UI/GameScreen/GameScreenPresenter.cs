@@ -99,6 +99,7 @@ namespace Chapchu.UI.GameScreen
         private bool _resolving;       // 체인 처리 중 — 효과 적용(OnCardResolved)부터 체인이 버림 더미로 갈 때까지. 이때 뽑은 카드만 「+n장」
         private HpSource _hpSource;    // 뒤따르는 HP 변화가 무엇에서 왔는지 — 다른 단계를 줄 세우면 보통으로 돌아간다
         private int _gaepanLoser = -1; // 개판 판정의 HP 0 은 피해가 아니라 설정 (11-card-list 1021) — 연출 없이
+        private int _gaepanCaster = -1; // 개판을 건 사람 — 처형 장면에서 그 사람의 강아지가 뭉치를 이끈다
         private DrawBatch _drawBatch;  // 바로 앞에 줄 세운 단계가 효과로 뽑은 카드면 그 묶음 — 같은 사람이 이어 뽑으면 붙인다
 
         private enum HpSource { Normal, Fallout, Quiet }
@@ -266,6 +267,7 @@ namespace Chapchu.UI.GameScreen
             _resolving = false;
             _hpSource = HpSource.Normal;
             _gaepanLoser = -1;
+            _gaepanCaster = -1;
             _drawBatch = null;
         }
 
@@ -1032,9 +1034,13 @@ namespace Chapchu.UI.GameScreen
             history.ShowChoiceMade(actor, option, timedOut, kind);
         }
 
-        // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
-        private void HandleGaepanChanged(int caster, int left, bool again) =>
+        // 개판 오분전 (1021, 프로토타입 v2) — 시작 제목 → 자명종, 바퀴마다 자명종, 판정 팻말 → 처형 장면. 판정 기록 줄은 팻말이 꼴찌를 보인 뒤에 (먼저 쓰면 알림 칩이 결과를 미리 알린다)
+        private void HandleGaepanChanged(int caster, int left, bool again)
+        {
+            if (caster != -1)
+                _gaepanCaster = caster;
             Enqueue(() => { history.ShowGaepan(caster, left, again, left == Chapchu.Game.GameServer.GaepanRounds); return gaepan.ChangedRoutine(left); });
+        }
 
         private void HandleGaepanJudged(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
@@ -1044,8 +1050,32 @@ namespace Chapchu.UI.GameScreen
 
         private IEnumerator GaepanJudgedRoutine(int loser, bool byHp, int value, int[] tied, int[] actors, int[] values)
         {
+            // 처형 장면(10-ui.md 「개판 처형 장면」)은 팻말이 도는 동안 미리 읽어 둔다 — 팻말이 끝나자마자 이어지게. 개발자 도구 「이펙트 끄기」 면 건너뛴다
+            CardData card = DevToolsPanel.EffectsOff ? null : FindGaepanCard();
+            Chapchu.UI.Fx.Gaepan.GaepanFx execution = null;
+            Coroutine loading = card != null ? StartCoroutine(cardFx.PrepareGaepanExecutionRoutine(card, prepared => execution = prepared)) : null;
+
             yield return gaepan.JudgedRoutine(loser, byHp, actors, values);
             history.ShowGaepanJudged(loser, byHp, value, tied);
+
+            if (loading != null)
+                yield return loading;
+            if (execution == null)
+                yield break;
+            List<CardFxSeat> fxSeats = CreateFxSeats();
+            int caster = _gaepanCaster;
+            yield return cardFx.PlayGaepanExecutionRoutine(execution, card, fxSeats.Find(seat => seat.Actor == caster), fxSeats.Find(seat => seat.Actor == loser), fxSeats);
+        }
+
+        // 이 덱의 개판 오분전 카드 (개판을 거는 효과가 있는 카드) — 처형 장면의 연출 프리팹 · 소리를 이 카드 번호로 찾는다
+        private CardData FindGaepanCard()
+        {
+            foreach (DeckData.Entry entry in cardDeck.Entries)
+            {
+                if (entry.card != null && entry.card.effects.Exists(effect => effect is Chapchu.Game.Effects.StartGaepanEffect))
+                    return entry.card;
+            }
+            return null;
         }
 
         // 체인의 카드가 버림 더미 대신 시전자 손패로 (04-card.md 7절 「손패로 반환」) — 내 것은 손패에 다시 붙고, 남의 것은 그 좌석으로 돌아간다.

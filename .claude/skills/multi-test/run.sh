@@ -1288,8 +1288,8 @@ run_gaepan() {
         sleep 2
         console_lines "$MAIN" | grep -q '\[GameDebugInput\].*개판 판정 — ' && break
     done
-    log "▶ 판정 공개 · 사망 처리 대기"
-    sleep 20
+    log "▶ 판정 공개(팻말 → 처형 장면) · 사망 처리 대기"
+    sleep 27
     for project in "${EDITORS[@]}"; do
         out=$(call "$project" GaepanHud)
         case "$out" in "OK NONE"|"WAIT 게임 화면 아님") ;; *) fail "$(name_of "$project") 판정 뒤에도 자명종이 남았다: $out" ;; esac # 2인 판은 판정 사망으로 끝나 결과 화면으로 넘어간다
