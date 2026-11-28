@@ -243,11 +243,13 @@ namespace Chapchu.UI.GameScreen
             Transform t = card.transform;
             t.SetParent(transform.parent, true);
             card.SetRaycastBlocking(false);
+            topLayer.Set(card, true); // HUD 위에서 날아간다 — 내 패널 · 칸의 점선 빈칸(HUD)이 날아드는 카드를 덮지 않게
             t.DOKill();
             t.DOMove(slot.position, trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);
             t.DORotateQuaternion(slot.rotation * Quaternion.Euler(0f, 180f, 0f), trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject); // 뒷면으로 눕는다
             t.DOScale(slot.lossyScale, trapSetDuration).SetEase(Ease.InQuad).SetLink(card.gameObject);
             yield return new WaitForSeconds(trapSetDuration);
+            topLayer.Set(card, false); // 지우기 전에 내린다 (TopCardLayerView)
             Destroy(card.gameObject);
         }
 

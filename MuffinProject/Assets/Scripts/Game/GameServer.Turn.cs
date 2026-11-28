@@ -152,13 +152,14 @@ namespace Chapchu.Game
         }
 
         // 참가자 순서를 무작위로 섞어 턴 순서를 정하고 첫 사람에게 턴을 준다 (03-turn.md 6절).
-        private void StartFirstTurn()
+        // openingSeconds > 0 이면 그동안 첫 턴이 멈춰 있다 — 화면의 게임 시작 연출 (01-game-flow.md 3절 #8).
+        private void StartFirstTurn(double openingSeconds)
         {
             _turnOrder.Clear();
             _turnOrder.AddRange(_players.Keys);
             Shuffle(_turnOrder);
 
-            SetTurn(_turnOrder[0]);
+            SetTurn(_turnOrder[0], openingSeconds);
         }
 
         // 턴을 넘기는 곳은 여기 하나다 — 뽑기 · 카드 사용 · 시간 초과 · 나감이 모두 이걸 부른다.
@@ -237,7 +238,9 @@ namespace Chapchu.Game
             DelayTurnUntil(SettleAfter(_clock()));
         }
 
-        private void SetTurn(int actor)
+        // holdSeconds > 0 — 그동안 멈춘 채로 시작한다 (게임 시작 연출). 멈춤은 끼어든 체인의 후처리와 같은 _resumeAt 이라 요청 거절 · 봇 대기 · 마감 미루기가 같이 된다.
+        // 알리는 마감은 멈춘 만큼 늦춘 값 — 풀릴 때 UpdateTurnClock 이 늘린 마감과 같다. 화면 타이머는 15초로 멈춰 보인다 (TurnTimerPresenter 가 15초로 자른다).
+        private void SetTurn(int actor, double holdSeconds = 0)
         {
             EndTurnStatus(CurrentTurnActor);
             CurrentTurnActor = actor;
@@ -245,12 +248,12 @@ namespace Chapchu.Game
             _turnDeadline = _lastTickAt + TurnLength; // 개발자 도구 「턴 시간 무제한」 이면 아주 길다 (GameServer.Dev)
             _mainActionUsed = false;
             _nextTurnAt = -1;
-            _resumeAt = -1;
+            _resumeAt = holdSeconds > 0 ? _lastTickAt + holdSeconds : -1;
             _turnPaused = false;
             _turnEndStage = TurnEndStageNone;
             TurnSerial++;
 
-            _events.Add(new TurnStarted(actor, _turnDeadline));
+            _events.Add(new TurnStarted(actor, _turnDeadline + System.Math.Max(0, holdSeconds)));
             BeginTurnStatus(actor);
 
             // 다음 실제 턴 시작에 더 뽑기 (T15) — 메인 행동이 아니다

@@ -11,6 +11,7 @@ namespace Chapchu.Network.Events
     public static class GameEvents
     {
         // ── 전원에게 ──
+        public static event Action<int[], double> OnGameStarted;             // order(섞은 턴 순서), openingSeconds(첫 턴이 멈춰 있는 초) — 새 판 시작 알림 묶음의 맨 앞, 이때만 게임 시작 연출 (10-ui.md 5-2)
         public static event Action<int, int> OnHpChanged;                    // actorNumber, hp
         public static event Action<int, int, int> OnCardDrawn;               // actorNumber, handCount, deckCount — 카드 내용은 OnMyCardDrawn
         public static event Action<int> OnDeckRefilled;                      // deckCount — 버림 더미를 섞어 덱을 다시 채움
@@ -64,6 +65,7 @@ namespace Chapchu.Network.Events
         public static void RaiseHpChanged(int actorNumber, int hp) => OnHpChanged?.Invoke(actorNumber, hp);
         public static void RaiseCardDrawn(int actorNumber, int handCount, int deckCount) => OnCardDrawn?.Invoke(actorNumber, handCount, deckCount);
         public static void RaiseDeckRefilled(int deckCount) => OnDeckRefilled?.Invoke(deckCount);
+        public static void RaiseGameStarted(int[] order, double openingSeconds) => OnGameStarted?.Invoke(order, openingSeconds);
         public static void RaiseTurnStarted(int actorNumber, double deadline) => OnTurnStarted?.Invoke(actorNumber, deadline);
         public static void RaiseCardPlayed(int actorNumber, int cardInstanceId, int cardId, int[] targets, int handCount, int discardCount) => OnCardPlayed?.Invoke(actorNumber, cardInstanceId, cardId, targets, handCount, discardCount);
         public static void RaiseReactionStarted(double opensAt) => OnReactionStarted?.Invoke(opensAt);

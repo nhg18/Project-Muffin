@@ -195,6 +195,9 @@ namespace Chapchu.UI.GameScreen
         /// <summary>내 캐릭터 가운데(화면 좌표) — 대상 표시 점선이 닿는 자리.</summary>
         public Vector2 CharacterScreenPoint => character.rectTransform.TransformPoint(character.rectTransform.rect.center);
 
+        /// <summary>게임 시작 연출에서 내 카드가 닿을 때 튀어나오는 것 — 내 캐릭터 · 내 HUD (10-ui.md 5-2).</summary>
+        public RectTransform[] IntroParts => new[] { character.rectTransform, (RectTransform)transform };
+
         public void OnPointerClick(PointerEventData eventData)
         {
             if (eventData.button != PointerEventData.InputButton.Left) return;

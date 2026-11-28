@@ -50,8 +50,8 @@ namespace Chapchu.UI.GameScreen
         /// <summary>덱 잔여 장수 — 누가 뽑든 · 다시 채워지든 전원에게 온다.</summary>
         public void ShowDeckCount(int deckCount) => _view.SetDeckCount(deckCount);
 
-        /// <summary>「뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다).</summary>
-        public void ShowCanDraw(bool canDraw) => _view.SetCanDraw(canDraw && !_drawRequested);
+        /// <summary>「n장 뽑고 턴 끝」 버튼을 보일지 — 표시만, 판정은 방장이 한다 (안 되면 거절이 온다). drawCount = 이번에 뽑는 장수 (10-ui.md 5-2 「뽑기 안내」).</summary>
+        public void ShowCanDraw(bool canDraw, int drawCount) => _view.SetCanDraw(canDraw && !_drawRequested, drawCount);
 
         /// <summary>턴이 바뀌었다 — 다음 내 턴에 다시 뽑을 수 있다.</summary>
         public void ShowTurnChanged() => _drawRequested = false;
@@ -59,7 +59,7 @@ namespace Chapchu.UI.GameScreen
         private void HandleDrawClicked()
         {
             _drawRequested = true;
-            _view.SetCanDraw(false);
+            _view.SetCanDraw(false, 0);
             server?.RequestDraw();
         }
 

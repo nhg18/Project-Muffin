@@ -121,7 +121,8 @@ namespace Chapchu.Network
                 _bots = CreateBots(bots);
 
             _started = true;
-            IReadOnlyList<GameEvent> started = _server.StartGame(actors, cards, bots); // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절)
+            // 봇은 시간 초과 자동 행동 · 강제 퇴장 대상이 아니다 (18-bot.md 11절). 첫 턴은 화면의 게임 시작 연출 동안 멈춘다 (01-game-flow.md 3절 #8)
+            IReadOnlyList<GameEvent> started = _server.StartGame(actors, cards, bots, GameServer.OpeningSeconds(actors.Length));
             // 섞은 턴 순서를 첫 턴 알림보다 먼저 — 화면의 턴 순서가 좌석 순서가 아니라 이 순서를 그린다 (03-turn.md 6절 #2)
             NetworkManager.Instance.SetRoomProps(new Hashtable { [RoomProps.TurnOrder] = _server.TurnOrder.ToArray() });
             Send(started);
@@ -527,6 +528,10 @@ namespace Chapchu.Network
                         roomProps[RoomProps.DeckCount] = refilled.DeckCount;
                         roomProps[RoomProps.DiscardCount] = 0;
                         roomProps[RoomProps.DiscardTop] = null; // 값이 null 이면 Photon 이 키를 지운다
+                        break;
+
+                    case GameStarted started:
+                        Broadcast(nameof(RPC_OnGameStarted), started.Order, started.OpeningSeconds);
                         break;
 
                     case TurnStarted turn:
@@ -941,6 +946,13 @@ namespace Chapchu.Network
         {
             if (Accept(seq, info))
                 GameEvents.RaiseDeckRefilled(deckCount);
+        }
+
+        [PunRPC]
+        private void RPC_OnGameStarted(int seq, int[] order, double openingSeconds, PhotonMessageInfo info)
+        {
+            if (Accept(seq, info))
+                GameEvents.RaiseGameStarted(Ints(order), openingSeconds);
         }
 
         [PunRPC]

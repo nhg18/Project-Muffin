@@ -95,5 +95,8 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>내 캐릭터 가운데(화면 좌표).</summary>
         public Vector2 CharacterScreenPoint => _view.CharacterScreenPoint;
+
+        /// <summary>게임 시작 연출에서 튀어나오는 내 캐릭터 · HUD.</summary>
+        public RectTransform[] IntroParts => _view.IntroParts;
     }
 }

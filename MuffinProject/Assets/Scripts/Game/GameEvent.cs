@@ -51,6 +51,22 @@
         }
     }
 
+    /// <summary>
+    /// 게임이 시작됐다 (01-game-flow.md 3절) — 시작 알림 묶음의 맨 앞, 한 판에 한 번. Order = 섞은 턴 순서, OpeningSeconds = 첫 턴이 멈춰 있는 초.
+    /// 화면은 이걸 받았을 때만 게임 시작 연출(10-ui.md 5-2)을 튼다 — 늦게 연 화면 · 다시 들어온 사람 · 대폭발 새 판에는 오지 않는다.
+    /// </summary>
+    public sealed class GameStarted : GameEvent
+    {
+        public int[] Order { get; }
+        public double OpeningSeconds { get; }
+
+        public GameStarted(int[] order, double openingSeconds)
+        {
+            Order = order;
+            OpeningSeconds = openingSeconds;
+        }
+    }
+
     /// <summary>턴이 시작됐다 (03-turn.md). Deadline 은 마감 서버 시각(초) — 남은 시간은 각 클라이언트가 계산한다 (09-network.md 8절).</summary>
     public sealed class TurnStarted : GameEvent
     {

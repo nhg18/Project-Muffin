@@ -231,6 +231,17 @@ namespace Chapchu.UI.GameScreen
             return true;
         }
 
+        /// <summary>게임 시작 연출에서 튀어나오는 상대 좌석 전체 (캐릭터 · 이름표 · 손패). 좌석이 없으면(나 · 나간 사람) false.</summary>
+        public bool TryGetIntroParts(int actorNumber, out RectTransform[] parts)
+        {
+            parts = null;
+            if (!_seatOf.TryGetValue(actorNumber, out OpponentSeatView seat))
+                return false;
+
+            parts = new[] { (RectTransform)seat.transform };
+            return true;
+        }
+
         /// <summary>상대의 4 단계 공통 연출 자리 (ResultFx). 좌석이 없으면(나 · 나간 사람) false.</summary>
         public bool TryGetFxSeat(int actorNumber, out ResultFx.Seat fxSeat)
         {
