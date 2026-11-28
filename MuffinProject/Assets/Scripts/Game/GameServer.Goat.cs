@@ -54,6 +54,12 @@ namespace Chapchu.Game
         // 그 사람의 HP 가 올라갈 수 있는 끝 — GOAT 동안은 GOAT 의 최대 HP. 아니면 100, 100 을 넘겨 남은 HP 는 지금 값이 끝이다 (06 2절).
         private int HpCapOf(PlayerState player) => player.GoatTurns > 0 ? player.GoatMaxHp : Math.Max(MaxHp, player.Hp);
 
+        /// <summary>actor 의 HP 가 지금 올라갈 수 있는 끝 — 회복 효과 · 봇 점수의 「최대 HP」 (06 2절). 100 을 박아 쓰지 않는다.</summary>
+        internal int HpCap(int actor) => HpCapOf(_players[actor]);
+
+        /// <summary>actor 가 최대 HP 까지 모자란 양 — 「HP 를 모두 채운다」(3012 편안)의 회복량.</summary>
+        internal int MissingHp(int actor) => Math.Max(0, HpCap(actor) - _players[actor].Hp);
+
         /// <summary>by 가 actor 에게 주는 피해 amount 를 지금 읽을 값 — by 가 GOAT 면 배로. 자기 피해 · 주인 없는 피해(-1)는 그대로.</summary>
         internal int DamageFrom(int by, int actor, int amount) =>
             by != actor && _players.TryGetValue(by, out PlayerState giver) && giver.GoatTurns > 0 ? amount * giver.GoatDamageTimes : amount;

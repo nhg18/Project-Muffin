@@ -159,8 +159,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
-  m_sharedMaterial: {fileID: 7808681615074698495, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
+  m_sharedMaterial: {fileID: 525092245739306415, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -531,7 +531,7 @@ MonoBehaviour:
   glow: {fileID: 21300000, guid: a3d52e457fa619a45aa3de372c056974, type: 3}
   streak: {fileID: 21300000, guid: 93ee8ae0c22e6b0469ca196b481ffe6e, type: 3}
   starburst: {fileID: 21300000, guid: 2c33c3efcc732c046a5319a06a021885, type: 3}
-  boomFont: {fileID: 11400000, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
+  boomFont: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   ink: {r: 0.16862746, g: 0.15686275, b: 0.3372549, a: 1}
 --- !u!223 &703031504
 Canvas:
@@ -832,8 +832,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\uB300\uC0C1"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
-  m_sharedMaterial: {fileID: 7808681615074698495, guid: 5fe1be9fcdd024949a190edf62ae8f94, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
+  m_sharedMaterial: {fileID: 525092245739306415, guid: 4d7a22c4c7dcaae4a9b2e2ebc99faa08, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

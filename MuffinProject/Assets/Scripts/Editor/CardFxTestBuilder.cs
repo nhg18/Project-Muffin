@@ -41,7 +41,7 @@ namespace Chapchu.EditorTools
         private const string HellBladeSprites = SpriteFolder + "/HellBlade/";
         private const string CommonSprites = SpriteFolder + "/Common/";
         private const string HandCardPrefabFolder = "Assets/Prefab/UI/GameScreen";
-        private const string BoldFontAssetPath = "Assets/Fonts/GlaMuri/Galmuri11-Bold SDF.asset";
+        private const string BoldFontAssetPath = "Assets/Fonts/Pretendard/Pretendard Bold SDF.asset"; // 이름표 · 버튼 · 숫자 (21-font 4절)
         private const string ResultFontPath = "Assets/Fonts/Taebaek/Taebaek SDF.asset";              // 4 단계 터지는 글자 (게임 화면과 같은 글꼴)
         private const string ResultFontMaterialPath = "Assets/Fonts/Taebaek/Taebaek SDF - Outline.mat"; // 흰 글자 + 잉크 테
         private const string BackgroundPath = "Assets/Sprites/UI/Background/bg_ingame.png";

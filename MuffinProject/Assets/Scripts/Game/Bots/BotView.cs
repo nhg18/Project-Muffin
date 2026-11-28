@@ -151,7 +151,7 @@ namespace Chapchu.Game.Bots
         public double HealScore(int actor, int amount)
         {
             int hp = Server.PlayerHp(actor);
-            int healed = Math.Min(amount, GameServer.MaxHp - hp);
+            int healed = Math.Min(amount, Server.HpCap(actor) - hp); // 최대 HP 는 사람마다 — GOAT 는 200 (06 2절)
             if (healed <= 0)
                 return 0;
             if (actor != Bot)

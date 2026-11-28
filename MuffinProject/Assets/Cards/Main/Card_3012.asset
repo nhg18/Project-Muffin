@@ -40,7 +40,8 @@ MonoBehaviour:
       type: {class: HealEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data:
         subject: 1
-        amount: 100
+        amount: 0
+        full: 1
     - rid: 5046878840515723270
       type: {class: ClearStatusEffect, ns: Chapchu.Game.Effects, asm: Chapchu.Game}
       data:

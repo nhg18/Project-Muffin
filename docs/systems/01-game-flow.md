@@ -1,6 +1,6 @@
 # 01. 게임플레이 흐름
 
-**최종 수정일**: 2026-11-26 (2절 로비 = 「랜덤 매칭」(매치) · 방 생성 · 참가는 개발자 모드 · 매치 방은 저절로 시작 — `08-room` 4절, PM). 이전: 2026-11-07
+**최종 수정일**: 2026-11-28 (씬 빌드 순서 · 전역 매니저 4종 · 타이틀 접속 시점 — 지금 프로젝트대로). 2026-11-26 (2절 로비 = 「랜덤 매칭」(매치) · 방 생성 · 참가는 개발자 모드 · 매치 방은 저절로 시작 — `08-room` 4절, PM). 이전: 2026-11-07
 **분류**: Core(플레이) / MVP(로비·방·로그인 — `23-login`)
 
 ---
@@ -54,8 +54,8 @@
 | `LobbyScene` | 로비 | 1 | 사용 중 |
 | `RoomScene` | 방 대기 | 2 | 사용 중 |
 | `GameScene` | 인게임 | 3 | 사용 중 |
-| `ResultScene` | 결과 화면 (`07-win-condition` 11절 · `10-ui` 10절, 2026-11-17) | 5 | 사용 중 |
-| `DebugLobbyScene` | 개발용 즉시 입장 | 4 | 개발 전용 |
+| `ResultScene` | 결과 화면 (`07-win-condition` 11절 · `10-ui` 10절, 2026-11-17) | 4 | 사용 중 |
+| `DebugLobbyScene` | 개발용 즉시 입장 | 5 | 개발 전용 |
 
 > 방(Room)에서 나가면 `LobbyScene` 으로 돌아간다.
 
@@ -68,8 +68,10 @@
 
 | 매니저 | 프리팹 | 비고 |
 | --- | --- | --- |
-| `NetworkManager` | `Resources/Bootstrap/NetworkManager.prefab` | 자신의 `Start()` 에서 접속을 시작한다 |
+| `NetworkManager` | `Resources/Bootstrap/NetworkManager.prefab` | 타이틀에서 시작하면 약관 동의 · 로그인 뒤에 접속한다 (`23-login` 3절 #9). 다른 씬(디버그 로비 등)에서 시작하면 `Start()` 에서 바로 접속 |
 | `PopupManager` | `Resources/Bootstrap/PopupManager.prefab` | 팝업 캔버스 · 레이어 3종 포함 |
+| `SoundManager` | `Resources/Bootstrap/SoundManager.prefab` | 배경음 · 효과음 |
+| `ScreenTransition` | `Resources/Bootstrap/ScreenTransition.prefab` | 화면 전환 연출 (`15-screen` 9절) |
 
 덕분에 **어느 씬에서 Play 를 눌러도 동일하게 동작한다.** 매니저를 씬에 배치할 필요가 없고,
 씬에 이미 배치돼 있어도 싱글톤 중복 방지 로직이 씬 쪽 사본을 정리한다.
