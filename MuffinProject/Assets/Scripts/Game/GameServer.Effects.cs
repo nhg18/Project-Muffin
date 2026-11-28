@@ -489,6 +489,9 @@ namespace Chapchu.Game
 
         internal int PlayerHp(int actor) => _players[actor].Hp;
         internal int HandCountOf(int actor) => _players[actor].Hand.Count;
+
+        /// <summary>0 ~ count − 1 중 무작위 하나 — 방장의 난수 (사람에게 고르게 하던 효과를 무작위로, 2026-11-28 PM).</summary>
+        internal int RandomIndex(int count) => _random.Next(count);
         internal int TrapCountOf(int actor) => _players[actor].Traps.Count;
 
         // ── 내부 ──
