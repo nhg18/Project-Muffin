@@ -47,7 +47,7 @@
     },
     {
       "id": 1013, "name": "기억 삭제", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "상대 모두 손패를 모두 버리고, 5장씩 뽑는다",
+      "text": "상대 모두 손패를 전부 버리고, 5장씩 뽑는다",
       "effects": [ { "type": "RedealHandEffect", "args": "subject=Target" } ]
     },
     {
@@ -67,7 +67,7 @@
     },
     {
       "id": 1008, "name": "영역전개", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Gaepan", "count": 1,
-      "text": "{0}바퀴 동안 내 턴 시작마다 상대 모두에게서 {1}장씩 빼앗고 {2} 피해를 준다",
+      "text": "{0}바퀴 동안 내 턴 시작마다 상대 모두에게서 {1}장씩 빼앗고, {2} 피해를 준다",
       "effects": [ { "type": "StartDomainEffect", "args": "rounds=2, take=1, damage=10" } ]
     },
     {
@@ -82,7 +82,7 @@
     },
     {
       "id": 1019, "name": "목표 조준", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Rare", "count": 3,
-      "text": "손패 모두 버리기와 {0} 피해 중 하나를 무작위로 준다",
+      "text": "손패 모두 버리기와 {0} 피해 중 하나를 고르게 한다",
       "effects": [ { "type": "DiscardOrDamageEffect", "args": "amount=80, seconds=5" } ]
     },
     {
@@ -92,7 +92,7 @@
     },
     {
       "id": 1021, "name": "개판 오분전", "type": "Action", "target": "Everyone", "targetCondition": "None", "grade": "Gaepan", "count": 1,
-      "text": "5바퀴 뒤 HP 꼴찌나 손패 꼴찌가 HP 0이 된다",
+      "text": "5바퀴 뒤, HP 꼴찌나 손패 꼴찌는 HP 0이 된다",
       "effects": [ { "type": "StartGaepanEffect", "args": "" } ]
     },
     {
@@ -106,13 +106,13 @@
       "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" }, { "type": "StealEffect", "args": "count=1" } ]
     },
     {
-      "id": 1012, "name": "대소동", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
+      "id": 1012, "name": "대폭발", "type": "Action", "target": "None", "targetCondition": "None", "grade": "Gaepan", "count": 1,
       "text": "새 판을 시작한다. 이후 턴마다 모두 점점 커지는 피해를 받는다",
       "effects": [ { "type": "RestartEffect", "args": "" } ]
     },
     {
       "id": 2003, "name": "진짜 할거야?", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "방금 나온 행동 카드를 막는다. 막은 카드는 쓴 사람 손패로 돌아간다",
+      "text": "방금 나온 행동 카드를 막고, 쓴 사람 손패로 돌려보낸다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "Any",
       "effects": [ { "type": "ReturnToHandEffect", "args": "" } ]
@@ -147,7 +147,7 @@
     },
     {
       "id": 2021, "name": "으르렁", "type": "Counter", "target": "TriggerSource", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "나에게 오는 행동 카드를 막고, 쓴 사람은 2장을 버린다. 대신 나도 1장을 버린다",
+      "text": "나에게 오는 행동 카드를 막고, 쓴 사람은 2장을 버린다. 대신 나는 1장을 버린다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DiscardEffect", "args": "subject=Target, count=2" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
@@ -175,7 +175,7 @@
     },
     {
       "id": 2018, "name": "물귀신", "type": "Counter", "target": "OneNotDamaged", "targetCondition": "None", "grade": "Fine", "count": 1,
-      "text": "나에게 오는 피해를 고른 1명도 같이 받는다",
+      "text": "나에게 오는 피해를 1명도 같이 받게 한다",
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
       "effects": [ { "type": "ShareDamageEffect", "args": "" } ]
@@ -231,7 +231,7 @@
     },
     {
       "id": 3012, "name": "편안", "type": "Trap", "target": "Self", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "턴 · 행동 · 뽑기를 막는 카드에 당한 뒤 → HP를 모두 채우고, 찹츄를 뺀 상태를 모두 푼다",
+      "text": "막는 카드에 당한 뒤 → HP를 모두 채우고, 걸린 상태를 모두 푼다 (찹츄 빼고)",
       "art": "",
       "trapTrigger": "AfterBlocked", "triggerValue": 0,
       "effects": [ { "type": "HealEffect", "args": "subject=Self, amount=100" }, { "type": "ClearStatusEffect", "args": "subject=Self" } ]

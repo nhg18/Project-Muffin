@@ -135,7 +135,7 @@ namespace Chapchu.Game
             w.Ints(Ids(_discardPile));
             w.Ints(Ids(_allCards));
 
-            // 개판 · 대소동
+            // 개판 · 대폭발
             w.Int(_gaepanCaster);
             w.Int(_gaepanLeft);
             w.Int(_gaepanTurns);
@@ -351,7 +351,7 @@ namespace Chapchu.Game
             ReadCards(_discardPile);
             ReadCards(_allCards);
 
-            // 개판 · 대소동
+            // 개판 · 대폭발
             _gaepanCaster = r.Int();
             _gaepanLeft = r.Int();
             _gaepanTurns = r.Int();
@@ -428,7 +428,7 @@ namespace Chapchu.Game
                 _choiceDeadline = now + ChoiceSeconds;
                 if (!departed.Contains(_choiceActor))
                     _events.Add(new ChoiceStarted(_choiceActor, _choiceEntry.User, _choiceEntry.Card.CardId, _players[_choiceActor].Hand.Count,
-                        _choiceEffect is DiscardOrDamageEffect option ? Scaled(_choiceEntry, option.amount) : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
+                        _choiceEffect is DiscardOrDamageEffect option ? ExpectedDamage(_choiceEntry, _choiceActor, option.amount) : 0, now, _choiceDeadline, IsHandChoice ? ChoiceKind.HandCard : ChoiceKind.Options));
             }
 
             if (IsGaepanJudging)

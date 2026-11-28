@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 타원 그라데이션 — CSS radial-gradient(ellipse, …) 처럼 가운데(0)에서 가장자리(1)로 색 · 알파 키마다 고리를 놓고 그 사이를 잇는다 (시안 「대소동」 글자 뒤 어둠).
+    /// 타원 그라데이션 — CSS radial-gradient(ellipse, …) 처럼 가운데(0)에서 가장자리(1)로 색 · 알파 키마다 고리를 놓고 그 사이를 잇는다 (시안 「대폭발」 글자 뒤 어둠).
     /// 타원 = 이 칸에 꽉 차는 크기. 색은 <see cref="gradient"/> × Graphic.color.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]

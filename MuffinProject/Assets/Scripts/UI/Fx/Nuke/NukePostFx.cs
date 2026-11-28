@@ -3,7 +3,7 @@
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 3D 장면 카메라의 후처리 — 시안 NUKE3D GX.finish 와 같은 순서 (주변광 차폐 → 블룸 → 심도 → 빛줄기 → 마무리).
+    /// 「대폭발」 3D 장면 카메라의 후처리 — 시안 NUKE3D GX.finish 와 같은 순서 (주변광 차폐 → 블룸 → 심도 → 빛줄기 → 마무리).
     /// 값은 <see cref="NukeSceneFx"/> 가 매 프레임 <see cref="Apply"/> 로 넣는다. 셰이더는 Sprites/CardFx/Nuke/Shaders/NukePost.
     /// </summary>
     [RequireComponent(typeof(Camera))]

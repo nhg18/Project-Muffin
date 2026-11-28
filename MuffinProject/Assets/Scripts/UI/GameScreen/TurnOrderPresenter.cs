@@ -14,7 +14,7 @@ namespace Chapchu.UI.GameScreen
     /// 턴 순서에 값을 넣는다 (통합 화면 UI v3 .tord · 03-turn.md 6 · 7절). 순서는 방장이 섞은 실제 턴 순서(방 속성 turnOrder, PlayerLook.TurnOrderActors) — 봇 포함. 나는 「나」.
     /// 줄은 지금 턴인 사람부터 진행 방향으로 쌓는다 — 맨 위가 지금 턴, 그 아래가 다음 차례 (10-ui.md 2-1 「턴 순서」). 턴 · 방향이 바뀔 때마다 줄을 다시 만든다.
     /// 얼굴은 그 사람의 캐릭터 모습(OpponentSeatsPresenter.LookOf — 봇은 봇마다 다르다). 턴 · HP · 찹츄 · 생사 · 방향은 GameScreenPresenter 가 연출 큐에서 넘긴다.
-    /// 순서가 오거나(시작 · 대소동 새 판) 누가 나가면 줄을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
+    /// 순서가 오거나(시작 · 대폭발 새 판) 누가 나가면 줄을 다시 만든다 — 큐 밖. 늦게 열렸을 때는 Start 에서 스냅샷을 한 번 읽는다 (09-network.md 6.1).
     /// </summary>
     [RequireComponent(typeof(TurnOrderView))]
     public class TurnOrderPresenter : MonoBehaviour
@@ -90,31 +90,6 @@ namespace Chapchu.UI.GameScreen
             RebuildRows();
         }
 
-        /// <summary>
-        /// 「내 턴이 아니에요」 안내 (10-ui.md 8-2) — 지금 턴인 사람의 이름과, 그 사람 다음부터 내 앞까지 남은 사람 수(사망은 건너뛴다).
-        /// 지금 턴인 줄을 톡 튀운다. 지금 턴을 모르거나 내 턴이면 false.
-        /// </summary>
-        public bool TryDescribeWait(int me, out string turnName, out int before)
-        {
-            turnName = null;
-            before = 0;
-            int current = _actors.IndexOf(_turnActor);
-            int mine = _actors.IndexOf(me);
-            if (current < 0 || mine < 0 || current == mine) return false;
-
-            int step = _reversed ? -1 : 1;
-            int count = _actors.Count;
-            for (int i = (current + step + count) % count; i != mine; i = (i + step + count) % count)
-            {
-                if (!_life.TryGetValue(_actors[i], out LifeState life) || life != LifeState.Dead)
-                    before++;
-            }
-
-            turnName = PlayerLook.NameOf(_turnActor);
-            _view.Ping(_rowActors.IndexOf(_turnActor));
-            return true;
-        }
-
         /// <summary>찹츄 상태 (OnChapchuChanged) — 지금 턴 꼬리표의 형광펜이 분홍 + 왕관.</summary>
         public void ShowChapchu(int actorNumber, bool isChapchu)
         {
@@ -148,7 +123,7 @@ namespace Chapchu.UI.GameScreen
             _view.SetHp(_rowActors.IndexOf(actorNumber), alive ? (float)hp / GameServer.MaxHp : 0f);
         }
 
-        // 방장이 섞은 턴 순서를 다시 읽고 줄을 만든다 (시작 · 대소동 새 판 · 누가 나감)
+        // 방장이 섞은 턴 순서를 다시 읽고 줄을 만든다 (시작 · 대폭발 새 판 · 누가 나감)
         private void ReadTurnOrder()
         {
             _actors.Clear();
@@ -186,7 +161,7 @@ namespace Chapchu.UI.GameScreen
             _view.SetCurrent(_rowActors.IndexOf(_turnActor));
         }
 
-        // 턴 순서가 왔다 (게임 시작 · 대소동 새 판) — 좌석 순서로 그려 둔 줄을 실제 순서로
+        // 턴 순서가 왔다 (게임 시작 · 대폭발 새 판) — 좌석 순서로 그려 둔 줄을 실제 순서로
         private void HandleRoomPropsChanged(Hashtable changed)
         {
             if (changed.ContainsKey(RoomProps.TurnOrder))

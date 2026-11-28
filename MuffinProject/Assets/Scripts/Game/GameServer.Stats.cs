@@ -29,7 +29,7 @@ namespace Chapchu.Game
         /// <summary>지표의 수 — 종료 요약의 지표 배열은 사람마다 이만큼이다.</summary>
         public static readonly int StatCount = Enum.GetValues(typeof(StatKind)).Length;
 
-        // PlayerState 에 두지 않는다 — 대소동이 PlayerState 를 새로 만들어도 지표는 새 판으로 이어진다 (11-card-list 112). 나간 사람 것도 남는다.
+        // PlayerState 에 두지 않는다 — 대폭발이 PlayerState 를 새로 만들어도 지표는 새 판으로 이어진다 (11-card-list 112). 나간 사람 것도 남는다.
         private readonly Dictionary<int, int[]> _stats = new Dictionary<int, int[]>();
 
         private void ResetStats(IReadOnlyList<int> actors)

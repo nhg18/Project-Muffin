@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 3D 장면의 빛 상태 하나 — 맑음 · 착탄 · 낙진. 장면은 착탄 뒤 맑음 → 착탄, 낙진 장면 앞에서 → 낙진으로 섞는다 (시안 NUKE3D env 의 mix3).
+    /// 「대폭발」 3D 장면의 빛 상태 하나 — 맑음 · 착탄 · 낙진. 장면은 착탄 뒤 맑음 → 착탄, 낙진 장면 앞에서 → 낙진으로 섞는다 (시안 NUKE3D env 의 mix3).
     /// 색은 HDR (1 보다 밝을 수 있다).
     /// </summary>
     [Serializable]

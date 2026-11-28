@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Chapchu.UI.Fx.Nuke
 {
     /// <summary>
-    /// 「대소동」 입자 — 시안 NUKE3D parts(t, tr) 와 같다 (최대 3000개, 먼 것부터 한 메시).
+    /// 「대폭발」 입자 — 시안 NUKE3D parts(t, tr) 와 같다 (최대 3000개, 먼 것부터 한 메시).
     /// 미사일 비행운(나선) · 불덩이 · 기둥 · 도넛처럼 말려 오르는 버섯 갓 · 응결 고리 · 바닥을 훑는 먼지 벽 · 무너지는 건물 먼지 · 불똥 · 폐허의 불과 연기 · 낙진(재와 초록 불티).
     /// 판은 셰이더(Chapchu/Nuke/Particle)가 카메라 쪽으로 세우고, 장면 깊이로 가리며 가장자리를 부드럽게 한다.
     /// </summary>

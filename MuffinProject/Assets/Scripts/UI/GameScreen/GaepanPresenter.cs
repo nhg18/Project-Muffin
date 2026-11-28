@@ -37,7 +37,7 @@ namespace Chapchu.UI.GameScreen
 
         /// <summary>
         /// 개판 상태가 바뀌었다 (OnGaepanChanged). 처음 · 다시 처음부터면 자명종을 새로 띄운다 (컷인 뒤), 바퀴가 줄면 자명종이 넘어간다,
-        /// 0 이면 (판정 직전 · 1012 대소동으로 지워짐) 자명종을 거둔다.
+        /// 0 이면 (판정 직전 · 1012 대폭발로 지워짐) 자명종을 거둔다.
         /// </summary>
         public IEnumerator ChangedRoutine(int left)
         {
@@ -71,7 +71,7 @@ namespace Chapchu.UI.GameScreen
             yield return judge.PlayRoutine(byHp, values, points, loserIndex);
         }
 
-        /// <summary>새 판 (1012 대소동) — 개판 표시를 모두 거둔다.</summary>
+        /// <summary>새 판 (1012 대폭발) — 개판 표시를 모두 거둔다.</summary>
         public void ShowRestarted()
         {
             hud.Hide(false);

@@ -49,7 +49,7 @@ GameObject:
   - component: {fileID: 3413910742622895743}
   - component: {fileID: 859648110331645971}
   m_Layer: 5
-  m_Name: "\uB3D9"
+  m_Name: "\uBC1C"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -102,7 +102,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB3D9"
+  m_text: "\uBC1C"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 28707ca5e5a2d784398975446a952747, type: 2}
@@ -1542,7 +1542,7 @@ GameObject:
   - component: {fileID: 3885478014679951209}
   - component: {fileID: 3302873242343769093}
   m_Layer: 5
-  m_Name: "\uC18C"
+  m_Name: "\uD3ED"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1595,7 +1595,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC18C"
+  m_text: "\uD3ED"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: f2487cce563250e409a1cd2fdc80eca4, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 28707ca5e5a2d784398975446a952747, type: 2}

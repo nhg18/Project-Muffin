@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Card_1012
   m_EditorClassIdentifier: Assembly-CSharp::Chapchu.Cards.CardData
   id: 1012
-  cardName: "\uB300\uC18C\uB3D9"
+  cardName: "\uB300\uD3ED\uBC1C"
   type: 0
   targetType: 0
   targetCondition: 0

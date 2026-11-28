@@ -4,7 +4,7 @@ using System.Linq;
 namespace Chapchu.Game.Effects
 {
     /// <summary>
-    /// 게임을 새로 시작한다 — 이 턴이 끝나면 지금 방에 있는 사람으로 처음처럼, 그 뒤로 턴이 끝날 때마다 모두 피폭 k^n (Restart — 1012 대소동, 11-card-list 1012).
+    /// 게임을 새로 시작한다 — 이 턴이 끝나면 지금 방에 있는 사람으로 처음처럼, 그 뒤로 턴이 끝날 때마다 모두 피폭 k^n (Restart — 1012 대폭발, 11-card-list 1012).
     /// 봇은 찹츄 상대가 있거나 내 HP 가 꼴찌일 때만 쓴다 (18-bot.md 7-3 ㅂ).
     /// </summary>
     [Serializable]

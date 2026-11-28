@@ -18,7 +18,7 @@ MonoBehaviour:
   targetType: 3
   targetCondition: 0
   grade: 2
-  description: "\uC0C1\uB300 \uBAA8\uB450 \uC190\uD328\uB97C \uBAA8\uB450 \uBC84\uB9AC\uACE0,
+  description: "\uC0C1\uB300 \uBAA8\uB450 \uC190\uD328\uB97C \uC804\uBD80 \uBC84\uB9AC\uACE0,
     5\uC7A5\uC529 \uBF51\uB294\uB2E4"
   reactsTo: 
   trapTrigger: 0

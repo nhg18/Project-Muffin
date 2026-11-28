@@ -25,7 +25,7 @@ namespace Chapchu.Game
             _choiceEntry = entry;
             _choiceEffect = effect;
             _choiceDeadline = now + effect.seconds;
-            _events.Add(new ChoiceStarted(actor, entry.User, entry.Card.CardId, _players[actor].Hand.Count, Scaled(entry, effect.amount), now, _choiceDeadline));
+            _events.Add(new ChoiceStarted(actor, entry.User, entry.Card.CardId, _players[actor].Hand.Count, ExpectedDamage(entry, actor, effect.amount), now, _choiceDeadline));
         }
 
         /// <summary>손패에서 1장 골라 버리기를 연다 (ChooseDiscardEffect.Apply — 2013 · 2021 의 대가). 1019 와 같은 흐름 — 그동안 게임 시간이 멈춘다.</summary>
