@@ -47,7 +47,7 @@
     },
     {
       "id": 1013, "name": "기억 삭제", "type": "Action", "target": "AllOthers", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "상대 모두 손패를 모두 버리고 5장씩 뽑는다",
+      "text": "상대 모두 손패를 모두 버리고, 5장씩 뽑는다",
       "effects": [ { "type": "RedealHandEffect", "args": "subject=Target" } ]
     },
     {
@@ -92,7 +92,7 @@
     },
     {
       "id": 1015, "name": "팍씨", "type": "Action", "target": "OneOther", "targetCondition": "None", "grade": "Normal", "count": 3,
-      "text": "{0} 피해를 주고 {1}장을 빼앗는다",
+      "text": "{0} 피해를 주고, {1}장을 빼앗는다",
       "effects": [ { "type": "DamageEffect", "args": "subject=Target, amount=10" }, { "type": "StealEffect", "args": "count=1" } ]
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "id": 2016, "name": "칼집", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "나에게 오는 피해를 40 줄이고 1장을 뽑는다",
+      "text": "나에게 오는 피해를 40 줄이고, 1장을 뽑는다",
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "DamagesMe",
       "effects": [ { "type": "ReduceDamageEffect", "args": "amount=40" }, { "type": "DrawEffect", "args": "subject=Self, count=1" } ]
@@ -130,21 +130,21 @@
     },
     {
       "id": 2020, "name": "내 거야!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "방금 나온 손패 + 카드를 막고, 그 카드를 가져온다. 대신 나는 20 피해를 받는다",
+      "text": "방금 나온 손패를 늘리는 카드를 막고, 그 카드를 가져온다. 대신 나는 20 피해를 받는다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "HasHandGain",
       "effects": [ { "type": "ReturnToHandEffect", "args": "to=CounterUser" }, { "type": "DamageEffect", "args": "subject=Self, amount=20" } ]
     },
     {
       "id": 2021, "name": "으르렁", "type": "Counter", "target": "TriggerSource", "targetCondition": "None", "grade": "Rare", "count": 2,
-      "text": "나에게 오는 행동 카드를 막고, 쓴 사람은 2장 버린다. 대신 나도 1장 버린다",
+      "text": "나에게 오는 행동 카드를 막고, 쓴 사람은 2장을 버린다. 대신 나도 1장을 버린다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "AimedAtMe",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "DiscardEffect", "args": "subject=Target, count=2" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
     },
     {
       "id": 2019, "name": "안 놔!", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 1,
-      "text": "나에게 오는 손패 감소를 막고, 그만큼(최대 3장) 뽑는다",
+      "text": "나에게 오는 손패를 줄이는 효과를 막고, 그만큼(최대 3장) 뽑는다",
       "art": "",
       "reactsTo": "Action, Counter", "reactCondition": "LosesMyHand",
       "effects": [ { "type": "NegateHandLossEffect", "args": "" }, { "type": "DrawBlockedHandLossEffect", "args": "max=3" } ]
@@ -179,14 +179,14 @@
     },
     {
       "id": 2013, "name": "새치기", "type": "Counter", "target": "None", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "방금 나온 행동 카드를 막고, 바로 내 턴이 된다. 대신 나는 1장 버린다",
+      "text": "방금 나온 행동 카드를 막고, 바로 내 턴이 된다. 대신 나는 1장을 버린다",
       "art": "",
       "reactsTo": "Action", "reactCondition": "Any",
       "effects": [ { "type": "NegateEffect", "args": "" }, { "type": "TakeTurnEffect", "args": "" }, { "type": "ChooseDiscardEffect", "args": "seconds=5" } ]
     },
     {
       "id": 3002, "name": "멈춰", "type": "Trap", "target": "TriggerSource", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "나에게 효과가 온 뒤 → 쓴 사람의 다음 턴을 건너뛴다",
+      "text": "효과를 받은 뒤 → 쓴 사람은 1턴 건너뛴다",
       "art": "",
       "trapTrigger": "AfterTargetedByOther", "triggerValue": 0,
       "effects": [ { "type": "SkipTurnEffect", "args": "subject=Target" } ]
@@ -221,7 +221,7 @@
     },
     {
       "id": 3012, "name": "편안", "type": "Trap", "target": "Self", "targetCondition": "None", "grade": "Fine", "count": 2,
-      "text": "턴 · 행동 · 뽑기를 막는 카드에 당한 뒤 → HP를 모두 채우고 찹츄를 뺀 상태를 모두 푼다",
+      "text": "턴 · 행동 · 뽑기를 막는 카드에 당한 뒤 → HP를 모두 채우고, 찹츄를 뺀 상태를 모두 푼다",
       "art": "",
       "trapTrigger": "AfterBlocked", "triggerValue": 0,
       "effects": [ { "type": "HealEffect", "args": "subject=Self, amount=100" }, { "type": "ClearStatusEffect", "args": "subject=Self" } ]
