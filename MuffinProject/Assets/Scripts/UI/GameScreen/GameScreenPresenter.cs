@@ -56,6 +56,10 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private ChapchuShoutView chapchuShout;
         [Tooltip("4 단계 공통 연출 — 피해 · 회복 · 카드 얻기 · 잃기 · 피폭 (10-ui.md 5-1 「4 단계 공통 연출」).")]
         [SerializeField] private ResultFx resultFx;
+        [Tooltip("게임 시작 연출 (10-ui.md 5-2) — 새 판 시작 알림(OnGameStarted)에만.")]
+        [SerializeField] private GameStartIntroView startIntro;
+        [Tooltip("내 턴 띠 「내 턴!」 (10-ui.md 5-2).")]
+        [SerializeField] private TurnBannerView turnBanner;
         [Tooltip("빼앗기 · 주고받기 — 잃는 사람의 「−n장」 뒤 얻는 사람의 「+n장」 까지 초 (시안 steal: 0.18초 + 카드가 건너가는 0.42초).")]
         [SerializeField] private float handMoveSeconds = 0.6f;
         [Tooltip("PunGameServer 와 같은 덱 에셋 — 처리된 카드의 화면 연출 값을 읽는다.")]
@@ -109,7 +113,7 @@ namespace Chapchu.UI.GameScreen
 
         private void Awake()
         {
-            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || choicePopup == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null)
+            if (deck == null || discardPile == null || hand == null || myPanel == null || seats == null || turnOrder == null || turnTimer == null || history == null || boardEffects == null || chainCards == null || reactionTimer == null || choicePopup == null || myTraps == null || screenFlash == null || chapchuShout == null || resultFx == null || cardDeck == null || cardFx == null || startIntro == null || turnBanner == null)
                 Debug.LogError($"[{nameof(GameScreenPresenter)}] 영역 프레젠터 참조 중 비어 있는 것이 있습니다.", this);
 
             if (cardDeck != null)
@@ -148,6 +152,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardDrawn += HandleCardDrawn;
             GameEvents.OnMyCardDrawn += HandleMyCardDrawn;
             GameEvents.OnDeckRefilled += HandleDeckRefilled;
+            GameEvents.OnGameStarted += HandleGameStarted;
             GameEvents.OnTurnStarted += HandleTurnStarted;
             GameEvents.OnTurnResumed += HandleTurnResumed;
             GameEvents.OnCardPlayed += HandleCardPlayed;
@@ -203,6 +208,7 @@ namespace Chapchu.UI.GameScreen
             GameEvents.OnCardDrawn -= HandleCardDrawn;
             GameEvents.OnMyCardDrawn -= HandleMyCardDrawn;
             GameEvents.OnDeckRefilled -= HandleDeckRefilled;
+            GameEvents.OnGameStarted -= HandleGameStarted;
             GameEvents.OnTurnStarted -= HandleTurnStarted;
             GameEvents.OnTurnResumed -= HandleTurnResumed;
             GameEvents.OnCardPlayed -= HandleCardPlayed;
@@ -267,7 +273,7 @@ namespace Chapchu.UI.GameScreen
         private void LateUpdate()
         {
             bool canAct = _isMyTurn && !_myMainActionDone && _chainCount == 0;
-            deck.ShowCanDraw(canAct, seats.IsSelectingTargets || hand.IsHoldingCard);
+            deck.ShowCanDraw(canAct, seats.IsSelectingTargets || hand.IsHoldingCard, GameServer.TurnDrawCountFor(myPanel.HandCount)); // 장수는 방장과 같은 식 (05-deck.md 4절) — 표시만
             turnTimer.TickForMe = canAct;
             UpdateTargetArrows();
         }
@@ -456,9 +462,53 @@ namespace Chapchu.UI.GameScreen
                 turnTimer.ShowTurn(deadline);
                 history.ShowTurnStarted(actorNumber);
                 if (isMyTurn)
+                {
                     SoundManager.Play(Sfx.MyTurn);
+                    turnBanner.Play();
+                }
                 return null;
             });
+        }
+
+        // 새 판 시작 (시작 알림 묶음의 맨 앞) — 시작 연출이 끝나야 HP · 손패 배분 · 첫 턴이 이어진다. 방장은 그동안 첫 턴을 멈춰 둔다 (01-game-flow.md 3절 #8)
+        private void HandleGameStarted(int[] order, double openingSeconds)
+        {
+            Enqueue(() => StartIntroRoutine(order));
+        }
+
+        private IEnumerator StartIntroRoutine(int[] order)
+        {
+            // 자리 · 좌표는 숨기기 전에 잰다 — 숨기면(크기 0) 좌표가 기준점으로 모인다
+            var introSeats = new List<GameStartIntroView.Seat>();
+            foreach (int actor in order)
+            {
+                bool isMe = IsMe(actor);
+                Vector2 point;
+                RectTransform[] reveal;
+                if (isMe)
+                {
+                    point = myPanel.CharacterScreenPoint;
+                    reveal = myPanel.IntroParts;
+                }
+                else if (!seats.TryGetCharacterScreenPoint(actor, out point) || !seats.TryGetIntroParts(actor, out reveal))
+                {
+                    continue; // 시작 전에 나간 사람
+                }
+
+                OpponentSeatsPresenter.CharacterLook look = seats.LookOf(actor);
+                introSeats.Add(new GameStartIntroView.Seat
+                {
+                    Name = PlayerLook.NameOf(actor),
+                    Color = PlayerLook.ColorOf(actor),
+                    Body = look.body,
+                    Accessory = look.accessory,
+                    IsMe = isMe,
+                    ScreenPoint = point,
+                    Reveal = reveal,
+                });
+            }
+
+            return startIntro.Play(introSeats, turnOrder.transform as RectTransform);
         }
 
         // 체인 · 함정으로 멈췄던 턴이 이어졌다 (메인 행동 전) — 같은 사람의 턴, 새 마감으로 다시 센다.

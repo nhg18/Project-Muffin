@@ -29,6 +29,8 @@ namespace Chapchu.UI.GameScreen
         [SerializeField] private float previewZ = -0.6f;
         [Tooltip("칸 아래 「내 함정 n/3」 글자 (HUD).")]
         [SerializeField] private TMP_Text countLabel;
+        [Tooltip("HUD 위 카드 층 — 크게 보기 카드를 올려 상대 좌석 · 버튼 · 낸 카드(HUD)에 가리지 않게 한다 (HandView 의 크게 보기와 같은 층).")]
+        [SerializeField] private TopCardLayerView topLayer;
 
         // 칸 순서대로 — 설치한 순서. 인스턴스 ID 와 카드 종류 ID
         private readonly List<int> _instanceIds = new List<int>();
@@ -42,8 +44,8 @@ namespace Chapchu.UI.GameScreen
         {
             _view = GetComponent<TrapSlotsView>();
 
-            if (deck == null || trapCardPrefab == null || previewSpot == null || countLabel == null)
-                Debug.LogError($"[{nameof(MyTrapsPresenter)}] {nameof(deck)} · {nameof(trapCardPrefab)} · {nameof(previewSpot)} · {nameof(countLabel)} 참조 중 비어 있는 것이 있습니다.", this);
+            if (deck == null || trapCardPrefab == null || previewSpot == null || countLabel == null || topLayer == null)
+                Debug.LogError($"[{nameof(MyTrapsPresenter)}] {nameof(deck)} · {nameof(trapCardPrefab)} · {nameof(previewSpot)} · {nameof(countLabel)} · {nameof(topLayer)} 참조 중 비어 있는 것이 있습니다.", this);
         }
 
         private void OnEnable() => _view.OnSlotClicked += HandleSlotClicked;
@@ -144,12 +146,14 @@ namespace Chapchu.UI.GameScreen
             _preview.SetRaycastBlocking(false);
             _preview.transform.SetPositionAndRotation(previewSpot.position + previewSpot.forward * previewZ, previewSpot.rotation);
             _preview.transform.localScale = previewSpot.lossyScale;
+            topLayer.Set(_preview, true);
         }
 
         private void HidePreview()
         {
             if (_preview == null) return;
 
+            topLayer.Set(_preview, false); // 지우기 전에 내린다 (TopCardLayerView)
             Destroy(_preview.gameObject);
             _preview = null;
         }
